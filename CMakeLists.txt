@@ -1,3 +1,4 @@
+
 cmake_minimum_required(VERSION 3.13)
 
 set(ROOMS_DIR_ROOT        ${CMAKE_CURRENT_LIST_DIR})
@@ -43,6 +44,29 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${ROOMS_DIR_SOURCES})
 set_property(DIRECTORY ${ROOMS_DIR_ROOT} PROPERTY VS_STARTUP_PROJECT ${PROJECT_NAME})
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 20)
 set_property(TARGET ${PROJECT_NAME} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${ROOMS_DIR_ROOT}")
+
+if (EMSCRIPTEN)
+    set(SHELL_FILE shell.html)
+
+    target_link_options(${PROJECT_NAME} PRIVATE
+        -O3
+        -sUSE_GLFW=3
+        -sUSE_WEBGPU
+        -sALLOW_MEMORY_GROWTH
+        -sASYNCIFY
+        --shell-file "${ROOMS_DIR_ROOT}/${SHELL_FILE}"
+        --preload-file "${ROOMS_DIR_ROOT}/data/shaders@/data/shaders"
+	)
+
+	# Make sure to re-link when the shell file changes
+    set_property(
+        TARGET ${PROJECT_NAME}
+        PROPERTY LINK_DEPENDS
+        "${ROOMS_DIR_ROOT}/${SHELL_FILE}"
+    )
+
+    set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".html")
+endif()
 
 # wgpuEngine
 add_subdirectory(libraries/wgpuEngine)
