@@ -17,6 +17,7 @@ struct sComputeData {
 
 @group(0) @binding(0) var left_eye_texture: texture_storage_2d<rgba8unorm,write>;
 @group(0) @binding(1) var right_eye_texture: texture_storage_2d<rgba8unorm,write>;
+@group(0) @binding(2) var sdf_texture: texture_3d<f32>;
 
 @group(1) @binding(0) var<uniform> compute_data : sComputeData;
 

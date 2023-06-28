@@ -6,32 +6,35 @@
 
 class RaymarchingRenderer : public Renderer {
 
-
+    // Render to screen
     WGPURenderPipeline      render_pipeline = nullptr;
-    Shader* render_shader = nullptr;
-
     WGPUPipelineLayout      render_pipeline_layout = nullptr;
-    WGPUBindGroupLayout     render_bind_group_layout = nullptr;
+    Shader*                 render_shader = nullptr;
 
     WGPUBindGroup           render_bind_group_left_eye = nullptr;
     WGPUBindGroup           render_bind_group_right_eye = nullptr;
 
-    WGPUComputePipeline     compute_pipeline = nullptr;
-    Shader* compute_shader = nullptr;
+    Uniform                 u_render_texture_left_eye;
+    Uniform                 u_render_texture_right_eye;
 
-    WGPUPipelineLayout      compute_pipeline_layout = nullptr;
+    // Compute
+    WGPUComputePipeline     compute_raymarching_pipeline = nullptr;
+    Shader*                 compute_raymarching_shader = nullptr;
 
-    WGPUBindGroupLayout     compute_textures_bind_group_layout = nullptr;
-    WGPUBindGroup           compute_textures_bind_group = nullptr;
-
-    WGPUBindGroupLayout     compute_data_bind_group_layout = nullptr;
-    WGPUBindGroup           compute_data_bind_group = nullptr;
+    WGPUBindGroup           compute_raymarching_textures_bind_group = nullptr;
+    WGPUBindGroup           compute_raymarching_data_bind_group = nullptr;
 
     WGPUTexture             left_eye_texture = nullptr;
     WGPUTexture             right_eye_texture = nullptr;
 
-    // Uniforms
+    WGPUTexture             sdf_texture = nullptr;
 
+    Uniform                 u_compute_buffer_data;
+    Uniform                 u_compute_texture_left_eye;
+    Uniform                 u_compute_texture_right_eye;
+    Uniform                 u_compute_texture_sdf;
+
+    // Data needed for XR raymarching
     struct sComputeData {
         glm::mat4x4 inv_view_projection_left_eye;
         glm::mat4x4 inv_view_projection_right_eye;
@@ -49,25 +52,15 @@ class RaymarchingRenderer : public Renderer {
 
     sComputeData            compute_data;
 
-    Uniform                 u_compute_buffer_data;
-    Uniform                 u_compute_texture_left_eye;
-    Uniform                 u_compute_texture_right_eye;
-    Uniform                 u_render_texture_left_eye;
-    Uniform                 u_render_texture_right_eye;
-
     Mesh                              quad_mesh;
-    std::vector<WGPUVertexAttribute>  quad_vertex_attributes;
     WGPUVertexBufferLayout            quad_vertex_layout;
+    std::vector<WGPUVertexAttribute>  quad_vertex_attributes;
     WGPUBuffer                        quad_vertex_buffer = nullptr;
 
+    // For the XR mirror screen
 #if defined(XR_SUPPORT) && defined(USE_MIRROR_WINDOW)
     WGPURenderPipeline      mirror_pipeline;
-    WGPUPipelineLayout      mirror_pipeline_layout;
-    WGPUBindGroupLayout     mirror_bind_group_layout;
-    WGPUBindGroup           mirror_bind_group;
     Shader* mirror_shader;
-
-    Uniform                 uniform_left_eye_view;
 #endif
 
     void render(WGPUTextureView swapchain_view, WGPUBindGroup bind_group);
@@ -80,14 +73,15 @@ class RaymarchingRenderer : public Renderer {
     void compute();
 
     void init_render_pipeline();
-    void init_compute_pipeline();
+    void init_compute_raymarching_pipeline();
+    void init_compute_merge_pipeline();
 
 #if defined(XR_SUPPORT) && defined(USE_MIRROR_WINDOW)
     void render_mirror();
     void init_mirror_pipeline();
 #endif
 
-public :
+public:
 
     RaymarchingRenderer();
 
