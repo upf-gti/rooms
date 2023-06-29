@@ -28,12 +28,10 @@ enum sdOperation {
 };
 
 struct Edit {
-
 	glm::vec3	position;
 	sdPrimitive primitive;
 	glm::vec3	color;
 	sdOperation operation;
 	glm::vec3	size;
-	float		radius;
-
+	float		radius = 1.0f;
 };

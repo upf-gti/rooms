@@ -3,6 +3,9 @@
 #include "includes.h"
 #include "graphics/renderer.h"
 #include <vector>
+#include "edit.h"
+
+#define EDITS_MAX 2048
 
 class RaymarchingRenderer : public Renderer {
 
@@ -20,19 +23,26 @@ class RaymarchingRenderer : public Renderer {
     // Compute
     WGPUComputePipeline     compute_raymarching_pipeline = nullptr;
     Shader*                 compute_raymarching_shader = nullptr;
-
     WGPUBindGroup           compute_raymarching_textures_bind_group = nullptr;
     WGPUBindGroup           compute_raymarching_data_bind_group = nullptr;
+
+    WGPUComputePipeline     compute_merge_pipeline = nullptr;
+    Shader*                 compute_merge_shader = nullptr;
+    WGPUBindGroup           compute_merge_bind_group = nullptr;
 
     WGPUTexture             left_eye_texture = nullptr;
     WGPUTexture             right_eye_texture = nullptr;
 
-    WGPUTexture             sdf_texture = nullptr;
+    //WGPUTexture             sdf_texture = nullptr;
 
     Uniform                 u_compute_buffer_data;
     Uniform                 u_compute_texture_left_eye;
     Uniform                 u_compute_texture_right_eye;
-    Uniform                 u_compute_texture_sdf;
+
+    Uniform                 u_compute_texture_sdf_storage;
+    //Uniform                 u_compute_texture_sdf_read;
+
+    Uniform                 u_compute_edits_data;
 
     // Data needed for XR raymarching
     struct sComputeData {
@@ -50,7 +60,8 @@ class RaymarchingRenderer : public Renderer {
         float dummy2 = 0.0f;
     };
 
-    sComputeData            compute_data;
+    sComputeData                      compute_data;
+    Edit                              edits[EDITS_MAX];
 
     Mesh                              quad_mesh;
     WGPUVertexBufferLayout            quad_vertex_layout;
@@ -88,7 +99,7 @@ public:
     virtual int initialize(GLFWwindow* window, bool use_mirror_screen = false) override;
     virtual void clean() override;
 
-    virtual void update(double delta_time) override;
+    virtual void update(float delta_time) override;
     virtual void render() override;
 
 };

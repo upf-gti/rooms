@@ -71,7 +71,7 @@ int main() {
 
     double start_time = glfwGetTime();
     double now = start_time;
-    double delta_time = 0.0;
+    float delta_time = 0.0f;
 
     while (!shouldClose(use_glfw, window)) {
         pollEvents(use_glfw);
@@ -82,7 +82,7 @@ int main() {
         double last_time = now;
         now = glfwGetTime();
 
-        delta_time = (now - last_time);
+        delta_time = static_cast<float>((now - last_time));
 
 #ifdef __EMSCRIPTEN__
         emscripten_sleep(16);

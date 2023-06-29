@@ -1,6 +1,6 @@
-#include raymarching_functions.wgsl
+#include sdf_functions.wgsl
 
-struct sComputeData {
+struct ComputeData {
     inv_view_projection_left_eye  : mat4x4f,
     inv_view_projection_right_eye : mat4x4f,
 
@@ -15,11 +15,12 @@ struct sComputeData {
     dummy2          : f32,
 };
 
+
 @group(0) @binding(0) var left_eye_texture: texture_storage_2d<rgba8unorm,write>;
 @group(0) @binding(1) var right_eye_texture: texture_storage_2d<rgba8unorm,write>;
-@group(0) @binding(2) var sdf_texture: texture_3d<f32>;
+@group(0) @binding(2) var<storage, read> sdf_data : SdfData;
 
-@group(1) @binding(0) var<uniform> compute_data : sComputeData;
+@group(1) @binding(0) var<uniform> compute_data : ComputeData;
 
 const MAX_DIST = 40.0;
 const MIN_HIT_DIST = 0.0001;
