@@ -3,35 +3,50 @@
 #include "includes.h"
 #include "graphics/renderer.h"
 #include <vector>
+#include "edit.h"
+
+#define EDITS_MAX 1024
+#define SDF_RESOLUTION 512
 
 class RaymarchingRenderer : public Renderer {
 
-
+    // Render to screen
     WGPURenderPipeline      render_pipeline = nullptr;
-    Shader* render_shader = nullptr;
-
     WGPUPipelineLayout      render_pipeline_layout = nullptr;
-    WGPUBindGroupLayout     render_bind_group_layout = nullptr;
+    Shader*                 render_shader = nullptr;
 
     WGPUBindGroup           render_bind_group_left_eye = nullptr;
     WGPUBindGroup           render_bind_group_right_eye = nullptr;
 
-    WGPUComputePipeline     compute_pipeline = nullptr;
-    Shader* compute_shader = nullptr;
+    Uniform                 u_render_texture_left_eye;
+    Uniform                 u_render_texture_right_eye;
 
-    WGPUPipelineLayout      compute_pipeline_layout = nullptr;
+    // Compute
+    WGPUComputePipeline     compute_raymarching_pipeline = nullptr;
+    Shader*                 compute_raymarching_shader = nullptr;
+    WGPUBindGroup           compute_raymarching_textures_bind_group = nullptr;
+    WGPUBindGroup           compute_raymarching_data_bind_group = nullptr;
 
-    WGPUBindGroupLayout     compute_textures_bind_group_layout = nullptr;
-    WGPUBindGroup           compute_textures_bind_group = nullptr;
-
-    WGPUBindGroupLayout     compute_data_bind_group_layout = nullptr;
-    WGPUBindGroup           compute_data_bind_group = nullptr;
+    WGPUComputePipeline     compute_merge_pipeline = nullptr;
+    Shader*                 compute_merge_shader = nullptr;
+    WGPUBindGroup           compute_merge_bind_group = nullptr;
 
     WGPUTexture             left_eye_texture = nullptr;
     WGPUTexture             right_eye_texture = nullptr;
 
-    // Uniforms
+    //WGPUTexture             sdf_texture = nullptr;
 
+    Uniform                 u_compute_buffer_data;
+    Uniform                 u_compute_texture_left_eye;
+    Uniform                 u_compute_texture_right_eye;
+
+    Uniform                 u_compute_texture_sdf_storage;
+    //Uniform                 u_compute_texture_sdf_read;
+
+    Uniform                 u_compute_merge_data;
+    Uniform                 u_compute_edits_array;
+
+    // Data needed for XR raymarching
     struct sComputeData {
         glm::mat4x4 inv_view_projection_left_eye;
         glm::mat4x4 inv_view_projection_right_eye;
@@ -47,27 +62,28 @@ class RaymarchingRenderer : public Renderer {
         float dummy2 = 0.0f;
     };
 
-    sComputeData            compute_data;
+    // Data needed for sdf merging
+    struct sMergeData {
+        uint32_t edits_to_process = 0;
+        float dummy0 = 0.0f;
+        float dummy1 = 0.0f;
+        float dummy2 = 0.0f;
+    };
 
-    Uniform                 u_compute_buffer_data;
-    Uniform                 u_compute_texture_left_eye;
-    Uniform                 u_compute_texture_right_eye;
-    Uniform                 u_render_texture_left_eye;
-    Uniform                 u_render_texture_right_eye;
+    sComputeData                      compute_raymarching_data;
+    sMergeData                        compute_merge_data;
+
+    sEdit                             edits[EDITS_MAX];
 
     Mesh                              quad_mesh;
+    WGPUVertexBufferLayout            quad_vertex_layout = {};
     std::vector<WGPUVertexAttribute>  quad_vertex_attributes;
-    WGPUVertexBufferLayout            quad_vertex_layout;
     WGPUBuffer                        quad_vertex_buffer = nullptr;
 
+    // For the XR mirror screen
 #if defined(XR_SUPPORT) && defined(USE_MIRROR_WINDOW)
-    WGPURenderPipeline      mirror_pipeline;
-    WGPUPipelineLayout      mirror_pipeline_layout;
-    WGPUBindGroupLayout     mirror_bind_group_layout;
-    WGPUBindGroup           mirror_bind_group;
-    Shader* mirror_shader;
-
-    Uniform                 uniform_left_eye_view;
+    WGPURenderPipeline      mirror_pipeline = nullptr;
+    Shader* mirror_shader = nullptr;
 #endif
 
     void render(WGPUTextureView swapchain_view, WGPUBindGroup bind_group);
@@ -77,24 +93,26 @@ class RaymarchingRenderer : public Renderer {
     void render_xr();
 #endif
 
-    void compute();
+    void compute_merge();
+    void compute_raymarching();
 
     void init_render_pipeline();
-    void init_compute_pipeline();
+    void init_compute_raymarching_pipeline();
+    void init_compute_merge_pipeline();
 
 #if defined(XR_SUPPORT) && defined(USE_MIRROR_WINDOW)
     void render_mirror();
     void init_mirror_pipeline();
 #endif
 
-public :
+public:
 
     RaymarchingRenderer();
 
     virtual int initialize(GLFWwindow* window, bool use_mirror_screen = false) override;
     virtual void clean() override;
 
-    virtual void update(double delta_time) override;
+    virtual void update(float delta_time) override;
     virtual void render() override;
 
 };
