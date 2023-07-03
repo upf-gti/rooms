@@ -1,25 +1,29 @@
 #include sdf_functions.wgsl
 
+struct MergeData {
+    edits_to_process : u32,
+    dummy0           : f32,
+    dummy1           : f32,
+    dummy2           : f32,
+};
+
 @group(0) @binding(0) var<uniform> edits : Edits;
+@group(0) @binding(1) var<uniform> merge_data : MergeData;
 @group(0) @binding(2) var<storage, read_write> sdf_data : SdfData;
 
 const smooth_factor = 0.6;
 
 fn evalSdf(position : vec3f) -> Surface
 {
-    let raw_sdf : vec4f = sdf_data.data[u32(position.x + position.y * 512 + position.z * 512 * 512)];
+    var sSurface : Surface = sdf_data.data[u32(position.x + position.y * 512 + position.z * 512 * 512)];
 
-    var sSurface : Surface;
-    sSurface.color = raw_sdf.rgb;
-    sSurface.distance = raw_sdf.a;
-
-    for (var i = 0; i < 2; i++) {
+    for (var i : u32 = 0; i < merge_data.edits_to_process; i++) {
 
         let edit : Edit = edits.data[i];
 
         var pSurface : Surface;
 
-        let offsetPosition : vec3f = edit.position + vec3f(RES_CENTER);
+        let offsetPosition : vec3f = edit.position;
 
         switch (edit.primitive) {
             case SD_SPHERE: {
@@ -101,7 +105,6 @@ fn evalSdf(position : vec3f) -> Surface
 @compute @workgroup_size(8, 8, 8)
 
 fn compute(@builtin(global_invocation_id) id: vec3<u32>) {
-    let position : vec3i = vec3i(id) + vec3i(RES_CENTER);
-    let sdf : Surface = evalSdf(vec3f(position));
-    sdf_data.data[position.x + position.y * 512 + position.z * 512 * 512] = vec4f(sdf.color, sdf.distance);
+    let position : vec3i = vec3i(id);
+    sdf_data.data[position.x + position.y * 512 + position.z * 512 * 512] = evalSdf(vec3f(position));
 }

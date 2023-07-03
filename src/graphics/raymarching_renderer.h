@@ -5,7 +5,8 @@
 #include <vector>
 #include "edit.h"
 
-#define EDITS_MAX 2048
+#define EDITS_MAX 1024
+#define SDF_RESOLUTION 512
 
 class RaymarchingRenderer : public Renderer {
 
@@ -42,7 +43,8 @@ class RaymarchingRenderer : public Renderer {
     Uniform                 u_compute_texture_sdf_storage;
     //Uniform                 u_compute_texture_sdf_read;
 
-    Uniform                 u_compute_edits_data;
+    Uniform                 u_compute_merge_data;
+    Uniform                 u_compute_edits_array;
 
     // Data needed for XR raymarching
     struct sComputeData {
@@ -60,18 +62,28 @@ class RaymarchingRenderer : public Renderer {
         float dummy2 = 0.0f;
     };
 
-    sComputeData                      compute_data;
-    Edit                              edits[EDITS_MAX];
+    // Data needed for sdf merging
+    struct sMergeData {
+        uint32_t edits_to_process = 0;
+        float dummy0 = 0.0f;
+        float dummy1 = 0.0f;
+        float dummy2 = 0.0f;
+    };
+
+    sComputeData                      compute_raymarching_data;
+    sMergeData                        compute_merge_data;
+
+    sEdit                             edits[EDITS_MAX];
 
     Mesh                              quad_mesh;
-    WGPUVertexBufferLayout            quad_vertex_layout;
+    WGPUVertexBufferLayout            quad_vertex_layout = {};
     std::vector<WGPUVertexAttribute>  quad_vertex_attributes;
     WGPUBuffer                        quad_vertex_buffer = nullptr;
 
     // For the XR mirror screen
 #if defined(XR_SUPPORT) && defined(USE_MIRROR_WINDOW)
-    WGPURenderPipeline      mirror_pipeline;
-    Shader* mirror_shader;
+    WGPURenderPipeline      mirror_pipeline = nullptr;
+    Shader* mirror_shader = nullptr;
 #endif
 
     void render(WGPUTextureView swapchain_view, WGPUBindGroup bind_group);
@@ -81,7 +93,8 @@ class RaymarchingRenderer : public Renderer {
     void render_xr();
 #endif
 
-    void compute();
+    void compute_merge();
+    void compute_raymarching();
 
     void init_render_pipeline();
     void init_compute_raymarching_pipeline();

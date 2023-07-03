@@ -2,6 +2,8 @@
 
 #include "includes.h"
 
+#include <iostream>
+
 enum sdPrimitive {
 	SD_SPHERE = 0,
 	SD_BOX,
@@ -27,11 +29,13 @@ enum sdOperation {
 	ALL_OPERATIONS
 };
 
-struct Edit {
+struct sEdit {
 	glm::vec3	position;
 	sdPrimitive primitive;
 	glm::vec3	color;
 	sdOperation operation;
-	glm::vec3	size;
+	glm::vec3	size = {};
 	float		radius = 1.0f;
+
+	friend std::ostream& operator<<(std::ostream& os, const sEdit& edit);
 };

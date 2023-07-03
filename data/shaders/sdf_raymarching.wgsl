@@ -15,10 +15,9 @@ struct ComputeData {
     dummy2          : f32,
 };
 
-
 @group(0) @binding(0) var left_eye_texture: texture_storage_2d<rgba8unorm,write>;
 @group(0) @binding(1) var right_eye_texture: texture_storage_2d<rgba8unorm,write>;
-@group(0) @binding(2) var<storage, read> sdf_data : SdfData;
+@group(0) @binding(2) var<storage, read_write> sdf_data : SdfData;
 
 @group(1) @binding(0) var<uniform> compute_data : ComputeData;
 
@@ -37,14 +36,7 @@ const up = vec3f(0.0, 1.0, 0.0);
 
 fn sampleSdf(p : vec3f) -> Surface
 {
-    var res : Surface = opSmoothUnion(
-        sdSphere(p, vec3f( 1.0 * sin(compute_data.time), 0.0, -2.0), 1.0, vec3f(1.0, 0.0, 0.0)),
-        sdSphere(p, vec3f(-1.0, 0.0, -2.0), 1.0, vec3f(0.0, 1.0, 0.0)), 0.5);
-
-    res = opSmoothUnion(res,
-        sdPlane(p, vec3f(0.0, -0.4, 0.0), vec3f(0.0, 1.0, 0.0), 0.0, vec3f(0.0, 0.0, 1.0)), 0.4);
-
-    return res;
+    return sdf_data.data[u32(p.x + p.y * 512 + p.z * 512 * 512)];
 }
 
 fn estimateNormal(p : vec3f) -> vec3f

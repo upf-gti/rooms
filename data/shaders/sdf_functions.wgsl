@@ -27,8 +27,8 @@ const OP_SMOOTH_PAINT           = 7;
 // Data containers
 
 struct Surface {
-    distance : f32,
     color    : vec3f,
+    distance : f32
 };
 
 struct Edit {
@@ -41,11 +41,11 @@ struct Edit {
 };
 
 struct Edits {
-    data : array<Edit, 2048>
+    data : array<Edit, 1024>
 }
 
 struct SdfData {
-    data : array<vec4f>
+    data : array<Surface>
 };
 
 // Primitives
