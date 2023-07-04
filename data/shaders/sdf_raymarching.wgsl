@@ -21,22 +21,29 @@ struct ComputeData {
 
 @group(1) @binding(0) var<uniform> compute_data : ComputeData;
 
-const MAX_DIST = 40.0;
+const MAX_DIST = 1000.0;
 const MIN_HIT_DIST = 0.0001;
-const DERIVATIVE_STEP = 0.0001;
+const DERIVATIVE_STEP = 1;
 
 const ambientCoeff = 0.2;
 const diffuseCoeff = 0.9;
 const specularCoeff = 1.0;
 const specularExponent = 64.0;
-const lightPos = vec3f(0.0, 2.0, 1.0);
+const lightPos = vec3f(400.0, 400.0, 400.0);
 
 const fov = 45.0;
 const up = vec3f(0.0, 1.0, 0.0);
 
 fn sampleSdf(p : vec3f) -> Surface
 {
-    return sdf_data.data[u32(p.x + p.y * 512 + p.z * 512 * 512)];
+    if (p.x < 0.0 || p.x > 511 ||
+        p.y < 0.0 || p.y > 511 ||
+        p.z < 0.0 || p.z > 511) {
+        return Surface(vec3(0.0, 0.0, 0.0), 1000.0);
+    }
+
+    let index : u32 = u32(floor(p.x) + floor(p.y) * 512 + floor(p.z) * 512 * 512);
+    return sdf_data.data[index];
 }
 
 fn estimateNormal(p : vec3f) -> vec3f
@@ -74,7 +81,6 @@ fn raymarch(rayOrigin : vec3f, rayDir : vec3f) -> vec3f
     let lightOffset = vec3f(0.0, 0.0, 0.0);
 
 	var depth = 0.0;
-	var minDist = MAX_DIST;
 	for (var i : i32 = 0; depth < MAX_DIST && i < 100; i++)
 	{
 		let pos = rayOrigin + rayDir * depth;
@@ -82,7 +88,7 @@ fn raymarch(rayOrigin : vec3f, rayDir : vec3f) -> vec3f
 		if (surface.distance < MIN_HIT_DIST) {
 			return blinnPhong(rayOrigin, pos, lightPos + lightOffset, ambientColor, surface.color);
 		}
-		depth += min(surface.distance, 0.5);
+		depth += surface.distance;//min(surface.distance, 0.5);
 	}
     return missColor;
 }

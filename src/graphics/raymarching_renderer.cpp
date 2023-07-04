@@ -87,10 +87,10 @@ void RaymarchingRenderer::update(float delta_time)
         sEdit edit;
         edit.operation = OP_SMOOTH_UNION;
         edit.color = glm::vec3(random(), random(), random());
-        edit.position = glm::vec3(random(), random(), random());
+        edit.position = glm::vec3(40 * (random() * 2 - 1), 20 * random(), 20 * random());
         edit.primitive = SD_SPHERE;
         edit.size = glm::vec3(1.0, 1.0, 1.0);
-        edit.radius = random();
+        edit.radius = random() * 50;
 
         std::cout << edit << std::endl;
 
@@ -127,7 +127,7 @@ void RaymarchingRenderer::render_screen()
     glm::mat4x4 view_projection = projection * view;
 
     compute_raymarching_data.inv_view_projection_left_eye = glm::inverse(view_projection);
-    compute_raymarching_data.left_eye_pos = glm::vec3(0.0, 0.0, 2.0);
+    compute_raymarching_data.left_eye_pos = glm::vec3(256.0, 256.0, 511.0);
 
     compute_merge();
     compute_raymarching();

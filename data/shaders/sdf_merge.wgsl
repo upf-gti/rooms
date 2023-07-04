@@ -23,7 +23,7 @@ fn evalSdf(position : vec3f) -> Surface
 
         var pSurface : Surface;
 
-        let offsetPosition : vec3f = edit.position;
+        let offsetPosition : vec3f = edit.position + vec3f(RES_CENTER);
 
         switch (edit.primitive) {
             case SD_SPHERE: {
