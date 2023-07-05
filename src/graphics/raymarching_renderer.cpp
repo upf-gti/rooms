@@ -84,7 +84,7 @@ void RaymarchingRenderer::update(float delta_time)
 {
     compute_raymarching_data.time += delta_time;
 
-    if (Input::was_key_pressed(GLFW_KEY_A)) {
+    if (Input::was_key_pressed(GLFW_KEY_A) || Input::was_button_pressed(XR_BUTTON_A)) {
 
         sEdit edit;
         edit.operation = OP_SMOOTH_UNION;
