@@ -1,6 +1,4 @@
 
-const RES_CENTER = 256; // resolution
-
 // SD Primitives
 
 const SD_SPHERE         = 0;

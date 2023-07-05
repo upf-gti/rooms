@@ -21,28 +21,34 @@ struct ComputeData {
 
 @group(1) @binding(0) var<uniform> compute_data : ComputeData;
 
-const MAX_DIST = 1000.0;
+const MAX_DIST = 100.0;
 const MIN_HIT_DIST = 0.0001;
-const DERIVATIVE_STEP = 1;
+const DERIVATIVE_STEP = 1.0 / 512.0;
 
 const ambientCoeff = 0.2;
 const diffuseCoeff = 0.9;
 const specularCoeff = 1.0;
 const specularExponent = 64.0;
-const lightPos = vec3f(400.0, 400.0, 400.0);
+const lightPos = vec3f(0.0, 2.0, 1.0);
 
 const fov = 45.0;
 const up = vec3f(0.0, 1.0, 0.0);
 
-fn sampleSdf(p : vec3f) -> Surface
+fn sampleSdf(position : vec3f) -> Surface
 {
+    let p = position * 512.0 + vec3f(256.0) - vec3(0.0, 500.0, 0.0);
+
     if (p.x < 0.0 || p.x > 511 ||
         p.y < 0.0 || p.y > 511 ||
         p.z < 0.0 || p.z > 511) {
-        return Surface(vec3(0.0, 0.0, 0.0), 1000.0);
+        return Surface(vec3(0.0, 0.0, 0.0), 0.01);
     }
 
-    let index : u32 = u32(floor(p.x) + floor(p.y) * 512 + floor(p.z) * 512 * 512);
+    let x : u32 = u32(round(p.x));
+    let y : u32 = u32(round(p.y));
+    let z : u32 = u32(round(p.z));
+
+    let index : u32 = x + y * 512u + z * 512u * 512u;
     return sdf_data.data[index];
 }
 
@@ -70,7 +76,7 @@ fn blinnPhong(rayOrigin : vec3f, position : vec3f, lightPosition : vec3f, ambien
     let specularFactor : vec3f = diffuse * pow(max(0.0, dot(normal, halfwayDir)), specularExponent)
                         * specularCoeff;
 
-    return ambientFactor + diffuseFactor + specularFactor;
+    return estimateNormal(position);//ambientFactor + diffuseFactor + specularFactor;
 }
 
 fn raymarch(rayOrigin : vec3f, rayDir : vec3f) -> vec3f
@@ -88,7 +94,7 @@ fn raymarch(rayOrigin : vec3f, rayDir : vec3f) -> vec3f
 		if (surface.distance < MIN_HIT_DIST) {
 			return blinnPhong(rayOrigin, pos, lightPos + lightOffset, ambientColor, surface.color);
 		}
-		depth += surface.distance;//min(surface.distance, 0.5);
+		depth += surface.distance;
 	}
     return missColor;
 }

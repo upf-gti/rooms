@@ -38,6 +38,8 @@ int RaymarchingRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
     compute_raymarching_data.render_width = static_cast<float>(render_width);
     compute_raymarching_data.render_height = static_cast<float>(render_height);
 
+    compute_merge_data.sdf_size = glm::uvec3(SDF_RESOLUTION);
+
     return 0;
 }
 
@@ -87,10 +89,10 @@ void RaymarchingRenderer::update(float delta_time)
         sEdit edit;
         edit.operation = OP_SMOOTH_UNION;
         edit.color = glm::vec3(random(), random(), random());
-        edit.position = glm::vec3(40 * (random() * 2 - 1), 20 * random(), 20 * random());
+        edit.position = glm::vec3(0.0, 0.0, 0.0); // glm::vec3(2 * (random() * 2 - 1), 2 * random(), 2 * random());
         edit.primitive = SD_SPHERE;
         edit.size = glm::vec3(1.0, 1.0, 1.0);
-        edit.radius = random() * 50;
+        edit.radius = 0.05;// random();
 
         std::cout << edit << std::endl;
 
@@ -120,14 +122,15 @@ void RaymarchingRenderer::render()
 
 void RaymarchingRenderer::render_screen()
 {
-    glm::mat4x4 view = glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::vec3 eye = glm::vec3(0.0f, 0.0f, 1.0f);
+    glm::mat4x4 view = glm::lookAt(eye, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     glm::mat4x4 projection = glm::perspective(glm::radians(45.0f), 16.0f / 9.0f, 0.1f, 100.0f);
     projection[1][1] *= -1.0f;
 
     glm::mat4x4 view_projection = projection * view;
 
     compute_raymarching_data.inv_view_projection_left_eye = glm::inverse(view_projection);
-    compute_raymarching_data.left_eye_pos = glm::vec3(256.0, 256.0, 511.0);
+    compute_raymarching_data.left_eye_pos = eye;
 
     compute_merge();
     compute_raymarching();
@@ -153,6 +156,7 @@ void RaymarchingRenderer::render_xr()
         compute_raymarching_data.left_eye_pos = xr_context.per_view_data[0].position;
         compute_raymarching_data.right_eye_pos = xr_context.per_view_data[1].position;
 
+        compute_merge();
         compute_raymarching();
 
         for (uint32_t i = 0; i < xr_context.view_count; ++i) {

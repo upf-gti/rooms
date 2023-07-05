@@ -1,10 +1,8 @@
 #include sdf_functions.wgsl
 
 struct MergeData {
+    sdf_size         : vec3<u32>,
     edits_to_process : u32,
-    dummy0           : f32,
-    dummy1           : f32,
-    dummy2           : f32,
 };
 
 @group(0) @binding(0) var<uniform> edits : Edits;
@@ -23,15 +21,16 @@ fn evalSdf(position : vec3f) -> Surface
 
         var pSurface : Surface;
 
-        let offsetPosition : vec3f = edit.position + vec3f(RES_CENTER);
+        // Center in texture (position 0,0,0 is just in the middle)
+        let offsetPosition : vec3f = edit.position + vec3f(0.5);
 
         switch (edit.primitive) {
             case SD_SPHERE: {
-                pSurface = sdSphere(position, offsetPosition, edit.radius, edit.color);
+                pSurface = sdSphere(position / vec3f(merge_data.sdf_size), offsetPosition, edit.radius, edit.color);
                 break;
             }
             case SD_BOX: {
-                pSurface = sdBox(position, offsetPosition, edit.size, edit.radius, edit.color);
+                pSurface = sdBox(position / vec3f(merge_data.sdf_size), offsetPosition, edit.size, edit.radius, edit.color);
                 break;
             }
             // case SD_ELLIPSOID:
