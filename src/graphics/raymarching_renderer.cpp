@@ -61,7 +61,6 @@ void RaymarchingRenderer::clean()
     wgpuBindGroupRelease(render_bind_group_right_eye);
 
     // Compute pipeline
-    wgpuComputePipelineRelease(compute_raymarching_pipeline);
     wgpuBindGroupRelease(compute_raymarching_textures_bind_group);
     wgpuBindGroupRelease(compute_raymarching_data_bind_group);
 
@@ -92,7 +91,7 @@ void RaymarchingRenderer::update(float delta_time)
         edit.position = glm::vec3(0.0, 0.0, 0.0); // glm::vec3(2 * (random() * 2 - 1), 2 * random(), 2 * random());
         edit.primitive = SD_SPHERE;
         edit.size = glm::vec3(1.0, 1.0, 1.0);
-        edit.radius = 0.05;// random();
+        edit.radius = 0.2;// random();
 
         std::cout << edit << std::endl;
 
@@ -246,7 +245,7 @@ void RaymarchingRenderer::compute_merge()
     WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
 
     // Use compute_raymarching pass
-    wgpuComputePassEncoderSetPipeline(compute_pass, compute_merge_pipeline);
+    compute_merge_pipeline.set(compute_pass);
 
     // Update uniform buffer
     wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(u_compute_edits_array.data), 0, edits, sizeof(sEdit) * compute_merge_data.edits_to_process);
@@ -286,7 +285,7 @@ void RaymarchingRenderer::compute_raymarching()
     WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
 
     // Use compute_raymarching pass
-    wgpuComputePassEncoderSetPipeline(compute_pass, compute_raymarching_pipeline);
+    compute_raymarching_pipeline.set(compute_pass);
 
     // Update uniform buffer
     wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(u_compute_buffer_data.data), 0, &(compute_raymarching_data), sizeof(sComputeData));
@@ -525,7 +524,7 @@ void RaymarchingRenderer::init_compute_raymarching_pipeline()
 
     WGPUPipelineLayout compute_raymarching_pipeline_layout = webgpu_context.create_pipeline_layout({ compute_textures_bind_group_layout, compute_data_bind_group_layout });
 
-    compute_raymarching_pipeline = webgpu_context.create_compute_pipeline(compute_raymarching_shader->get_module(), compute_raymarching_pipeline_layout);
+    compute_raymarching_pipeline.create_compute(compute_raymarching_shader, compute_raymarching_pipeline_layout);
 }
 
 void RaymarchingRenderer::init_compute_merge_pipeline()
@@ -554,7 +553,7 @@ void RaymarchingRenderer::init_compute_merge_pipeline()
 
     WGPUPipelineLayout compute_pipeline_layout = webgpu_context.create_pipeline_layout({ compute_bind_group_layout });
 
-    compute_merge_pipeline = webgpu_context.create_compute_pipeline(compute_merge_shader->get_module(), compute_pipeline_layout);
+    compute_merge_pipeline.create_compute(compute_merge_shader, compute_pipeline_layout);
 }
 
 #if defined(XR_SUPPORT) && defined(USE_MIRROR_WINDOW)

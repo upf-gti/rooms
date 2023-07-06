@@ -22,12 +22,12 @@ class RaymarchingRenderer : public Renderer {
     Uniform                 u_render_texture_right_eye;
 
     // Compute
-    WGPUComputePipeline     compute_raymarching_pipeline = nullptr;
+    Pipeline                compute_raymarching_pipeline;
     Shader*                 compute_raymarching_shader = nullptr;
     WGPUBindGroup           compute_raymarching_textures_bind_group = nullptr;
     WGPUBindGroup           compute_raymarching_data_bind_group = nullptr;
 
-    WGPUComputePipeline     compute_merge_pipeline = nullptr;
+    Pipeline                compute_merge_pipeline;
     Shader*                 compute_merge_shader = nullptr;
     WGPUBindGroup           compute_merge_bind_group = nullptr;
 

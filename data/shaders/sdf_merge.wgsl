@@ -11,9 +11,9 @@ struct MergeData {
 
 const smooth_factor = 0.6;
 
-fn evalSdf(position : vec3f) -> Surface
+fn evalSdf(position : vec3u) -> Surface
 {
-    var sSurface : Surface = sdf_data.data[u32(position.x + position.y * 512 + position.z * 512 * 512)];
+    var sSurface : Surface = sdf_data.data[position.x + position.y * 512 + position.z * 512 * 512];
 
     for (var i : u32 = 0; i < merge_data.edits_to_process; i++) {
 
@@ -26,11 +26,11 @@ fn evalSdf(position : vec3f) -> Surface
 
         switch (edit.primitive) {
             case SD_SPHERE: {
-                pSurface = sdSphere(position / vec3f(merge_data.sdf_size), offsetPosition, edit.radius, edit.color);
+                pSurface = sdSphere(vec3f(position) / vec3f(merge_data.sdf_size), offsetPosition, edit.radius, edit.color);
                 break;
             }
             case SD_BOX: {
-                pSurface = sdBox(position / vec3f(merge_data.sdf_size), offsetPosition, edit.size, edit.radius, edit.color);
+                pSurface = sdBox(vec3f(position) / vec3f(merge_data.sdf_size), offsetPosition, edit.size, edit.radius, edit.color);
                 break;
             }
             // case SD_ELLIPSOID:
@@ -104,6 +104,5 @@ fn evalSdf(position : vec3f) -> Surface
 @compute @workgroup_size(8, 8, 8)
 
 fn compute(@builtin(global_invocation_id) id: vec3<u32>) {
-    let position : vec3i = vec3i(id);
-    sdf_data.data[position.x + position.y * 512 + position.z * 512 * 512] = evalSdf(vec3f(position));
+    sdf_data.data[id.x + id.y * 512 + id.z * 512 * 512] = evalSdf(id);
 }

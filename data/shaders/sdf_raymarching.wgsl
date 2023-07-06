@@ -36,7 +36,7 @@ const up = vec3f(0.0, 1.0, 0.0);
 
 fn sampleSdf(position : vec3f) -> Surface
 {
-    let p = position * 512.0 + vec3f(256.0) - vec3(0.0, 500.0, 0.0);
+    let p = position * 512.0 + vec3f(256.0);// - vec3f(0.0, 500.0, 0.0);
 
     if (p.x < 0.0 || p.x > 511 ||
         p.y < 0.0 || p.y > 511 ||
@@ -76,7 +76,7 @@ fn blinnPhong(rayOrigin : vec3f, position : vec3f, lightPosition : vec3f, ambien
     let specularFactor : vec3f = diffuse * pow(max(0.0, dot(normal, halfwayDir)), specularExponent)
                         * specularCoeff;
 
-    return estimateNormal(position);//ambientFactor + diffuseFactor + specularFactor;
+    return ambientFactor + diffuseFactor + specularFactor;
 }
 
 fn raymarch(rayOrigin : vec3f, rayDir : vec3f) -> vec3f
