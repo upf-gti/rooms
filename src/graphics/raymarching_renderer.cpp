@@ -213,7 +213,8 @@ void RaymarchingRenderer::render(WGPUTextureView swapchain_view, WGPUBindGroup b
         wgpuRenderPassEncoderDraw(render_pass, 6, 1, 0, 0);
 
         wgpuRenderPassEncoderEnd(render_pass);
-        //render_pass.Release();
+
+        wgpuRenderPassEncoderRelease(render_pass);
     }
 
     WGPUCommandBufferDescriptor cmd_buff_descriptor = {};
@@ -223,8 +224,10 @@ void RaymarchingRenderer::render(WGPUTextureView swapchain_view, WGPUBindGroup b
     WGPUCommandBuffer commands = wgpuCommandEncoderFinish(command_encoder, &cmd_buff_descriptor);
 
     wgpuQueueSubmit(webgpu_context.device_queue, 1, &commands);
-    //webgpu_context.device_command_encoder.Release();
 
+    wgpuCommandBufferRelease(commands);
+    wgpuCommandEncoderRelease(command_encoder);
+    wgpuTextureViewRelease(swapchain_view);
 }
 
 void RaymarchingRenderer::compute_merge()
@@ -269,7 +272,12 @@ void RaymarchingRenderer::compute_merge()
     WGPUCommandBuffer commands = wgpuCommandEncoderFinish(command_encoder, &cmd_buff_descriptor);
     wgpuQueueSubmit(webgpu_context.device_queue, 1, &commands);
 
+    wgpuCommandBufferRelease(commands);
+    wgpuComputePassEncoderRelease(compute_pass);
+    wgpuCommandEncoderRelease(command_encoder);
+
     compute_merge_data.edits_to_process = 0;
+
 }
 
 void RaymarchingRenderer::compute_raymarching()
@@ -307,6 +315,10 @@ void RaymarchingRenderer::compute_raymarching()
     // Encode and submit the GPU commands
     WGPUCommandBuffer commands = wgpuCommandEncoderFinish(command_encoder, &cmd_buff_descriptor);
     wgpuQueueSubmit(webgpu_context.device_queue, 1, &commands);
+
+    wgpuCommandBufferRelease(commands);
+    wgpuComputePassEncoderRelease(compute_pass);
+    wgpuCommandEncoderRelease(command_encoder);
 }
 
 #if defined(XR_SUPPORT) && defined(USE_MIRROR_WINDOW)
