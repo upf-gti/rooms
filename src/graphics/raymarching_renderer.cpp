@@ -83,17 +83,17 @@ void RaymarchingRenderer::update(float delta_time)
 {
     compute_raymarching_data.time += delta_time;
 
-    if (Input::was_key_pressed(GLFW_KEY_A) || Input::was_button_pressed(XR_BUTTON_A)) {
+    if (Input::is_key_pressed(GLFW_KEY_A) || Input::was_button_pressed(XR_BUTTON_A)) {
 
         sEdit edit;
-        edit.operation = OP_SMOOTH_UNION;
+        edit.operation = random() < 0.5 ? OP_SMOOTH_UNION : OP_SMOOTH_SUBSTRACTION;
         edit.color = glm::vec3(random(), random(), random());
-        edit.position = glm::vec3(0.0, 0.0, 0.0); // glm::vec3(2 * (random() * 2 - 1), 2 * random(), 2 * random());
+        edit.position = glm::vec3(0.4 * (random() * 2 - 1), 0.4 * (random() * 2 - 1), 0.4 * (random() * 2 - 1));
         edit.primitive = SD_SPHERE;
         edit.size = glm::vec3(1.0, 1.0, 1.0);
-        edit.radius = 0.2;// random();
+        edit.radius = 0.05f;// random();
 
-        std::cout << edit << std::endl;
+        //std::cout << edit << std::endl;
 
         edits[compute_merge_data.edits_to_process++] = edit;
     }
@@ -121,7 +121,7 @@ void RaymarchingRenderer::render()
 
 void RaymarchingRenderer::render_screen()
 {
-    glm::vec3 eye = glm::vec3(0.0f, 0.0f, 1.0f);
+    glm::vec3 eye = glm::vec3(0.0f, 0.0f, 1.5f);
     glm::mat4x4 view = glm::lookAt(eye, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     glm::mat4x4 projection = glm::perspective(glm::radians(45.0f), 16.0f / 9.0f, 0.1f, 100.0f);
     projection[1][1] *= -1.0f;

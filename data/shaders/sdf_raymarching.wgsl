@@ -21,7 +21,7 @@ struct ComputeData {
 
 @group(1) @binding(0) var<uniform> compute_data : ComputeData;
 
-const MAX_DIST = 100.0;
+const MAX_DIST = 400.0;
 const MIN_HIT_DIST = 0.0001;
 const DERIVATIVE_STEP = 1.0 / 512.0;
 
@@ -69,7 +69,7 @@ fn blinnPhong(rayOrigin : vec3f, position : vec3f, lightPosition : vec3f, ambien
     // let reflection : vec3f = reflect(-toLight, normal); // uncomment for Phong model
     let halfwayDir : vec3f = normalize(toLight + toEye);
 
-    let ambientFactor : vec3f = ambient * ambientCoeff;
+    let ambientFactor : vec3f = ambient * ambientCoeff * diffuse;
     let diffuseFactor : vec3f = diffuse * max(0.0, dot(normal, toLight));
     // let specularFactor : vec3f = diffuse * pow(max(0.0, dot(toEye, reflection)), specularExponent)
     //                     * specularCoeff; // uncomment for Phong model
@@ -81,13 +81,13 @@ fn blinnPhong(rayOrigin : vec3f, position : vec3f, lightPosition : vec3f, ambien
 
 fn raymarch(rayOrigin : vec3f, rayDir : vec3f) -> vec3f
 {
-    let ambientColor = vec3f(0.2, 0.2, 0.2);
+    let ambientColor = vec3f(0.4, 0.4, 0.4);
 	let hitColor = vec3f(1.0, 1.0, 1.0);
 	let missColor = vec3f(0.0, 0.0, 0.0);
     let lightOffset = vec3f(0.0, 0.0, 0.0);
 
 	var depth = 0.0;
-	for (var i : i32 = 0; depth < MAX_DIST && i < 100; i++)
+	for (var i : i32 = 0; depth < MAX_DIST && i < 500; i++)
 	{
 		let pos = rayOrigin + rayDir * depth;
         let surface : Surface = sampleSdf(pos);
