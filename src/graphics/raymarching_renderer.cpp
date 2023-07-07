@@ -83,15 +83,34 @@ void RaymarchingRenderer::update(float delta_time)
 {
     compute_raymarching_data.time += delta_time;
 
-    if (Input::is_key_pressed(GLFW_KEY_A) || Input::was_button_pressed(XR_BUTTON_A)) {
+    if (Input::is_key_pressed(GLFW_KEY_A) || Input::get_trigger_value(HAND_RIGHT) > 0.5) {
 
         sEdit edit;
-        edit.operation = random() < 0.5 ? OP_SMOOTH_UNION : OP_SMOOTH_SUBSTRACTION;
+        edit.operation = OP_SMOOTH_UNION; // random() < 0.5 ? OP_SMOOTH_UNION : OP_SMOOTH_SUBSTRACTION;
         edit.color = glm::vec3(random(), random(), random());
-        edit.position = glm::vec3(0.4 * (random() * 2 - 1), 0.4 * (random() * 2 - 1), 0.4 * (random() * 2 - 1));
+        // edit.position = glm::vec3(0.4 * (random() * 2 - 1), 0.4 * (random() * 2 - 1), 0.4 * (random() * 2 - 1));
+        edit.position = Input::get_controller_position(HAND_RIGHT);
+        edit.position.y -= 1.f;
         edit.primitive = SD_SPHERE;
         edit.size = glm::vec3(1.0, 1.0, 1.0);
-        edit.radius = 0.05f;// random();
+        edit.radius = 0.02f;// random();
+
+        //std::cout << edit << std::endl;
+
+        edits[compute_merge_data.edits_to_process++] = edit;
+    }
+
+    if (Input::get_trigger_value(HAND_LEFT) > 0.5) {
+
+        sEdit edit;
+        edit.operation = OP_SMOOTH_SUBSTRACTION;
+        edit.color = glm::vec3(random(), random(), random());
+        // edit.position = glm::vec3(0.4 * (random() * 2 - 1), 0.4 * (random() * 2 - 1), 0.4 * (random() * 2 - 1));
+        edit.position = Input::get_controller_position(HAND_LEFT);
+        edit.position.y -= 1.f;
+        edit.primitive = SD_SPHERE;
+        edit.size = glm::vec3(1.0, 1.0, 1.0);
+        edit.radius = 0.02f;// random();
 
         //std::cout << edit << std::endl;
 

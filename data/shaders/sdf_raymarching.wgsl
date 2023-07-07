@@ -21,7 +21,7 @@ struct ComputeData {
 
 @group(1) @binding(0) var<uniform> compute_data : ComputeData;
 
-const MAX_DIST = 400.0;
+const MAX_DIST = 100.0;
 const MIN_HIT_DIST = 0.0001;
 const DERIVATIVE_STEP = 1.0 / 512.0;
 
@@ -36,12 +36,12 @@ const up = vec3f(0.0, 1.0, 0.0);
 
 fn sampleSdf(position : vec3f) -> Surface
 {
-    let p = position * 512.0 + vec3f(256.0);// - vec3f(0.0, 500.0, 0.0);
+    let p = position * 512.0 + vec3f(256.0) - vec3f(0.0, 512.0, 0.0);
 
     if (p.x < 0.0 || p.x > 511 ||
         p.y < 0.0 || p.y > 511 ||
         p.z < 0.0 || p.z > 511) {
-        return Surface(vec3(0.0, 0.0, 0.0), 0.01);
+        return Surface(vec3(0.0, 0.0, 0.0), 0.1);
     }
 
     let x : u32 = u32(round(p.x));
@@ -87,7 +87,7 @@ fn raymarch(rayOrigin : vec3f, rayDir : vec3f) -> vec3f
     let lightOffset = vec3f(0.0, 0.0, 0.0);
 
 	var depth = 0.0;
-	for (var i : i32 = 0; depth < MAX_DIST && i < 500; i++)
+	for (var i : i32 = 0; depth < MAX_DIST && i < 250; i++)
 	{
 		let pos = rayOrigin + rayDir * depth;
         let surface : Surface = sampleSdf(pos);
