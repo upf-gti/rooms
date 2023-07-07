@@ -134,7 +134,10 @@ void RaymarchingRenderer::render_screen()
     compute_merge();
     compute_raymarching();
 
-    render(wgpuSwapChainGetCurrentTextureView(webgpu_context.screen_swapchain), render_bind_group_left_eye);
+    WGPUTextureView swapchain_view = wgpuSwapChainGetCurrentTextureView(webgpu_context.screen_swapchain);
+    render(swapchain_view, render_bind_group_left_eye);
+    
+    wgpuTextureViewRelease(swapchain_view);
 
 #ifndef __EMSCRIPTEN__
     wgpuSwapChainPresent(webgpu_context.screen_swapchain);
@@ -227,7 +230,6 @@ void RaymarchingRenderer::render(WGPUTextureView swapchain_view, WGPUBindGroup b
 
     wgpuCommandBufferRelease(commands);
     wgpuCommandEncoderRelease(command_encoder);
-    wgpuTextureViewRelease(swapchain_view);
 }
 
 void RaymarchingRenderer::compute_merge()
