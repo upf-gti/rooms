@@ -67,11 +67,6 @@ void RaymarchingRenderer::clean()
     wgpuTextureDestroy(left_eye_texture);
     wgpuTextureDestroy(right_eye_texture);
 
-    // Mesh
-    quad_mesh.destroy();
-
-    wgpuBufferDestroy(quad_vertex_buffer);
-
 #if defined(XR_SUPPORT) && defined(USE_MIRROR_WINDOW)
     if (is_openxr_available) {
         wgpuRenderPipelineRelease(mirror_pipeline);
@@ -229,7 +224,7 @@ void RaymarchingRenderer::render(WGPUTextureView swapchain_view, WGPUBindGroup b
         wgpuRenderPassEncoderSetBindGroup(render_pass, 0, bind_group, 0, nullptr);
 
         // Set vertex buffer while encoding the render pass
-        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, quad_vertex_buffer, 0, quad_mesh.get_size() * sizeof(float));
+        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, quad_mesh.get_vertex_buffer(), 0, quad_mesh.get_byte_size());
 
         // Submit drawcall
         wgpuRenderPassEncoderDraw(render_pass, 6, 1, 0, 0);
@@ -379,7 +374,7 @@ void RaymarchingRenderer::render_mirror()
             wgpuRenderPassEncoderSetBindGroup(render_pass, 0, render_bind_group_left_eye, 0, nullptr);
 
             // Set vertex buffer while encoding the render pass
-            wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, quad_vertex_buffer, 0, quad_mesh.get_size() * sizeof(float));
+            wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, quad_mesh.get_vertex_buffer(), 0, quad_mesh.get_byte_size());
 
             // Submit drawcall
             wgpuRenderPassEncoderDraw(render_pass, 6, 1, 0, 0);
@@ -459,25 +454,9 @@ void RaymarchingRenderer::init_render_pipeline()
         render_bind_group_right_eye = webgpu_context.create_bind_group(uniforms, render_bind_group_layout);
     }
 
-    render_pipeline_layout = webgpu_context.create_pipeline_layout({ render_bind_group_layout });
-
-    // Vertex attributes
-    WGPUVertexAttribute vertex_attrib_position;
-    vertex_attrib_position.shaderLocation = 0;
-    vertex_attrib_position.format = WGPUVertexFormat_Float32x2;
-    vertex_attrib_position.offset = 0;
-
-    WGPUVertexAttribute vertex_attrib_uv;
-    vertex_attrib_uv.shaderLocation = 1;
-    vertex_attrib_uv.format = WGPUVertexFormat_Float32x2;
-    vertex_attrib_uv.offset = 2 * sizeof(float);
-
-    quad_vertex_attributes = { vertex_attrib_position, vertex_attrib_uv };
-    quad_vertex_layout = webgpu_context.create_vertex_buffer_layout(quad_vertex_attributes, 4 * sizeof(float), WGPUVertexStepMode_Vertex);
-
     quad_mesh.create_quad();
 
-    quad_vertex_buffer = webgpu_context.create_buffer(quad_mesh.get_size() * sizeof(float), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Vertex, quad_mesh.data());
+    render_pipeline_layout = webgpu_context.create_pipeline_layout({ render_bind_group_layout });
 
     WGPUTextureFormat swapchain_format = is_openxr_available ? webgpu_context.xr_swapchain_format : webgpu_context.swapchain_format;
 
@@ -498,7 +477,7 @@ void RaymarchingRenderer::init_render_pipeline()
     color_target.blend = &blend_state;
     color_target.writeMask = WGPUColorWriteMask_All;
 
-    render_pipeline = webgpu_context.create_render_pipeline({ quad_vertex_layout }, color_target, render_shader->get_module(), render_pipeline_layout);
+    render_pipeline = webgpu_context.create_render_pipeline({ quad_mesh.get_vertex_buffer_layout() }, color_target, render_shader->get_module(), render_pipeline_layout);
 }
 
 void RaymarchingRenderer::init_compute_raymarching_pipeline()
@@ -614,7 +593,7 @@ void RaymarchingRenderer::init_mirror_pipeline()
     color_target.blend = &blend_state;
     color_target.writeMask = WGPUColorWriteMask_All;
 
-    mirror_pipeline = webgpu_context.create_render_pipeline({ quad_vertex_layout }, color_target, mirror_shader->get_module(), render_pipeline_layout);
+    mirror_pipeline = webgpu_context.create_render_pipeline({ quad_mesh.get_vertex_buffer_layout() }, color_target, mirror_shader->get_module(), render_pipeline_layout);
 }
 
 #endif

@@ -74,9 +74,6 @@ class RaymarchingRenderer : public Renderer {
     sEdit                             edits[EDITS_MAX];
 
     Mesh                              quad_mesh;
-    WGPUVertexBufferLayout            quad_vertex_layout = {};
-    std::vector<WGPUVertexAttribute>  quad_vertex_attributes;
-    WGPUBuffer                        quad_vertex_buffer = nullptr;
 
     // For the XR mirror screen
 #if defined(XR_SUPPORT) && defined(USE_MIRROR_WINDOW)
