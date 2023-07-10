@@ -32,7 +32,12 @@ class RaymarchingRenderer : public Renderer {
     WGPUBindGroup           compute_merge_bind_group = nullptr;
 
     WGPUTexture             left_eye_texture = nullptr;
+    WGPUTexture             left_eye_depth_texture = nullptr;
     WGPUTexture             right_eye_texture = nullptr;
+    WGPUTexture             right_eye_depth_texture = nullptr;
+
+    WGPUTextureView         left_eye_depth_texture_view = nullptr;
+    WGPUTextureView         right_eye_depth_texture_view = nullptr;
 
     //WGPUTexture             sdf_texture = nullptr;
 
@@ -84,7 +89,7 @@ class RaymarchingRenderer : public Renderer {
     Shader* mirror_shader = nullptr;
 #endif
 
-    void render(WGPUTextureView swapchain_view, WGPUBindGroup bind_group);
+    void render(WGPUTextureView swapchain_view, WGPUTextureView swapchain_depth, WGPUBindGroup bind_group);
     void render_screen();
 
 #if defined(XR_SUPPORT)

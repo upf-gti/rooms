@@ -65,7 +65,13 @@ void RaymarchingRenderer::clean()
     wgpuBindGroupRelease(compute_raymarching_data_bind_group);
 
     wgpuTextureDestroy(left_eye_texture);
+    wgpuTextureDestroy(right_eye_depth_texture);
     wgpuTextureDestroy(right_eye_texture);
+    wgpuTextureDestroy(right_eye_depth_texture);
+
+    // Texture views
+    wgpuTextureViewRelease(left_eye_depth_texture_view);
+    wgpuTextureViewRelease(right_eye_depth_texture_view);
 
     // Mesh
     quad_mesh.destroy();
@@ -83,6 +89,7 @@ void RaymarchingRenderer::update(float delta_time)
 {
     compute_raymarching_data.time += delta_time;
 
+#ifdef XR_SUPPORT
     if (Input::is_key_pressed(GLFW_KEY_A) || Input::get_trigger_value(HAND_RIGHT) > 0.5) {
 
         sEdit edit;
@@ -116,6 +123,23 @@ void RaymarchingRenderer::update(float delta_time)
 
         edits[compute_merge_data.edits_to_process++] = edit;
     }
+#else
+    if (Input::is_key_pressed(GLFW_KEY_A)) {
+
+        sEdit edit;
+        edit.operation = OP_SMOOTH_UNION; // random() < 0.5 ? OP_SMOOTH_UNION : OP_SMOOTH_SUBSTRACTION;
+        edit.color = glm::vec3(random(), random(), random());
+        edit.position = glm::vec3(0.4 * (random() * 2 - 1), 0.4 * (random() * 2 - 1), 0.4 * (random() * 2 - 1));
+        //edit.position.z += 0.20f;
+        edit.primitive = SD_SPHERE;
+        edit.size = glm::vec3(1.0, 1.0, 1.0);
+        edit.radius = 0.02f;// random();
+
+        //std::cout << edit << std::endl;
+
+        edits[compute_merge_data.edits_to_process++] = edit;
+    }
+#endif
 }
 
 void RaymarchingRenderer::render()
@@ -140,7 +164,7 @@ void RaymarchingRenderer::render()
 
 void RaymarchingRenderer::render_screen()
 {
-    glm::vec3 eye = glm::vec3(0.0f, 0.0f, 1.5f);
+    glm::vec3 eye = glm::vec3(0.0f, 2.0f, 1.5f);
     glm::mat4x4 view = glm::lookAt(eye, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     glm::mat4x4 projection = glm::perspective(glm::radians(45.0f), 16.0f / 9.0f, 0.1f, 100.0f);
     projection[1][1] *= -1.0f;
@@ -154,7 +178,7 @@ void RaymarchingRenderer::render_screen()
     compute_raymarching();
 
     WGPUTextureView swapchain_view = wgpuSwapChainGetCurrentTextureView(webgpu_context.screen_swapchain);
-    render(swapchain_view, render_bind_group_left_eye);
+    render(swapchain_view, left_eye_depth_texture_view, render_bind_group_left_eye);
     
     wgpuTextureViewRelease(swapchain_view);
 
@@ -187,8 +211,9 @@ void RaymarchingRenderer::render_xr()
             const sSwapchainData& swapchainData = xr_context.swapchains[i];
 
             WGPUBindGroup bind_group = i == 0 ? render_bind_group_left_eye : render_bind_group_right_eye;
+            WGPUTextureView depth_texture_view = (i == 0) ? left_eye_depth_texture_view : right_eye_depth_texture_view;
 
-            render(swapchainData.images[swapchainData.image_index].textureView, bind_group);
+            render(swapchainData.images[swapchainData.image_index].textureView, depth_texture_view, bind_group);
 
             xr_context.release_swapchain(i);
         }
@@ -201,7 +226,7 @@ void RaymarchingRenderer::render_xr()
 }
 #endif
 
-void RaymarchingRenderer::render(WGPUTextureView swapchain_view, WGPUBindGroup bind_group)
+void RaymarchingRenderer::render(WGPUTextureView swapchain_view, WGPUTextureView swapchain_depth, WGPUBindGroup bind_group)
 {
     // Create the command encoder
     WGPUCommandEncoderDescriptor encoder_desc = {};
@@ -214,9 +239,22 @@ void RaymarchingRenderer::render(WGPUTextureView swapchain_view, WGPUBindGroup b
     render_pass_color_attachment.storeOp = WGPUStoreOp_Store;
     render_pass_color_attachment.clearValue = WGPUColor(0.0f, 0.0f, 0.0f, 1.0f);
 
+    // Prepate the depth attachment
+    WGPURenderPassDepthStencilAttachment render_pass_depth_attachment = {};
+    render_pass_depth_attachment.view = swapchain_depth;
+    render_pass_depth_attachment.depthClearValue = 1.0f;
+    render_pass_depth_attachment.depthLoadOp = WGPULoadOp_Clear;
+    render_pass_depth_attachment.depthStoreOp = WGPUStoreOp_Store;
+    render_pass_depth_attachment.depthReadOnly = false;
+    render_pass_depth_attachment.stencilClearValue = 0; // Stencil config necesary, even if unused
+    render_pass_depth_attachment.stencilLoadOp = WGPULoadOp_Undefined;
+    render_pass_depth_attachment.stencilStoreOp = WGPUStoreOp_Undefined;
+    render_pass_depth_attachment.stencilReadOnly = true;
+
     WGPURenderPassDescriptor render_pass_descr = {};
     render_pass_descr.colorAttachmentCount = 1;
     render_pass_descr.colorAttachments = &render_pass_color_attachment;
+    render_pass_descr.depthStencilAttachment = &render_pass_depth_attachment;
 
     {
         // Create & fill the render pass (encoder)
@@ -288,6 +326,8 @@ void RaymarchingRenderer::compute_merge()
     wgpuComputePassEncoderEnd(compute_pass);
 
     WGPUCommandBufferDescriptor cmd_buff_descriptor = {};
+    cmd_buff_descriptor.nextInChain = NULL;
+    cmd_buff_descriptor.label = "Merge Command buffer";
 
     // Encode and submit the GPU commands
     WGPUCommandBuffer commands = wgpuCommandEncoderFinish(command_encoder, &cmd_buff_descriptor);
@@ -332,6 +372,8 @@ void RaymarchingRenderer::compute_raymarching()
     wgpuComputePassEncoderEnd(compute_pass);
 
     WGPUCommandBufferDescriptor cmd_buff_descriptor = {};
+    cmd_buff_descriptor.nextInChain = NULL;
+    cmd_buff_descriptor.label = "Raymarch Command buffer";
 
     // Encode and submit the GPU commands
     WGPUCommandBuffer commands = wgpuCommandEncoderFinish(command_encoder, &cmd_buff_descriptor);
@@ -425,6 +467,13 @@ void RaymarchingRenderer::init_render_pipeline()
         WGPUTextureUsage_TextureBinding | WGPUTextureUsage_StorageBinding,
         1);
 
+    left_eye_depth_texture = webgpu_context.create_texture(
+        WGPUTextureDimension_2D,
+        WGPUTextureFormat_Depth16Unorm,
+        { render_width, render_height, 1 },
+        WGPUTextureUsage_RenderAttachment,
+        1);
+
     right_eye_texture = webgpu_context.create_texture(
         WGPUTextureDimension_2D,
         WGPUTextureFormat_RGBA8Unorm,
@@ -432,6 +481,27 @@ void RaymarchingRenderer::init_render_pipeline()
         WGPUTextureUsage_TextureBinding | WGPUTextureUsage_StorageBinding,
         1);
 
+    right_eye_depth_texture = webgpu_context.create_texture(
+        WGPUTextureDimension_2D,
+        WGPUTextureFormat_Depth16Unorm,
+        { render_width, render_height, 1 },
+        WGPUTextureUsage_RenderAttachment,
+        1);
+
+    // Generate Texture views of depth buffers
+    left_eye_depth_texture_view = webgpu_context.create_texture_view(
+        left_eye_depth_texture, 
+        WGPUTextureViewDimension_2D,
+        WGPUTextureFormat_Depth16Unorm, 
+        WGPUTextureAspect_DepthOnly);
+
+    right_eye_depth_texture_view = webgpu_context.create_texture_view(
+        right_eye_depth_texture,
+        WGPUTextureViewDimension_2D,
+        WGPUTextureFormat_Depth16Unorm,
+        WGPUTextureAspect_DepthOnly);
+
+    // Generate bindgroups
     u_render_texture_left_eye.data = webgpu_context.create_texture_view(left_eye_texture, WGPUTextureViewDimension_2D, WGPUTextureFormat_RGBA8Unorm);
     u_render_texture_left_eye.binding = 0;
     u_render_texture_left_eye.visibility = WGPUShaderStage_Fragment;

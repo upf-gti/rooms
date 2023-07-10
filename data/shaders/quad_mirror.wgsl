@@ -16,13 +16,23 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     return out;
 }
 
-@group(0) @binding(0) var leftEyeTexture: texture_2d<f32>;
+@group(0) @binding(0) var left_eye_texture: texture_2d<f32>;
+
+struct FragmentOutput {
+    @location(0) color: vec4f,
+    @builtin(frag_depth) depth: f32,
+}
 
 @fragment
-fn fs_main(in: VertexOutput) -> @location(0) vec4f {
-    var texture_size = textureDimensions(leftEyeTexture);
+fn fs_main(in: VertexOutput) -> FragmentOutput {
+    var texture_size = textureDimensions(left_eye_texture);
     var uv_flip = in.uv;
     uv_flip.y = 1.0 - uv_flip.y;
-    let color = textureLoad(leftEyeTexture, vec2u(uv_flip * vec2f(texture_size)) , 0);
-    return color;
+    let ray_result = textureLoad(left_eye_texture, vec2u(uv_flip * vec2f(texture_size)), 0);
+
+    var out: FragmentOutput;
+    out.color = vec4f(pow(ray_result.rgb, vec3f(2.2, 2.2, 2.2)), 1.0); // Color
+    out.depth = ray_result.a; // Depth
+
+    return out;
 }

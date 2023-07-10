@@ -79,7 +79,7 @@ fn blinnPhong(rayOrigin : vec3f, position : vec3f, lightPosition : vec3f, ambien
     return ambientFactor + diffuseFactor + specularFactor;
 }
 
-fn raymarch(rayOrigin : vec3f, rayDir : vec3f) -> vec3f
+fn raymarch(rayOrigin : vec3f, rayDir : vec3f) -> vec4f
 {
     let ambientColor = vec3f(0.4, 0.4, 0.4);
 	let hitColor = vec3f(1.0, 1.0, 1.0);
@@ -92,11 +92,11 @@ fn raymarch(rayOrigin : vec3f, rayDir : vec3f) -> vec3f
 		let pos = rayOrigin + rayDir * depth;
         let surface : Surface = sampleSdf(pos);
 		if (surface.distance < MIN_HIT_DIST) {
-			return blinnPhong(rayOrigin, pos, lightPos + lightOffset, ambientColor, surface.color);
+			return vec4f(blinnPhong(rayOrigin, pos, lightPos + lightOffset, ambientColor, surface.color), depth);
 		}
 		depth += surface.distance;
 	}
-    return missColor;
+    return vec4f(missColor.rgb, 0.0);
 }
 
 fn getRayDirection(inv_view_projection : mat4x4f, uv : vec2f) -> vec3f
@@ -119,6 +119,10 @@ fn compute(@builtin(global_invocation_id) id: vec3<u32>) {
     let ray_dir_left = getRayDirection(compute_data.inv_view_projection_left_eye, uv);
     let ray_dir_right = getRayDirection(compute_data.inv_view_projection_right_eye, uv);
 
-    textureStore(left_eye_texture, id.xy, vec4f(raymarch(compute_data.left_eye_pos, ray_dir_left), 1.0));
-    textureStore(right_eye_texture, id.xy, vec4f(raymarch(compute_data.right_eye_pos, ray_dir_right), 1.0));
+    let left_eye_raymarch_result = raymarch(compute_data.left_eye_pos, ray_dir_left);
+    let right_eye_raymarch_result = raymarch(compute_data.right_eye_pos, ray_dir_right);
+
+    textureStore(left_eye_texture, id.xy, vec4f(left_eye_raymarch_result.rgb, left_eye_raymarch_result.a / MAX_DIST));
+
+    textureStore(right_eye_texture, id.xy, vec4f(right_eye_raymarch_result.rgb, right_eye_raymarch_result.a / MAX_DIST));
 }
