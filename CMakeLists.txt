@@ -1,8 +1,9 @@
 
 cmake_minimum_required(VERSION 3.13)
 
-set(ROOMS_DIR_ROOT        ${CMAKE_CURRENT_LIST_DIR})
+set(ROOMS_DIR_ROOT        ${CMAKE_CURRENT_SOURCE_DIR})
 set(ROOMS_DIR_SOURCES     "${ROOMS_DIR_ROOT}/src")
+set(ROOMS_DIR_LIBS        "${ROOMS_DIR_ROOT}/libraries")
 
 project(rooms LANGUAGES C CXX)
 
