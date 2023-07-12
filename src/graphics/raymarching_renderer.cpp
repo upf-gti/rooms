@@ -5,6 +5,9 @@
 #endif
 
 #include "framework/input.h"
+#include "ui/ui.h"
+
+ui::Controller ui_controller;
 
 std::ostream& operator<<(std::ostream& os, const sEdit& edit)
 {
@@ -19,6 +22,7 @@ std::ostream& operator<<(std::ostream& os, const sEdit& edit)
 
 RaymarchingRenderer::RaymarchingRenderer() : Renderer()
 {
+    ui_controller.set_workspace({ 256, 128 });
 }
 
 int RaymarchingRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
@@ -155,6 +159,9 @@ void RaymarchingRenderer::render()
 
     // Check validation errors
     webgpu_context.printErrors();
+
+    // Render UI
+    ui_controller.render();
 }
 
 void RaymarchingRenderer::render_screen()
