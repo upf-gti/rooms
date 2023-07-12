@@ -31,7 +31,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     let ray_result = textureLoad(render_texture, vec2u(uv_flip * vec2f(texture_size)), 0);
 
     var out: FragmentOutput;
-    out.color = vec4f(pow(ray_result.rgb, vec3f(2.2, 2.2, 2.2)), 0.0); // Color
+    out.color = vec4f(pow(ray_result.rgb, vec3f(2.2, 2.2, 2.2)), 1.0); // Color
     out.depth = ray_result.a; // Depth
 
     return out;
