@@ -547,7 +547,7 @@ void RaymarchingRenderer::init_render_pipeline()
     color_target.blend = &blend_state;
     color_target.writeMask = WGPUColorWriteMask_All;
 
-    render_pipeline = webgpu_context.create_render_pipeline({ quad_mesh.get_vertex_buffer_layout() }, color_target, render_shader->get_module(), render_pipeline_layout);
+    render_pipeline = webgpu_context.create_render_pipeline({ quad_mesh.get_vertex_buffer_layout() }, color_target, render_shader->get_module(), render_pipeline_layout, true);
 }
 
 void RaymarchingRenderer::init_compute_raymarching_pipeline()
