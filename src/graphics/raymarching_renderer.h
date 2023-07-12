@@ -22,6 +22,10 @@ class RaymarchingRenderer : public Renderer {
     Uniform                 u_render_texture_right_eye;
 
     // Compute
+    Pipeline                initialize_sdf_pipeline;
+    Shader*                 initialize_sdf_shader = nullptr;
+    WGPUBindGroup           initialize_sdf_bind_group = nullptr;
+
     Pipeline                compute_raymarching_pipeline;
     Shader*                 compute_raymarching_shader = nullptr;
     WGPUBindGroup           compute_raymarching_textures_bind_group = nullptr;
@@ -93,11 +97,13 @@ class RaymarchingRenderer : public Renderer {
     void render_xr();
 #endif
 
+    void compute_initialize_sdf();
     void compute_merge();
     void compute_raymarching();
 
     void init_render_pipeline();
     void init_compute_raymarching_pipeline();
+    void init_initialize_sdf_pipeline();
     void init_compute_merge_pipeline();
 
 #if defined(XR_SUPPORT) && defined(USE_MIRROR_WINDOW)
