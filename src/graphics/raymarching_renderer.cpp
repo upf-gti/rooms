@@ -120,7 +120,7 @@ void RaymarchingRenderer::update(float delta_time)
 
         //std::cout << edit << std::endl;
 
-        edits[compute_merge_data.edits_to_process++] = edit;
+        push_edit(edit);
     }
 #else
     if (Input::is_key_pressed(GLFW_KEY_A)) {
@@ -136,7 +136,7 @@ void RaymarchingRenderer::update(float delta_time)
 
         //std::cout << edit << std::endl;
 
-        edits[compute_merge_data.edits_to_process++] = edit;
+        push_edit(edit);
     }
 #endif
 }
@@ -161,7 +161,7 @@ void RaymarchingRenderer::render()
     webgpu_context.printErrors();
 
     // Render UI
-    ui_controller.render();
+    ui_controller.render( this );
 }
 
 void RaymarchingRenderer::render_screen()

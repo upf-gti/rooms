@@ -115,4 +115,11 @@ public:
     virtual void update(float delta_time) override;
     virtual void render() override;
 
+    /*
+    *   Edits
+    */
+
+    void push_edit(sEdit edit) {
+        edits[compute_merge_data.edits_to_process++] = edit;
+    };
 };
