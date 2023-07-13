@@ -96,7 +96,7 @@ fn raymarch(rayOrigin : vec3f, rayDir : vec3f) -> vec4f
 		}
 		depth += surface.distance;
 	}
-    return vec4f(missColor.rgb, 0.0);
+    return vec4f(missColor.rgb, MAX_DIST);
 }
 
 fn getRayDirection(inv_view_projection : mat4x4f, uv : vec2f) -> vec3f

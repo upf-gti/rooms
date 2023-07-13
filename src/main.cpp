@@ -1,4 +1,4 @@
-#include "engine.h"
+#include "engine/rooms_engine.h"
 #include "graphics/raymarching_renderer.h"
 
 #include <GLFW/glfw3.h>
@@ -34,8 +34,8 @@ void pollEvents(bool use_glfw) {
 
 int main() {
 
-    Engine engine;
-    RaymarchingRenderer raymarching_renderer;
+    RoomsEngine* engine = new RoomsEngine();
+    RaymarchingRenderer* raymarching_renderer = new RaymarchingRenderer();
     GLFWwindow* window = nullptr;
 
 #ifdef __EMSCRIPTEN__
@@ -46,8 +46,8 @@ int main() {
     int render_height = 720;
 #endif
 
-    const bool use_xr = raymarching_renderer.get_openxr_available();
-    const bool use_mirror_screen = engine.get_use_mirror_window();
+    const bool use_xr = raymarching_renderer->get_openxr_available();
+    const bool use_mirror_screen = engine->get_use_mirror_window();
 
     // Only init glfw if no xr or using mirror
     const bool use_glfw = !use_xr || (use_xr && use_mirror_screen);
@@ -61,7 +61,7 @@ int main() {
         window = glfwCreateWindow(render_width, render_height, "WebGPU Engine", NULL, NULL);
     }
 
-    if (engine.initialize(&raymarching_renderer, window, use_mirror_screen)) {
+    if (engine->initialize(raymarching_renderer, window, use_mirror_screen)) {
         std::cout << "Could not initialize engine" << std::endl;
         closeWindow(window);
         return 1;
@@ -76,8 +76,8 @@ int main() {
     while (!shouldClose(use_glfw, window)) {
         pollEvents(use_glfw);
 
-        engine.update(delta_time);
-        engine.render();
+        engine->update(delta_time);
+        engine->render();
 
         double last_time = now;
         now = glfwGetTime();
@@ -89,9 +89,12 @@ int main() {
 #endif
     }
     
-    engine.clean();
+    engine->clean();
 
     closeWindow(window);
+
+    delete engine;
+    delete raymarching_renderer;
 
     return 0;
 }

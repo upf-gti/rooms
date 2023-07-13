@@ -11,9 +11,9 @@
 class RaymarchingRenderer : public Renderer {
 
     // Render to screen
-    WGPURenderPipeline      render_pipeline = nullptr;
-    WGPUPipelineLayout      render_pipeline_layout = nullptr;
-    Shader*                 render_shader = nullptr;
+    WGPURenderPipeline      render_quad_pipeline = nullptr;
+    WGPUPipelineLayout      render_quad_pipeline_layout = nullptr;
+    Shader*                 render_quad_shader = nullptr;
 
     WGPUBindGroup           render_bind_group_left_eye = nullptr;
     WGPUBindGroup           render_bind_group_right_eye = nullptr;
@@ -38,6 +38,14 @@ class RaymarchingRenderer : public Renderer {
 
     WGPUTextureView         left_eye_depth_texture_view = nullptr;
     WGPUTextureView         right_eye_depth_texture_view = nullptr;
+
+    // Render meshes
+    WGPURenderPipeline      render_mesh_pipeline = nullptr;
+    WGPUPipelineLayout      render_mesh_pipeline_layout = nullptr;
+    WGPUBindGroup           render_bind_group_camera = nullptr;
+    Shader*                 render_mesh_shader = nullptr;
+
+    Uniform                 u_camera;
 
     //WGPUTexture             sdf_texture = nullptr;
 
@@ -65,16 +73,17 @@ class RaymarchingRenderer : public Renderer {
         float dummy0 = 0.0f;
         float dummy1 = 0.0f;
         float dummy2 = 0.0f;
-    };
+    } compute_raymarching_data;
 
     // Data needed for sdf merging
     struct sMergeData {
-        glm::uvec3 sdf_size;
+        glm::uvec3 sdf_size = {};
         uint32_t edits_to_process = 0;
-    };
+    } compute_merge_data;
 
-    sComputeData                      compute_raymarching_data;
-    sMergeData                        compute_merge_data;
+    struct sCameraData {
+        glm::mat4x4 view_projection;
+    } camera_data;
 
     sEdit                             edits[EDITS_MAX];
 
@@ -86,8 +95,11 @@ class RaymarchingRenderer : public Renderer {
     Shader* mirror_shader = nullptr;
 #endif
 
-    void render(WGPUTextureView swapchain_view, WGPUTextureView swapchain_depth, WGPUBindGroup bind_group);
+
+    void render_eye_quad(WGPUTextureView swapchain_view, WGPUTextureView swapchain_depth, WGPUBindGroup bind_group);
     void render_screen();
+
+    void render_meshes(WGPUTextureView swapchain_view, WGPUTextureView swapchain_depth);
 
 #if defined(XR_SUPPORT)
     void render_xr();
@@ -96,7 +108,8 @@ class RaymarchingRenderer : public Renderer {
     void compute_merge();
     void compute_raymarching();
 
-    void init_render_pipeline();
+    void init_render_quad_pipeline();
+    void init_render_mesh_pipeline();
     void init_compute_raymarching_pipeline();
     void init_compute_merge_pipeline();
 
