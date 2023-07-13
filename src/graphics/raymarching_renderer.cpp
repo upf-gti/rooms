@@ -153,6 +153,7 @@ void RaymarchingRenderer::render()
         }
     }
 #endif
+    render_list.clear();
 
     // Check validation errors
     webgpu_context.printErrors();
@@ -262,8 +263,6 @@ void RaymarchingRenderer::render_meshes(WGPUTextureView swapchain_view, WGPUText
 
     wgpuCommandBufferRelease(commands);
     wgpuCommandEncoderRelease(command_encoder);
-
-    render_list.clear();
 }
 
 #if defined(XR_SUPPORT)
@@ -539,12 +538,7 @@ void RaymarchingRenderer::render_mirror()
 
 void RaymarchingRenderer::init_render_quad_pipeline()
 {
-    if (is_openxr_available) {
-        render_quad_shader = Shader::get("data/shaders/quad_eye.wgsl");
-    }
-    else {
-        render_quad_shader = Shader::get("data/shaders/quad_mirror.wgsl");
-    }
+    render_quad_shader = Shader::get("data/shaders/quad_eye.wgsl");
 
     left_eye_texture = webgpu_context.create_texture(
         WGPUTextureDimension_2D,
@@ -794,7 +788,7 @@ void RaymarchingRenderer::init_mirror_pipeline()
     color_target.blend = &blend_state;
     color_target.writeMask = WGPUColorWriteMask_All;
 
-    mirror_pipeline = webgpu_context.create_render_pipeline({ quad_mesh.get_vertex_buffer_layout() }, color_target, mirror_shader->get_module(), render_pipeline_layout);
+    mirror_pipeline = webgpu_context.create_render_pipeline({ Mesh::get_vertex_buffer_layout(VB_DEFAULT)}, color_target, mirror_shader->get_module(), render_quad_pipeline_layout);
 }
 
 #endif

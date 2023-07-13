@@ -19,8 +19,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 @group(0) @binding(0) var left_eye_texture: texture_2d<f32>;
 
 struct FragmentOutput {
-    @location(0) color: vec4f,
-    @builtin(frag_depth) depth: f32,
+    @location(0) color: vec4f
 }
 
 @fragment
@@ -32,7 +31,8 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     var out: FragmentOutput;
     out.color = vec4f(pow(ray_result.rgb, vec3f(2.2, 2.2, 2.2)), 1.0); // Color
-    out.depth = ray_result.a; // Depth
+    //out.depth = ray_result.a; // Depth
+    //out.depth = ray_result.a; // Depth
 
     return out;
 }
