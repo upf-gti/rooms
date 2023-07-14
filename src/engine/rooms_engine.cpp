@@ -8,10 +8,18 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_mir
 
 	if (error) return error;
 
-	EntityMesh* entity = new EntityMesh();
-	entity->get_mesh()->load_mesh("data/meshes/torus.obj");
+	EntityMesh* torus = new EntityMesh();
+	torus->get_mesh()->load_mesh("data/meshes/torus.obj");
+	torus->scale(glm::vec3(0.25));
+	torus->translate(glm::vec3(-1.0, 0.0, 0.0));
 
-	entities.push_back(entity);
+	EntityMesh* cube = new EntityMesh();
+	cube->get_mesh()->load_mesh("data/meshes/cube.obj");
+	cube->scale(glm::vec3(0.25));
+	cube->translate(glm::vec3(1.0, 0.0, 0.0));
+
+	entities.push_back(torus);
+	entities.push_back(cube);
 
 	return error;
 }
@@ -19,6 +27,9 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_mir
 void RoomsEngine::update(float delta_time)
 {
 	Engine::update(delta_time);
+
+	entities[0]->rotate(1.6f * delta_time, glm::vec3(1.0, 0.0, 0.0));
+	entities[1]->rotate(1.6f * delta_time, glm::vec3(0.0, 0.0, 1.0));
 }
 
 void RoomsEngine::render()
