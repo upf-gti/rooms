@@ -10,9 +10,9 @@ struct ComputeData {
     render_width    : f32,
 
     time            : f32,
+    camera_near     : f32,
+    camera_far      : f32,
     dummy0          : f32,
-    dummy1          : f32,
-    dummy2          : f32,
 };
 
 @group(0) @binding(0) var left_eye_texture: texture_storage_2d<rgba8unorm,write>;
@@ -86,7 +86,7 @@ fn raymarch(rayOrigin : vec3f, rayDir : vec3f) -> vec4f
 	let missColor = vec3f(0.0, 0.0, 0.0);
     let lightOffset = vec3f(0.0, 0.0, 0.0);
 
-	var depth = 0.0;
+	var depth : f32 = 0.0;
 	for (var i : i32 = 0; depth < MAX_DIST && i < 250; i++)
 	{
 		let pos = rayOrigin + rayDir * depth;
@@ -110,6 +110,10 @@ fn getRayDirection(inv_view_projection : mat4x4f, uv : vec2f) -> vec3f
 	return normalize(rayDir.xyz);
 }
 
+fn map_depths_to_log(depth: f32) -> f32 {
+    return log(depth + 1.0) / log(compute_data.camera_far + 1.0);
+}
+
 @compute @workgroup_size(16, 16, 1)
 fn compute(@builtin(global_invocation_id) id: vec3<u32>) {
 
@@ -122,7 +126,7 @@ fn compute(@builtin(global_invocation_id) id: vec3<u32>) {
     let left_eye_raymarch_result = raymarch(compute_data.left_eye_pos, ray_dir_left);
     let right_eye_raymarch_result = raymarch(compute_data.right_eye_pos, ray_dir_right);
 
-    textureStore(left_eye_texture, id.xy, vec4f(left_eye_raymarch_result.rgb, left_eye_raymarch_result.a / MAX_DIST));
+    textureStore(left_eye_texture, id.xy, vec4f(left_eye_raymarch_result.rgb, map_depths_to_log(left_eye_raymarch_result.a / MAX_DIST)));
 
-    textureStore(right_eye_texture, id.xy, vec4f(right_eye_raymarch_result.rgb, right_eye_raymarch_result.a / MAX_DIST));
+    textureStore(right_eye_texture, id.xy, vec4f(right_eye_raymarch_result.rgb, map_depths_to_log(right_eye_raymarch_result.a / MAX_DIST)));
 }

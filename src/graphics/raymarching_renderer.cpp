@@ -284,6 +284,11 @@ void RaymarchingRenderer::render_xr()
         compute_raymarching_data.left_eye_pos = xr_context.per_view_data[0].position;
         compute_raymarching_data.right_eye_pos = xr_context.per_view_data[1].position;
 
+        const float* proj_verts = glm::value_ptr(xr_context.per_view_data[0].projection_matrix);
+
+        compute_raymarching_data.camera_far = proj_verts[14] / (proj_verts[10] - 1.0);
+        compute_raymarching_data.camera_near = proj_verts[14] / (proj_verts[10] + 1.0);
+
         compute_merge();
         compute_raymarching();
 

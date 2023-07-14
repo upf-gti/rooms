@@ -70,9 +70,9 @@ class RaymarchingRenderer : public Renderer {
         float render_width = 0.0f;
 
         float time = 0.0f;
+        float camera_near = 0.0f;
+        float camera_far = 0.0f;
         float dummy0 = 0.0f;
-        float dummy1 = 0.0f;
-        float dummy2 = 0.0f;
     } compute_raymarching_data;
 
     // Data needed for sdf merging
