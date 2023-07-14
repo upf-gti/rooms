@@ -33,6 +33,7 @@ int RaymarchingRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
     init_render_mesh_pipeline();
     init_compute_raymarching_pipeline();
     init_compute_merge_pipeline();
+    init_initialize_sdf_pipeline();
 
 #ifdef XR_SUPPORT
     if (is_openxr_available && use_mirror_screen) {
@@ -44,6 +45,8 @@ int RaymarchingRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
     compute_raymarching_data.render_height = static_cast<float>(render_height);
 
     compute_merge_data.sdf_size = glm::uvec3(SDF_RESOLUTION);
+
+    compute_initialize_sdf();
 
     return 0;
 }
@@ -68,6 +71,7 @@ void RaymarchingRenderer::clean()
     // Compute pipeline
     wgpuBindGroupRelease(compute_raymarching_textures_bind_group);
     wgpuBindGroupRelease(compute_raymarching_data_bind_group);
+    wgpuBindGroupRelease(initialize_sdf_bind_group);
 
     wgpuTextureDestroy(left_eye_texture);
     wgpuTextureDestroy(right_eye_depth_texture);
@@ -291,6 +295,11 @@ void RaymarchingRenderer::render_xr()
         compute_raymarching_data.left_eye_pos = xr_context.per_view_data[0].position;
         compute_raymarching_data.right_eye_pos = xr_context.per_view_data[1].position;
 
+        const float* proj_verts = glm::value_ptr(xr_context.per_view_data[0].projection_matrix);
+
+        compute_raymarching_data.camera_far = proj_verts[14] / (proj_verts[10] - 1.0);
+        compute_raymarching_data.camera_near = proj_verts[14] / (proj_verts[10] + 1.0);
+
         compute_merge();
         compute_raymarching();
 
@@ -383,6 +392,45 @@ void RaymarchingRenderer::render_eye_quad(WGPUTextureView swapchain_view, WGPUTe
     wgpuQueueSubmit(webgpu_context.device_queue, 1, &commands);
 
     wgpuCommandBufferRelease(commands);
+    wgpuCommandEncoderRelease(command_encoder);
+}
+
+void RaymarchingRenderer::compute_initialize_sdf() {
+    // Initialize a command encoder
+    WGPUCommandEncoderDescriptor encoder_desc = {};
+    WGPUCommandEncoder command_encoder = wgpuDeviceCreateCommandEncoder(webgpu_context.device, &encoder_desc);
+
+    // Create compute_raymarching pass
+    WGPUComputePassDescriptor compute_pass_desc = {};
+    compute_pass_desc.timestampWriteCount = 0;
+    compute_pass_desc.timestampWrites = nullptr;
+    WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
+
+    // Use compute_raymarching pass
+    initialize_sdf_pipeline.set(compute_pass);
+
+    wgpuComputePassEncoderSetBindGroup(compute_pass, 0, initialize_sdf_bind_group, 0, nullptr);
+
+    uint32_t workgroupSize = 8;
+    // This ceils invocationCount / workgroupSize
+    uint32_t workgroupWidth = (SDF_RESOLUTION + workgroupSize - 1) / workgroupSize;
+    uint32_t workgroupHeight = (SDF_RESOLUTION + workgroupSize - 1) / workgroupSize;
+    uint32_t workgroupDepth = (SDF_RESOLUTION + workgroupSize - 1) / workgroupSize;
+    wgpuComputePassEncoderDispatchWorkgroups(compute_pass, workgroupWidth, workgroupHeight, workgroupDepth);
+
+    // Finalize compute_raymarching pass
+    wgpuComputePassEncoderEnd(compute_pass);
+
+    WGPUCommandBufferDescriptor cmd_buff_descriptor = {};
+    cmd_buff_descriptor.nextInChain = NULL;
+    cmd_buff_descriptor.label = "Initialize SDF Command buffer";
+
+    // Encode and submit the GPU commands
+    WGPUCommandBuffer commands = wgpuCommandEncoderFinish(command_encoder, &cmd_buff_descriptor);
+    wgpuQueueSubmit(webgpu_context.device_queue, 1, &commands);
+
+    wgpuCommandBufferRelease(commands);
+    wgpuComputePassEncoderRelease(compute_pass);
     wgpuCommandEncoderRelease(command_encoder);
 }
 
@@ -713,9 +761,9 @@ void RaymarchingRenderer::init_compute_raymarching_pipeline()
 
         // RGB for color, A for distance
         
-        std::vector<glm::vec4> sdf_data = { SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION, glm::vec4(0.0, 0.0, 0.0, 1000.0) };
+        //std::vector<glm::vec4> sdf_data = { SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION, glm::vec4(0.0, 0.0, 0.0, 1000.0) };
 
-        u_compute_texture_sdf_storage.data = webgpu_context.create_buffer(SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION * sizeof(float) * 4, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, sdf_data.data());
+        u_compute_texture_sdf_storage.data = webgpu_context.create_buffer(SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION * sizeof(float) * 4, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr);
         u_compute_texture_sdf_storage.binding = 2;
         u_compute_texture_sdf_storage.visibility = WGPUShaderStage_Compute;
         u_compute_texture_sdf_storage.buffer_binding_type = WGPUBufferBindingType_Storage;
@@ -744,6 +792,18 @@ void RaymarchingRenderer::init_compute_raymarching_pipeline()
     WGPUPipelineLayout compute_raymarching_pipeline_layout = webgpu_context.create_pipeline_layout({ compute_textures_bind_group_layout, compute_data_bind_group_layout });
 
     compute_raymarching_pipeline.create_compute(compute_raymarching_shader, compute_raymarching_pipeline_layout);
+}
+
+void RaymarchingRenderer::init_initialize_sdf_pipeline() {
+    initialize_sdf_shader = Shader::get("data/shaders/sdf_initialization.wgsl");
+
+    std::vector<Uniform*> uniforms = { &u_compute_texture_sdf_storage };
+    WGPUBindGroupLayout initilze_sdf_bind_group_layout = webgpu_context.create_bind_group_layout(uniforms);
+    initialize_sdf_bind_group = webgpu_context.create_bind_group(uniforms, initilze_sdf_bind_group_layout);
+    
+    WGPUPipelineLayout initialize_sdf_pipeline_layout = webgpu_context.create_pipeline_layout({ initilze_sdf_bind_group_layout });
+
+    initialize_sdf_pipeline.create_compute(initialize_sdf_shader, initialize_sdf_pipeline_layout);
 }
 
 void RaymarchingRenderer::init_compute_merge_pipeline()

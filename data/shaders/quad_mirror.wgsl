@@ -31,8 +31,6 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     var out: FragmentOutput;
     out.color = vec4f(pow(ray_result.rgb, vec3f(2.2, 2.2, 2.2)), 1.0); // Color
-    //out.depth = ray_result.a; // Depth
-    //out.depth = ray_result.a; // Depth
 
     return out;
 }

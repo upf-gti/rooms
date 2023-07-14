@@ -11,12 +11,12 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_mir
 	EntityMesh* torus = new EntityMesh();
 	torus->get_mesh()->load_mesh("data/meshes/torus.obj");
 	torus->scale(glm::vec3(0.25));
-	torus->translate(glm::vec3(-1.0, 0.0, 0.0));
+	torus->translate(glm::vec3(0.50, 0.0, 0.0));
 
 	EntityMesh* cube = new EntityMesh();
 	cube->get_mesh()->load_mesh("data/meshes/cube.obj");
 	cube->scale(glm::vec3(0.25));
-	cube->translate(glm::vec3(1.0, 0.0, 0.0));
+	cube->translate(glm::vec3(0.5, 0.0, 0.0));
 
 	entities.push_back(torus);
 	entities.push_back(cube);

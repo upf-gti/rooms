@@ -22,6 +22,10 @@ class RaymarchingRenderer : public Renderer {
     Uniform                 u_render_texture_right_eye;
 
     // Compute
+    Pipeline                initialize_sdf_pipeline;
+    Shader*                 initialize_sdf_shader = nullptr;
+    WGPUBindGroup           initialize_sdf_bind_group = nullptr;
+
     Pipeline                compute_raymarching_pipeline;
     Shader*                 compute_raymarching_shader = nullptr;
     WGPUBindGroup           compute_raymarching_textures_bind_group = nullptr;
@@ -70,9 +74,9 @@ class RaymarchingRenderer : public Renderer {
         float render_width = 0.0f;
 
         float time = 0.0f;
+        float camera_near = 0.0f;
+        float camera_far = 0.0f;
         float dummy0 = 0.0f;
-        float dummy1 = 0.0f;
-        float dummy2 = 0.0f;
     } compute_raymarching_data;
 
     // Data needed for sdf merging
@@ -108,12 +112,14 @@ class RaymarchingRenderer : public Renderer {
     void render_xr();
 #endif
 
+    void compute_initialize_sdf();
     void compute_merge();
     void compute_raymarching();
 
     void init_render_quad_pipeline();
     void init_render_mesh_pipeline();
     void init_compute_raymarching_pipeline();
+    void init_initialize_sdf_pipeline();
     void init_compute_merge_pipeline();
 
 #if defined(XR_SUPPORT) && defined(USE_MIRROR_WINDOW)
