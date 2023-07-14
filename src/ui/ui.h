@@ -2,7 +2,10 @@
 
 #include "includes.h"
 
-class RaymarchingRenderer;
+#define RED glm::vec3(1.f, 0.f, 0.f)
+#define GREEN glm::vec3(0.f, 1.f, 0.f)
+#define BLUE glm::vec3(0.f, 0.f, 1.f)
+#define PURPLE glm::vec3(1.f, 0.f, 1.f)
 
 namespace ui {
 
@@ -17,6 +20,7 @@ namespace ui {
 		};
 
 		WorkSpaceData workspace;
+		glm::mat4x4 global_transform;
 
 	public:
 
@@ -26,12 +30,13 @@ namespace ui {
 		*/
 
 		void set_workspace(glm::vec2 _workspace_size, uint8_t _select_button = 0, uint8_t _root_pose = 0, uint8_t _hand = 0, uint8_t _select_hand = 1);
-		void render( RaymarchingRenderer* _renderer);
+		void render();
+		void update(float delta_time);
 
 		/*
 		*	Widgets
 		*/
 
-		bool make_button(glm::vec2 pos, glm::vec2 size, const char* texture = nullptr);
+		bool make_button(glm::vec2 pos, glm::vec2 size, glm::vec3 color, const char* texture = nullptr);
 	};
 }
