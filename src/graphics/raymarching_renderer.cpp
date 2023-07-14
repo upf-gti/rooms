@@ -76,6 +76,11 @@ void RaymarchingRenderer::clean()
 
 #if defined(XR_SUPPORT) && defined(USE_MIRROR_WINDOW)
     if (is_openxr_available) {
+        for (uint8_t i = 0; i < swapchain_uniforms.size(); i++) {
+            swapchain_uniforms[i].destroy();
+            wgpuBindGroupRelease(swapchain_bind_groups[i]);
+        }
+
         wgpuRenderPipelineRelease(mirror_pipeline);
     }
 #endif
@@ -503,7 +508,7 @@ void RaymarchingRenderer::render_mirror()
             wgpuRenderPassEncoderSetPipeline(render_pass, mirror_pipeline);
 
             // Set binding group
-            wgpuRenderPassEncoderSetBindGroup(render_pass, 0, render_bind_group_left_eye, 0, nullptr);
+            wgpuRenderPassEncoderSetBindGroup(render_pass, 0, swapchain_bind_groups[xr_context.swapchains[0].image_index], 0, nullptr);
 
             // Set vertex buffer while encoding the render pass
             wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, quad_mesh.get_vertex_buffer(), 0, quad_mesh.get_byte_size());
@@ -788,7 +793,32 @@ void RaymarchingRenderer::init_mirror_pipeline()
     color_target.blend = &blend_state;
     color_target.writeMask = WGPUColorWriteMask_All;
 
-    mirror_pipeline = webgpu_context.create_render_pipeline({ Mesh::get_vertex_buffer_layout(VB_DEFAULT)}, color_target, mirror_shader->get_module(), render_quad_pipeline_layout);
+    // Generate uniforms from the swapchain
+    for (uint8_t i = 0; i < xr_context.swapchains[0].images.size(); i++) {
+        Uniform swapchain_uni;
+
+        swapchain_uni.data = xr_context.swapchains[0].images[i].textureView;
+        swapchain_uni.binding = 0;
+        swapchain_uni.visibility = WGPUShaderStage_Fragment;
+
+        swapchain_uniforms.push_back(swapchain_uni);
+    }
+
+    WGPUBindGroupLayout swapchain_bind_group_layout;
+    std::vector<Uniform*> uniforms = { &swapchain_uniforms[0]};
+    swapchain_bind_group_layout = webgpu_context.create_bind_group_layout(uniforms);
+    WGPUPipelineLayout render_mirror_pipeline_layout = webgpu_context.create_pipeline_layout({ swapchain_bind_group_layout });
+
+    // Generate bindgroups from the swapchain
+    for (uint8_t i = 0; i < swapchain_uniforms.size(); i++) {
+        Uniform swapchain_uni;
+
+        std::vector<Uniform*> uniforms = { &swapchain_uniforms[i]};
+
+        swapchain_bind_groups.push_back(webgpu_context.create_bind_group(uniforms, swapchain_bind_group_layout));
+    }
+
+    mirror_pipeline = webgpu_context.create_render_pipeline({ Mesh::get_vertex_buffer_layout(VB_DEFAULT)}, color_target, mirror_shader->get_module(), render_mirror_pipeline_layout);
 }
 
 #endif

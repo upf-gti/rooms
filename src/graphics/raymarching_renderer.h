@@ -93,6 +93,9 @@ class RaymarchingRenderer : public Renderer {
 #if defined(XR_SUPPORT) && defined(USE_MIRROR_WINDOW)
     WGPURenderPipeline      mirror_pipeline = nullptr;
     Shader* mirror_shader = nullptr;
+
+    std::vector<Uniform> swapchain_uniforms;
+    std::vector<WGPUBindGroup> swapchain_bind_groups;
 #endif
 
 
