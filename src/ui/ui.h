@@ -1,23 +1,26 @@
 #pragma once
 
-#include "includes.h"
-
-#define RED glm::vec3(1.f, 0.f, 0.f)
-#define GREEN glm::vec3(0.f, 1.f, 0.f)
-#define BLUE glm::vec3(0.f, 0.f, 1.f)
-#define PURPLE glm::vec3(1.f, 0.f, 1.f)
+#include "framework/colors.h"
 
 namespace ui {
 
-	class Controller {
+	struct ButtonColorData {
+		Color base_color = colors::WHITE;
+		Color hover_color = colors::WHITE;
+		Color active_color = colors::WHITE;
 
-		struct WorkSpaceData {
-			glm::vec2 size;
-			uint8_t select_button;
-			uint8_t root_pose;
-			uint8_t hand;
-			uint8_t select_hand;
-		};
+		const char* texture = nullptr;
+	};
+
+	struct WorkSpaceData {
+		glm::vec2 size;
+		uint8_t select_button;
+		uint8_t root_pose;
+		uint8_t hand;
+		uint8_t select_hand;
+	};
+
+	class Controller {
 
 		WorkSpaceData workspace;
 		glm::mat4x4 global_transform;
@@ -37,6 +40,6 @@ namespace ui {
 		*	Widgets
 		*/
 
-		bool make_button(glm::vec2 pos, glm::vec2 size, glm::vec3 color, const char* texture = nullptr);
+		bool make_button(glm::vec2 pos, glm::vec2 size, const ButtonColorData& data);
 	};
 }
