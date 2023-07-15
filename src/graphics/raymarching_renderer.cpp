@@ -187,6 +187,8 @@ void RaymarchingRenderer::render_screen()
 
     compute_raymarching_data.inv_view_projection_left_eye = glm::inverse(view_projection);
     compute_raymarching_data.left_eye_pos = eye;
+    compute_raymarching_data.camera_far = 100.0f;
+    compute_raymarching_data.camera_near = 0.1f;
 
     camera_data.view_projection = view_projection;
 
