@@ -13,12 +13,12 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_mir
 	EntityMesh* torus = new EntityMesh();
 	torus->get_mesh()->load("data/meshes/torus.obj");
 	torus->scale(glm::vec3(0.25f));
-	torus->translate(glm::vec3(1.f, 0.0, 0.0));
+	torus->translate(glm::vec3(1.f, 0.f, 0.f));
 
 	EntityMesh* cube = new EntityMesh();
 	cube->get_mesh()->load("data/meshes/cube.obj");
 	cube->scale(glm::vec3(0.25f));
-	cube->translate(glm::vec3(-1.f, 0.0, 0.0));
+	cube->translate(glm::vec3(-1.f, 0.f, 0.f));
 
 	entities.push_back(torus);
 	entities.push_back(cube);
@@ -27,8 +27,14 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_mir
 
 	ui_controller.set_workspace({ 256.f, 64.f  }, XR_BUTTON_A, POSE_AIM, HAND_LEFT, HAND_RIGHT);
 
-	ui_controller.connect("on_button_a", [](const std::string& signal) {
+	ui_controller.connect("on_button_a", [](const std::string& signal, float value) {
 		std::cout << "Signal: " << signal << std::endl;
+	});
+
+	ui_controller.connect("on_slider_changed", [torus](const std::string& signal, float value) {
+		std::cout << "Signal: " << signal << ", Value: " << value << std::endl;
+		torus->set_translation(glm::vec3(value, 0.f, 0.f));
+		torus->scale(glm::vec3(0.25f));
 	});
 
 	return error;

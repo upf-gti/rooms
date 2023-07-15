@@ -7,8 +7,6 @@
 EntityMesh* origin_el = nullptr;
 EntityMesh* debug_el = nullptr;
 
-bool hovered = false;
-
 namespace ui {
 
 	void Controller::set_workspace(glm::vec2 _workspace_size, uint8_t _select_button, uint8_t _root_pose, uint8_t _hand, uint8_t _select_hand)
@@ -61,15 +59,14 @@ namespace ui {
 
 		global_transform = ui_el->get_global_matrix();
 
-		// Render buttons
+		// Render buttons (example)
 
-		// TEST FULL WORKSPACE AS BUTTON
-		// make_button({ 0.f, 0.f }, workspace.size, hovered ? BLUE : GREEN);
-
-		for (int i = 0; i < 5; ++i)
+		for (int i = 0; i < 2; ++i)
 		{																				  // base, hover, active colors
 			make_button("on_button_a", { 16.f * (i + 1) + i * 32.f, 16.f }, { 32.f, 32.f }, { colors::GREEN, colors::PURPLE, colors::RED });
 		}
+
+		make_slider("on_slider_changed", { 112.f, 16.f }, { 128.f, 32.f }, { colors::GREEN, colors::PURPLE, colors::YELLOW });
 	}
 
 	void Controller::update(float delta_time)
@@ -85,10 +82,7 @@ namespace ui {
 		// Clamp to workspace limits
 		size = glm::clamp(size, glm::vec2(0.f), workspace.size - pos);
 
-		/*
-		*	To workspace local size
-		*/
-		
+		// To workspace local size
 		pos -= (workspace.size - size - pos);
 
 		/*
@@ -121,14 +115,14 @@ namespace ui {
 		// Check hover (intersects)
 		glm::vec3 intersection;
 		float collision_dist;
-		hovered = intersection::ray_quad(
-						ray_origin,
-						ray_direction,
-						quad_position,
-						size,
-						quad_rotation,
-						intersection,
-						collision_dist
+		bool hovered = intersection::ray_quad(
+			ray_origin,
+			ray_direction,
+			quad_position,
+			size,
+			quad_rotation,
+			intersection,
+			collision_dist
 		);
 
 		/*
@@ -144,8 +138,98 @@ namespace ui {
 			emit_signal(signal);
 	}
 
+	void Controller::make_slider(const std::string& signal, glm::vec2 pos, glm::vec2 size, const ButtonColorData& data)
+	{
+		pos *= global_scale;
+		size *= global_scale;
 
-	void Controller::connect(const std::string& name, std::function<void(const std::string&)> callback)
+		// Clamp to workspace limits
+		size = glm::clamp(size, glm::vec2(0.f), workspace.size - pos);
+
+		// Thumb data
+		glm::vec2 thumb_size = { size.y, size.y };
+		float thumb_pos = current_slider_pos * global_scale - workspace.size.x + thumb_size.x + pos.x * 2.f;
+
+		// To workspace local size
+		pos -= (workspace.size - size - pos);
+
+		/*
+		*	Create button entity and set transform
+		*/
+
+		// Render quad in local workspace position
+		EntityMesh* e_slider = new EntityMesh();
+		e_slider->destroy_after_render = true;
+		e_slider->set_model(global_transform);
+		e_slider->translate(glm::vec3(pos.x, pos.y, -1e-3f));
+		e_slider->get_mesh()->create_quad(size.x, size.y, colors::RED);
+		e_slider->render();
+		
+		EntityMesh* e_thumb = new EntityMesh();
+		e_thumb->destroy_after_render = true;
+		e_thumb->set_model(global_transform);
+		e_thumb->translate(glm::vec3(thumb_pos, pos.y, -2e-3f));
+
+		/*
+		*	Manage intersection
+		*/
+
+		uint8_t hand = workspace.hand;
+		uint8_t select_hand = workspace.select_hand;
+		uint8_t pose = workspace.root_pose;
+
+		// Ray
+		glm::vec3 ray_origin = Input::get_controller_position(select_hand, pose);
+		glm::mat4x4 select_hand_pose = Input::get_controller_pose(select_hand, pose);
+		glm::vec3 ray_direction = get_front(select_hand_pose);
+
+		// Quad
+		glm::vec3 quad_position = e_thumb->get_translation();
+		glm::vec3 slider_quad_position = e_slider->get_translation();
+		glm::quat quad_rotation = glm::quat_cast(global_transform);
+
+		// Check hover with thumb
+		glm::vec3 intersection;
+		float collision_dist;
+		bool thumb_hovered = intersection::ray_quad(
+			ray_origin,
+			ray_direction,
+			quad_position,
+			thumb_size,
+			quad_rotation,
+			intersection,
+			collision_dist
+		);
+
+		// Check hover with slider background to move thumb
+		bool slider_hovered = intersection::ray_quad(
+			ray_origin,
+			ray_direction,
+			slider_quad_position,
+			size,
+			quad_rotation,
+			intersection,
+			collision_dist
+		);
+
+		/*
+		*	Create mesh and render thumb
+		*/
+
+		bool is_pressed = thumb_hovered && Input::is_button_pressed(workspace.select_button);
+		bool was_pressed = thumb_hovered && Input::was_button_pressed(workspace.select_button);
+		e_thumb->get_mesh()->create_quad(thumb_size.x, thumb_size.y, is_pressed ? data.active_color : (thumb_hovered ? data.hover_color : data.base_color));
+		e_thumb->render();
+
+		if (is_pressed)
+		{
+			max_slider_pos = (size.x * 2.f - thumb_size.x * 2.f) / global_scale;
+			current_slider_pos = glm::clamp((intersection.x + size.x - thumb_size.x) / global_scale, 0.f, max_slider_pos);
+			emit_signal(signal, glm::clamp(current_slider_pos / max_slider_pos, 0.f, 1.f));
+		}
+	}
+
+	void Controller::connect(const std::string& name, std::function<void(const std::string&, float)> callback)
 	{
 		auto it = signals.find(name);
 		if (it != signals.end())
@@ -154,13 +238,13 @@ namespace ui {
 		signals[name] = callback;
 	}
 
-	bool Controller::emit_signal(const std::string& name)
+	bool Controller::emit_signal(const std::string& name, float value)
 	{
 		auto it = signals.find(name);
 		if (it == signals.end())
 			return false;
 
-		signals[name](name);
+		signals[name](name, value);
 		return true;
 	}
 }

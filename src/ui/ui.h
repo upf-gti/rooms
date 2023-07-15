@@ -27,9 +27,12 @@ namespace ui {
 
 		WorkSpaceData workspace;
 		glm::mat4x4 global_transform;
-		float global_scale = 1.f;
 
-		std::map <std::string, std::function<void(const std::string&)>> signals;
+		float global_scale				= 1.f;
+		float current_slider_pos		= 0.f;
+		float max_slider_pos;
+
+		std::map <std::string, std::function<void(const std::string&, float)>> signals;
 
 	public:
 
@@ -49,12 +52,13 @@ namespace ui {
 		*/
 
 		void make_button(const std::string& signal, glm::vec2 pos, glm::vec2 size, const ButtonColorData& data);
+		void make_slider(const std::string& signal, glm::vec2 pos, glm::vec2 size, const ButtonColorData& data);
 
 		/*
 		*	Callbacks
 		*/
 
-		void connect(const std::string& name, std::function<void(const std::string&)> callback);
-		bool emit_signal(const std::string& name);
+		void connect(const std::string& name, std::function<void(const std::string&, float)> callback);
+		bool emit_signal(const std::string& name, float value = 0.f);
 	};
 }
