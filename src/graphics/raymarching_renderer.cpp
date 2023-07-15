@@ -19,6 +19,7 @@ std::ostream& operator<<(std::ostream& os, const sEdit& edit)
 
 RaymarchingRenderer::RaymarchingRenderer() : Renderer()
 {
+    
 }
 
 int RaymarchingRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
@@ -107,9 +108,9 @@ void RaymarchingRenderer::update(float delta_time)
         edit.size = glm::vec3(1.0, 1.0, 1.0);
         edit.radius = 0.02f;// random();
 
-        //std::cout << edit << std::endl;
+        std::cout << edit << std::endl;
 
-        edits[compute_merge_data.edits_to_process++] = edit;
+        push_edit(edit);
     }
 
     if (Input::get_trigger_value(HAND_LEFT) > 0.5) {
@@ -126,7 +127,7 @@ void RaymarchingRenderer::update(float delta_time)
 
         //std::cout << edit << std::endl;
 
-        edits[compute_merge_data.edits_to_process++] = edit;
+        push_edit(edit);
     }
 #else
     if (Input::is_key_pressed(GLFW_KEY_A)) {
@@ -142,7 +143,7 @@ void RaymarchingRenderer::update(float delta_time)
 
         //std::cout << edit << std::endl;
 
-        edits[compute_merge_data.edits_to_process++] = edit;
+        push_edit(edit);
     }
 #endif
 }
@@ -162,6 +163,13 @@ void RaymarchingRenderer::render()
         }
     }
 #endif
+
+    // Destroy UI elements
+    for (const auto entity : render_list) {
+        if (entity->destroy_after_render)
+            delete entity;
+    }
+
     render_list.clear();
 
     // Check validation errors
