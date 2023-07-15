@@ -5,8 +5,9 @@
 #include "graphics/raymarching_renderer.h"
 
 EntityMesh* origin_el = nullptr;
+EntityMesh* intersection_el = nullptr;
 
-bool pressed = false;
+bool hovered = false;
 
 namespace ui {
 
@@ -22,6 +23,9 @@ namespace ui {
 
 		origin_el = new EntityMesh();
 		origin_el->get_mesh()->load("data/meshes/raycast.obj");
+
+		intersection_el = new EntityMesh();
+		intersection_el->get_mesh()->load("data/meshes/cube.obj");
 	}
 
 	void Controller::render()
@@ -44,11 +48,10 @@ namespace ui {
 		// Render quad with workspace size
 		EntityMesh* ui_el = new EntityMesh();
 		ui_el->destroy_after_render = true;
-		ui_el->get_mesh()->create_quad(workspace.size.x, workspace.size.y);
-		ui_el->set_model( glm::translate(glm::mat4x4(1.f), workspace_position) );
-		// ui_el->set_model(workspace_transform);
+		ui_el->get_mesh()->create_quad(workspace.size.x, workspace.size.y, hovered ? GREEN : glm::vec3(1,1,1));
+		//ui_el->set_model( glm::translate(glm::mat4x4(1.f), workspace_position) );
+		ui_el->set_model(workspace_transform);
 		ui_el->rotate(glm::radians(90.f), glm::vec3(1.f, 0.f, 0.f));
-		//ui_el->set_model(workspace_transform * ui_el->get_global_matrix());
 
 		global_transform = ui_el->get_global_matrix();
 
@@ -56,14 +59,10 @@ namespace ui {
 
 		// Render buttons
 
-		if (make_button({ 0.f, 0.f }, { 0.125f, 0.05f }, pressed ? BLUE : GREEN)) {
+		// TEST WORKSPACE
+		// make_button({ 0.f, 0.f }, workspace.size, hovered ? BLUE : GREEN);
 
-			std::cout << "Button pressed!" << std::endl;
-
-			pressed = !pressed;
-		}
-
-		if (make_button({ 0.125f, 0.05f }, { 0.125f, 0.05f }, pressed ? RED : PURPLE)) {
+		/*if (make_button({ 0.125f, 0.05f }, { 0.125f, 0.05f }, pressed ? RED : PURPLE)) {
 
 			std::cout << "Button pressed!" << std::endl;
 
@@ -75,7 +74,7 @@ namespace ui {
 			std::cout << "Button pressed!" << std::endl;
 
 			pressed = !pressed;
-		}
+		}*/
 
 		origin_el->render(); 
 	}
@@ -104,7 +103,7 @@ namespace ui {
 		ui_el->get_mesh()->create_quad(size.x, size.y, color);
 		ui_el->set_model(global_transform);
 		ui_el->translate(glm::vec3(pos.x, pos.y, -1e-3f));
-		ui_el->render();
+		// ui_el->render();
 
 		/*
 		*	Manage intersection
@@ -120,27 +119,41 @@ namespace ui {
 		glm::vec3 ray_direction = get_front(select_hand_pose);
 
 		// Position
-		glm::vec3 quad_position = Input::get_controller_position(hand, pose) +
-			glm::vec3(pos.x, -1e-3f, pos.y);
+		glm::vec3 quad_position = Input::get_controller_position(hand, pose);// +glm::vec3(pos.x, -1e-3f, pos.y);
 
 		// Rotation
 		glm::mat4x4 hand_pose = Input::get_controller_pose(hand, pose);
-		// hand_pose = glm::rotate(hand_pose, glm::radians(120.f), glm::vec3(1.f, 0.f, 0.f));
 		// glm::quat quad_rotation = glm::quat(0.707f, -0.707f, 0.f, 0.f);
-		glm::quat quad_rotation = glm::quat(1.f, 0.f, 0.f, 0.f);
+		// glm::quat quad_rotation = glm::quat(1.f, 0.f, 0.f, 0.f);
 		// glm::quat quad_rotation = Input::get_controller_rotation(hand, pose);
-		// glm::quat quad_rotation = glm::quat_cast(ui_el->get_global_matrix());
-		float collision_dist;
+		glm::quat quad_rotation = glm::quat_cast(glm::rotate(hand_pose, glm::radians(90.f), glm::vec3(1.f, 0.f, 0.f)));
+		
+		glm::vec3 intersection;
+		float collision_dist = -1.f;
+
+		if (Input::was_button_pressed(workspace.select_button))
+		{
+			std::cout << "" << std::endl;
+		}
 
 		// Check hover (intersects)
-		bool hovered = intersection::ray_quad(
+		hovered = intersection::ray_quad(
 						ray_origin,
 						ray_direction,
 						quad_position,
 						size,
 						quad_rotation,
+						intersection,
 						collision_dist
 		);
+
+		if (collision_dist > 0)
+		{
+			intersection_el->set_model(global_transform);
+			intersection_el->set_model(glm::translate(glm::mat4x4(1.f), intersection));
+			intersection_el->scale(glm::vec3(0.02f));
+			intersection_el->render();
+		}
 
 		// Check pressed (hover and button pressed)
 		bool pressed = hovered && Input::was_button_pressed( workspace.select_button );
