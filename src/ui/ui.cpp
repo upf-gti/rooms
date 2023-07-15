@@ -13,8 +13,10 @@ namespace ui {
 
 	void Controller::set_workspace(glm::vec2 _workspace_size, uint8_t _select_button, uint8_t _root_pose, uint8_t _hand, uint8_t _select_hand)
 	{
+		global_scale = 0.001f;
+
 		workspace = {
-			.size = _workspace_size,
+			.size = _workspace_size * global_scale,
 			.select_button = _select_button,
 			.root_pose = _root_pose,
 			.hand = _hand,
@@ -64,22 +66,9 @@ namespace ui {
 		// TEST FULL WORKSPACE AS BUTTON
 		// make_button({ 0.f, 0.f }, workspace.size, hovered ? BLUE : GREEN);
 
-		if (make_button({ 0.125f, 0.05f }, {0.125f, 0.05f}, {
-				.base_color = colors::GREEN,
-				.hover_color = colors::PURPLE,
-				.active_color = colors::BLUE
-			})) {
-
-			std::cout << "Button pressed!" << std::endl;
-		}
-
-		if (make_button({ 0.025f, 0.025f }, { 0.05f, 0.05f }, {
-				.base_color = colors::YELLOW,
-				.hover_color = colors::PURPLE,
-				.active_color = colors::BLUE
-			})) {
-
-			std::cout << "Button pressed!" << std::endl;
+		for (int i = 0; i < 5; ++i)
+		{																				  // base, hover, active colors
+			make_button("on_button_a", { 16.f * (i + 1) + i * 32.f, 16.f }, { 32.f, 32.f }, { colors::GREEN, colors::PURPLE, colors::RED });
 		}
 	}
 
@@ -88,8 +77,14 @@ namespace ui {
 		// ...
 	}
 
-	bool Controller::make_button(glm::vec2 pos, glm::vec2 size, const ButtonColorData& data)
+	void Controller::make_button(const std::string& signal, glm::vec2 pos, glm::vec2 size, const ButtonColorData& data)
 	{
+		pos *= global_scale;
+		size *= global_scale;
+
+		// Clamp to workspace limits
+		size = glm::clamp(size, glm::vec2(0.f), workspace.size - pos);
+
 		/*
 		*	To workspace local size
 		*/
@@ -145,6 +140,27 @@ namespace ui {
 		e_button->get_mesh()->create_quad(size.x, size.y, is_pressed ? data.active_color : (hovered ? data.hover_color : data.base_color));
 		e_button->render();
 
-		return was_pressed;
+		if(was_pressed)
+			emit_signal(signal);
+	}
+
+
+	void Controller::connect(const std::string& name, std::function<void(const std::string&)> callback)
+	{
+		auto it = signals.find(name);
+		if (it != signals.end())
+			return;
+
+		signals[name] = callback;
+	}
+
+	bool Controller::emit_signal(const std::string& name)
+	{
+		auto it = signals.find(name);
+		if (it == signals.end())
+			return false;
+
+		signals[name](name);
+		return true;
 	}
 }

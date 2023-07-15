@@ -25,7 +25,11 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_mir
 
 	// UI
 
-	ui_controller.set_workspace({ 0.25f, 0.1f }, XR_BUTTON_A, POSE_AIM, HAND_LEFT, HAND_RIGHT);
+	ui_controller.set_workspace({ 256.f, 64.f  }, XR_BUTTON_A, POSE_AIM, HAND_LEFT, HAND_RIGHT);
+
+	ui_controller.connect("on_button_a", [](const std::string& signal) {
+		std::cout << "Signal: " << signal << std::endl;
+	});
 
 	return error;
 }
