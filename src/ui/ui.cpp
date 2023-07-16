@@ -25,7 +25,7 @@ namespace ui {
 		origin_el->get_mesh()->load("data/meshes/raycast.obj");
 
 		debug_el = new EntityMesh();
-		debug_el->get_mesh()->load("data/meshes/cube.obj");
+		debug_el->get_mesh()->load("data/meshes/cube/cube.obj");
 	}
 
 	void Controller::render()
