@@ -92,11 +92,12 @@ fn raymarch(rayOrigin : vec3f, rayDir : vec3f) -> vec4f
 		let pos = rayOrigin + rayDir * depth;
         let surface : Surface = sample_sdf(pos);
 		if (surface.distance < MIN_HIT_DIST) {
+            depth = map_depths_to_log((depth / MAX_DIST) * compute_data.camera_far);
 			return vec4f(blinn_phong(rayOrigin, pos, lightPos + lightOffset, ambientColor, surface.color), depth);
 		}
 		depth += surface.distance;
 	}
-    return vec4f(missColor.rgb, MAX_DIST);
+    return vec4f(missColor.rgb, 1.0);
 }
 
 fn get_ray_direction(inv_view_projection : mat4x4f, uv : vec2f) -> vec3f
@@ -126,7 +127,7 @@ fn compute(@builtin(global_invocation_id) id: vec3<u32>) {
     let left_eye_raymarch_result = raymarch(compute_data.left_eye_pos, ray_dir_left);
     let right_eye_raymarch_result = raymarch(compute_data.right_eye_pos, ray_dir_right);
 
-    textureStore(left_eye_texture, id.xy, vec4f(left_eye_raymarch_result.rgb, map_depths_to_log(left_eye_raymarch_result.a)));
+    textureStore(left_eye_texture, id.xy, left_eye_raymarch_result);
 
-    textureStore(right_eye_texture, id.xy, vec4f(right_eye_raymarch_result.rgb, map_depths_to_log(right_eye_raymarch_result.a)));
+    textureStore(right_eye_texture, id.xy, right_eye_raymarch_result);
 }
