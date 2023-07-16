@@ -70,11 +70,6 @@ void RaymarchingRenderer::clean()
     wgpuBindGroupRelease(compute_raymarching_data_bind_group);
     wgpuBindGroupRelease(initialize_sdf_bind_group);
 
-    wgpuTextureDestroy(left_eye_texture);
-    wgpuTextureDestroy(right_eye_depth_texture);
-    wgpuTextureDestroy(right_eye_texture);
-    wgpuTextureDestroy(right_eye_depth_texture);
-
     // Texture views
     wgpuTextureViewRelease(left_eye_depth_texture_view);
     wgpuTextureViewRelease(right_eye_depth_texture_view);
@@ -603,53 +598,44 @@ void RaymarchingRenderer::init_render_quad_pipeline()
 {
     render_quad_shader = Shader::get("data/shaders/quad_eye.wgsl");
 
-    left_eye_texture = webgpu_context.create_texture(
+    left_eye_texture.create(
         WGPUTextureDimension_2D,
         WGPUTextureFormat_RGBA8Unorm,
         { render_width, render_height, 1 },
-        WGPUTextureUsage_TextureBinding | WGPUTextureUsage_StorageBinding,
-        1);
+        static_cast<WGPUTextureUsage>(WGPUTextureUsage_TextureBinding | WGPUTextureUsage_StorageBinding),
+        1, nullptr);
 
-    left_eye_depth_texture = webgpu_context.create_texture(
+    left_eye_depth_texture.create(
         WGPUTextureDimension_2D,
         WGPUTextureFormat_Depth16Unorm,
         { render_width, render_height, 1 },
         WGPUTextureUsage_RenderAttachment,
-        1);
+        1, nullptr);
 
-    right_eye_texture = webgpu_context.create_texture(
+    right_eye_texture.create(
         WGPUTextureDimension_2D,
         WGPUTextureFormat_RGBA8Unorm,
         { render_width, render_height, 1 },
-        WGPUTextureUsage_TextureBinding | WGPUTextureUsage_StorageBinding,
-        1);
+        static_cast<WGPUTextureUsage>(WGPUTextureUsage_TextureBinding | WGPUTextureUsage_StorageBinding),
+        1, nullptr);
 
-    right_eye_depth_texture = webgpu_context.create_texture(
+    right_eye_depth_texture.create(
         WGPUTextureDimension_2D,
         WGPUTextureFormat_Depth16Unorm,
         { render_width, render_height, 1 },
         WGPUTextureUsage_RenderAttachment,
-        1);
+        1, nullptr);
 
     // Generate Texture views of depth buffers
-    left_eye_depth_texture_view = webgpu_context.create_texture_view(
-        left_eye_depth_texture, 
-        WGPUTextureViewDimension_2D,
-        WGPUTextureFormat_Depth16Unorm, 
-        WGPUTextureAspect_DepthOnly);
-
-    right_eye_depth_texture_view = webgpu_context.create_texture_view(
-        right_eye_depth_texture,
-        WGPUTextureViewDimension_2D,
-        WGPUTextureFormat_Depth16Unorm,
-        WGPUTextureAspect_DepthOnly);
+    left_eye_depth_texture_view = left_eye_depth_texture.get_view();
+    right_eye_depth_texture_view = right_eye_depth_texture.get_view();
 
     // Generate bindgroups
-    u_render_texture_left_eye.data = webgpu_context.create_texture_view(left_eye_texture, WGPUTextureViewDimension_2D, WGPUTextureFormat_RGBA8Unorm);
+    u_render_texture_left_eye.data = left_eye_texture.get_view();
     u_render_texture_left_eye.binding = 0;
     u_render_texture_left_eye.visibility = WGPUShaderStage_Fragment;
 
-    u_render_texture_right_eye.data = webgpu_context.create_texture_view(right_eye_texture, WGPUTextureViewDimension_2D, WGPUTextureFormat_RGBA8Unorm);
+    u_render_texture_right_eye.data = right_eye_texture.get_view();
     u_render_texture_right_eye.binding = 0;
     u_render_texture_right_eye.visibility = WGPUShaderStage_Fragment;
 
@@ -746,7 +732,7 @@ void RaymarchingRenderer::init_compute_raymarching_pipeline()
     WGPUBindGroupLayout compute_textures_bind_group_layout;
     // Texture uniforms
     {
-        u_compute_texture_left_eye.data = webgpu_context.create_texture_view(left_eye_texture, WGPUTextureViewDimension_2D, WGPUTextureFormat_RGBA8Unorm);
+        u_compute_texture_left_eye.data = left_eye_texture.get_view();
         u_compute_texture_left_eye.binding = 0;
         u_compute_texture_left_eye.visibility = WGPUShaderStage_Compute;
         u_compute_texture_left_eye.is_storage_texture = true;
@@ -754,7 +740,7 @@ void RaymarchingRenderer::init_compute_raymarching_pipeline()
         u_compute_texture_left_eye.storage_texture_binding_layout.format = WGPUTextureFormat_RGBA8Unorm;
         u_compute_texture_left_eye.storage_texture_binding_layout.viewDimension = WGPUTextureViewDimension_2D;
 
-        u_compute_texture_right_eye.data = webgpu_context.create_texture_view(right_eye_texture, WGPUTextureViewDimension_2D, WGPUTextureFormat_RGBA8Unorm);
+        u_compute_texture_right_eye.data = right_eye_texture.get_view();
         u_compute_texture_right_eye.binding = 1;
         u_compute_texture_right_eye.visibility = WGPUShaderStage_Compute;
         u_compute_texture_right_eye.is_storage_texture = true;

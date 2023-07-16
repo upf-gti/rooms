@@ -5,6 +5,8 @@
 #include <vector>
 #include "edit.h"
 
+#include "graphics/texture.h"
+
 #define EDITS_MAX 1024
 #define SDF_RESOLUTION 512
 
@@ -35,10 +37,10 @@ class RaymarchingRenderer : public Renderer {
     Shader*                 compute_merge_shader = nullptr;
     WGPUBindGroup           compute_merge_bind_group = nullptr;
 
-    WGPUTexture             left_eye_texture = nullptr;
-    WGPUTexture             left_eye_depth_texture = nullptr;
-    WGPUTexture             right_eye_texture = nullptr;
-    WGPUTexture             right_eye_depth_texture = nullptr;
+    Texture                 left_eye_texture;
+    Texture                 left_eye_depth_texture;
+    Texture                 right_eye_texture;
+    Texture                 right_eye_depth_texture;
 
     WGPUTextureView         left_eye_depth_texture_view = nullptr;
     WGPUTextureView         right_eye_depth_texture_view = nullptr;
@@ -50,8 +52,6 @@ class RaymarchingRenderer : public Renderer {
     Shader*                 render_mesh_shader = nullptr;
 
     Uniform                 u_camera;
-
-    //WGPUTexture             sdf_texture = nullptr;
 
     Uniform                 u_compute_buffer_data;
     Uniform                 u_compute_texture_left_eye;
