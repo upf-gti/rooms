@@ -1,6 +1,8 @@
 #include "rooms_engine.h"
-
 #include "framework/entities/entity_mesh.h"
+#include "ui/ui.h"
+
+ui::Controller ui_controller;
 
 int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_mirror_screen)
 {
@@ -21,6 +23,20 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_mir
 	entities.push_back(torus);
 	entities.push_back(cube);
 
+	// UI
+
+	ui_controller.set_workspace({ 256.f, 64.f  }, XR_BUTTON_A, POSE_AIM, HAND_LEFT, HAND_RIGHT);
+
+	ui_controller.connect("on_button_a", [](const std::string& signal, float value) {
+		std::cout << "Signal: " << signal << std::endl;
+	});
+
+	ui_controller.connect("on_slider_changed", [torus](const std::string& signal, float value) {
+		std::cout << "Signal: " << signal << ", Value: " << value << std::endl;
+		torus->set_translation(glm::vec3(value, 0.f, 0.f));
+		torus->scale(glm::vec3(0.25f));
+	});
+
 	return error;
 }
 
@@ -30,6 +46,8 @@ void RoomsEngine::update(float delta_time)
 
 	entities[0]->rotate(1.6f * delta_time, glm::vec3(1.0, 0.0, 0.0));
 	entities[1]->rotate(1.6f * delta_time, glm::vec3(0.0, 0.0, 1.0));
+
+	ui_controller.update(delta_time);
 }
 
 void RoomsEngine::render()
@@ -37,6 +55,8 @@ void RoomsEngine::render()
 	for (auto entity : entities) {
 		entity->render();
 	}
+
+	ui_controller.render();
 
 	Engine::render();
 }
