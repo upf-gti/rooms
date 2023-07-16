@@ -99,7 +99,7 @@ void RaymarchingRenderer::update(float delta_time)
 
         sEdit edit;
         edit.operation = OP_SMOOTH_UNION; // random() < 0.5 ? OP_SMOOTH_UNION : OP_SMOOTH_SUBSTRACTION;
-        edit.color = glm::vec3(random(), random(), random());
+        edit.color = glm::vec3(random_f(), random_f(), random_f());
         // edit.position = glm::vec3(0.4 * (random() * 2 - 1), 0.4 * (random() * 2 - 1), 0.4 * (random() * 2 - 1));
         edit.position = Input::get_controller_position(HAND_RIGHT);
         edit.position.y -= 1.f;
@@ -116,7 +116,7 @@ void RaymarchingRenderer::update(float delta_time)
 
         sEdit edit;
         edit.operation = OP_SMOOTH_SUBSTRACTION;
-        edit.color = glm::vec3(random(), random(), random());
+        edit.color = glm::vec3(random_f(), random_f(), random_f());
         // edit.position = glm::vec3(0.4 * (random() * 2 - 1), 0.4 * (random() * 2 - 1), 0.4 * (random() * 2 - 1));
         edit.position = Input::get_controller_position(HAND_LEFT);
         edit.position.y -= 1.f;
@@ -133,8 +133,8 @@ void RaymarchingRenderer::update(float delta_time)
 
         sEdit edit;
         edit.operation = OP_SMOOTH_UNION; // random() < 0.5 ? OP_SMOOTH_UNION : OP_SMOOTH_SUBSTRACTION;
-        edit.color = glm::vec3(random(), random(), random());
-        edit.position = glm::vec3(0.4 * (random() * 2 - 1), 0.4 * (random() * 2 - 1), 0.4 * (random() * 2 - 1));
+        edit.color = glm::vec3(random_f(), random_f(), random_f());
+        edit.position = glm::vec3(0.4 * (random_f() * 2 - 1), 0.4 * (random_f() * 2 - 1), 0.4 * (random_f() * 2 - 1));
         //edit.position.z += 0.20f;
         edit.primitive = SD_SPHERE;
         edit.size = glm::vec3(1.0, 1.0, 1.0);

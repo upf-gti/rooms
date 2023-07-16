@@ -59,7 +59,7 @@ if (EMSCRIPTEN)
         -sALLOW_MEMORY_GROWTH
         -sASYNCIFY
         --shell-file "${ROOMS_DIR_ROOT}/${SHELL_FILE}"
-        --preload-file "${ROOMS_DIR_ROOT}/data/shaders@/data/shaders"
+        --preload-file "${ROOMS_DIR_ROOT}/data@/data"
 	)
 
 	# Make sure to re-link when the shell file changes

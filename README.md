@@ -12,7 +12,7 @@ For Web:
 Download [emscripten](https://emscripten.org/) and follow installation guide.
 
 
-On Window you may need to download [ninja](https://ninja-build.org/) and include the folder in your PATH environment variable, then:
+On Windows you may need to download [ninja](https://ninja-build.org/) and include the folder in your PATH environment variable, then:
 
 
 ```
