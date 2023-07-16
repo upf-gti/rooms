@@ -34,7 +34,7 @@ const lightPos = vec3f(0.0, 2.0, 1.0);
 const fov = 45.0;
 const up = vec3f(0.0, 1.0, 0.0);
 
-fn sampleSdf(position : vec3f) -> Surface
+fn sample_sdf(position : vec3f) -> Surface
 {
     let p = position * 512.0 + vec3f(256.0) - vec3f(0.0, 512.0, 0.0);
 
@@ -52,18 +52,18 @@ fn sampleSdf(position : vec3f) -> Surface
     return sdf_data.data[index];
 }
 
-fn estimateNormal(p : vec3f) -> vec3f
+fn estimate_normal(p : vec3f) -> vec3f
 {
     return normalize(vec3f(
-        sampleSdf(vec3f(p.x + DERIVATIVE_STEP, p.y, p.z)).distance - sampleSdf(vec3f(p.x - DERIVATIVE_STEP, p.y, p.z)).distance,
-        sampleSdf(vec3f(p.x, p.y + DERIVATIVE_STEP, p.z)).distance - sampleSdf(vec3f(p.x, p.y - DERIVATIVE_STEP, p.z)).distance,
-        sampleSdf(vec3f(p.x, p.y, p.z + DERIVATIVE_STEP)).distance - sampleSdf(vec3f(p.x, p.y, p.z - DERIVATIVE_STEP)).distance
+        sample_sdf(vec3f(p.x + DERIVATIVE_STEP, p.y, p.z)).distance - sample_sdf(vec3f(p.x - DERIVATIVE_STEP, p.y, p.z)).distance,
+        sample_sdf(vec3f(p.x, p.y + DERIVATIVE_STEP, p.z)).distance - sample_sdf(vec3f(p.x, p.y - DERIVATIVE_STEP, p.z)).distance,
+        sample_sdf(vec3f(p.x, p.y, p.z + DERIVATIVE_STEP)).distance - sample_sdf(vec3f(p.x, p.y, p.z - DERIVATIVE_STEP)).distance
     ));
 }
 
-fn blinnPhong(rayOrigin : vec3f, position : vec3f, lightPosition : vec3f, ambient : vec3f, diffuse : vec3f) -> vec3f
+fn blinn_phong(rayOrigin : vec3f, position : vec3f, lightPosition : vec3f, ambient : vec3f, diffuse : vec3f) -> vec3f
 {
-    let normal : vec3f = estimateNormal(position);
+    let normal : vec3f = estimate_normal(position);
     let toEye : vec3f = normalize(rayOrigin - position);
     let toLight : vec3f = normalize(lightPosition - position);
     // let reflection : vec3f = reflect(-toLight, normal); // uncomment for Phong model
@@ -90,16 +90,16 @@ fn raymarch(rayOrigin : vec3f, rayDir : vec3f) -> vec4f
 	for (var i : i32 = 0; depth < MAX_DIST && i < 250; i++)
 	{
 		let pos = rayOrigin + rayDir * depth;
-        let surface : Surface = sampleSdf(pos);
+        let surface : Surface = sample_sdf(pos);
 		if (surface.distance < MIN_HIT_DIST) {
-			return vec4f(blinnPhong(rayOrigin, pos, lightPos + lightOffset, ambientColor, surface.color), depth);
+			return vec4f(blinn_phong(rayOrigin, pos, lightPos + lightOffset, ambientColor, surface.color), depth);
 		}
 		depth += surface.distance;
 	}
     return vec4f(missColor.rgb, MAX_DIST);
 }
 
-fn getRayDirection(inv_view_projection : mat4x4f, uv : vec2f) -> vec3f
+fn get_ray_direction(inv_view_projection : mat4x4f, uv : vec2f) -> vec3f
 {
 	// convert coordinates from [0, 1] to [-1, 1]
 	var screenCoord : vec4f = vec4f((uv - 0.5) * 2.0, 1.0, 1.0);
@@ -120,13 +120,13 @@ fn compute(@builtin(global_invocation_id) id: vec3<u32>) {
     let pixel_size = 1.0 / vec2f(compute_data.render_width, compute_data.render_height);
     var uv = vec2f(id.xy) * pixel_size;
     //uv.y = 1.0 - uv.y;
-    let ray_dir_left = getRayDirection(compute_data.inv_view_projection_left_eye, uv);
-    let ray_dir_right = getRayDirection(compute_data.inv_view_projection_right_eye, uv);
+    let ray_dir_left = get_ray_direction(compute_data.inv_view_projection_left_eye, uv);
+    let ray_dir_right = get_ray_direction(compute_data.inv_view_projection_right_eye, uv);
 
     let left_eye_raymarch_result = raymarch(compute_data.left_eye_pos, ray_dir_left);
     let right_eye_raymarch_result = raymarch(compute_data.right_eye_pos, ray_dir_right);
 
-    textureStore(left_eye_texture, id.xy, vec4f(left_eye_raymarch_result.rgb, map_depths_to_log(left_eye_raymarch_result.a / MAX_DIST)));
+    textureStore(left_eye_texture, id.xy, vec4f(left_eye_raymarch_result.rgb, map_depths_to_log(left_eye_raymarch_result.a)));
 
-    textureStore(right_eye_texture, id.xy, vec4f(right_eye_raymarch_result.rgb, map_depths_to_log(right_eye_raymarch_result.a / MAX_DIST)));
+    textureStore(right_eye_texture, id.xy, vec4f(right_eye_raymarch_result.rgb, map_depths_to_log(right_eye_raymarch_result.a)));
 }
