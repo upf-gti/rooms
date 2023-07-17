@@ -28,6 +28,7 @@ int RaymarchingRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
 
     init_render_quad_pipeline();
     init_render_mesh_pipeline();
+    init_render_fonts_pipeline();
     init_compute_raymarching_pipeline();
     init_compute_merge_pipeline();
     init_initialize_sdf_pipeline();
@@ -722,6 +723,39 @@ void RaymarchingRenderer::init_render_mesh_pipeline()
     color_target.writeMask = WGPUColorWriteMask_All;
 
     render_mesh_pipeline = webgpu_context.create_render_pipeline({ Mesh::get_vertex_buffer_layout(eVertexBufferLayout::VB_DEFAULT) }, color_target, render_mesh_shader->get_module(), render_mesh_pipeline_layout, true);
+}
+
+void RaymarchingRenderer::init_render_fonts_pipeline()
+{
+    render_fonts_shader = Shader::get("data/shaders/sdf_fonts.wgsl");
+
+    std::vector<Uniform*> uniforms = { &u_camera };
+
+    // shared with right eye
+    WGPUBindGroupLayout camera_bind_group_layout = webgpu_context.create_bind_group_layout(uniforms);
+
+    render_fonts_pipeline_layout = webgpu_context.create_pipeline_layout({ Mesh::get_bind_group_layout(BG_DEFAULT), camera_bind_group_layout });
+
+    WGPUTextureFormat swapchain_format = is_openxr_available ? webgpu_context.xr_swapchain_format : webgpu_context.swapchain_format;
+
+    WGPUBlendState blend_state;
+    blend_state.color = {
+            .operation = WGPUBlendOperation_Add,
+            .srcFactor = WGPUBlendFactor_SrcAlpha,
+            .dstFactor = WGPUBlendFactor_OneMinusSrcAlpha,
+    };
+    blend_state.alpha = {
+            .operation = WGPUBlendOperation_Add,
+            .srcFactor = WGPUBlendFactor_Zero,
+            .dstFactor = WGPUBlendFactor_One,
+    };
+
+    WGPUColorTargetState color_target = {};
+    color_target.format = swapchain_format;
+    color_target.blend = &blend_state;
+    color_target.writeMask = WGPUColorWriteMask_All;
+
+    render_fonts_pipeline = webgpu_context.create_render_pipeline({ Mesh::get_vertex_buffer_layout(eVertexBufferLayout::VB_DEFAULT) }, color_target, render_fonts_shader->get_module(), render_fonts_pipeline_layout, true);
 }
 
 void RaymarchingRenderer::init_compute_raymarching_pipeline()

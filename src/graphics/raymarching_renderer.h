@@ -51,7 +51,13 @@ class RaymarchingRenderer : public Renderer {
     WGPUBindGroup           render_bind_group_camera = nullptr;
     Shader*                 render_mesh_shader = nullptr;
 
+    // Font rendering
+    WGPURenderPipeline      render_fonts_pipeline = nullptr;
+    WGPUPipelineLayout      render_fonts_pipeline_layout = nullptr;
+    Shader*                 render_fonts_shader = nullptr;
+
     Uniform                 u_camera;
+    Uniform                 u_font;
 
     Uniform                 u_compute_buffer_data;
     Uniform                 u_compute_texture_left_eye;
@@ -118,6 +124,7 @@ class RaymarchingRenderer : public Renderer {
 
     void init_render_quad_pipeline();
     void init_render_mesh_pipeline();
+    void init_render_fonts_pipeline();
     void init_compute_raymarching_pipeline();
     void init_initialize_sdf_pipeline();
     void init_compute_merge_pipeline();
