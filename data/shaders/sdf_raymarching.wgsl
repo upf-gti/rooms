@@ -120,7 +120,7 @@ fn compute(@builtin(global_invocation_id) id: vec3<u32>) {
 
     let pixel_size = 1.0 / vec2f(compute_data.render_width, compute_data.render_height);
     var uv = vec2f(id.xy) * pixel_size;
-    //uv.y = 1.0 - uv.y;
+    uv.y = 1.0 - uv.y;
     let ray_dir_left = get_ray_direction(compute_data.inv_view_projection_left_eye, uv);
     let ray_dir_right = get_ray_direction(compute_data.inv_view_projection_right_eye, uv);
 
