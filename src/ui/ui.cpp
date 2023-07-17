@@ -22,10 +22,10 @@ namespace ui {
 		};
 
 		origin_el = new EntityMesh();
-		origin_el->get_mesh()->load("data/meshes/raycast.obj");
+		origin_el->set_mesh(Mesh::get("data/meshes/raycast.obj"));
 
 		debug_el = new EntityMesh();
-		debug_el->get_mesh()->load("data/meshes/cube/cube.obj");
+		debug_el->set_mesh(Mesh::get("data/meshes/cube/cube.obj"));
 	}
 
 	void Controller::render()
