@@ -7,6 +7,8 @@
 
 #include "graphics/texture.h"
 
+#include "tools/tool.h"
+
 #define EDITS_MAX 1024
 #define SDF_RESOLUTION 512
 
