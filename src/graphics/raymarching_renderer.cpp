@@ -79,8 +79,6 @@ void RaymarchingRenderer::clean()
             swapchain_uniforms[i].destroy();
             wgpuBindGroupRelease(swapchain_bind_groups[i]);
         }
-
-        wgpuRenderPipelineRelease(mirror_pipeline);
     }
 #endif
 }
@@ -259,7 +257,7 @@ void RaymarchingRenderer::render_meshes(WGPUTextureView swapchain_view, WGPUText
         wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, mesh->get_vertex_buffer(), 0, mesh->get_byte_size());
 
         // Submit drawcall
-        wgpuRenderPassEncoderDraw(render_pass, mesh->get_vertex_count(), 1, 0, 0);
+        wgpuRenderPassEncoderDraw(render_pass, static_cast<uint32_t>(mesh->get_vertex_count()), 1, 0, 0);
     }
 
     wgpuRenderPassEncoderEnd(render_pass);
@@ -557,7 +555,7 @@ void RaymarchingRenderer::render_mirror()
             WGPURenderPassEncoder render_pass = wgpuCommandEncoderBeginRenderPass(command_encoder, &render_pass_descr);
 
             // Bind Pipeline
-            wgpuRenderPassEncoderSetPipeline(render_pass, mirror_pipeline);
+            mirror_pipeline.set(render_pass);
 
             // Set binding group
             wgpuRenderPassEncoderSetBindGroup(render_pass, 0, swapchain_bind_groups[xr_context.swapchains[0].image_index], 0, nullptr);
@@ -671,7 +669,7 @@ void RaymarchingRenderer::init_render_quad_pipeline()
     color_target.blend = &blend_state;
     color_target.writeMask = WGPUColorWriteMask_All;
 
-    render_quad_pipeline.create_render(render_quad_shader, { Mesh::get_vertex_buffer_layout(eVertexBufferLayout::VB_DEFAULT) }, color_target, true);
+    render_quad_pipeline.create_render(render_quad_shader, color_target, true);
 }
 
 void RaymarchingRenderer::init_render_mesh_pipeline()
@@ -705,7 +703,7 @@ void RaymarchingRenderer::init_render_mesh_pipeline()
     color_target.blend = &blend_state;
     color_target.writeMask = WGPUColorWriteMask_All;
 
-    render_mesh_pipeline.create_render(render_mesh_shader, { Mesh::get_vertex_buffer_layout(eVertexBufferLayout::VB_DEFAULT) }, color_target, true);
+    render_mesh_pipeline.create_render(render_mesh_shader, color_target, true);
 }
 
 void RaymarchingRenderer::init_render_fonts_pipeline()
@@ -734,7 +732,7 @@ void RaymarchingRenderer::init_render_fonts_pipeline()
     color_target.blend = &blend_state;
     color_target.writeMask = WGPUColorWriteMask_All;
 
-    render_fonts_pipeline.create_render(render_fonts_shader, { Mesh::get_vertex_buffer_layout(eVertexBufferLayout::VB_DEFAULT) }, color_target, true);
+    render_fonts_pipeline.create_render(render_fonts_shader, color_target, true);
 }
 
 void RaymarchingRenderer::init_compute_raymarching_pipeline()
@@ -846,7 +844,7 @@ void RaymarchingRenderer::init_mirror_pipeline()
     }
 
     WGPUBindGroupLayout swapchain_bind_group_layout;
-    std::vector<Uniform*> uniforms = { &swapchain_uniforms[0]};
+    std::vector<Uniform*> uniforms = { &swapchain_uniforms[0] };
     swapchain_bind_group_layout = webgpu_context.create_bind_group_layout(uniforms);
     WGPUPipelineLayout render_mirror_pipeline_layout = webgpu_context.create_pipeline_layout({ swapchain_bind_group_layout });
 
@@ -854,12 +852,12 @@ void RaymarchingRenderer::init_mirror_pipeline()
     for (uint8_t i = 0; i < swapchain_uniforms.size(); i++) {
         Uniform swapchain_uni;
 
-        std::vector<Uniform*> uniforms = { &swapchain_uniforms[i]};
+        std::vector<Uniform*> uniforms = { &swapchain_uniforms[i] };
 
         swapchain_bind_groups.push_back(webgpu_context.create_bind_group(uniforms, swapchain_bind_group_layout));
     }
 
-    mirror_pipeline = webgpu_context.create_render_pipeline(mirror_shader->get_module(), render_mirror_pipeline_layout, { Mesh::get_vertex_buffer_layout(VB_DEFAULT)}, color_target);
+    mirror_pipeline.create_render(mirror_shader, color_target);
 }
 
 #endif

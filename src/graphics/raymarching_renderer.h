@@ -92,14 +92,14 @@ class RaymarchingRenderer : public Renderer {
         glm::mat4x4 view_projection;
     } camera_data;
 
-    sEdit                             edits[EDITS_MAX];
+    sEdit edits[EDITS_MAX];
 
-    Mesh                              quad_mesh;
+    Mesh  quad_mesh;
 
     // For the XR mirror screen
 #if defined(XR_SUPPORT) && defined(USE_MIRROR_WINDOW)
-    WGPURenderPipeline      mirror_pipeline = nullptr;
-    Shader* mirror_shader = nullptr;
+    Pipeline mirror_pipeline;
+    Shader*  mirror_shader = nullptr;
 
     std::vector<Uniform> swapchain_uniforms;
     std::vector<WGPUBindGroup> swapchain_bind_groups;
