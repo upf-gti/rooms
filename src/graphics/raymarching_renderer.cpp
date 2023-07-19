@@ -169,7 +169,7 @@ void RaymarchingRenderer::render()
     render_list.clear();
 
     // Check validation errors
-    webgpu_context.printErrors();
+    webgpu_context.print_errors();
 }
 
 void RaymarchingRenderer::render_screen()
@@ -763,24 +763,13 @@ void RaymarchingRenderer::init_compute_raymarching_pipeline()
     // Load compute_raymarching shader
     compute_raymarching_shader = Shader::get("data/shaders/sdf_raymarching.wgsl");
 
-    WGPUBindGroupLayout compute_textures_bind_group_layout;
     // Texture uniforms
     {
         u_compute_texture_left_eye.data = left_eye_texture.get_view();
         u_compute_texture_left_eye.binding = 0;
-        u_compute_texture_left_eye.visibility = WGPUShaderStage_Compute;
-        u_compute_texture_left_eye.is_storage_texture = true;
-        u_compute_texture_left_eye.storage_texture_binding_layout.access = WGPUStorageTextureAccess_WriteOnly;
-        u_compute_texture_left_eye.storage_texture_binding_layout.format = WGPUTextureFormat_RGBA8Unorm;
-        u_compute_texture_left_eye.storage_texture_binding_layout.viewDimension = WGPUTextureViewDimension_2D;
 
         u_compute_texture_right_eye.data = right_eye_texture.get_view();
         u_compute_texture_right_eye.binding = 1;
-        u_compute_texture_right_eye.visibility = WGPUShaderStage_Compute;
-        u_compute_texture_right_eye.is_storage_texture = true;
-        u_compute_texture_right_eye.storage_texture_binding_layout.access = WGPUStorageTextureAccess_WriteOnly;
-        u_compute_texture_right_eye.storage_texture_binding_layout.format = WGPUTextureFormat_RGBA8Unorm;
-        u_compute_texture_right_eye.storage_texture_binding_layout.viewDimension = WGPUTextureViewDimension_2D;
 
         // RGB for color, A for distance
         
@@ -788,45 +777,34 @@ void RaymarchingRenderer::init_compute_raymarching_pipeline()
 
         u_compute_texture_sdf_storage.data = webgpu_context.create_buffer(SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION * sizeof(float) * 4, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr);
         u_compute_texture_sdf_storage.binding = 2;
-        u_compute_texture_sdf_storage.visibility = WGPUShaderStage_Compute;
-        u_compute_texture_sdf_storage.buffer_binding_type = WGPUBufferBindingType_Storage;
         u_compute_texture_sdf_storage.buffer_size = SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION * sizeof(float) * 4;
 
         std::vector<Uniform*> uniforms = { &u_compute_texture_left_eye, &u_compute_texture_right_eye, &u_compute_texture_sdf_storage };
 
-        compute_textures_bind_group_layout = webgpu_context.create_bind_group_layout(uniforms);
-        compute_raymarching_textures_bind_group = webgpu_context.create_bind_group(uniforms, compute_textures_bind_group_layout);
+        compute_raymarching_textures_bind_group = webgpu_context.create_bind_group(uniforms, compute_raymarching_shader, 0);
     }
 
-    WGPUBindGroupLayout compute_data_bind_group_layout;
     // Compute data uniforms
     {
         u_compute_buffer_data.data = webgpu_context.create_buffer(sizeof(sComputeData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr);
         u_compute_buffer_data.binding = 0;
-        u_compute_buffer_data.visibility = WGPUShaderStage_Compute;
         u_compute_buffer_data.buffer_size = sizeof(sComputeData);
 
         std::vector<Uniform*> uniforms = { &u_compute_buffer_data };
 
-        compute_data_bind_group_layout = webgpu_context.create_bind_group_layout(uniforms);
-        compute_raymarching_data_bind_group = webgpu_context.create_bind_group(uniforms, compute_data_bind_group_layout);
+        compute_raymarching_data_bind_group = webgpu_context.create_bind_group(uniforms, compute_raymarching_shader, 1);
     }
 
-    WGPUPipelineLayout compute_raymarching_pipeline_layout = webgpu_context.create_pipeline_layout({ compute_textures_bind_group_layout, compute_data_bind_group_layout });
-
-    compute_raymarching_pipeline.create_compute(compute_raymarching_shader, compute_raymarching_pipeline_layout);
+    compute_raymarching_pipeline.create_compute(compute_raymarching_shader);
 }
 
 void RaymarchingRenderer::init_initialize_sdf_pipeline() {
     initialize_sdf_shader = Shader::get("data/shaders/sdf_initialization.wgsl");
 
     std::vector<Uniform*> uniforms = { &u_compute_texture_sdf_storage };
-    WGPUBindGroupLayout initilze_sdf_bind_group_layout = webgpu_context.create_bind_group_layout(uniforms);
-    initialize_sdf_bind_group = webgpu_context.create_bind_group(uniforms, initilze_sdf_bind_group_layout);
+    initialize_sdf_bind_group = webgpu_context.create_bind_group(uniforms, initialize_sdf_shader, 0);
     
-    WGPUPipelineLayout initialize_sdf_pipeline_layout = webgpu_context.create_pipeline_layout({ initilze_sdf_bind_group_layout });
-
-    initialize_sdf_pipeline.create_compute(initialize_sdf_shader, initialize_sdf_pipeline_layout);
+    initialize_sdf_pipeline.create_compute(initialize_sdf_shader);
 }
 
 void RaymarchingRenderer::init_compute_merge_pipeline()
@@ -834,28 +812,22 @@ void RaymarchingRenderer::init_compute_merge_pipeline()
     // Load compute_raymarching shader
     compute_merge_shader = Shader::get("data/shaders/sdf_merge.wgsl");
 
-    WGPUBindGroupLayout compute_bind_group_layout;
     // Texture uniforms
     {
         u_compute_edits_array.data = webgpu_context.create_buffer(sizeof(edits), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr);
         u_compute_edits_array.binding = 0;
-        u_compute_edits_array.visibility = WGPUShaderStage_Compute;
         u_compute_edits_array.buffer_size = sizeof(edits);
 
         u_compute_merge_data.data = webgpu_context.create_buffer(sizeof(sMergeData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr);
         u_compute_merge_data.binding = 1;
-        u_compute_merge_data.visibility = WGPUShaderStage_Compute;
         u_compute_merge_data.buffer_size = sizeof(sMergeData);
 
         std::vector<Uniform*> uniforms = { &u_compute_edits_array, &u_compute_merge_data, &u_compute_texture_sdf_storage };
 
-        compute_bind_group_layout = webgpu_context.create_bind_group_layout(uniforms);
-        compute_merge_bind_group = webgpu_context.create_bind_group(uniforms, compute_bind_group_layout);
+        compute_merge_bind_group = webgpu_context.create_bind_group(uniforms, compute_merge_shader, 0);
     }
 
-    WGPUPipelineLayout compute_pipeline_layout = webgpu_context.create_pipeline_layout({ compute_bind_group_layout });
-
-    compute_merge_pipeline.create_compute(compute_merge_shader, compute_pipeline_layout);
+    compute_merge_pipeline.create_compute(compute_merge_shader);
 }
 
 #if defined(XR_SUPPORT) && defined(USE_MIRROR_WINDOW)
