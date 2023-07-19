@@ -1,6 +1,6 @@
 {
     "pages": [
-        "Lato-Regular.png"
+        "Lato.png"
     ],
     "chars": [
         {
@@ -3127,7 +3127,7 @@
         }
     ],
     "info": {
-        "face": "Lato-Regular",
+        "face": "Lato",
         "size": 42,
         "bold": 0,
         "italic": 0,
