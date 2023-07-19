@@ -13,8 +13,7 @@
 class RaymarchingRenderer : public Renderer {
 
     // Render to screen
-    WGPURenderPipeline      render_quad_pipeline = nullptr;
-    WGPUPipelineLayout      render_quad_pipeline_layout = nullptr;
+    Pipeline                render_quad_pipeline;
     Shader*                 render_quad_shader = nullptr;
 
     WGPUBindGroup           render_bind_group_left_eye = nullptr;
@@ -46,14 +45,12 @@ class RaymarchingRenderer : public Renderer {
     WGPUTextureView         right_eye_depth_texture_view = nullptr;
 
     // Render meshes
-    WGPURenderPipeline      render_mesh_pipeline = nullptr;
-    WGPUPipelineLayout      render_mesh_pipeline_layout = nullptr;
+    Pipeline                render_mesh_pipeline;
     WGPUBindGroup           render_bind_group_camera = nullptr;
     Shader*                 render_mesh_shader = nullptr;
 
     // Font rendering
-    WGPURenderPipeline      render_fonts_pipeline = nullptr;
-    WGPUPipelineLayout      render_fonts_pipeline_layout = nullptr;
+    Pipeline                render_fonts_pipeline;
     Shader*                 render_fonts_shader = nullptr;
 
     Uniform                 u_camera;

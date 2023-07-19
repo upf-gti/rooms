@@ -61,8 +61,6 @@ void RaymarchingRenderer::clean()
     u_render_texture_right_eye.destroy();
 
     // Render pipeline
-    wgpuRenderPipelineRelease(render_quad_pipeline);
-    wgpuPipelineLayoutRelease(render_quad_pipeline_layout);
     wgpuBindGroupRelease(render_bind_group_left_eye);
     wgpuBindGroupRelease(render_bind_group_right_eye);
 
@@ -241,7 +239,7 @@ void RaymarchingRenderer::render_meshes(WGPUTextureView swapchain_view, WGPUText
     WGPURenderPassEncoder render_pass = wgpuCommandEncoderBeginRenderPass(command_encoder, &render_pass_descr);
 
     // Bind Pipeline
-    wgpuRenderPassEncoderSetPipeline(render_pass, render_mesh_pipeline);
+    render_mesh_pipeline.set(render_pass);
 
     for (const auto entity : render_list) {
 
@@ -366,7 +364,7 @@ void RaymarchingRenderer::render_eye_quad(WGPUTextureView swapchain_view, WGPUTe
         WGPURenderPassEncoder render_pass = wgpuCommandEncoderBeginRenderPass(command_encoder, &render_pass_descr);
 
         // Bind Pipeline
-        wgpuRenderPassEncoderSetPipeline(render_pass, render_quad_pipeline);
+        render_quad_pipeline.set(render_pass);
 
         // Set binding group
         wgpuRenderPassEncoderSetBindGroup(render_pass, 0, bind_group, 0, nullptr);
@@ -634,34 +632,25 @@ void RaymarchingRenderer::init_render_quad_pipeline()
     // Generate bindgroups
     u_render_texture_left_eye.data = left_eye_texture.get_view();
     u_render_texture_left_eye.binding = 0;
-    u_render_texture_left_eye.visibility = WGPUShaderStage_Fragment;
 
     u_render_texture_right_eye.data = right_eye_texture.get_view();
     u_render_texture_right_eye.binding = 0;
-    u_render_texture_right_eye.visibility = WGPUShaderStage_Fragment;
 
     // Left eye bind group
-    WGPUBindGroupLayout render_bind_group_layout;
     {
         std::vector<Uniform*> uniforms = { &u_render_texture_left_eye };
 
-        // shared with right eye
-        render_bind_group_layout = webgpu_context.create_bind_group_layout(uniforms);
-
-        render_bind_group_left_eye = webgpu_context.create_bind_group(uniforms, render_bind_group_layout);
+        render_bind_group_left_eye = webgpu_context.create_bind_group(uniforms, render_quad_shader, 0);
     }
 
     // Right eye bind group
     {
         std::vector<Uniform*> uniforms = { &u_render_texture_right_eye };
 
-        // render_bind_group_layout is the same as left eye
-        render_bind_group_right_eye = webgpu_context.create_bind_group(uniforms, render_bind_group_layout);
+        render_bind_group_right_eye = webgpu_context.create_bind_group(uniforms, render_quad_shader, 0);
     }
 
     quad_mesh.create_quad();
-
-    render_quad_pipeline_layout = webgpu_context.create_pipeline_layout({ render_bind_group_layout });
 
     WGPUTextureFormat swapchain_format = is_openxr_available ? webgpu_context.xr_swapchain_format : webgpu_context.swapchain_format;
 
@@ -682,7 +671,7 @@ void RaymarchingRenderer::init_render_quad_pipeline()
     color_target.blend = &blend_state;
     color_target.writeMask = WGPUColorWriteMask_All;
 
-    render_quad_pipeline = webgpu_context.create_render_pipeline({ Mesh::get_vertex_buffer_layout(eVertexBufferLayout::VB_DEFAULT) }, color_target, render_quad_shader->get_module(), render_quad_pipeline_layout, true);
+    render_quad_pipeline.create_render(render_quad_shader, { Mesh::get_vertex_buffer_layout(eVertexBufferLayout::VB_DEFAULT) }, color_target, true);
 }
 
 void RaymarchingRenderer::init_render_mesh_pipeline()
@@ -691,17 +680,11 @@ void RaymarchingRenderer::init_render_mesh_pipeline()
 
     u_camera.data = webgpu_context.create_buffer(sizeof(sCameraData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "camera_buffer");
     u_camera.binding = 0;
-    u_camera.visibility = WGPUShaderStage_Vertex;
     u_camera.buffer_size = sizeof(sCameraData);
 
     std::vector<Uniform*> uniforms = { &u_camera };
 
-    // shared with right eye
-    WGPUBindGroupLayout camera_bind_group_layout = webgpu_context.create_bind_group_layout(uniforms);
-
-    render_bind_group_camera = webgpu_context.create_bind_group(uniforms, camera_bind_group_layout);
-
-    render_mesh_pipeline_layout = webgpu_context.create_pipeline_layout({ Mesh::get_bind_group_layout(BG_DEFAULT), camera_bind_group_layout});
+    render_bind_group_camera = webgpu_context.create_bind_group(uniforms, render_mesh_shader, 1);
 
     WGPUTextureFormat swapchain_format = is_openxr_available ? webgpu_context.xr_swapchain_format : webgpu_context.swapchain_format;
 
@@ -722,7 +705,7 @@ void RaymarchingRenderer::init_render_mesh_pipeline()
     color_target.blend = &blend_state;
     color_target.writeMask = WGPUColorWriteMask_All;
 
-    render_mesh_pipeline = webgpu_context.create_render_pipeline({ Mesh::get_vertex_buffer_layout(eVertexBufferLayout::VB_DEFAULT) }, color_target, render_mesh_shader->get_module(), render_mesh_pipeline_layout, true);
+    render_mesh_pipeline.create_render(render_mesh_shader, { Mesh::get_vertex_buffer_layout(eVertexBufferLayout::VB_DEFAULT) }, color_target, true);
 }
 
 void RaymarchingRenderer::init_render_fonts_pipeline()
@@ -732,10 +715,6 @@ void RaymarchingRenderer::init_render_fonts_pipeline()
     std::vector<Uniform*> uniforms = { &u_camera };
 
     // shared with right eye
-    WGPUBindGroupLayout camera_bind_group_layout = webgpu_context.create_bind_group_layout(uniforms);
-
-    render_fonts_pipeline_layout = webgpu_context.create_pipeline_layout({ Mesh::get_bind_group_layout(BG_DEFAULT), camera_bind_group_layout });
-
     WGPUTextureFormat swapchain_format = is_openxr_available ? webgpu_context.xr_swapchain_format : webgpu_context.swapchain_format;
 
     WGPUBlendState blend_state;
@@ -755,7 +734,7 @@ void RaymarchingRenderer::init_render_fonts_pipeline()
     color_target.blend = &blend_state;
     color_target.writeMask = WGPUColorWriteMask_All;
 
-    render_fonts_pipeline = webgpu_context.create_render_pipeline({ Mesh::get_vertex_buffer_layout(eVertexBufferLayout::VB_DEFAULT) }, color_target, render_fonts_shader->get_module(), render_fonts_pipeline_layout, true);
+    render_fonts_pipeline.create_render(render_fonts_shader, { Mesh::get_vertex_buffer_layout(eVertexBufferLayout::VB_DEFAULT) }, color_target, true);
 }
 
 void RaymarchingRenderer::init_compute_raymarching_pipeline()
@@ -880,7 +859,7 @@ void RaymarchingRenderer::init_mirror_pipeline()
         swapchain_bind_groups.push_back(webgpu_context.create_bind_group(uniforms, swapchain_bind_group_layout));
     }
 
-    mirror_pipeline = webgpu_context.create_render_pipeline({ Mesh::get_vertex_buffer_layout(VB_DEFAULT)}, color_target, mirror_shader->get_module(), render_mirror_pipeline_layout);
+    mirror_pipeline = webgpu_context.create_render_pipeline(mirror_shader->get_module(), render_mirror_pipeline_layout, { Mesh::get_vertex_buffer_layout(VB_DEFAULT)}, color_target);
 }
 
 #endif
