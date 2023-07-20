@@ -1,11 +1,8 @@
-//https://medium.com/@calebfaith/implementing-msdf-font-in-opengl-ea09a9ab7e00
-
 struct VertexInput {
     @location(0) position: vec3f,
     @location(1) uv: vec2f,
     @location(2) normal: vec3f,
     @location(3) color: vec3f,
-
 };
 
 struct VertexOutput {
@@ -25,7 +22,7 @@ struct CameraData {
 };
 
 @group(0) @binding(0) var<uniform> mesh_data : RenderMeshData;
-@group(0) @binding(1) var texture: texture_2d<f32>;
+@group(0) @binding(1) var albedo_texture: texture_2d<f32>;
 
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
 
@@ -43,39 +40,13 @@ struct FragmentOutput {
     @location(0) color: vec4f
 }
 
-fn median( r: f32, g: f32, b: f32) -> f32 {
-    return max(min(r, g), min(max(r, g), b));
-}
-
 @fragment
 fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     var out: FragmentOutput;
 
-    var sample : vec3f = textureLoad(texture, vec2u(in.uv), 0).xyz;
-
-    var bgColor : vec4f = vec4f(0,0,0,0);
-    var fgColor : vec4f = vec4f(in.color, 1.0);
-    var pxRange : f32 = 4;
-
-    var size : vec2f = vec2f(textureDimensions(texture));
-
-    var uvs : vec2f = in.uv / size;
-
-    size.x *= dpdx( uvs.x );
-    size.y *= dpdy( uvs.y );
-
-    var msdfUnit : vec2f = pxRange / size;
-    var sigDist : f32 = median(sample.r, sample.g, sample.b) - 0.5;
-    sigDist *= dot(msdfUnit, 0.5 / fwidth(uvs));
-    var w : f32 = fwidth( sigDist );
-    var opacity : f32 = smoothstep( 0.5 - w, 0.5 + w, sigDist );
-
-    if(opacity < 0.01) {
-        discard;
-    }
-
-    out.color = mix(bgColor, fgColor, opacity);
+    var texture_size = textureDimensions(albedo_texture);
+    out.color = textureLoad(albedo_texture, vec2u(in.uv * vec2f(texture_size)), 0);
 
     return out;
 }

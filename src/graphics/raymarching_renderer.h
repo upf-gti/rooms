@@ -44,10 +44,14 @@ class RaymarchingRenderer : public Renderer {
     WGPUTextureView         left_eye_depth_texture_view = nullptr;
     WGPUTextureView         right_eye_depth_texture_view = nullptr;
 
-    // Render meshes
+    // Render meshes with material color
     Pipeline                render_mesh_pipeline;
     WGPUBindGroup           render_bind_group_camera = nullptr;
     Shader*                 render_mesh_shader = nullptr;
+
+    // Render meshes with textures
+    Pipeline                render_mesh_texture_pipeline;
+    Shader*                 render_mesh_texture_shader = nullptr;
 
     // Font rendering
     Pipeline                render_fonts_pipeline;
@@ -120,8 +124,7 @@ class RaymarchingRenderer : public Renderer {
     void compute_raymarching();
 
     void init_render_quad_pipeline();
-    void init_render_mesh_pipeline();
-    void init_render_fonts_pipeline();
+    void init_render_mesh_pipelines();
     void init_compute_raymarching_pipeline();
     void init_initialize_sdf_pipeline();
     void init_compute_merge_pipeline();

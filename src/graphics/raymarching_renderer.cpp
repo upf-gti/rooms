@@ -27,8 +27,7 @@ int RaymarchingRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
     Renderer::initialize(window, use_mirror_screen);
 
     init_render_quad_pipeline();
-    init_render_mesh_pipeline();
-    init_render_fonts_pipeline();
+    init_render_mesh_pipelines();
     init_compute_raymarching_pipeline();
     init_compute_merge_pipeline();
     init_initialize_sdf_pipeline();
@@ -156,13 +155,9 @@ void RaymarchingRenderer::render()
     }
 #endif
 
-    // Destroy UI elements
-    for (const auto entity : render_list) {
-        if (entity->destroy_after_render)
-            delete entity;
-    }
-
-    render_list.clear();
+    render_mesh_pipeline.clean_renderables();
+    render_mesh_texture_pipeline.clean_renderables();
+    render_fonts_pipeline.clean_renderables();
 
     // Check validation errors
     webgpu_context.print_errors();
@@ -236,29 +231,36 @@ void RaymarchingRenderer::render_meshes(WGPUTextureView swapchain_view, WGPUText
     // Create & fill the render pass (encoder)
     WGPURenderPassEncoder render_pass = wgpuCommandEncoderBeginRenderPass(command_encoder, &render_pass_descr);
 
-    // Bind Pipeline
-    render_mesh_pipeline.set(render_pass);
+    static auto render_pipeline = [&](Pipeline& pipeline) {
 
-    for (const auto entity : render_list) {
+        // Bind Pipeline
+        pipeline.set(render_pass);
 
-        Mesh* mesh = entity->get_mesh();
+        for (const auto entity : pipeline.get_render_list()) {
 
-        // Not initialized
-        if (mesh->get_vertex_count() == 0) {
-            std::cerr << "Skipping not initialized mesh" << std::endl;
-            continue;
+            Mesh* mesh = entity->get_mesh();
+
+            // Not initialized
+            if (mesh->get_vertex_count() == 0) {
+                std::cerr << "Skipping not initialized mesh" << std::endl;
+                continue;
+            }
+
+            // Set bind group
+            wgpuRenderPassEncoderSetBindGroup(render_pass, 0, mesh->get_bind_group(), 0, nullptr);
+            wgpuRenderPassEncoderSetBindGroup(render_pass, 1, render_bind_group_camera, 0, nullptr);
+
+            // Set vertex buffer while encoding the render pass
+            wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, mesh->get_vertex_buffer(), 0, mesh->get_byte_size());
+
+            // Submit drawcall
+            wgpuRenderPassEncoderDraw(render_pass, static_cast<uint32_t>(mesh->get_vertex_count()), 1, 0, 0);
         }
+    };
 
-        // Set bind group
-        wgpuRenderPassEncoderSetBindGroup(render_pass, 0, mesh->get_bind_group(), 0, nullptr);
-        wgpuRenderPassEncoderSetBindGroup(render_pass, 1, render_bind_group_camera, 0, nullptr);
-
-        // Set vertex buffer while encoding the render pass
-        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, mesh->get_vertex_buffer(), 0, mesh->get_byte_size());
-
-        // Submit drawcall
-        wgpuRenderPassEncoderDraw(render_pass, static_cast<uint32_t>(mesh->get_vertex_count()), 1, 0, 0);
-    }
+    render_pipeline(render_mesh_pipeline);
+    render_pipeline(render_mesh_texture_pipeline);
+    render_pipeline(render_fonts_pipeline);
 
     wgpuRenderPassEncoderEnd(render_pass);
 
@@ -672,9 +674,11 @@ void RaymarchingRenderer::init_render_quad_pipeline()
     render_quad_pipeline.create_render(render_quad_shader, color_target, true);
 }
 
-void RaymarchingRenderer::init_render_mesh_pipeline()
+void RaymarchingRenderer::init_render_mesh_pipelines()
 {
     render_mesh_shader = Shader::get("data/shaders/mesh_color.wgsl");
+    render_mesh_texture_shader = Shader::get("data/shaders/mesh_texture.wgsl");
+    render_fonts_shader = Shader::get("data/shaders/sdf_fonts.wgsl");
 
     u_camera.data = webgpu_context.create_buffer(sizeof(sCameraData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "camera_buffer");
     u_camera.binding = 0;
@@ -704,34 +708,7 @@ void RaymarchingRenderer::init_render_mesh_pipeline()
     color_target.writeMask = WGPUColorWriteMask_All;
 
     render_mesh_pipeline.create_render(render_mesh_shader, color_target, true);
-}
-
-void RaymarchingRenderer::init_render_fonts_pipeline()
-{
-    render_fonts_shader = Shader::get("data/shaders/sdf_fonts.wgsl");
-
-    std::vector<Uniform*> uniforms = { &u_camera };
-
-    // shared with right eye
-    WGPUTextureFormat swapchain_format = is_openxr_available ? webgpu_context.xr_swapchain_format : webgpu_context.swapchain_format;
-
-    WGPUBlendState blend_state;
-    blend_state.color = {
-            .operation = WGPUBlendOperation_Add,
-            .srcFactor = WGPUBlendFactor_SrcAlpha,
-            .dstFactor = WGPUBlendFactor_OneMinusSrcAlpha,
-    };
-    blend_state.alpha = {
-            .operation = WGPUBlendOperation_Add,
-            .srcFactor = WGPUBlendFactor_Zero,
-            .dstFactor = WGPUBlendFactor_One,
-    };
-
-    WGPUColorTargetState color_target = {};
-    color_target.format = swapchain_format;
-    color_target.blend = &blend_state;
-    color_target.writeMask = WGPUColorWriteMask_All;
-
+    render_mesh_texture_pipeline.create_render(render_mesh_texture_shader, color_target, true);
     render_fonts_pipeline.create_render(render_fonts_shader, color_target, true);
 }
 
