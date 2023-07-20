@@ -79,3 +79,9 @@ target_link_libraries(${PROJECT_NAME} webgpuEngine)
 
 # vulkan
 include_directories(${Vulkan_INCLUDE_DIR})
+
+# Enable multicore compile on VS solution
+if(MSVC)
+  add_definitions(/MP)
+endif()
+
