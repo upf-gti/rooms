@@ -19,7 +19,7 @@ std::vector<sEdit> SausageTool::use() {
 			.position = edit_origin,
 			.primitive = selected_primitive,
 			.color = glm::vec3(random_f(), random_f(), random_f()),
-			.operation = (is_smooth) ? OP_SMOOTH_UNION : OP_UNION,
+			.operation = (smooth_mode) ? OP_SMOOTH_UNION : OP_UNION,
 			.size = second_position,
 			.radius = radius
 		});

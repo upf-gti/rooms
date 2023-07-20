@@ -22,7 +22,7 @@ std::vector<sEdit> MirrorTool::use() {
 			.position = edit_origin,
 			.primitive = selected_primitive,
 			.color = rnd_color,
-			.operation = (is_smooth) ? OP_SMOOTH_UNION : OP_UNION,
+			.operation = (smooth_mode) ? OP_SMOOTH_UNION : OP_UNION,
 			.size = size,
 			.radius = radius
 		});
@@ -31,7 +31,7 @@ std::vector<sEdit> MirrorTool::use() {
 			.position = edit_origin + mirror_normal * dist_to_plane * 2.0f,
 			.primitive = selected_primitive,
 			.color = rnd_color,
-			.operation = (is_smooth) ? OP_SMOOTH_UNION : OP_UNION,
+			.operation = (smooth_mode) ? OP_SMOOTH_UNION : OP_UNION,
 			.size = size,
 			.radius = radius
 		});

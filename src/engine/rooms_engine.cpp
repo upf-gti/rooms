@@ -3,6 +3,8 @@
 #include "framework/entities/entity_text.h"
 #include "framework/input.h"
 #include "ui/ui.h"
+#include "tools/sculpt.h"
+#include "tools/mirror.h"
 
 ui::Controller ui_controller;
 
@@ -31,7 +33,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_mir
 
 	// UI
 
-	ui_controller.set_workspace({ 256.f, 64.f  }, XR_BUTTON_A, POSE_AIM, HAND_LEFT, HAND_RIGHT);
+	ui_controller.set_workspace({ 256.f, 64.f }, XR_BUTTON_A, POSE_AIM, HAND_LEFT, HAND_RIGHT);
 
 	ui_controller.connect("on_button_a", [](const std::string& signal, float value) {
 		std::cout << "Signal: " << signal << std::endl;
@@ -42,6 +44,10 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_mir
 		torus->set_translation(glm::vec3(value, 0.f, 0.f));
 		torus->scale(glm::vec3(0.25f));
 	});
+
+	// Tooling
+	//tools[ADDITION] = (EditorTool*) new AdditionTool();
+	tools[MIRROR] = (EditorTool*) new MirrorTool();
 
 	return error;
 }

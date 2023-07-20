@@ -6,7 +6,7 @@
 
 class EditorTool {
 public:
-	bool is_smooth					= true;
+	bool smooth_mode					= true;
 	sdPrimitive selected_primitive	= SD_SPHERE;
 	glm::vec3 size					= glm::vec3(0.1f, 0.1f, 0.1f);
 	glm::vec3 color					= glm::vec3(1.0f, 1.0f, 1.0f);
