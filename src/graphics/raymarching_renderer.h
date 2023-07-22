@@ -15,8 +15,7 @@
 class RaymarchingRenderer : public Renderer {
 
     // Render to screen
-    WGPURenderPipeline      render_quad_pipeline = nullptr;
-    WGPUPipelineLayout      render_quad_pipeline_layout = nullptr;
+    Pipeline                render_quad_pipeline;
     Shader*                 render_quad_shader = nullptr;
 
     WGPUBindGroup           render_bind_group_left_eye = nullptr;
@@ -47,15 +46,17 @@ class RaymarchingRenderer : public Renderer {
     WGPUTextureView         left_eye_depth_texture_view = nullptr;
     WGPUTextureView         right_eye_depth_texture_view = nullptr;
 
-    // Render meshes
-    WGPURenderPipeline      render_mesh_pipeline = nullptr;
-    WGPUPipelineLayout      render_mesh_pipeline_layout = nullptr;
+    // Render meshes with material color
+    Pipeline                render_mesh_pipeline;
     WGPUBindGroup           render_bind_group_camera = nullptr;
     Shader*                 render_mesh_shader = nullptr;
 
+    // Render meshes with textures
+    Pipeline                render_mesh_texture_pipeline;
+    Shader*                 render_mesh_texture_shader = nullptr;
+
     // Font rendering
-    WGPURenderPipeline      render_fonts_pipeline = nullptr;
-    WGPUPipelineLayout      render_fonts_pipeline_layout = nullptr;
+    Pipeline                render_fonts_pipeline;
     Shader*                 render_fonts_shader = nullptr;
 
     Uniform                 u_camera;
@@ -97,14 +98,14 @@ class RaymarchingRenderer : public Renderer {
         glm::mat4x4 view_projection;
     } camera_data;
 
-    sEdit                             edits[EDITS_MAX];
+    sEdit edits[EDITS_MAX];
 
-    Mesh                              quad_mesh;
+    Mesh  quad_mesh;
 
     // For the XR mirror screen
 #if defined(XR_SUPPORT) && defined(USE_MIRROR_WINDOW)
-    WGPURenderPipeline      mirror_pipeline = nullptr;
-    Shader* mirror_shader = nullptr;
+    Pipeline mirror_pipeline;
+    Shader*  mirror_shader = nullptr;
 
     std::vector<Uniform> swapchain_uniforms;
     std::vector<WGPUBindGroup> swapchain_bind_groups;
@@ -125,8 +126,7 @@ class RaymarchingRenderer : public Renderer {
     void compute_raymarching();
 
     void init_render_quad_pipeline();
-    void init_render_mesh_pipeline();
-    void init_render_fonts_pipeline();
+    void init_render_mesh_pipelines();
     void init_compute_raymarching_pipeline();
     void init_initialize_sdf_pipeline();
     void init_compute_merge_pipeline();

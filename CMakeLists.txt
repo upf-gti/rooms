@@ -45,7 +45,7 @@ add_executable(${PROJECT_NAME} ${ROOMS_SOURCES})
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${ROOMS_DIR_SOURCES})
 
-# set_target_properties(${PROJECT_NAME} PROPERTIES VS_DEBUGGER_ENVIRONMENT "DAWN_DEBUG_BREAK_ON_ERROR=1")
+set_target_properties(${PROJECT_NAME} PROPERTIES VS_DEBUGGER_ENVIRONMENT "DAWN_DEBUG_BREAK_ON_ERROR=1")
 
 set_property(DIRECTORY ${ROOMS_DIR_ROOT} PROPERTY VS_STARTUP_PROJECT ${PROJECT_NAME})
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 20)
@@ -80,3 +80,9 @@ target_link_libraries(${PROJECT_NAME} webgpuEngine)
 
 # vulkan
 include_directories(${Vulkan_INCLUDE_DIR})
+
+# Enable multicore compile on VS solution
+if(MSVC)
+  add_definitions(/MP)
+endif()
+

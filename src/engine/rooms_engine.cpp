@@ -58,7 +58,7 @@ void RoomsEngine::update(float delta_time)
 
 	entities[0]->rotate(1.6f * delta_time, glm::vec3(1.0, 0.0, 0.0));
 	entities[1]->rotate(1.6f * delta_time, glm::vec3(0.0, 0.0, 1.0));
-	// entities[2]->rotate(1.6f * delta_time, glm::vec3(1.0, 0.0, 0.0));
+	//entities[2]->rotate(1.6f * delta_time, glm::vec3(1.0, 0.0, 0.0));
 
 	ui_controller.update(delta_time);
 }
