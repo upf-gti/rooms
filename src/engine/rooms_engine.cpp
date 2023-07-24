@@ -25,7 +25,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_mir
 	entities.push_back(cube);
 
 	TextEntity* text = new TextEntity("oppenheimer vs barbie", glm::vec2(1.f, 1.f), false);
-	text->scale(glm::vec3(0.15));
+	text->scale(glm::vec3(0.25));
 	text->translate(glm::vec3(-5.0f, 0.0, 0.0));
 	entities.push_back(text);
 

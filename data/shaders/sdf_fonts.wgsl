@@ -25,7 +25,8 @@ struct CameraData {
 };
 
 @group(0) @binding(0) var<uniform> mesh_data : RenderMeshData;
-@group(0) @binding(1) var texture: texture_2d<f32>;
+@group(0) @binding(1) var texture : texture_2d<f32>;
+@group(0) @binding(2) var texture_sampler : sampler;
 
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
 
@@ -62,7 +63,8 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var fgColor : vec4f = vec4f(in.color, 1.0);
 
     var sz : vec2f = vec2f(textureDimensions(texture));
-    var msd : vec3f = textureLoad(texture, vec2u(in.uv * sz), 0).xyz;
+    // var msd : vec3f = textureLoad(texture, vec2u(in.uv * sz), 0).rgb;
+    var msd : vec3f = textureSample(texture, texture_sampler, in.uv).rgb;
     var sd = median(msd.r, msd.g, msd.b);
     var screenPxDistance = screenPxRange(4, in.uv) * (sd - 0.5);
     var opacity = clamp(screenPxDistance + 0.5, 0.0, 1.0);
