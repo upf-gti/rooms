@@ -61,12 +61,12 @@ namespace ui {
 
 		// Render buttons (example)
 
-		for (int i = 0; i < 2; ++i)
+		/*for (int i = 0; i < 2; ++i)
 		{																				  // base, hover, active colors
 			make_button("on_button_a", { 16.f * (i + 1) + i * 32.f, 16.f }, { 32.f, 32.f }, { colors::GREEN, colors::PURPLE, colors::RED });
 		}
 
-		make_slider("on_slider_changed", { 112.f, 16.f }, { 128.f, 32.f }, { colors::GREEN, colors::PURPLE, colors::YELLOW });
+		make_slider("on_slider_changed", { 112.f, 16.f }, { 128.f, 32.f }, { colors::GREEN, colors::PURPLE, colors::YELLOW });*/
 	}
 
 	void Controller::update(float delta_time)

@@ -4,8 +4,7 @@
 #include "tools/tool.h"
 
 enum eTool : uint8_t {
-	ADDITION = 0,
-	MIRROR,
+	SCULPTING = 0,
 	EDITOR_TOOL_COUNT
 };
 
@@ -14,6 +13,8 @@ class RoomsEngine : public Engine {
 	std::vector<Entity*> entities;
 
 	EditorTool *tools[EDITOR_TOOL_COUNT];
+
+	eTool current_tool = SCULPTING;
 
 public:
 

@@ -4,7 +4,6 @@
 #include "framework/input.h"
 #include "ui/ui.h"
 #include "tools/sculpt.h"
-#include "tools/mirror.h"
 
 ui::Controller ui_controller;
 
@@ -33,7 +32,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_mir
 
 	// UI
 
-	ui_controller.set_workspace({ 256.f, 64.f }, XR_BUTTON_A, POSE_AIM, HAND_LEFT, HAND_RIGHT);
+	/*ui_controller.set_workspace({256.f, 64.f}, XR_BUTTON_A, POSE_AIM, HAND_LEFT, HAND_RIGHT);
 
 	ui_controller.connect("on_button_a", [](const std::string& signal, float value) {
 		std::cout << "Signal: " << signal << std::endl;
@@ -43,11 +42,13 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_mir
 		std::cout << "Signal: " << signal << ", Value: " << value << std::endl;
 		torus->set_translation(glm::vec3(value, 0.f, 0.f));
 		torus->scale(glm::vec3(0.25f));
-	});
+	});*/
 
 	// Tooling
-	//tools[ADDITION] = (EditorTool*) new AdditionTool();
-	tools[MIRROR] = (EditorTool*) new MirrorTool();
+	SculptTool *sculpting_tool =  new SculptTool();
+	sculpting_tool->initialize(renderer, &ui_controller);
+
+	tools[SCULPTING] = (EditorTool*) sculpting_tool;
 
 	return error;
 }
@@ -61,6 +62,8 @@ void RoomsEngine::update(float delta_time)
 	//entities[2]->rotate(1.6f * delta_time, glm::vec3(1.0, 0.0, 0.0));
 
 	ui_controller.update(delta_time);
+
+	tools[current_tool]->update(delta_time);
 }
 
 void RoomsEngine::render()
@@ -70,6 +73,8 @@ void RoomsEngine::render()
 	}
 
 	ui_controller.render();
-
+#ifdef XR_SUPPORT
+	tools[current_tool]->render_ui();
+#endif
 	Engine::render();
 }

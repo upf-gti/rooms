@@ -14,6 +14,8 @@
 
 class RaymarchingRenderer : public Renderer {
 
+    //Renderer* renderer = nullptr;
+
     // Render to screen
     Pipeline                render_quad_pipeline;
     Shader*                 render_quad_shader = nullptr;
@@ -152,5 +154,11 @@ public:
 
     void push_edit(sEdit edit) {
         edits[compute_merge_data.edits_to_process++] = edit;
+    };
+
+    void push_edit_list(std::vector<sEdit> &edits) {
+        for (sEdit edit : edits) {
+            edits[compute_merge_data.edits_to_process++] = edit;
+        }
     };
 };

@@ -134,7 +134,7 @@ void RaymarchingRenderer::update(float delta_time)
 
         //std::cout << edit << std::endl;
 
-        push_edit(edit);
+        //push_edit(edit);
     }
 #endif
 }
@@ -452,6 +452,7 @@ void RaymarchingRenderer::compute_merge()
     compute_merge_pipeline.set(compute_pass);
 
     // Update uniform buffer
+    std::cout << compute_merge_data.edits_to_process << std::endl;
     wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(u_compute_edits_array.data), 0, edits, sizeof(sEdit) * compute_merge_data.edits_to_process);
     wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(u_compute_merge_data.data), 0, &(compute_merge_data), sizeof(sMergeData));
 
