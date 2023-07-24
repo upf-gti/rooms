@@ -1,4 +1,11 @@
 ## How To Build:
+
+You will need:
+
+- [CMake](https://cmake.org/download/)
+- [Python](https://www.python.org/) (added to your PATH)
+- [Vulkan SDK](https://vulkan.lunarg.com/)
+
 For desktop:
 ```
 git submodule update --init --recursive
