@@ -24,9 +24,9 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_mir
 	cube->translate(glm::vec3(1.0f, 3.0, 0.0));
 	entities.push_back(cube);
 
-	TextEntity* text = new TextEntity("LLmmm", glm::vec2(1.f, 1.f), false);
-	text->scale(glm::vec3(0.25));
-	text->translate(glm::vec3(-2.0f, 3.0, -2.0));
+	TextEntity* text = new TextEntity("oppenheimer vs barbie", glm::vec2(1.f, 1.f), false);
+	text->scale(glm::vec3(0.15));
+	text->translate(glm::vec3(-5.0f, 0.0, 0.0));
 	entities.push_back(text);
 
 	// UI
@@ -52,7 +52,7 @@ void RoomsEngine::update(float delta_time)
 
 	entities[0]->rotate(1.6f * delta_time, glm::vec3(1.0, 0.0, 0.0));
 	entities[1]->rotate(1.6f * delta_time, glm::vec3(0.0, 0.0, 1.0));
-	//entities[2]->rotate(1.6f * delta_time, glm::vec3(1.0, 0.0, 0.0));
+	entities[2]->rotate(1.6f * delta_time, glm::vec3(1.0, 0.0, 0.0));
 
 	ui_controller.update(delta_time);
 }

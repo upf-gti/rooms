@@ -47,35 +47,26 @@ fn median( r: f32, g: f32, b: f32) -> f32 {
     return max(min(r, g), min(max(r, g), b));
 }
 
+fn screenPxRange( pxRange : f32, texCoord : vec2f ) -> f32 {
+    var unitRange = vec2f(pxRange) / vec2f(textureDimensions(texture));
+    var screenTexSize = vec2f(1.0) / fwidth(texCoord);
+    return max(0.5*dot(unitRange, screenTexSize), 1.0);
+}
+
 @fragment
 fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     var out: FragmentOutput;
 
-    var sample : vec3f = textureLoad(texture, vec2u(in.uv), 0).xyz;
-
     var bgColor : vec4f = vec4f(0,0,0,0);
     var fgColor : vec4f = vec4f(in.color, 1.0);
-    var pxRange : f32 = 4;
 
-    var size : vec2f = vec2f(textureDimensions(texture));
-
-    var uvs : vec2f = in.uv / size;
-
-    size.x *= dpdx( uvs.x );
-    size.y *= dpdy( uvs.y );
-
-    var msdfUnit : vec2f = pxRange / size;
-    var sigDist : f32 = median(sample.r, sample.g, sample.b) - 0.5;
-    sigDist *= dot(msdfUnit, 0.5 / fwidth(uvs));
-    var w : f32 = fwidth( sigDist );
-    var opacity : f32 = smoothstep( 0.5 - w, 0.5 + w, sigDist );
-
-    if(opacity < 0.01) {
-        discard;
-    }
-
+    var sz : vec2f = vec2f(textureDimensions(texture));
+    var msd : vec3f = textureLoad(texture, vec2u(in.uv * sz), 0).xyz;
+    var sd = median(msd.r, msd.g, msd.b);
+    var screenPxDistance = screenPxRange(4, in.uv) * (sd - 0.5);
+    var opacity = clamp(screenPxDistance + 0.5, 0.0, 1.0);
+    
     out.color = mix(bgColor, fgColor, opacity);
-
     return out;
 }
