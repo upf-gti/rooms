@@ -2,7 +2,7 @@
 #include "framework/entities/entity_mesh.h"
 #include "framework/entities/entity_text.h"
 #include "framework/input.h"
-#include "ui/ui.h"
+#include "ui/ui_controller.h"
 
 ui::Controller ui_controller;
 
@@ -21,17 +21,26 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_mir
 	EntityMesh* cube = new EntityMesh();
 	cube->set_mesh(Mesh::get("data/meshes/cube/cube.obj"));
 	cube->scale(glm::vec3(0.25));
-	cube->translate(glm::vec3(1.0f, 3.0, 0.0));
+	cube->translate(glm::vec3(1.0f, 0.0, 0.0));
 	entities.push_back(cube);
 
-	TextEntity* text = new TextEntity("oppenheimer vs barbie", glm::vec2(1.f, 1.f), false);
-	text->scale(glm::vec3(0.25));
-	text->translate(glm::vec3(-5.0f, 0.0, 0.0));
+	TextEntity* text = new TextEntity("oppenheimer vs barbie");
+	text->set_color(colors::GREEN)->set_scale(0.25f)->generate_mesh();
+	text->translate(glm::vec3(0.0f, 1.0, -3.0));
 	entities.push_back(text);
 
 	// UI
 
 	ui_controller.set_workspace({ 256.f, 64.f  }, XR_BUTTON_A, POSE_AIM, HAND_LEFT, HAND_RIGHT);
+
+	for (int i = 0; i < 2; ++i)
+	{																				  // base, hover, active colors
+		ui_controller.make_button("on_button_a", { 16.f * (i + 1) + i * 32.f, 16.f }, { 32.f, 32.f }, colors::GREEN);
+	}
+
+	ui_controller.make_text("on_slider_changed", { 0.f, 0.f }, colors::RED, 25.f);
+
+	ui_controller.make_slider("on_slider_changed", { 112.f, 16.f }, { 128.f, 32.f }, colors::PURPLE);
 
 	ui_controller.connect("on_button_a", [](const std::string& signal, float value) {
 		std::cout << "Signal: " << signal << std::endl;
