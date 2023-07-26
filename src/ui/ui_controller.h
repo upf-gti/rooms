@@ -1,19 +1,14 @@
 #pragma once
-
+#include "ui/ui_widgets.h"
 #include "framework/colors.h"
 #include <functional>
 #include <map>
 #include <string>
+#include <vector>
+
+class EntityMesh;
 
 namespace ui {
-
-	struct ButtonColorData {
-		Color base_color = colors::WHITE;
-		Color hover_color = colors::WHITE;
-		Color active_color = colors::WHITE;
-
-		const char* texture = nullptr;
-	};
 
 	struct WorkSpaceData {
 		glm::vec2 size;
@@ -28,13 +23,15 @@ namespace ui {
 		WorkSpaceData workspace;
 		glm::mat4x4 global_transform;
 
-		float global_scale				= 1.f;
-		float current_slider_pos		= 0.f;
-		float max_slider_pos;
+		EntityMesh* raycast_pointer = nullptr;
+		EntityMesh* workspace_element = nullptr;
 
+		std::vector <ui::Widget*> root;
 		std::map <std::string, std::function<void(const std::string&, float)>> signals;
 
 	public:
+
+		float global_scale = 1.f;
 
 		/*
 		*	Select button: XR Buttons
@@ -43,7 +40,11 @@ namespace ui {
 		*	Select hand: Raycast hand
 		*/
 
+		const WorkSpaceData& get_workspace() { return workspace; };
 		void set_workspace(glm::vec2 _workspace_size, uint8_t _select_button = 0, uint8_t _root_pose = 0, uint8_t _hand = 0, uint8_t _select_hand = 1);
+		const glm::mat4x4& get_matrix() { return global_transform; };
+		bool is_active();
+
 		void render();
 		void update(float delta_time);
 
@@ -51,8 +52,9 @@ namespace ui {
 		*	Widgets
 		*/
 
-		void make_button(const std::string& signal, glm::vec2 pos, glm::vec2 size, const ButtonColorData& data);
-		void make_slider(const std::string& signal, glm::vec2 pos, glm::vec2 size, const ButtonColorData& data);
+		void make_text(const std::string& text, glm::vec2 pos, const glm::vec3& color, float scale = 1.f, glm::vec2 size = {1, 1});
+		void make_button(const std::string& signal, glm::vec2 pos, glm::vec2 size, const glm::vec3& color, const char* texture = nullptr);
+		void make_slider(const std::string& signal, glm::vec2 pos, glm::vec2 size, const glm::vec3& color, const char* texture = nullptr);
 
 		/*
 		*	Callbacks

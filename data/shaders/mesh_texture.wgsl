@@ -23,6 +23,7 @@ struct CameraData {
 
 @group(0) @binding(0) var<uniform> mesh_data : RenderMeshData;
 @group(0) @binding(1) var albedo_texture: texture_2d<f32>;
+@group(0) @binding(2) var texture_sampler : sampler;
 
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
 
@@ -44,9 +45,6 @@ struct FragmentOutput {
 fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     var out: FragmentOutput;
-
-    var texture_size = textureDimensions(albedo_texture);
-    out.color = textureLoad(albedo_texture, vec2u(in.uv * vec2f(texture_size)), 0);
-
+    out.color = textureSample(albedo_texture, texture_sampler, in.uv);
     return out;
 }
