@@ -22,8 +22,9 @@ namespace ui {
 	class Widget {
 	public:
 
-		Widget(EntityMesh* e, const glm::vec2& p, uint8_t t) 
-			: entity(e), position(p), type(t) {};
+		Widget() {};
+		Widget(EntityMesh* e, const glm::vec2& p) 
+			: entity(e), position(p) {};
 
 		EntityMesh* entity = nullptr;
 		glm::vec2 position;
@@ -36,8 +37,10 @@ namespace ui {
 	class TextWidget : public Widget {
 	public:
 
-		TextWidget(EntityMesh* e, const glm::vec2& pos, uint8_t t)
-			: Widget(e, pos, t) {};
+		TextWidget(EntityMesh* e, const glm::vec2& pos)
+			: Widget(e, pos) {
+			type = eWidgetType::TEXT;
+		}
 	};
 
 	class ButtonWidget : public Widget {
@@ -47,8 +50,10 @@ namespace ui {
 		std::string signal;
 		Color color;
 
-		ButtonWidget(const std::string& sg, EntityMesh* e, const glm::vec2& p, const glm::vec3& c, const glm::vec2& s, uint8_t t)
-			: Widget(e, p, t), signal(sg), size(s), color(c) {};
+		ButtonWidget(const std::string& sg, EntityMesh* e, const glm::vec2& p, const glm::vec3& c, const glm::vec2& s)
+			: Widget(e, p), signal(sg), size(s), color(c) {
+			type = eWidgetType::BUTTON;
+		}
 
 		virtual void update(Controller* controller) override;
 	};
@@ -58,13 +63,29 @@ namespace ui {
 
 		EntityMesh* thumb_entity = nullptr;
 
-		float current_slider_pos = 0.f;
+		float current_value = 0.f;
+		float current_slider_pos = -1.f;
 		float max_slider_pos = -1.f;
 
-		SliderWidget(const std::string& sg, EntityMesh* tr, EntityMesh* th, const glm::vec2& p, const glm::vec3& c, const glm::vec2& s, uint8_t t)
-			: ButtonWidget(sg, tr, p, c, s, t), thumb_entity(th) {};
+		SliderWidget(const std::string& sg, EntityMesh* tr, EntityMesh* th, float v, const glm::vec2& p, const glm::vec3& c, const glm::vec2& s)
+			: ButtonWidget(sg, tr, p, c, s), thumb_entity(th), current_value(v) {
+			type = eWidgetType::SLIDER;
+		}
 
 		virtual void render() override;
 		virtual void update(Controller* controller) override;
+	};
+
+	class ColorPickerWidget : public Widget {
+	public:
+
+		glm::vec3 rect_color;
+
+		ColorPickerWidget(EntityMesh* rect, const glm::vec3& color) : rect_color(color) {
+			entity = rect;
+		}
+
+		virtual void render() override {};
+		virtual void update(Controller* controller) override {};
 	};
 }

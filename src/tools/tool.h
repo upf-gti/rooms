@@ -11,7 +11,7 @@ public:
 	virtual void initialize() {}
 	virtual void clean() {}
 
-	virtual void update(float delta_tim) {}
+	virtual void update(float delta_time) {}
 	virtual void render_scene() {}
 	virtual void render_ui() {}
 };

@@ -31,32 +31,10 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_mir
 	text->translate(glm::vec3(0.0f, 1.0, -3.0));
 	entities.push_back(text);
 
-	// UI
-
-	/*ui_controller.set_workspace({256.f, 64.f}, XR_BUTTON_A, POSE_AIM, HAND_LEFT, HAND_RIGHT);
-
-	for (int i = 0; i < 2; ++i)
-	{																				  // base, hover, active colors
-		ui_controller.make_button("on_button_a", { 16.f * (i + 1) + i * 32.f, 16.f }, { 32.f, 32.f }, colors::GREEN);
-	}
-
-	ui_controller.make_text("on_slider_changed", { 0.f, 0.f }, colors::RED, 25.f);
-
-	ui_controller.make_slider("on_slider_changed", { 112.f, 16.f }, { 128.f, 32.f }, colors::PURPLE);
-
-	ui_controller.connect("on_button_a", [](const std::string& signal, float value) {
-		std::cout << "Signal: " << signal << std::endl;
-	});
-
-	ui_controller.connect("on_slider_changed", [torus](const std::string& signal, float value) {
-		std::cout << "Signal: " << signal << ", Value: " << value << std::endl;
-		torus->set_translation(glm::vec3(value, 0.f, 0.f));
-		torus->scale(glm::vec3(0.25f));
-	});*/
-
 	// Tooling
+
 	SculptTool *sculpting_tool =  new SculptTool();
-	sculpting_tool->initialize(renderer);
+	sculpting_tool->initialize();
 
 	tools[SCULPTING] = (EditorTool*) sculpting_tool;
 

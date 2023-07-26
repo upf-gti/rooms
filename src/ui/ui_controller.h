@@ -1,12 +1,18 @@
 #pragma once
 #include "ui/ui_widgets.h"
 #include "framework/colors.h"
+#include <variant>
 #include <functional>
 #include <map>
 #include <string>
 #include <vector>
 
 class EntityMesh;
+
+using FuncFloat = std::function<void(const std::string&, float)>;
+using FuncString = std::function<void(const std::string&, std::string)>;
+using FuncVec2 = std::function<void(const std::string&, glm::vec2)>;
+using FuncVec3 = std::function<void(const std::string&, glm::vec3)>;
 
 namespace ui {
 
@@ -27,7 +33,14 @@ namespace ui {
 		EntityMesh* workspace_element = nullptr;
 
 		std::vector <ui::Widget*> root;
-		std::map <std::string, std::function<void(const std::string&, float)>> signals;
+		std::map <std::string, std::vector<std::variant<FuncFloat, FuncString, FuncVec2, FuncVec3>>> signals;
+
+		/*
+		*	Widget Helpers
+		*/
+
+		void process_params(glm::vec2& position, glm::vec2& size, bool skip_to_local = false);
+		EntityMesh* make_rect(glm::vec2 pos, glm::vec2 size, const glm::vec3& color);
 
 	public:
 
@@ -54,13 +67,31 @@ namespace ui {
 
 		void make_text(const std::string& text, glm::vec2 pos, const glm::vec3& color, float scale = 1.f, glm::vec2 size = {1, 1});
 		void make_button(const std::string& signal, glm::vec2 pos, glm::vec2 size, const glm::vec3& color, const char* texture = nullptr);
-		void make_slider(const std::string& signal, glm::vec2 pos, glm::vec2 size, const glm::vec3& color, const char* texture = nullptr);
+		void make_slider(const std::string& signal, float default_value, glm::vec2 pos, glm::vec2 size, const glm::vec3& color, const char* texture = nullptr);
+		void make_color_picker(const std::string& signal, const glm::vec3& default_color, glm::vec2 pos, glm::vec2 size);
 
 		/*
 		*	Callbacks
 		*/
 
-		void connect(const std::string& name, std::function<void(const std::string&, float)> callback);
-		bool emit_signal(const std::string& name, float value = 0.f);
+		void connect(const std::string& name, std::variant<FuncFloat, FuncString, FuncVec2, FuncVec3> callback);
+
+		template<typename T>
+		bool emit_signal(const std::string& name, T value) {
+
+			auto it = signals.find(name);
+			if (it == signals.end())
+				return false;
+
+			using FuncT = std::function<void(const std::string&, T)>;
+
+			for (auto& f : signals[name])
+			{
+				if (std::holds_alternative<FuncT>(f))
+					std::get<FuncT>(f)(name, value);
+			}
+
+			return true;
+		}
 	};
 }

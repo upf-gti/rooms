@@ -2,16 +2,15 @@
 
 #include "tool.h"
 #include "graphics/edit.h"
-#include "graphics/raymarching_renderer.h"
 #include "ui/ui_controller.h"
-
 #include <glm/glm.hpp>
 
+class RaymarchingRenderer;
 
 class SculptTool : EditorTool {
-	RaymarchingRenderer  *edit_renderer;
-	ui::Controller  ui_controller;
 
+	RaymarchingRenderer* renderer = nullptr;
+	ui::Controller ui_controller;
 
 	sEdit edit_to_add = {
 		.position = glm::vec3(0.0f, 0.0f, 0.0f),
@@ -22,21 +21,27 @@ class SculptTool : EditorTool {
 		.radius = 0.01f
 	};
 
-	// Modifiers
+	/*
+	*	Modifiers
+	*/
+
 	// Mirror
+
 	bool use_mirror = true;
 	glm::vec3 mirror_origin = glm::vec3(0.0f, -0.5f, 0.0f);
 	glm::vec3 mirror_normal = glm::vec3(1.0f, 0.0f, 0.0f);
 
 	// Aditional Sausage primitive
+
 	bool is_sausage_start_setted = false;
 	glm::vec3 sausage_start_position = glm::vec3(0.0f, 0.0f, 0.0f);
 
 public:
-	void initialize(Renderer* edit_render);
+
+	void initialize();
 	void clean();
 
-	void update(float delta_tim);
+	void update(float delta_time);
 	void render_scene();
 	void render_ui();
 };

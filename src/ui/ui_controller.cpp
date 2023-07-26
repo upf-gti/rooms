@@ -78,36 +78,51 @@ namespace ui {
 		}
 	}
 
-	void Controller::make_text(const std::string& text, glm::vec2 pos, const glm::vec3& color, float scale, glm::vec2 size)
+	void Controller::process_params(glm::vec2& position, glm::vec2& size, bool skip_to_local)
 	{
-		pos *= global_scale;
+		position *= global_scale;
 		size *= global_scale;
-		scale *= global_scale;
 
 		// Clamp to workspace limits
-		size = glm::clamp(size, glm::vec2(0.f), workspace.size - pos);
+		size = glm::clamp(size, glm::vec2(0.f), workspace.size - position);
 
 		// To workspace local size
-		pos -= (workspace.size - size - pos);
+		if(!skip_to_local)
+			position -= (workspace.size - size - position);
+	}
+
+	EntityMesh* Controller::make_rect(glm::vec2 pos, glm::vec2 size, const glm::vec3& color)
+	{
+		process_params(pos, size);
+
+		// Render quad in local workspace position
+		EntityMesh* rect = new EntityMesh();
+		Mesh* mesh = new Mesh();
+		mesh->create_quad(size.x, size.y, color);
+		rect->set_mesh(mesh);
+
+		Widget* widget = new Widget(rect, pos);
+		root.push_back(widget);
+
+		return rect;
+	}
+
+	void Controller::make_text(const std::string& text, glm::vec2 pos, const glm::vec3& color, float scale, glm::vec2 size)
+	{
+		process_params(pos, size);
+		scale *= global_scale;
 
 		TextEntity* e_text = new TextEntity(text);
 		e_text->set_color(color)->set_scale(scale);
 		e_text->generate_mesh();
 
-		TextWidget* widget = new TextWidget(e_text, pos, eWidgetType::TEXT);
+		TextWidget* widget = new TextWidget(e_text, pos);
 		root.push_back(widget);
 	}
 
 	void Controller::make_button(const std::string& signal, glm::vec2 pos, glm::vec2 size, const glm::vec3& color, const char* texture)
 	{
-		pos *= global_scale;
-		size *= global_scale;
-
-		// Clamp to workspace limits
-		size = glm::clamp(size, glm::vec2(0.f), workspace.size - pos);
-
-		// To workspace local size
-		pos -= (workspace.size - size - pos);
+		process_params(pos, size);
 
 		/*
 		*	Create button entity and set transform
@@ -116,23 +131,16 @@ namespace ui {
 		// Render quad in local workspace position
 		EntityMesh* e_button = new EntityMesh();
 		Mesh* mesh = new Mesh();
-		mesh->create_quad(size.x, size.y, color);
+		mesh->create_quad(size.x, size.y);
 		e_button->set_mesh(mesh);
 
-		ButtonWidget* widget = new ButtonWidget(signal, e_button, pos, color, size, eWidgetType::BUTTON);
+		ButtonWidget* widget = new ButtonWidget(signal, e_button, pos, color, size);
 		root.push_back(widget);
 	}
 
-	void Controller::make_slider(const std::string& signal, glm::vec2 pos, glm::vec2 size, const glm::vec3& color, const char* texture)
+	void Controller::make_slider(const std::string& signal, float default_value, glm::vec2 pos, glm::vec2 size, const glm::vec3& color, const char* texture)
 	{
-		pos *= global_scale;
-		size *= global_scale;
-
-		// Clamp to workspace limits
-		size = glm::clamp(size, glm::vec2(0.f), workspace.size - pos);
-
-		// To workspace local size
-		// ... doing this each frame to compute thumb position
+		process_params(pos, size, true);
 
 		/*
 		*	Create button entity and set transform
@@ -149,26 +157,45 @@ namespace ui {
 		thumb_mesh->create_quad(size.y, size.y, color);
 		e_thumb->set_mesh(thumb_mesh);
 
-		SliderWidget* widget = new SliderWidget(signal, e_track, e_thumb, pos, color, size, eWidgetType::SLIDER);
+		SliderWidget* widget = new SliderWidget(signal,e_track, e_thumb, default_value, pos, color, size);
 		root.push_back(widget);
 	}
 
-	void Controller::connect(const std::string& name, std::function<void(const std::string&, float)> callback)
+	void Controller::make_color_picker(const std::string& signal, const glm::vec3& default_color, glm::vec2 pos, glm::vec2 size)
 	{
-		auto it = signals.find(name);
-		if (it != signals.end())
-			return;
+		glm::vec2 offset = {0.f, size.y + 1.f};
+		make_slider(signal + "_r", default_color.r, pos, size, colors::RED);
+		make_slider(signal + "_g", default_color.g, pos + offset, size, colors::GREEN);
+		make_slider(signal + "_b", default_color.b, pos + offset * 2.f, size, colors::BLUE);
+		
+		// Get color rect entity
+		EntityMesh* rect = make_rect(glm::vec2(pos.x + size.x + 1.f, pos.y), glm::vec2(size.y, size.y + offset.y * 2.f), colors::WHITE);
+		rect->get_mesh()->update_material_color(default_color);
 
-		signals[name] = callback;
+		ColorPickerWidget* widget = new ColorPickerWidget(rect, default_color);
+		root.push_back(widget);
+
+		connect(signal + "_r", [this, signal, w = widget, r = rect](const std::string& s, float value) {
+			w->rect_color.x = value;
+			r->get_mesh()->update_material_color(w->rect_color);
+			emit_signal(signal, w->rect_color);
+		});
+
+		connect(signal + "_g", [this, signal, w = widget, r = rect](const std::string& s, float value) {
+			w->rect_color.y = value;
+			r->get_mesh()->update_material_color(w->rect_color);
+			emit_signal(signal, w->rect_color);
+		});
+
+		connect(signal + "_b", [this, signal, w = widget, r = rect](const std::string& s, float value) {
+			w->rect_color.z = value;
+			r->get_mesh()->update_material_color(w->rect_color);
+			emit_signal(signal, w->rect_color);
+		});
 	}
 
-	bool Controller::emit_signal(const std::string& name, float value)
+	void Controller::connect(const std::string& name, std::variant<FuncFloat, FuncString, FuncVec2, FuncVec3> callback)
 	{
-		auto it = signals.find(name);
-		if (it == signals.end())
-			return false;
-
-		signals[name](name, value);
-		return true;
+		signals[name].push_back(callback);
 	}
 }

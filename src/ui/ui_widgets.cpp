@@ -66,12 +66,10 @@ namespace ui {
 		bool is_pressed = hovered && Input::is_button_pressed(workspace.select_button);
 		bool was_pressed = hovered && Input::was_button_pressed(workspace.select_button);
 		
-		// I suppose we wont use hover/active colors when we have the texture, so
-		// it wont be necessary to recreate the mesh
-		entity->get_mesh()->create_quad(size.x, size.y, is_pressed ? colors::PURPLE : (hovered ? colors::CYAN : color));
+		entity->get_mesh()->update_material_color(is_pressed ? colors::PURPLE : (hovered ? colors::CYAN : color));
 		
 		if (was_pressed)
-			controller->emit_signal(signal);
+			controller->emit_signal(signal, 1.f);
 	}
 
 	/*
@@ -91,6 +89,14 @@ namespace ui {
 		// We need to store this position before converting to local size
 		glm::vec2 pos = position;
 		glm::vec2 thumb_size = { size.y, size.y };
+
+		// No value assigned
+		if (current_slider_pos == -1)
+		{
+			max_slider_pos = (size.x * 2.f - thumb_size.x * 2.f) / controller->global_scale;
+			current_slider_pos = current_value * max_slider_pos;
+		}
+
 		float thumb_pos = current_slider_pos * controller->global_scale - workspace.size.x + thumb_size.x + pos.x * 2.f;
 
 		// To workspace local size
@@ -157,9 +163,13 @@ namespace ui {
 
 		if (is_pressed)
 		{
-			max_slider_pos = (size.x * 2.f - thumb_size.x * 2.f) / controller->global_scale;
 			current_slider_pos = glm::clamp((intersection.x + size.x - thumb_size.x) / controller->global_scale, 0.f, max_slider_pos);
-			controller->emit_signal(signal, glm::clamp(current_slider_pos / max_slider_pos, 0.f, 1.f));
+			current_value = glm::clamp(current_slider_pos / max_slider_pos, 0.f, 1.f);
+			controller->emit_signal(signal, current_value);
 		}
 	}
+
+	/*
+	*	ColorPicker
+	*/
 }
