@@ -85,58 +85,6 @@ void RaymarchingRenderer::clean()
 void RaymarchingRenderer::update(float delta_time)
 {
     compute_raymarching_data.time += delta_time;
-
-#ifdef XR_SUPPORT
-    if (Input::is_key_pressed(GLFW_KEY_A) || Input::get_trigger_value(HAND_RIGHT) > 0.5) {
-
-        sEdit edit;
-        edit.operation = OP_SMOOTH_UNION; // random() < 0.5 ? OP_SMOOTH_UNION : OP_SMOOTH_SUBSTRACTION;
-        edit.color = glm::vec3(random_f(), random_f(), random_f());
-        // edit.position = glm::vec3(0.4 * (random() * 2 - 1), 0.4 * (random() * 2 - 1), 0.4 * (random() * 2 - 1));
-        edit.position = Input::get_controller_position(HAND_RIGHT);
-        edit.position.y -= 1.f;
-        edit.primitive = SD_SPHERE;
-        edit.size = glm::vec3(1.0, 1.0, 1.0);
-        edit.radius = 0.02f;// random();
-
-        std::cout << edit << std::endl;
-
-        push_edit(edit);
-    }
-
-    if (Input::get_trigger_value(HAND_LEFT) > 0.5) {
-
-        sEdit edit;
-        edit.operation = OP_SMOOTH_SUBSTRACTION;
-        edit.color = glm::vec3(random_f(), random_f(), random_f());
-        // edit.position = glm::vec3(0.4 * (random() * 2 - 1), 0.4 * (random() * 2 - 1), 0.4 * (random() * 2 - 1));
-        edit.position = Input::get_controller_position(HAND_LEFT);
-        edit.position.y -= 1.f;
-        edit.primitive = SD_SPHERE;
-        edit.size = glm::vec3(1.0, 1.0, 1.0);
-        edit.radius = 0.02f;// random();
-
-        //std::cout << edit << std::endl;
-
-        push_edit(edit);
-    }
-#else
-    if (Input::is_key_pressed(GLFW_KEY_A)) {
-
-        sEdit edit;
-        edit.operation = OP_SMOOTH_UNION; // random() < 0.5 ? OP_SMOOTH_UNION : OP_SMOOTH_SUBSTRACTION;
-        edit.color = glm::vec3(random_f(), random_f(), random_f());
-        edit.position = glm::vec3(0.4 * (random_f() * 2 - 1), 0.4 * (random_f() * 2 - 1), 0.4 * (random_f() * 2 - 1));
-        //edit.position.z += 0.20f;
-        edit.primitive = SD_SPHERE;
-        edit.size = glm::vec3(1.0, 1.0, 1.0);
-        edit.radius = 0.02f;// random();
-
-        //std::cout << edit << std::endl;
-
-        //push_edit(edit);
-    }
-#endif
 }
 
 void RaymarchingRenderer::render()
@@ -452,7 +400,6 @@ void RaymarchingRenderer::compute_merge()
     compute_merge_pipeline.set(compute_pass);
 
     // Update uniform buffer
-    std::cout << compute_merge_data.edits_to_process << std::endl;
     wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(u_compute_edits_array.data), 0, edits, sizeof(sEdit) * compute_merge_data.edits_to_process);
     wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(u_compute_merge_data.data), 0, &(compute_merge_data), sizeof(sMergeData));
 

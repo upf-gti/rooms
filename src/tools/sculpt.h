@@ -3,14 +3,14 @@
 #include "tool.h"
 #include "graphics/edit.h"
 #include "graphics/raymarching_renderer.h"
-#include "ui/ui.h"
+#include "ui/ui_controller.h"
 
 #include <glm/glm.hpp>
 
 
 class SculptTool : EditorTool {
 	RaymarchingRenderer  *edit_renderer;
-	ui::Controller  *ui_controller;
+	ui::Controller  ui_controller;
 
 
 	sEdit edit_to_add = {
@@ -19,7 +19,7 @@ class SculptTool : EditorTool {
 		.color = glm::vec3(1.0f, 0.0f, 0.0f),
 		.operation = OP_SMOOTH_UNION,
 		.size = glm::vec3(0.1f, 0.1f, 0.1f),
-		.radius = 0.05f
+		.radius = 0.01f
 	};
 
 	// Modifiers
@@ -33,7 +33,7 @@ class SculptTool : EditorTool {
 	glm::vec3 sausage_start_position = glm::vec3(0.0f, 0.0f, 0.0f);
 
 public:
-	void initialize(Renderer* edit_render, ui::Controller *ui_controller);
+	void initialize(Renderer* edit_render);
 	void clean();
 
 	void update(float delta_tim);
