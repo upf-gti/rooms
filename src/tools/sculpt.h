@@ -17,7 +17,7 @@ class SculptTool : EditorTool {
 		.position = glm::vec3(0.0f, 0.0f, 0.0f),
 		.primitive = SD_SPHERE,
 		.color = glm::vec3(1.0f, 0.0f, 0.0f),
-		.operation = OP_SMOOTH_UNION,
+		.operation = OP_UNION,
 		.size = glm::vec3(0.1f, 0.1f, 0.1f),
 		.radius = 0.01f
 	};

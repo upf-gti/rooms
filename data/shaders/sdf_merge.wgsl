@@ -26,11 +26,11 @@ fn evalSdf(position : vec3u) -> Surface
 
         switch (edit.primitive) {
             case SD_SPHERE: {
-                pSurface = sdSphere(vec3f(position) / vec3f(merge_data.sdf_size), offsetPosition, edit.radius, edit.color);
+                pSurface = sdSphere(vec3f(position) / vec3f(512.0), offsetPosition, edit.radius, edit.color);
                 break;
             }
             case SD_BOX: {
-                pSurface = sdBox(vec3f(position) / vec3f(merge_data.sdf_size), offsetPosition, edit.size, edit.radius, edit.color);
+                pSurface = sdBox(vec3f(position) / vec3f(512.0), offsetPosition, edit.size, edit.radius, edit.color);
                 break;
             }
             // case SD_ELLIPSOID:
@@ -104,5 +104,6 @@ fn evalSdf(position : vec3u) -> Surface
 @compute @workgroup_size(8, 8, 8)
 
 fn compute(@builtin(global_invocation_id) id: vec3<u32>) {
-    sdf_data.data[id.x + id.y * 512 + id.z * 512 * 512] = evalSdf(id);
+    let world_id : vec3<u32> = merge_data.sdf_size + id;
+    sdf_data.data[world_id.x + world_id.y * 512 + world_id.z * 512 * 512] = evalSdf(world_id);
 }

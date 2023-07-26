@@ -22,7 +22,7 @@ struct ComputeData {
 @group(1) @binding(0) var<uniform> compute_data : ComputeData;
 
 const MAX_DIST = 100.0;
-const MIN_HIT_DIST = 0.0001;
+const MIN_HIT_DIST = 0.002;
 const DERIVATIVE_STEP = 1.0 / 512.0;
 
 const ambientCoeff = 0.2;
@@ -91,13 +91,14 @@ fn raymarch(rayOrigin : vec3f, rayDir : vec3f) -> vec4f
 	{
 		let pos = rayOrigin + rayDir * depth;
         let surface : Surface = sample_sdf(pos);
-		if (surface.distance < MIN_HIT_DIST) {
+		if (surface.distance < MIN_HIT_DIST && surface.distance > -MIN_HIT_DIST) {
             depth = map_depths_to_log((depth / MAX_DIST) * compute_data.camera_far);
+            //return vec4f(surface.color, 0.05);
 			return vec4f(blinn_phong(rayOrigin, pos, lightPos + lightOffset, ambientColor, surface.color), depth);
 		}
 		depth += surface.distance;
 	}
-    return vec4f(missColor.rgb, 1.0);
+    return vec4f(1.0, 1.0, 1.0, 1.0);
 }
 
 fn get_ray_direction(inv_view_projection : mat4x4f, uv : vec2f) -> vec3f
