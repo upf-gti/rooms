@@ -38,7 +38,7 @@ fn evalSdf(position : vec3u) -> Surface
                 break;
             }
             case SD_CAPSULE: {
-                pSurface = sdCapsule(vec3f(position) / vec3f(merge_data.sdf_size), offsetPosition, edit.size + vec3f(0.5), edit.radius, edit.color);
+                pSurface = sdCapsule(vec3f(position) / vec3f(512.0), offsetPosition, edit.size + vec3f(0.5), edit.radius, edit.color);
                 break;
             }
             // case SD_CONE:
