@@ -40,7 +40,7 @@ void SculptTool::initialize()
 			use_mirror[0] = !use_mirror[0];
 		});
 		ui_controller.connect("on_radius_slider", [edit_to_add = &edit_to_add](const std::string& signal, float value) {
-			edit_to_add->radius = (value / 10.0f) + 0.01f;
+			edit_to_add->radius = (value / 10.0f * 0.5f) + 0.01f;
 		});
 		ui_controller.connect("on_edit_toggle", [edit_to_add = &edit_to_add](const std::string& signal, float value) {
 			edit_to_add->primitive = (edit_to_add->primitive == SD_CAPSULE) ? SD_SPHERE : SD_CAPSULE;

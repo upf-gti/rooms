@@ -41,6 +41,11 @@ int main() {
 #ifdef __EMSCRIPTEN__
     int render_width = canvas_get_width();
     int render_height = canvas_get_height();
+
+#elif defined(XR_SUPPORT)
+    // Keep XR aspect ratio
+    int render_width = 992;
+    int render_height = 1000;
 #else
     int render_width = 1280;
     int render_height = 720;

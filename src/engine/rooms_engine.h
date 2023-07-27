@@ -10,11 +10,14 @@ enum eTool : uint8_t {
 
 class RoomsEngine : public Engine {
 
-	std::vector<Entity*> entities;
+	std::vector<Entity*>	entities;
 
-	EditorTool *tools[EDITOR_TOOL_COUNT];
+	EditorTool				*tools[EDITOR_TOOL_COUNT];
 
-	eTool current_tool = SCULPTING;
+	eTool					current_tool = SCULPTING;
+
+	EntityMesh				*right_controller_mesh = NULL;
+	EntityMesh				*left_controller_mesh = NULL;
 
 public:
 
