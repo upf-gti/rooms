@@ -53,6 +53,12 @@ void SculptTool::update(float delta_time)
 	if (is_tool_being_used()) {
 
 #ifdef XR_SUPPORT
+		float curr_trigger_value = Input::get_trigger_value(HAND_RIGHT);
+
+		if (edit_to_add.primitive == SD_CAPSULE && has_trigger_used) {
+			return;
+		}
+
 		edit_to_add.position = Input::get_controller_position(HAND_RIGHT) - glm::vec3(0.0f, 1.0f, 0.0f);
 #else
 		edit_to_add.position = glm::vec3(0.4 * (random_f() * 2 - 1), 0.4 * (random_f() * 2 - 1), 0.4 * (random_f() * 2 - 1));
@@ -61,6 +67,7 @@ void SculptTool::update(float delta_time)
 		if (edit_to_add.primitive == SD_CAPSULE && !is_sausage_start_setted) {
 			edit_to_add.size = edit_to_add.position;
 			is_sausage_start_setted = true;
+			has_trigger_used = true;
 			return;
 		}
 
@@ -81,6 +88,9 @@ void SculptTool::update(float delta_time)
 		}
 
 		is_sausage_start_setted = false;
+		has_trigger_used = true;
+	} else {
+		has_trigger_used = false;
 	}
 }
 

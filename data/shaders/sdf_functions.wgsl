@@ -74,6 +74,20 @@ fn sdBox( p : vec3f, c : vec3f, s : vec3f, r : f32, color : vec3f ) -> Surface
     return sf;
 }
 
+fn sdCapsule( p : vec3f, a : vec3f, b : vec3f, r : f32, color : vec3f ) -> Surface {
+    var sf : Surface;
+
+    let pa : vec3f = p - a;
+    let ba : vec3f = b - a;
+
+    let h : f32 = clamp(dot(pa,ba) / dot(ba, ba), 0.0, 1.0);
+
+    sf.distance = length(pa-ba*h) - r;
+    sf.color = color;
+
+    return sf;
+}
+
 // Primitive combinations
 
 fn colorMix( a : vec3f, b : vec3f, n : f32 ) -> vec3f

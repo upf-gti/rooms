@@ -9,17 +9,17 @@ class RaymarchingRenderer;
 
 class SculptTool : EditorTool {
 
-	RaymarchingRenderer* renderer = nullptr;
-	ui::Controller ui_controller;
+	RaymarchingRenderer*	renderer = nullptr;
+	ui::Controller			ui_controller;
 
-	sEdit edit_to_add = {
-		.position = glm::vec3(0.0f, 0.0f, 0.0f),
-		.primitive = SD_SPHERE,
-		.color = glm::vec3(1.0f, 0.0f, 0.0f),
-		.operation = OP_SMOOTH_UNION,
-		.size = glm::vec3(0.1f, 0.1f, 0.1f),
-		.radius = 0.01f
-	};
+	sEdit					edit_to_add = {
+								.position = glm::vec3(0.0f, 0.0f, 0.0f),
+								.primitive = SD_SPHERE,
+								.color = glm::vec3(1.0f, 0.0f, 0.0f),
+								.operation = OP_SMOOTH_UNION,
+								.size = glm::vec3(0.1f, 0.1f, 0.1f),
+								.radius = 0.01f
+							};
 
 	/*
 	*	Modifiers
@@ -27,14 +27,15 @@ class SculptTool : EditorTool {
 
 	// Mirror
 
-	bool use_mirror = true;
-	glm::vec3 mirror_origin = glm::vec3(0.0f, -0.5f, 0.0f);
-	glm::vec3 mirror_normal = glm::vec3(1.0f, 0.0f, 0.0f);
+	bool			use_mirror = true;
+	glm::vec3		mirror_origin = glm::vec3(0.0f, -0.5f, 0.0f);
+	glm::vec3		mirror_normal = glm::vec3(1.0f, 0.0f, 0.0f);
 
 	// Aditional Sausage primitive
 
-	bool is_sausage_start_setted = false;
-	glm::vec3 sausage_start_position = glm::vec3(0.0f, 0.0f, 0.0f);
+	bool			is_sausage_start_setted = false;
+	glm::vec3		sausage_start_position = glm::vec3(0.0f, 0.0f, 0.0f);
+	bool			has_trigger_used = false;
 
 public:
 

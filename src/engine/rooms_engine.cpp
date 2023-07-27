@@ -49,8 +49,6 @@ void RoomsEngine::update(float delta_time)
 	entities[1]->rotate(1.6f * delta_time, glm::vec3(0.0, 0.0, 1.0));
 	entities[2]->rotate(1.6f * delta_time, glm::vec3(1.0, 0.0, 0.0));
 
-	//ui_controller.update(delta_time);
-
 	tools[current_tool]->update(delta_time);
 }
 
@@ -60,7 +58,6 @@ void RoomsEngine::render()
 		entity->render();
 	}
 
-	//ui_controller.render();
 #ifdef XR_SUPPORT
 	tools[current_tool]->render_ui();
 #endif

@@ -9,7 +9,7 @@ struct MergeData {
 @group(0) @binding(1) var<uniform> merge_data : MergeData;
 @group(0) @binding(2) var<storage, read_write> sdf_data : SdfData;
 
-const smooth_factor = 0.1;
+const smooth_factor = 0.01;
 
 fn evalSdf(position : vec3u) -> Surface
 {
@@ -33,9 +33,10 @@ fn evalSdf(position : vec3u) -> Surface
                 pSurface = sdBox(vec3f(position) / vec3f(merge_data.sdf_size), offsetPosition, edit.size, edit.radius, edit.color);
                 break;
             }
-            // case SD_ELLIPSOID:
-            //     pSurface = sdEllipsoid(position, offsetPosition, edit.size, edit.color);
-            //     break;
+            case SD_CAPSULE: {
+                pSurface = sdCapsule(vec3f(position) / vec3f(merge_data.sdf_size), offsetPosition, edit.size + vec3f(0.5), edit.radius, edit.color);
+                break;
+            }
             // case SD_CONE:
             //     pSurface = sdCone(position, offsetPosition, edit.size.xy, edit.size.z, edit.color);
             //     break;

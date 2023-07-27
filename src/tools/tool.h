@@ -6,8 +6,6 @@
 
 class EditorTool {
 public:
-
-
 	virtual void initialize() {}
 	virtual void clean() {}
 
