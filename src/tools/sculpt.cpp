@@ -16,15 +16,19 @@ void SculptTool::initialize()
 	renderer = dynamic_cast<RaymarchingRenderer*>(Renderer::instance);
 
 	// Config UI
-	ui_controller.set_workspace({ 256.f, 140.f }, XR_BUTTON_A, POSE_AIM, HAND_LEFT, HAND_RIGHT);
+	ui_controller.set_workspace({ 160.f, 140.f }, XR_BUTTON_A, POSE_AIM, HAND_LEFT, HAND_RIGHT);
 
 	// UI Layout
 	{
 		ui_controller.make_button("on_smooth_toggle", { 16.f, 0.f }, { 32.f, 32.f }, colors::GREEN);
 
-		ui_controller.make_button("on_mirror_toggle", { 84.f, 0.f }, { 32.f, 32.f }, colors::PURPLE);
+		ui_controller.make_button("on_mirror_toggle", { 64.f, 0.f }, { 32.f, 32.f }, colors::PURPLE);
 
-		ui_controller.make_color_picker("on_color_pick", edit_to_add.color, { 16.0f, 64.0f }, { 64.f, 16.f });
+		ui_controller.make_button("on_edit_toggle", { 112.f, 0.f }, { 32.f, 32.f }, colors::RED);
+
+		ui_controller.make_slider("on_radius_slider", 0.1f, { 16.0f, 34.0f }, { 128.0f, 32.0f }, colors::YELLOW);
+
+		ui_controller.make_color_picker("on_color_pick", edit_to_add.color, { 16.0f, 82.0f }, { 64.f, 16.f });
 	}
 
 	// UI events
@@ -34,6 +38,12 @@ void SculptTool::initialize()
 		});
 		ui_controller.connect("on_mirror_toggle", [use_mirror = &use_mirror](const std::string& signal, float value) {
 			use_mirror[0] = !use_mirror[0];
+		});
+		ui_controller.connect("on_radius_slider", [edit_to_add = &edit_to_add](const std::string& signal, float value) {
+			edit_to_add->radius = (value / 10.0f) + 0.01f;
+		});
+		ui_controller.connect("on_edit_toggle", [edit_to_add = &edit_to_add](const std::string& signal, float value) {
+			edit_to_add->primitive = (edit_to_add->primitive == SD_CAPSULE) ? SD_SPHERE : SD_CAPSULE;
 		});
 		ui_controller.connect("on_color_pick", [edit_to_add = &edit_to_add](const std::string& signal, const glm::vec3& color) {
 			edit_to_add->color = color;
@@ -49,7 +59,7 @@ void SculptTool::clean()
 void SculptTool::update(float delta_time)
 {
 	ui_controller.update(delta_time);
-
+	
 	if (is_tool_being_used()) {
 
 #ifdef XR_SUPPORT
