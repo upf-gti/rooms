@@ -15,6 +15,10 @@ struct ComputeData {
     dummy0          : f32,
 };
 
+struct SdfData {
+    data : array<vec4f>
+};
+
 @group(0) @binding(0) var left_eye_texture: texture_storage_2d<rgba8unorm,write>;
 @group(0) @binding(1) var right_eye_texture: texture_storage_2d<rgba8unorm,write>;
 @group(0) @binding(2) var<storage, read_write> sdf_data : SdfData;
@@ -34,6 +38,46 @@ const lightPos = vec3f(0.0, 2.0, 1.0);
 const fov = 45.0;
 const up = vec3f(0.0, 1.0, 0.0);
 
+// From: http://paulbourke.net/miscellaneous/interpolation/
+fn sample_sdf_trilinear(position : vec3f) -> Surface
+{
+    let p = position * 512.0 + vec3f(256.0) - vec3f(0.0, 512.0, 0.0);
+
+    if (p.x < 0.0 || p.x > 511 ||
+        p.y < 0.0 || p.y > 511 ||
+        p.z < 0.0 || p.z > 511) {
+        return Surface(vec3(0.0, 0.0, 0.0), 0.1);
+    }
+
+    let x_f : f32 = abs(fract(p.x));
+    let y_f : f32 = abs(fract(p.y));
+    let z_f : f32 = abs(fract(p.z));
+
+    let x : u32 = u32(floor(p.x));
+    let y : u32 = u32(floor(p.y));
+    let z : u32 = u32(floor(p.z));
+
+    let index000 : u32 = x + y * 512u + z * 512u * 512u;
+    let index100 : u32 = (x + 1) + (y + 0) * 512u + (z + 0) * 512u * 512u;
+    let index010 : u32 = (x + 0) + (y + 1) * 512u + (z + 0) * 512u * 512u;
+    let index001 : u32 = (x + 0) + (y + 0) * 512u + (z + 1) * 512u * 512u;
+    let index101 : u32 = (x + 1) + (y + 0) * 512u + (z + 1) * 512u * 512u;
+    let index011 : u32 = (x + 0) + (y + 1) * 512u + (z + 1) * 512u * 512u;
+    let index110 : u32 = (x + 1) + (y + 1) * 512u + (z + 0) * 512u * 512u;
+    let index111 : u32 = (x + 1) + (y + 1) * 512u + (z + 1) * 512u * 512u;
+
+    let data : vec4f = sdf_data.data[index000] * (1.0 - x_f) * (1.0 - y_f) * (1.0 - z_f) +
+                       sdf_data.data[index100] * x_f * (1.0 - y_f) * (1.0 - z_f) +
+                       sdf_data.data[index010] * (1.0 - x_f) * y_f * (1.0 - z_f) +
+                       sdf_data.data[index001] * (1.0 - x_f) * (1.0 - y_f) * z_f +
+                       sdf_data.data[index101] * x_f * (1.0 - y_f) * z_f +
+                       sdf_data.data[index011] * (1.0 - x_f) * y_f * z_f +
+                       sdf_data.data[index110] * x_f * y_f * (1.0 - z_f) +
+                       sdf_data.data[index111] * x_f * y_f * z_f;
+
+    return Surface(data.xyz, data.w);
+}
+
 fn sample_sdf(position : vec3f) -> Surface
 {
     let p = position * 512.0 + vec3f(256.0) - vec3f(0.0, 512.0, 0.0);
@@ -49,15 +93,16 @@ fn sample_sdf(position : vec3f) -> Surface
     let z : u32 = u32(round(p.z));
 
     let index : u32 = x + y * 512u + z * 512u * 512u;
-    return sdf_data.data[index];
+    let data = sdf_data.data[index];
+    return Surface(data.xyz, data.w);
 }
 
 fn estimate_normal(p : vec3f) -> vec3f
 {
     return normalize(vec3f(
-        sample_sdf(vec3f(p.x + DERIVATIVE_STEP, p.y, p.z)).distance - sample_sdf(vec3f(p.x - DERIVATIVE_STEP, p.y, p.z)).distance,
-        sample_sdf(vec3f(p.x, p.y + DERIVATIVE_STEP, p.z)).distance - sample_sdf(vec3f(p.x, p.y - DERIVATIVE_STEP, p.z)).distance,
-        sample_sdf(vec3f(p.x, p.y, p.z + DERIVATIVE_STEP)).distance - sample_sdf(vec3f(p.x, p.y, p.z - DERIVATIVE_STEP)).distance
+        sample_sdf_trilinear(vec3f(p.x + DERIVATIVE_STEP, p.y, p.z)).distance - sample_sdf_trilinear(vec3f(p.x - DERIVATIVE_STEP, p.y, p.z)).distance,
+        sample_sdf_trilinear(vec3f(p.x, p.y + DERIVATIVE_STEP, p.z)).distance - sample_sdf_trilinear(vec3f(p.x, p.y - DERIVATIVE_STEP, p.z)).distance,
+        sample_sdf_trilinear(vec3f(p.x, p.y, p.z + DERIVATIVE_STEP)).distance - sample_sdf_trilinear(vec3f(p.x, p.y, p.z - DERIVATIVE_STEP)).distance
     ));
 }
 
@@ -90,7 +135,7 @@ fn raymarch(rayOrigin : vec3f, rayDir : vec3f) -> vec4f
 	for (var i : i32 = 0; depth < MAX_DIST && i < 250; i++)
 	{
 		let pos = rayOrigin + rayDir * depth;
-        let surface : Surface = sample_sdf(pos);
+        let surface : Surface = sample_sdf_trilinear(pos);
 		if (surface.distance < MIN_HIT_DIST) {
             depth = map_depths_to_log((depth / MAX_DIST) * compute_data.camera_far);
 			return vec4f(blinn_phong(rayOrigin, pos, lightPos + lightOffset, ambientColor, surface.color), depth);

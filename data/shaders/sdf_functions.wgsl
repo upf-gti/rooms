@@ -42,10 +42,6 @@ struct Edits {
     data : array<Edit, 1024>
 }
 
-struct SdfData {
-    data : array<Surface>
-};
-
 // Primitives
 
 fn sdPlane( p : vec3f, c : vec3f, n : vec3f, h : f32, color : vec3f ) -> Surface

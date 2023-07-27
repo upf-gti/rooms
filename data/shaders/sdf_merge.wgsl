@@ -5,6 +5,10 @@ struct MergeData {
     edits_to_process : u32,
 };
 
+struct SdfData {
+    data : array<Surface>
+};
+
 @group(0) @binding(0) var<uniform> edits : Edits;
 @group(0) @binding(1) var<uniform> merge_data : MergeData;
 @group(0) @binding(2) var<storage, read_write> sdf_data : SdfData;

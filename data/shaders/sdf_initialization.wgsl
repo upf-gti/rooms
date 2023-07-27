@@ -1,5 +1,9 @@
 #include sdf_functions.wgsl
 
+struct SdfData {
+    data : array<Surface>
+};
+
 @group(0) @binding(2) var<storage, read_write> sdf_data : SdfData;
 
 @compute @workgroup_size(8, 8, 8)
