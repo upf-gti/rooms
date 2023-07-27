@@ -38,4 +38,21 @@ struct sEdit {
 	float		radius = 1.0f;
 
 	friend std::ostream& operator<<(std::ostream& os, const sEdit& edit);
+
+	inline glm::vec3 world_size() const {
+		switch (primitive) {
+		case SD_SPHERE:
+			return glm::vec3(radius, radius, radius) * 2.0f;
+		case SD_BOX:
+			return size;
+		case SD_CAPSULE:
+			return glm::abs(position - size);
+		}
+	}
+
+	inline void get_world_AABB(glm::vec3 *min, glm::vec3 *max) const {
+		glm::vec3 h_size = world_size();
+		*min = position - h_size + glm::vec3(0.50, 0.50, 0.50);
+		*max = position + h_size + glm::vec3(0.50, 0.50, 0.50);
+	}
 };

@@ -41,7 +41,6 @@ int RaymarchingRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
     compute_raymarching_data.render_width = static_cast<float>(render_width);
     compute_raymarching_data.render_height = static_cast<float>(render_height);
 
-    compute_merge_data.sdf_size = glm::uvec3(SDF_RESOLUTION);
 
     compute_initialize_sdf();
 
@@ -399,6 +398,28 @@ void RaymarchingRenderer::compute_merge()
     // Use compute_raymarching pass
     compute_merge_pipeline.set(compute_pass);
 
+    // Compute the edit size
+    // NOTE: 6.12557 ms to beat
+    // beated by 0.01741 ms
+    glm::vec3 edit_min = { 100.0f, 100.0f, 100.0f };
+    glm::vec3 edit_max = { -100.0f, -100.0f, -100.0f };
+    glm::vec3 tmp_min, tmp_max;
+    for (uint16_t i = 0; i < compute_merge_data.edits_to_process; i++) {
+        edits[i].get_world_AABB(&tmp_min, &tmp_max);
+        // Add an update border
+        tmp_min -= glm::vec3(edits[i].radius);
+        tmp_max += glm::vec3(edits[i].radius);
+        edit_min = glm::min(edit_min, tmp_min);
+        edit_max = glm::max(edit_max, tmp_max);
+    }
+
+    // Calculate size
+    glm::vec3 edit_size = edit_max - edit_min;
+    std::cout << "Edit size: " << edit_size.x << " " << edit_size.y << " " << edit_size.z << std::endl;
+    // To SDF coords:
+    edit_size = edit_size * 512.0f;
+    compute_merge_data.sdf_edit_start = glm::uvec3(glm::floor((edit_min) * 512.0f));
+
     // Update uniform buffer
     wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(u_compute_edits_array.data), 0, edits, sizeof(sEdit) * compute_merge_data.edits_to_process);
     wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(u_compute_merge_data.data), 0, &(compute_merge_data), sizeof(sMergeData));
@@ -407,10 +428,11 @@ void RaymarchingRenderer::compute_merge()
 
     uint32_t workgroupSize = 8;
     // This ceils invocationCount / workgroupSize
-    uint32_t workgroupWidth = (SDF_RESOLUTION + workgroupSize - 1) / workgroupSize;
-    uint32_t workgroupHeight = (SDF_RESOLUTION + workgroupSize - 1) / workgroupSize;
-    uint32_t workgroupDepth = (SDF_RESOLUTION + workgroupSize - 1) / workgroupSize;
+    uint32_t workgroupWidth = (edit_size.x + workgroupSize - 1) / workgroupSize;
+    uint32_t workgroupHeight = (edit_size.y + workgroupSize - 1) / workgroupSize;
+    uint32_t workgroupDepth = (edit_size.z + workgroupSize - 1) / workgroupSize;
     wgpuComputePassEncoderDispatchWorkgroups(compute_pass, workgroupWidth, workgroupHeight, workgroupDepth);
+    std::cout << "Dispatch size: " << workgroupWidth << " " << workgroupHeight << " " << workgroupDepth << std::endl;
 
     // Finalize compute_raymarching pass
     wgpuComputePassEncoderEnd(compute_pass);
