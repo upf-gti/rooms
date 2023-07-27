@@ -92,7 +92,7 @@ class RaymarchingRenderer : public Renderer {
 
     // Data needed for sdf merging
     struct sMergeData {
-        glm::uvec3 sdf_size = {};
+        glm::uvec3 sdf_edit_start = {};
         uint32_t edits_to_process = 0;
     } compute_merge_data;
 

@@ -41,7 +41,6 @@ int RaymarchingRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
     compute_raymarching_data.render_width = static_cast<float>(render_width);
     compute_raymarching_data.render_height = static_cast<float>(render_height);
 
-    compute_merge_data.sdf_size = glm::uvec3(SDF_RESOLUTION);
 
     compute_initialize_sdf();
 
@@ -419,7 +418,7 @@ void RaymarchingRenderer::compute_merge()
     std::cout << "Edit size: " << edit_size.x << " " << edit_size.y << " " << edit_size.z << std::endl;
     // To SDF coords:
     edit_size = edit_size * 512.0f;
-    compute_merge_data.sdf_size = glm::uvec3(glm::floor((edit_min) * 512.0f));
+    compute_merge_data.sdf_edit_start = glm::uvec3(glm::floor((edit_min) * 512.0f));
 
     // Update uniform buffer
     wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(u_compute_edits_array.data), 0, edits, sizeof(sEdit) * compute_merge_data.edits_to_process);

@@ -1,7 +1,7 @@
 #include sdf_functions.wgsl
 
 struct MergeData {
-    sdf_size         : vec3<u32>,
+    sdf_edit_start   : vec3<u32>,
     edits_to_process : u32,
 };
 
@@ -104,6 +104,6 @@ fn evalSdf(position : vec3u) -> Surface
 @compute @workgroup_size(8, 8, 8)
 
 fn compute(@builtin(global_invocation_id) id: vec3<u32>) {
-    let world_id : vec3<u32> = merge_data.sdf_size + id;
+    let world_id : vec3<u32> = merge_data.sdf_edit_start + id;
     sdf_data.data[world_id.x + world_id.y * 512 + world_id.z * 512 * 512] = evalSdf(world_id);
 }
