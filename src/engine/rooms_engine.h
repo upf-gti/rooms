@@ -3,8 +3,11 @@
 #include "engine.h"
 #include "tools/tool.h"
 
+#include "ui/ui_controller.h"
+
 enum eTool : uint8_t {
 	SCULPTING = 0,
+	COLOR,
 	EDITOR_TOOL_COUNT
 };
 
@@ -18,6 +21,8 @@ class RoomsEngine : public Engine {
 
 	EntityMesh				*right_controller_mesh = NULL;
 	EntityMesh				*left_controller_mesh = NULL;
+
+	ui::Controller			tool_selection_ui_controller;
 
 public:
 

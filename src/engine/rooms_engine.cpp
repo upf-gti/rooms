@@ -4,9 +4,8 @@
 #include "framework/input.h"
 
 #include "tools/sculpt.h"
-#include "ui/ui_controller.h"
+#include "tools/color.h"
 
-ui::Controller ui_controller;
 
 int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_mirror_screen)
 {
@@ -50,6 +49,30 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_mir
 
 	tools[SCULPTING] = (EditorTool*) sculpting_tool;
 
+
+	ColoringTool* coloring_tool = new ColoringTool();
+	coloring_tool->initialize();
+
+	tools[COLOR] = (EditorTool*)coloring_tool;
+
+
+	tool_selection_ui_controller.set_workspace({ 190.f, 140.f }, XR_BUTTON_A, POSE_AIM, HAND_RIGHT, HAND_LEFT);
+	// Config UI
+	{
+		tool_selection_ui_controller.make_button("on_sculpt_button", { 10.f, 0.f }, { 50.f, 25.f }, colors::GREEN);
+
+		tool_selection_ui_controller.make_button("on_color_button", { 70.f, 0.f }, { 50.f, 25.f }, colors::PURPLE);
+	}
+	// UI events
+	{
+		tool_selection_ui_controller.connect("on_sculpt_button", [current_tool = &current_tool](const std::string& signal, float value) {
+			*current_tool = SCULPTING;
+		});
+		tool_selection_ui_controller.connect("on_color_button", [current_tool = &current_tool](const std::string& signal, float value) {
+			*current_tool = COLOR;
+		});
+	}
+
 	return error;
 }
 
@@ -67,6 +90,8 @@ void RoomsEngine::update(float delta_time)
 	//left_controller_mesh->scale(glm::vec3(0.10f));
 
 	tools[current_tool]->update(delta_time);
+
+	tool_selection_ui_controller.update(delta_time);
 }
 
 void RoomsEngine::render()
@@ -77,6 +102,7 @@ void RoomsEngine::render()
 
 #ifdef XR_SUPPORT
 	tools[current_tool]->render_ui();
+	tool_selection_ui_controller.render();
 #endif
 
 	Engine::render();
