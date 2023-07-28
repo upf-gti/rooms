@@ -16,15 +16,15 @@ void SculptTool::initialize()
 	renderer = dynamic_cast<RaymarchingRenderer*>(Renderer::instance);
 
 	// Config UI
-	ui_controller.set_workspace({ 160.f, 140.f }, XR_BUTTON_A, POSE_AIM, HAND_LEFT, HAND_RIGHT);
+	ui_controller.set_workspace({ 190.f, 140.f }, XR_BUTTON_A, POSE_AIM, HAND_LEFT, HAND_RIGHT);
 
 	// UI Layout
 	{
-		ui_controller.make_button("on_smooth_toggle", { 16.f, 0.f }, { 32.f, 32.f }, colors::GREEN);
+		ui_controller.make_button("on_smooth_toggle", { 10.f, 0.f }, { 50.f, 25.f }, colors::GREEN);
 
-		ui_controller.make_button("on_mirror_toggle", { 64.f, 0.f }, { 32.f, 32.f }, colors::PURPLE);
+		ui_controller.make_button("on_mirror_toggle", { 70.f, 0.f }, { 50.f, 25.f }, colors::PURPLE);
 
-		ui_controller.make_button("on_edit_toggle", { 112.f, 0.f }, { 32.f, 32.f }, colors::RED);
+		ui_controller.make_button("on_edit_toggle", { 130.f, 0.f }, { 50.f, 25.f }, colors::RED);
 
 		ui_controller.make_slider("on_radius_slider", 0.1f, { 16.0f, 34.0f }, { 128.0f, 32.0f }, colors::YELLOW);
 

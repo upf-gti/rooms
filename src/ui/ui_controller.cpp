@@ -91,7 +91,7 @@ namespace ui {
 			position -= (workspace.size - size - position);
 	}
 
-	EntityMesh* Controller::make_rect(glm::vec2 pos, glm::vec2 size, const glm::vec3& color)
+	Widget* Controller::make_rect(glm::vec2 pos, glm::vec2 size, const glm::vec3& color)
 	{
 		process_params(pos, size);
 
@@ -104,10 +104,10 @@ namespace ui {
 		Widget* widget = new Widget(rect, pos);
 		root.push_back(widget);
 
-		return rect;
+		return widget;
 	}
 
-	void Controller::make_text(const std::string& text, glm::vec2 pos, const glm::vec3& color, float scale, glm::vec2 size)
+	Widget* Controller::make_text(const std::string& text, glm::vec2 pos, const glm::vec3& color, float scale, glm::vec2 size)
 	{
 		process_params(pos, size);
 		scale *= global_scale;
@@ -118,10 +118,15 @@ namespace ui {
 
 		TextWidget* widget = new TextWidget(e_text, pos);
 		root.push_back(widget);
+
+		return widget;
 	}
 
-	void Controller::make_button(const std::string& signal, glm::vec2 pos, glm::vec2 size, const glm::vec3& color, const char* texture)
+	Widget* Controller::make_button(const std::string& signal, glm::vec2 pos, glm::vec2 size, const glm::vec3& color, const char* texture)
 	{
+		glm::vec2 _pos = pos;
+		glm::vec2 _size = size;
+
 		process_params(pos, size);
 
 		/*
@@ -136,9 +141,15 @@ namespace ui {
 
 		ButtonWidget* widget = new ButtonWidget(signal, e_button, pos, color, size);
 		root.push_back(widget);
+
+		// Text: Use another param as "button text"
+		Widget* text = make_text(signal, _pos, colors::BLACK, _size.x * 0.2f);
+		text->priority = 1;
+
+		return widget;
 	}
 
-	void Controller::make_slider(const std::string& signal, float default_value, glm::vec2 pos, glm::vec2 size, const glm::vec3& color, const char* texture)
+	Widget* Controller::make_slider(const std::string& signal, float default_value, glm::vec2 pos, glm::vec2 size, const glm::vec3& color, const char* texture)
 	{
 		process_params(pos, size, true);
 
@@ -159,9 +170,11 @@ namespace ui {
 
 		SliderWidget* widget = new SliderWidget(signal,e_track, e_thumb, default_value, pos, color, size);
 		root.push_back(widget);
+
+		return widget;
 	}
 
-	void Controller::make_color_picker(const std::string& signal, const glm::vec3& default_color, glm::vec2 pos, glm::vec2 size)
+	Widget* Controller::make_color_picker(const std::string& signal, const glm::vec3& default_color, glm::vec2 pos, glm::vec2 size)
 	{
 		glm::vec2 offset = {0.f, size.y + 1.f};
 		make_slider(signal + "_r", default_color.r, pos, size, colors::RED);
@@ -169,7 +182,8 @@ namespace ui {
 		make_slider(signal + "_b", default_color.b, pos + offset * 2.f, size, colors::BLUE);
 		
 		// Get color rect entity
-		EntityMesh* rect = make_rect(glm::vec2(pos.x + size.x + 1.f, pos.y), glm::vec2(size.y, size.y + offset.y * 2.f), colors::WHITE);
+		Widget* widget_rect = make_rect(glm::vec2(pos.x + size.x + 1.f, pos.y), glm::vec2(size.y, size.y + offset.y * 2.f), colors::WHITE);
+		EntityMesh* rect = widget_rect->entity;
 		rect->get_mesh()->update_material_color(default_color);
 
 		ColorPickerWidget* widget = new ColorPickerWidget(rect, default_color);
@@ -192,6 +206,8 @@ namespace ui {
 			r->get_mesh()->update_material_color(w->rect_color);
 			emit_signal(signal, w->rect_color);
 		});
+
+		return widget;
 	}
 
 	void Controller::connect(const std::string& name, std::variant<FuncFloat, FuncString, FuncVec2, FuncVec3> callback)

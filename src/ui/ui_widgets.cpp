@@ -16,7 +16,7 @@ namespace ui {
 	void Widget::update(Controller* controller)
 	{
 		entity->set_model(controller->get_matrix());
-		entity->translate(glm::vec3(position.x, position.y, -1e-3f));
+		entity->translate(glm::vec3(position.x, position.y, -1e-3f - priority * 1e-3f));
 	}
 
 	/*
@@ -168,8 +168,4 @@ namespace ui {
 			controller->emit_signal(signal, current_value);
 		}
 	}
-
-	/*
-	*	ColorPicker
-	*/
 }

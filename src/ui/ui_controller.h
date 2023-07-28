@@ -40,7 +40,7 @@ namespace ui {
 		*/
 
 		void process_params(glm::vec2& position, glm::vec2& size, bool skip_to_local = false);
-		EntityMesh* make_rect(glm::vec2 pos, glm::vec2 size, const glm::vec3& color);
+		Widget* make_rect(glm::vec2 pos, glm::vec2 size, const glm::vec3& color);
 
 	public:
 
@@ -65,10 +65,10 @@ namespace ui {
 		*	Widgets
 		*/
 
-		void make_text(const std::string& text, glm::vec2 pos, const glm::vec3& color, float scale = 1.f, glm::vec2 size = {1, 1});
-		void make_button(const std::string& signal, glm::vec2 pos, glm::vec2 size, const glm::vec3& color, const char* texture = nullptr);
-		void make_slider(const std::string& signal, float default_value, glm::vec2 pos, glm::vec2 size, const glm::vec3& color, const char* texture = nullptr);
-		void make_color_picker(const std::string& signal, const glm::vec3& default_color, glm::vec2 pos, glm::vec2 size);
+		Widget* make_text(const std::string& text, glm::vec2 pos, const glm::vec3& color, float scale = 1.f, glm::vec2 size = {1, 1});
+		Widget* make_button(const std::string& signal, glm::vec2 pos, glm::vec2 size, const glm::vec3& color, const char* texture = nullptr);
+		Widget* make_slider(const std::string& signal, float default_value, glm::vec2 pos, glm::vec2 size, const glm::vec3& color, const char* texture = nullptr);
+		Widget* make_color_picker(const std::string& signal, const glm::vec3& default_color, glm::vec2 pos, glm::vec2 size);
 
 		/*
 		*	Callbacks

@@ -29,6 +29,7 @@ namespace ui {
 		EntityMesh* entity = nullptr;
 		glm::vec2 position;
 		uint8_t type = eWidgetType::NONE;
+		uint8_t priority = 0;
 
 		virtual void render();
 		virtual void update(Controller* controller);
