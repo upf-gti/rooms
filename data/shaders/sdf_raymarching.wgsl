@@ -132,15 +132,23 @@ fn raymarch(rayOrigin : vec3f, rayDir : vec3f) -> vec4f
     let lightOffset = vec3f(0.0, 0.0, 0.0);
 
 	var depth : f32 = 0.0;
+    var surface_min_dist : f32 = 100.0;
+    var surface : Surface;
 	for (var i : i32 = 0; depth < MAX_DIST && i < 250; i++)
 	{
 		let pos = rayOrigin + rayDir * depth;
-        let surface : Surface = sample_sdf_trilinear(pos);
+        if (surface_min_dist < 0.01) {
+            surface = sample_sdf_trilinear(pos);
+        } else {
+            surface = sample_sdf(pos);
+        }
+        
 		if (surface.distance < MIN_HIT_DIST && surface.distance > -MIN_HIT_DIST) {
             depth = map_depths_to_log((depth / MAX_DIST) * compute_data.camera_far);
 			return vec4f(blinn_phong(rayOrigin, pos, lightPos + lightOffset, ambientColor, surface.color), depth);
 		}
 		depth += surface.distance;
+        surface_min_dist = surface.distance;
 	}
     return vec4f(1.0, 1.0, 1.0, 1.0);
 }
