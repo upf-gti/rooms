@@ -46,13 +46,13 @@ struct sEdit {
 		case SD_BOX:
 			return size;
 		case SD_CAPSULE:
-			return glm::abs(position - size);
+			return glm::abs(position - size) + radius * 2.0f;
 		}
 	}
 
 	inline void get_world_AABB(glm::vec3 *min, glm::vec3 *max) const {
 		glm::vec3 h_size = world_size();
-		*min = position - h_size + glm::vec3(0.50, 0.50, 0.50);
-		*max = position + h_size + glm::vec3(0.50, 0.50, 0.50);
+		*min = position - h_size + glm::vec3(0.50f, 0.50f, 0.50f);
+		*max = position + h_size + glm::vec3(0.50f, 0.50f, 0.50f);
 	}
 };
