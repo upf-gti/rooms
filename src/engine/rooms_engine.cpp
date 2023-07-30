@@ -25,6 +25,12 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_mir
 	cube->translate(glm::vec3(1.0f, 0.0, 0.0));
 	entities.push_back(cube);
 
+	EntityMesh* cube2 = new EntityMesh();
+	cube2->set_mesh(Mesh::get("data/meshes/cube/cube.obj"));
+	cube2->scale(glm::vec3(0.25));
+	cube2->translate(glm::vec3(4.0f, 0.0, 0.0));
+	entities.push_back(cube2);
+
 	TextEntity* text = new TextEntity("oppenheimer vs barbie");
 	text->set_color(colors::GREEN)->set_scale(0.25f)->generate_mesh();
 	text->translate(glm::vec3(0.0f, 1.0, -3.0));
@@ -83,6 +89,7 @@ void RoomsEngine::update(float delta_time)
 	entities[0]->rotate(1.6f * delta_time, glm::vec3(1.0, 0.0, 0.0));
 	entities[1]->rotate(1.6f * delta_time, glm::vec3(0.0, 0.0, 1.0));
 	entities[2]->rotate(1.6f * delta_time, glm::vec3(1.0, 0.0, 0.0));
+	entities[3]->rotate(1.6f * delta_time, glm::vec3(1.0, 0.0, 0.0));
 
 	right_controller_mesh->set_translation(Input::get_controller_position(HAND_RIGHT));
 	right_controller_mesh->scale(glm::vec3(0.10f));

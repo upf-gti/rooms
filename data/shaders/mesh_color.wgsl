@@ -1,4 +1,5 @@
 struct VertexInput {
+    @builtin(instance_index) instance_id : u32,
     @location(0) position: vec3f,
     @location(1) uv: vec2f,
     @location(2) normal: vec3f,
@@ -17,19 +18,26 @@ struct RenderMeshData {
     color  : vec3f,
 };
 
+struct InstanceData {
+    data : array<RenderMeshData>
+}
+
 struct CameraData {
     view_projection : mat4x4f,
 };
 
-@group(0) @binding(0) var<uniform> mesh_data : RenderMeshData;
+@group(0) @binding(0) var<storage, read> mesh_data : InstanceData;
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
+
+    let instance_data : RenderMeshData = mesh_data.data[in.instance_id];
+
     var out: VertexOutput;
-    out.position = camera_data.view_projection * mesh_data.model * vec4f(in.position, 1.0);
+    out.position = camera_data.view_projection * instance_data.model * vec4f(in.position, 1.0);
     out.uv = in.uv; // forward to the fragment shader
-    out.color = in.color * mesh_data.color;
+    out.color = in.color * instance_data.color;
     out.normal = in.normal;
     return out;
 }

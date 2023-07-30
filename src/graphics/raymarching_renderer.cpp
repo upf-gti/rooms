@@ -201,7 +201,7 @@ void RaymarchingRenderer::render_meshes(WGPUTextureView swapchain_view, WGPUText
             wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, mesh->get_vertex_buffer(), 0, mesh->get_byte_size());
 
             // Submit drawcall
-            wgpuRenderPassEncoderDraw(render_pass, static_cast<uint32_t>(mesh->get_vertex_count()), 1, 0, 0);
+            wgpuRenderPassEncoderDraw(render_pass, static_cast<uint32_t>(mesh->get_vertex_count()), mesh->get_instances(), 0, 0);
         }
     };
 
