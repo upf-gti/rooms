@@ -137,7 +137,7 @@ fn raymarch(rayOrigin : vec3f, rayDir : vec3f) -> vec4f
 	for (var i : i32 = 0; depth < MAX_DIST && i < 250; i++)
 	{
 		let pos = rayOrigin + rayDir * depth;
-        if (surface_min_dist < 0.01) {
+        if (surface_min_dist < 0.02) {
             surface = sample_sdf_trilinear(pos);
         } else {
             surface = sample_sdf(pos);
