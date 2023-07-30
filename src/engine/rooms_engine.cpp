@@ -42,11 +42,11 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_mir
 	right_controller_mesh->translate(glm::vec3(1.0f, 1.0, 0.0));
 	entities.push_back(right_controller_mesh);
 
-	/*left_controller_mesh = new EntityMesh();
+	left_controller_mesh = new EntityMesh();
 	left_controller_mesh->set_mesh(Mesh::get("data/meshes/sphere.obj"));
 	left_controller_mesh->scale(glm::vec3(0.25f));
 	left_controller_mesh->translate(glm::vec3(1.0f, 1.0, 0.0));
-	entities.push_back(left_controller_mesh);*/
+	entities.push_back(left_controller_mesh);
 
 	// Tooling
 
@@ -93,8 +93,8 @@ void RoomsEngine::update(float delta_time)
 
 	right_controller_mesh->set_translation(Input::get_controller_position(HAND_RIGHT));
 	right_controller_mesh->scale(glm::vec3(0.10f));
-	//left_controller_mesh->set_translation(Input::get_controller_position(HAND_LEFT));
-	//left_controller_mesh->scale(glm::vec3(0.10f));
+	left_controller_mesh->set_translation(Input::get_controller_position(HAND_LEFT));
+	left_controller_mesh->scale(glm::vec3(0.10f));
 
 	tools[current_tool]->update(delta_time);
 
