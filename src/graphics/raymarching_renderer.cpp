@@ -539,26 +539,24 @@ void RaymarchingRenderer::render_mirror()
             wgpuRenderPassEncoderDraw(render_pass, 6, 1, 0, 0);
 
             wgpuRenderPassEncoderEnd(render_pass);
+
+            wgpuRenderPassEncoderRelease(render_pass);
         }
     }
 
-    //
-    {
-        WGPUCommandBufferDescriptor cmd_buff_descriptor = {};
-        cmd_buff_descriptor.nextInChain = NULL;
-        cmd_buff_descriptor.label = "Command buffer";
+    WGPUCommandBufferDescriptor cmd_buff_descriptor = {};
+    cmd_buff_descriptor.nextInChain = NULL;
+    cmd_buff_descriptor.label = "Command buffer";
 
-        WGPUCommandBuffer commands = wgpuCommandEncoderFinish(command_encoder, &cmd_buff_descriptor);
-        wgpuQueueSubmit(webgpu_context.device_queue, 1, &commands);
-
-        //commander.Release();
-        //current_texture_view.Release();
-    }
+    WGPUCommandBuffer commands = wgpuCommandEncoderFinish(command_encoder, &cmd_buff_descriptor);
+    wgpuQueueSubmit(webgpu_context.device_queue, 1, &commands);
 
     // Submit frame to mirror window
-    {
-        wgpuSwapChainPresent(webgpu_context.screen_swapchain);
-    }
+    wgpuSwapChainPresent(webgpu_context.screen_swapchain);
+
+    wgpuCommandBufferRelease(commands);
+    wgpuCommandEncoderRelease(command_encoder);
+    wgpuTextureViewRelease(current_texture_view);
 }
 
 #endif
@@ -813,10 +811,7 @@ void RaymarchingRenderer::init_mirror_pipeline()
         swapchain_uniforms.push_back(swapchain_uni);
     }
 
-    WGPUBindGroupLayout swapchain_bind_group_layout;
     std::vector<Uniform*> uniforms = { &swapchain_uniforms[0] };
-    swapchain_bind_group_layout = webgpu_context.create_bind_group_layout(uniforms);
-    WGPUPipelineLayout render_mirror_pipeline_layout = webgpu_context.create_pipeline_layout({ swapchain_bind_group_layout });
 
     // Generate bindgroups from the swapchain
     for (uint8_t i = 0; i < swapchain_uniforms.size(); i++) {
@@ -824,7 +819,7 @@ void RaymarchingRenderer::init_mirror_pipeline()
 
         std::vector<Uniform*> uniforms = { &swapchain_uniforms[i] };
 
-        swapchain_bind_groups.push_back(webgpu_context.create_bind_group(uniforms, swapchain_bind_group_layout));
+        swapchain_bind_groups.push_back(webgpu_context.create_bind_group(uniforms, mirror_shader, 0));
     }
 
     mirror_pipeline.create_render(mirror_shader, color_target);
