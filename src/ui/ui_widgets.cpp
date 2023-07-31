@@ -66,7 +66,7 @@ namespace ui {
 		bool is_pressed = hovered && Input::is_button_pressed(workspace.select_button);
 		bool was_pressed = hovered && Input::was_button_pressed(workspace.select_button);
 		
-		entity->get_mesh()->update_material_color(is_pressed ? colors::PURPLE : (hovered ? colors::CYAN : color));
+		entity->set_color(is_pressed ? colors::PURPLE : (hovered ? colors::CYAN : color));
 		
 		if (was_pressed)
 			controller->emit_signal(signal, 1.f);

@@ -13,6 +13,9 @@ using FuncFloat = std::function<void(const std::string&, float)>;
 using FuncString = std::function<void(const std::string&, std::string)>;
 using FuncVec2 = std::function<void(const std::string&, glm::vec2)>;
 using FuncVec3 = std::function<void(const std::string&, glm::vec3)>;
+using FuncVec4 = std::function<void(const std::string&, glm::vec4)>;
+
+using SignalType = std::variant < FuncFloat, FuncString, FuncVec2, FuncVec3, FuncVec4>;
 
 namespace ui {
 
@@ -33,14 +36,14 @@ namespace ui {
 		EntityMesh* workspace_element = nullptr;
 
 		std::vector <ui::Widget*> root;
-		std::map <std::string, std::vector<std::variant<FuncFloat, FuncString, FuncVec2, FuncVec3>>> signals;
+		std::map <std::string, std::vector<SignalType>> signals;
 
 		/*
 		*	Widget Helpers
 		*/
 
 		void process_params(glm::vec2& position, glm::vec2& size, bool skip_to_local = false);
-		Widget* make_rect(glm::vec2 pos, glm::vec2 size, const glm::vec3& color);
+		Widget* make_rect(glm::vec2 pos, glm::vec2 size, const Color& color);
 
 	public:
 
@@ -65,16 +68,16 @@ namespace ui {
 		*	Widgets
 		*/
 
-		Widget* make_text(const std::string& text, glm::vec2 pos, const glm::vec3& color, float scale = 1.f, glm::vec2 size = {1, 1});
-		Widget* make_button(const std::string& signal, glm::vec2 pos, glm::vec2 size, const glm::vec3& color, const char* texture = nullptr);
-		Widget* make_slider(const std::string& signal, float default_value, glm::vec2 pos, glm::vec2 size, const glm::vec3& color, const char* texture = nullptr);
-		Widget* make_color_picker(const std::string& signal, const glm::vec3& default_color, glm::vec2 pos, glm::vec2 size);
+		Widget* make_text(const std::string& text, glm::vec2 pos, const Color& color, float scale = 1.f, glm::vec2 size = {1, 1});
+		Widget* make_button(const std::string& signal, glm::vec2 pos, glm::vec2 size, const Color& color, const char* texture = nullptr);
+		Widget* make_slider(const std::string& signal, float default_value, glm::vec2 pos, glm::vec2 size, const Color& color, const char* texture = nullptr);
+		Widget* make_color_picker(const std::string& signal, const Color& default_color, glm::vec2 pos, glm::vec2 size);
 
 		/*
 		*	Callbacks
 		*/
 
-		void connect(const std::string& name, std::variant<FuncFloat, FuncString, FuncVec2, FuncVec3> callback);
+		void connect(const std::string& name, SignalType callback);
 
 		template<typename T>
 		bool emit_signal(const std::string& name, T value) {

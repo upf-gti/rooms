@@ -51,7 +51,7 @@ namespace ui {
 		std::string signal;
 		Color color;
 
-		ButtonWidget(const std::string& sg, EntityMesh* e, const glm::vec2& p, const glm::vec3& c, const glm::vec2& s)
+		ButtonWidget(const std::string& sg, EntityMesh* e, const glm::vec2& p, const Color& c, const glm::vec2& s)
 			: Widget(e, p), signal(sg), size(s), color(c) {
 			type = eWidgetType::BUTTON;
 		}
@@ -68,7 +68,7 @@ namespace ui {
 		float current_slider_pos = -1.f;
 		float max_slider_pos = -1.f;
 
-		SliderWidget(const std::string& sg, EntityMesh* tr, EntityMesh* th, float v, const glm::vec2& p, const glm::vec3& c, const glm::vec2& s)
+		SliderWidget(const std::string& sg, EntityMesh* tr, EntityMesh* th, float v, const glm::vec2& p, const Color& c, const glm::vec2& s)
 			: ButtonWidget(sg, tr, p, c, s), thumb_entity(th), current_value(v) {
 			type = eWidgetType::SLIDER;
 		}
@@ -80,9 +80,9 @@ namespace ui {
 	class ColorPickerWidget : public Widget {
 	public:
 
-		glm::vec3 rect_color;
+		Color rect_color;
 
-		ColorPickerWidget(EntityMesh* rect, const glm::vec3& color) : rect_color(color) {
+		ColorPickerWidget(EntityMesh* rect, const Color& color) : rect_color(color) {
 			entity = rect;
 		}
 

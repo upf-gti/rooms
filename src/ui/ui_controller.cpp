@@ -21,9 +21,11 @@ namespace ui {
 		};
 
 		raycast_pointer = new EntityMesh();
+		raycast_pointer->set_shader(Shader::get("data/shaders/mesh_color.wgsl"));
 		raycast_pointer->set_mesh(Mesh::get("data/meshes/raycast.obj"));
 
 		workspace_element = new EntityMesh();
+		workspace_element->set_shader(Shader::get("data/shaders/mesh_color.wgsl"));
 		Mesh* mesh = new Mesh();
 		mesh->create_quad(workspace.size.x, workspace.size.y);
 		workspace_element->set_mesh(mesh);
@@ -91,16 +93,16 @@ namespace ui {
 			position -= (workspace.size - size - position);
 	}
 
-	Widget* Controller::make_rect(glm::vec2 pos, glm::vec2 size, const glm::vec3& color)
+	Widget* Controller::make_rect(glm::vec2 pos, glm::vec2 size, const Color& color)
 	{
 		process_params(pos, size);
 
 		// Render quad in local workspace position
 		EntityMesh* rect = new EntityMesh();
+		rect->set_shader(Shader::get("data/shaders/mesh_color.wgsl"));
 		Mesh* mesh = new Mesh();
 		mesh->create_quad(size.x, size.y, color);
 		rect->set_mesh(mesh);
-		mesh->create_bind_group(0);
 
 		Widget* widget = new Widget(rect, pos);
 		root.push_back(widget);
@@ -108,13 +110,15 @@ namespace ui {
 		return widget;
 	}
 
-	Widget* Controller::make_text(const std::string& text, glm::vec2 pos, const glm::vec3& color, float scale, glm::vec2 size)
+	Widget* Controller::make_text(const std::string& text, glm::vec2 pos, const Color& color, float scale, glm::vec2 size)
 	{
 		process_params(pos, size);
 		scale *= global_scale;
 
 		TextEntity* e_text = new TextEntity(text);
-		e_text->set_color(color)->set_scale(scale);
+		e_text->set_shader(Shader::get("data/shaders/sdf_fonts.wgsl"));
+		e_text->set_color(color);
+		e_text->set_scale(scale);
 		e_text->generate_mesh();
 
 		TextWidget* widget = new TextWidget(e_text, pos);
@@ -123,7 +127,7 @@ namespace ui {
 		return widget;
 	}
 
-	Widget* Controller::make_button(const std::string& signal, glm::vec2 pos, glm::vec2 size, const glm::vec3& color, const char* texture)
+	Widget* Controller::make_button(const std::string& signal, glm::vec2 pos, glm::vec2 size, const Color& color, const char* texture)
 	{
 		glm::vec2 _pos = pos;
 		glm::vec2 _size = size;
@@ -136,10 +140,10 @@ namespace ui {
 
 		// Render quad in local workspace position
 		EntityMesh* e_button = new EntityMesh();
+		e_button->set_shader(Shader::get("data/shaders/mesh_color.wgsl"));
 		Mesh* mesh = new Mesh();
 		mesh->create_quad(size.x, size.y);
 		e_button->set_mesh(mesh);
-		mesh->create_bind_group(0);
 
 		ButtonWidget* widget = new ButtonWidget(signal, e_button, pos, color, size);
 		root.push_back(widget);
@@ -151,7 +155,7 @@ namespace ui {
 		return widget;
 	}
 
-	Widget* Controller::make_slider(const std::string& signal, float default_value, glm::vec2 pos, glm::vec2 size, const glm::vec3& color, const char* texture)
+	Widget* Controller::make_slider(const std::string& signal, float default_value, glm::vec2 pos, glm::vec2 size, const Color& color, const char* texture)
 	{
 		process_params(pos, size, true);
 
@@ -161,16 +165,16 @@ namespace ui {
 
 		// Render quad in local workspace position
 		EntityMesh* e_track = new EntityMesh();
+		e_track->set_shader(Shader::get("data/shaders/mesh_color.wgsl"));
 		Mesh * mesh = new Mesh();
 		mesh->create_quad(size.x, size.y, colors::GRAY);
 		e_track->set_mesh(mesh);
-		mesh->create_bind_group(0);
 		
 		EntityMesh* e_thumb = new EntityMesh();
+		e_thumb->set_shader(Shader::get("data/shaders/mesh_color.wgsl"));
 		Mesh* thumb_mesh = new Mesh();
 		thumb_mesh->create_quad(size.y, size.y, color);
 		e_thumb->set_mesh(thumb_mesh);
-		thumb_mesh->create_bind_group(0);
 
 		SliderWidget* widget = new SliderWidget(signal,e_track, e_thumb, default_value, pos, color, size);
 		root.push_back(widget);
@@ -178,7 +182,7 @@ namespace ui {
 		return widget;
 	}
 
-	Widget* Controller::make_color_picker(const std::string& signal, const glm::vec3& default_color, glm::vec2 pos, glm::vec2 size)
+	Widget* Controller::make_color_picker(const std::string& signal, const Color& default_color, glm::vec2 pos, glm::vec2 size)
 	{
 		glm::vec2 offset = {0.f, size.y + 1.f};
 		make_slider(signal + "_r", default_color.r, pos, size, colors::RED);
@@ -188,33 +192,33 @@ namespace ui {
 		// Get color rect entity
 		Widget* widget_rect = make_rect(glm::vec2(pos.x + size.x + 1.f, pos.y), glm::vec2(size.y, size.y + offset.y * 2.f), colors::WHITE);
 		EntityMesh* rect = widget_rect->entity;
-		rect->get_mesh()->update_material_color(default_color);
+		rect->set_color( default_color );
 
 		ColorPickerWidget* widget = new ColorPickerWidget(rect, default_color);
 		root.push_back(widget);
 
 		connect(signal + "_r", [this, signal, w = widget, r = rect](const std::string& s, float value) {
 			w->rect_color.x = value;
-			r->get_mesh()->update_material_color(w->rect_color);
+			r->set_color(w->rect_color);
 			emit_signal(signal, w->rect_color);
 		});
 
 		connect(signal + "_g", [this, signal, w = widget, r = rect](const std::string& s, float value) {
 			w->rect_color.y = value;
-			r->get_mesh()->update_material_color(w->rect_color);
+			r->set_color(w->rect_color);
 			emit_signal(signal, w->rect_color);
 		});
 
 		connect(signal + "_b", [this, signal, w = widget, r = rect](const std::string& s, float value) {
 			w->rect_color.z = value;
-			r->get_mesh()->update_material_color(w->rect_color);
+			r->set_color(w->rect_color);
 			emit_signal(signal, w->rect_color);
 		});
 
 		return widget;
 	}
 
-	void Controller::connect(const std::string& name, std::variant<FuncFloat, FuncString, FuncVec2, FuncVec3> callback)
+	void Controller::connect(const std::string& name, SignalType callback)
 	{
 		signals[name].push_back(callback);
 	}

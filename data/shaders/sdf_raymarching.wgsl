@@ -46,7 +46,7 @@ fn sample_sdf_trilinear(position : vec3f) -> Surface
     if (p.x < 0.0 || p.x > 511 ||
         p.y < 0.0 || p.y > 511 ||
         p.z < 0.0 || p.z > 511) {
-        return Surface(vec3(0.0, 0.0, 0.0), 0.1);
+        return Surface(vec3(0.0, 0.0, 0.0), 0.01);
     }
 
     let x_f : f32 = abs(fract(p.x));
@@ -85,7 +85,7 @@ fn sample_sdf(position : vec3f) -> Surface
     if (p.x < 0.0 || p.x > 511 ||
         p.y < 0.0 || p.y > 511 ||
         p.z < 0.0 || p.z > 511) {
-        return Surface(vec3(0.0, 0.0, 0.0), 0.1);
+        return Surface(vec3(0.0, 0.0, 0.0), 0.01);
     }
 
     let x : u32 = u32(round(p.x));
@@ -137,7 +137,7 @@ fn raymarch(rayOrigin : vec3f, rayDir : vec3f) -> vec4f
 	for (var i : i32 = 0; depth < MAX_DIST && i < 250; i++)
 	{
 		let pos = rayOrigin + rayDir * depth;
-        if (surface_min_dist < 0.02) {
+        if (surface_min_dist < 0.01) {
             surface = sample_sdf_trilinear(pos);
         } else {
             surface = sample_sdf(pos);

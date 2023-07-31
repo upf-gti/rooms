@@ -15,35 +15,42 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_mir
 
 	EntityMesh* torus = new EntityMesh();
 	torus->set_mesh(Mesh::get("data/meshes/torus/torus.obj"));
+	torus->set_shader(Shader::get("data/shaders/mesh_color.wgsl"));
 	torus->scale(glm::vec3(0.25));
 	torus->translate(glm::vec3(-1.0f, 0.0, 0.0));
 	entities.push_back(torus);
 
 	EntityMesh* cube = new EntityMesh();
 	cube->set_mesh(Mesh::get("data/meshes/cube/cube.obj"));
+	cube->set_shader(Shader::get("data/shaders/mesh_texture.wgsl"));
 	cube->scale(glm::vec3(0.25));
 	cube->translate(glm::vec3(1.0f, 0.0, 0.0));
 	entities.push_back(cube);
 
 	EntityMesh* cube2 = new EntityMesh();
 	cube2->set_mesh(Mesh::get("data/meshes/cube/cube.obj"));
+	cube2->set_shader(Shader::get("data/shaders/mesh_texture.wgsl"));
 	cube2->scale(glm::vec3(0.25));
 	cube2->translate(glm::vec3(4.0f, 0.0, 0.0));
 	entities.push_back(cube2);
 
 	TextEntity* text = new TextEntity("oppenheimer vs barbie");
-	text->set_color(colors::GREEN)->set_scale(0.25f)->generate_mesh();
-	text->translate(glm::vec3(0.0f, 1.0, -3.0));
+	text->set_shader(Shader::get("data/shaders/sdf_fonts.wgsl"));
+	text->set_color(colors::GREEN);
+	text->set_scale(0.25f)->generate_mesh();
+	text->translate(glm::vec3(0.0f, 1.0, 0.0));
 	entities.push_back(text);
 
 	right_controller_mesh = new EntityMesh();
 	right_controller_mesh->set_mesh(Mesh::get("data/meshes/sphere.obj"));
+	right_controller_mesh->set_shader(Shader::get("data/shaders/mesh_color.wgsl"));
 	right_controller_mesh->scale(glm::vec3(0.25f));
 	right_controller_mesh->translate(glm::vec3(1.0f, 1.0, 0.0));
 	entities.push_back(right_controller_mesh);
 
 	left_controller_mesh = new EntityMesh();
 	left_controller_mesh->set_mesh(Mesh::get("data/meshes/sphere.obj"));
+	left_controller_mesh->set_shader(Shader::get("data/shaders/mesh_color.wgsl"));
 	left_controller_mesh->scale(glm::vec3(0.25f));
 	left_controller_mesh->translate(glm::vec3(1.0f, 1.0, 0.0));
 	entities.push_back(left_controller_mesh);

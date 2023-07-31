@@ -24,7 +24,7 @@ void ColoringTool::initialize()
 
 		ui_controller.make_slider("on_radius_slider", 0.1f, { 16.0f, 34.0f }, { 128.0f, 32.0f }, colors::YELLOW);
 
-		ui_controller.make_color_picker("on_color_pick", edit_to_add.color, { 16.0f, 82.0f }, { 64.f, 16.f });
+		ui_controller.make_color_picker("on_color_pick", { edit_to_add.color.r, edit_to_add.color.g, edit_to_add.color.b, 1.0f }, { 16.0f, 82.0f }, { 64.f, 16.f });
 	}
 
 	// UI events
@@ -37,7 +37,7 @@ void ColoringTool::initialize()
 			edit_to_add->radius = (value / 10.0f * 0.5f) + 0.01f;
 		});
 		
-		ui_controller.connect("on_color_pick", [edit_to_add = &edit_to_add](const std::string& signal, const glm::vec3& color) {
+		ui_controller.connect("on_color_pick", [edit_to_add = &edit_to_add](const std::string& signal, const Color& color) {
 			edit_to_add->color = color;
 		});
 	}

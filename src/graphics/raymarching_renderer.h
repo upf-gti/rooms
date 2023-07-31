@@ -61,6 +61,11 @@ class RaymarchingRenderer : public Renderer {
     Pipeline                render_fonts_pipeline;
     Shader*                 render_fonts_shader = nullptr;
 
+    // Octree creation
+    Pipeline                compute_octree_flag_nodes_pipeline;
+    Shader*                 compute_octree_flag_nodes_shader = nullptr;
+    Uniform                 u_octree;
+
     Uniform                 u_camera;
     Uniform                 u_font;
 
@@ -132,6 +137,8 @@ class RaymarchingRenderer : public Renderer {
     void init_compute_raymarching_pipeline();
     void init_initialize_sdf_pipeline();
     void init_compute_merge_pipeline();
+
+    void init_compute_octree_pipeline();
 
 #if defined(XR_SUPPORT) && defined(USE_MIRROR_WINDOW)
     void render_mirror();

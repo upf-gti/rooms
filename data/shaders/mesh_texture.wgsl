@@ -15,7 +15,7 @@ struct VertexOutput {
 
 struct RenderMeshData {
     model  : mat4x4f,
-    color  : vec3f,
+    color  : vec4f,
 };
 
 struct InstanceData {
@@ -40,7 +40,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     var out: VertexOutput;
     out.position = camera_data.view_projection * instance_data.model * vec4f(in.position, 1.0);
     out.uv = in.uv; // forward to the fragment shader
-    out.color = in.color * instance_data.color;
+    out.color = in.color * instance_data.color.rgb;
     out.normal = in.normal;
     return out;
 }
