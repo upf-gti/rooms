@@ -100,6 +100,7 @@ namespace ui {
 		Mesh* mesh = new Mesh();
 		mesh->create_quad(size.x, size.y, color);
 		rect->set_mesh(mesh);
+		mesh->create_bind_group(0);
 
 		Widget* widget = new Widget(rect, pos);
 		root.push_back(widget);
@@ -138,6 +139,7 @@ namespace ui {
 		Mesh* mesh = new Mesh();
 		mesh->create_quad(size.x, size.y);
 		e_button->set_mesh(mesh);
+		mesh->create_bind_group(0);
 
 		ButtonWidget* widget = new ButtonWidget(signal, e_button, pos, color, size);
 		root.push_back(widget);
@@ -162,11 +164,13 @@ namespace ui {
 		Mesh * mesh = new Mesh();
 		mesh->create_quad(size.x, size.y, colors::GRAY);
 		e_track->set_mesh(mesh);
+		mesh->create_bind_group(0);
 		
 		EntityMesh* e_thumb = new EntityMesh();
 		Mesh* thumb_mesh = new Mesh();
 		thumb_mesh->create_quad(size.y, size.y, color);
 		e_thumb->set_mesh(thumb_mesh);
+		thumb_mesh->create_bind_group(0);
 
 		SliderWidget* widget = new SliderWidget(signal,e_track, e_thumb, default_value, pos, color, size);
 		root.push_back(widget);
