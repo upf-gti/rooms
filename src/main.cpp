@@ -38,6 +38,21 @@ int main() {
     RaymarchingRenderer* raymarching_renderer = new RaymarchingRenderer();
     GLFWwindow* window = nullptr;
 
+    WGPURequiredLimits required_limits = {};
+    required_limits.limits.maxVertexAttributes = 4;
+    required_limits.limits.maxVertexBuffers = 1;
+    required_limits.limits.maxBindGroups = 2;
+    required_limits.limits.maxUniformBuffersPerShaderStage = 1;
+    required_limits.limits.maxUniformBufferBindingSize = 16 * 4 * sizeof(float);
+    required_limits.limits.minUniformBufferOffsetAlignment = 256;
+    required_limits.limits.minStorageBufferOffsetAlignment = 32;
+    required_limits.limits.maxBufferSize = 512 * 512 * 512 * sizeof(float) * 4 + 4; // TODO: remove this +4 when fixed in Dawn
+    required_limits.limits.maxStorageBufferBindingSize = 512 * 512 * 512 * sizeof(float) * 4;
+    required_limits.limits.maxComputeInvocationsPerWorkgroup = 512;
+    required_limits.limits.maxSamplersPerShaderStage = 1;
+
+    raymarching_renderer->set_required_limits(required_limits);
+
 #ifdef __EMSCRIPTEN__
     int render_width = canvas_get_width();
     int render_height = canvas_get_height();

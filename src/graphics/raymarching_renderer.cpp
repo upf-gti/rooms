@@ -201,7 +201,7 @@ void RaymarchingRenderer::render_meshes(WGPUTextureView swapchain_view, WGPUText
             wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, mesh->get_vertex_buffer(), 0, mesh->get_byte_size());
 
             // Submit drawcall
-            wgpuRenderPassEncoderDraw(render_pass, static_cast<uint32_t>(mesh->get_vertex_count()), mesh->get_instances_size(), 0, 0);
+            wgpuRenderPassEncoderDraw(render_pass, mesh->get_vertex_count(), mesh->get_instances_size(), 0, 0);
         }
     };
 
@@ -241,8 +241,8 @@ void RaymarchingRenderer::render_xr()
 
         const float* proj_verts = glm::value_ptr(xr_context.per_view_data[0].projection_matrix);
 
-        compute_raymarching_data.camera_far = proj_verts[14] / (proj_verts[10] - 1.0);
-        compute_raymarching_data.camera_near = proj_verts[14] / (proj_verts[10] + 1.0);
+        compute_raymarching_data.camera_far = proj_verts[14] / (proj_verts[10] - 1.0f);
+        compute_raymarching_data.camera_near = proj_verts[14] / (proj_verts[10] + 1.0f);
 
         compute_merge();
         compute_raymarching();
@@ -428,9 +428,9 @@ void RaymarchingRenderer::compute_merge()
 
     uint32_t workgroupSize = 8;
     // This ceils invocationCount / workgroupSize
-    uint32_t workgroupWidth = (edit_size.x + workgroupSize - 1) / workgroupSize;
-    uint32_t workgroupHeight = (edit_size.y + workgroupSize - 1) / workgroupSize;
-    uint32_t workgroupDepth = (edit_size.z + workgroupSize - 1) / workgroupSize;
+    uint32_t workgroupWidth  = static_cast<uint32_t>((edit_size.x + workgroupSize - 1) / workgroupSize);
+    uint32_t workgroupHeight = static_cast<uint32_t>((edit_size.y + workgroupSize - 1) / workgroupSize);
+    uint32_t workgroupDepth  = static_cast<uint32_t>((edit_size.z + workgroupSize - 1) / workgroupSize);
     wgpuComputePassEncoderDispatchWorkgroups(compute_pass, workgroupWidth, workgroupHeight, workgroupDepth);
     std::cout << "Dispatch size: " << workgroupWidth << " " << workgroupHeight << " " << workgroupDepth << std::endl;
 

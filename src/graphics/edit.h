@@ -47,6 +47,9 @@ struct sEdit {
 			return size;
 		case SD_CAPSULE:
 			return glm::abs(position - size) + radius * 2.0f;
+		default:
+			assert(false);
+			return {};
 		}
 	}
 
