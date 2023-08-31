@@ -55,11 +55,14 @@ if (EMSCRIPTEN)
     set(SHELL_FILE shell.html)
 
     target_link_options(${PROJECT_NAME} PRIVATE
-        -O3
+        -O0
         -sUSE_GLFW=3
         -sUSE_WEBGPU
         -sALLOW_MEMORY_GROWTH
         -sASYNCIFY
+#        -sWASM=0
+#        -sASSERTIONS
+        -fsanitize=address
         --shell-file "${ROOMS_DIR_ROOT}/${SHELL_FILE}"
         --preload-file "${ROOMS_DIR_ROOT}/data@/data"
 	)
