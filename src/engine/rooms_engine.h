@@ -2,27 +2,25 @@
 
 #include "engine.h"
 #include "tools/tool.h"
-
 #include "ui/ui_controller.h"
 
 enum eTool : uint8_t {
-	SCULPTING = 0,
+	NONE = 0,
+	SCULPTING,
 	COLOR,
-	EDITOR_TOOL_COUNT
+	TOOL_COUNT
 };
 
 class RoomsEngine : public Engine {
 
 	std::vector<Entity*>	entities;
 
-	EditorTool				*tools[EDITOR_TOOL_COUNT];
+	EditorTool*				tools[TOOL_COUNT];
 
-	eTool					current_tool = SCULPTING;
+	eTool					current_tool = NONE;
+	ui::Controller			tool_controller;
 
-	EntityMesh				*right_controller_mesh = NULL;
-	EntityMesh				*left_controller_mesh = NULL;
-
-	ui::Controller			tool_selection_ui_controller;
+	void enable_tool( eTool tool );
 
 public:
 

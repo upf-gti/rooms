@@ -50,19 +50,23 @@ void ColoringTool::clean()
 
 void ColoringTool::update(float delta_time)
 {
+	if (!enabled) return;
+
 	ui_controller.update(delta_time);
 	
-	if (is_tool_being_used()) {
-
 #ifdef XR_SUPPORT
-		edit_to_add.position = Input::get_controller_position(HAND_RIGHT) - glm::vec3(0.0f, 1.0f, 0.0f);
+	edit_to_add.position = Input::get_controller_position(HAND_RIGHT) - glm::vec3(0.0f, 1.0f, 0.0f);
 #else
-		edit_to_add.position = glm::vec3(0.4 * (random_f() * 2 - 1), 0.4 * (random_f() * 2 - 1), 0.4 * (random_f() * 2 - 1));
+	edit_to_add.position = glm::vec3(0.4 * (random_f() * 2 - 1), 0.4 * (random_f() * 2 - 1), 0.4 * (random_f() * 2 - 1));
 #endif
-	
 
+	if (is_tool_being_used())
+	{
 		renderer->push_edit(edit_to_add);
-
+	}
+	else
+	{
+		renderer->set_preview_edit(edit_to_add);
 	}
 }
 
@@ -73,5 +77,7 @@ void ColoringTool::render_scene()
 
 void ColoringTool::render_ui()
 {
+	if (!enabled) return;
+
 	ui_controller.render();
 }

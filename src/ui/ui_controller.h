@@ -48,6 +48,7 @@ namespace ui {
 	public:
 
 		float global_scale = 1.f;
+		bool enabled = true;
 
 		/*
 		*	Select button: XR Buttons

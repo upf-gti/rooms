@@ -38,7 +38,7 @@ namespace ui {
 
 	void Controller::render()
 	{
-		if (!is_active()) return;
+		if (!enabled || !is_active()) return;
 
 		workspace_element->render();
 
@@ -51,7 +51,7 @@ namespace ui {
 
 	void Controller::update(float delta_time)
 	{
-		if (!is_active()) return;
+		if (!enabled || !is_active()) return;
 
 		uint8_t hand = workspace.hand;
 		uint8_t pose = workspace.root_pose;
