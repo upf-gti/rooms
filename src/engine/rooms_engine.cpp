@@ -103,7 +103,10 @@ void RoomsEngine::render()
 
 #ifdef XR_SUPPORT
 	if (current_tool != NONE)
+	{
+		tools[current_tool]->render_scene();
 		tools[current_tool]->render_ui();
+	}
 	tool_controller.render();
 #endif
 

@@ -10,6 +10,7 @@ class RaymarchingRenderer;
 class SculptTool : EditorTool {
 
 	RaymarchingRenderer*	renderer = nullptr;
+	EntityMesh*				mesh_preview = nullptr;
 	ui::Controller			ui_controller;
 
 	sEdit					edit_to_add = {
