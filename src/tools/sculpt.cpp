@@ -64,16 +64,17 @@ void SculptTool::update(float delta_time)
 
 	if (is_tool_being_used()) {
 
-#ifdef XR_SUPPORT
-		float curr_trigger_value = Input::get_trigger_value(HAND_RIGHT);
+		if (renderer->get_openxr_available()) {
+			float curr_trigger_value = Input::get_trigger_value(HAND_RIGHT);
 
-		if (edit_to_add.primitive == SD_CAPSULE && has_trigger_used) {
-			return;
+			if (edit_to_add.primitive == SD_CAPSULE && has_trigger_used) {
+				return;
+			}
+		}
+		else {
+			edit_to_add.position = glm::vec3(0.4 * (random_f() * 2 - 1), 0.4 * (random_f() * 2 - 1), 0.4 * (random_f() * 2 - 1));
 		}
 
-#else
-		edit_to_add.position = glm::vec3(0.4 * (random_f() * 2 - 1), 0.4 * (random_f() * 2 - 1), 0.4 * (random_f() * 2 - 1));
-#endif
 		// Store the end of the sausage on the unused size attribute
 		if (edit_to_add.primitive == SD_CAPSULE && !is_sausage_start_setted) {
 			edit_to_add.size = edit_to_add.position;
