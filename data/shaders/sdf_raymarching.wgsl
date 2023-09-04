@@ -24,6 +24,7 @@ struct SdfData {
 @group(0) @binding(2) var<storage, read_write> sdf_data : SdfData;
 
 @group(1) @binding(0) var<uniform> compute_data : ComputeData;
+@group(1) @binding(1) var<uniform> preview_edit : Edit;
 
 const MAX_DIST = 100.0;
 const MIN_HIT_DIST = 0.002;
@@ -75,7 +76,12 @@ fn sample_sdf_trilinear(position : vec3f) -> Surface
                        sdf_data.data[index110] * x_f * y_f * (1.0 - z_f) +
                        sdf_data.data[index111] * x_f * y_f * z_f;
 
-    return Surface(data.xyz, data.w);
+
+    var surface : Surface = Surface(data.xyz, data.w);
+
+    surface = add_preview_edit(p, surface);
+
+    return surface;
 }
 
 fn sample_sdf(position : vec3f) -> Surface
@@ -94,7 +100,17 @@ fn sample_sdf(position : vec3f) -> Surface
 
     let index : u32 = x + y * 512u + z * 512u * 512u;
     let data = sdf_data.data[index];
-    return Surface(data.xyz, data.w);
+
+    var surface : Surface = Surface(data.xyz, data.w);
+
+    surface = add_preview_edit(p, surface);
+
+    return surface;
+}
+
+fn add_preview_edit(position : vec3f, surface : Surface) -> Surface
+{
+    return evalEdit(position, surface, preview_edit);
 }
 
 fn estimate_normal(p : vec3f) -> vec3f
@@ -142,7 +158,7 @@ fn raymarch(rayOrigin : vec3f, rayDir : vec3f) -> vec4f
         } else {
             surface = sample_sdf(pos);
         }
-        
+
 		if (surface.distance < MIN_HIT_DIST && surface.distance > -MIN_HIT_DIST) {
             depth = map_depths_to_log((depth / MAX_DIST) * compute_data.camera_far);
 			return vec4f(blinn_phong(rayOrigin, pos, lightPos + lightOffset, ambientColor, surface.color), depth);

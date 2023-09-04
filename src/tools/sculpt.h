@@ -27,7 +27,7 @@ class SculptTool : EditorTool {
 
 	// Mirror
 
-	bool			use_mirror = true;
+	bool			use_mirror = false;
 	glm::vec3		mirror_origin = glm::vec3(0.0f, -0.5f, 0.0f);
 	glm::vec3		mirror_normal = glm::vec3(1.0f, 0.0f, 0.0f);
 

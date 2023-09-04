@@ -41,19 +41,19 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_mir
 	text->translate(glm::vec3(0.0f, 1.0, 0.0));
 	entities.push_back(text);
 
-	right_controller_mesh = new EntityMesh();
-	right_controller_mesh->set_mesh(Mesh::get("data/meshes/sphere.obj"));
-	right_controller_mesh->set_shader(Shader::get("data/shaders/mesh_color.wgsl"));
-	right_controller_mesh->scale(glm::vec3(0.25f));
-	right_controller_mesh->translate(glm::vec3(1.0f, 1.0, 0.0));
-	entities.push_back(right_controller_mesh);
+	//right_controller_mesh = new EntityMesh();
+	//right_controller_mesh->set_mesh(Mesh::get("data/meshes/sphere.obj"));
+	//right_controller_mesh->set_shader(Shader::get("data/shaders/mesh_color.wgsl"));
+	//right_controller_mesh->scale(glm::vec3(0.25f));
+	//right_controller_mesh->translate(glm::vec3(1.0f, 1.0, 0.0));
+	//entities.push_back(right_controller_mesh);
 
-	left_controller_mesh = new EntityMesh();
-	left_controller_mesh->set_mesh(Mesh::get("data/meshes/sphere.obj"));
-	left_controller_mesh->set_shader(Shader::get("data/shaders/mesh_color.wgsl"));
-	left_controller_mesh->scale(glm::vec3(0.25f));
-	left_controller_mesh->translate(glm::vec3(1.0f, 1.0, 0.0));
-	entities.push_back(left_controller_mesh);
+	//left_controller_mesh = new EntityMesh();
+	//left_controller_mesh->set_mesh(Mesh::get("data/meshes/sphere.obj"));
+	//left_controller_mesh->set_shader(Shader::get("data/shaders/mesh_color.wgsl"));
+	//left_controller_mesh->scale(glm::vec3(0.25f));
+	//left_controller_mesh->translate(glm::vec3(1.0f, 1.0, 0.0));
+	//entities.push_back(left_controller_mesh);
 
 	// Tooling
 
@@ -98,10 +98,10 @@ void RoomsEngine::update(float delta_time)
 	entities[2]->rotate(1.6f * delta_time, glm::vec3(1.0, 0.0, 0.0));
 	entities[3]->rotate(1.6f * delta_time, glm::vec3(1.0, 0.0, 0.0));
 
-	right_controller_mesh->set_translation(Input::get_controller_position(HAND_RIGHT));
-	right_controller_mesh->scale(glm::vec3(0.10f));
-	left_controller_mesh->set_translation(Input::get_controller_position(HAND_LEFT));
-	left_controller_mesh->scale(glm::vec3(0.10f));
+	//right_controller_mesh->set_translation(Input::get_controller_position(HAND_RIGHT));
+	//right_controller_mesh->scale(glm::vec3(0.10f));
+	//left_controller_mesh->set_translation(Input::get_controller_position(HAND_LEFT));
+	//left_controller_mesh->scale(glm::vec3(0.10f));
 
 	tools[current_tool]->update(delta_time);
 

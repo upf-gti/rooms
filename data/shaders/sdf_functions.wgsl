@@ -187,3 +187,89 @@ fn opSmoothPaint( s1 : Surface, s2 : Surface, paintColor : vec3f, k : f32 ) -> S
     s.distance = u.distance;
     return s;
 }
+
+fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit ) -> Surface
+{
+    var pSurface : Surface;
+
+    const smooth_factor = 0.01;
+
+    // Center in texture (position 0,0,0 is just in the middle)
+    let offsetPosition : vec3f = edit.position + vec3f(0.5);
+
+    switch (edit.primitive) {
+        case SD_SPHERE: {
+            pSurface = sdSphere(vec3f(position) / vec3f(512.0), offsetPosition, edit.radius, edit.color);
+            break;
+        }
+        case SD_BOX: {
+            pSurface = sdBox(vec3f(position) / vec3f(512.0), offsetPosition, edit.size, edit.radius, edit.color);
+            break;
+        }
+        case SD_CAPSULE: {
+            pSurface = sdCapsule(vec3f(position) / vec3f(512.0), offsetPosition, edit.size + vec3f(0.5), edit.radius, edit.color);
+            break;
+        }
+        // case SD_CONE:
+        //     pSurface = sdCone(position, offsetPosition, edit.size.xy, edit.size.z, edit.color);
+        //     break;
+        // case SD_PYRAMID:
+        //     pSurface = sdPyramid(position, offsetPosition, edit.size.x, edit.radius, edit.color);
+        //     break;
+        // case SD_CYLINDER:
+        //     pSurface = sdCylinder(position, offsetPosition, offsetPosition + vec3(0.0, 5.0, 0.0), edit.size.x, edit.radius, edit.color);
+        //     break;
+        // case SD_CAPSULE:
+        //     pSurface = sdCapsule(position, offsetPosition, offsetPosition + vec3(2.0, 5.0, 0.0), edit.radius, edit.color);
+        //     break;
+        // case SD_TORUS:
+        //     pSurface = sdTorus(position, offsetPosition, edit.size.xy, edit.color);
+        //     break;
+        // case SD_CAPPED_TORUS:
+        //     pSurface = sdCappedTorus(position, offsetPosition, edit.size.x, edit.size.y, edit.size.z, edit.color);
+        //     break;
+        default: {
+            break;
+        }
+    }
+
+    switch (edit.operation) {
+        case OP_UNION: {
+            pSurface = opUnion(current_surface, pSurface);
+            break;
+        }
+        case OP_SUBSTRACTION:{
+            pSurface = opSubtraction(current_surface, pSurface);
+            break;
+        }
+        case OP_INTERSECTION: {
+            pSurface = opIntersection(current_surface, pSurface);
+            break;
+        }
+        case OP_PAINT: {
+            pSurface = opPaint(current_surface, pSurface, edit.color);
+            break;
+        }
+        case OP_SMOOTH_UNION: {
+            pSurface = opSmoothUnion(current_surface, pSurface, smooth_factor);
+            break;
+        }
+        case OP_SMOOTH_SUBSTRACTION: {
+            pSurface = opSmoothSubtraction(current_surface, pSurface, smooth_factor);
+            break;
+        }
+        case OP_SMOOTH_INTERSECTION: {
+            pSurface = opSmoothIntersection(current_surface, pSurface, smooth_factor);
+            break;
+        }
+        case OP_SMOOTH_PAINT: {
+            pSurface = opSmoothPaint(current_surface, pSurface, edit.color, smooth_factor);
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+
+    return pSurface;
+}

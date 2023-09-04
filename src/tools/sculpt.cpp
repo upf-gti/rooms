@@ -60,6 +60,8 @@ void SculptTool::update(float delta_time)
 {
 	ui_controller.update(delta_time);
 	
+	edit_to_add.position = Input::get_controller_position(HAND_RIGHT) - glm::vec3(0.0f, 1.0f, 0.0f);
+
 	if (is_tool_being_used()) {
 
 #ifdef XR_SUPPORT
@@ -69,7 +71,6 @@ void SculptTool::update(float delta_time)
 			return;
 		}
 
-		edit_to_add.position = Input::get_controller_position(HAND_RIGHT) - glm::vec3(0.0f, 1.0f, 0.0f);
 #else
 		edit_to_add.position = glm::vec3(0.4 * (random_f() * 2 - 1), 0.4 * (random_f() * 2 - 1), 0.4 * (random_f() * 2 - 1));
 #endif
@@ -101,6 +102,8 @@ void SculptTool::update(float delta_time)
 		has_trigger_used = true;
 	} else {
 		has_trigger_used = false;
+
+		renderer->set_preview_edit(edit_to_add);
 	}
 }
 

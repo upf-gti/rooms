@@ -70,6 +70,7 @@ class RaymarchingRenderer : public Renderer {
     Uniform                 u_font;
 
     Uniform                 u_compute_buffer_data;
+    Uniform                 u_compute_preview_edit;
     Uniform                 u_compute_texture_left_eye;
     Uniform                 u_compute_texture_right_eye;
 
@@ -168,4 +169,7 @@ public:
             edits[compute_merge_data.edits_to_process++] = edit;
         }
     };
+
+    void set_preview_edit(const sEdit& edit);
+
 };

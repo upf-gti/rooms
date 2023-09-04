@@ -339,6 +339,11 @@ void RaymarchingRenderer::render_eye_quad(WGPUTextureView swapchain_view, WGPUTe
     wgpuCommandEncoderRelease(command_encoder);
 }
 
+void RaymarchingRenderer::set_preview_edit(const sEdit& edit)
+{
+    wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(u_compute_preview_edit.data), 0, &(edit), sizeof(sEdit));
+}
+
 void RaymarchingRenderer::compute_initialize_sdf() {
     // Initialize a command encoder
     WGPUCommandEncoderDescriptor encoder_desc = {};
@@ -712,7 +717,11 @@ void RaymarchingRenderer::init_compute_raymarching_pipeline()
         u_compute_buffer_data.binding = 0;
         u_compute_buffer_data.buffer_size = sizeof(sComputeData);
 
-        std::vector<Uniform*> uniforms = { &u_compute_buffer_data };
+        u_compute_preview_edit.data = webgpu_context.create_buffer(sizeof(sEdit), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr);
+        u_compute_preview_edit.binding = 1;
+        u_compute_preview_edit.buffer_size = sizeof(sEdit);
+
+        std::vector<Uniform*> uniforms = { &u_compute_buffer_data, &u_compute_preview_edit };
 
         compute_raymarching_data_bind_group = webgpu_context.create_bind_group(uniforms, compute_raymarching_shader, 1);
     }

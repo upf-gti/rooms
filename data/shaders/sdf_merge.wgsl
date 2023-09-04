@@ -13,8 +13,6 @@ struct SdfData {
 @group(0) @binding(1) var<uniform> merge_data : MergeData;
 @group(0) @binding(2) var<storage, read_write> sdf_data : SdfData;
 
-const smooth_factor = 0.01;
-
 fn evalSdf(position : vec3u) -> Surface
 {
     var sSurface : Surface = sdf_data.data[position.x + position.y * 512 + position.z * 512 * 512];
@@ -23,85 +21,8 @@ fn evalSdf(position : vec3u) -> Surface
 
         let edit : Edit = edits.data[i];
 
-        var pSurface : Surface;
-
-        // Center in texture (position 0,0,0 is just in the middle)
-        let offsetPosition : vec3f = edit.position + vec3f(0.5);
-
-        switch (edit.primitive) {
-            case SD_SPHERE: {
-                pSurface = sdSphere(vec3f(position) / vec3f(512.0), offsetPosition, edit.radius, edit.color);
-                break;
-            }
-            case SD_BOX: {
-                pSurface = sdBox(vec3f(position) / vec3f(512.0), offsetPosition, edit.size, edit.radius, edit.color);
-                break;
-            }
-            case SD_CAPSULE: {
-                pSurface = sdCapsule(vec3f(position) / vec3f(512.0), offsetPosition, edit.size + vec3f(0.5), edit.radius, edit.color);
-                break;
-            }
-            // case SD_CONE:
-            //     pSurface = sdCone(position, offsetPosition, edit.size.xy, edit.size.z, edit.color);
-            //     break;
-            // case SD_PYRAMID:
-            //     pSurface = sdPyramid(position, offsetPosition, edit.size.x, edit.radius, edit.color);
-            //     break;
-            // case SD_CYLINDER:
-            //     pSurface = sdCylinder(position, offsetPosition, offsetPosition + vec3(0.0, 5.0, 0.0), edit.size.x, edit.radius, edit.color);
-            //     break;
-            // case SD_CAPSULE:
-            //     pSurface = sdCapsule(position, offsetPosition, offsetPosition + vec3(2.0, 5.0, 0.0), edit.radius, edit.color);
-            //     break;
-            // case SD_TORUS:
-            //     pSurface = sdTorus(position, offsetPosition, edit.size.xy, edit.color);
-            //     break;
-            // case SD_CAPPED_TORUS:
-            //     pSurface = sdCappedTorus(position, offsetPosition, edit.size.x, edit.size.y, edit.size.z, edit.color);
-            //     break;
-            default: {
-                break;
-            }
-        }
-
-        switch (edit.operation) {
-            case OP_UNION: {
-                sSurface = opUnion(sSurface, pSurface);
-                break;
-            }
-            case OP_SUBSTRACTION:{
-                sSurface = opSubtraction(sSurface, pSurface);
-                break;
-            }
-            case OP_INTERSECTION: {
-                sSurface = opIntersection(sSurface, pSurface);
-                break;
-            }
-            case OP_PAINT: {
-                sSurface = opPaint(sSurface, pSurface, edit.color);
-                break;
-            }
-            case OP_SMOOTH_UNION: {
-                sSurface = opSmoothUnion(sSurface, pSurface, smooth_factor);
-                break;
-            }
-            case OP_SMOOTH_SUBSTRACTION: {
-                sSurface = opSmoothSubtraction(sSurface, pSurface, smooth_factor);
-                break;
-            }
-            case OP_SMOOTH_INTERSECTION: {
-                sSurface = opSmoothIntersection(sSurface, pSurface, smooth_factor);
-                break;
-            }
-            case OP_SMOOTH_PAINT: {
-                sSurface = opSmoothPaint(sSurface, pSurface, edit.color, smooth_factor);
-                break;
-            }
-            default: {
-                break;
-            }
-        }
-     }
+        sSurface = evalEdit(vec3f(position), sSurface, edit);
+    }
 
     return sSurface;
 }
