@@ -8,8 +8,6 @@ const SD_CONE           = 3;
 const SD_PYRAMID        = 4;
 const SD_CYLINDER       = 5;
 const SD_CAPSULE        = 6;
-const SD_TORUS          = 7;
-const SD_CAPPED_TORUS   = 8;
 
 // SD Operations
 
@@ -70,7 +68,8 @@ fn sdBox( p : vec3f, c : vec3f, s : vec3f, r : f32, color : vec3f ) -> Surface
     return sf;
 }
 
-fn sdCapsule( p : vec3f, a : vec3f, b : vec3f, r : f32, color : vec3f ) -> Surface {
+fn sdCapsule( p : vec3f, a : vec3f, b : vec3f, r : f32, color : vec3f ) -> Surface
+{
     var sf : Surface;
 
     let pa : vec3f = p - a;
@@ -81,6 +80,68 @@ fn sdCapsule( p : vec3f, a : vec3f, b : vec3f, r : f32, color : vec3f ) -> Surfa
     sf.distance = length(pa-ba*h) - r;
     sf.color = color;
 
+    return sf;
+}
+
+fn sdCone( p : vec3f, c : vec3f, t : vec2f, h : f32, color : vec3f ) -> Surface
+{
+    var sf : Surface;
+    let pos : vec3f = p - c;
+    let q : vec2f = h * vec2(t.x / t.y, -1.0);
+    let w : vec2f = vec2(length(pos.xz), pos.y);
+    let a : vec2f = w - q * clamp(dot(w,q) / dot(q, q), 0.0, 1.0);
+    let b : vec2f = w - q * vec2(clamp( w.x / q.x, 0.0, 1.0 ), 1.0);
+    let k : f32 = sign(q.y);
+    let d : f32 = min(dot(a, a), dot(b, b));
+    let s : f32 = max(k*(w.x * q.y - w.y * q.x), k * (w.y - q.y));
+
+    sf.distance = sqrt(d) * sign(s);
+    sf.color = color;
+    return sf;
+}
+
+fn sdPyramid( p : vec3f, c : vec3f, r : f32, h : f32, color : vec3f ) -> Surface
+{
+    var sf : Surface;
+    let m2 : f32 = h * h + 0.25;
+
+    var pos : vec3f = p - c;
+
+    let abs_pos : vec2f = abs(pos.xz);
+    let swizzle_pos : vec2f = select(abs_pos.xy, abs_pos.yx, abs_pos.y > abs_pos.x);
+    let moved_pos : vec3f = vec3f(swizzle_pos.x - 0.5, pos.y, swizzle_pos.y - 0.5);
+
+    let q : vec3f = vec3(moved_pos.z, h * moved_pos.y - 0.5 * moved_pos.x, h * moved_pos.x + 0.5 * moved_pos.y);
+
+    let s : f32 = max(-q.x, 0.0);
+    let t : f32 = clamp((q.y - 0.5 * moved_pos.z) / (m2 + 0.25), 0.0, 1.0);
+
+    let a : f32 = m2 * (q.x + s) * (q.x + s) + q.y * q.y;
+    let b : f32 = m2 * (q.x + 0.5 * t) * (q.x + 0.5 * t) + (q.y - m2 * t) * (q.y - m2 * t);
+
+    let d2 : f32 = select(min(a, b), 0.0, min(q.y, -q.x * m2 - q.y * 0.5) > 0.0);
+
+    sf.distance = sqrt((d2 + q.z * q.z) / m2) * sign(max(q.z, -moved_pos.y)) - r;
+    sf.color = color;
+    return sf;
+}
+
+fn sdCylinder(p : vec3f, a : vec3f, b : vec3f, r : f32, rr : f32, color : vec3f) -> Surface
+{
+    var sf : Surface;
+    let pa : vec3f = p - a;
+    let ba : vec3f = b - a;
+    let baba : f32 = dot(ba, ba);
+    let paba : f32 = dot(pa, ba);
+
+    let x  : f32 = length(pa * baba - ba * paba) - r * baba;
+    let y  : f32 = abs(paba - baba * 0.5) - baba * 0.5;
+    let x2 : f32 = x * x;
+    let y2 : f32 = y * y * baba;
+    let d  : f32 = select(select(0.0, x2, x > 0.0) + select(0.0, y2, y > 0.0), -min(x2, y2), max(x, y) < 0.0);
+
+    sf.distance = sign(d) * sqrt(abs(d)) / baba - rr;
+    sf.color = color;
     return sf;
 }
 
@@ -210,24 +271,18 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit ) -> Surfa
             pSurface = sdCapsule(vec3f(position) / vec3f(512.0), offsetPosition, edit.size + vec3f(0.5), edit.radius, edit.color);
             break;
         }
-        // case SD_CONE:
-        //     pSurface = sdCone(position, offsetPosition, edit.size.xy, edit.size.z, edit.color);
-        //     break;
-        // case SD_PYRAMID:
-        //     pSurface = sdPyramid(position, offsetPosition, edit.size.x, edit.radius, edit.color);
-        //     break;
-        // case SD_CYLINDER:
-        //     pSurface = sdCylinder(position, offsetPosition, offsetPosition + vec3(0.0, 5.0, 0.0), edit.size.x, edit.radius, edit.color);
-        //     break;
-        // case SD_CAPSULE:
-        //     pSurface = sdCapsule(position, offsetPosition, offsetPosition + vec3(2.0, 5.0, 0.0), edit.radius, edit.color);
-        //     break;
-        // case SD_TORUS:
-        //     pSurface = sdTorus(position, offsetPosition, edit.size.xy, edit.color);
-        //     break;
-        // case SD_CAPPED_TORUS:
-        //     pSurface = sdCappedTorus(position, offsetPosition, edit.size.x, edit.size.y, edit.size.z, edit.color);
-        //     break;
+        case SD_CONE: {
+            pSurface = sdCone(vec3f(position) / vec3f(512.0), offsetPosition, edit.size.xy, edit.size.z, edit.color);
+            break;
+        }
+        case SD_PYRAMID: {
+            pSurface = sdPyramid(vec3f(position) / vec3f(512.0), offsetPosition, edit.size.x, edit.radius, edit.color);
+            break;
+        }
+        case SD_CYLINDER: {
+            pSurface = sdCylinder(vec3f(position) / vec3f(512.0), offsetPosition, offsetPosition + vec3(0.0, 5.0, 0.0), edit.size.x, edit.radius, edit.color);
+            break;
+        }
         default: {
             break;
         }

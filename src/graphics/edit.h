@@ -12,8 +12,6 @@ enum sdPrimitive {
 	SD_PYRAMID,
 	SD_CYLINDER,
 	SD_CAPSULE,
-	SD_TORUS,
-	SD_CAPPED_TORUS,
 	ALL_PRIMITIVES
 };
 
@@ -47,6 +45,12 @@ struct sEdit {
 			return size;
 		case SD_CAPSULE:
 			return glm::abs(position - size) + radius * 2.0f;
+		//case SD_CONE:
+		//	return glm::abs(position - size) + radius * 2.0f;
+		//case SD_PYRAMID:
+		//	return glm::abs(position - size) + radius * 2.0f;
+		//case SD_CYLINDER:
+		//	return glm::abs(position - size) + radius * 2.0f;
 		default:
 			assert(false);
 			return {};
