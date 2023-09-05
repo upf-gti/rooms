@@ -54,8 +54,8 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_mir
 
 	// Tools Menu
 	{
-		tool_controller.make_button("sculpt_mode", { 8.f, 8.f }, { 32.f, 32.f }, colors::GREEN);
-		tool_controller.make_button("color_mode", { 48.f , 8.f }, { 32.f, 32.f }, colors::PURPLE);
+		tool_controller.make_button("sculpt_mode", { 8.f, 8.f }, { 32.f, 32.f }, colors::WHITE, "data/textures/sculpt.png");
+		tool_controller.make_button("color_mode", { 48.f , 8.f }, { 32.f, 32.f }, colors::WHITE, "data/textures/paint.png");
 	}
 
 	// Events
@@ -67,6 +67,8 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_mir
 			enable_tool(COLOR);
 		});
 	}
+
+	enable_tool(SCULPTING);
 
 	return error;
 }

@@ -8,15 +8,45 @@
 
 namespace ui {
 
+	void Widget::add_child(Widget* child)
+	{
+		if (child->parent) {
+			std::cerr << "Child has already a parent, remove it first!" << std::endl;
+			return;
+		}
+
+		// Checks if it's already a child
+		auto it = std::find(children.begin(), children.end(), child);
+		if (it != children.end()) {
+			std::cerr << "Widget is already one of the children!" << std::endl;
+			return;
+		}
+
+		child->parent = this;
+		children.push_back(child);
+	}
+
 	void Widget::render()
 	{
 		entity->render();
+
+		if (!show_children)
+			return;
+
+		for (auto c : children)
+			c->render();
 	}
 
 	void Widget::update(Controller* controller)
 	{
 		entity->set_model(controller->get_matrix());
 		entity->translate(glm::vec3(position.x, position.y, -1e-3f - priority * 1e-3f));
+
+		if (!show_children)
+			return;
+
+		for (auto c : children)
+			c->update( controller );
 	}
 
 	/*
@@ -78,7 +108,8 @@ namespace ui {
 
 	void SliderWidget::render()
 	{
-		entity->render();
+		Widget::render();
+
 		thumb_entity->render();
 	}
 

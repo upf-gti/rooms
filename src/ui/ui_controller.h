@@ -42,6 +42,8 @@ namespace ui {
 		*	Widget Helpers
 		*/
 
+		Widget* active_submenu = nullptr;
+
 		void process_params(glm::vec2& position, glm::vec2& size, bool skip_to_local = false);
 		Widget* make_rect(glm::vec2 pos, glm::vec2 size, const Color& color);
 
@@ -73,6 +75,8 @@ namespace ui {
 		Widget* make_button(const std::string& signal, glm::vec2 pos, glm::vec2 size, const Color& color, const char* texture = nullptr);
 		Widget* make_slider(const std::string& signal, float default_value, glm::vec2 pos, glm::vec2 size, const Color& color, const char* texture = nullptr);
 		Widget* make_color_picker(const std::string& signal, const Color& default_color, glm::vec2 pos, glm::vec2 size);
+		Widget* make_submenu(const std::string& name, glm::vec2 pos, glm::vec2 size, const Color& color, const char* texture = nullptr);
+		void close_submenu() { active_submenu = nullptr; };
 
 		/*
 		*	Callbacks

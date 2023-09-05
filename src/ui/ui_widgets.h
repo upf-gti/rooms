@@ -31,6 +31,12 @@ namespace ui {
 		uint8_t type = eWidgetType::NONE;
 		uint8_t priority = 0;
 
+		Widget* parent = nullptr;
+		bool show_children = false;
+		std::vector<Widget*> children;
+
+		void add_child(Widget* child);
+
 		virtual void render();
 		virtual void update(Controller* controller);
 	};
