@@ -34,6 +34,7 @@ struct sEdit {
 	sdOperation operation;
 	glm::vec3	size = {};
 	float		radius = 1.0f;
+	glm::vec4   rotation;
 
 	friend std::ostream& operator<<(std::ostream& os, const sEdit& edit);
 

@@ -15,7 +15,7 @@ class SculptTool : EditorTool {
 
 	sEdit					edit_to_add = {
 								.position = glm::vec3(0.0f, 0.0f, 0.0f),
-								.primitive = SD_SPHERE,
+								.primitive = SD_BOX,
 								.color = glm::vec3(1.0f, 0.0f, 0.0f),
 								.operation = OP_SMOOTH_UNION,
 								.size = glm::vec3(0.1f, 0.1f, 0.1f),

@@ -33,7 +33,8 @@ struct Edit {
     color      : vec3f,
     operation  : u32,
     size       : vec3f,
-    radius     : f32
+    radius     : f32,
+    rotation   : vec4f
 };
 
 struct Edits {
@@ -41,6 +42,11 @@ struct Edits {
 }
 
 // Primitives
+
+fn rotateSdf(position : vec3f, rotation : vec4f) -> vec3f
+{
+    return position + 2.0 * cross(rotation.xyz, cross(rotation.xyz, position) + rotation.w * position);
+}
 
 fn sdPlane( p : vec3f, c : vec3f, n : vec3f, h : f32, color : vec3f ) -> Surface
 {
@@ -59,20 +65,25 @@ fn sdSphere( p : vec3f, c : vec3f, s : f32, color : vec3f) -> Surface
     return sf;
 }
 
-fn sdBox( p : vec3f, c : vec3f, s : vec3f, r : f32, color : vec3f ) -> Surface
+fn sdBox( p : vec3f, c : vec3f, rotation : vec4f, s : vec3f, r : f32, color : vec3f ) -> Surface
 {
     var sf : Surface;
-    let q : vec3f = abs(p - c) - s;
+
+    let pos : vec3f = rotateSdf(p - c, rotation);
+
+    let q : vec3f = abs(pos) - s;
     sf.distance = length(max(q, vec3f(0.0))) + min(max(q.x, max(q.y, q.z)), 0.0) - r;
     sf.color = color;
     return sf;
 }
 
-fn sdCapsule( p : vec3f, a : vec3f, b : vec3f, r : f32, color : vec3f ) -> Surface
+fn sdCapsule( p : vec3f, a : vec3f, b : vec3f, rotation : vec4f, r : f32, color : vec3f ) -> Surface
 {
     var sf : Surface;
 
-    let pa : vec3f = p - a;
+    let posA : vec3f = rotateSdf(p - a, rotation);
+
+    let pa : vec3f = posA;
     let ba : vec3f = b - a;
 
     let h : f32 = clamp(dot(pa,ba) / dot(ba, ba), 0.0, 1.0);
@@ -83,10 +94,12 @@ fn sdCapsule( p : vec3f, a : vec3f, b : vec3f, r : f32, color : vec3f ) -> Surfa
     return sf;
 }
 
-fn sdCone( p : vec3f, c : vec3f, t : vec2f, h : f32, color : vec3f ) -> Surface
+fn sdCone( p : vec3f, c : vec3f, rotation : vec4f, t : vec2f, h : f32, color : vec3f ) -> Surface
 {
     var sf : Surface;
-    let pos : vec3f = p - c;
+
+    let pos : vec3f = rotateSdf(p - c, rotation);
+
     let q : vec2f = h * vec2(t.x / t.y, -1.0);
     let w : vec2f = vec2(length(pos.xz), pos.y);
     let a : vec2f = w - q * clamp(dot(w,q) / dot(q, q), 0.0, 1.0);
@@ -100,12 +113,12 @@ fn sdCone( p : vec3f, c : vec3f, t : vec2f, h : f32, color : vec3f ) -> Surface
     return sf;
 }
 
-fn sdPyramid( p : vec3f, c : vec3f, r : f32, h : f32, color : vec3f ) -> Surface
+fn sdPyramid( p : vec3f, c : vec3f, rotation : vec4f, r : f32, h : f32, color : vec3f ) -> Surface
 {
     var sf : Surface;
     let m2 : f32 = h * h + 0.25;
 
-    var pos : vec3f = p - c;
+    let pos : vec3f = rotateSdf(p - c, rotation);
 
     let abs_pos : vec2f = abs(pos.xz);
     let swizzle_pos : vec2f = select(abs_pos.xy, abs_pos.yx, abs_pos.y > abs_pos.x);
@@ -126,11 +139,15 @@ fn sdPyramid( p : vec3f, c : vec3f, r : f32, h : f32, color : vec3f ) -> Surface
     return sf;
 }
 
-fn sdCylinder(p : vec3f, a : vec3f, b : vec3f, r : f32, rr : f32, color : vec3f) -> Surface
+fn sdCylinder(p : vec3f, a : vec3f, b : vec3f, rotation : vec4f, r : f32, rr : f32, color : vec3f) -> Surface
 {
     var sf : Surface;
-    let pa : vec3f = p - a;
-    let ba : vec3f = b - a;
+
+    let posA : vec3f = rotateSdf(p - a, rotation);
+    let posB : vec3f = rotateSdf(b - a, rotation);
+
+    let pa : vec3f = posA;
+    let ba : vec3f = posB;
     let baba : f32 = dot(ba, ba);
     let paba : f32 = dot(pa, ba);
 
@@ -257,30 +274,31 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit ) -> Surfa
 
     // Center in texture (position 0,0,0 is just in the middle)
     let offsetPosition : vec3f = edit.position + vec3f(0.5);
+    let norm_position : vec3f = vec3f(position) / vec3f(512.0);
 
     switch (edit.primitive) {
         case SD_SPHERE: {
-            pSurface = sdSphere(vec3f(position) / vec3f(512.0), offsetPosition, edit.radius, edit.color);
+            pSurface = sdSphere(norm_position, offsetPosition, edit.radius, edit.color);
             break;
         }
         case SD_BOX: {
-            pSurface = sdBox(vec3f(position) / vec3f(512.0), offsetPosition, edit.size, edit.radius, edit.color);
+            pSurface = sdBox(norm_position, offsetPosition, edit.rotation, edit.size, edit.radius, edit.color);
             break;
         }
         case SD_CAPSULE: {
-            pSurface = sdCapsule(vec3f(position) / vec3f(512.0), offsetPosition, edit.size + vec3f(0.5), edit.radius, edit.color);
+            pSurface = sdCapsule(norm_position, offsetPosition, offsetPosition + vec3f(0.0, 0.1, 0.0), edit.rotation, edit.radius, edit.color);
             break;
         }
         case SD_CONE: {
-            pSurface = sdCone(vec3f(position) / vec3f(512.0), offsetPosition, edit.size.xy, edit.size.z, edit.color);
+            pSurface = sdCone(norm_position, offsetPosition, edit.rotation, edit.size.xy, edit.size.z, edit.color);
             break;
         }
         case SD_PYRAMID: {
-            pSurface = sdPyramid(vec3f(position) / vec3f(512.0), offsetPosition, edit.size.x, edit.radius, edit.color);
+            pSurface = sdPyramid(norm_position, offsetPosition, edit.rotation, edit.size.x, edit.radius, edit.color);
             break;
         }
         case SD_CYLINDER: {
-            pSurface = sdCylinder(vec3f(position) / vec3f(512.0), offsetPosition, offsetPosition + vec3(0.0, 5.0, 0.0), edit.size.x, edit.radius, edit.color);
+            pSurface = sdCylinder(norm_position, offsetPosition,  offsetPosition + vec3f(0.0, 0.1, 0.0), edit.rotation, edit.size.x, edit.radius, edit.color);
             break;
         }
         default: {

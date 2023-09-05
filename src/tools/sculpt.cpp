@@ -87,27 +87,37 @@ void SculptTool::update(float delta_time)
 	ui_controller.update(delta_time);
 	
 	edit_to_add.position = Input::get_controller_position(HAND_RIGHT) - glm::vec3(0.0f, 1.0f, 0.0f);
+	glm::quat rotation = glm::inverse(Input::get_controller_rotation(HAND_RIGHT));
+	edit_to_add.rotation = glm::vec4(rotation.x, rotation.y, rotation.z, rotation.w);
 
 	if (is_tool_being_used()) {
 
 		if (renderer->get_openxr_available()) {
-			float curr_trigger_value = Input::get_trigger_value(HAND_RIGHT);
+			//float curr_trigger_value = Input::get_trigger_value(HAND_RIGHT);
 
-			if (edit_to_add.primitive == SD_CAPSULE && has_trigger_used) {
-				return;
-			}
+			//if (edit_to_add.primitive == SD_CAPSULE && has_trigger_used) {
+			//	return;
+			//}
 		}
 		else {
 			edit_to_add.position = glm::vec3(0.4 * (random_f() * 2 - 1), 0.4 * (random_f() * 2 - 1), 0.4 * (random_f() * 2 - 1));
+
+			glm::vec3 euler_angles(random_f() * 90, random_f() * 90, random_f() * 90);
+
+			edit_to_add.size = glm::vec3(random_f() * 0.2f, random_f() * 0.2f, random_f() * 0.2f);
+
+			glm::quat rotation_random = glm::inverse(glm::quat(euler_angles));
+
+			edit_to_add.rotation = glm::vec4(rotation_random.x, rotation_random.y, rotation_random.z, rotation_random.w);
 		}
 
 		// Store the end of the sausage on the unused size attribute
-		if (edit_to_add.primitive == SD_CAPSULE && !is_sausage_start_setted) {
-			edit_to_add.size = edit_to_add.position;
-			is_sausage_start_setted = true;
-			has_trigger_used = true;
-			return;
-		}
+		//if (edit_to_add.primitive == SD_CAPSULE && !is_sausage_start_setted) {
+		//	edit_to_add.size = edit_to_add.position;
+		//	is_sausage_start_setted = true;
+		//	has_trigger_used = true;
+		//	return;
+		//}
 
 		renderer->push_edit(edit_to_add);
 
@@ -117,10 +127,10 @@ void SculptTool::update(float delta_time)
 			edit_to_add.position = edit_to_add.position - mirror_normal * dist_to_plane * 2.0f;
 
 			// Also mirror the other side of the capsule
-			if (edit_to_add.primitive == SD_CAPSULE) {
-				dist_to_plane = glm::dot(mirror_normal, edit_to_add.size - mirror_origin);
-				edit_to_add.size = edit_to_add.size - mirror_normal * dist_to_plane * 2.0f;
-			}
+			//if (edit_to_add.primitive == SD_CAPSULE) {
+			//	dist_to_plane = glm::dot(mirror_normal, edit_to_add.size - mirror_origin);
+			//	edit_to_add.size = edit_to_add.size - mirror_normal * dist_to_plane * 2.0f;
+			//}
 
 			renderer->push_edit(edit_to_add);
 		}
