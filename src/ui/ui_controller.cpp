@@ -25,7 +25,7 @@ namespace ui {
 		raycast_pointer->set_mesh(Mesh::get("data/meshes/raycast.obj"));
 
 		workspace_element = new EntityMesh();
-		workspace_element->set_shader(Shader::get("data/shaders/mesh_color.wgsl"));
+		workspace_element->set_shader(Shader::get("data/shaders/mesh_ui.wgsl"));
 		Mesh* mesh = new Mesh();
 		mesh->create_quad(workspace.size.x, workspace.size.y);
 		workspace_element->set_mesh(mesh);
@@ -40,7 +40,7 @@ namespace ui {
 	{
 		if (!enabled || !is_active()) return;
 
-		workspace_element->render();
+		// workspace_element->render();
 
 		for (auto widget : root) {
 			widget->render();
@@ -142,15 +142,29 @@ namespace ui {
 		EntityMesh* e_button = new EntityMesh();
 		e_button->set_shader(Shader::get("data/shaders/mesh_color.wgsl"));
 		Mesh* mesh = new Mesh();
+		if (texture)
+		{
+			e_button->set_shader(Shader::get("data/shaders/mesh_texture.wgsl"));
+			mesh->set_texture(Texture::get(texture));
+		}
+		else
+		{
+			// Text: Use for debug  only
+			Widget* text = make_text(signal, _pos, colors::BLACK, _size.x * 0.2f);
+			text->priority = 1;
+		}
 		mesh->create_quad(size.x, size.y);
 		e_button->set_mesh(mesh);
 
 		ButtonWidget* widget = new ButtonWidget(signal, e_button, pos, color, size);
-		root.push_back(widget);
 
-		// Text: Use another param as "button text"
-		Widget* text = make_text(signal, _pos, colors::BLACK, _size.x * 0.2f);
-		text->priority = 1;
+		if (active_submenu)
+		{
+			active_submenu->add_child(widget);
+			// connect(signal, [widget = widget](const std::string& signal, float value) { widget->parent->show_children = false; });
+		}
+		else
+			root.push_back(widget);
 
 		return widget;
 	}
@@ -213,6 +227,53 @@ namespace ui {
 			w->rect_color.z = value;
 			r->set_color(w->rect_color);
 			emit_signal(signal, w->rect_color);
+		});
+
+		return widget;
+	}
+
+	Widget* Controller::make_submenu(const std::string& name, glm::vec2 pos, glm::vec2 size, const Color& color, const char* texture)
+	{
+		glm::vec2 _pos = pos;
+		glm::vec2 _size = size;
+
+		process_params(pos, size);
+
+		/*
+		*	Create button entity and set transform
+		*/
+
+		// Render quad in local workspace position
+		EntityMesh* e_button = new EntityMesh();
+		e_button->set_shader(Shader::get("data/shaders/mesh_color.wgsl"));
+		Mesh* mesh = new Mesh();
+		if (texture)
+		{
+			e_button->set_shader(Shader::get("data/shaders/mesh_texture.wgsl"));
+			mesh->set_texture(Texture::get(texture));
+		}
+		else
+		{
+			// Text: Use for debug  only
+			Widget* text = make_text(name, _pos, colors::BLACK, _size.x * 0.2f);
+			text->priority = 1;
+		}
+		mesh->create_quad(size.x, size.y);
+		e_button->set_mesh(mesh);
+
+		ButtonWidget* widget = new ButtonWidget(name, e_button, pos, color, size);
+		root.push_back(widget);
+
+		// Visibility callback ...
+
+		active_submenu = widget;
+
+		connect(name, [widget = widget, root = &root](const std::string& signal, float value) {
+
+			for (auto w : *root)
+				w->show_children = false;
+
+			widget->show_children = !widget->show_children;
 		});
 
 		return widget;

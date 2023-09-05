@@ -57,6 +57,10 @@ class RaymarchingRenderer : public Renderer {
     Pipeline                render_mesh_texture_pipeline;
     Shader*                 render_mesh_texture_shader = nullptr;
 
+    // Render UI Quads
+    Pipeline                render_mesh_ui_pipeline;
+    Shader*                 render_mesh_ui_shader = nullptr;
+
     // Font rendering
     Pipeline                render_fonts_pipeline;
     Shader*                 render_fonts_shader = nullptr;
@@ -94,12 +98,18 @@ class RaymarchingRenderer : public Renderer {
         float camera_near = 0.0f;
         float camera_far = 0.0f;
         float dummy0 = 0.0f;
+
+        glm::vec3 sculpt_start_position = {};
+        float dummy1 = 0.0f;
+
     } compute_raymarching_data;
 
     // Data needed for sdf merging
     struct sMergeData {
-        glm::uvec3 sdf_edit_start = {};
+        glm::uvec3 edits_aabb_start = {};
         uint32_t edits_to_process = 0;
+        glm::vec3  sculpt_start_position = {};
+        float dummy0;
     } compute_merge_data;
 
     struct sCameraData {
@@ -155,6 +165,11 @@ public:
 
     virtual void update(float delta_time) override;
     virtual void render() override;
+
+    void set_sculpt_start_position(const glm::vec3& position) {
+        compute_merge_data.sculpt_start_position = position;
+        compute_raymarching_data.sculpt_start_position = position;
+    }
 
     /*
     *   Edits

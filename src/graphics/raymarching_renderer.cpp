@@ -103,6 +103,7 @@ void RaymarchingRenderer::render()
 #endif
 
     render_mesh_pipeline.clean_renderables();
+    render_mesh_ui_pipeline.clean_renderables();
     render_mesh_texture_pipeline.clean_renderables();
     render_fonts_pipeline.clean_renderables();
 
@@ -206,6 +207,7 @@ void RaymarchingRenderer::render_meshes(WGPUTextureView swapchain_view, WGPUText
     };
 
     render_pipeline(render_mesh_pipeline);
+    render_pipeline(render_mesh_ui_pipeline);
     render_pipeline(render_mesh_texture_pipeline);
     render_pipeline(render_fonts_pipeline);
 
@@ -410,7 +412,7 @@ void RaymarchingRenderer::compute_merge()
     glm::vec3 edit_max = { -100.0f, -100.0f, -100.0f };
     glm::vec3 tmp_min, tmp_max;
     for (uint16_t i = 0; i < compute_merge_data.edits_to_process; i++) {
-        edits[i].get_world_AABB(&tmp_min, &tmp_max, true);
+        edits[i].get_world_AABB(&tmp_min, &tmp_max, compute_merge_data.sculpt_start_position, true);
         edit_min = glm::min(edit_min, tmp_min);
         edit_max = glm::max(edit_max, tmp_max);
     }
@@ -420,7 +422,7 @@ void RaymarchingRenderer::compute_merge()
     std::cout << "Edit size: " << edit_size.x << " " << edit_size.y << " " << edit_size.z << std::endl;
     // To SDF coords:
     edit_size = edit_size * 512.0f;
-    compute_merge_data.sdf_edit_start = glm::uvec3(glm::floor((edit_min) * 512.0f));
+    compute_merge_data.edits_aabb_start = glm::uvec3(glm::floor((edit_min) * 512.0f));
 
     // Update uniform buffer
     wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(u_compute_edits_array.data), 0, edits, sizeof(sEdit) * compute_merge_data.edits_to_process);
@@ -647,6 +649,7 @@ void RaymarchingRenderer::init_render_quad_pipeline()
 void RaymarchingRenderer::init_render_mesh_pipelines()
 {
     render_mesh_shader = Shader::get("data/shaders/mesh_color.wgsl");
+    render_mesh_ui_shader = Shader::get("data/shaders/mesh_ui.wgsl");
     render_mesh_texture_shader = Shader::get("data/shaders/mesh_texture.wgsl");
     render_fonts_shader = Shader::get("data/shaders/sdf_fonts.wgsl");
 
@@ -678,6 +681,7 @@ void RaymarchingRenderer::init_render_mesh_pipelines()
     color_target.writeMask = WGPUColorWriteMask_All;
 
     render_mesh_pipeline.create_render(render_mesh_shader, color_target, true);
+    render_mesh_ui_pipeline.create_render(render_mesh_ui_shader, color_target, true);
     render_mesh_texture_pipeline.create_render(render_mesh_texture_shader, color_target, true);
     render_fonts_pipeline.create_render(render_fonts_shader, color_target, true);
 }

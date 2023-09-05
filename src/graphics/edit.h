@@ -59,11 +59,11 @@ struct sEdit {
 		}
 	}
 
-	inline void get_world_AABB(glm::vec3 *min, glm::vec3 *max, const bool use_padding = false) const {
-		glm::vec3 edit_size = world_half_size();
+	inline void get_world_AABB(glm::vec3 *min, glm::vec3 *max, const glm::vec3 & start_position, const bool use_padding = false) const {
+		glm::vec3 edit_half_size = world_half_size();
 		
 		if (use_padding) {
-			edit_size *= 2.5f;
+			edit_half_size *= 2.5f;
 		}
 
 		glm::vec3 rotated_mx_size = glm::vec3(-1000.0f, -1000.0f, -1000.0f);
@@ -71,18 +71,18 @@ struct sEdit {
 
 		// Avoid rotation if primitive is a sphere, and the rotation is unitary
 		if (primitive == SD_SPHERE || glm::all(glm::epsilonEqual(rotation, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), 0.001f))) {
-			rotated_mx_size = edit_size;
-			rotated_min_size = -edit_size;
+			rotated_mx_size = edit_half_size;
+			rotated_min_size = -edit_half_size;
 		} else {
 			// Rotate the AABB (turning it into an OBB) and compute the AABB
-			const glm::vec3 axis[8] = { rotate_point_by_quat(glm::vec3(edit_size.x, edit_size.y, edit_size.z), rotation),
-									rotate_point_by_quat(glm::vec3(edit_size.x, edit_size.y, -edit_size.z), rotation),
-									rotate_point_by_quat(glm::vec3(edit_size.x, -edit_size.y, edit_size.z), rotation),
-									rotate_point_by_quat(glm::vec3(edit_size.x, -edit_size.y, -edit_size.z), rotation),
-									rotate_point_by_quat(glm::vec3(-edit_size.x, edit_size.y, edit_size.z), rotation),
-									rotate_point_by_quat(glm::vec3(-edit_size.x, edit_size.y, -edit_size.z), rotation),
-									rotate_point_by_quat(glm::vec3(-edit_size.x, -edit_size.y, edit_size.z), rotation),
-									rotate_point_by_quat(glm::vec3(-edit_size.x, -edit_size.y, -edit_size.z), rotation) };
+			const glm::vec3 axis[8] = { rotate_point_by_quat(glm::vec3(edit_half_size.x, edit_half_size.y, edit_half_size.z), rotation),
+									rotate_point_by_quat(glm::vec3(edit_half_size.x, edit_half_size.y, -edit_half_size.z), rotation),
+									rotate_point_by_quat(glm::vec3(edit_half_size.x, -edit_half_size.y, edit_half_size.z), rotation),
+									rotate_point_by_quat(glm::vec3(edit_half_size.x, -edit_half_size.y, -edit_half_size.z), rotation),
+									rotate_point_by_quat(glm::vec3(-edit_half_size.x, edit_half_size.y, edit_half_size.z), rotation),
+									rotate_point_by_quat(glm::vec3(-edit_half_size.x, edit_half_size.y, -edit_half_size.z), rotation),
+									rotate_point_by_quat(glm::vec3(-edit_half_size.x, -edit_half_size.y, edit_half_size.z), rotation),
+									rotate_point_by_quat(glm::vec3(-edit_half_size.x, -edit_half_size.y, -edit_half_size.z), rotation) };
 
 			for (uint8_t i = 0; i < 8; i++) {
 				rotated_mx_size.x = glm::max(rotated_mx_size.x, axis[i].x);
@@ -97,7 +97,7 @@ struct sEdit {
 
 		const glm::vec3 edit_half_size = (rotated_mx_size - rotated_min_size) / 2.0f;
 
-		*min = position - edit_half_size + glm::vec3(0.50f, 0.50f, 0.50f);
-		*max = position + edit_half_size + glm::vec3(0.50f, 0.50f, 0.50f);
+		*min = position - start_position - edit_half_size + glm::vec3(0.50f, 0.50f, 0.50f);
+		*max = position - start_position + edit_half_size + glm::vec3(0.50f, 0.50f, 0.50f);
 	}
 };
