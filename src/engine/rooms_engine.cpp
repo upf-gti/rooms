@@ -68,6 +68,8 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_mir
 		});
 	}
 
+	enable_tool(SCULPTING);
+
 	return error;
 }
 

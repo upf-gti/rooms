@@ -22,6 +22,9 @@ class SculptTool : EditorTool {
 								.radius = 0.01f
 							};
 
+
+	bool			sculpt_started = false;
+
 	/*
 	*	Modifiers
 	*/

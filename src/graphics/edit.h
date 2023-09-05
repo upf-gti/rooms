@@ -58,9 +58,9 @@ struct sEdit {
 		}
 	}
 
-	inline void get_world_AABB(glm::vec3 *min, glm::vec3 *max) const {
+	inline void get_world_AABB(glm::vec3 *min, glm::vec3 *max, const glm::vec3& start_position) const {
 		glm::vec3 h_size = world_size();
-		*min = position - h_size + glm::vec3(0.50f, 0.50f, 0.50f);
-		*max = position + h_size + glm::vec3(0.50f, 0.50f, 0.50f);
+		*min = position - start_position - h_size + glm::vec3(0.50f, 0.50f, 0.50f);
+		*max = position - start_position + h_size + glm::vec3(0.50f, 0.50f, 0.50f);
 	}
 };

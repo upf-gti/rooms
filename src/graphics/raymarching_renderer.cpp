@@ -410,7 +410,7 @@ void RaymarchingRenderer::compute_merge()
     glm::vec3 edit_max = { -100.0f, -100.0f, -100.0f };
     glm::vec3 tmp_min, tmp_max;
     for (uint16_t i = 0; i < compute_merge_data.edits_to_process; i++) {
-        edits[i].get_world_AABB(&tmp_min, &tmp_max);
+        edits[i].get_world_AABB(&tmp_min, &tmp_max, compute_merge_data.sculpt_start_position);
         // Add an update border
         tmp_min -= glm::vec3(edits[i].radius);
         tmp_max += glm::vec3(edits[i].radius);
@@ -423,7 +423,7 @@ void RaymarchingRenderer::compute_merge()
     std::cout << "Edit size: " << edit_size.x << " " << edit_size.y << " " << edit_size.z << std::endl;
     // To SDF coords:
     edit_size = edit_size * 512.0f;
-    compute_merge_data.sdf_edit_start = glm::uvec3(glm::floor((edit_min) * 512.0f));
+    compute_merge_data.edits_aabb_start = glm::uvec3(glm::floor((edit_min) * 512.0f));
 
     // Update uniform buffer
     wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(u_compute_edits_array.data), 0, edits, sizeof(sEdit) * compute_merge_data.edits_to_process);
