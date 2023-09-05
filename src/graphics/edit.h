@@ -1,6 +1,7 @@
 #pragma once
 
 #include "includes.h"
+#include "utils.h"
 
 #include <iostream>
 
@@ -38,14 +39,14 @@ struct sEdit {
 
 	friend std::ostream& operator<<(std::ostream& os, const sEdit& edit);
 
-	inline glm::vec3 world_size() const {
+	inline glm::vec3 world_half_size() const {
 		switch (primitive) {
 		case SD_SPHERE:
-			return glm::vec3(radius, radius, radius) * 2.0f;
+			return glm::vec3(radius, radius, radius);
 		case SD_BOX:
-			return size;
+			return size + glm::vec3(radius, radius, radius);
 		case SD_CAPSULE:
-			return glm::abs(position - size) + radius * 2.0f;
+			return glm::abs(position - size) + radius;
 		//case SD_CONE:
 		//	return glm::abs(position - size) + radius * 2.0f;
 		//case SD_PYRAMID:
@@ -58,9 +59,45 @@ struct sEdit {
 		}
 	}
 
-	inline void get_world_AABB(glm::vec3 *min, glm::vec3 *max) const {
-		glm::vec3 h_size = world_size();
-		*min = position - h_size + glm::vec3(0.50f, 0.50f, 0.50f);
-		*max = position + h_size + glm::vec3(0.50f, 0.50f, 0.50f);
+	inline void get_world_AABB(glm::vec3 *min, glm::vec3 *max, const bool use_padding = false) const {
+		glm::vec3 edit_size = world_half_size();
+		
+		if (use_padding) {
+			edit_size *= 2.5f;
+		}
+
+		glm::vec3 rotated_mx_size = glm::vec3(-1000.0f, -1000.0f, -1000.0f);
+		glm::vec3 rotated_min_size = glm::vec3(1000.0f, 1000.0f, 1000.0f);
+
+		// Avoid rotation if primitive is a sphere, and the rotation is unitary
+		if (primitive == SD_SPHERE || glm::all(glm::epsilonEqual(rotation, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), 0.001f))) {
+			rotated_mx_size = edit_size;
+			rotated_min_size = -edit_size;
+		} else {
+			// Rotate the AABB (turning it into an OBB) and compute the AABB
+			const glm::vec3 axis[8] = { rotate_point_by_quat(glm::vec3(edit_size.x, edit_size.y, edit_size.z), rotation),
+									rotate_point_by_quat(glm::vec3(edit_size.x, edit_size.y, -edit_size.z), rotation),
+									rotate_point_by_quat(glm::vec3(edit_size.x, -edit_size.y, edit_size.z), rotation),
+									rotate_point_by_quat(glm::vec3(edit_size.x, -edit_size.y, -edit_size.z), rotation),
+									rotate_point_by_quat(glm::vec3(-edit_size.x, edit_size.y, edit_size.z), rotation),
+									rotate_point_by_quat(glm::vec3(-edit_size.x, edit_size.y, -edit_size.z), rotation),
+									rotate_point_by_quat(glm::vec3(-edit_size.x, -edit_size.y, edit_size.z), rotation),
+									rotate_point_by_quat(glm::vec3(-edit_size.x, -edit_size.y, -edit_size.z), rotation) };
+
+			for (uint8_t i = 0; i < 8; i++) {
+				rotated_mx_size.x = glm::max(rotated_mx_size.x, axis[i].x);
+				rotated_mx_size.y = glm::max(rotated_mx_size.y, axis[i].y);
+				rotated_mx_size.z = glm::max(rotated_mx_size.z, axis[i].z);
+
+				rotated_min_size.x = glm::min(rotated_min_size.x, axis[i].x);
+				rotated_min_size.y = glm::min(rotated_min_size.y, axis[i].y);
+				rotated_min_size.z = glm::min(rotated_min_size.z, axis[i].z);
+			}
+		}
+
+		const glm::vec3 edit_half_size = (rotated_mx_size - rotated_min_size) / 2.0f;
+
+		*min = position - edit_half_size + glm::vec3(0.50f, 0.50f, 0.50f);
+		*max = position + edit_half_size + glm::vec3(0.50f, 0.50f, 0.50f);
 	}
 };

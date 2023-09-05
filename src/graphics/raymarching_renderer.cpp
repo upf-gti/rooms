@@ -410,10 +410,7 @@ void RaymarchingRenderer::compute_merge()
     glm::vec3 edit_max = { -100.0f, -100.0f, -100.0f };
     glm::vec3 tmp_min, tmp_max;
     for (uint16_t i = 0; i < compute_merge_data.edits_to_process; i++) {
-        edits[i].get_world_AABB(&tmp_min, &tmp_max);
-        // Add an update border
-        tmp_min -= glm::vec3(edits[i].radius);
-        tmp_max += glm::vec3(edits[i].radius);
+        edits[i].get_world_AABB(&tmp_min, &tmp_max, true);
         edit_min = glm::min(edit_min, tmp_min);
         edit_max = glm::max(edit_max, tmp_max);
     }
