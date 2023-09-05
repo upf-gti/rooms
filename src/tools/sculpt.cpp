@@ -119,6 +119,11 @@ void SculptTool::update(float delta_time)
 
 	if (is_tool_being_used()) {
 
+		if (!sculpt_started) {
+			renderer->set_sculpt_start_position(edit_to_add.position);
+			sculpt_started = true;
+		}
+
 		if (renderer->get_openxr_available()) {
 			//float curr_trigger_value = Input::get_trigger_value(HAND_RIGHT);
 

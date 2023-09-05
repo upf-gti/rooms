@@ -13,6 +13,10 @@ struct ComputeData {
     camera_near     : f32,
     camera_far      : f32,
     dummy0          : f32,
+
+    sculpt_start_position   : vec3f,
+    dummy1                  : f32,
+
 };
 
 struct SdfData {
@@ -42,12 +46,15 @@ const up = vec3f(0.0, 1.0, 0.0);
 // From: http://paulbourke.net/miscellaneous/interpolation/
 fn sample_sdf_trilinear(position : vec3f) -> Surface
 {
-    let p = position * 512.0 + vec3f(256.0) - vec3f(0.0, 512.0, 0.0);
+    let p = (position - compute_data.sculpt_start_position) * 512.0 + vec3f(256.0) - vec3f(0.0, 512.0, 0.0);
 
     if (p.x < 0.0 || p.x > 511 ||
         p.y < 0.0 || p.y > 511 ||
         p.z < 0.0 || p.z > 511) {
-        return Surface(vec3(0.0, 0.0, 0.0), 0.01);
+
+        var surface : Surface = Surface(vec3(0.0, 0.0, 0.0), 0.01);
+        surface = add_preview_edit(p + compute_data.sculpt_start_position * 512.0, surface);
+        return surface;
     }
 
     let x_f : f32 = abs(fract(p.x));
@@ -79,19 +86,22 @@ fn sample_sdf_trilinear(position : vec3f) -> Surface
 
     var surface : Surface = Surface(data.xyz, data.w);
 
-    surface = add_preview_edit(p, surface);
+    surface = add_preview_edit(p + compute_data.sculpt_start_position * 512.0, surface);
 
     return surface;
 }
 
 fn sample_sdf(position : vec3f) -> Surface
 {
-    let p = position * 512.0 + vec3f(256.0) - vec3f(0.0, 512.0, 0.0);
+    let p = (position - compute_data.sculpt_start_position) * 512.0 + vec3f(256.0) - vec3f(0.0, 512.0, 0.0);
 
     if (p.x < 0.0 || p.x > 511 ||
         p.y < 0.0 || p.y > 511 ||
         p.z < 0.0 || p.z > 511) {
-        return Surface(vec3(0.0, 0.0, 0.0), 0.01);
+
+        var surface : Surface = Surface(vec3(0.0, 0.0, 0.0), 0.01);
+        surface = add_preview_edit(p + compute_data.sculpt_start_position * 512.0, surface);
+        return surface;
     }
 
     let x : u32 = u32(round(p.x));
@@ -103,7 +113,7 @@ fn sample_sdf(position : vec3f) -> Surface
 
     var surface : Surface = Surface(data.xyz, data.w);
 
-    surface = add_preview_edit(p, surface);
+    surface = add_preview_edit(p + compute_data.sculpt_start_position * 512.0, surface);
 
     return surface;
 }
