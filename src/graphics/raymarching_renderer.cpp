@@ -120,6 +120,7 @@ void RaymarchingRenderer::render_screen()
 
     glm::mat4x4 view_projection = projection * view;
 
+    compute_raymarching_data.view_projection_left_eye = view_projection;
     compute_raymarching_data.inv_view_projection_left_eye = glm::inverse(view_projection);
     compute_raymarching_data.left_eye_pos = eye;
     compute_raymarching_data.camera_far = 100.0f;
@@ -234,6 +235,9 @@ void RaymarchingRenderer::render_xr()
     if (is_openxr_available) {
 
         xr_context.init_frame();
+
+        compute_raymarching_data.view_projection_left_eye = xr_context.per_view_data[0].view_projection_matrix;
+        compute_raymarching_data.view_projection_right_eye = xr_context.per_view_data[1].view_projection_matrix;
 
         compute_raymarching_data.inv_view_projection_left_eye = glm::inverse(xr_context.per_view_data[0].view_projection_matrix);
         compute_raymarching_data.inv_view_projection_right_eye = glm::inverse(xr_context.per_view_data[1].view_projection_matrix);

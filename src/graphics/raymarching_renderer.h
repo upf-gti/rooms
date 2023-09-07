@@ -86,6 +86,9 @@ class RaymarchingRenderer : public Renderer {
 
     // Data needed for XR raymarching
     struct sComputeData {
+        glm::mat4x4 view_projection_left_eye;
+        glm::mat4x4 view_projection_right_eye;
+
         glm::mat4x4 inv_view_projection_left_eye;
         glm::mat4x4 inv_view_projection_right_eye;
 
