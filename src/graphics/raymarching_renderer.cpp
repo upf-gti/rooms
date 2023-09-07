@@ -232,53 +232,47 @@ void RaymarchingRenderer::render_meshes(WGPUTextureView swapchain_view, WGPUText
 
 void RaymarchingRenderer::render_xr()
 {
-    if (is_openxr_available) {
+    xr_context.init_frame();
 
-        xr_context.init_frame();
+    compute_raymarching_data.view_projection_left_eye = xr_context.per_view_data[0].view_projection_matrix;
+    compute_raymarching_data.view_projection_right_eye = xr_context.per_view_data[1].view_projection_matrix;
 
-        compute_raymarching_data.view_projection_left_eye = xr_context.per_view_data[0].view_projection_matrix;
-        compute_raymarching_data.view_projection_right_eye = xr_context.per_view_data[1].view_projection_matrix;
+    compute_raymarching_data.inv_view_projection_left_eye = glm::inverse(xr_context.per_view_data[0].view_projection_matrix);
+    compute_raymarching_data.inv_view_projection_right_eye = glm::inverse(xr_context.per_view_data[1].view_projection_matrix);
 
-        compute_raymarching_data.inv_view_projection_left_eye = glm::inverse(xr_context.per_view_data[0].view_projection_matrix);
-        compute_raymarching_data.inv_view_projection_right_eye = glm::inverse(xr_context.per_view_data[1].view_projection_matrix);
+    compute_raymarching_data.left_eye_pos = xr_context.per_view_data[0].position;
+    compute_raymarching_data.right_eye_pos = xr_context.per_view_data[1].position;
 
-        compute_raymarching_data.left_eye_pos = xr_context.per_view_data[0].position;
-        compute_raymarching_data.right_eye_pos = xr_context.per_view_data[1].position;
+    const float* proj_verts = glm::value_ptr(xr_context.per_view_data[0].projection_matrix);
 
-        const float* proj_verts = glm::value_ptr(xr_context.per_view_data[0].projection_matrix);
+    compute_raymarching_data.camera_far = proj_verts[14] / (proj_verts[10] - 1.0f);
+    compute_raymarching_data.camera_near = proj_verts[14] / (proj_verts[10] + 1.0f);
 
-        compute_raymarching_data.camera_far = proj_verts[14] / (proj_verts[10] - 1.0f);
-        compute_raymarching_data.camera_near = proj_verts[14] / (proj_verts[10] + 1.0f);
+    compute_merge();
+    compute_raymarching();
 
-        compute_merge();
-        compute_raymarching();
+    for (uint32_t i = 0; i < xr_context.view_count; ++i) {
 
-        for (uint32_t i = 0; i < xr_context.view_count; ++i) {
+        xr_context.acquire_swapchain(i);
 
-            xr_context.acquire_swapchain(i);
+        const sSwapchainData& swapchainData = xr_context.swapchains[i];
 
-            const sSwapchainData& swapchainData = xr_context.swapchains[i];
+        WGPUBindGroup bind_group = i == 0 ? render_bind_group_left_eye : render_bind_group_right_eye;
+        WGPUTextureView depth_texture_view = (i == 0) ? left_eye_depth_texture_view : right_eye_depth_texture_view;
 
-            WGPUBindGroup bind_group = i == 0 ? render_bind_group_left_eye : render_bind_group_right_eye;
-            WGPUTextureView depth_texture_view = (i == 0) ? left_eye_depth_texture_view : right_eye_depth_texture_view;
+        render_eye_quad(swapchainData.images[swapchainData.image_index].textureView, depth_texture_view, bind_group);
 
-            render_eye_quad(swapchainData.images[swapchainData.image_index].textureView, depth_texture_view, bind_group);
+        camera_data.view_projection = xr_context.per_view_data[i].view_projection_matrix;
 
-            camera_data.view_projection = xr_context.per_view_data[i].view_projection_matrix;
+        // Update uniform buffer
+        wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(u_camera.data), 0, &(camera_data), sizeof(sCameraData));
 
-            // Update uniform buffer
-            wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(u_camera.data), 0, &(camera_data), sizeof(sCameraData));
+        render_meshes(swapchainData.images[swapchainData.image_index].textureView, depth_texture_view);
 
-            render_meshes(swapchainData.images[swapchainData.image_index].textureView, depth_texture_view);
-
-            xr_context.release_swapchain(i);
-        }
-
-        xr_context.end_frame();
+        xr_context.release_swapchain(i);
     }
-    else {
-        render_screen();
-    }
+
+    xr_context.end_frame();
 }
 #endif
 
@@ -707,7 +701,7 @@ void RaymarchingRenderer::init_compute_raymarching_pipeline()
         
         //std::vector<glm::vec4> sdf_data = { SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION, glm::vec4(0.0, 0.0, 0.0, 1000.0) };
 
-        u_compute_texture_sdf_storage.data = webgpu_context.create_buffer(SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION * sizeof(float) * 4, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr);
+        u_compute_texture_sdf_storage.data = webgpu_context.create_buffer(SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION * sizeof(float) * 4, WGPUBufferUsage_Storage, nullptr);
         u_compute_texture_sdf_storage.binding = 2;
         u_compute_texture_sdf_storage.buffer_size = SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION * sizeof(float) * 4;
 
