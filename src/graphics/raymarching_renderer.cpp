@@ -575,7 +575,7 @@ void RaymarchingRenderer::init_render_quad_pipeline()
 
     left_eye_texture.create(
         WGPUTextureDimension_2D,
-        WGPUTextureFormat_RGBA8Unorm,
+        WGPUTextureFormat_RGBA16Float,
         { render_width, render_height, 1 },
         static_cast<WGPUTextureUsage>(WGPUTextureUsage_TextureBinding | WGPUTextureUsage_StorageBinding),
         1, nullptr);
@@ -589,7 +589,7 @@ void RaymarchingRenderer::init_render_quad_pipeline()
 
     right_eye_texture.create(
         WGPUTextureDimension_2D,
-        WGPUTextureFormat_RGBA8Unorm,
+        WGPUTextureFormat_RGBA16Float,
         { render_width, render_height, 1 },
         static_cast<WGPUTextureUsage>(WGPUTextureUsage_TextureBinding | WGPUTextureUsage_StorageBinding),
         1, nullptr);
