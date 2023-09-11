@@ -33,7 +33,7 @@ struct SdfData {
 @group(1) @binding(0) var<uniform> compute_data : ComputeData;
 @group(1) @binding(1) var<uniform> preview_edit : Edit;
 
-const MAX_DIST = 100.0;
+const MAX_DIST = 1.5;
 const MIN_HIT_DIST = 0.002;
 const DERIVATIVE_STEP = 1.0 / 512.0;
 
@@ -54,7 +54,7 @@ fn sample_sdf(position : vec3f, trilinear : bool) -> Surface
         p.y < 0.0 || p.y > 511 ||
         p.z < 0.0 || p.z > 511) {
 
-        var surface : Surface = Surface(vec3(0.0, 0.0, 0.0), 0.01);
+        var surface : Surface = Surface(vec3(0.0, 0.0, 0.0), 0.1);
         // surface = add_preview_edit(p + compute_data.sculpt_start_position * 512.0, surface);
         return surface;
     }
@@ -143,10 +143,11 @@ fn raymarch(rayOrigin : vec3f, rayDir : vec3f, view_proj : mat4x4f) -> vec4f
 	let missColor = vec3f(0.0, 0.0, 0.0);
     let lightOffset = vec3f(0.0, 0.0, 0.0);
 
-	var depth : f32 = 0.0;
+	var depth : f32 = clamp(length(rayOrigin - compute_data.sculpt_start_position) - 1.412, 0.0, MAX_DIST);
     var surface_min_dist : f32 = 100.0;
     var surface : Surface;
-	for (var i : i32 = 0; depth < MAX_DIST && i < 250; i++)
+   
+	for (var i : i32 = 0; depth < MAX_DIST && i < 100; i++)
 	{
 		let pos = rayOrigin + rayDir * depth;
 
