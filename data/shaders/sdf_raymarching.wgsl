@@ -37,10 +37,8 @@ const MAX_DIST = 1.5;
 const MIN_HIT_DIST = 0.0005;
 const DERIVATIVE_STEP = 1.0 / 512.0;
 
-const ambientCoeff = 0.2;
-const diffuseCoeff = 0.9;
 const specularCoeff = 1.0;
-const specularExponent = 64.0;
+const specularExponent = 4.0;
 const lightPos = vec3f(0.0, 2.0, 1.0);
 
 const fov = 45.0;
@@ -123,22 +121,20 @@ fn blinn_phong(rayOrigin : vec3f, position : vec3f, lightPosition : vec3f, ambie
     let normal : vec3f = estimate_normal(position);
     let toEye : vec3f = normalize(rayOrigin - position);
     let toLight : vec3f = normalize(lightPosition - position);
-    // let reflection : vec3f = reflect(-toLight, normal); // uncomment for Phong model
+    let reflection : vec3f = normalize(reflect(-toLight, normal)); // uncomment for Phong model
     let halfwayDir : vec3f = normalize(toLight + toEye);
 
-    let ambientFactor : vec3f = ambient * ambientCoeff * diffuse;
-    let diffuseFactor : vec3f = diffuse * max(0.0, dot(normal, toLight));
-    // let specularFactor : vec3f = diffuse * pow(max(0.0, dot(toEye, reflection)), specularExponent)
-    //                     * specularCoeff; // uncomment for Phong model
-    let specularFactor : vec3f = diffuse * pow(max(0.0, dot(normal, halfwayDir)), specularExponent)
-                        * specularCoeff;
+    let ambientFactor : vec3f = ambient * diffuse;
+    let diffuseFactor : vec3f = 0.4 * diffuse * max(0.0, dot(normal, toLight));
+    let specularFactor : vec3f = vec3f(0.3) * pow(max(0.0, dot(toEye, reflection)), specularExponent); // uncomment for Phong model
+    //let specularFactor : vec3f = diffuse * pow(max(0.0, dot(normal, halfwayDir)), specularExponent) * specularCoeff;
 
     return ambientFactor + diffuseFactor + specularFactor;
 }
 
 fn raymarch(rayOrigin : vec3f, rayDir : vec3f, view_proj : mat4x4f) -> vec4f
 {
-    let ambientColor = vec3f(0.4, 0.4, 0.4);
+    let ambientColor = vec3f(0.4);
 	let hitColor = vec3f(1.0, 1.0, 1.0);
 	let missColor = vec3f(0.0, 0.0, 0.0);
     let lightOffset = vec3f(0.0, 0.0, 0.0);
@@ -158,9 +154,11 @@ fn raymarch(rayOrigin : vec3f, rayDir : vec3f, view_proj : mat4x4f) -> vec4f
             depth = proj_pos.z / proj_pos.w;
 			return vec4f(blinn_phong(rayOrigin, pos, lightPos + lightOffset, ambientColor, surface.color), depth);
 		}
+
         surface_min_dist = surface.distance;
         depth += surface.distance;
 	}
+
     return vec4f(1.0, 1.0, 1.0, 1.0);
 }
 
