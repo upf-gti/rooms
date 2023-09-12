@@ -108,7 +108,7 @@ void RaymarchingRenderer::render()
     render_fonts_pipeline.clean_renderables();
 
     // Check validation errors
-    webgpu_context.print_errors();
+    //webgpu_context.print_errors();
 }
 
 void RaymarchingRenderer::render_screen()
@@ -344,7 +344,8 @@ void RaymarchingRenderer::set_preview_edit(const sEdit& edit)
     wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(u_compute_preview_edit.data), 0, &(edit), sizeof(sEdit));
 }
 
-void RaymarchingRenderer::compute_initialize_sdf() {
+void RaymarchingRenderer::compute_initialize_sdf()
+{
     // Initialize a command encoder
     WGPUCommandEncoderDescriptor encoder_desc = {};
     WGPUCommandEncoder command_encoder = wgpuDeviceCreateCommandEncoder(webgpu_context.device, &encoder_desc);
@@ -385,6 +386,8 @@ void RaymarchingRenderer::compute_initialize_sdf() {
 
 void RaymarchingRenderer::compute_merge()
 {
+    if (!compute_merge_shader->is_loaded()) return;
+
     // Nothing to merge if equals 0
     if (compute_merge_data.edits_to_process == 0) {
         return;
@@ -457,6 +460,8 @@ void RaymarchingRenderer::compute_merge()
 
 void RaymarchingRenderer::compute_raymarching()
 {
+    if (!compute_raymarching_shader->is_loaded()) return;
+
     // Initialize a command encoder
     WGPUCommandEncoderDescriptor encoder_desc = {};
     WGPUCommandEncoder command_encoder = wgpuDeviceCreateCommandEncoder(webgpu_context.device, &encoder_desc);
