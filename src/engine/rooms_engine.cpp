@@ -6,7 +6,6 @@
 #include "tools/sculpt.h"
 #include "tools/color.h"
 
-
 int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_mirror_screen)
 {
 	int error = Engine::initialize(renderer, window, use_mirror_screen);
@@ -68,6 +67,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_mir
 		});
 	}
 	enable_tool(SCULPTING);
+
 	return error;
 }
 
