@@ -141,9 +141,15 @@ void SculptTool::update(float delta_time)
 		edit_to_add.rotation = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 	}
 
+	if (!sculpt_started) {
+		renderer->set_sculpt_start_position(edit_to_add.position);
+	}
+
+	renderer->set_preview_edit(edit_to_add);
+
 	if (is_tool_being_used()) {
+
 		if (!sculpt_started) {
-			renderer->set_sculpt_start_position(edit_to_add.position);
 			sculpt_started = true;
 		}
 
@@ -183,8 +189,6 @@ void SculptTool::update(float delta_time)
 		has_trigger_used = true;
 	} else {
 		has_trigger_used = false;
-
-		renderer->set_preview_edit(edit_to_add);
 	}
 }
 
