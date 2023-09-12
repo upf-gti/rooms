@@ -34,7 +34,7 @@ struct SdfData {
 @group(1) @binding(1) var<uniform> preview_edit : Edit;
 
 const MAX_DIST = 1.5;
-const MIN_HIT_DIST = 0.002;
+const MIN_HIT_DIST = 0.0005;
 const DERIVATIVE_STEP = 1.0 / 512.0;
 
 const ambientCoeff = 0.2;
@@ -48,13 +48,13 @@ const up = vec3f(0.0, 1.0, 0.0);
 
 fn sample_sdf(position : vec3f, trilinear : bool) -> Surface
 {
-    let p = (position - compute_data.sculpt_start_position) * 512.0 + vec3f(256.0) - vec3f(0.0, 512.0, 0.0);
+    let p = (position - compute_data.sculpt_start_position + vec3(0.5, -0.5, 0.5)) * 512.0;
 
     if (p.x < 0.0 || p.x > 511 ||
         p.y < 0.0 || p.y > 511 ||
         p.z < 0.0 || p.z > 511) {
 
-        var surface : Surface = Surface(vec3(0.0, 0.0, 0.0), 0.1);
+        var surface : Surface = Surface(vec3(0.0, 0.0, 0.0), 0.01);
         // surface = add_preview_edit(p + compute_data.sculpt_start_position * 512.0, surface);
         return surface;
     }
@@ -153,13 +153,13 @@ fn raymarch(rayOrigin : vec3f, rayDir : vec3f, view_proj : mat4x4f) -> vec4f
 
         surface = sample_sdf(pos, surface_min_dist < 0.01);
 
-		if (surface.distance < MIN_HIT_DIST && surface.distance > -MIN_HIT_DIST) {
+		if (surface.distance < MIN_HIT_DIST) {
             let proj_pos : vec4f = view_proj * vec4f(pos, 1.0);
             depth = proj_pos.z / proj_pos.w;
 			return vec4f(blinn_phong(rayOrigin, pos, lightPos + lightOffset, ambientColor, surface.color), depth);
 		}
-		depth += surface.distance;
         surface_min_dist = surface.distance;
+        depth += surface.distance;
 	}
     return vec4f(1.0, 1.0, 1.0, 1.0);
 }

@@ -132,14 +132,14 @@ void SculptTool::update(float delta_time)
 		}
 	}
 
-#ifdef XR_SUPPORT
-	edit_to_add.position = Input::get_controller_position(HAND_RIGHT) - glm::vec3(0.0f, 1.0f, 0.0f);
-	glm::quat rotation = glm::inverse(Input::get_controller_rotation(HAND_RIGHT));
-	edit_to_add.rotation = glm::vec4(rotation.x, rotation.y, rotation.z, rotation.w);
-#else
-	edit_to_add.position = glm::vec3(0.0f, -1.0f, 0.0f);
-	edit_to_add.rotation = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-#endif
+	if (renderer->get_openxr_available()) {
+		edit_to_add.position = Input::get_controller_position(HAND_RIGHT) - glm::vec3(0.0f, 1.0f, 0.0f);
+		glm::quat rotation = glm::inverse(Input::get_controller_rotation(HAND_RIGHT));
+		edit_to_add.rotation = glm::vec4(rotation.x, rotation.y, rotation.z, rotation.w);
+	} else {
+		edit_to_add.position = glm::vec3(0.0f, 0.5f, 0.0f);
+		edit_to_add.rotation = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+	}
 
 	if (is_tool_being_used()) {
 		if (!sculpt_started) {

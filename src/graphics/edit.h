@@ -63,7 +63,7 @@ struct sEdit {
 		glm::vec3 pure_edit_half_size = world_half_size();
 		
 		if (use_padding) {
-			pure_edit_half_size *= 2.5f;
+			pure_edit_half_size += 0.03f;
 		}
 
 		glm::vec3 rotated_mx_size = glm::vec3(-1000.0f, -1000.0f, -1000.0f);
