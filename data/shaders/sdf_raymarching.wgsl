@@ -20,6 +20,8 @@ struct ComputeData {
     sculpt_start_position   : vec3f,
     dummy1                  : f32,
 
+    sculpt_rotation : vec4f
+
 };
 
 struct SdfData {
@@ -51,10 +53,7 @@ fn sample_sdf(position : vec3f, trilinear : bool) -> Surface
     if (p.x < 0.0 || p.x > 511 ||
         p.y < 0.0 || p.y > 511 ||
         p.z < 0.0 || p.z > 511) {
-
-        var surface : Surface = Surface(vec3(0.0, 0.0, 0.0), 0.01);
-        // surface = add_preview_edit(p + compute_data.sculpt_start_position * 512.0, surface);
-        return surface;
+        return Surface(vec3(0.0, 0.0, 0.0), 0.01);
     }
 
     var data : vec4f;
@@ -116,10 +115,10 @@ fn estimate_normal(p : vec3f) -> vec3f
     ));
 }
 
-fn blinn_phong(rayOrigin : vec3f, position : vec3f, lightPosition : vec3f, ambient : vec3f, diffuse : vec3f) -> vec3f
+fn blinn_phong(ray_origin : vec3f, position : vec3f, lightPosition : vec3f, ambient : vec3f, diffuse : vec3f) -> vec3f
 {
     let normal : vec3f = estimate_normal(position);
-    let toEye : vec3f = normalize(rayOrigin - position);
+    let toEye : vec3f = normalize(ray_origin - position);
     let toLight : vec3f = normalize(lightPosition - position);
     let reflection : vec3f = normalize(reflect(-toLight, normal)); // uncomment for Phong model
     let halfwayDir : vec3f = normalize(toLight + toEye);
@@ -132,27 +131,30 @@ fn blinn_phong(rayOrigin : vec3f, position : vec3f, lightPosition : vec3f, ambie
     return ambientFactor + diffuseFactor + specularFactor;
 }
 
-fn raymarch(rayOrigin : vec3f, rayDir : vec3f, view_proj : mat4x4f) -> vec4f
+fn raymarch(ray_origin : vec3f, ray_dir : vec3f, view_proj : mat4x4f) -> vec4f
 {
     let ambientColor = vec3f(0.4);
 	let hitColor = vec3f(1.0, 1.0, 1.0);
 	let missColor = vec3f(0.0, 0.0, 0.0);
     let lightOffset = vec3f(0.0, 0.0, 0.0);
 
-	var depth : f32 = clamp(length(rayOrigin - compute_data.sculpt_start_position) - 1.412, 0.0, MAX_DIST);
+    let rot_ray_origin : vec3f = rotate_point_quat(ray_origin, compute_data.sculpt_rotation);
+    let rot_ray_dir : vec3f = rotate_point_quat(ray_dir, compute_data.sculpt_rotation);
+
+	var depth : f32 = clamp(length(rot_ray_origin - compute_data.sculpt_start_position) - 1.412, 0.0, MAX_DIST);
     var surface_min_dist : f32 = 100.0;
     var surface : Surface;
    
 	for (var i : i32 = 0; depth < MAX_DIST && i < 100; i++)
 	{
-		let pos = rayOrigin + rayDir * depth;
+		let pos = rot_ray_origin + rot_ray_dir * depth;
 
         surface = sample_sdf(pos, surface_min_dist < 0.01);
 
 		if (surface.distance < MIN_HIT_DIST) {
             let proj_pos : vec4f = view_proj * vec4f(pos, 1.0);
             depth = proj_pos.z / proj_pos.w;
-			return vec4f(blinn_phong(rayOrigin, pos, lightPos + lightOffset, ambientColor, surface.color), depth);
+			return vec4f(blinn_phong(rot_ray_origin, pos, lightPos + lightOffset, ambientColor, surface.color), depth);
 		}
 
         surface_min_dist = surface.distance;
@@ -167,10 +169,10 @@ fn get_ray_direction(inv_view_projection : mat4x4f, uv : vec2f) -> vec3f
 	// convert coordinates from [0, 1] to [-1, 1]
 	var screenCoord : vec4f = vec4f((uv - 0.5) * 2.0, 1.0, 1.0);
 
-	var rayDir : vec4f = inv_view_projection * screenCoord;
-    rayDir = rayDir / rayDir.w;
+	var ray_dir : vec4f = inv_view_projection * screenCoord;
+    ray_dir = ray_dir / ray_dir.w;
 
-	return normalize(rayDir.xyz);
+	return normalize(ray_dir.xyz);
 }
 
 fn map_depths_to_log(depth: f32) -> f32 {

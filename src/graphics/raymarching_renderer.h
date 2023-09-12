@@ -105,6 +105,8 @@ class RaymarchingRenderer : public Renderer {
         glm::vec3 sculpt_start_position = {};
         float dummy1 = 0.0f;
 
+        glm::vec4 sculpt_rotation = {};
+
     } compute_raymarching_data;
 
     // Data needed for sdf merging
@@ -189,5 +191,6 @@ public:
     };
 
     void set_preview_edit(const sEdit& edit);
+    void set_sculpt_rotation(const glm::quat& rotation);
 
 };

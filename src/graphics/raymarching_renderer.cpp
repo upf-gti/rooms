@@ -41,7 +41,6 @@ int RaymarchingRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
     compute_raymarching_data.render_width = static_cast<float>(render_width);
     compute_raymarching_data.render_height = static_cast<float>(render_height);
 
-
     compute_initialize_sdf();
 
     return 0;
@@ -344,6 +343,11 @@ void RaymarchingRenderer::set_preview_edit(const sEdit& edit)
     wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(u_compute_preview_edit.data), 0, &(edit), sizeof(sEdit));
 }
 
+void RaymarchingRenderer::set_sculpt_rotation(const glm::quat& rotation)
+{
+    compute_raymarching_data.sculpt_rotation = glm::vec4(rotation.x, rotation.y, rotation.z, rotation.w);
+}
+
 void RaymarchingRenderer::compute_initialize_sdf()
 {
     // Initialize a command encoder
@@ -420,7 +424,7 @@ void RaymarchingRenderer::compute_merge()
 
     // Calculate size
     glm::vec3 edit_size = edit_max - edit_min;
-    std::cout << "Edit size: " << edit_size.x << " " << edit_size.y << " " << edit_size.z << std::endl;
+    //std::cout << "Edit size: " << edit_size.x << " " << edit_size.y << " " << edit_size.z << std::endl;
     // To SDF coords:
     edit_size = edit_size * 512.0f;
     compute_merge_data.edits_aabb_start = glm::uvec3(glm::floor((edit_min) * 512.0f));
@@ -437,7 +441,7 @@ void RaymarchingRenderer::compute_merge()
     uint32_t workgroupHeight = static_cast<uint32_t>((edit_size.y + workgroupSize - 1) / workgroupSize);
     uint32_t workgroupDepth  = static_cast<uint32_t>((edit_size.z + workgroupSize - 1) / workgroupSize);
     wgpuComputePassEncoderDispatchWorkgroups(compute_pass, workgroupWidth, workgroupHeight, workgroupDepth);
-    std::cout << "Dispatch size: " << workgroupWidth << " " << workgroupHeight << " " << workgroupDepth << std::endl;
+    //std::cout << "Dispatch size: " << workgroupWidth << " " << workgroupHeight << " " << workgroupDepth << std::endl;
 
     // Finalize compute_raymarching pass
     wgpuComputePassEncoderEnd(compute_pass);

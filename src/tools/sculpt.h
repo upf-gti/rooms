@@ -26,6 +26,11 @@ class SculptTool : EditorTool {
 
 	bool			sculpt_started = false;
 
+	bool			rotation_started = false;
+
+	glm::quat		initial_hand_rotation = {};
+	glm::quat		sculpt_rotation = {1.0, 0.0, 0.0, 0.0};
+
 	/*
 	*	Modifiers
 	*/

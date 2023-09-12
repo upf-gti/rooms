@@ -11,6 +11,10 @@ inline bool is_tool_being_used() {
 #endif
 }
 
+inline bool is_rotation_being_used() {
+	return Input::get_trigger_value(HAND_LEFT) > 0.5;
+}
+
 void SculptTool::initialize()
 {
 	renderer = dynamic_cast<RaymarchingRenderer*>(Renderer::instance);
@@ -140,6 +144,26 @@ void SculptTool::update(float delta_time)
 		edit_to_add.position = glm::vec3(0.0f, 0.5f, 0.0f);
 		edit_to_add.rotation = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 	}
+
+	if (is_rotation_being_used()) {
+
+		if (!rotation_started) {
+			initial_hand_rotation = Input::get_controller_rotation(HAND_LEFT);
+		}
+
+		glm::quat rotation_diff = glm::inverse(Input::get_controller_rotation(HAND_LEFT)) * initial_hand_rotation;
+
+		//sculpt_rotation = rotation_diff * sculpt_rotation;
+
+		//renderer->set_sculpt_rotation(rotation_diff * sculpt_rotation);
+
+		rotation_started = true;
+	}
+	else {
+		rotation_started = false;
+	}
+
+	edit_to_add.position = sculpt_rotation * glm::vec4(edit_to_add.position, 1.0f);
 
 	if (!sculpt_started) {
 		renderer->set_sculpt_start_position(edit_to_add.position);

@@ -43,7 +43,7 @@ struct Edits {
 
 // Primitives
 
-fn rotateSdf(position : vec3f, rotation : vec4f) -> vec3f
+fn rotate_point_quat(position : vec3f, rotation : vec4f) -> vec3f
 {
     return position + 2.0 * cross(rotation.xyz, cross(rotation.xyz, position) + rotation.w * position);
 }
@@ -69,7 +69,7 @@ fn sdBox( p : vec3f, c : vec3f, rotation : vec4f, s : vec3f, r : f32, color : ve
 {
     var sf : Surface;
 
-    let pos : vec3f = rotateSdf(p - c, rotation);
+    let pos : vec3f = rotate_point_quat(p - c, rotation);
 
     let q : vec3f = abs(pos) - s;
     sf.distance = length(max(q, vec3f(0.0))) + min(max(q.x, max(q.y, q.z)), 0.0) - r;
@@ -81,7 +81,7 @@ fn sdCapsule( p : vec3f, a : vec3f, b : vec3f, rotation : vec4f, r : f32, color 
 {
     var sf : Surface;
 
-    let posA : vec3f = rotateSdf(p - a, rotation);
+    let posA : vec3f = rotate_point_quat(p - a, rotation);
 
     let pa : vec3f = posA;
     let ba : vec3f = b - a;
@@ -98,7 +98,7 @@ fn sdCone( p : vec3f, c : vec3f, rotation : vec4f, t : vec2f, h : f32, color : v
 {
     var sf : Surface;
 
-    let pos : vec3f = rotateSdf(p - c, rotation);
+    let pos : vec3f = rotate_point_quat(p - c, rotation);
 
     let q : vec2f = h * vec2(t.x / t.y, -1.0);
     let w : vec2f = vec2(length(pos.xz), pos.y);
@@ -118,7 +118,7 @@ fn sdPyramid( p : vec3f, c : vec3f, rotation : vec4f, r : f32, h : f32, color : 
     var sf : Surface;
     let m2 : f32 = h * h + 0.25;
 
-    let pos : vec3f = rotateSdf(p - c, rotation);
+    let pos : vec3f = rotate_point_quat(p - c, rotation);
 
     let abs_pos : vec2f = abs(pos.xz);
     let swizzle_pos : vec2f = select(abs_pos.xy, abs_pos.yx, abs_pos.y > abs_pos.x);
@@ -143,8 +143,8 @@ fn sdCylinder(p : vec3f, a : vec3f, b : vec3f, rotation : vec4f, r : f32, rr : f
 {
     var sf : Surface;
 
-    let posA : vec3f = rotateSdf(p - a, rotation);
-    let posB : vec3f = rotateSdf(b - a, rotation);
+    let posA : vec3f = rotate_point_quat(p - a, rotation);
+    let posB : vec3f = rotate_point_quat(b - a, rotation);
 
     let pa : vec3f = posA;
     let ba : vec3f = posB;
