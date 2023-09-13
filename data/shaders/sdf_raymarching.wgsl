@@ -50,9 +50,11 @@ fn sample_sdf(position : vec3f, trilinear : bool) -> Surface
 {
     let p = (position - compute_data.sculpt_start_position + vec3(0.5, -0.5, 0.5)) * 512.0;
 
-    if (p.x < 0.0 || p.x > 511 ||
-        p.y < 0.0 || p.y > 511 ||
-        p.z < 0.0 || p.z > 511) {
+    let rot_p = rotate_point_quat(p - vec3f(256.0), compute_data.sculpt_rotation) + vec3f(256.0);
+
+    if (rot_p.x < 0.0 || rot_p.x > 511 ||
+        rot_p.y < 0.0 || rot_p.y > 511 ||
+        rot_p.z < 0.0 || rot_p.z > 511) {
         return Surface(vec3(0.0, 0.0, 0.0), 0.01);
     }
 
@@ -60,13 +62,13 @@ fn sample_sdf(position : vec3f, trilinear : bool) -> Surface
 
     // From: http://paulbourke.net/miscellaneous/interpolation/
     if (trilinear) {
-        let x_f : f32 = abs(fract(p.x));
-        let y_f : f32 = abs(fract(p.y));
-        let z_f : f32 = abs(fract(p.z));
+        let x_f : f32 = abs(fract(rot_p.x));
+        let y_f : f32 = abs(fract(rot_p.y));
+        let z_f : f32 = abs(fract(rot_p.z));
 
-        let x : u32 = u32(floor(p.x));
-        let y : u32 = u32(floor(p.y));
-        let z : u32 = u32(floor(p.z));
+        let x : u32 = u32(floor(rot_p.x));
+        let y : u32 = u32(floor(rot_p.y));
+        let z : u32 = u32(floor(rot_p.z));
 
         let index000 : u32 = x + y * 512u + z * 512u * 512u;
         let index100 : u32 = (x + 1) + (y + 0) * 512u + (z + 0) * 512u * 512u;
@@ -86,9 +88,9 @@ fn sample_sdf(position : vec3f, trilinear : bool) -> Surface
                         sdf_data.data[index110] * x_f * y_f * (1.0 - z_f) +
                         sdf_data.data[index111] * x_f * y_f * z_f;
     } else {
-        let x : u32 = u32(round(p.x));
-        let y : u32 = u32(round(p.y));
-        let z : u32 = u32(round(p.z));
+        let x : u32 = u32(round(rot_p.x));
+        let y : u32 = u32(round(rot_p.y));
+        let z : u32 = u32(round(rot_p.z));
 
         let index : u32 = x + y * 512u + z * 512u * 512u;
         data = sdf_data.data[index];
@@ -138,23 +140,20 @@ fn raymarch(ray_origin : vec3f, ray_dir : vec3f, view_proj : mat4x4f) -> vec4f
 	let missColor = vec3f(0.0, 0.0, 0.0);
     let lightOffset = vec3f(0.0, 0.0, 0.0);
 
-    let rot_ray_origin : vec3f = rotate_point_quat(ray_origin, compute_data.sculpt_rotation);
-    let rot_ray_dir : vec3f = rotate_point_quat(ray_dir, compute_data.sculpt_rotation);
-
-	var depth : f32 = clamp(length(rot_ray_origin - compute_data.sculpt_start_position) - 1.412, 0.0, MAX_DIST);
+	var depth : f32 = clamp(length(ray_origin - compute_data.sculpt_start_position) - 1.412, 0.0, MAX_DIST);
     var surface_min_dist : f32 = 100.0;
     var surface : Surface;
    
 	for (var i : i32 = 0; depth < MAX_DIST && i < 100; i++)
 	{
-		let pos = rot_ray_origin + rot_ray_dir * depth;
+		let pos = ray_origin + ray_dir * depth;
 
         surface = sample_sdf(pos, surface_min_dist < 0.01);
 
 		if (surface.distance < MIN_HIT_DIST) {
             let proj_pos : vec4f = view_proj * vec4f(pos, 1.0);
             depth = proj_pos.z / proj_pos.w;
-			return vec4f(blinn_phong(rot_ray_origin, pos, lightPos + lightOffset, ambientColor, surface.color), depth);
+			return vec4f(blinn_phong(ray_origin, pos, lightPos + lightOffset, ambientColor, surface.color), depth);
 		}
 
         surface_min_dist = surface.distance;

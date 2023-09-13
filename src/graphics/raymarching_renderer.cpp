@@ -345,7 +345,9 @@ void RaymarchingRenderer::set_preview_edit(const sEdit& edit)
 
 void RaymarchingRenderer::set_sculpt_rotation(const glm::quat& rotation)
 {
-    compute_raymarching_data.sculpt_rotation = glm::vec4(rotation.x, rotation.y, rotation.z, rotation.w);
+    glm::vec4 vec_rotation = glm::vec4(rotation.x, rotation.y, rotation.z, rotation.w);
+    compute_raymarching_data.sculpt_rotation = vec_rotation;
+    compute_merge_data.sculpt_rotation = vec_rotation;
 }
 
 void RaymarchingRenderer::compute_initialize_sdf()
@@ -417,7 +419,7 @@ void RaymarchingRenderer::compute_merge()
     glm::vec3 edit_max = { -100.0f, -100.0f, -100.0f };
     glm::vec3 tmp_min, tmp_max;
     for (uint16_t i = 0; i < compute_merge_data.edits_to_process; i++) {
-        edits[i].get_world_AABB(&tmp_min, &tmp_max, compute_merge_data.sculpt_start_position, true);
+        edits[i].get_world_AABB(&tmp_min, &tmp_max, compute_merge_data.sculpt_start_position, compute_merge_data.sculpt_rotation, true);
         edit_min = glm::min(edit_min, tmp_min);
         edit_max = glm::max(edit_max, tmp_max);
     }
