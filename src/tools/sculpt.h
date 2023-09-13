@@ -55,4 +55,6 @@ public:
 	void update(float delta_time);
 	void render_scene();
 	void render_ui();
+
+	virtual bool use_tool() override;
 };

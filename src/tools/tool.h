@@ -8,6 +8,8 @@ class EditorTool {
 public:
 
 	bool enabled = false;
+	// Timestepping counters
+	float  edit_update_counter = 0.0f;
 
 	virtual void initialize() {}
 	virtual void clean() {}
@@ -15,7 +17,20 @@ public:
 	virtual void start() { enabled = true; }
 	virtual void stop() { enabled = false; }
 
-	virtual void update(float delta_time) {}
+	virtual bool use_tool() {
+		if (edit_update_counter > 0.016) {
+			edit_update_counter -= 0.016;
+			return true;
+		}
+		
+		return false;
+	}
+
+	virtual void update(float delta_time) {
+		edit_update_counter += delta_time;
+	}
+
 	virtual void render_scene() {}
 	virtual void render_ui() {}
+
 };

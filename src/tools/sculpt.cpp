@@ -113,6 +113,8 @@ void SculptTool::clean()
 
 void SculptTool::update(float delta_time)
 {
+	EditorTool::update(delta_time);
+
 	if (!enabled) return;
 
 	ui_controller.update(delta_time);
@@ -193,7 +195,7 @@ void SculptTool::update(float delta_time)
 		//	return;
 		//}
 
-		renderer->push_edit(edit_to_add);
+		use_tool();
 
 		// If the mirror is activated, mirror using the plane, and add another edit to the list
 		if (use_mirror) {
@@ -206,7 +208,7 @@ void SculptTool::update(float delta_time)
 			//	edit_to_add.size = edit_to_add.size - mirror_normal * dist_to_plane * 2.0f;
 			//}
 
-			renderer->push_edit(edit_to_add);
+			use_tool();
 		}
 
 		is_sausage_start_setted = false;
@@ -232,4 +234,14 @@ void SculptTool::render_ui()
 	if (!enabled) return;
 	
 	ui_controller.render();
+}
+
+bool SculptTool::use_tool()
+{
+	if (EditorTool::use_tool()) {
+		renderer->push_edit(edit_to_add);
+		return true;
+	}
+
+	return false;
 }

@@ -83,6 +83,11 @@ void RaymarchingRenderer::clean()
 void RaymarchingRenderer::update(float delta_time)
 {
     compute_raymarching_data.time += delta_time;
+
+    updated_time += delta_time;
+    for (;updated_time >= 0.0166f; updated_time -= 0.0166f) {
+        compute_merge();
+    }
 }
 
 void RaymarchingRenderer::render()
@@ -130,7 +135,7 @@ void RaymarchingRenderer::render_screen()
     // Update uniform buffer
     wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(u_camera.data), 0, &(camera_data), sizeof(sCameraData));
 
-    compute_merge();
+    //compute_merge();
     compute_raymarching();
 
     WGPUTextureView swapchain_view = wgpuSwapChainGetCurrentTextureView(webgpu_context.screen_swapchain);
@@ -247,7 +252,7 @@ void RaymarchingRenderer::render_xr()
     compute_raymarching_data.camera_far = proj_verts[14] / (proj_verts[10] - 1.0f);
     compute_raymarching_data.camera_near = proj_verts[14] / (proj_verts[10] + 1.0f);
 
-    compute_merge();
+    //compute_merge();
     compute_raymarching();
 
     for (uint32_t i = 0; i < xr_context.view_count; ++i) {
