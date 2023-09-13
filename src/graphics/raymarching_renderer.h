@@ -126,6 +126,9 @@ class RaymarchingRenderer : public Renderer {
 
     Mesh  quad_mesh;
 
+    // Timestepping counters
+    float					updated_time = 0.0f;
+
     // For the XR mirror screen
 #if defined(XR_SUPPORT) && defined(USE_MIRROR_WINDOW)
     Pipeline mirror_pipeline;
