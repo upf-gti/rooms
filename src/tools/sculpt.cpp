@@ -3,7 +3,7 @@
 #include "framework/input.h"
 #include "graphics/raymarching_renderer.h"
 
-inline bool is_tool_being_used() {
+inline bool is_tool_activated() {
 #ifdef XR_SUPPORT
 	return Input::is_key_pressed(GLFW_KEY_A) || Input::get_trigger_value(HAND_RIGHT) > 0.5;
 #else
@@ -119,6 +119,8 @@ void SculptTool::update(float delta_time)
 
 	ui_controller.update(delta_time);
 	
+
+	// Tool Operation changer
 	if (Input::is_button_pressed(XR_BUTTON_B))
 	{
 		switch (edit_to_add.operation)
@@ -138,6 +140,7 @@ void SculptTool::update(float delta_time)
 		}
 	}
 
+	// Update edit position
 	if (renderer->get_openxr_available()) {
 		edit_to_add.position = Input::get_controller_position(HAND_RIGHT) - glm::vec3(0.0f, 1.0f, 0.0f);
 		glm::quat rotation = glm::inverse(Input::get_controller_rotation(HAND_RIGHT));
@@ -147,6 +150,7 @@ void SculptTool::update(float delta_time)
 		edit_to_add.rotation = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 	}
 
+	// Rotate the scene TODO: when ready move this out of tool to engine
 	if (is_rotation_being_used()) {
 
 		if (!rotation_started) {
@@ -164,21 +168,23 @@ void SculptTool::update(float delta_time)
 	else {
 		rotation_started = false;
 	}
-
 	edit_to_add.position = sculpt_rotation * glm::vec4(edit_to_add.position, 1.0f);
 
+	// Set center of sculpture
 	if (!sculpt_started) {
 		renderer->set_sculpt_start_position(edit_to_add.position);
 	}
 
+	// Set position of the preview edit
 	renderer->set_preview_edit(edit_to_add);
 
-	if (is_tool_being_used()) {
 
-		if (!sculpt_started) {
-			sculpt_started = true;
-		}
+	// Sculpting (adding edits)
+	if (is_tool_activated()) {
 
+		sculpt_started = true;
+
+		// For debugging sculpture without a headset
 		if (!renderer->get_openxr_available()) {
 			edit_to_add.position = glm::vec3(0.4 * (random_f() * 2 - 1), 0.4 * (random_f() * 2 - 1), 0.4 * (random_f() * 2 - 1));
 			glm::vec3 euler_angles(random_f() * 90, random_f() * 90, random_f() * 90);
@@ -187,39 +193,13 @@ void SculptTool::update(float delta_time)
 			edit_to_add.rotation = glm::vec4(rotation_random.x, rotation_random.y, rotation_random.z, rotation_random.w);
 		}
 
-		// Store the end of the sausage on the unused size attribute
-		//if (edit_to_add.primitive == SD_CAPSULE && !is_sausage_start_setted) {
-		//	edit_to_add.size = edit_to_add.position;
-		//	is_sausage_start_setted = true;
-		//	has_trigger_used = true;
-		//	return;
-		//}
-
 		use_tool();
-
-		// If the mirror is activated, mirror using the plane, and add another edit to the list
-		if (use_mirror) {
-			float dist_to_plane = glm::dot(mirror_normal, edit_to_add.position - mirror_origin);
-			edit_to_add.position = edit_to_add.position - mirror_normal * dist_to_plane * 2.0f;
-
-			// Also mirror the other side of the capsule
-			//if (edit_to_add.primitive == SD_CAPSULE) {
-			//	dist_to_plane = glm::dot(mirror_normal, edit_to_add.size - mirror_origin);
-			//	edit_to_add.size = edit_to_add.size - mirror_normal * dist_to_plane * 2.0f;
-			//}
-
-			use_tool();
-		}
-
-		is_sausage_start_setted = false;
-		has_trigger_used = true;
-	} else {
-		has_trigger_used = false;
-	}
+	} 
 }
 
 void SculptTool::render_scene()
 {
+	// Render a hollowed Edit
 	if (edit_to_add.operation == OP_SUBSTRACTION ||
 		edit_to_add.operation == OP_SMOOTH_SUBSTRACTION)
 	{
@@ -240,6 +220,15 @@ bool SculptTool::use_tool()
 {
 	if (EditorTool::use_tool()) {
 		renderer->push_edit(edit_to_add);
+
+		// If the mirror is activated, mirror using the plane, and add another edit to the list
+		if (use_mirror) {
+			float dist_to_plane = glm::dot(mirror_normal, edit_to_add.position - mirror_origin);
+			edit_to_add.position = edit_to_add.position - mirror_normal * dist_to_plane * 2.0f;
+
+			renderer->push_edit(edit_to_add);
+		}
+		
 		return true;
 	}
 

@@ -3,7 +3,7 @@
 #include "framework/input.h"
 #include "graphics/raymarching_renderer.h"
 
-inline bool is_tool_being_used() {
+inline bool is_tool_activated() {
 #ifdef XR_SUPPORT
 	return Input::is_key_pressed(GLFW_KEY_A) || Input::get_trigger_value(HAND_RIGHT) > 0.5;
 #else
@@ -65,7 +65,7 @@ void ColoringTool::update(float delta_time)
 	edit_to_add.position = glm::vec3(0.4 * (random_f() * 2 - 1), 0.4 * (random_f() * 2 - 1), 0.4 * (random_f() * 2 - 1));
 #endif
 
-	if (is_tool_being_used())
+	if (is_tool_activated())
 	{
 		use_tool();
 	}
