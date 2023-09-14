@@ -18,8 +18,8 @@ public:
 	virtual void stop() { enabled = false; }
 
 	virtual bool use_tool() {
-		if (edit_update_counter > 0.016) {
-			edit_update_counter -= 0.016;
+		if (edit_update_counter > 0.016f) {
+			edit_update_counter -= 0.016f;
 			return true;
 		}
 		

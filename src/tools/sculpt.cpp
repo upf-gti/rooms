@@ -140,11 +140,10 @@ void SculptTool::update(float delta_time)
 
 	if (renderer->get_openxr_available()) {
 		edit_to_add.position = Input::get_controller_position(HAND_RIGHT) - glm::vec3(0.0f, 1.0f, 0.0f);
-		glm::quat rotation = glm::inverse(Input::get_controller_rotation(HAND_RIGHT));
-		edit_to_add.rotation = glm::vec4(rotation.x, rotation.y, rotation.z, rotation.w);
+		edit_to_add.rotation = glm::inverse(Input::get_controller_rotation(HAND_RIGHT));
 	} else {
 		edit_to_add.position = glm::vec3(0.0f, 0.5f, 0.0f);
-		edit_to_add.rotation = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+		edit_to_add.rotation = glm::quat(0.0f, 0.0f, 0.0f, 1.0f);
 	}
 
 	if (is_rotation_being_used()) {
@@ -183,8 +182,7 @@ void SculptTool::update(float delta_time)
 			edit_to_add.position = glm::vec3(0.4 * (random_f() * 2 - 1), 0.4 * (random_f() * 2 - 1), 0.4 * (random_f() * 2 - 1));
 			glm::vec3 euler_angles(random_f() * 90, random_f() * 90, random_f() * 90);
 			edit_to_add.size = glm::vec3(0.01f, 0.01f, 0.05f);
-			glm::quat rotation_random = glm::inverse(glm::quat(euler_angles));
-			edit_to_add.rotation = glm::vec4(rotation_random.x, rotation_random.y, rotation_random.z, rotation_random.w);
+			edit_to_add.rotation = glm::inverse(glm::quat(euler_angles));
 		}
 
 		// Store the end of the sausage on the unused size attribute

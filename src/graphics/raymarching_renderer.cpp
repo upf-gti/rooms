@@ -350,9 +350,8 @@ void RaymarchingRenderer::set_preview_edit(const sEdit& edit)
 
 void RaymarchingRenderer::set_sculpt_rotation(const glm::quat& rotation)
 {
-    glm::vec4 vec_rotation = glm::vec4(rotation.x, rotation.y, rotation.z, rotation.w);
-    compute_raymarching_data.sculpt_rotation = vec_rotation;
-    compute_merge_data.sculpt_rotation = vec_rotation;
+    compute_raymarching_data.sculpt_rotation = rotation;
+    compute_merge_data.sculpt_rotation = rotation;
 }
 
 void RaymarchingRenderer::compute_initialize_sdf()

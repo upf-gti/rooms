@@ -35,7 +35,7 @@ struct sEdit {
 	sdOperation operation;
 	glm::vec3	size = {};
 	float		radius = 1.0f;
-	glm::vec4   rotation;
+	glm::quat   rotation;
 
 	friend std::ostream& operator<<(std::ostream& os, const sEdit& edit);
 
@@ -59,11 +59,9 @@ struct sEdit {
 		}
 	}
 
-	inline void get_world_AABB(glm::vec3 *min, glm::vec3 *max, const glm::vec3 & start_position, const glm::vec4& vec_sculpt_rotation, const bool use_padding = false) const {
+	inline void get_world_AABB(glm::vec3 *min, glm::vec3 *max, const glm::vec3 & start_position, const glm::quat& sculpt_rotation, const bool use_padding = false) const {
 		glm::vec3 pure_edit_half_size = world_half_size();
 		
-		glm::quat sculpt_rotation = glm::quat{ vec_sculpt_rotation.w, vec_sculpt_rotation.x, vec_sculpt_rotation.y, vec_sculpt_rotation.z };
-
 		if (use_padding) {
 			pure_edit_half_size += 0.03f;
 		}
