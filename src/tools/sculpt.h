@@ -28,8 +28,14 @@ class SculptTool : EditorTool {
 
 	bool			rotation_started = false;
 
+	glm::vec3		sculpt_start_position;
+
 	glm::quat		initial_hand_rotation = {};
 	glm::quat		rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
+
+	glm::vec3		initial_hand_translation = {};
+	glm::vec3		translation_diff = {};
+
 	glm::quat		sculpt_rotation = {0.0, 0.0, 0.0, 1.0};
 
 	/*

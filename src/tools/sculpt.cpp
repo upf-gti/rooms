@@ -146,30 +146,33 @@ void SculptTool::update(float delta_time)
 		edit_to_add.rotation = glm::quat(0.0f, 0.0f, 0.0f, 1.0f);
 	}
 
+	if (!sculpt_started) {
+		sculpt_start_position = edit_to_add.position;
+		renderer->set_sculpt_start_position(sculpt_start_position);
+	}
+
 	if (is_rotation_being_used()) {
 
 		if (!rotation_started) {
 			initial_hand_rotation = glm::inverse(Input::get_controller_rotation(HAND_LEFT));
+			initial_hand_translation = Input::get_controller_position(HAND_LEFT) - glm::vec3(0.0f, 1.0f, 0.0f);
 		}
 
 		rotation_diff = glm::inverse(initial_hand_rotation) * glm::inverse(Input::get_controller_rotation(HAND_LEFT));
+		translation_diff = Input::get_controller_position(HAND_LEFT) - glm::vec3(0.0f, 1.0f, 0.0f) - initial_hand_translation;
 
 		renderer->set_sculpt_rotation(sculpt_rotation * rotation_diff);
+		renderer->set_sculpt_start_position(sculpt_start_position + translation_diff);
 
 		rotation_started = true;
 	}
 	else {
 		if (rotation_started) {
 			sculpt_rotation = sculpt_rotation * rotation_diff;
+			sculpt_start_position = sculpt_start_position + translation_diff;
 			rotation_started = false;
 			rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
 		}
-	}
-
-	edit_to_add.position = glm::vec4(edit_to_add.position, 1.0f);
-
-	if (!sculpt_started) {
-		renderer->set_sculpt_start_position(edit_to_add.position);
 	}
 
 	renderer->set_preview_edit(edit_to_add);
