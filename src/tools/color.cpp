@@ -65,6 +65,11 @@ void ColoringTool::update(float delta_time)
 	edit_to_add.position = glm::vec3(0.4 * (random_f() * 2 - 1), 0.4 * (random_f() * 2 - 1), 0.4 * (random_f() * 2 - 1));
 #endif
 
+	// Update edit size
+	float size_multipler = Input::get_thumbstick_value(HAND_LEFT).y * delta_time * 0.1;
+	edit_to_add.radius = glm::clamp(size_multipler + edit_to_add.radius, 0.01f, 0.10f);
+	edit_to_add.size = glm::vec3(edit_to_add.radius, edit_to_add.radius, edit_to_add.radius);
+
 	if (is_tool_activated())
 	{
 		use_tool();

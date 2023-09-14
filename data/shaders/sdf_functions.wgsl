@@ -183,9 +183,23 @@ fn sminN( a : f32, b : f32, k : f32, n : f32 ) -> vec2f
     }
 }
 
+// From iqulzes and Dreams
+fn sminPoly(a : f32, b : f32, k : f32) -> vec2f {
+    let h : f32 = max(k - abs(a - b), 0.0) / k;
+    let m : f32 = h*h;
+    let s : f32 = m*k*(1.0/4.0);
+
+    if (a < b) {
+        return vec2f(a - s, m);
+    } else {
+        return vec2f(b - s, 1.0 - m);
+    }
+}
+
 fn opSmoothUnion( s1 : Surface, s2 : Surface, k : f32 ) -> Surface
 {
-    let smin : vec2f = sminN(s2.distance, s1.distance, k, 3.0);
+    //let smin : vec2f = sminN(s2.distance, s1.distance, k, 3.0);
+    let smin : vec2f = sminPoly(s2.distance, s1.distance, k);
     var sf : Surface;
     sf.distance = smin.x;
     sf.color = colorMix(s2.color, s1.color, smin.y);
@@ -270,7 +284,7 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit ) -> Surfa
 {
     var pSurface : Surface;
 
-    const smooth_factor = 0.01;
+    const smooth_factor = 0.005;
 
     // Center in texture (position 0,0,0 is just in the middle)
     let offsetPosition : vec3f = edit.position + vec3f(0.5);

@@ -19,7 +19,7 @@ class SculptTool : EditorTool {
 								.primitive = SD_SPHERE,
 								.color = glm::vec3(1.0f, 0.0f, 0.0f),
 								.operation = OP_SMOOTH_UNION,
-								.size = glm::vec3(0.1f, 0.1f, 0.1f),
+								.size = glm::vec3(0.01f, 0.01f, 0.01f),
 								.radius = 0.01f
 							};
 
