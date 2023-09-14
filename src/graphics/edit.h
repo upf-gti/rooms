@@ -33,18 +33,21 @@ struct sEdit {
 	sdPrimitive primitive;
 	glm::vec3	color;
 	sdOperation operation;
-	glm::vec3	size = {};
-	float		radius = 1.0f;
+	glm::vec4	dimensions;
 	glm::quat   rotation;
 
 	friend std::ostream& operator<<(std::ostream& os, const sEdit& edit);
 
 	inline glm::vec3 world_half_size() const {
+
+		glm::vec3 size = glm::vec3(dimensions);
+		float radius = dimensions.w;
+
 		switch (primitive) {
 		case SD_SPHERE:
-			return glm::vec3(radius, radius, radius);
+			return size;
 		case SD_BOX:
-			return size + glm::vec3(radius, radius, radius);
+			return size + glm::vec3(radius);
 		case SD_CAPSULE:
 			return glm::abs(position - size) + radius;
 		//case SD_CONE:

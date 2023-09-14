@@ -31,9 +31,9 @@ void SculptTool::initialize()
 	// UI Layout
 	{
 		ui_controller.make_submenu("modes", { 24.f, 4.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/sculpt_modes.png");
-			ui_controller.make_button("normal", { 24.f, 36.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/normal.png");
-			ui_controller.make_button("stamp", { 52.f, 36.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/stamp.png");
-			ui_controller.make_color_picker("colors", { edit_to_add.color.r, edit_to_add.color.g, edit_to_add.color.b, 1.0f } , { 80.f, 36.f }, { 32.f, 8.f });
+		ui_controller.make_button("normal", { 24.f, 36.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/normal.png");
+		ui_controller.make_button("stamp", { 52.f, 36.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/stamp.png");
+		ui_controller.make_color_picker("colors", { edit_to_add.color.r, edit_to_add.color.g, edit_to_add.color.b, 1.0f } , { 80.f, 36.f }, { 32.f, 8.f });
 		ui_controller.close_submenu();
 		
 		ui_controller.make_submenu("primitives", { 52.f, 4.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/sphere.png");
@@ -56,13 +56,10 @@ void SculptTool::initialize()
 		ui_controller.connect("sphere", [&](const std::string& signal, float value) { 
 			edit_to_add.primitive = SD_SPHERE; 
 			mesh_preview->set_mesh(Mesh::get("data/meshes/wired_sphere.obj"));
-			edit_to_add.radius = edit_to_add.size.x;
 		});
 		ui_controller.connect("cube", [&](const std::string& signal, float value) { 
 			edit_to_add.primitive = SD_BOX; 
 			mesh_preview->set_mesh(Mesh::get("data/meshes/hollow_cube.obj")); 
-			edit_to_add.size = glm::vec3(edit_to_add.radius);
-			edit_to_add.radius = 0.f;
 		});
 
 		// Tools
@@ -112,18 +109,14 @@ void SculptTool::update(float delta_time)
 		edit_to_add.rotation = glm::quat(0.0f, 0.0f, 0.0f, 1.0f);
 	}
 
-	// Update edit dimensions depending on primitive
-	float size_multipler = Input::get_thumbstick_value(HAND_LEFT).y * delta_time * 0.1;
-	switch (edit_to_add.primitive)
-	{
-	case SD_SPHERE:
-		edit_to_add.radius = glm::clamp(size_multipler + edit_to_add.radius, 0.001f, 0.1f);
-		break;
-	case SD_BOX:
-		edit_to_add.size = glm::clamp(glm::vec3(size_multipler) + edit_to_add.size, glm::vec3(0.001f), glm::vec3(0.1f));
-	default:
-		break;
-	}
+	// Update common edit dimensions
+	float size_multipler = Input::get_thumbstick_value(HAND_RIGHT).y * delta_time * 0.1;
+	glm::vec3 new_dimensions = glm::clamp(size_multipler + glm::vec3(edit_to_add.dimensions), 0.001f, 0.1f);
+	edit_to_add.dimensions = glm::vec4(new_dimensions, edit_to_add.dimensions.w);
+
+	// Update primitive specific size
+	size_multipler = Input::get_thumbstick_value(HAND_LEFT).y * delta_time * 0.1;
+	edit_to_add.dimensions.w = glm::clamp(size_multipler + edit_to_add.dimensions.w, 0.001f, 0.1f);
 
 	// Rotate the scene TODO: when ready move this out of tool to engine
 	if (is_rotation_being_used()) {
@@ -170,7 +163,7 @@ void SculptTool::update(float delta_time)
 		if (!renderer->get_openxr_available()) {
 			edit_to_add.position = glm::vec3(0.4 * (random_f() * 2 - 1), 0.4 * (random_f() * 2 - 1), 0.4 * (random_f() * 2 - 1));
 			glm::vec3 euler_angles(random_f() * 90, random_f() * 90, random_f() * 90);
-			edit_to_add.size = glm::vec3(0.01f, 0.01f, 0.05f);
+			edit_to_add.dimensions = glm::vec4(0.01f, 0.01f, 0.05f, 0.01f);
 			edit_to_add.rotation = glm::inverse(glm::quat(euler_angles));
 		}
 
@@ -185,18 +178,7 @@ void SculptTool::render_scene()
 		edit_to_add.operation == OP_SMOOTH_SUBSTRACTION)
 	{
 		mesh_preview->set_model(Input::get_controller_pose(ui_controller.get_workspace().select_hand));
-
-		switch (edit_to_add.primitive)
-		{
-		case SD_SPHERE:
-			mesh_preview->scale(glm::vec3(edit_to_add.radius));
-			break;
-		case SD_BOX:
-			mesh_preview->scale(edit_to_add.size);
-		default:
-			break;
-		}
-
+		mesh_preview->scale(edit_to_add.dimensions);
 		mesh_preview->render();
 	}
 }
