@@ -162,7 +162,7 @@ void RaymarchingRenderer::render_meshes(WGPUTextureView swapchain_view, WGPUText
     render_pass_color_attachment.view = swapchain_view;
     render_pass_color_attachment.loadOp = WGPULoadOp_Load;
     render_pass_color_attachment.storeOp = WGPUStoreOp_Store;
-    render_pass_color_attachment.clearValue = WGPUColor(0.0f, 0.0f, 0.0f, 1.0f);
+    render_pass_color_attachment.clearValue = WGPUColor(0.035f, 0.035f, 0.035f, 1.0f);
 
     // Prepate the depth attachment
     WGPURenderPassDepthStencilAttachment render_pass_depth_attachment = {};
@@ -291,7 +291,7 @@ void RaymarchingRenderer::render_eye_quad(WGPUTextureView swapchain_view, WGPUTe
     render_pass_color_attachment.view = swapchain_view;
     render_pass_color_attachment.loadOp = WGPULoadOp_Clear;
     render_pass_color_attachment.storeOp = WGPUStoreOp_Store;
-    render_pass_color_attachment.clearValue = WGPUColor(0.0f, 0.0f, 0.0f, 1.0f);
+    render_pass_color_attachment.clearValue = WGPUColor(0.035f, 0.035f, 0.035f, 1.0f);
 
     // Prepate the depth attachment
     WGPURenderPassDepthStencilAttachment render_pass_depth_attachment = {};
@@ -350,9 +350,8 @@ void RaymarchingRenderer::set_preview_edit(const sEdit& edit)
 
 void RaymarchingRenderer::set_sculpt_rotation(const glm::quat& rotation)
 {
-    glm::vec4 vec_rotation = glm::vec4(rotation.x, rotation.y, rotation.z, rotation.w);
-    compute_raymarching_data.sculpt_rotation = vec_rotation;
-    compute_merge_data.sculpt_rotation = vec_rotation;
+    compute_raymarching_data.sculpt_rotation = rotation;
+    compute_merge_data.sculpt_rotation = rotation;
 }
 
 void RaymarchingRenderer::compute_initialize_sdf()
@@ -535,7 +534,7 @@ void RaymarchingRenderer::render_mirror()
         render_pass_color_attachment.view = current_texture_view;
         render_pass_color_attachment.loadOp = WGPULoadOp_Clear;
         render_pass_color_attachment.storeOp = WGPUStoreOp_Store;
-        render_pass_color_attachment.clearValue = WGPUColor(0.0f, 0.0f, 0.0f, 1.0f);
+        render_pass_color_attachment.clearValue = WGPUColor(0.035f, 0.035f, 0.035f, 1.0f);
 
         WGPURenderPassDescriptor render_pass_descr = {};
         render_pass_descr.colorAttachmentCount = 1;

@@ -143,11 +143,10 @@ void SculptTool::update(float delta_time)
 	// Update edit position
 	if (renderer->get_openxr_available()) {
 		edit_to_add.position = Input::get_controller_position(HAND_RIGHT) - glm::vec3(0.0f, 1.0f, 0.0f);
-		glm::quat rotation = glm::inverse(Input::get_controller_rotation(HAND_RIGHT));
-		edit_to_add.rotation = glm::vec4(rotation.x, rotation.y, rotation.z, rotation.w);
+		edit_to_add.rotation = glm::inverse(Input::get_controller_rotation(HAND_RIGHT));
 	} else {
 		edit_to_add.position = glm::vec3(0.0f, 0.5f, 0.0f);
-		edit_to_add.rotation = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+		edit_to_add.rotation = glm::quat(0.0f, 0.0f, 0.0f, 1.0f);
 	}
 
 	// Update edit size
@@ -162,16 +161,18 @@ void SculptTool::update(float delta_time)
 			initial_hand_rotation = glm::inverse(Input::get_controller_rotation(HAND_LEFT));
 		}
 
-		glm::quat rotation_diff = glm::inverse(Input::get_controller_rotation(HAND_LEFT)) * glm::inverse(initial_hand_rotation);
+		rotation_diff = glm::inverse(initial_hand_rotation) * glm::inverse(Input::get_controller_rotation(HAND_LEFT));
 
-		//sculpt_rotation = rotation_diff * sculpt_rotation;
-
-		renderer->set_sculpt_rotation(glm::inverse(Input::get_controller_rotation(HAND_LEFT)));
+		renderer->set_sculpt_rotation(sculpt_rotation * rotation_diff);
 
 		rotation_started = true;
 	}
 	else {
-		rotation_started = false;
+		if (rotation_started) {
+			sculpt_rotation = sculpt_rotation * rotation_diff;
+			rotation_started = false;
+			rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
+		}
 	}
 
 
@@ -196,8 +197,7 @@ void SculptTool::update(float delta_time)
 			edit_to_add.position = glm::vec3(0.4 * (random_f() * 2 - 1), 0.4 * (random_f() * 2 - 1), 0.4 * (random_f() * 2 - 1));
 			glm::vec3 euler_angles(random_f() * 90, random_f() * 90, random_f() * 90);
 			edit_to_add.size = glm::vec3(0.01f, 0.01f, 0.05f);
-			glm::quat rotation_random = glm::inverse(glm::quat(euler_angles));
-			edit_to_add.rotation = glm::vec4(rotation_random.x, rotation_random.y, rotation_random.z, rotation_random.w);
+			edit_to_add.rotation = glm::inverse(glm::quat(euler_angles));
 		}
 
 		use_tool();
