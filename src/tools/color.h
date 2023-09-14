@@ -9,18 +9,17 @@ class RaymarchingRenderer;
 
 class ColoringTool : EditorTool {
 
-	RaymarchingRenderer*	renderer = nullptr;
-	EntityMesh*				mesh_preview = nullptr;
-	ui::Controller			ui_controller;
+	RaymarchingRenderer* renderer = nullptr;
+	EntityMesh*  mesh_preview = nullptr;
+	ui::Controller ui_controller;
 
-	sEdit					edit_to_add = {
-								.position = glm::vec3(0.0f, 0.0f, 0.0f),
-								.primitive = SD_SPHERE,
-								.color = glm::vec3(1.0f, 0.0f, 0.0f),
-								.operation = OP_PAINT,
-								.size = glm::vec3(0.1f, 0.1f, 0.1f),
-								.radius = 0.01f
-							};
+	sEdit edit_to_add = {
+		.position = glm::vec3(0.0f, 0.0f, 0.0f),
+		.primitive = SD_SPHERE,
+		.color = glm::vec3(1.0f, 0.0f, 0.0f),
+		.operation = OP_SMOOTH_PAINT,
+		.dimensions = glm::vec4(0.01f, 0.01f, 0.01f, 0.f)
+	};
 
 public:
 

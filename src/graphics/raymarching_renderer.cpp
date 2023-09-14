@@ -12,8 +12,7 @@ std::ostream& operator<<(std::ostream& os, const sEdit& edit)
     os << "Primitive: " << edit.primitive << std::endl;
     os << "Color: " << edit.color.x << ", " << edit.color.y << ", " << edit.color.z << std::endl;
     os << "Operation: " << edit.operation << std::endl;
-    os << "Size: " << edit.size.x << ", " << edit.size.y << ", " << edit.size.z << std::endl;
-    os << "Radius: " << edit.radius << std::endl;
+    os << "Dimensions: " << edit.dimensions.x << ", " << edit.dimensions.y << ", " << edit.dimensions.z << edit.dimensions.w << std::endl;
     return os;
 }
 

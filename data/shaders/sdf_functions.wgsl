@@ -32,8 +32,7 @@ struct Edit {
     primitive  : u32,
     color      : vec3f,
     operation  : u32,
-    size       : vec3f,
-    radius     : f32,
+    dimensions : vec4f,
     rotation   : vec4f
 };
 
@@ -308,30 +307,33 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit ) -> Surfa
     // Center in texture (position 0,0,0 is just in the middle)
     let offsetPosition : vec3f = edit.position + vec3f(0.5);
     let norm_position : vec3f = vec3f(position) / vec3f(512.0);
+    let size : vec3f = edit.dimensions.xyz;
+    let radius : f32 = edit.dimensions.x;
+    let primitive_spec : f32 = edit.dimensions.w;
 
     switch (edit.primitive) {
         case SD_SPHERE: {
-            pSurface = sdSphere(norm_position, offsetPosition, edit.radius, edit.color);
+            pSurface = sdSphere(norm_position, offsetPosition, radius, edit.color);
             break;
         }
         case SD_BOX: {
-            pSurface = sdBox(norm_position, offsetPosition, edit.rotation, edit.size, edit.radius, edit.color);
+            pSurface = sdBox(norm_position, offsetPosition, edit.rotation, size - primitive_spec, primitive_spec, edit.color);
             break;
         }
         case SD_CAPSULE: {
-            pSurface = sdCapsule(norm_position, offsetPosition, offsetPosition + vec3f(0.0, 0.1, 0.0), edit.rotation, edit.radius, edit.color);
+            pSurface = sdCapsule(norm_position, offsetPosition, offsetPosition + vec3f(0.0, 0.1, 0.0), edit.rotation, radius, edit.color);
             break;
         }
         case SD_CONE: {
-            pSurface = sdCone(norm_position, offsetPosition, edit.rotation, edit.size.xy, edit.size.z, edit.color);
+            pSurface = sdCone(norm_position, offsetPosition, edit.rotation, size.xy, primitive_spec, edit.color);
             break;
         }
         case SD_PYRAMID: {
-            pSurface = sdPyramid(norm_position, offsetPosition, edit.rotation, edit.size.x, edit.radius, edit.color);
+            pSurface = sdPyramid(norm_position, offsetPosition, edit.rotation, radius, primitive_spec, edit.color);
             break;
         }
         case SD_CYLINDER: {
-            pSurface = sdCylinder(norm_position, offsetPosition,  offsetPosition + vec3f(0.0, 0.1, 0.0), edit.rotation, edit.size.x, edit.radius, edit.color);
+            pSurface = sdCylinder(norm_position, offsetPosition,  offsetPosition + vec3f(0.0, 0.1, 0.0), edit.rotation, radius, primitive_spec, edit.color);
             break;
         }
         default: {
