@@ -44,6 +44,7 @@ namespace ui {
 
 		Widget* active_submenu = nullptr;
 
+		void append_widget( Widget* widget );
 		void process_params(glm::vec2& position, glm::vec2& size, bool skip_to_local = false);
 		Widget* make_rect(glm::vec2 pos, glm::vec2 size, const Color& color);
 
