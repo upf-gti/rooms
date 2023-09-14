@@ -53,30 +53,12 @@ void SculptTool::initialize()
 		});
 
 		// Primitives
-		ui_controller.connect("sphere", [&](const std::string& signal, float value) { edit_to_add.primitive = SD_SPHERE; });
-		ui_controller.connect("cube", [&](const std::string& signal, float value) { edit_to_add.primitive = SD_BOX; });
+		ui_controller.connect("sphere", [&](const std::string& signal, float value) { edit_to_add.primitive = SD_SPHERE; mesh_preview->set_mesh(Mesh::get("data/meshes/sphere.obj")); });
+		ui_controller.connect("cube", [&](const std::string& signal, float value) { edit_to_add.primitive = SD_BOX; mesh_preview->set_mesh(Mesh::get("data/meshes/hollow_cube.obj")); });
 
 		// Tools
 		ui_controller.connect("mirror", [&](const std::string& signal, float value) { use_mirror = !use_mirror; });
 	}
-
-	// UI Layout
-	//{
-	//	ui_controller.make_button("enable_smooth", { 8.f, 8.f }, { 32.f, 32.f }, colors::GREEN);
-
-	//	ui_controller.make_color_picker("edit_color", { edit_to_add.color.r, edit_to_add.color.g, edit_to_add.color.b, 1.0f }, { 130.0f, 8.0f }, { 64.f, 16.f });
-	//}
-
-	//// UI events
-	//{
-	//	ui_controller.connect("enable_smooth", [edit_to_add  = &edit_to_add](const std::string& signal, float value) {
-	//		edit_to_add->operation = (sdOperation)((edit_to_add->operation >= 4) ? (edit_to_add->operation - 4) : (edit_to_add->operation + 4));
-	//	});
-	//	
-	//	ui_controller.connect("edit_color", [edit_to_add = &edit_to_add](const std::string& signal, const Color& color) {
-	//		edit_to_add->color = color;
-	//	});
-	//}
 }
 
 void SculptTool::clean()
@@ -92,7 +74,6 @@ void SculptTool::update(float delta_time)
 
 	ui_controller.update(delta_time);
 	
-
 	// Tool Operation changer
 	if (Input::was_button_pressed(XR_BUTTON_Y))
 	{
@@ -127,7 +108,6 @@ void SculptTool::update(float delta_time)
 	edit_to_add.radius = glm::clamp(size_multipler + edit_to_add.radius, 0.01f, 0.10f);
 	edit_to_add.size = glm::vec3(edit_to_add.radius, edit_to_add.radius, edit_to_add.radius);
 
-	
 	// Rotate the scene TODO: when ready move this out of tool to engine
 	if (is_rotation_being_used()) {
 
@@ -153,7 +133,6 @@ void SculptTool::update(float delta_time)
 		}
 	}
 
-
 	edit_to_add.position = glm::vec4(edit_to_add.position, 1.0f);
 
 	// Set center of sculpture
@@ -164,7 +143,6 @@ void SculptTool::update(float delta_time)
 
 	// Set position of the preview edit
 	renderer->set_preview_edit(edit_to_add);
-
 
 	// Sculpting (adding edits)
 	if (is_tool_activated()) {
@@ -190,7 +168,18 @@ void SculptTool::render_scene()
 		edit_to_add.operation == OP_SMOOTH_SUBSTRACTION)
 	{
 		mesh_preview->set_model(Input::get_controller_pose(ui_controller.get_workspace().select_hand));
-		mesh_preview->scale(glm::vec3(edit_to_add.radius));
+
+		switch (edit_to_add.primitive)
+		{
+		case SD_SPHERE:
+			mesh_preview->scale(glm::vec3(edit_to_add.radius));
+			break;
+		case SD_BOX:
+			mesh_preview->scale(edit_to_add.size * 4.f);
+		default:
+			break;
+		}
+
 		mesh_preview->render();
 	}
 }

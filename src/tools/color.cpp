@@ -82,7 +82,7 @@ void ColoringTool::update(float delta_time)
 
 void ColoringTool::render_scene()
 {
-	mesh_preview->set_translation(Input::get_controller_position(ui_controller.get_workspace().select_hand));
+	mesh_preview->set_model(Input::get_controller_pose(ui_controller.get_workspace().select_hand));
 	mesh_preview->scale(glm::vec3(edit_to_add.radius));
 	mesh_preview->render();
 }
