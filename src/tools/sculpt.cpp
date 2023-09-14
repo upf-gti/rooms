@@ -154,8 +154,6 @@ void SculptTool::update(float delta_time)
 	}
 
 
-	edit_to_add.position = glm::vec4(edit_to_add.position, 1.0f);
-
 	// Set center of sculpture
 	if (!sculpt_started) {
 		sculpt_start_position = edit_to_add.position;

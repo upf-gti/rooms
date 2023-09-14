@@ -27,6 +27,8 @@ fn evalSdf(position : vec3u) -> Surface
         edit.position -= merge_data.sculpt_start_position;
         edit.position = rotate_point_quat(edit.position, merge_data.sculpt_rotation);
 
+        edit.rotation = quat_mult(edit.rotation, quat_inverse(merge_data.sculpt_rotation));
+
         sSurface = evalEdit(vec3f(position), sSurface, edit);
     }
 
