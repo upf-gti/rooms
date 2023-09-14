@@ -115,6 +115,7 @@ class RaymarchingRenderer : public Renderer {
         uint32_t edits_to_process = 0;
         glm::vec3  sculpt_start_position = {};
         float dummy0;
+        glm::vec4 sculpt_rotation = {};
     } compute_merge_data;
 
     struct sCameraData {

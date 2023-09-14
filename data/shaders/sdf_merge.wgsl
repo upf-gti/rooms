@@ -4,7 +4,8 @@ struct MergeData {
     edits_aabb_start      : vec3<u32>,
     edits_to_process      : u32,
     sculpt_start_position : vec3f,
-    dummy0                : f32
+    dummy0                : f32,
+    sculpt_rotation       : vec4f
 };
 
 struct SdfData {
@@ -24,6 +25,7 @@ fn evalSdf(position : vec3u) -> Surface
         var edit : Edit = edits.data[i];
 
         edit.position -= merge_data.sculpt_start_position;
+        edit.position = rotate_point_quat(edit.position, merge_data.sculpt_rotation);
 
         sSurface = evalEdit(vec3f(position), sSurface, edit);
     }
