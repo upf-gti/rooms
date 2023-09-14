@@ -154,22 +154,27 @@ void SculptTool::update(float delta_time)
 	edit_to_add.radius = glm::clamp(size_multipler + edit_to_add.radius, 0.01f, 0.10f);
 	edit_to_add.size = glm::vec3(edit_to_add.radius, edit_to_add.radius, edit_to_add.radius);
 
+	
 	// Rotate the scene TODO: when ready move this out of tool to engine
 	if (is_rotation_being_used()) {
 
 		if (!rotation_started) {
 			initial_hand_rotation = glm::inverse(Input::get_controller_rotation(HAND_LEFT));
+			initial_hand_translation = Input::get_controller_position(HAND_LEFT) - glm::vec3(0.0f, 1.0f, 0.0f);
 		}
 
 		rotation_diff = glm::inverse(initial_hand_rotation) * glm::inverse(Input::get_controller_rotation(HAND_LEFT));
+		translation_diff = Input::get_controller_position(HAND_LEFT) - glm::vec3(0.0f, 1.0f, 0.0f) - initial_hand_translation;
 
 		renderer->set_sculpt_rotation(sculpt_rotation * rotation_diff);
+		renderer->set_sculpt_start_position(sculpt_start_position + translation_diff);
 
 		rotation_started = true;
 	}
 	else {
 		if (rotation_started) {
 			sculpt_rotation = sculpt_rotation * rotation_diff;
+			sculpt_start_position = sculpt_start_position + translation_diff;
 			rotation_started = false;
 			rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
 		}
@@ -180,7 +185,8 @@ void SculptTool::update(float delta_time)
 
 	// Set center of sculpture
 	if (!sculpt_started) {
-		renderer->set_sculpt_start_position(edit_to_add.position);
+		sculpt_start_position = edit_to_add.position;
+		renderer->set_sculpt_start_position(sculpt_start_position);
 	}
 
 	// Set position of the preview edit
