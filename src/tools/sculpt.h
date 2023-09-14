@@ -29,7 +29,8 @@ class SculptTool : EditorTool {
 	bool			rotation_started = false;
 
 	glm::quat		initial_hand_rotation = {};
-	glm::quat		sculpt_rotation = {1.0, 0.0, 0.0, 0.0};
+	glm::quat		rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
+	glm::quat		sculpt_rotation = {0.0, 0.0, 0.0, 1.0};
 
 	/*
 	*	Modifiers

@@ -152,16 +152,18 @@ void SculptTool::update(float delta_time)
 			initial_hand_rotation = glm::inverse(Input::get_controller_rotation(HAND_LEFT));
 		}
 
-		glm::quat rotation_diff = glm::inverse(Input::get_controller_rotation(HAND_LEFT)) * glm::inverse(initial_hand_rotation);
+		rotation_diff = glm::inverse(initial_hand_rotation) * glm::inverse(Input::get_controller_rotation(HAND_LEFT));
 
-		//sculpt_rotation = rotation_diff * sculpt_rotation;
-
-		renderer->set_sculpt_rotation(glm::inverse(Input::get_controller_rotation(HAND_LEFT)));
+		renderer->set_sculpt_rotation(sculpt_rotation * rotation_diff);
 
 		rotation_started = true;
 	}
 	else {
-		rotation_started = false;
+		if (rotation_started) {
+			sculpt_rotation = sculpt_rotation * rotation_diff;
+			rotation_started = false;
+			rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
+		}
 	}
 
 	edit_to_add.position = glm::vec4(edit_to_add.position, 1.0f);
