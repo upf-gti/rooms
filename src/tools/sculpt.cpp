@@ -53,8 +53,17 @@ void SculptTool::initialize()
 		});
 
 		// Primitives
-		ui_controller.connect("sphere", [&](const std::string& signal, float value) { edit_to_add.primitive = SD_SPHERE; mesh_preview->set_mesh(Mesh::get("data/meshes/sphere.obj")); });
-		ui_controller.connect("cube", [&](const std::string& signal, float value) { edit_to_add.primitive = SD_BOX; mesh_preview->set_mesh(Mesh::get("data/meshes/hollow_cube.obj")); });
+		ui_controller.connect("sphere", [&](const std::string& signal, float value) { 
+			edit_to_add.primitive = SD_SPHERE; 
+			mesh_preview->set_mesh(Mesh::get("data/meshes/wired_sphere.obj"));
+			edit_to_add.radius = edit_to_add.size.x;
+		});
+		ui_controller.connect("cube", [&](const std::string& signal, float value) { 
+			edit_to_add.primitive = SD_BOX; 
+			mesh_preview->set_mesh(Mesh::get("data/meshes/hollow_cube.obj")); 
+			edit_to_add.size = glm::vec3(edit_to_add.radius);
+			edit_to_add.radius = 0.f;
+		});
 
 		// Tools
 		ui_controller.connect("mirror", [&](const std::string& signal, float value) { use_mirror = !use_mirror; });
@@ -103,10 +112,18 @@ void SculptTool::update(float delta_time)
 		edit_to_add.rotation = glm::quat(0.0f, 0.0f, 0.0f, 1.0f);
 	}
 
-	// Update edit size
+	// Update edit dimensions depending on primitive
 	float size_multipler = Input::get_thumbstick_value(HAND_LEFT).y * delta_time * 0.1;
-	edit_to_add.radius = glm::clamp(size_multipler + edit_to_add.radius, 0.01f, 0.10f);
-	edit_to_add.size = glm::vec3(edit_to_add.radius, edit_to_add.radius, edit_to_add.radius);
+	switch (edit_to_add.primitive)
+	{
+	case SD_SPHERE:
+		edit_to_add.radius = glm::clamp(size_multipler + edit_to_add.radius, 0.001f, 0.1f);
+		break;
+	case SD_BOX:
+		edit_to_add.size = glm::clamp(glm::vec3(size_multipler) + edit_to_add.size, glm::vec3(0.001f), glm::vec3(0.1f));
+	default:
+		break;
+	}
 
 	// Rotate the scene TODO: when ready move this out of tool to engine
 	if (is_rotation_being_used()) {
@@ -175,7 +192,7 @@ void SculptTool::render_scene()
 			mesh_preview->scale(glm::vec3(edit_to_add.radius));
 			break;
 		case SD_BOX:
-			mesh_preview->scale(edit_to_add.size * 4.f);
+			mesh_preview->scale(edit_to_add.size);
 		default:
 			break;
 		}
