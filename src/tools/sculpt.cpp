@@ -26,14 +26,14 @@ void SculptTool::initialize()
 
 	// Config UI
 	const float ww = 128.f;
-	ui_controller.set_workspace({ ww, 64.f }, XR_BUTTON_A, POSE_AIM, HAND_LEFT, HAND_RIGHT);
+	ui_controller.set_workspace({ ww, ww }, XR_BUTTON_A, POSE_AIM, HAND_LEFT, HAND_RIGHT);
 
 	// UI Layout
 	{
-		ui_controller.make_submenu("modes", { 24.f, 4.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/sphere.png");
-		ui_controller.make_button("normal", { 24.f, 36.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/normal.png");
-		ui_controller.make_button("stamp", { 52.f, 36.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/stamp.png");
-		ui_controller.make_button("colors", { 80.f, 36.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/colors.png");
+		ui_controller.make_submenu("modes", { 24.f, 4.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/sculpt_modes.png");
+			ui_controller.make_button("normal", { 24.f, 36.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/normal.png");
+			ui_controller.make_button("stamp", { 52.f, 36.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/stamp.png");
+			ui_controller.make_color_picker("colors", { edit_to_add.color.r, edit_to_add.color.g, edit_to_add.color.b, 1.0f } , { 80.f, 36.f }, { 32.f, 8.f });
 		ui_controller.close_submenu();
 		
 		ui_controller.make_submenu("primitives", { 52.f, 4.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/sphere.png");
@@ -48,7 +48,9 @@ void SculptTool::initialize()
 
 	{
 		// Modes
-		// ...
+		ui_controller.connect("colors", [edit_to_add = &edit_to_add](const std::string& signal, const Color& color) {
+			edit_to_add->color = color;
+		});
 
 		// Primitives
 		ui_controller.connect("sphere", [&](const std::string& signal, float value) { edit_to_add.primitive = SD_SPHERE; });
@@ -62,12 +64,6 @@ void SculptTool::initialize()
 	//{
 	//	ui_controller.make_button("enable_smooth", { 8.f, 8.f }, { 32.f, 32.f }, colors::GREEN);
 
-	//	ui_controller.make_button("toggle_union_substract", { 48.f, 8.f }, { 32.f, 32.f }, colors::PURPLE);
-
-	//	// ui_controller.make_button("enable_sausage", { 130.f, 0.f }, { 50.f, 25.f }, colors::RED);
-
-	//	ui_controller.make_slider("radius_slider", 0.1f, { 8.0f, 42.0f }, { 112.0f, 16.0f }, colors::YELLOW);
-
 	//	ui_controller.make_color_picker("edit_color", { edit_to_add.color.r, edit_to_add.color.g, edit_to_add.color.b, 1.0f }, { 130.0f, 8.0f }, { 64.f, 16.f });
 	//}
 
@@ -76,30 +72,7 @@ void SculptTool::initialize()
 	//	ui_controller.connect("enable_smooth", [edit_to_add  = &edit_to_add](const std::string& signal, float value) {
 	//		edit_to_add->operation = (sdOperation)((edit_to_add->operation >= 4) ? (edit_to_add->operation - 4) : (edit_to_add->operation + 4));
 	//	});
-	//	ui_controller.connect("toggle_union_substract", [edit_to_add = &edit_to_add](const std::string& signal, float value) {
-	//		switch (edit_to_add->operation)
-	//		{
-	//		case OP_UNION:
-	//			edit_to_add->operation = OP_SUBSTRACTION;
-	//			break;
-	//		case OP_SUBSTRACTION:
-	//			edit_to_add->operation = OP_UNION;
-	//		case OP_SMOOTH_UNION:
-	//			edit_to_add->operation = OP_SMOOTH_SUBSTRACTION;
-	//			break;
-	//		case OP_SMOOTH_SUBSTRACTION:
-	//			edit_to_add->operation = OP_SMOOTH_UNION;
-	//		default:
-	//			break;
-	//		}
-	//	});
 	//	
-	//	ui_controller.connect("radius_slider", [edit_to_add = &edit_to_add](const std::string& signal, float value) {
-	//		edit_to_add->radius = (value / 10.0f * 0.5f) + 0.01f;
-	//	});
-	//	/*ui_controller.connect("on_edit_toggle", [edit_to_add = &edit_to_add](const std::string& signal, float value) {
-	//		edit_to_add->primitive = (edit_to_add->primitive == SD_CAPSULE) ? SD_SPHERE : SD_CAPSULE;
-	//	});*/
 	//	ui_controller.connect("edit_color", [edit_to_add = &edit_to_add](const std::string& signal, const Color& color) {
 	//		edit_to_add->color = color;
 	//	});
@@ -121,7 +94,7 @@ void SculptTool::update(float delta_time)
 	
 
 	// Tool Operation changer
-	if (Input::is_button_pressed(XR_BUTTON_B))
+	if (Input::was_button_pressed(XR_BUTTON_Y))
 	{
 		switch (edit_to_add.operation)
 		{

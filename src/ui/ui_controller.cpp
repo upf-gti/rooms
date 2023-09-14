@@ -93,6 +93,18 @@ namespace ui {
 			position -= (workspace.size - size - position);
 	}
 
+	void Controller::append_widget(Widget* widget)
+	{
+		if (active_submenu)
+		{
+			active_submenu->add_child(widget);
+		}
+		else
+		{
+			root.push_back(widget);
+		}
+	}
+
 	Widget* Controller::make_rect(glm::vec2 pos, glm::vec2 size, const Color& color)
 	{
 		process_params(pos, size);
@@ -105,8 +117,7 @@ namespace ui {
 		rect->set_mesh(mesh);
 
 		Widget* widget = new Widget(rect, pos);
-		root.push_back(widget);
-
+		append_widget(widget);
 		return widget;
 	}
 
@@ -122,8 +133,7 @@ namespace ui {
 		e_text->generate_mesh();
 
 		TextWidget* widget = new TextWidget(e_text, pos);
-		root.push_back(widget);
-
+		append_widget(widget);
 		return widget;
 	}
 
@@ -157,15 +167,7 @@ namespace ui {
 		e_button->set_mesh(mesh);
 
 		ButtonWidget* widget = new ButtonWidget(signal, e_button, pos, color, size);
-
-		if (active_submenu)
-		{
-			active_submenu->add_child(widget);
-			// connect(signal, [widget = widget](const std::string& signal, float value) { widget->parent->show_children = false; });
-		}
-		else
-			root.push_back(widget);
-
+		append_widget(widget);
 		return widget;
 	}
 
@@ -191,8 +193,7 @@ namespace ui {
 		e_thumb->set_mesh(thumb_mesh);
 
 		SliderWidget* widget = new SliderWidget(signal,e_track, e_thumb, default_value, pos, color, size);
-		root.push_back(widget);
-
+		append_widget(widget);
 		return widget;
 	}
 
@@ -209,7 +210,7 @@ namespace ui {
 		rect->set_color( default_color );
 
 		ColorPickerWidget* widget = new ColorPickerWidget(rect, default_color);
-		root.push_back(widget);
+		append_widget(widget);
 
 		connect(signal + "_r", [this, signal, w = widget, r = rect](const std::string& s, float value) {
 			w->rect_color.x = value;
