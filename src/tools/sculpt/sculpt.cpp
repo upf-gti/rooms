@@ -21,9 +21,11 @@ void SculptTool::initialize()
 	// UI Layout
 	{
 		ui_controller.make_submenu("modes", { 24.f, 4.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/sculpt_modes.png");
-		ui_controller.make_button("normal", { 24.f, 36.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/normal.png");
-		ui_controller.make_button("stamp", { 52.f, 36.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/stamp.png");
-		ui_controller.make_color_picker("colors", { edit_to_add.color.r, edit_to_add.color.g, edit_to_add.color.b, 1.0f } , { 80.f, 36.f }, { 32.f, 8.f });
+		    ui_controller.make_button("normal", { 24.f, 36.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/normal.png");
+		    ui_controller.make_button("stamp", { 52.f, 36.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/stamp.png");
+            ui_controller.make_submenu("colorize", { 80.f, 36.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/sculpt_modes.png");
+                ui_controller.make_color_picker("colors", { edit_to_add.color.r, edit_to_add.color.g, edit_to_add.color.b, 1.0f } , { 48.f, 68.f }, { 32.f, 8.f });
+            ui_controller.close_submenu();
 		ui_controller.close_submenu();
 		
 		ui_controller.make_submenu("primitives", { 52.f, 4.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/sphere.png");

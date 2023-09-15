@@ -36,6 +36,7 @@ namespace ui {
 		std::vector<Widget*> children;
 
 		void add_child(Widget* child);
+        void hide_children();
 
 		virtual void render();
 		virtual void update(Controller* controller);

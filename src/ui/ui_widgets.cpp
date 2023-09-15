@@ -26,6 +26,14 @@ namespace ui {
 		children.push_back(child);
 	}
 
+    void Widget::hide_children()
+    {
+        show_children = false;
+
+        for (auto w : children)
+            w->show_children = false;
+    }
+
 	void Widget::render()
 	{
 		entity->render();

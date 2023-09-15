@@ -20,6 +20,8 @@ namespace ui {
 			.select_hand = _select_hand
 		};
 
+        root = new Widget();
+
 		raycast_pointer = new EntityMesh();
 		raycast_pointer->set_shader(Shader::get("data/shaders/mesh_color.wgsl"));
 		raycast_pointer->set_mesh(Mesh::get("data/meshes/raycast.obj"));
@@ -42,7 +44,7 @@ namespace ui {
 
 		// workspace_element->render();
 
-		for (auto widget : root) {
+		for (auto widget : root->children) {
 			widget->render();
 		}
 
@@ -75,7 +77,7 @@ namespace ui {
 
 		// Update widgets using this controller
 
-		for (auto element : root) {
+		for (auto element : root->children) {
 			element->update( this );
 		}
 	}
@@ -95,13 +97,14 @@ namespace ui {
 
 	void Controller::append_widget(Widget* widget)
 	{
-		if (active_submenu)
-		{
+        if (parent_queue.size())
+        {
+            Widget* active_submenu = parent_queue.back();
 			active_submenu->add_child(widget);
-		}
+        }
 		else
 		{
-			root.push_back(widget);
+			root->add_child(widget);
 		}
 	}
 
@@ -168,6 +171,14 @@ namespace ui {
 
 		ButtonWidget* widget = new ButtonWidget(signal, e_button, pos, color, size);
 		append_widget(widget);
+
+        // Hide submenus of siblings
+        connect(signal, [widget = widget, childs = &widget->parent->children](const std::string& signal, float value) {
+
+            for (auto w : *childs)
+                w->hide_children();
+        });
+
 		return widget;
 	}
 
@@ -263,22 +274,31 @@ namespace ui {
 		e_button->set_mesh(mesh);
 
 		ButtonWidget* widget = new ButtonWidget(name, e_button, pos, color, size);
-		root.push_back(widget);
 
-		// Visibility callback ...
+        // Append to last submenu if necessary...
+        append_widget(widget);
+         
+		// Visibility callback...
+		connect(name, [widget = widget, childs = &widget->parent->children](const std::string& signal, float value) {
 
-		active_submenu = widget;
-
-		connect(name, [widget = widget, root = &root](const std::string& signal, float value) {
-
-			for (auto w : *root)
-				w->show_children = false;
+            for (auto w : *childs)
+                w->hide_children();
 
 			widget->show_children = !widget->show_children;
 		});
 
+        // Set as new parent...
+        parent_queue.push_back(widget);
+
 		return widget;
 	}
+
+    void Controller::close_submenu()
+    {
+        std::cout << parent_queue.size() << std::endl;
+        parent_queue.pop_back();
+        std::cout << parent_queue.size() << std::endl;
+    }
 
 	void Controller::connect(const std::string& name, SignalType callback)
 	{
