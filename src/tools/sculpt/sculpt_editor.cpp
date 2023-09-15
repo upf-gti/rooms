@@ -31,9 +31,9 @@ void SculptEditor::initialize()
         gui.make_button("smear", { 24.f, 36.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/normal.png");
         gui.make_button("stamp", { 52.f, 36.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/stamp.png");
         gui.make_button("paint", { 52.f, 36.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/stamp.png");
-        /*gui.make_submenu("colorize", { 80.f, 36.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/sculpt_modes.png");
-        gui.make_color_picker("colors", { edit_to_add.color.r, edit_to_add.color.g, edit_to_add.color.b, 1.0f }, { 48.f, 68.f }, { 32.f, 8.f });
-        gui.close_submenu();*/
+        gui.make_submenu("colorize", { 80.f, 36.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/sculpt_modes.png");
+        gui.make_color_picker("colors", { current_color.r, current_color.g, current_color.b, 1.0f }, { 48.f, 68.f }, { 32.f, 8.f });
+        gui.close_submenu();
         gui.close_submenu();
 
         gui.make_submenu("primitives", { 52.f, 4.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/sphere.png");
@@ -64,7 +64,7 @@ void SculptEditor::initialize()
         });
 
         // Tools
-        gui.connect("mirror", [&](const std::string& signal, float value) {/* use_mirror = !use_mirror;*/ });
+        gui.connect("mirror", [&](const std::string& signal, float value) { use_mirror = !use_mirror; });
     }
 
     enable_tool(SCULPT);
@@ -114,6 +114,10 @@ void SculptEditor::update(float delta_time)
             rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
         }
     }
+
+    edit_to_add.primitive = current_primitive;
+    edit_to_add.color = current_color;
+    // ...
 
     // Set position of the preview edit
     renderer->set_preview_edit(edit_to_add);

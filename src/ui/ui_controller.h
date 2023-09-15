@@ -33,7 +33,6 @@ namespace ui {
 		glm::mat4x4 global_transform;
 
 		EntityMesh* raycast_pointer = nullptr;
-		EntityMesh* workspace_element = nullptr;
 
 		ui::Widget* root = nullptr;
 		std::map<std::string, std::vector<SignalType>> signals;

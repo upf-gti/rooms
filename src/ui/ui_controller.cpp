@@ -26,11 +26,11 @@ namespace ui {
 		raycast_pointer->set_shader(Shader::get("data/shaders/mesh_color.wgsl"));
 		raycast_pointer->set_mesh(Mesh::get("data/meshes/raycast.obj"));
 
-		workspace_element = new EntityMesh();
+		/*workspace_element = new EntityMesh();
 		workspace_element->set_shader(Shader::get("data/shaders/mesh_ui.wgsl"));
 		Mesh* mesh = new Mesh();
 		mesh->create_quad(workspace.size.x, workspace.size.y);
-		workspace_element->set_mesh(mesh);
+		workspace_element->set_mesh(mesh);*/
 	}
 
 	bool Controller::is_active()
@@ -42,7 +42,7 @@ namespace ui {
 	{
 		if (!enabled || !is_active()) return;
 
-		workspace_element->render();
+		//workspace_element->render();
 
 		for (auto widget : root->children) {
 			widget->render();
@@ -67,13 +67,9 @@ namespace ui {
 
 		// Update workspace
 
-		glm::mat4x4 workspace_transform = Input::get_controller_pose(hand, pose);
-		workspace_element->set_model(workspace_transform);
-		workspace_element->rotate(glm::radians(120.f), glm::vec3(1.f, 0.f, 0.f));
-
-		// Store global matrix for the rest of elements
-
-		global_transform = workspace_element->get_global_matrix();
+		glm::mat4x4 workspace_transform = 
+        global_transform = Input::get_controller_pose(hand, pose);
+        global_transform = glm::rotate(global_transform, glm::radians(120.f), glm::vec3(1.f, 0.f, 0.f));
 
 		// Update widgets using this controller
 
