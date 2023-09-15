@@ -20,6 +20,8 @@ protected:
         .dimensions = glm::vec4(0.01f, 0.01f, 0.01f, 0.f)
     };
 
+    Edit previous_edit;
+
 	// Timestepping counters
 	float           edit_update_counter = 0.0f;
 
