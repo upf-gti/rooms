@@ -6,7 +6,7 @@
 
 #include "framework/input.h"
 
-std::ostream& operator<<(std::ostream& os, const sEdit& edit)
+std::ostream& operator<<(std::ostream& os, const Edit& edit)
 {
     os << "Position: " << edit.position.x << ", " << edit.position.y << ", " << edit.position.z << std::endl;
     os << "Primitive: " << edit.primitive << std::endl;
@@ -342,9 +342,9 @@ void RaymarchingRenderer::render_eye_quad(WGPUTextureView swapchain_view, WGPUTe
     wgpuCommandEncoderRelease(command_encoder);
 }
 
-void RaymarchingRenderer::set_preview_edit(const sEdit& edit)
+void RaymarchingRenderer::set_preview_edit(const Edit& edit)
 {
-    wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(u_compute_preview_edit.data), 0, &(edit), sizeof(sEdit));
+    wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(u_compute_preview_edit.data), 0, &(edit), sizeof(Edit));
 }
 
 void RaymarchingRenderer::set_sculpt_rotation(const glm::quat& rotation)
@@ -435,7 +435,7 @@ void RaymarchingRenderer::compute_merge()
     compute_merge_data.edits_aabb_start = glm::uvec3(glm::floor((edit_min) * 512.0f));
 
     // Update uniform buffer
-    wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(u_compute_edits_array.data), 0, edits, sizeof(sEdit) * compute_merge_data.edits_to_process);
+    wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(u_compute_edits_array.data), 0, edits, sizeof(Edit) * compute_merge_data.edits_to_process);
     wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(u_compute_merge_data.data), 0, &(compute_merge_data), sizeof(sMergeData));
 
     wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_merge_bind_group, 0, nullptr);
@@ -730,9 +730,9 @@ void RaymarchingRenderer::init_compute_raymarching_pipeline()
         u_compute_buffer_data.binding = 0;
         u_compute_buffer_data.buffer_size = sizeof(sComputeData);
 
-        u_compute_preview_edit.data = webgpu_context.create_buffer(sizeof(sEdit), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr);
+        u_compute_preview_edit.data = webgpu_context.create_buffer(sizeof(Edit), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr);
         u_compute_preview_edit.binding = 1;
-        u_compute_preview_edit.buffer_size = sizeof(sEdit);
+        u_compute_preview_edit.buffer_size = sizeof(Edit);
 
         std::vector<Uniform*> uniforms = { &u_compute_buffer_data, &u_compute_preview_edit };
 

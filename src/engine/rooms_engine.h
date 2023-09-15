@@ -1,26 +1,14 @@
 #pragma once
 
 #include "engine.h"
-#include "tools/tool.h"
+#include "tools/sculpt/sculpt_editor.h"
 #include "ui/ui_controller.h"
-
-enum eTool : uint8_t {
-	NONE = 0,
-	SCULPTING,
-	COLOR,
-	TOOL_COUNT
-};
 
 class RoomsEngine : public Engine {
 
 	std::vector<Entity*>	entities;
 
-	EditorTool*				tools[TOOL_COUNT];
-
-	eTool					current_tool = NONE;
-	ui::Controller			tool_controller;
-
-	void enable_tool( eTool tool );
+    SculptEditor            sculpt_editor;
 
 public:
 

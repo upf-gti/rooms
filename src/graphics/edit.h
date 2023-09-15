@@ -28,7 +28,7 @@ enum sdOperation {
 	ALL_OPERATIONS
 };
 
-struct sEdit {
+struct Edit {
 	glm::vec3	position;
 	sdPrimitive primitive;
 	glm::vec3	color;
@@ -36,7 +36,7 @@ struct sEdit {
 	glm::vec4	dimensions;
 	glm::quat   rotation;
 
-	friend std::ostream& operator<<(std::ostream& os, const sEdit& edit);
+	friend std::ostream& operator<<(std::ostream& os, const Edit& edit);
 
 	inline glm::vec3 world_half_size() const {
 

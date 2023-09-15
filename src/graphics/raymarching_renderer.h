@@ -7,7 +7,7 @@
 
 #include "graphics/texture.h"
 
-#include "tools/tool.h"
+#include "tools/sculpt/tool.h"
 
 #define EDITS_MAX 1024
 #define SDF_RESOLUTION 512
@@ -122,7 +122,7 @@ class RaymarchingRenderer : public Renderer {
         glm::mat4x4 view_projection;
     } camera_data;
 
-    sEdit edits[EDITS_MAX];
+    Edit edits[EDITS_MAX];
 
     Mesh  quad_mesh;
 
@@ -184,17 +184,17 @@ public:
     *   Edits
     */
 
-    void push_edit(sEdit edit) {
+    void push_edit(Edit edit) {
         edits[compute_merge_data.edits_to_process++] = edit;
     };
 
-    void push_edit_list(std::vector<sEdit> &edits) {
-        for (sEdit edit : edits) {
+    void push_edit_list(std::vector<Edit> &edits) {
+        for (Edit edit : edits) {
             edits[compute_merge_data.edits_to_process++] = edit;
         }
     };
 
-    void set_preview_edit(const sEdit& edit);
+    void set_preview_edit(const Edit& edit);
     void set_sculpt_rotation(const glm::quat& rotation);
 
 };

@@ -1,19 +1,13 @@
-#include "color.h"
+#include "paint.h"
 #include "utils.h"
 #include "framework/input.h"
-#include "graphics/raymarching_renderer.h"
+#include "framework/entities/entity_mesh.h"
+#include "graphics/mesh.h"
+#include "graphics/shader.h"
 
-inline bool is_tool_activated() {
-#ifdef XR_SUPPORT
-	return Input::is_key_pressed(GLFW_KEY_A) || Input::get_trigger_value(HAND_RIGHT) > 0.5;
-#else
-	return Input::is_key_pressed(GLFW_KEY_A);
-#endif
-}
-
-void ColoringTool::initialize()
+void PaintTool::initialize()
 {
-	renderer = dynamic_cast<RaymarchingRenderer*>(Renderer::instance);
+    Tool::initialize();
 
 	mesh_preview = new EntityMesh();
 	mesh_preview->set_mesh(Mesh::get("data/meshes/wired_sphere.obj"));
@@ -53,62 +47,46 @@ void ColoringTool::initialize()
 	}
 }
 
-void ColoringTool::clean()
+void PaintTool::clean()
 {
 
 }
 
-void ColoringTool::update(float delta_time)
+bool PaintTool::update(float delta_time)
 {
-	EditorTool::update(delta_time);
+	Tool::update(delta_time);
 
-	if (!enabled) return;
+	if (!enabled) return false;
 
 	ui_controller.update(delta_time);
 	
-#ifdef XR_SUPPORT
 	edit_to_add.position = Input::get_controller_position(HAND_RIGHT) - glm::vec3(0.0f, 1.0f, 0.0f);
-#else
-	edit_to_add.position = glm::vec3(0.4 * (random_f() * 2 - 1), 0.4 * (random_f() * 2 - 1), 0.4 * (random_f() * 2 - 1));
-#endif
-
-	// Update common edit dimensions
-	float size_multipler = Input::get_thumbstick_value(HAND_RIGHT).y * delta_time * 0.1f;
-	glm::vec3 new_dimensions = glm::clamp(size_multipler + glm::vec3(edit_to_add.dimensions), 0.001f, 0.1f);
-	edit_to_add.dimensions = glm::vec4(new_dimensions, edit_to_add.dimensions.w);
-
-	// Update primitive specific size
-	size_multipler = Input::get_thumbstick_value(HAND_LEFT).y * delta_time * 0.1f;
-	edit_to_add.dimensions.w = glm::clamp(size_multipler + edit_to_add.dimensions.w, 0.001f, 0.1f);
 
 	if (is_tool_activated())
 	{
-		use_tool();
+        return use_tool();
 	}
-	else
-	{
-		renderer->set_preview_edit(edit_to_add);
-	}
+
+    return false;
 }
 
-void ColoringTool::render_scene()
+void PaintTool::render_scene()
 {
 	mesh_preview->set_model(Input::get_controller_pose(ui_controller.get_workspace().select_hand));
 	mesh_preview->scale(glm::vec3(edit_to_add.dimensions));
 	mesh_preview->render();
 }
 
-void ColoringTool::render_ui()
+void PaintTool::render_ui()
 {
 	if (!enabled) return;
 
 	ui_controller.render();
 }
 
-bool ColoringTool::use_tool()
+bool PaintTool::use_tool()
 {
-	if (EditorTool::use_tool()) {
-		renderer->push_edit(edit_to_add);
+	if (Tool::use_tool()) {
 		return true;
 	}
 

@@ -3,42 +3,11 @@
 #include "framework/entities/entity_text.h"
 #include "framework/input.h"
 
-#include "tools/sculpt.h"
-#include "tools/color.h"
-
 int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_mirror_screen)
 {
 	int error = Engine::initialize(renderer, window, use_mirror_screen);
 
-	if (error) return error;
-
-	// Tooling
-
-	tools[SCULPTING] = (EditorTool*) new SculptTool();
-	tools[COLOR] = (EditorTool*) new ColoringTool();
-
-	for (auto t : tools) {
-		if(t) t->initialize();
-	}
-
-	tool_controller.set_workspace({ 88.f, 48.f }, XR_BUTTON_A, POSE_AIM);
-
-	// Tools Menu
-	{
-		tool_controller.make_button("sculpt_mode", { 8.f, 8.f }, { 32.f, 32.f }, colors::WHITE, "data/textures/sculpt.png");
-		tool_controller.make_button("color_mode", { 48.f , 8.f }, { 32.f, 32.f }, colors::WHITE, "data/textures/paint.png");
-	}
-
-	// Events
-	{
-		tool_controller.connect("sculpt_mode", [&](const std::string& signal, float value) {
-			enable_tool(SCULPTING);
-		});
-		tool_controller.connect("color_mode", [&](const std::string& signal, float value) {
-			enable_tool(COLOR);
-		});
-	}
-	enable_tool(SCULPTING);
+    sculpt_editor.initialize();
 
 	return error;
 }
@@ -47,19 +16,7 @@ void RoomsEngine::update(float delta_time)
 {
 	Engine::update(delta_time);
 
-	if(current_tool != NONE)
-		tools[current_tool]->update(delta_time);
-
-	tool_controller.update(delta_time);
-
-	if (Input::is_button_pressed(XR_BUTTON_B))
-	{
-		tool_controller.enabled = true;
-
-		for (auto t : tools) {
-			if(t) t->stop();
-		}
-	}
+    sculpt_editor.update(delta_time);
 }
 
 void RoomsEngine::render()
@@ -68,27 +25,7 @@ void RoomsEngine::render()
 		entity->render();
 	}
 
-#ifdef XR_SUPPORT
-	if (current_tool != NONE)
-	{
-		tools[current_tool]->render_scene();
-		tools[current_tool]->render_ui();
-	}
-	tool_controller.render();
-#endif
+    sculpt_editor.render();
 
 	Engine::render();
-}
-
-void RoomsEngine::enable_tool(eTool tool)
-{
-	tool_controller.enabled = false;
-
-	if (current_tool != NONE)
-	{
-		tools[current_tool]->stop();
-	}
-	
-	tools[tool]->start();
-	current_tool = tool;
 }
