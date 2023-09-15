@@ -34,8 +34,8 @@ bool Tool::update(float delta_time)
 
 bool Tool::use_tool()
 {
-    if (edit_update_counter > 0.016f) {
-        edit_update_counter -= 0.016f;
+    if (edit_to_add.weigth_difference(previous_edit) > 0.003f) {
+        previous_edit = edit_to_add;
         return true;
     }
 

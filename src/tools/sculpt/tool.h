@@ -12,16 +12,18 @@ protected:
 
 	bool enabled = false;
 
-	// Timestepping counters
-	float           edit_update_counter = 0.0f;
+    Edit edit_to_add = {
+        .position = glm::vec3(0.0f, 0.0f, 0.0f),
+        .primitive = SD_SPHERE,
+        .color = glm::vec3(1.0f, 0.0f, 0.0f),
+        .operation = OP_SMOOTH_UNION,
+        .dimensions = glm::vec4(0.01f, 0.01f, 0.01f, 0.f)
+    };
 
-    Edit            edit_to_add = {
-                        .position = glm::vec3(0.0f, 0.0f, 0.0f),
-                        .primitive = SD_SPHERE,
-                        .color = glm::vec3(1.0f, 0.0f, 0.0f),
-                        .operation = OP_SMOOTH_UNION,
-                        .dimensions = glm::vec4(0.01f, 0.01f, 0.01f, 0.f)
-                    };
+    Edit previous_edit;
+
+	// Timestepping counters
+	float edit_update_counter = 0.0f;
 
     bool is_tool_activated() {
 #ifdef XR_SUPPORT
