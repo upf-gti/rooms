@@ -1,6 +1,7 @@
 #include "tool.h"
 #include "utils.h"
 #include "framework/input.h"
+#include "sculpt_editor.h"
 
 void Tool::initialize()
 {

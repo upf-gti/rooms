@@ -61,7 +61,7 @@ namespace ui {
 		*/
 
 		const WorkSpaceData& get_workspace() { return workspace; };
-		void set_workspace(glm::vec2 _workspace_size, uint8_t _select_button = 0, uint8_t _root_pose = 0, uint8_t _hand = 0, uint8_t _select_hand = 1);
+		void set_workspace(glm::vec2 _workspace_size, uint8_t _select_button = 0, uint8_t _root_pose = 1, uint8_t _hand = 0, uint8_t _select_hand = 1);
 		const glm::mat4x4& get_matrix() { return global_transform; };
 		bool is_active();
 

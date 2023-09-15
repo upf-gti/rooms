@@ -4,9 +4,6 @@
 
 class SculptTool : public Tool {
 
-    EntityMesh* mesh_preview = nullptr;
-    ui::Controller ui_controller;
-
 public:
 
 	void initialize();

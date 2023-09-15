@@ -12,23 +12,16 @@ protected:
 
 	bool enabled = false;
 
-    Edit edit_to_add = {
-        .position = glm::vec3(0.0f, 0.0f, 0.0f),
-        .primitive = SD_SPHERE,
-        .color = glm::vec3(1.0f, 0.0f, 0.0f),
-        .operation = OP_SMOOTH_UNION,
-        .dimensions = glm::vec4(0.01f, 0.01f, 0.01f, 0.f)
-    };
-
 	// Timestepping counters
 	float           edit_update_counter = 0.0f;
 
-
-	// Aditional Sausage primitive
-
-	bool			is_sausage_start_setted = false;
-	glm::vec3		sausage_start_position = glm::vec3(0.0f, 0.0f, 0.0f);
-	bool			has_trigger_used = false;
+    Edit            edit_to_add = {
+                        .position = glm::vec3(0.0f, 0.0f, 0.0f),
+                        .primitive = SD_SPHERE,
+                        .color = glm::vec3(1.0f, 0.0f, 0.0f),
+                        .operation = OP_SMOOTH_UNION,
+                        .dimensions = glm::vec4(0.01f, 0.01f, 0.01f, 0.f)
+                    };
 
     bool is_tool_activated() {
 #ifdef XR_SUPPORT
@@ -37,7 +30,6 @@ protected:
         return Input::is_key_pressed(GLFW_KEY_A);
 #endif
     }
-
 
 public:
 
@@ -57,5 +49,4 @@ public:
     Edit& get_edit_to_add() {
         return edit_to_add;
     }
-
 };

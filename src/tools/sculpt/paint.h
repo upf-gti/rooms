@@ -2,12 +2,7 @@
 
 #include "tool.h"
 
-class RaymarchingRenderer;
-
 class PaintTool : public Tool {
-
-    EntityMesh* mesh_preview = nullptr;
-    ui::Controller ui_controller;
 
 public:
 

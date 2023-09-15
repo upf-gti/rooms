@@ -42,7 +42,7 @@ namespace ui {
 	{
 		if (!enabled || !is_active()) return;
 
-		// workspace_element->render();
+		workspace_element->render();
 
 		for (auto widget : root->children) {
 			widget->render();
