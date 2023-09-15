@@ -37,7 +37,7 @@ class SculptEditor {
 
     glm::vec3		sculpt_start_position;
 
-    glm::quat		initial_hand_rotation = {};
+    glm::quat		initial_hand_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
     glm::quat		rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
 
     glm::vec3		initial_hand_translation = {};
