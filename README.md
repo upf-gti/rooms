@@ -29,3 +29,11 @@ cd build-web
 emcmake cmake ..
 cmake --build .
 ```
+
+After building for web, you can host a local server with python:
+
+```
+python -m http.server
+```
+
+And access the webpage using a browser with WebGPU support using the link: localhost:8000/rooms.html
