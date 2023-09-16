@@ -141,12 +141,12 @@ void SculptEditor::render()
 {
     Edit& edit_to_add = tools[current_tool]->get_edit_to_add();
 
+#ifdef XR_SUPPORT
     // Render a hollowed edit
     mesh_preview->set_model(Input::get_controller_pose(gui.get_workspace().select_hand));
     mesh_preview->scale(edit_to_add.dimensions + glm::vec4(0.001f));
     mesh_preview->render();
 
-#ifdef XR_SUPPORT
     if (current_tool != NONE) {
         tools[current_tool]->render_scene();
         tools[current_tool]->render_ui();

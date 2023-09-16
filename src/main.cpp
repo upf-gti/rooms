@@ -26,12 +26,6 @@ bool shouldClose(bool use_glfw, GLFWwindow* window) {
     return glfwWindowShouldClose(window);
 }
 
-void pollEvents(bool use_glfw) {
-    if (use_glfw) {
-        glfwPollEvents();
-    }
-}
-
 int main() {
 
     RoomsEngine* engine = new RoomsEngine();
@@ -45,9 +39,11 @@ int main() {
     required_limits.limits.maxUniformBuffersPerShaderStage = 1;
     required_limits.limits.maxUniformBufferBindingSize = 16 * 4 * sizeof(float);
     required_limits.limits.minUniformBufferOffsetAlignment = 256;
-    required_limits.limits.minStorageBufferOffsetAlignment = 32;
-    required_limits.limits.maxBufferSize = 512 * 512 * 512 * sizeof(float) * 4 + 4; // TODO: remove this +4 when fixed in Dawn
-    required_limits.limits.maxStorageBufferBindingSize = 512 * 512 * 512 * sizeof(float) * 4;
+    required_limits.limits.minStorageBufferOffsetAlignment = 256;
+#ifndef DISABLE_RAYMARCHER
+    required_limits.limits.maxBufferSize = SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION * sizeof(float) * 4; // TODO: remove this +4 when fixed in Dawn
+    required_limits.limits.maxStorageBufferBindingSize = SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION * sizeof(float) * 4;
+#endif
     required_limits.limits.maxComputeInvocationsPerWorkgroup = 512;
     required_limits.limits.maxSamplersPerShaderStage = 1;
 
@@ -81,7 +77,7 @@ int main() {
         window = glfwCreateWindow(render_width, render_height, "WebGPU Engine", NULL, NULL);
     }
 
-    if (engine->initialize(raymarching_renderer, window, use_mirror_screen)) {
+    if (engine->initialize(raymarching_renderer, window, use_glfw, use_mirror_screen)) {
         std::cout << "Could not initialize engine" << std::endl;
         closeWindow(window);
         return 1;
@@ -89,26 +85,22 @@ int main() {
 
     std::cout << "Engine initialized" << std::endl;
 
-    double start_time = glfwGetTime();
-    double now = start_time;
-    float delta_time = 0.0f;
-
-    while (!shouldClose(use_glfw, window)) {
-        pollEvents(use_glfw);
-
-        engine->update(delta_time);
-        engine->render();
-
-        double last_time = now;
-        now = glfwGetTime();
-
-        delta_time = static_cast<float>((now - last_time));
-
 #ifdef __EMSCRIPTEN__
-        emscripten_sleep(16);
-#endif
+    emscripten_set_main_loop_arg(
+        [](void* userData) {
+            RoomsEngine* engine = reinterpret_cast<RoomsEngine*>(userData);
+            engine->on_frame();
+        },
+        (void*)engine,
+        0, true
+    );
+
+#else
+    while (!shouldClose(use_glfw, window)) {
+        engine->on_frame();
     }
-    
+#endif
+
     engine->clean();
 
     closeWindow(window);

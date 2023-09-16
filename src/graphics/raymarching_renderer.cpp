@@ -25,11 +25,20 @@ int RaymarchingRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
 {
     Renderer::initialize(window, use_mirror_screen);
 
+    clear_color = glm::vec3(0.22);
+
     init_render_quad_pipeline();
     init_render_mesh_pipelines();
+
+#ifndef DISABLE_RAYMARCHER
     init_compute_raymarching_pipeline();
     init_compute_merge_pipeline();
     init_initialize_sdf_pipeline();
+
+    compute_initialize_sdf();
+
+    clear_color = glm::vec3(powf(0.22, 2.2f));
+#endif
 
 #ifdef XR_SUPPORT
     if (is_openxr_available && use_mirror_screen) {
@@ -40,8 +49,6 @@ int RaymarchingRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
     compute_raymarching_data.render_width = static_cast<float>(render_width);
     compute_raymarching_data.render_height = static_cast<float>(render_height);
 
-    compute_initialize_sdf();
-
     return 0;
 }
 
@@ -49,6 +56,7 @@ void RaymarchingRenderer::clean()
 {
     Renderer::clean();
 
+#ifndef DISABLE_RAYMARCHER
     // Uniforms
     u_compute_buffer_data.destroy();
     u_compute_texture_left_eye.destroy();
@@ -76,6 +84,8 @@ void RaymarchingRenderer::clean()
             wgpuBindGroupRelease(swapchain_bind_groups[i]);
         }
     }
+#endif
+
 #endif
 }
 
@@ -116,10 +126,10 @@ void RaymarchingRenderer::render()
 
 void RaymarchingRenderer::render_screen()
 {
-    glm::vec3 eye = glm::vec3(0.0f, 2.0f, 1.5f);
+    glm::vec3 eye = glm::vec3(0.0f, 0.5f, 1.5f);
     glm::mat4x4 view = glm::lookAt(eye, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     glm::mat4x4 projection = glm::perspective(glm::radians(45.0f), 16.0f / 9.0f, 0.1f, 100.0f);
-    projection[1][1] *= -1.0f;
+    //projection[1][1] *= -1.0f;
 
     glm::mat4x4 view_projection = projection * view;
 
@@ -161,13 +171,17 @@ void RaymarchingRenderer::render_meshes(WGPUTextureView swapchain_view, WGPUText
     render_pass_color_attachment.view = swapchain_view;
     render_pass_color_attachment.loadOp = WGPULoadOp_Load;
     render_pass_color_attachment.storeOp = WGPUStoreOp_Store;
-    render_pass_color_attachment.clearValue = WGPUColor(0.035f, 0.035f, 0.035f, 1.0f);
+    render_pass_color_attachment.clearValue = WGPUColor(clear_color.x, clear_color.y, clear_color.z, 1.0f);
 
     // Prepate the depth attachment
     WGPURenderPassDepthStencilAttachment render_pass_depth_attachment = {};
     render_pass_depth_attachment.view = swapchain_depth;
     render_pass_depth_attachment.depthClearValue = 1.0f;
+#ifndef DISABLE_RAYMARCHER
     render_pass_depth_attachment.depthLoadOp = WGPULoadOp_Load;
+#else
+    render_pass_depth_attachment.depthLoadOp = WGPULoadOp_Clear;
+#endif
     render_pass_depth_attachment.depthStoreOp = WGPUStoreOp_Store;
     render_pass_depth_attachment.depthReadOnly = false;
     render_pass_depth_attachment.stencilClearValue = 0; // Stencil config necesary, even if unused
@@ -290,7 +304,7 @@ void RaymarchingRenderer::render_eye_quad(WGPUTextureView swapchain_view, WGPUTe
     render_pass_color_attachment.view = swapchain_view;
     render_pass_color_attachment.loadOp = WGPULoadOp_Clear;
     render_pass_color_attachment.storeOp = WGPUStoreOp_Store;
-    render_pass_color_attachment.clearValue = WGPUColor(0.035f, 0.035f, 0.035f, 1.0f);
+    render_pass_color_attachment.clearValue = WGPUColor(clear_color.x, clear_color.y, clear_color.z, 1.0f);
 
     // Prepate the depth attachment
     WGPURenderPassDepthStencilAttachment render_pass_depth_attachment = {};
@@ -344,7 +358,9 @@ void RaymarchingRenderer::render_eye_quad(WGPUTextureView swapchain_view, WGPUTe
 
 void RaymarchingRenderer::set_preview_edit(const Edit& edit)
 {
+#ifndef DISABLE_RAYMARCHER
     wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(u_compute_preview_edit.data), 0, &(edit), sizeof(Edit));
+#endif
 }
 
 void RaymarchingRenderer::set_sculpt_rotation(const glm::quat& rotation)
@@ -395,7 +411,7 @@ void RaymarchingRenderer::compute_initialize_sdf()
 
 void RaymarchingRenderer::compute_merge()
 {
-    if (!compute_merge_shader->is_loaded()) return;
+    if (!compute_merge_shader || !compute_merge_shader->is_loaded()) return;
 
     // Nothing to merge if equals 0
     if (compute_merge_data.edits_to_process == 0) {
@@ -431,8 +447,8 @@ void RaymarchingRenderer::compute_merge()
     glm::vec3 edit_size = edit_max - edit_min;
     //std::cout << "Edit size: " << edit_size.x << " " << edit_size.y << " " << edit_size.z << std::endl;
     // To SDF coords:
-    edit_size = edit_size * 512.0f;
-    compute_merge_data.edits_aabb_start = glm::uvec3(glm::floor((edit_min) * 512.0f));
+    edit_size = edit_size * static_cast<float>(SDF_RESOLUTION);
+    compute_merge_data.edits_aabb_start = glm::uvec3(glm::floor((edit_min) * static_cast<float>(SDF_RESOLUTION)));
 
     // Update uniform buffer
     wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(u_compute_edits_array.data), 0, edits, sizeof(Edit) * compute_merge_data.edits_to_process);
@@ -469,7 +485,7 @@ void RaymarchingRenderer::compute_merge()
 
 void RaymarchingRenderer::compute_raymarching()
 {
-    if (!compute_raymarching_shader->is_loaded()) return;
+    if (!compute_raymarching_shader || !compute_raymarching_shader->is_loaded()) return;
 
     // Initialize a command encoder
     WGPUCommandEncoderDescriptor encoder_desc = {};
@@ -533,7 +549,7 @@ void RaymarchingRenderer::render_mirror()
         render_pass_color_attachment.view = current_texture_view;
         render_pass_color_attachment.loadOp = WGPULoadOp_Clear;
         render_pass_color_attachment.storeOp = WGPUStoreOp_Store;
-        render_pass_color_attachment.clearValue = WGPUColor(0.035f, 0.035f, 0.035f, 1.0f);
+        render_pass_color_attachment.clearValue = WGPUColor(clear_color.x, clear_color.y, clear_color.z, 1.0f);
 
         WGPURenderPassDescriptor render_pass_descr = {};
         render_pass_descr.colorAttachmentCount = 1;

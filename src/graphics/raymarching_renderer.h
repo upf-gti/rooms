@@ -9,6 +9,10 @@
 
 #include "tools/sculpt/tool.h"
 
+#ifdef __EMSCRIPTEN__
+#define DISABLE_RAYMARCHER
+#endif
+
 #define EDITS_MAX 1024
 #define SDF_RESOLUTION 512
 
@@ -128,6 +132,8 @@ class RaymarchingRenderer : public Renderer {
 
     // Timestepping counters
     float					updated_time = 0.0f;
+
+    glm::vec3               clear_color;
 
     // For the XR mirror screen
 #if defined(XR_SUPPORT) && defined(USE_MIRROR_WINDOW)
