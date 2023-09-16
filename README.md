@@ -26,7 +26,7 @@ On Windows you may need to download [ninja](https://ninja-build.org/) and includ
 git submodule update --init --recursive
 mkdir build-web
 cd build-web
-emcmake cmake ..
+emcmake cmake -DCMAKE_BUILD_TYPE=Release ..
 cmake --build .
 ```
 
@@ -36,4 +36,4 @@ After building for web, you can host a local server with python:
 python -m http.server
 ```
 
-And access the webpage using a browser with WebGPU support using the link: localhost:8000/rooms.html
+And access the webpage using a browser with WebGPU support using the link: ``localhost:8000/rooms.html``
