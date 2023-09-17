@@ -50,7 +50,7 @@ struct FragmentOutput {
 fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     var out: FragmentOutput;
-    out.color = vec4f(pow(in.color, vec3f(2.2, 2.2, 2.2)), 1.0); // Color
+    out.color = vec4f(pow(in.color, vec3f(2.2)), 1.0); // Color
 
     return out;
 }

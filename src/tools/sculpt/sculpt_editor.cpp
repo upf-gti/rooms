@@ -22,53 +22,48 @@ void SculptEditor::initialize()
     }
 
     // Config UI
-    gui.set_workspace({ 256.f, 128.f });
+    gui.set_workspace({ 256.f, 144 });
 
     // UI Layout
     {
-        gui.make_group("g_main_tools", 2, Color(0.4f));
-        ui::Widget* primitives_widget = gui.make_button("primitives", "data/textures/cube.png", "data/textures/cube_selected.png");
+        // debug
+        /*ui::Widget* debugw = gui.make_rect({0, 0}, { 256.f, 144.f }, colors::RED);
+        debugw->priority = -1;*/
+        // ...
+
+        gui.make_group("g_main_tools", 2, colors::GRAY);
+        ui::Widget* primitives_widget = gui.make_button("primitives", "data/textures/cube.png");
         gui.make_button("paint", "data/textures/paint.png");
         gui.close_group();
         gui.make_button("mirror", "data/textures/mirror.png");
         ui::Widget* colors_widget = gui.make_button("colors", "data/textures/colors.png");
 
         gui.make_submenu(primitives_widget, "primitives");
-            gui.make_group("g_primitives", 2, Color(0.4f));
+            gui.make_group("g_primitives", 2, colors::GRAY);
             gui.make_button("sphere", "data/textures/sphere.png");
             gui.make_button("cube", "data/textures/cube.png");
             gui.close_group();
         gui.close_submenu();
 
         gui.make_submenu(colors_widget, "colors");
-            gui.make_group("g_colors", 5, Color(0.4f));
-            gui.make_button("color-template-1", "data/textures/colors_template.png");
-            gui.make_button("color-template-2", "data/textures/colors_template.png");
-            gui.make_button("color-template-3", "data/textures/colors_template.png");
-            gui.make_button("color-template-4", "data/textures/colors_template.png");
-            gui.make_button("color-template-5", "data/textures/colors_template.png");
+            gui.make_group("g_colors", 5, colors::GRAY);
+            ui::Widget* color_template_palette_1 = gui.make_button("color_template_palette_1", "data/textures/colors_template_1.png");
+            ui::Widget* color_template_palette_2 = gui.make_button("color_template_palette_2", "data/textures/colors_template_2.png");
+            ui::Widget* color_template_palette_3 = gui.make_button("color_template_palette_3", "data/textures/colors_template_3.png");
+            ui::Widget* color_template_palette_4 = gui.make_button("color_template_palette_4", "data/textures/colors_template_4.png");
+            ui::Widget* color_template_palette_5 = gui.make_button("color_template_palette_5", "data/textures/colors_template_5.png");
             gui.close_group();
             gui.make_button("recent-colors", "data/textures/recent_colors.png");
         gui.close_submenu();
 
-        // Old
-        /*gui.make_submenu("modes", { 24.f, 4.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/sculpt_modes.png");
-        gui.make_button("smear", { 24.f, 36.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/normal.png");
-        gui.make_button("stamp", { 52.f, 36.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/stamp.png");
-        gui.make_button("paint", { 52.f, 36.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/stamp.png");
-        gui.make_submenu("colorize", { 80.f, 36.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/sculpt_modes.png");
-        gui.make_color_picker("colors", { current_color.r, current_color.g, current_color.b, 1.0f }, { 48.f, 68.f }, { 32.f, 8.f });
+        gui.make_submenu(color_template_palette_1, "color_template_palette_1");
+        gui.make_group("g_colors_t1", 4, colors::GRAY);
+        gui.make_button("colors_t1_1", "data/textures/circle256.png", "data/shaders/mesh_texture.wgsl", Color(0.2f, 0.21f, 0.77f, 1.f));
+        gui.make_button("colors_t1_2", "data/textures/circle256.png", "data/shaders/mesh_texture.wgsl", Color(0.41f, 0.57f, 0.79f, 1.f));
+        gui.make_button("colors_t1_3", "data/textures/circle256.png", "data/shaders/mesh_texture.wgsl", Color(0.41f, 0.76f, 0.79f, 1.f));
+        gui.make_button("colors_t1_4", "data/textures/circle256.png", "data/shaders/mesh_texture.wgsl", Color(0.64f, 0.9f, 0.93f,  1.f));
+        gui.close_group();
         gui.close_submenu();
-        gui.close_submenu();
-
-        gui.make_submenu("primitives", { 52.f, 4.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/sphere.png");
-        gui.make_button("sphere", { 38.f, 36.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/sphere.png");
-        gui.make_button("cube", { 66.f, 36.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/cube.png");
-        gui.close_submenu();
-
-        gui.make_submenu("tools", { 80.f, 4.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/tools.png");
-        gui.make_button("mirror", { 52.f, 36.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/mirror.png");
-        gui.close_submenu();*/
     }
 
     // Set events
@@ -85,9 +80,10 @@ void SculptEditor::initialize()
 
         // Tools
 
-        /*gui.bind("colors", [&](const std::string& signal, const Color& color) {
-            current_color = color;
-        });*/
+        gui.bind("colors_t1_1", [&](const std::string& signal, float value) { current_color = Color(0.2f,  0.21f, 0.77f,  1.f); });
+        gui.bind("colors_t1_2", [&](const std::string& signal, float value) { current_color = Color(0.41f, 0.57f, 0.79f,  1.f); });
+        gui.bind("colors_t1_3", [&](const std::string& signal, float value) { current_color = Color(0.41f, 0.76f, 0.79f,  1.f); });
+        gui.bind("colors_t1_4", [&](const std::string& signal, float value) { current_color = Color(0.64f, 0.9f,  0.93f,  1.f); });
 
         gui.bind("mirror", [&](const std::string& signal, float value) { use_mirror = !use_mirror; });
     }

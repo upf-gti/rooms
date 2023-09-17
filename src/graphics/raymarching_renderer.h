@@ -60,9 +60,11 @@ class RaymarchingRenderer : public Renderer {
     Shader*                 render_mesh_texture_shader = nullptr;
 
     // Render UI Quads
-    Pipeline                render_mesh_ui_pipeline;
     WGPUBindGroup           render_bind_group_ui = nullptr;
+    Pipeline                render_mesh_ui_pipeline;
     Shader*                 render_mesh_ui_shader = nullptr;
+    Pipeline                render_mesh_ui_texture_pipeline;
+    Shader*                 render_mesh_ui_texture_shader = nullptr;
 
     // Font rendering
     Pipeline                render_fonts_pipeline;

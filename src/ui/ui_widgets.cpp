@@ -37,8 +37,12 @@ namespace ui {
         if (bw && bw->is_submenu)
             show_children = value;
 
-        for (auto w : children)
-            w->set_show_children(value);
+        // Only hiding is recursive...
+        if (!value)
+        {
+            for (auto w : children)
+                w->set_show_children(value);
+        }
     }
 
 	void Widget::render()
@@ -120,8 +124,12 @@ namespace ui {
 
 		bool is_pressed = hovered && Input::is_button_pressed(workspace.select_button);
 		bool was_pressed = hovered && Input::was_button_pressed(workspace.select_button);
-		
-		entity->set_color(is_pressed ? colors::PURPLE : (hovered ? colors::CYAN : color));
+
+
+        if(entity->get_shader() == Shader::get("data/shaders/mesh_texture_ui.wgsl"))
+		    entity->set_color(is_pressed ? colors::GRAY : (hovered ? Color(0.95f, 0.76f, 0.17f, 1.f) : color));
+        else
+            entity->set_color(color);
 		
 		if (was_pressed)
 			controller->emit_signal(signal, 1.f);

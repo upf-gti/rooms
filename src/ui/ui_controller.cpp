@@ -96,15 +96,15 @@ namespace ui {
 
         if (group_opened)
         {
-            x = last_layout_pos.x + g_iterator * BUTTON_SIZE + g_iterator * X_MARGIN;
+            x = last_layout_pos.x + g_iterator * BUTTON_SIZE + g_iterator * X_GROUP_MARGIN;
             y = last_layout_pos.y;
             g_iterator++;
         }
         else
         {
-            x = layout_iterator.x * BUTTON_SIZE + (layout_iterator.x + 1.f) * X_MARGIN;
+            x = layout_iterator.x;
             y = layout_iterator.y * BUTTON_SIZE + (layout_iterator.y + 1.f) * Y_MARGIN;
-            layout_iterator.x++;
+            layout_iterator.x += BUTTON_SIZE + X_MARGIN;
             last_layout_pos = { x, y };
         }
 
@@ -156,7 +156,7 @@ namespace ui {
 		return widget;
 	}
 
-	Widget* Controller::make_button(const std::string& signal, const char* texture, const char* texture_selected, const Color& color)
+	Widget* Controller::make_button(const std::string& signal, const char* texture, const char* shader, const Color& color)
 	{
         // World attributes
         glm::vec2 pos = compute_position();
@@ -173,19 +173,11 @@ namespace ui {
 
 		// Render quad in local workspace position
 		EntityMesh* e_button = new EntityMesh();
-		e_button->set_shader(Shader::get("data/shaders/mesh_color.wgsl"));
+		e_button->set_shader(Shader::get(shader));
 		Mesh* mesh = new Mesh();
 		if (texture)
-		{
-			e_button->set_shader(Shader::get("data/shaders/mesh_texture.wgsl"));
 			mesh->set_texture(Texture::get(texture));
-		}
-		else
-		{
-			// Text: Use for debug  only
-			Widget* text = make_text(signal, _pos, colors::BLACK, _size.x * 0.2f);
-			text->priority = 1;
-		}
+
 		mesh->create_quad(size.x, size.y);
 		e_button->set_mesh(mesh);
 
@@ -197,12 +189,6 @@ namespace ui {
         widget->m_layer = layout_iterator.y;
 
 		append_widget(widget);
-
-        // Hide submenus of siblings
-        bind(signal, [widget = widget, childs = &widget->parent->children](const std::string& signal, float value) {
-            for (auto w : *childs)
-                w->set_show_children(false);
-        });
 
         /*if (texture && texture_selected)
         {
@@ -280,27 +266,33 @@ namespace ui {
 		return widget;
 	}
 
-	void Controller::make_submenu(Widget* parent, const std::string& name)
+	void Controller::make_submenu(Widget* widget, const std::string& name)
 	{
-        static_cast<ButtonWidget*>(parent)->is_submenu = true;
+        static_cast<ButtonWidget*>(widget)->is_submenu = true;
 
         // Visibility callback...
-		bind(name, [widget = parent, childs = &parent->parent->children](const std::string& signal, float value) {
-            for (auto w : *childs)
+		bind(name, [widget = widget](const std::string& signal, float value) {
+
+            Widget* parent = widget->parent;
+            if (parent->type == GROUP)
+                parent = parent->parent;
+
+            for (auto w : parent->children)
                 w->set_show_children(false);
+
             widget->set_show_children(!widget->show_children);
 		});
 
         layout_iterator.x = 0.f;
-        layout_iterator.y = parent->m_layer + 1.f;
+        layout_iterator.y = widget->m_layer + 1.f;
 
         // Update last layout pos
-        float x = layout_iterator.x * BUTTON_SIZE + (layout_iterator.x + 1.f) * X_MARGIN;
+        float x = 0.f;
         float y = layout_iterator.y * BUTTON_SIZE + (layout_iterator.y + 1.f) * Y_MARGIN;
         last_layout_pos = { x, y };
 
         // Set as new parent...
-        parent_queue.push_back(parent);
+        parent_queue.push_back(widget);
 	}
 
     void Controller::close_submenu()
@@ -315,9 +307,11 @@ namespace ui {
         // World attributes
         glm::vec2 pos = compute_position() - 4.f;
         glm::vec2 size = glm::vec2(
-            BUTTON_SIZE * number_of_widgets + (number_of_widgets - 1.f) * X_MARGIN + 8.f,
+            BUTTON_SIZE * number_of_widgets + (number_of_widgets - 1.f) * X_GROUP_MARGIN + 8.f,
             BUTTON_SIZE + 8.f
         );
+
+        glm::vec2 _size = size;
 
         process_params(pos, size);
 
@@ -335,7 +329,7 @@ namespace ui {
 
         parent_queue.push_back(group);
         group_opened = true;
-        layout_iterator.x += (number_of_widgets - 1.f);
+        layout_iterator.x += _size.x - (BUTTON_SIZE + X_GROUP_MARGIN);
     }
 
     void Controller::close_group()
