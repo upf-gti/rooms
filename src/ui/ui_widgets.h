@@ -31,9 +31,9 @@ namespace ui {
 		EntityMesh* entity = nullptr;
 		glm::vec2 position;
 		uint8_t type = eWidgetType::NONE;
-		uint8_t priority = 0;
-
         uint8_t m_layer = 0;
+
+		int priority = 0;
 
 		Widget* parent = nullptr;
 		bool show_children = false;
