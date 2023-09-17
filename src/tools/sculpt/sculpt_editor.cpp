@@ -16,6 +16,7 @@ void SculptEditor::initialize()
     Mesh* quad_mesh = new Mesh();
     quad_mesh->create_quad(0.5f, 0.5f);
     quad_mesh->set_texture(Texture::get("data/textures/mirror_quad_texture.png"));
+    mirror_mesh->set_shader(Shader::get("data/shaders/mesh_texture.wgsl"));
     mirror_mesh->set_mesh(quad_mesh);
 
     tools[SCULPT] = new SculptTool();
@@ -116,9 +117,9 @@ void SculptEditor::update(float delta_time)
         sculpt_start_position = edit_to_add.position;
         renderer->set_sculpt_start_position(sculpt_start_position);
 
-        mirror_gizmo.initialize(POSITION_GIZMO);
+        mirror_gizmo.initialize(POSITION_GIZMO, sculpt_start_position + glm::vec3(0.0f, 1.0f, 0.0f));
 
-        mirror_origin = sculpt_start_position;
+        mirror_origin = sculpt_start_position + glm::vec3(0.0f, 1.0f, 0.0f);
     }
 
     // Rotate the scene TODO: when ready move this out of tool to engine
@@ -153,12 +154,16 @@ void SculptEditor::update(float delta_time)
     // Set position of the preview edit
     renderer->set_preview_edit(edit_to_add);
 
+    if (use_mirror) {
+        mirror_origin = mirror_gizmo.update(mirror_origin);
+    }
+
     if (tool_used) {
         renderer->push_edit(edit_to_add);
 
         // If the mirror is activated, mirror using the plane, and add another edit to the list
         if (use_mirror) {
-            float dist_to_plane = glm::dot(mirror_normal, edit_to_add.position - sculpt_start_position + mirror_origin);
+            float dist_to_plane = glm::dot(mirror_normal, edit_to_add.position - mirror_origin);
             edit_to_add.position = edit_to_add.position - mirror_normal * dist_to_plane * 2.0f;
 
             renderer->push_edit(edit_to_add);
@@ -166,10 +171,6 @@ void SculptEditor::update(float delta_time)
     }
 
     gui.update(delta_time);
-
-    if (use_mirror) {
-        mirror_origin = mirror_gizmo.update(mirror_origin);
-    }
 }
 
 void SculptEditor::render()
@@ -191,6 +192,7 @@ void SculptEditor::render()
     if (use_mirror) {
         mirror_gizmo.render();
         mirror_mesh->set_translation(mirror_origin);
+        mirror_mesh->rotate(90.0f * 0.0174533f, glm::vec3(0.0f, 1.0f, 0.0f));
         mirror_mesh->render();
     }
 #endif

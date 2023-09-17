@@ -7,13 +7,14 @@
 #include <framework/intersections.h>
 #include <utils.h>
 
-void TransformGizmo::initialize(const eGizmoType gizmo_use) {
+void TransformGizmo::initialize(const eGizmoType gizmo_use, const glm::vec3 &position) {
 	type = gizmo_use;
 	arrow_mesh = new EntityMesh();
 	arrow_mesh->set_mesh(Mesh::get("data/meshes/arrow.obj"));
 	arrow_mesh->set_shader(Shader::get("data/shaders/mesh_color.wgsl"));
 
 	gizmo_scale = glm::vec3(0.1f, 0.1f, 0.1f);
+    gizmo_position = position;
 }
 
 void TransformGizmo::clean() {

@@ -38,7 +38,7 @@ class TransformGizmo {
 
 public:
 
-	void			initialize(const eGizmoType gizmo_use);
+	void			initialize(const eGizmoType gizmo_use, const glm::vec3 &position);
 	void			clean();
 
 	glm::vec3		update(const glm::vec3& new_position);
