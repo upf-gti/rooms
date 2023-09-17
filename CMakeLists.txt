@@ -57,7 +57,7 @@ if (EMSCRIPTEN)
     set(SHELL_FILE shell.html)
 
     target_link_options(${PROJECT_NAME} PRIVATE
-        -O0
+        -O3
         -sUSE_GLFW=3
         -sUSE_WEBGPU
         -sALLOW_MEMORY_GROWTH

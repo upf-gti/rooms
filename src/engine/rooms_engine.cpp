@@ -3,9 +3,9 @@
 #include "framework/entities/entity_text.h"
 #include "framework/input.h"
 
-int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_mirror_screen)
+int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen)
 {
-	int error = Engine::initialize(renderer, window, use_mirror_screen);
+	int error = Engine::initialize(renderer, window, use_glfw, use_mirror_screen);
 
     sculpt_editor.initialize();
 
