@@ -1,6 +1,7 @@
 #pragma once
 
 #include "framework/colors.h"
+#include "graphics/webgpu_context.h"
 #include <functional>
 #include <map>
 #include <string>
@@ -45,6 +46,14 @@ namespace ui {
 		virtual void render();
 		virtual void update(Controller* controller);
 	};
+
+    class WidgetGroup : public Widget {
+    public:
+
+        float number_of_widgets;
+
+        WidgetGroup(EntityMesh* e, const glm::vec2& p, float number_of_widgets);
+    };
 
 	class TextWidget : public Widget {
 	public:

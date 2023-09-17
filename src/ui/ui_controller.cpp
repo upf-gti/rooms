@@ -8,10 +8,14 @@
 
 namespace ui {
 
+    std::map<std::string, Widget*> Controller::groups;
+
     float current_number_of_group_widgets; // store to make sure everything went well
 
 	void Controller::set_workspace(glm::vec2 _workspace_size, uint8_t _select_button, uint8_t _root_pose, uint8_t _hand, uint8_t _select_hand)
 	{
+        renderer = dynamic_cast<RaymarchingRenderer*>(Renderer::instance);
+
 		global_scale = 0.001f;
 
 		workspace = {
@@ -92,14 +96,14 @@ namespace ui {
 
         if (group_opened)
         {
-            x = last_layout_pos.x + g_iterator * BUTTON_SIZE + g_iterator * 4.f;
+            x = last_layout_pos.x + g_iterator * BUTTON_SIZE + g_iterator * X_MARGIN;
             y = last_layout_pos.y;
             g_iterator++;
         }
         else
         {
-            x = layout_iterator.x * BUTTON_SIZE + (layout_iterator.x + 1.f) * 8.f;
-            y = layout_iterator.y * BUTTON_SIZE + (layout_iterator.y + 1.f) * 12.f;
+            x = layout_iterator.x * BUTTON_SIZE + (layout_iterator.x + 1.f) * X_MARGIN;
+            y = layout_iterator.y * BUTTON_SIZE + (layout_iterator.y + 1.f) * Y_MARGIN;
             layout_iterator.x++;
             last_layout_pos = { x, y };
         }
@@ -195,7 +199,7 @@ namespace ui {
 		append_widget(widget);
 
         // Hide submenus of siblings
-        connect(signal, [widget = widget, childs = &widget->parent->children](const std::string& signal, float value) {
+        bind(signal, [widget = widget, childs = &widget->parent->children](const std::string& signal, float value) {
             for (auto w : *childs)
                 w->set_show_children(false);
         });
@@ -255,19 +259,19 @@ namespace ui {
 		ColorPickerWidget* widget = new ColorPickerWidget(rect, default_color);
 		append_widget(widget);
 
-		connect(signal + "_r", [this, signal, w = widget, r = rect](const std::string& s, float value) {
+		bind(signal + "_r", [this, signal, w = widget, r = rect](const std::string& s, float value) {
 			w->rect_color.x = value;
 			r->set_color(w->rect_color);
 			emit_signal(signal, w->rect_color);
 		});
 
-		connect(signal + "_g", [this, signal, w = widget, r = rect](const std::string& s, float value) {
+		bind(signal + "_g", [this, signal, w = widget, r = rect](const std::string& s, float value) {
 			w->rect_color.y = value;
 			r->set_color(w->rect_color);
 			emit_signal(signal, w->rect_color);
 		});
 
-		connect(signal + "_b", [this, signal, w = widget, r = rect](const std::string& s, float value) {
+		bind(signal + "_b", [this, signal, w = widget, r = rect](const std::string& s, float value) {
 			w->rect_color.z = value;
 			r->set_color(w->rect_color);
 			emit_signal(signal, w->rect_color);
@@ -281,7 +285,7 @@ namespace ui {
         static_cast<ButtonWidget*>(parent)->is_submenu = true;
 
         // Visibility callback...
-		connect(name, [widget = parent, childs = &parent->parent->children](const std::string& signal, float value) {
+		bind(name, [widget = parent, childs = &parent->parent->children](const std::string& signal, float value) {
             for (auto w : *childs)
                 w->set_show_children(false);
             widget->set_show_children(!widget->show_children);
@@ -291,8 +295,8 @@ namespace ui {
         layout_iterator.y = parent->m_layer + 1.f;
 
         // Update last layout pos
-        float x = layout_iterator.x * BUTTON_SIZE + (layout_iterator.x + 1.f) * 8.f;
-        float y = layout_iterator.y * BUTTON_SIZE + (layout_iterator.y + 1.f) * 12.f;
+        float x = layout_iterator.x * BUTTON_SIZE + (layout_iterator.x + 1.f) * X_MARGIN;
+        float y = layout_iterator.y * BUTTON_SIZE + (layout_iterator.y + 1.f) * Y_MARGIN;
         last_layout_pos = { x, y };
 
         // Set as new parent...
@@ -304,14 +308,14 @@ namespace ui {
         parent_queue.pop_back();
     }
 
-    void Controller::make_group(float number_of_widgets, const Color& color)
+    void Controller::make_group(const std::string& group_name, float number_of_widgets, const Color& color)
     {
         current_number_of_group_widgets = number_of_widgets;
 
         // World attributes
         glm::vec2 pos = compute_position() - 4.f;
         glm::vec2 size = glm::vec2(
-            BUTTON_SIZE * number_of_widgets + (number_of_widgets - 1.f) * 4.f + 8.f,
+            BUTTON_SIZE * number_of_widgets + (number_of_widgets - 1.f) * X_MARGIN + 8.f,
             BUTTON_SIZE + 8.f
         );
 
@@ -321,12 +325,13 @@ namespace ui {
         e->set_shader(Shader::get("data/shaders/mesh_ui.wgsl"));
         Mesh* mesh = new Mesh();
         mesh->create_quad(size.x, size.y, color);
+        mesh->set_alias(group_name);
         e->set_mesh(mesh);
 
-        Widget* group = new Widget(e, pos);
-        group->show_children = true;
-        group->type = GROUP;
+        WidgetGroup* group = new WidgetGroup(e, pos, number_of_widgets);
         append_widget(group);
+
+        groups[group_name] = group;
 
         parent_queue.push_back(group);
         group_opened = true;
@@ -343,8 +348,14 @@ namespace ui {
         g_iterator = 0.f;
     }
 
-	void Controller::connect(const std::string& name, SignalType callback)
+	void Controller::bind(const std::string& name, SignalType callback)
 	{
 		signals[name].push_back(callback);
 	}
+
+    Widget* Controller::get_group_from_alias(const std::string& alias)
+    {
+        if(groups.count(alias)) return groups[alias];
+        return nullptr;
+    }
 }

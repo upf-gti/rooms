@@ -212,9 +212,17 @@ void RaymarchingRenderer::render_meshes(WGPUTextureView swapchain_view, WGPUText
 
             mesh->update_instance_model_matrices();
 
+            ui::WidgetGroup* group = static_cast<ui::WidgetGroup*>( ui::Controller::get_group_from_alias(mesh->get_alias()));
+            if (group)
+            {
+                ui_data.num_group_items = group->number_of_widgets;
+                wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(u_ui.data), 0, &ui_data, sizeof(sUIData));
+            }
+
             // Set bind group
             wgpuRenderPassEncoderSetBindGroup(render_pass, 0, mesh->get_bind_group(), 0, nullptr);
             wgpuRenderPassEncoderSetBindGroup(render_pass, 1, render_bind_group_camera, 0, nullptr);
+            wgpuRenderPassEncoderSetBindGroup(render_pass, 2, render_bind_group_ui, 0, nullptr);
 
             // Set vertex buffer while encoding the render pass
             wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, mesh->get_vertex_buffer(), 0, mesh->get_byte_size());
@@ -681,6 +689,8 @@ void RaymarchingRenderer::init_render_mesh_pipelines()
     render_mesh_texture_shader = Shader::get("data/shaders/mesh_texture.wgsl");
     render_fonts_shader = Shader::get("data/shaders/sdf_fonts.wgsl");
 
+    // Camera
+
     u_camera.data = webgpu_context.create_buffer(sizeof(sCameraData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "camera_buffer");
     u_camera.binding = 0;
     u_camera.buffer_size = sizeof(sCameraData);
@@ -688,6 +698,19 @@ void RaymarchingRenderer::init_render_mesh_pipelines()
     std::vector<Uniform*> uniforms = { &u_camera };
 
     render_bind_group_camera = webgpu_context.create_bind_group(uniforms, render_mesh_shader, 1);
+
+    // UI
+
+    u_ui.data = webgpu_context.create_buffer(sizeof(sUIData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "camera_buffer");
+    u_ui.binding = 0;
+    u_ui.buffer_size = sizeof(sUIData);
+
+    uniforms.clear();
+    uniforms = { &u_ui };
+
+    render_bind_group_ui = webgpu_context.create_bind_group(uniforms, render_mesh_ui_shader, 2);
+
+    // ...
 
     WGPUTextureFormat swapchain_format = is_openxr_available ? webgpu_context.xr_swapchain_format : webgpu_context.swapchain_format;
 

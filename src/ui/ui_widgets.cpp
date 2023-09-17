@@ -8,6 +8,11 @@
 
 namespace ui {
 
+    struct sUIData {
+        glm::vec3 dummy;
+        float num_group_items;
+    } ui_data;
+
 	void Widget::add_child(Widget* child)
 	{
 		if (child->parent) {
@@ -58,6 +63,16 @@ namespace ui {
 		for (auto c : children)
 			c->update( controller );
 	}
+
+    /*
+    *   Widget Group
+    */
+
+    WidgetGroup::WidgetGroup(EntityMesh* e, const glm::vec2& p, float n) : Widget(e, p) {
+        number_of_widgets = n;
+        show_children = true;
+        type = GROUP;
+    }
 
 	/*
 	*	Button

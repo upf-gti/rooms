@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+class RaymarchingRenderer;
 class EntityMesh;
 
 using FuncFloat = std::function<void(const std::string&, float)>;
@@ -20,6 +21,8 @@ using SignalType = std::variant < FuncFloat, FuncString, FuncVec2, FuncVec3, Fun
 namespace ui {
 
     const float BUTTON_SIZE = 32.f;
+    const float X_MARGIN    = 8.f;
+    const float Y_MARGIN    = 12.f;
 
 	struct WorkSpaceData {
 		glm::vec2 size;
@@ -31,6 +34,7 @@ namespace ui {
 
 	class Controller {
 
+        RaymarchingRenderer* renderer = nullptr;
 		WorkSpaceData workspace;
 		glm::mat4x4 global_transform;
 
@@ -38,6 +42,8 @@ namespace ui {
 
 		ui::Widget* root = nullptr;
 		std::map<std::string, std::vector<SignalType>> signals;
+
+        static std::map<std::string, Widget*> groups;
 
 		/*
 		*	Widget Helpers
@@ -86,14 +92,16 @@ namespace ui {
         void make_submenu(Widget* parent, const std::string& name);
         void close_submenu();
 
-        void make_group(float number_of_widgets, const Color& color = colors::WHITE);
+        void make_group(const std::string& group_name, float number_of_widgets, const Color& color = colors::WHITE);
         void close_group();
+
+        static Widget* get_group_from_alias(const std::string& alias);
 
 		/*
 		*	Callbacks
 		*/
 
-		void connect(const std::string& name, SignalType callback);
+		void bind(const std::string& name, SignalType callback);
 
 		template<typename T>
 		bool emit_signal(const std::string& name, T value) {

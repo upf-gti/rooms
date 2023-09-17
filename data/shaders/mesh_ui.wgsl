@@ -15,7 +15,7 @@ struct VertexOutput {
 
 struct RenderMeshData {
     model  : mat4x4f,
-    color  : vec4f,
+    color  : vec4f
 };
 
 struct InstanceData {
@@ -23,11 +23,17 @@ struct InstanceData {
 }
 
 struct CameraData {
-    view_projection : mat4x4f,
+    view_projection : mat4x4f
+};
+
+struct UIData {
+    dummy : vec3f,
+    num_group_items : f32
 };
 
 @group(0) @binding(0) var<storage, read> mesh_data : InstanceData;
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
+@group(2) @binding(0) var<uniform> ui_data : UIData;
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
@@ -53,8 +59,8 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     var uvs = in.uv;
     var button_size = 32.0;
-    var items = 2.0; // in group
-    var tx = max(button_size, 32.0 * items);
+    // var items = 2.0;
+    var tx = max(button_size, 32.0 * ui_data.num_group_items);
     var divisions = tx / button_size;
     uvs.x *= divisions;
     var p = vec2f(clamp(uvs.x, 0.5, divisions - 0.5), 0.5);

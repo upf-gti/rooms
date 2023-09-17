@@ -18,8 +18,6 @@
 
 class RaymarchingRenderer : public Renderer {
 
-    //Renderer* renderer = nullptr;
-
     // Render to screen
     Pipeline                render_quad_pipeline;
     Shader*                 render_quad_shader = nullptr;
@@ -63,6 +61,7 @@ class RaymarchingRenderer : public Renderer {
 
     // Render UI Quads
     Pipeline                render_mesh_ui_pipeline;
+    WGPUBindGroup           render_bind_group_ui = nullptr;
     Shader*                 render_mesh_ui_shader = nullptr;
 
     // Font rendering
@@ -75,7 +74,7 @@ class RaymarchingRenderer : public Renderer {
     Uniform                 u_octree;
 
     Uniform                 u_camera;
-    Uniform                 u_font;
+    Uniform                 u_ui;
 
     Uniform                 u_compute_buffer_data;
     Uniform                 u_compute_preview_edit;
@@ -101,10 +100,10 @@ class RaymarchingRenderer : public Renderer {
         glm::vec3 right_eye_pos;
         float render_width = 0.0f;
 
-        float time = 0.0f;
-        float camera_near = 0.0f;
-        float camera_far = 0.0f;
-        float dummy0 = 0.0f;
+        float time          = 0.0f;
+        float camera_near   = 0.0f;
+        float camera_far    = 0.0f;
+        float dummy0        = 0.0f;
 
         glm::vec3 sculpt_start_position = {};
         float dummy1 = 0.0f;
@@ -126,14 +125,19 @@ class RaymarchingRenderer : public Renderer {
         glm::mat4x4 view_projection;
     } camera_data;
 
+    struct sUIData {
+        glm::vec3 dummy;
+        float num_group_items = 2;
+    } ui_data;
+
     Edit edits[EDITS_MAX];
 
     Mesh  quad_mesh;
 
     // Timestepping counters
-    float					updated_time = 0.0f;
+    float updated_time = 0.0f;
 
-    glm::vec3               clear_color;
+    glm::vec3 clear_color;
 
     // For the XR mirror screen
 #if defined(XR_SUPPORT) && defined(USE_MIRROR_WINDOW)

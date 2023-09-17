@@ -26,18 +26,29 @@ void SculptEditor::initialize()
 
     // UI Layout
     {
-        gui.make_group(2, Color(0.4f));
+        gui.make_group("g_main_tools", 2, Color(0.4f));
         ui::Widget* primitives_widget = gui.make_button("primitives", "data/textures/cube.png", "data/textures/cube_selected.png");
         gui.make_button("paint", "data/textures/paint.png");
         gui.close_group();
         gui.make_button("mirror", "data/textures/mirror.png");
-        gui.make_button("colors", "data/textures/colors.png");
+        ui::Widget* colors_widget = gui.make_button("colors", "data/textures/colors.png");
 
         gui.make_submenu(primitives_widget, "primitives");
-        gui.make_group(2, Color(0.4f));
-        gui.make_button("sphere", "data/textures/sphere.png");
-        gui.make_button("cube", "data/textures/cube.png");
-        gui.close_group();
+            gui.make_group("g_primitives", 2, Color(0.4f));
+            gui.make_button("sphere", "data/textures/sphere.png");
+            gui.make_button("cube", "data/textures/cube.png");
+            gui.close_group();
+        gui.close_submenu();
+
+        gui.make_submenu(colors_widget, "colors");
+            gui.make_group("g_colors", 5, Color(0.4f));
+            gui.make_button("color-template-1", "data/textures/colors_template.png");
+            gui.make_button("color-template-2", "data/textures/colors_template.png");
+            gui.make_button("color-template-3", "data/textures/colors_template.png");
+            gui.make_button("color-template-4", "data/textures/colors_template.png");
+            gui.make_button("color-template-5", "data/textures/colors_template.png");
+            gui.close_group();
+            gui.make_button("recent-colors", "data/textures/recent_colors.png");
         gui.close_submenu();
 
         // Old
@@ -62,23 +73,23 @@ void SculptEditor::initialize()
 
     // Set events
     {
-        // Modes
-        /*gui.connect("colors", [&](const std::string& signal, const Color& color) {
-            current_color = color;
-        });*/
-
         // Primitives
-        gui.connect("sphere", [&](const std::string& signal, float value) {
+        gui.bind("sphere", [&](const std::string& signal, float value) {
             current_primitive = SD_SPHERE;
             mesh_preview->set_mesh(Mesh::get("data/meshes/wired_sphere.obj"));
         });
-        gui.connect("cube", [&](const std::string& signal, float value) {
+        gui.bind("cube", [&](const std::string& signal, float value) {
             current_primitive = SD_BOX;
             mesh_preview->set_mesh(Mesh::get("data/meshes/hollow_cube.obj"));
         });
 
         // Tools
-        gui.connect("mirror", [&](const std::string& signal, float value) { use_mirror = !use_mirror; });
+
+        /*gui.bind("colors", [&](const std::string& signal, const Color& color) {
+            current_color = color;
+        });*/
+
+        gui.bind("mirror", [&](const std::string& signal, float value) { use_mirror = !use_mirror; });
     }
 
     enable_tool(SCULPT);
