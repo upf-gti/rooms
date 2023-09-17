@@ -12,6 +12,12 @@ void SculptEditor::initialize()
     mesh_preview->set_shader(Shader::get("data/shaders/mesh_color.wgsl"));
     mesh_preview->set_color(colors::WHITE);
 
+    mirror_mesh = new EntityMesh();
+    Mesh* quad_mesh = new Mesh();
+    quad_mesh->create_quad(0.5f, 0.5f);
+    quad_mesh->set_texture(Texture::get("data/textures/mirror_quad_texture.png"));
+    mirror_mesh->set_mesh(quad_mesh);
+
     tools[SCULPT] = new SculptTool();
     tools[PAINT] = new PaintTool();
 
@@ -109,10 +115,14 @@ void SculptEditor::update(float delta_time)
 
     Edit& edit_to_add = tools[current_tool]->get_edit_to_add();
 
-    // Set center of sculpture
+    // Set center of sculpture and reuse it as mirror center
     if (!sculpt_started) {
         sculpt_start_position = edit_to_add.position;
         renderer->set_sculpt_start_position(sculpt_start_position);
+
+        mirror_gizmo.initialize(POSITION_GIZMO);
+
+        mirror_origin = sculpt_start_position;
     }
 
     // Rotate the scene TODO: when ready move this out of tool to engine
@@ -152,7 +162,7 @@ void SculptEditor::update(float delta_time)
 
         // If the mirror is activated, mirror using the plane, and add another edit to the list
         if (use_mirror) {
-            float dist_to_plane = glm::dot(mirror_normal, edit_to_add.position - mirror_origin);
+            float dist_to_plane = glm::dot(mirror_normal, edit_to_add.position - sculpt_start_position + mirror_origin);
             edit_to_add.position = edit_to_add.position - mirror_normal * dist_to_plane * 2.0f;
 
             renderer->push_edit(edit_to_add);
@@ -160,6 +170,10 @@ void SculptEditor::update(float delta_time)
     }
 
     gui.update(delta_time);
+
+    if (use_mirror) {
+        mirror_origin = mirror_gizmo.update(mirror_origin);
+    }
 }
 
 void SculptEditor::render()
@@ -177,6 +191,12 @@ void SculptEditor::render()
         tools[current_tool]->render_ui();
     }
     gui.render();
+
+    if (use_mirror) {
+        mirror_gizmo.render();
+        mirror_mesh->set_translation(mirror_origin);
+        mirror_mesh->render();
+    }
 #endif
 }
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "tool.h"
+#include "ui/transform_gizmo.h"
 
 enum eTool : uint8_t {
     NONE = 0,
@@ -16,6 +17,12 @@ class SculptEditor {
     Tool*                   tools[TOOL_COUNT];
     eTool					current_tool = NONE;
     ui::Controller			gui;
+
+    /*
+    *   Mirror
+    */
+    TransformGizmo          mirror_gizmo;
+    EntityMesh*             mirror_mesh;
 
     /*
     *	Edits
