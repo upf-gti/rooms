@@ -8,6 +8,8 @@
 
 namespace ui {
 
+    float current_number_of_group_widgets; // store to make sure everything went well
+
 	void Controller::set_workspace(glm::vec2 _workspace_size, uint8_t _select_button, uint8_t _root_pose, uint8_t _hand, uint8_t _select_hand)
 	{
 		global_scale = 0.001f;
@@ -25,12 +27,6 @@ namespace ui {
 		raycast_pointer = new EntityMesh();
 		raycast_pointer->set_shader(Shader::get("data/shaders/mesh_color.wgsl"));
 		raycast_pointer->set_mesh(Mesh::get("data/meshes/raycast.obj"));
-
-		/*workspace_element = new EntityMesh();
-		workspace_element->set_shader(Shader::get("data/shaders/mesh_ui.wgsl"));
-		Mesh* mesh = new Mesh();
-		mesh->create_quad(workspace.size.x, workspace.size.y);
-		workspace_element->set_mesh(mesh);*/
 	}
 
 	bool Controller::is_active()
@@ -41,8 +37,6 @@ namespace ui {
 	void Controller::render()
 	{
 		if (!enabled || !is_active()) return;
-
-		//workspace_element->render();
 
 		for (auto widget : root->children) {
 			widget->render();
@@ -91,6 +85,28 @@ namespace ui {
 			position -= (workspace.size - size - position);
 	}
 
+    // Gets next button position (applies margin)
+    const glm::vec2& Controller::compute_position()
+    {
+        float x, y;
+
+        if (group_opened)
+        {
+            x = last_layout_pos.x + g_iterator * BUTTON_SIZE + g_iterator * 4.f;
+            y = last_layout_pos.y;
+            g_iterator++;
+        }
+        else
+        {
+            x = layout_iterator.x * BUTTON_SIZE + (layout_iterator.x + 1.f) * 8.f;
+            y = layout_iterator.y * BUTTON_SIZE + (layout_iterator.y + 1.f) * 12.f;
+            layout_iterator.x++;
+            last_layout_pos = { x, y };
+        }
+
+        return { x, y };
+    }
+
 	void Controller::append_widget(Widget* widget)
 	{
         if (parent_queue.size())
@@ -136,8 +152,12 @@ namespace ui {
 		return widget;
 	}
 
-	Widget* Controller::make_button(const std::string& signal, glm::vec2 pos, glm::vec2 size, const Color& color, const char* texture)
+	Widget* Controller::make_button(const std::string& signal, const char* texture, const char* texture_selected, const Color& color)
 	{
+        // World attributes
+        glm::vec2 pos = compute_position();
+        glm::vec2 size = glm::vec2(BUTTON_SIZE);
+
 		glm::vec2 _pos = pos;
 		glm::vec2 _size = size;
 
@@ -166,14 +186,30 @@ namespace ui {
 		e_button->set_mesh(mesh);
 
 		ButtonWidget* widget = new ButtonWidget(signal, e_button, pos, color, size);
+
+        if( group_opened )
+            widget->priority = 1;
+
+        widget->m_layer = layout_iterator.y;
+
 		append_widget(widget);
 
         // Hide submenus of siblings
         connect(signal, [widget = widget, childs = &widget->parent->children](const std::string& signal, float value) {
-
             for (auto w : *childs)
-                w->hide_children();
+                w->set_show_children(false);
         });
+
+        /*if (texture && texture_selected)
+        {
+            std::string tex(texture);
+            std::string tex_selected(texture_selected);
+
+            connect(signal, [widget = widget, tex, tex_selected, mesh = mesh](const std::string& signal, float value) {
+                widget->selected = !widget->selected;
+                mesh->set_texture(Texture::get(widget->selected ? tex_selected.c_str() : tex.c_str()));
+            });
+        }*/
 
 		return widget;
 	}
@@ -240,60 +276,71 @@ namespace ui {
 		return widget;
 	}
 
-	Widget* Controller::make_submenu(const std::string& name, glm::vec2 pos, glm::vec2 size, const Color& color, const char* texture)
+	void Controller::make_submenu(Widget* parent, const std::string& name)
 	{
-		glm::vec2 _pos = pos;
-		glm::vec2 _size = size;
+        static_cast<ButtonWidget*>(parent)->is_submenu = true;
 
-		process_params(pos, size);
-
-		/*
-		*	Create button entity and set transform
-		*/
-
-		// Render quad in local workspace position
-		EntityMesh* e_button = new EntityMesh();
-		e_button->set_shader(Shader::get("data/shaders/mesh_color.wgsl"));
-		Mesh* mesh = new Mesh();
-		if (texture)
-		{
-			e_button->set_shader(Shader::get("data/shaders/mesh_texture.wgsl"));
-			mesh->set_texture(Texture::get(texture));
-		}
-		else
-		{
-			// Text: Use for debug  only
-			Widget* text = make_text(name, _pos, colors::BLACK, _size.x * 0.2f);
-			text->priority = 1;
-		}
-		mesh->create_quad(size.x, size.y);
-		e_button->set_mesh(mesh);
-
-		ButtonWidget* widget = new ButtonWidget(name, e_button, pos, color, size);
-
-        // Append to last submenu if necessary...
-        append_widget(widget);
-         
-		// Visibility callback...
-		connect(name, [widget = widget, childs = &widget->parent->children](const std::string& signal, float value) {
-
+        // Visibility callback...
+		connect(name, [widget = parent, childs = &parent->parent->children](const std::string& signal, float value) {
             for (auto w : *childs)
-                w->hide_children();
-
-			widget->show_children = !widget->show_children;
+                w->set_show_children(false);
+            widget->set_show_children(!widget->show_children);
 		});
 
-        // Set as new parent...
-        parent_queue.push_back(widget);
+        layout_iterator.x = 0.f;
+        layout_iterator.y = parent->m_layer + 1.f;
 
-		return widget;
+        // Update last layout pos
+        float x = layout_iterator.x * BUTTON_SIZE + (layout_iterator.x + 1.f) * 8.f;
+        float y = layout_iterator.y * BUTTON_SIZE + (layout_iterator.y + 1.f) * 12.f;
+        last_layout_pos = { x, y };
+
+        // Set as new parent...
+        parent_queue.push_back(parent);
 	}
 
     void Controller::close_submenu()
     {
-        std::cout << parent_queue.size() << std::endl;
         parent_queue.pop_back();
-        std::cout << parent_queue.size() << std::endl;
+    }
+
+    void Controller::make_group(float number_of_widgets, const Color& color)
+    {
+        current_number_of_group_widgets = number_of_widgets;
+
+        // World attributes
+        glm::vec2 pos = compute_position() - 4.f;
+        glm::vec2 size = glm::vec2(
+            BUTTON_SIZE * number_of_widgets + (number_of_widgets - 1.f) * 4.f + 8.f,
+            BUTTON_SIZE + 8.f
+        );
+
+        process_params(pos, size);
+
+        EntityMesh* e = new EntityMesh();
+        e->set_shader(Shader::get("data/shaders/mesh_ui.wgsl"));
+        Mesh* mesh = new Mesh();
+        mesh->create_quad(size.x, size.y, color);
+        e->set_mesh(mesh);
+
+        Widget* group = new Widget(e, pos);
+        group->show_children = true;
+        group->type = GROUP;
+        append_widget(group);
+
+        parent_queue.push_back(group);
+        group_opened = true;
+        layout_iterator.x += (number_of_widgets - 1.f);
+    }
+
+    void Controller::close_group()
+    {
+        assert(g_iterator == current_number_of_group_widgets && "Num Widgets in group does not correspond");
+
+        // Clear group info
+        parent_queue.pop_back();
+        group_opened = false; 
+        g_iterator = 0.f;
     }
 
 	void Controller::connect(const std::string& name, SignalType callback)

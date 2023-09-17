@@ -50,7 +50,16 @@ struct FragmentOutput {
 fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     var out: FragmentOutput;
-    out.color = vec4f(in.color, 1.0); // Color
 
+    var uvs = in.uv;
+    var button_size = 32.0;
+    var items = 2.0; // in group
+    var tx = max(button_size, 32.0 * items);
+    var divisions = tx / button_size;
+    uvs.x *= divisions;
+    var p = vec2f(clamp(uvs.x, 0.5, divisions - 0.5), 0.5);
+    var d = 1.0 - step(0.5, distance(uvs, p));
+
+    out.color = vec4f(pow(in.color * d, vec3f(2.2)), d);
     return out;
 }

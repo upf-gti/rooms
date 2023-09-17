@@ -19,6 +19,8 @@ using SignalType = std::variant < FuncFloat, FuncString, FuncVec2, FuncVec3, Fun
 
 namespace ui {
 
+    const float BUTTON_SIZE = 32.f;
+
 	struct WorkSpaceData {
 		glm::vec2 size;
 		uint8_t select_button;
@@ -41,10 +43,16 @@ namespace ui {
 		*	Widget Helpers
 		*/
 
+        bool group_opened = false;
+        float g_iterator = 0.f;
+
+        glm::vec2 layout_iterator = { 0.f, 0.f };
+        glm::vec2 last_layout_pos;
 		std::vector<Widget*> parent_queue;
 
 		void append_widget( Widget* widget );
 		void process_params(glm::vec2& position, glm::vec2& size, bool skip_to_local = false);
+        const glm::vec2& compute_position();
 		Widget* make_rect(glm::vec2 pos, glm::vec2 size, const Color& color);
 
 	public:
@@ -72,11 +80,14 @@ namespace ui {
 		*/
 
 		Widget* make_text(const std::string& text, glm::vec2 pos, const Color& color, float scale = 1.f, glm::vec2 size = {1, 1});
-		Widget* make_button(const std::string& signal, glm::vec2 pos, glm::vec2 size, const Color& color, const char* texture = nullptr);
+		Widget* make_button(const std::string& signal, const char* texture = nullptr, const char* texture_selected = nullptr, const Color& color = colors::WHITE);
 		Widget* make_slider(const std::string& signal, float default_value, glm::vec2 pos, glm::vec2 size, const Color& color, const char* texture = nullptr);
 		Widget* make_color_picker(const std::string& signal, const Color& default_color, glm::vec2 pos, glm::vec2 size);
-		Widget* make_submenu(const std::string& name, glm::vec2 pos, glm::vec2 size, const Color& color, const char* texture = nullptr);
+        void make_submenu(Widget* parent, const std::string& name);
         void close_submenu();
+
+        void make_group(float number_of_widgets, const Color& color = colors::WHITE);
+        void close_group();
 
 		/*
 		*	Callbacks

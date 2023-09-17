@@ -22,12 +22,26 @@ void SculptEditor::initialize()
     }
 
     // Config UI
-    const float size = 128.f;
-    gui.set_workspace({ size, size });
+    gui.set_workspace({ 256.f, 128.f });
 
     // UI Layout
     {
-        gui.make_submenu("modes", { 24.f, 4.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/sculpt_modes.png");
+        gui.make_group(2, Color(0.4f));
+        ui::Widget* primitives_widget = gui.make_button("primitives", "data/textures/cube.png", "data/textures/cube_selected.png");
+        gui.make_button("paint", "data/textures/paint.png");
+        gui.close_group();
+        gui.make_button("mirror", "data/textures/mirror.png");
+        gui.make_button("colors", "data/textures/colors.png");
+
+        gui.make_submenu(primitives_widget, "primitives");
+        gui.make_group(2, Color(0.4f));
+        gui.make_button("sphere", "data/textures/sphere.png");
+        gui.make_button("cube", "data/textures/cube.png");
+        gui.close_group();
+        gui.close_submenu();
+
+        // Old
+        /*gui.make_submenu("modes", { 24.f, 4.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/sculpt_modes.png");
         gui.make_button("smear", { 24.f, 36.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/normal.png");
         gui.make_button("stamp", { 52.f, 36.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/stamp.png");
         gui.make_button("paint", { 52.f, 36.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/stamp.png");
@@ -43,15 +57,15 @@ void SculptEditor::initialize()
 
         gui.make_submenu("tools", { 80.f, 4.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/tools.png");
         gui.make_button("mirror", { 52.f, 36.f }, { 24.f, 24.f }, colors::WHITE, "data/textures/mirror.png");
-        gui.close_submenu();
+        gui.close_submenu();*/
     }
 
     // Set events
     {
         // Modes
-        gui.connect("colors", [&](const std::string& signal, const Color& color) {
+        /*gui.connect("colors", [&](const std::string& signal, const Color& color) {
             current_color = color;
-        });
+        });*/
 
         // Primitives
         gui.connect("sphere", [&](const std::string& signal, float value) {

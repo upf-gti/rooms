@@ -16,7 +16,8 @@ namespace ui {
 		NONE,
 		TEXT,
 		BUTTON,
-		SLIDER
+		SLIDER,
+        GROUP
 	};
 
 	class Widget {
@@ -31,12 +32,15 @@ namespace ui {
 		uint8_t type = eWidgetType::NONE;
 		uint8_t priority = 0;
 
+        uint8_t m_layer = 0;
+
 		Widget* parent = nullptr;
 		bool show_children = false;
 		std::vector<Widget*> children;
 
 		void add_child(Widget* child);
-        void hide_children();
+
+        void set_show_children(bool value);
 
 		virtual void render();
 		virtual void update(Controller* controller);
@@ -57,6 +61,9 @@ namespace ui {
 		glm::vec2 size;
 		std::string signal;
 		Color color;
+
+        bool selected = false;
+        bool is_submenu = false;
 
 		ButtonWidget(const std::string& sg, EntityMesh* e, const glm::vec2& p, const Color& c, const glm::vec2& s)
 			: Widget(e, p), signal(sg), size(s), color(c) {

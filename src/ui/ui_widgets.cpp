@@ -26,12 +26,14 @@ namespace ui {
 		children.push_back(child);
 	}
 
-    void Widget::hide_children()
+    void Widget::set_show_children(bool value)
     {
-        show_children = false;
+        ButtonWidget* bw = dynamic_cast<ButtonWidget*>(this);
+        if (bw && bw->is_submenu)
+            show_children = value;
 
         for (auto w : children)
-            w->show_children = false;
+            w->set_show_children(value);
     }
 
 	void Widget::render()
@@ -117,7 +119,6 @@ namespace ui {
 	void SliderWidget::render()
 	{
 		Widget::render();
-
 		thumb_entity->render();
 	}
 
