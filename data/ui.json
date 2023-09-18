@@ -1,0 +1,160 @@
+{
+    "elements": [
+
+        {
+            "name": "g_main_tools",
+            "type": "group",
+            "nitems": 2
+        },
+        {
+            "name": "sculpt",
+            "type": "button",
+            "texture": "data/textures/cube.png",
+            "store_widget": true
+        },
+        {
+            "name": "paint",
+            "type": "button",
+            "texture": "data/textures/paint.png",
+            "store_widget": true
+        },
+        {
+            "name": "mirror",
+            "type": "button",
+            "texture": "data/textures/mirror.png"
+        },
+        {
+            "name": "stamp",
+            "type": "button",
+            "texture": "data/textures/stamp.png"
+        },
+        {
+            "name": "colors",
+            "type": "button",
+            "texture": "data/textures/colors.png",
+            "store_widget": true
+        },
+        {
+            "name": "sculpt",
+            "type": "submenu",
+            "children": [
+                {
+                    "name": "g0_primitives",
+                    "type": "group",
+                    "nitems": 2
+                },
+                {
+                    "name": "sphere",
+                    "type": "button",
+                    "texture": "data/textures/sphere.png"
+                },
+                {
+                    "name": "cube",
+                    "type": "button",
+                    "texture": "data/textures/cube.png"
+                }
+            ]
+        },
+        {
+            "name": "paint",
+            "type": "submenu",
+            "children": [
+                {
+                    "name": "g1_primitives",
+                    "type": "group",
+                    "nitems": 2
+                },
+                {
+                    "name": "sphere",
+                    "type": "button",
+                    "texture": "data/textures/sphere.png"
+                },
+                {
+                    "name": "cube",
+                    "type": "button",
+                    "texture": "data/textures/cube.png"
+                }
+            ]
+        },
+        {
+            "name": "colors",
+            "type": "submenu",
+            "children": [
+                {
+                    "name": "g_colors",
+                    "type": "group",
+                    "nitems": 5
+                },
+                {
+                    "name": "color_template_palette_1",
+                    "type": "button",
+                    "texture": "data/textures/colors_template_1.png",
+                    "store_widget": true
+                },
+                {
+                    "name": "color_template_palette_2",
+                    "type": "button",
+                    "texture": "data/textures/colors_template_2.png",
+                    "store_widget": true
+                },
+                {
+                    "name": "color_template_palette_3",
+                    "type": "button",
+                    "texture": "data/textures/colors_template_3.png",
+                    "store_widget": true
+                },
+                {
+                    "name": "color_template_palette_4",
+                    "type": "button",
+                    "texture": "data/textures/colors_template_4.png",
+                    "store_widget": true
+                },
+                {
+                    "name": "color_template_palette_5",
+                    "type": "button",
+                    "texture": "data/textures/colors_template_5.png",
+                    "store_widget": true
+                }
+            ]
+        },
+        {
+            "name": "color_template_palette_1",
+            "type": "submenu",
+            "children": [
+                {
+                    "name": "g_colors_t1",
+                    "type": "group",
+                    "nitems": 4
+                },
+                {
+                    "name": "colors_t1_1",
+                    "type": "button",
+                    "texture": "data/textures/circle256.png",
+                    "shader": "data/shaders/mesh_texture.wgsl",
+                    "color": "0.2 0.21 0.77 1"
+                },
+                {
+                    "name": "colors_t1_2",
+                    "type": "button",
+                    "texture": "data/textures/circle256.png",
+                    "shader": "data/shaders/mesh_texture.wgsl",
+                    "color": "0.41 0.57 0.79 1"
+                },
+                {
+                    "name": "colors_t1_3",
+                    "type": "button",
+                    "texture": "data/textures/circle256.png",
+                    "shader": "data/shaders/mesh_texture.wgsl",
+                    "color": "0.41 0.76 0.79 1"
+                },
+                {
+                    "name": "colors_t1_4",
+                    "type": "button",
+                    "texture": "data/textures/circle256.png",
+                    "shader": "data/shaders/mesh_texture.wgsl",
+                    "color": "0.64 0.9 0.93 1"
+                }
+            ]
+        }
+    ]
+}

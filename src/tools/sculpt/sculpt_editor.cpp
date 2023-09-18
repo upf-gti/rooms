@@ -31,60 +31,12 @@ void SculptEditor::initialize()
     // Config UI
     gui.set_workspace({ 256.f, 144 });
 
-    // UI Layout
+    /*ui::Widget* debug = gui.make_rect({0, 0}, { 256.f, 144.f }, colors::RED);
+    debug->priority = -1;*/
+
+    // UI Layout from JSON
     {
-        // debug
-        /*ui::Widget* debugw = gui.make_rect({0, 0}, { 256.f, 144.f }, colors::RED);
-        debugw->priority = -1;*/
-        // ...
-
-        gui.make_group("g_main_tools", 2, colors::GRAY);
-        ui::Widget* sculpt_widget = gui.make_button("sculpt", "data/textures/cube.png");
-        ui::Widget* paint_widget = gui.make_button("paint", "data/textures/paint.png");
-        gui.close_group();
-        gui.make_button("mirror", "data/textures/mirror.png");
-        gui.make_button("stamp", "data/textures/stamp.png");
-        ui::Widget* colors_widget = gui.make_button("colors", "data/textures/colors.png");
-
-        // Sculpt primitive dropdown
-        gui.make_submenu(sculpt_widget, "sculpt");
-            gui.make_group("g0_primitives", 2, colors::GRAY);
-            gui.make_button("sphere", "data/textures/sphere.png");
-            gui.make_button("cube", "data/textures/cube.png");
-            gui.close_group();
-        gui.close_submenu();
-
-        // Paint primitive dropdown
-        gui.make_submenu(paint_widget, "paint");
-            gui.make_group("g1_primitives", 2, colors::GRAY);
-            gui.make_button("sphere", "data/textures/sphere.png");
-            gui.make_button("cube", "data/textures/cube.png");
-            gui.close_group();
-        gui.close_submenu();
-
-        /*
-        *   Colors ...
-        */
-
-        gui.make_submenu(colors_widget, "colors");
-            gui.make_group("g_colors", 5, colors::GRAY);
-            ui::Widget* color_template_palette_1 = gui.make_button("color_template_palette_1", "data/textures/colors_template_1.png");
-            ui::Widget* color_template_palette_2 = gui.make_button("color_template_palette_2", "data/textures/colors_template_2.png");
-            ui::Widget* color_template_palette_3 = gui.make_button("color_template_palette_3", "data/textures/colors_template_3.png");
-            ui::Widget* color_template_palette_4 = gui.make_button("color_template_palette_4", "data/textures/colors_template_4.png");
-            ui::Widget* color_template_palette_5 = gui.make_button("color_template_palette_5", "data/textures/colors_template_5.png");
-            gui.close_group();
-            gui.make_button("recent-colors", "data/textures/recent_colors.png");
-        gui.close_submenu();
-
-        gui.make_submenu(color_template_palette_1, "color_template_palette_1");
-        gui.make_group("g_colors_t1", 4, colors::GRAY);
-        gui.make_button("colors_t1_1", "data/textures/circle256.png", "data/shaders/mesh_texture.wgsl", Color(0.2f, 0.21f, 0.77f, 1.f));
-        gui.make_button("colors_t1_2", "data/textures/circle256.png", "data/shaders/mesh_texture.wgsl", Color(0.41f, 0.57f, 0.79f, 1.f));
-        gui.make_button("colors_t1_3", "data/textures/circle256.png", "data/shaders/mesh_texture.wgsl", Color(0.41f, 0.76f, 0.79f, 1.f));
-        gui.make_button("colors_t1_4", "data/textures/circle256.png", "data/shaders/mesh_texture.wgsl", Color(0.64f, 0.9f, 0.93f,  1.f));
-        gui.close_group();
-        gui.close_submenu();
+        load_ui_layout( "data/ui.json" );
     }
 
     // Set events
@@ -222,4 +174,68 @@ void SculptEditor::enable_tool(eTool tool)
 
     tools[tool]->start();
     current_tool = tool;
+}
+
+void SculptEditor::load_ui_layout(const std::string& filename)
+{
+    std::map<std::string, ui::Widget*> widgets_loaded;
+    const json& j = load_json(filename);
+    float group_elements_pending = -1;
+
+    std::function<void(const json&)> read_element = [&](const json& j) {
+
+        std::string name = j["name"];
+        std::string type = j["type"];
+
+        if (type == "group")
+        {
+            assert(j.count("nitems") > 0);
+            float nitems = j["nitems"];
+            group_elements_pending = nitems;
+            glm::vec4 color = load_vec4(j, "color", colors::GRAY);
+            gui.make_group(name, nitems, color);
+        }
+        else if (type == "button")
+        {
+            std::string texture = j["texture"];
+            std::string shader = "data/shaders/mesh_texture_ui.wgsl";
+
+            if (j.count("shader"))
+                shader = j["shader"];
+
+            Color color = colors::WHITE;
+            if (j.count("color"))
+                color = load_vec4(j, "color", glm::vec4());
+
+            ui::Widget* widget = gui.make_button(name, texture.c_str(), shader.c_str(), color);
+            group_elements_pending--;
+
+            if (j.count("store_widget"))
+                widgets_loaded[name] = widget;
+
+            if (group_elements_pending == 0.f)
+            {
+                gui.close_group();
+                group_elements_pending = -1;
+            }
+        }
+        else if (type == "submenu")
+        {
+            ui::Widget* parent = widgets_loaded[name];
+            gui.make_submenu(parent, name);
+
+            assert(j.count("children") > 0);
+            auto& _subelements = j["children"];
+            for (auto& sub_el : _subelements) {
+                read_element(sub_el);
+            }
+
+            gui.close_submenu();
+        }
+    };
+
+    auto& _elements = j["elements"];
+    for (auto& el : _elements) {
+        read_element(el);
+    }
 }

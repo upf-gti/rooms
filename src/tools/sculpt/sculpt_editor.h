@@ -16,7 +16,6 @@ class SculptEditor {
     bool                    sculpt_started = false;
     Tool*                   tools[TOOL_COUNT];
     eTool					current_tool = NONE;
-    ui::Controller			gui;
 
     /*
     *	Edits
@@ -51,11 +50,14 @@ class SculptEditor {
     glm::vec3		mirror_origin = glm::vec3(0.0f, 0.0f, 0.0f);
     glm::vec3		mirror_normal = glm::vec3(1.0f, 0.0f, 0.0f);
 
-    /*
-    *   Mirror
-    */
 
     bool			stamp_enabled = false;
+    
+    // UI
+
+    ui::Controller gui;
+    void load_ui_layout(const std::string& filename);
+
 
     void enable_tool(eTool tool);
 
