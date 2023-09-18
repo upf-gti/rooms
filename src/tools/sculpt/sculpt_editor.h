@@ -19,12 +19,6 @@ class SculptEditor {
     ui::Controller			gui;
 
     /*
-    *   Mirror
-    */
-    TransformGizmo          mirror_gizmo;
-    EntityMesh*             mirror_mesh;
-
-    /*
     *	Edits
     */
 
@@ -50,8 +44,18 @@ class SculptEditor {
     // Mirror
 
     bool			use_mirror = false;
+
+    TransformGizmo  mirror_gizmo;
+    EntityMesh*     mirror_mesh;
+
     glm::vec3		mirror_origin = glm::vec3(0.0f, 0.0f, 0.0f);
     glm::vec3		mirror_normal = glm::vec3(1.0f, 0.0f, 0.0f);
+
+    /*
+    *   Mirror
+    */
+
+    bool			stamp_enabled = false;
 
     void enable_tool(eTool tool);
 

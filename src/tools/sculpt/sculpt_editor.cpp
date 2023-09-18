@@ -43,6 +43,7 @@ void SculptEditor::initialize()
         ui::Widget* paint_widget = gui.make_button("paint", "data/textures/paint.png");
         gui.close_group();
         gui.make_button("mirror", "data/textures/mirror.png");
+        gui.make_button("stamp", "data/textures/stamp.png");
         ui::Widget* colors_widget = gui.make_button("colors", "data/textures/colors.png");
 
         // Sculpt primitive dropdown
@@ -88,30 +89,23 @@ void SculptEditor::initialize()
 
     // Set events
     {
-        gui.bind("sculpt", [&](const std::string& signal, float value) {
-            enable_tool(SCULPT);
-        });
-
+        gui.bind("sculpt", [&](const std::string& signal, float value) { enable_tool(SCULPT); });
         gui.bind("sphere", [&](const std::string& signal, float value) {
             current_primitive = SD_SPHERE;
             mesh_preview->set_mesh(Mesh::get("data/meshes/wired_sphere.obj"));
         });
-
         gui.bind("cube", [&](const std::string& signal, float value) {
             current_primitive = SD_BOX;
             mesh_preview->set_mesh(Mesh::get("data/meshes/hollow_cube.obj"));
         });
-
-        gui.bind("paint", [&](const std::string& signal, float value) {
-            enable_tool(PAINT);
-        });
+        gui.bind("paint", [&](const std::string& signal, float value) { enable_tool(PAINT); });
+        gui.bind("mirror", [&](const std::string& signal, float value) { use_mirror = !use_mirror; });
+        gui.bind("stamp", [&](const std::string& signal, float value) { stamp_enabled = !stamp_enabled; });
 
         gui.bind("colors_t1_1", [&](const std::string& signal, float value) { current_color = Color(0.2f,  0.21f, 0.77f,  1.f); });
         gui.bind("colors_t1_2", [&](const std::string& signal, float value) { current_color = Color(0.41f, 0.57f, 0.79f,  1.f); });
         gui.bind("colors_t1_3", [&](const std::string& signal, float value) { current_color = Color(0.41f, 0.76f, 0.79f,  1.f); });
         gui.bind("colors_t1_4", [&](const std::string& signal, float value) { current_color = Color(0.64f, 0.9f,  0.93f,  1.f); });
-
-        gui.bind("mirror", [&](const std::string& signal, float value) { use_mirror = !use_mirror; });
     }
 
     enable_tool(SCULPT);
@@ -122,6 +116,8 @@ void SculptEditor::update(float delta_time)
     if (current_tool == NONE) {
         return;
     }
+
+    tools[current_tool]->stamp_enabled = stamp_enabled;
 
     bool tool_used = tools[current_tool]->update(delta_time);
 
