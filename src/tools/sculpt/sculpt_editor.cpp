@@ -26,7 +26,7 @@ void SculptEditor::initialize()
     floor_grid_mesh = new EntityMesh();
     Mesh* q_mesh = new Mesh();
     q_mesh->create_quad(3.0f, 3.0f);
-    floor_grid_mesh->set_shader(Shader::get("data/shaders/mesh_grid.wgsl"));
+    floor_grid_mesh->set_material_shader(Shader::get("data/shaders/mesh_grid.wgsl"));
     floor_grid_mesh->set_mesh(q_mesh);
     floor_grid_mesh->set_translation(glm::vec3(0.0f));
     floor_grid_mesh->rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
@@ -104,6 +104,7 @@ void SculptEditor::update(float delta_time)
 
     if (current_tool == SCULPT && tool_used) {
         sculpt_started = true;
+        mirror_gizmo.initialize(POSITION_GIZMO, sculpt_start_position + glm::vec3(0.0f, 1.0f, 0.0f));
     }
 
     Edit& edit_to_add = tools[current_tool]->get_edit_to_add();
@@ -112,8 +113,6 @@ void SculptEditor::update(float delta_time)
     if (!sculpt_started) {
         sculpt_start_position = edit_to_add.position;
         renderer->set_sculpt_start_position(sculpt_start_position);
-
-        mirror_gizmo.initialize(POSITION_GIZMO, sculpt_start_position + glm::vec3(0.0f, 1.0f, 0.0f));
 
         mirror_origin = sculpt_start_position + glm::vec3(0.0f, 1.0f, 0.0f);
     }
