@@ -7,11 +7,11 @@
 #include <framework/intersections.h>
 #include <utils.h>
 
+#include "framework/scene/parse_scene.h"
+
 void TransformGizmo::initialize(const eGizmoType gizmo_use, const glm::vec3 &position) {
 	type = gizmo_use;
-	arrow_mesh = new EntityMesh();
-	arrow_mesh->set_mesh(Mesh::get("data/meshes/arrow.obj"));
-	arrow_mesh->set_shader(Shader::get("data/shaders/mesh_color.wgsl"));
+    arrow_mesh = parse_scene("data/meshes/arrow.obj");
 
 	gizmo_scale = glm::vec3(0.1f, 0.1f, 0.1f);
     gizmo_position = position;
@@ -91,15 +91,15 @@ void TransformGizmo::render() {
 	if (type == POSITION_GIZMO) {
 		arrow_mesh->set_translation(gizmo_position);
 		arrow_mesh->scale(gizmo_scale);
-		arrow_mesh->set_color(glm::vec4(0.0f, 0.0f, 1.0f, 1.0f) + ((axis_y_selected) ? glm::vec4(0.5f, 0.5f, 0.5f, 0.0f) : glm::vec4(0.0f)));
+		arrow_mesh->set_material_color(glm::vec4(0.0f, 0.0f, 1.0f, 1.0f) + ((axis_y_selected) ? glm::vec4(0.5f, 0.5f, 0.5f, 0.0f) : glm::vec4(0.0f)));
 		arrow_mesh->render();
 
 		arrow_mesh->rotate(0.0174533f * 90.0f, glm::vec3(0.0f, 0.0f, 1.0f));
-		arrow_mesh->set_color(glm::vec4(0.0f, 1.0f, 0.0f, 1.0f) + ((axis_x_selected) ? glm::vec4(0.5f, 0.5f, 0.5f, 0.0f) : glm::vec4(0.0f)));
+		arrow_mesh->set_material_color(glm::vec4(0.0f, 1.0f, 0.0f, 1.0f) + ((axis_x_selected) ? glm::vec4(0.5f, 0.5f, 0.5f, 0.0f) : glm::vec4(0.0f)));
 		arrow_mesh->render();
 
 		arrow_mesh->rotate(0.0174533f * 90.0f, glm::vec3(1.0f, 0.0f, 0.0f));
-		arrow_mesh->set_color(glm::vec4(1.0f, 0.0f, 0.0f, 1.0f) + ((axis_z_selected) ? glm::vec4(0.5f, 0.5f, 0.5f, 0.0f) : glm::vec4(0.0f)));
+		arrow_mesh->set_material_color(glm::vec4(1.0f, 0.0f, 0.0f, 1.0f) + ((axis_z_selected) ? glm::vec4(0.5f, 0.5f, 0.5f, 0.0f) : glm::vec4(0.0f)));
 		arrow_mesh->render();
 	}
 }

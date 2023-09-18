@@ -28,6 +28,10 @@ class SculptEditor {
 
     EntityMesh*             mesh_preview = nullptr;
 
+    EntityMesh*             sphere_mesh = nullptr;
+    EntityMesh*             cube_mesh = nullptr;
+
+
     bool			        rotation_started = false;
 
     glm::vec3		        sculpt_start_position;

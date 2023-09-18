@@ -58,7 +58,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var mask = distance(in.uv, vec2f(0.5));
     mask = step(0.45, mask);
 
-    var masked_color = mix(in.color, color.rgb, 1 - mask);
+    var masked_color = mix(in.color, color.rgb, 1.0 - mask);
     out.color = vec4f(pow(masked_color, vec3f(2.2)), color.a); // Color
 
     return out;
