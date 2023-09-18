@@ -46,6 +46,19 @@ const lightPos = vec3f(0.0, 2.0, 1.0);
 const fov = 45.0;
 const up = vec3f(0.0, 1.0, 0.0);
 
+// SKYMAP FUNCTION
+fn irradiance_spherical_harmonics(n : vec3f) -> vec3f {
+return vec3f(0.366, 0.363, 0.371)
+     + vec3f(0.257, 0.252, 0.263) * (n.y)
+     + vec3f(0.108, 0.109, 0.113) * (n.z)
+     + vec3f(0.028, 0.044, 0.05) * (n.x)
+     + vec3f(0.027, 0.038, 0.036) * (n.y * n.x)
+     + vec3f(0.11, 0.11, 0.118) * (n.y * n.z)
+     + vec3f(-0.11, -0.113, -0.13) * (3.0 * n.z * n.z - 1.0)
+     + vec3f(0.016, 0.018, 0.016) * (n.z * n.x)
+     + vec3f(-0.033, -0.033, -0.037) * (n.x * n.x - n.y * n.y);
+}
+
 fn sample_sdf(position : vec3f, trilinear : bool) -> Surface
 {
     let p = (position - compute_data.sculpt_start_position + vec3(0.5, -0.5, 0.5)) * 512.0;
@@ -160,7 +173,8 @@ fn raymarch(ray_origin : vec3f, ray_dir : vec3f, view_proj : mat4x4f) -> vec4f
         depth += surface.distance;
 	}
 
-    return vec4f(1.0, 1.0, 1.0, 1.0);
+    // Use a two band spherical harmonic as a skymap
+    return vec4f(irradiance_spherical_harmonics(ray_dir), 0.999);
 }
 
 fn get_ray_direction(inv_view_projection : mat4x4f, uv : vec2f) -> vec3f
