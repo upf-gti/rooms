@@ -28,16 +28,13 @@ void SculptEditor::initialize()
         }
     }
 
-    // Config UI
-    gui.set_workspace({ 256.f, 144 });
-
-    /*ui::Widget* debug = gui.make_rect({0, 0}, { 256.f, 144.f }, colors::RED);
-    debug->priority = -1;*/
-
     // UI Layout from JSON
     {
         load_ui_layout( "data/ui.json" );
     }
+
+    /*ui::Widget* debug = gui.make_rect({0, 0}, { 256.f, 144.f }, colors::RED);
+    debug->priority = -1;*/
 
     // Set events
     {
@@ -181,6 +178,10 @@ void SculptEditor::load_ui_layout(const std::string& filename)
     std::map<std::string, ui::Widget*> widgets_loaded;
     const json& j = load_json(filename);
     float group_elements_pending = -1;
+
+    float width = j["width"];
+    float height = j["height"];
+    gui.set_workspace({ width, height });
 
     std::function<void(const json&)> read_element = [&](const json& j) {
 
