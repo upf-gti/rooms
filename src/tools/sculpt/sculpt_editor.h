@@ -17,6 +17,8 @@ class SculptEditor {
     Tool*                   tools[TOOL_COUNT];
     eTool					current_tool = NONE;
 
+    EntityMesh*             floor_grid_mesh = nullptr;
+
     /*
     *	Edits
     */
@@ -45,7 +47,7 @@ class SculptEditor {
     bool			use_mirror = false;
 
     TransformGizmo  mirror_gizmo;
-    EntityMesh*     mirror_mesh;
+    EntityMesh*     mirror_mesh = nullptr;
 
     glm::vec3		mirror_origin = glm::vec3(0.0f, 0.0f, 0.0f);
     glm::vec3		mirror_normal = glm::vec3(1.0f, 0.0f, 0.0f);

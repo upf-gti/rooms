@@ -120,6 +120,7 @@ void RaymarchingRenderer::render()
     render_mesh_ui_pipeline.clean_renderables();
     render_mesh_ui_texture_pipeline.clean_renderables();
     render_fonts_pipeline.clean_renderables();
+    render_mesh_grid_pipeline.clean_renderables();
 
     // Check validation errors
     //webgpu_context.print_errors();
@@ -238,6 +239,7 @@ void RaymarchingRenderer::render_meshes(WGPUTextureView swapchain_view, WGPUText
     render_pipeline(render_mesh_ui_texture_pipeline);
     render_pipeline(render_mesh_texture_pipeline);
     render_pipeline(render_fonts_pipeline);
+    render_pipeline(render_mesh_grid_pipeline);
 
     wgpuRenderPassEncoderEnd(render_pass);
 
@@ -691,6 +693,7 @@ void RaymarchingRenderer::init_render_mesh_pipelines()
     render_mesh_ui_shader = Shader::get("data/shaders/mesh_ui.wgsl");
     render_mesh_ui_texture_shader = Shader::get("data/shaders/mesh_texture_ui.wgsl");
     render_fonts_shader = Shader::get("data/shaders/sdf_fonts.wgsl");
+    render_mesh_grid_shader = Shader::get("data/shaders/mesh_grid.wgsl");
 
     // Camera
 
@@ -739,6 +742,7 @@ void RaymarchingRenderer::init_render_mesh_pipelines()
     render_mesh_ui_pipeline.create_render(render_mesh_ui_shader, color_target, true);
     render_mesh_ui_texture_pipeline.create_render(render_mesh_ui_texture_shader, color_target, true);
     render_fonts_pipeline.create_render(render_fonts_shader, color_target, true);
+    render_mesh_grid_pipeline.create_render(render_mesh_grid_shader, color_target, true);
 }
 
 void RaymarchingRenderer::init_compute_raymarching_pipeline()

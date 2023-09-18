@@ -66,6 +66,10 @@ class RaymarchingRenderer : public Renderer {
     Pipeline                render_mesh_ui_texture_pipeline;
     Shader*                 render_mesh_ui_texture_shader = nullptr;
 
+    // Render Mesh Grid
+    Pipeline                render_mesh_grid_pipeline;
+    Shader*                 render_mesh_grid_shader = nullptr;
+
     // Font rendering
     Pipeline                render_fonts_pipeline;
     Shader*                 render_fonts_shader = nullptr;

@@ -19,6 +19,14 @@ void SculptEditor::initialize()
     mirror_mesh->set_shader(Shader::get("data/shaders/mesh_texture.wgsl"));
     mirror_mesh->set_mesh(quad_mesh);
 
+    floor_grid_mesh = new EntityMesh();
+    Mesh* q_mesh = new Mesh();
+    q_mesh->create_quad(3.0f, 3.0f);
+    floor_grid_mesh->set_shader(Shader::get("data/shaders/mesh_grid.wgsl"));
+    floor_grid_mesh->set_mesh(q_mesh);
+    floor_grid_mesh->set_translation(glm::vec3(0.0f));
+    floor_grid_mesh->rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+
     tools[SCULPT] = new SculptTool();
     tools[PAINT] = new PaintTool();
 
@@ -180,6 +188,8 @@ void SculptEditor::render()
         mirror_mesh->rotate(glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         mirror_mesh->render();
     }
+
+    floor_grid_mesh->render();
 #endif
 }
 
