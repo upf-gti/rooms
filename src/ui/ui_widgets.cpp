@@ -126,10 +126,10 @@ namespace ui {
 		bool was_pressed = hovered && Input::was_button_pressed(workspace.select_button);
 
 
-        if(entity->get_shader() == Shader::get("data/shaders/mesh_texture_ui.wgsl"))
-		    entity->set_color(is_pressed ? colors::GRAY : (hovered ? Color(0.95f, 0.76f, 0.17f, 1.f) : color));
+        if(entity->get_material_shader() == Shader::get("data/shaders/mesh_texture_ui.wgsl"))
+		    entity->set_material_color(is_pressed ? colors::GRAY : (hovered ? Color(0.95f, 0.76f, 0.17f, 1.f) : color));
         else
-            entity->set_color(color);
+            entity->set_material_color(color);
 		
 		if (was_pressed)
 			controller->emit_signal(signal, color);

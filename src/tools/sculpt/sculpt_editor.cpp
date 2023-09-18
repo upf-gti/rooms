@@ -3,20 +3,24 @@
 #include "paint.h"
 #include "graphics/raymarching_renderer.h"
 
+#include "framework/scene/parse_scene.h"
+
 void SculptEditor::initialize()
 {
     renderer = dynamic_cast<RaymarchingRenderer*>(Renderer::instance);
 
-    mesh_preview = new EntityMesh();
-    mesh_preview->set_mesh(Mesh::get("data/meshes/wired_sphere.obj"));
-    mesh_preview->set_shader(Shader::get("data/shaders/mesh_color.wgsl"));
-    mesh_preview->set_color(colors::WHITE);
+    sphere_mesh = parse_scene("data/meshes/wired_sphere.obj");
+    sphere_mesh->set_material_color(colors::WHITE);
+    cube_mesh = parse_scene("data/meshes/hollow_cube.obj");
+    cube_mesh->set_material_color(colors::WHITE);
+
+    mesh_preview = sphere_mesh;
 
     mirror_mesh = new EntityMesh();
     Mesh* quad_mesh = new Mesh();
     quad_mesh->create_quad(0.5f, 0.5f);
-    quad_mesh->set_texture(Texture::get("data/textures/mirror_quad_texture.png"));
-    mirror_mesh->set_shader(Shader::get("data/shaders/mesh_texture.wgsl"));
+    mirror_mesh->set_material_diffuse(Texture::get("data/textures/mirror_quad_texture.png"));
+    mirror_mesh->set_material_shader(Shader::get("data/shaders/mesh_texture.wgsl"));
     mirror_mesh->set_mesh(quad_mesh);
 
     tools[SCULPT] = new SculptTool();
@@ -41,11 +45,11 @@ void SculptEditor::initialize()
         gui.bind("sculpt", [&](const std::string& signal, Color color) { enable_tool(SCULPT); });
         gui.bind("sphere", [&](const std::string& signal, Color color) {
             current_primitive = SD_SPHERE;
-            mesh_preview->set_mesh(Mesh::get("data/meshes/wired_sphere.obj"));
+            mesh_preview = sphere_mesh;
         });
         gui.bind("cube", [&](const std::string& signal, Color color) {
             current_primitive = SD_BOX;
-            mesh_preview->set_mesh(Mesh::get("data/meshes/hollow_cube.obj"));
+            mesh_preview = cube_mesh;
         });
         gui.bind("paint", [&](const std::string& signal, Color color) { enable_tool(PAINT); });
         gui.bind("mirror", [&](const std::string& signal, Color color) { use_mirror = !use_mirror; });

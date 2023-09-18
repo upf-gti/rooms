@@ -6,6 +6,8 @@
 #include "graphics/raymarching_renderer.h"
 #include "framework/entities/entity_text.h"
 
+#include "framework/scene/parse_scene.h"
+
 namespace ui {
 
     std::map<std::string, Widget*> Controller::groups;
@@ -28,9 +30,7 @@ namespace ui {
 
         root = new Widget();
 
-		raycast_pointer = new EntityMesh();
-		raycast_pointer->set_shader(Shader::get("data/shaders/mesh_color.wgsl"));
-		raycast_pointer->set_mesh(Mesh::get("data/meshes/raycast.obj"));
+        raycast_pointer = parse_scene("data/meshes/raycast.obj");
 	}
 
 	bool Controller::is_active()
@@ -130,7 +130,7 @@ namespace ui {
 
 		// Render quad in local workspace position
 		EntityMesh* rect = new EntityMesh();
-		rect->set_shader(Shader::get("data/shaders/mesh_color.wgsl"));
+		rect->set_material_shader(Shader::get("data/shaders/mesh_color.wgsl"));
 		Mesh* mesh = new Mesh();
 		mesh->create_quad(size.x, size.y, color);
 		rect->set_mesh(mesh);
@@ -146,8 +146,7 @@ namespace ui {
 		scale *= global_scale;
 
 		TextEntity* e_text = new TextEntity(text);
-		e_text->set_shader(Shader::get("data/shaders/sdf_fonts.wgsl"));
-		e_text->set_color(color);
+		e_text->set_material_color(color);
 		e_text->set_scale(scale);
 		e_text->generate_mesh();
 
@@ -173,10 +172,10 @@ namespace ui {
 
 		// Render quad in local workspace position
 		EntityMesh* e_button = new EntityMesh();
-		e_button->set_shader(Shader::get(shader));
+		e_button->set_material_shader(Shader::get(shader));
 		Mesh* mesh = new Mesh();
 		if (texture)
-			mesh->set_texture(Texture::get(texture));
+            e_button->set_material_diffuse(Texture::get(texture));
 
 		mesh->create_quad(size.x, size.y);
 		e_button->set_mesh(mesh);
@@ -186,7 +185,7 @@ namespace ui {
         if( group_opened )
             widget->priority = 1;
 
-        widget->m_layer = layout_iterator.y;
+        widget->m_layer = static_cast<uint8_t>(layout_iterator.y);
 
 		append_widget(widget);
 
@@ -214,13 +213,13 @@ namespace ui {
 
 		// Render quad in local workspace position
 		EntityMesh* e_track = new EntityMesh();
-		e_track->set_shader(Shader::get("data/shaders/mesh_color.wgsl"));
+		e_track->set_material_shader(Shader::get("data/shaders/mesh_color.wgsl"));
 		Mesh * mesh = new Mesh();
 		mesh->create_quad(size.x, size.y, colors::GRAY);
 		e_track->set_mesh(mesh);
 		
 		EntityMesh* e_thumb = new EntityMesh();
-		e_thumb->set_shader(Shader::get("data/shaders/mesh_color.wgsl"));
+		e_thumb->set_material_shader(Shader::get("data/shaders/mesh_color.wgsl"));
 		Mesh* thumb_mesh = new Mesh();
 		thumb_mesh->create_quad(size.y, size.y, color);
 		e_thumb->set_mesh(thumb_mesh);
@@ -240,26 +239,26 @@ namespace ui {
 		// Get color rect entity
 		Widget* widget_rect = make_rect(glm::vec2(pos.x + size.x + 1.f, pos.y), glm::vec2(size.y, size.y + offset.y * 2.f), colors::WHITE);
 		EntityMesh* rect = widget_rect->entity;
-		rect->set_color( default_color );
+		rect->set_material_color( default_color );
 
 		ColorPickerWidget* widget = new ColorPickerWidget(rect, default_color);
 		append_widget(widget);
 
 		bind(signal + "_r", [this, signal, w = widget, r = rect](const std::string& s, float value) {
 			w->rect_color.x = value;
-			r->set_color(w->rect_color);
+			r->set_material_color(w->rect_color);
 			emit_signal(signal, w->rect_color);
 		});
 
 		bind(signal + "_g", [this, signal, w = widget, r = rect](const std::string& s, float value) {
 			w->rect_color.y = value;
-			r->set_color(w->rect_color);
+			r->set_material_color(w->rect_color);
 			emit_signal(signal, w->rect_color);
 		});
 
 		bind(signal + "_b", [this, signal, w = widget, r = rect](const std::string& s, float value) {
 			w->rect_color.z = value;
-			r->set_color(w->rect_color);
+			r->set_material_color(w->rect_color);
 			emit_signal(signal, w->rect_color);
 		});
 
@@ -316,7 +315,7 @@ namespace ui {
         process_params(pos, size);
 
         EntityMesh* e = new EntityMesh();
-        e->set_shader(Shader::get("data/shaders/mesh_ui.wgsl"));
+        e->set_material_shader(Shader::get("data/shaders/mesh_ui.wgsl"));
         Mesh* mesh = new Mesh();
         mesh->create_quad(size.x, size.y, color);
         mesh->set_alias(group_name);

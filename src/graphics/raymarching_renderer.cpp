@@ -25,7 +25,7 @@ int RaymarchingRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
 {
     Renderer::initialize(window, use_mirror_screen);
 
-    clear_color = glm::vec3(0.22);
+    clear_color = glm::vec3(0.22f);
 
     init_render_quad_pipeline();
     init_render_mesh_pipelines();
