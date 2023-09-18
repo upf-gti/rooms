@@ -93,7 +93,7 @@ namespace ui {
         void make_submenu(Widget* parent, const std::string& name);
         void close_submenu();
 
-        void make_group(const std::string& group_name, float number_of_widgets, const Color& color = colors::WHITE);
+        Widget* make_group(const std::string& group_name, float number_of_widgets, const Color& color = colors::WHITE);
         void close_group();
 
         static Widget* get_group_from_alias(const std::string& alias);

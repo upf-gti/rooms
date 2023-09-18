@@ -132,7 +132,7 @@ namespace ui {
             entity->set_color(color);
 		
 		if (was_pressed)
-			controller->emit_signal(signal, 1.f);
+			controller->emit_signal(signal, color);
 	}
 
 	/*

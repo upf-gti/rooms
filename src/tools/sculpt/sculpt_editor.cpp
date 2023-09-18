@@ -38,23 +38,43 @@ void SculptEditor::initialize()
 
     // Set events
     {
-        gui.bind("sculpt", [&](const std::string& signal, float value) { enable_tool(SCULPT); });
-        gui.bind("sphere", [&](const std::string& signal, float value) {
+        gui.bind("sculpt", [&](const std::string& signal, Color color) { enable_tool(SCULPT); });
+        gui.bind("sphere", [&](const std::string& signal, Color color) {
             current_primitive = SD_SPHERE;
             mesh_preview->set_mesh(Mesh::get("data/meshes/wired_sphere.obj"));
         });
-        gui.bind("cube", [&](const std::string& signal, float value) {
+        gui.bind("cube", [&](const std::string& signal, Color color) {
             current_primitive = SD_BOX;
             mesh_preview->set_mesh(Mesh::get("data/meshes/hollow_cube.obj"));
         });
-        gui.bind("paint", [&](const std::string& signal, float value) { enable_tool(PAINT); });
-        gui.bind("mirror", [&](const std::string& signal, float value) { use_mirror = !use_mirror; });
-        gui.bind("stamp", [&](const std::string& signal, float value) { stamp_enabled = !stamp_enabled; });
+        gui.bind("paint", [&](const std::string& signal, Color color) { enable_tool(PAINT); });
+        gui.bind("mirror", [&](const std::string& signal, Color color) { use_mirror = !use_mirror; });
+        gui.bind("stamp", [&](const std::string& signal, Color color) { stamp_enabled = !stamp_enabled; });
 
-        gui.bind("colors_t1_1", [&](const std::string& signal, float value) { current_color = Color(0.2f,  0.21f, 0.77f,  1.f); });
-        gui.bind("colors_t1_2", [&](const std::string& signal, float value) { current_color = Color(0.41f, 0.57f, 0.79f,  1.f); });
-        gui.bind("colors_t1_3", [&](const std::string& signal, float value) { current_color = Color(0.41f, 0.76f, 0.79f,  1.f); });
-        gui.bind("colors_t1_4", [&](const std::string& signal, float value) { current_color = Color(0.64f, 0.9f,  0.93f,  1.f); });
+        // Bind all colors...
+
+        auto on_press_color = [&](const std::string& signal, Color color) {
+            current_color = color;
+            add_recent_color(color);
+        };
+
+        auto& _colors = j_ui["colors_to_bind"];
+        for (auto& color_name : _colors) {
+            gui.bind(color_name, on_press_color);
+        }
+
+        // Bind recent colors...
+
+        auto on_press_recent_color = [&](const std::string& signal, Color color) {
+            current_color = color;
+        };
+
+        _colors = j_ui["recent_colors_to_bind"];
+        for (auto& color_name : _colors) {
+            gui.bind(color_name, on_press_recent_color);
+        }
+
+        max_recent_colors = _colors.size();
     }
 
     enable_tool(SCULPT);
@@ -175,8 +195,8 @@ void SculptEditor::enable_tool(eTool tool)
 
 void SculptEditor::load_ui_layout(const std::string& filename)
 {
-    std::map<std::string, ui::Widget*> widgets_loaded;
     const json& j = load_json(filename);
+    j_ui = j;
     float group_elements_pending = -1;
 
     float width = j["width"];
@@ -194,7 +214,10 @@ void SculptEditor::load_ui_layout(const std::string& filename)
             float nitems = j["nitems"];
             group_elements_pending = nitems;
             glm::vec4 color = load_vec4(j, "color", colors::GRAY);
-            gui.make_group(name, nitems, color);
+            ui::Widget* group = gui.make_group(name, nitems, color);
+
+            if (j.count("store_widget"))
+                widgets_loaded[name] = group;
         }
         else if (type == "button")
         {
@@ -238,5 +261,30 @@ void SculptEditor::load_ui_layout(const std::string& filename)
     auto& _elements = j["elements"];
     for (auto& el : _elements) {
         read_element(el);
+    }
+}
+
+void SculptEditor::add_recent_color(const Color& color)
+{
+    auto it = std::find(recent_colors.begin(), recent_colors.end(), color);
+
+    // Color is not present in recents...
+    if (it == recent_colors.end())
+    {
+        recent_colors.insert(recent_colors.begin(), color);
+
+        if (recent_colors.size() > max_recent_colors)
+        {
+            recent_colors.pop_back();
+        }
+    }
+
+    ui::Widget* recent_group = widgets_loaded["g_recent_colors"];
+
+    assert(recent_colors.size() <= recent_group->children.size());
+    for (uint8_t i = 0; i < recent_colors.size(); ++i)
+    {
+        ui::ButtonWidget* child = static_cast<ui::ButtonWidget*>(recent_group->children[i]);
+        child->color = recent_colors[i];
     }
 }

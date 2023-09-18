@@ -271,7 +271,7 @@ namespace ui {
         static_cast<ButtonWidget*>(widget)->is_submenu = true;
 
         // Visibility callback...
-		bind(name, [widget = widget](const std::string& signal, float value) {
+		bind(name, [widget = widget](const std::string& signal, Color color) {
 
             Widget* parent = widget->parent;
             if (parent->type == GROUP)
@@ -300,7 +300,7 @@ namespace ui {
         parent_queue.pop_back();
     }
 
-    void Controller::make_group(const std::string& group_name, float number_of_widgets, const Color& color)
+    Widget* Controller::make_group(const std::string& group_name, float number_of_widgets, const Color& color)
     {
         current_number_of_group_widgets = number_of_widgets;
 
@@ -330,6 +330,8 @@ namespace ui {
         parent_queue.push_back(group);
         group_opened = true;
         layout_iterator.x += _size.x - (BUTTON_SIZE + X_GROUP_MARGIN);
+
+        return group;
     }
 
     void Controller::close_group()
