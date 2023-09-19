@@ -232,7 +232,15 @@ void SculptEditor::load_ui_layout(const std::string& filename)
             assert(j.count("nitems") > 0);
             float nitems = j["nitems"];
             group_elements_pending = nitems;
-            glm::vec4 color = load_vec4(j, "color", colors::GRAY);
+
+            glm::vec4 color;
+            if (j.count("color")) {
+                color = load_vec4(j["color"]);
+            }
+            else {
+                color = colors::GRAY;
+            }
+
             ui::Widget* group = gui.make_group(name, nitems, color);
 
             if (j.count("store_widget"))
@@ -248,7 +256,7 @@ void SculptEditor::load_ui_layout(const std::string& filename)
 
             Color color = colors::WHITE;
             if (j.count("color"))
-                color = load_vec4(j, "color", glm::vec4());
+                color = load_vec4(j["color"]);
 
             ui::Widget* widget = gui.make_button(name, texture.c_str(), shader.c_str(), color);
             group_elements_pending--;
