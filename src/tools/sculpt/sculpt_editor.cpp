@@ -31,6 +31,8 @@ void SculptEditor::initialize()
     floor_grid_mesh->set_translation(glm::vec3(0.0f));
     floor_grid_mesh->rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
+    mirror_gizmo.initialize(POSITION_GIZMO, sculpt_start_position + glm::vec3(0.0f, 1.0f, 0.0f));
+
     tools[SCULPT] = new SculptTool();
     tools[PAINT] = new PaintTool();
 
@@ -61,7 +63,7 @@ void SculptEditor::initialize()
         });
         gui.bind("paint", [&](const std::string& signal, Color color) { enable_tool(PAINT); });
         gui.bind("mirror", [&](const std::string& signal, Color color) { use_mirror = !use_mirror; });
-        gui.bind("stamp", [&](const std::string& signal, Color color) { stamp_enabled = !stamp_enabled; });
+        gui.bind("snap_to_grid", [&](const std::string& signal, Color color) { snap_to_grid = !snap_to_grid; });
 
         // Bind all colors...
 
@@ -98,16 +100,20 @@ void SculptEditor::update(float delta_time)
         return;
     }
 
-    tools[current_tool]->stamp_enabled = stamp_enabled;
-
     bool tool_used = tools[current_tool]->update(delta_time);
 
     if (current_tool == SCULPT && tool_used) {
         sculpt_started = true;
-        mirror_gizmo.initialize(POSITION_GIZMO, sculpt_start_position + glm::vec3(0.0f, 1.0f, 0.0f));
     }
 
     Edit& edit_to_add = tools[current_tool]->get_edit_to_add();
+
+    if (snap_to_grid) {
+        float grid_multiplier = 1.0f / snap_grid_size;
+        // Uncomment for grid size of half of the edit radius
+        // grid_multiplier = 1.0f / (edit_to_add.dimensions.x / 2.0f);
+        edit_to_add.position = glm::round(edit_to_add.position * grid_multiplier) / grid_multiplier;
+    }
 
     // Set center of sculpture and reuse it as mirror center
     if (!sculpt_started) {

@@ -48,15 +48,15 @@ const up = vec3f(0.0, 1.0, 0.0);
 
 // SKYMAP FUNCTION
 fn irradiance_spherical_harmonics(n : vec3f) -> vec3f {
-return vec3f(0.366, 0.363, 0.371)
-     + vec3f(0.257, 0.252, 0.263) * (n.y)
-     + vec3f(0.108, 0.109, 0.113) * (n.z)
-     + vec3f(0.028, 0.044, 0.05) * (n.x)
-     + vec3f(0.027, 0.038, 0.036) * (n.y * n.x)
-     + vec3f(0.11, 0.11, 0.118) * (n.y * n.z)
-     + vec3f(-0.11, -0.113, -0.13) * (3.0 * n.z * n.z - 1.0)
-     + vec3f(0.016, 0.018, 0.016) * (n.z * n.x)
-     + vec3f(-0.033, -0.033, -0.037) * (n.x * n.x - n.y * n.y);
+    return vec3f(0.366, 0.363, 0.371)
+        + vec3f(0.257, 0.252, 0.263) * (n.y)
+        + vec3f(0.108, 0.109, 0.113) * (n.z)
+        + vec3f(0.028, 0.044, 0.05) * (n.x)
+        + vec3f(0.027, 0.038, 0.036) * (n.y * n.x)
+        + vec3f(0.11, 0.11, 0.118) * (n.y * n.z)
+        + vec3f(-0.11, -0.113, -0.13) * (3.0 * n.z * n.z - 1.0)
+        + vec3f(0.016, 0.018, 0.016) * (n.z * n.x)
+        + vec3f(-0.033, -0.033, -0.037) * (n.x * n.x - n.y * n.y);
 }
 
 fn sample_sdf(position : vec3f, trilinear : bool) -> Surface

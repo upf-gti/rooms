@@ -234,12 +234,12 @@ void RaymarchingRenderer::render_meshes(WGPUTextureView swapchain_view, WGPUText
         }
     };
 
-    render_pipeline(render_mesh_pipeline);
+    render_pipeline(render_mesh_grid_pipeline);
     render_pipeline(render_mesh_ui_pipeline);
     render_pipeline(render_mesh_ui_texture_pipeline);
+    render_pipeline(render_mesh_pipeline);
     render_pipeline(render_mesh_texture_pipeline);
     render_pipeline(render_fonts_pipeline);
-    render_pipeline(render_mesh_grid_pipeline);
 
     wgpuRenderPassEncoderEnd(render_pass);
 

@@ -47,6 +47,11 @@ class SculptEditor {
     *	Modifiers
     */
 
+    // Snap to grid
+
+    bool            snap_to_grid = false;
+    float           snap_grid_size = 0.05f;
+
     // Mirror
 
     bool			use_mirror = false;
@@ -57,8 +62,6 @@ class SculptEditor {
     glm::vec3		mirror_origin = glm::vec3(0.0f, 0.0f, 0.0f);
     glm::vec3		mirror_normal = glm::vec3(1.0f, 0.0f, 0.0f);
 
-
-    bool			stamp_enabled = false;
     
     // UI
 
