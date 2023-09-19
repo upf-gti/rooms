@@ -920,8 +920,8 @@ void RaymarchingRenderer::resize_window(int width, int height)
 {
     Renderer::resize_window(width, height);
 
-    compute_raymarching_data.render_width = static_cast<float>(webgpu_context.render_width);
-    compute_raymarching_data.render_height = static_cast<float>(webgpu_context.render_height);
+    compute_raymarching_data.render_width = static_cast<float>(webgpu_context.screen_width);
+    compute_raymarching_data.render_height = static_cast<float>(webgpu_context.screen_height);
 
     init_render_quad_bind_groups();
 

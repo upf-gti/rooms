@@ -273,6 +273,13 @@ void SculptEditor::load_ui_layout(const std::string& filename)
         else if (type == "submenu")
         {
             ui::Widget* parent = widgets_loaded[name];
+
+            if (!parent) {
+                assert(0);
+                std::cerr << "Can not find parent button with name " << name << std::endl;
+                return;
+            }
+
             gui.make_submenu(parent, name);
 
             assert(j.count("children") > 0);

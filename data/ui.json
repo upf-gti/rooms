@@ -118,6 +118,12 @@
                     "store_widget": true
                 },
                 {
+                    "name": "color_template_palette_6",
+                    "type": "button",
+                    "texture": "data/textures/colors_template_6.png",
+                    "store_widget": true
+                },
+                {
                     "name": "recent_colors",
                     "type": "button",
                     "texture": "data/textures/recent_colors.png",
@@ -256,28 +262,67 @@
                     "type": "button",
                     "texture": "data/textures/circle_white.png",
                     "shader": "data/shaders/mesh_texture.wgsl",
-                    "color": "0.94 0.77 0.44 1"
+                    "color": "0.58 0.12 0.12 1"
                 },
                 {
                     "name": "colors_t4_2",
                     "type": "button",
                     "texture": "data/textures/circle_white.png",
                     "shader": "data/shaders/mesh_texture.wgsl",
-                    "color": "0.96 0.67 0.09 1"
+                    "color": "0.83 0.09 0.09 1"
                 },
                 {
                     "name": "colors_t4_3",
                     "type": "button",
                     "texture": "data/textures/circle_white.png",
                     "shader": "data/shaders/mesh_texture.wgsl",
-                    "color": "0.98 0.9 0.08 1"
+                    "color": "0.88 0.42 0.42 1"
                 },
                 {
                     "name": "colors_t4_4",
                     "type": "button",
                     "texture": "data/textures/circle_white.png",
                     "shader": "data/shaders/mesh_texture.wgsl",
-                    "color": "0.94 0.92 0.7 1"
+                    "color": "0.90 0.71 0.71 1"
+                }
+            ]
+        },
+        {
+            "name": "color_template_palette_6",
+            "type": "submenu",
+            "children": [
+                {
+                    "name": "g_colors_t6",
+                    "type": "group",
+                    "nitems": 4
+                },
+                {
+                    "name": "colors_t6_1",
+                    "type": "button",
+                    "texture": "data/textures/circle_white.png",
+                    "shader": "data/shaders/mesh_texture.wgsl",
+                    "color": "0.0 0.0 0.0 1"
+                },
+                {
+                    "name": "colors_t6_2",
+                    "type": "button",
+                    "texture": "data/textures/circle_white.png",
+                    "shader": "data/shaders/mesh_texture.wgsl",
+                    "color": "0.33 0.33 0.33 1"
+                },
+                {
+                    "name": "colors_t6_3",
+                    "type": "button",
+                    "texture": "data/textures/circle_white.png",
+                    "shader": "data/shaders/mesh_texture.wgsl",
+                    "color": "0.66 0.66 0.66 1"
+                },
+                {
+                    "name": "colors_t6_4",
+                    "type": "button",
+                    "texture": "data/textures/circle_white.png",
+                    "shader": "data/shaders/mesh_texture.wgsl",
+                    "color": "1.0 1.0 1.0 1"
                 }
             ]
         },
@@ -334,7 +379,8 @@
         "colors_t1_1", "colors_t1_2", "colors_t1_3", "colors_t1_4",
         "colors_t2_1", "colors_t2_2", "colors_t2_3", "colors_t2_4",
         "colors_t3_1", "colors_t3_2", "colors_t3_3", "colors_t3_4",
-        "colors_t4_1", "colors_t4_2", "colors_t4_3", "colors_t4_4"
+        "colors_t4_1", "colors_t4_2", "colors_t4_3", "colors_t4_4",
+        "colors_t6_1", "colors_t6_2", "colors_t6_3", "colors_t6_4"
     ],
     "recent_colors_to_bind": [
         "recent_color_1", "recent_color_2", "recent_color_3", "recent_color_4",
