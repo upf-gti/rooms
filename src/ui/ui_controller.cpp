@@ -90,7 +90,7 @@ namespace ui {
 	}
 
     // Gets next button position (applies margin)
-    const glm::vec2& Controller::compute_position()
+    glm::vec2 Controller::compute_position()
     {
         float x, y;
 

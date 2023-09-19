@@ -59,7 +59,7 @@ namespace ui {
 
 		void append_widget( Widget* widget );
 		void process_params(glm::vec2& position, glm::vec2& size, bool skip_to_local = false);
-        const glm::vec2& compute_position();
+        glm::vec2 compute_position();
 
 	public:
 

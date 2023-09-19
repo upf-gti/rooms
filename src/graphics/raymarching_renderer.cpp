@@ -37,7 +37,7 @@ int RaymarchingRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
 
     compute_initialize_sdf();
 
-    clear_color = glm::vec3(powf(0.22, 2.2f));
+    clear_color = glm::vec3(powf(0.22f, 2.2f));
 #endif
 
 #ifdef XR_SUPPORT
