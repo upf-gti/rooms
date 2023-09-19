@@ -31,6 +31,8 @@ void SculptEditor::initialize()
     floor_grid_mesh->set_translation(glm::vec3(0.0f));
     floor_grid_mesh->rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
+    mirror_gizmo.initialize(POSITION_GIZMO, sculpt_start_position + glm::vec3(0.0f, 1.0f, 0.0f));
+
     tools[SCULPT] = new SculptTool();
     tools[PAINT] = new PaintTool();
 
@@ -104,7 +106,6 @@ void SculptEditor::update(float delta_time)
 
     if (current_tool == SCULPT && tool_used) {
         sculpt_started = true;
-        mirror_gizmo.initialize(POSITION_GIZMO, sculpt_start_position + glm::vec3(0.0f, 1.0f, 0.0f));
     }
 
     Edit& edit_to_add = tools[current_tool]->get_edit_to_add();
