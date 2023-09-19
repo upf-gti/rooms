@@ -49,7 +49,7 @@ class SculptEditor {
     // Snap to grid
 
     bool            snap_to_grid = false;
-    float           snap_grid_size = 0.01f;
+    float           snap_grid_size = 0.05f;
 
     // Mirror
 

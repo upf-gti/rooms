@@ -63,7 +63,7 @@ void SculptEditor::initialize()
         });
         gui.bind("paint", [&](const std::string& signal, Color color) { enable_tool(PAINT); });
         gui.bind("mirror", [&](const std::string& signal, Color color) { use_mirror = !use_mirror; });
-        gui.bind("stamp", [&](const std::string& signal, Color color) { snap_to_grid = !snap_to_grid; });
+        gui.bind("snap_to_grid", [&](const std::string& signal, Color color) { snap_to_grid = !snap_to_grid; });
 
         // Bind all colors...
 
