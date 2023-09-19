@@ -41,6 +41,7 @@ fn evalSdf(position : vec3u) -> Surface
 
 fn compute(@builtin(global_invocation_id) id: vec3<u32>) {
     let world_id : vec3<u32> = merge_data.edits_aabb_start + id;
-    textureStore(write_sdf, world_id, evalSdf(world_id));
+    let result_sdf : Surface = evalSdf(world_id);
+    textureStore(write_sdf, world_id, vec4f(result_sdf.color, result_sdf.distance));
     //sdf_data.data[world_id.x + world_id.y * 512 + world_id.z * 512 * 512] = evalSdf(world_id);
 }

@@ -790,8 +790,8 @@ void RaymarchingRenderer::init_compute_raymarching_pipeline()
         WGPUTextureView texture_view = sdf_textures[i].get_view();
 
         for (int j = 0; j < 2; ++j) {
-            u_compute_texture_sdf_storage[j + i * 2].data = texture_view;
-            u_compute_texture_sdf_storage[j + i * 2].binding = 2 + j;
+            u_compute_texture_sdf_storage[i * 2 + j].data = texture_view;
+            u_compute_texture_sdf_storage[i * 2 + j].binding = 2 + j;
         }
 
         init_compute_raymarching_textures(i);
@@ -827,7 +827,10 @@ void RaymarchingRenderer::init_compute_raymarching_textures(int index)
     u_compute_texture_right_eye.data = right_eye_texture.get_view();
     u_compute_texture_right_eye.binding = 1;
 
-    std::vector<Uniform*> uniforms = { &u_compute_texture_left_eye, &u_compute_texture_right_eye, &u_compute_texture_sdf_storage[index * 2] };
+    u_sampler.data = webgpu_context.create_sampler(); // Using all default params
+    u_sampler.binding = 3;
+
+    std::vector<Uniform*> uniforms = { &u_compute_texture_left_eye, &u_compute_texture_right_eye, &u_compute_texture_sdf_storage[index * 2], &u_sampler };
 
     compute_raymarching_textures_bind_group[index] = webgpu_context.create_bind_group(uniforms, compute_raymarching_shader, 0);
 }
@@ -836,7 +839,7 @@ void RaymarchingRenderer::init_initialize_sdf_pipeline() {
     initialize_sdf_shader = Shader::get("data/shaders/sdf_initialization.wgsl");
 
     for (int i = 0; i < 2; ++i) {
-        std::vector<Uniform*> uniforms = { &u_compute_texture_sdf_storage[i]};
+        std::vector<Uniform*> uniforms = { &u_compute_texture_sdf_storage[i*2 + 1]};
         initialize_sdf_bind_group[i] = webgpu_context.create_bind_group(uniforms, initialize_sdf_shader, 0);
     }
 
@@ -858,10 +861,10 @@ void RaymarchingRenderer::init_compute_merge_pipeline()
         u_compute_merge_data.binding = 1;
         u_compute_merge_data.buffer_size = sizeof(sMergeData);
 
-        for (int i = 0; i < 2; ++i) {
-            std::vector<Uniform*> uniforms = { &u_compute_edits_array, &u_compute_merge_data, &u_compute_texture_sdf_storage[i], &u_compute_texture_sdf_storage[i + 2] };
-            compute_merge_bind_group[i] = webgpu_context.create_bind_group(uniforms, compute_merge_shader, 0);
-        }
+        std::vector<Uniform*> uniforms = { &u_compute_edits_array, &u_compute_merge_data, &u_compute_texture_sdf_storage[0], &u_compute_texture_sdf_storage[3] };
+        compute_merge_bind_group[0] = webgpu_context.create_bind_group(uniforms, compute_merge_shader, 0);
+        uniforms = { &u_compute_edits_array, &u_compute_merge_data, &u_compute_texture_sdf_storage[2], &u_compute_texture_sdf_storage[1] };
+        compute_merge_bind_group[1] = webgpu_context.create_bind_group(uniforms, compute_merge_shader, 0);
     }
 
     compute_merge_pipeline.create_compute(compute_merge_shader);

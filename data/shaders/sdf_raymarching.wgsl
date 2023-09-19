@@ -74,41 +74,7 @@ fn sample_sdf(position : vec3f, trilinear : bool) -> Surface
 
     var data : vec4f;
 
-    // // From: http://paulbourke.net/miscellaneous/interpolation/
-    // if (trilinear) {
-    //     let x_f : f32 = abs(fract(rot_p.x));
-    //     let y_f : f32 = abs(fract(rot_p.y));
-    //     let z_f : f32 = abs(fract(rot_p.z));
-
-    //     let x : u32 = u32(floor(rot_p.x));
-    //     let y : u32 = u32(floor(rot_p.y));
-    //     let z : u32 = u32(floor(rot_p.z));
-
-    //     let index000 : u32 = x + y * 512u + z * 512u * 512u;
-    //     let index100 : u32 = (x + 1) + (y + 0) * 512u + (z + 0) * 512u * 512u;
-    //     let index010 : u32 = (x + 0) + (y + 1) * 512u + (z + 0) * 512u * 512u;
-    //     let index001 : u32 = (x + 0) + (y + 0) * 512u + (z + 1) * 512u * 512u;
-    //     let index101 : u32 = (x + 1) + (y + 0) * 512u + (z + 1) * 512u * 512u;
-    //     let index011 : u32 = (x + 0) + (y + 1) * 512u + (z + 1) * 512u * 512u;
-    //     let index110 : u32 = (x + 1) + (y + 1) * 512u + (z + 0) * 512u * 512u;
-    //     let index111 : u32 = (x + 1) + (y + 1) * 512u + (z + 1) * 512u * 512u;
-
-    //     data = sdf_data.data[index000] * (1.0 - x_f) * (1.0 - y_f) * (1.0 - z_f) +
-    //                     sdf_data.data[index100] * x_f * (1.0 - y_f) * (1.0 - z_f) +
-    //                     sdf_data.data[index010] * (1.0 - x_f) * y_f * (1.0 - z_f) +
-    //                     sdf_data.data[index001] * (1.0 - x_f) * (1.0 - y_f) * z_f +
-    //                     sdf_data.data[index101] * x_f * (1.0 - y_f) * z_f +
-    //                     sdf_data.data[index011] * (1.0 - x_f) * y_f * z_f +
-    //                     sdf_data.data[index110] * x_f * y_f * (1.0 - z_f) +
-    //                     sdf_data.data[index111] * x_f * y_f * z_f;
-    // } else {
-        // let x : u32 = u32(round(rot_p.x));
-        // let y : u32 = u32(round(rot_p.y));
-        // let z : u32 = u32(round(rot_p.z));
-
-        // let index : u32 = x + y * 512u + z * 512u * 512u;
-        data = textureSampleLevel(read_sdf, texture_sampler, rot_p, 0);
-    // }
+    data = textureSampleLevel(read_sdf, texture_sampler, rot_p, 0.0);
 
     var surface : Surface = Surface(data.xyz, data.w);
 
@@ -158,7 +124,7 @@ fn raymarch(ray_origin : vec3f, ray_dir : vec3f, view_proj : mat4x4f) -> vec4f
     var surface_min_dist : f32 = 100.0;
     var surface : Surface;
    
-	for (var i : i32 = 0; depth < MAX_DIST && i < 100; i++)
+	for (var i : i32 = 0; depth < MAX_DIST && i < 200; i++)
 	{
 		let pos = ray_origin + ray_dir * depth;
 

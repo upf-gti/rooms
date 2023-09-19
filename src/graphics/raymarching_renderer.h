@@ -14,7 +14,7 @@
 #endif
 
 #define EDITS_MAX 1024
-#define SDF_RESOLUTION 512
+#define SDF_RESOLUTION 256
 
 class RaymarchingRenderer : public Renderer {
 
@@ -27,6 +27,7 @@ class RaymarchingRenderer : public Renderer {
 
     Uniform                 u_render_texture_left_eye;
     Uniform                 u_render_texture_right_eye;
+    Uniform                 u_sampler;
 
     // Compute
     Pipeline                initialize_sdf_pipeline;
