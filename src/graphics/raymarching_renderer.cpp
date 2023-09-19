@@ -46,8 +46,8 @@ int RaymarchingRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
     }
 #endif
 
-    compute_raymarching_data.render_width = static_cast<float>(render_width);
-    compute_raymarching_data.render_height = static_cast<float>(render_height);
+    compute_raymarching_data.render_width = static_cast<float>(webgpu_context.render_width);
+    compute_raymarching_data.render_height = static_cast<float>(webgpu_context.render_height);
 
     return 0;
 }
@@ -130,7 +130,7 @@ void RaymarchingRenderer::render_screen()
 {
     glm::vec3 eye = glm::vec3(0.0f, 0.5f, 1.5f);
     glm::mat4x4 view = glm::lookAt(eye, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    glm::mat4x4 projection = glm::perspective(glm::radians(45.0f), 16.0f / 9.0f, 0.1f, 100.0f);
+    glm::mat4x4 projection = glm::perspective(glm::radians(45.0f), webgpu_context.render_width / static_cast<float>(webgpu_context.render_height), 0.1f, 100.0f);
     //projection[1][1] *= -1.0f;
 
     glm::mat4x4 view_projection = projection * view;
@@ -520,8 +520,8 @@ void RaymarchingRenderer::compute_raymarching()
 
     uint32_t workgroupSize = 16;
     // This ceils invocationCount / workgroupSize
-    uint32_t workgroupWidth = (render_width + workgroupSize - 1) / workgroupSize;
-    uint32_t workgroupHeight = (render_height + workgroupSize - 1) / workgroupSize;
+    uint32_t workgroupWidth = (webgpu_context.render_width + workgroupSize - 1) / workgroupSize;
+    uint32_t workgroupHeight = (webgpu_context.render_height + workgroupSize - 1) / workgroupSize;
     wgpuComputePassEncoderDispatchWorkgroups(compute_pass, workgroupWidth, workgroupHeight, 1);
 
     // Finalize compute_raymarching pass
@@ -609,33 +609,69 @@ void RaymarchingRenderer::init_render_quad_pipeline()
 {
     render_quad_shader = Shader::get("data/shaders/quad_eye.wgsl");
 
+    init_render_quad_bind_groups();
+
+    quad_mesh.create_quad();
+
+    WGPUTextureFormat swapchain_format = is_openxr_available ? webgpu_context.xr_swapchain_format : webgpu_context.swapchain_format;
+
+    WGPUBlendState blend_state;
+    blend_state.color = {
+            .operation = WGPUBlendOperation_Add,
+            .srcFactor = WGPUBlendFactor_SrcAlpha,
+            .dstFactor = WGPUBlendFactor_OneMinusSrcAlpha,
+    };
+    blend_state.alpha = {
+            .operation = WGPUBlendOperation_Add,
+            .srcFactor = WGPUBlendFactor_Zero,
+            .dstFactor = WGPUBlendFactor_One,
+    };
+
+    WGPUColorTargetState color_target = {};
+    color_target.format = swapchain_format;
+    color_target.blend = &blend_state;
+    color_target.writeMask = WGPUColorWriteMask_All;
+
+    render_quad_pipeline.create_render(render_quad_shader, color_target, true);
+}
+
+void RaymarchingRenderer::init_render_quad_bind_groups()
+{
     left_eye_texture.create(
         WGPUTextureDimension_2D,
         WGPUTextureFormat_RGBA32Float,
-        { render_width, render_height, 1 },
+        { webgpu_context.render_width, webgpu_context.render_height, 1 },
         static_cast<WGPUTextureUsage>(WGPUTextureUsage_TextureBinding | WGPUTextureUsage_StorageBinding),
         1, nullptr);
 
     left_eye_depth_texture.create(
         WGPUTextureDimension_2D,
         WGPUTextureFormat_Depth32Float,
-        { render_width, render_height, 1 },
+        { webgpu_context.render_width, webgpu_context.render_height, 1 },
         WGPUTextureUsage_RenderAttachment,
         1, nullptr);
 
     right_eye_texture.create(
         WGPUTextureDimension_2D,
         WGPUTextureFormat_RGBA32Float,
-        { render_width, render_height, 1 },
+        { webgpu_context.render_width, webgpu_context.render_height, 1 },
         static_cast<WGPUTextureUsage>(WGPUTextureUsage_TextureBinding | WGPUTextureUsage_StorageBinding),
         1, nullptr);
 
     right_eye_depth_texture.create(
         WGPUTextureDimension_2D,
         WGPUTextureFormat_Depth32Float,
-        { render_width, render_height, 1 },
+        { webgpu_context.render_width, webgpu_context.render_height, 1 },
         WGPUTextureUsage_RenderAttachment,
         1, nullptr);
+
+    if (left_eye_depth_texture_view) {
+        wgpuTextureViewRelease(left_eye_depth_texture_view);
+        wgpuTextureViewRelease(right_eye_depth_texture_view);
+
+        wgpuBindGroupRelease(render_bind_group_left_eye);
+        wgpuBindGroupRelease(render_bind_group_right_eye);
+    }
 
     // Generate Texture views of depth buffers
     left_eye_depth_texture_view = left_eye_depth_texture.get_view();
@@ -662,28 +698,6 @@ void RaymarchingRenderer::init_render_quad_pipeline()
         render_bind_group_right_eye = webgpu_context.create_bind_group(uniforms, render_quad_shader, 0);
     }
 
-    quad_mesh.create_quad();
-
-    WGPUTextureFormat swapchain_format = is_openxr_available ? webgpu_context.xr_swapchain_format : webgpu_context.swapchain_format;
-
-    WGPUBlendState blend_state;
-    blend_state.color = {
-            .operation = WGPUBlendOperation_Add,
-            .srcFactor = WGPUBlendFactor_SrcAlpha,
-            .dstFactor = WGPUBlendFactor_OneMinusSrcAlpha,
-    };
-    blend_state.alpha = {
-            .operation = WGPUBlendOperation_Add,
-            .srcFactor = WGPUBlendFactor_Zero,
-            .dstFactor = WGPUBlendFactor_One,
-    };
-
-    WGPUColorTargetState color_target = {};
-    color_target.format = swapchain_format;
-    color_target.blend = &blend_state;
-    color_target.writeMask = WGPUColorWriteMask_All;
-
-    render_quad_pipeline.create_render(render_quad_shader, color_target, true);
 }
 
 void RaymarchingRenderer::init_render_mesh_pipelines()
@@ -750,26 +764,15 @@ void RaymarchingRenderer::init_compute_raymarching_pipeline()
     // Load compute_raymarching shader
     compute_raymarching_shader = Shader::get("data/shaders/sdf_raymarching.wgsl");
 
-    // Texture uniforms
-    {
-        u_compute_texture_left_eye.data = left_eye_texture.get_view();
-        u_compute_texture_left_eye.binding = 0;
+    // RGB for color, A for distance
 
-        u_compute_texture_right_eye.data = right_eye_texture.get_view();
-        u_compute_texture_right_eye.binding = 1;
+    //std::vector<glm::vec4> sdf_data = { SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION, glm::vec4(0.0, 0.0, 0.0, 1000.0) };
 
-        // RGB for color, A for distance
-        
-        //std::vector<glm::vec4> sdf_data = { SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION, glm::vec4(0.0, 0.0, 0.0, 1000.0) };
+    u_compute_texture_sdf_storage.data = webgpu_context.create_buffer(SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION * sizeof(float) * 4, WGPUBufferUsage_Storage, nullptr);
+    u_compute_texture_sdf_storage.binding = 2;
+    u_compute_texture_sdf_storage.buffer_size = SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION * sizeof(float) * 4;
 
-        u_compute_texture_sdf_storage.data = webgpu_context.create_buffer(SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION * sizeof(float) * 4, WGPUBufferUsage_Storage, nullptr);
-        u_compute_texture_sdf_storage.binding = 2;
-        u_compute_texture_sdf_storage.buffer_size = SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION * sizeof(float) * 4;
-
-        std::vector<Uniform*> uniforms = { &u_compute_texture_left_eye, &u_compute_texture_right_eye, &u_compute_texture_sdf_storage };
-
-        compute_raymarching_textures_bind_group = webgpu_context.create_bind_group(uniforms, compute_raymarching_shader, 0);
-    }
+    init_compute_raymarching_textures();
 
     // Compute data uniforms
     {
@@ -787,6 +790,23 @@ void RaymarchingRenderer::init_compute_raymarching_pipeline()
     }
 
     compute_raymarching_pipeline.create_compute(compute_raymarching_shader);
+}
+
+void RaymarchingRenderer::init_compute_raymarching_textures()
+{
+    if (compute_raymarching_textures_bind_group) {
+        wgpuBindGroupRelease(compute_raymarching_textures_bind_group);
+    }
+
+    u_compute_texture_left_eye.data = left_eye_texture.get_view();
+    u_compute_texture_left_eye.binding = 0;
+
+    u_compute_texture_right_eye.data = right_eye_texture.get_view();
+    u_compute_texture_right_eye.binding = 1;
+
+    std::vector<Uniform*> uniforms = { &u_compute_texture_left_eye, &u_compute_texture_right_eye, &u_compute_texture_sdf_storage };
+
+    compute_raymarching_textures_bind_group = webgpu_context.create_bind_group(uniforms, compute_raymarching_shader, 0);
 }
 
 void RaymarchingRenderer::init_initialize_sdf_pipeline() {
@@ -895,3 +915,18 @@ void RaymarchingRenderer::init_mirror_pipeline()
 }
 
 #endif
+
+void RaymarchingRenderer::resize_window(int width, int height)
+{
+    Renderer::resize_window(width, height);
+
+    compute_raymarching_data.render_width = static_cast<float>(webgpu_context.render_width);
+    compute_raymarching_data.render_height = static_cast<float>(webgpu_context.render_height);
+
+    init_render_quad_bind_groups();
+
+#ifndef DISABLE_RAYMARCHER
+    init_compute_raymarching_textures();
+#endif
+
+}

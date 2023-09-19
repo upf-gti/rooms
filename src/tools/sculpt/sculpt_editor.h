@@ -2,6 +2,7 @@
 
 #include "tool.h"
 #include "ui/transform_gizmo.h"
+#include "json_utils.h"
 
 enum eTool : uint8_t {
     NONE = 0,

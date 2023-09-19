@@ -169,8 +169,10 @@ class RaymarchingRenderer : public Renderer {
     void compute_raymarching();
 
     void init_render_quad_pipeline();
+    void init_render_quad_bind_groups();
     void init_render_mesh_pipelines();
     void init_compute_raymarching_pipeline();
+    void init_compute_raymarching_textures();
     void init_initialize_sdf_pipeline();
     void init_compute_merge_pipeline();
 
@@ -212,5 +214,7 @@ public:
 
     void set_preview_edit(const Edit& edit);
     void set_sculpt_rotation(const glm::quat& rotation);
+
+    void resize_window(int width, int height) override;
 
 };
