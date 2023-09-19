@@ -252,7 +252,7 @@ void SculptEditor::load_ui_layout(const std::string& filename)
             if (is_color_button)
                 color = load_vec4(j["color"]);
 
-            ui::Widget* widget = gui.make_button(name, texture.c_str(), shader.c_str(), color);
+            ui::ButtonWidget* widget = (ui::ButtonWidget*)gui.make_button(name, texture.c_str(), shader.c_str(), is_color_button, color);
             group_elements_pending--;
 
             if (is_color_button)

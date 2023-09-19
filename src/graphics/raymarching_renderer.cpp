@@ -218,11 +218,11 @@ void RaymarchingRenderer::render_meshes(WGPUTextureView swapchain_view, WGPUText
             wgpuRenderPassEncoderSetBindGroup(render_pass, 0, mesh->get_bind_group(), 0, nullptr);
             wgpuRenderPassEncoderSetBindGroup(render_pass, 1, render_bind_group_camera, 0, nullptr);
 
-            ui::WidgetGroup* group = static_cast<ui::WidgetGroup*>(ui::Controller::get_group_from_alias(mesh->get_alias()));
-            if (group)
+            ui::Widget* widget = ui::Controller::get_widget_from_name(mesh->get_alias());
+            if (widget)
             {
-                wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(group->uniforms.data), 0, &group->ui_data, sizeof(ui::sUIData));
-                wgpuRenderPassEncoderSetBindGroup(render_pass, 2, group->render_bind_group_ui, 0, nullptr);
+                wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(widget->uniforms.data), 0, &widget->ui_data, sizeof(ui::sUIData));
+                wgpuRenderPassEncoderSetBindGroup(render_pass, 2, widget->bind_group, 0, nullptr);
             }
 
             // Set vertex buffer while encoding the render pass

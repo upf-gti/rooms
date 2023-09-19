@@ -44,7 +44,7 @@ namespace ui {
 		ui::Widget* root = nullptr;
 		std::map<std::string, std::vector<SignalType>> signals;
 
-        static std::map<std::string, Widget*> groups;
+        static std::map<std::string, Widget*> widgets;
 
 		/*
 		*	Widget Helpers
@@ -57,7 +57,7 @@ namespace ui {
         glm::vec2 last_layout_pos;
 		std::vector<Widget*> parent_queue;
 
-		void append_widget( Widget* widget );
+		void append_widget( Widget* widget, const std::string& name );
 		void process_params(glm::vec2& position, glm::vec2& size, bool skip_to_local = false);
         glm::vec2 compute_position();
 
@@ -87,7 +87,7 @@ namespace ui {
 
         Widget* make_rect(glm::vec2 pos, glm::vec2 size, const Color& color);
 		Widget* make_text(const std::string& text, glm::vec2 pos, const Color& color, float scale = 1.f, glm::vec2 size = {1, 1});
-		Widget* make_button(const std::string& signal, const char* texture = nullptr, const char* shader = "data/shaders/mesh_texture_ui.wgsl", const Color& color = colors::WHITE);
+		Widget* make_button(const std::string& signal, const char* texture = nullptr, const char* shader = "data/shaders/mesh_texture_ui.wgsl", bool is_color_button = false, const Color& color = colors::WHITE);
 		Widget* make_slider(const std::string& signal, float default_value, glm::vec2 pos, glm::vec2 size, const Color& color, const char* texture = nullptr);
 		Widget* make_color_picker(const std::string& signal, const Color& default_color, glm::vec2 pos, glm::vec2 size);
         void make_submenu(Widget* parent, const std::string& name);
@@ -96,7 +96,7 @@ namespace ui {
         Widget* make_group(const std::string& group_name, float number_of_widgets, const Color& color = colors::WHITE);
         void close_group();
 
-        static Widget* get_group_from_alias(const std::string& alias);
+        static Widget* get_widget_from_name(const std::string& alias);
 
 		/*
 		*	Callbacks

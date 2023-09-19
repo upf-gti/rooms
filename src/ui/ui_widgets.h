@@ -14,8 +14,10 @@ namespace ui {
 	class Controller;
 
     struct sUIData {
-        glm::vec3 dummy;
-        float num_group_items = 2;
+        float num_group_items   = 2;
+        float is_selected       = 0.f;
+        float is_hovered        = 0.f;
+        float is_color_button   = 0.f;
     };
 
 	enum eWidgetType {
@@ -29,24 +31,31 @@ namespace ui {
 	class Widget {
 	public:
 
-		Widget() {};
-		Widget(EntityMesh* e, const glm::vec2& p) 
-			: entity(e), position(p) {};
+        Widget() {}
+        Widget(EntityMesh* e, const glm::vec2& p);
+
+        uint8_t type = eWidgetType::NONE;
+		Widget* parent = nullptr;
+
+        static Widget* current_selected;
+
+		std::vector<Widget*> children;
+		bool show_children  = false;
+        bool selected       = false;
 
 		EntityMesh* entity = nullptr;
-		glm::vec2 position;
-		uint8_t type = eWidgetType::NONE;
-        uint8_t m_layer = 0;
+		glm::vec2   position;
+        uint8_t     m_layer = 0;
+		int         priority = 0;
 
-		int priority = 0;
-
-		Widget* parent = nullptr;
-		bool show_children = false;
-		std::vector<Widget*> children;
+        sUIData         ui_data;
+        WGPUBindGroup   bind_group = nullptr;
+        Uniform         uniforms;
 
 		void add_child(Widget* child);
 
         void set_show_children(bool value);
+        void set_selected(bool value);
 
 		virtual void render();
 		virtual void update(Controller* controller);
@@ -54,11 +63,6 @@ namespace ui {
 
     class WidgetGroup : public Widget {
     public:
-
-        sUIData ui_data;
-
-        WGPUBindGroup render_bind_group_ui = nullptr;
-        Uniform uniforms;
 
         WidgetGroup(EntityMesh* e, const glm::vec2& p, float number_of_widgets);
     };
@@ -77,15 +81,13 @@ namespace ui {
 
 		glm::vec2 size;
 		std::string signal;
-		Color color;
 
-        bool selected = false;
+        Color color;
+        bool is_color_button = false;
+
         bool is_submenu = false;
 
-		ButtonWidget(const std::string& sg, EntityMesh* e, const glm::vec2& p, const Color& c, const glm::vec2& s)
-			: Widget(e, p), signal(sg), size(s), color(c) {
-			type = eWidgetType::BUTTON;
-		}
+        ButtonWidget(const std::string& sg, EntityMesh* e, const glm::vec2& p, const Color& c, const glm::vec2& s);
 
 		virtual void update(Controller* controller) override;
 	};

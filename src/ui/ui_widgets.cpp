@@ -8,6 +8,19 @@
 
 namespace ui {
 
+    Widget* Widget::current_selected = nullptr;
+
+    Widget::Widget(EntityMesh* e, const glm::vec2& p) : entity(e), position(p)
+    {
+        // Bind uniforms
+
+        auto webgpu_context = Renderer::instance->get_webgpu_context();
+
+        uniforms.data = webgpu_context->create_buffer(sizeof(sUIData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "ui_buffer");
+        uniforms.binding = 0;
+        uniforms.buffer_size = sizeof(sUIData);
+    }
+
 	void Widget::add_child(Widget* child)
 	{
 		if (child->parent) {
@@ -29,14 +42,28 @@ namespace ui {
     void Widget::set_show_children(bool value)
     {
         ButtonWidget* bw = dynamic_cast<ButtonWidget*>(this);
-        if (bw && bw->is_submenu)
+        if (bw && bw->is_submenu) {
             show_children = value;
+            selected = value;
+        }
 
         // Only hiding is recursive...
         if (!value)
         {
             for (auto w : children)
                 w->set_show_children(value);
+        }
+    }
+
+    void Widget::set_selected(bool value)
+    {
+        selected = value;
+
+        // Only unselecting is recursive...
+        if (!value)
+        {
+            for (auto w : children)
+                w->set_selected(value);
         }
     }
 
@@ -70,24 +97,26 @@ namespace ui {
     WidgetGroup::WidgetGroup(EntityMesh* e, const glm::vec2& p, float n) : Widget(e, p) {
 
         show_children = true;
-        type = GROUP;
-
-        // Bind uniforms
-
-        auto webgpu_context = Renderer::instance->get_webgpu_context();
-
-        uniforms.data = webgpu_context->create_buffer(sizeof(sUIData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "ui_buffer");
-        uniforms.binding = 0;
-        uniforms.buffer_size = sizeof(sUIData);
+        type = eWidgetType::GROUP;
 
         ui_data.num_group_items = n;
 
-        render_bind_group_ui = webgpu_context->create_bind_group({ &uniforms }, Shader::get("data/shaders/mesh_ui.wgsl"), 2);
+        auto webgpu_context = Renderer::instance->get_webgpu_context();
+        bind_group = webgpu_context->create_bind_group({ &uniforms }, Shader::get("data/shaders/mesh_ui.wgsl"), 2);
     }
 
 	/*
 	*	Button
 	*/
+
+    ButtonWidget::ButtonWidget(const std::string& sg, EntityMesh* e, const glm::vec2& p, const Color& c, const glm::vec2& s)
+        : Widget(e, p), signal(sg), size(s), color(c) {
+
+        type = eWidgetType::BUTTON;
+
+        auto webgpu_context = Renderer::instance->get_webgpu_context();
+        bind_group = webgpu_context->create_bind_group({ &uniforms }, Shader::get("data/shaders/mesh_texture_ui.wgsl"), 2);
+    }
 
 	void ButtonWidget::update(Controller* controller)
 	{
@@ -132,14 +161,25 @@ namespace ui {
 		bool is_pressed = hovered && Input::is_button_pressed(workspace.select_button);
 		bool was_pressed = hovered && Input::was_button_pressed(workspace.select_button);
 
-
-        if(entity->get_material_shader() == Shader::get("data/shaders/mesh_texture_ui.wgsl"))
-		    entity->set_material_color(is_pressed ? colors::GRAY : (hovered ? Color(0.95f, 0.76f, 0.17f, 1.f) : color));
-        else
-            entity->set_material_color(color);
+        entity->set_material_color(/*is_pressed ? colors::GRAY : */color);
 		
-		if (was_pressed)
+        if (was_pressed)
+        {
+            selected = !selected;
+
 			controller->emit_signal(signal, color);
+
+            if (selected && is_color_button)
+            {
+                if(current_selected) current_selected->selected = false;
+                current_selected = this;
+            }
+        }
+
+        // Update uniforms
+        ui_data.is_hovered = hovered ? 1.f : 0.f;
+        ui_data.is_selected = selected ? 1.f : 0.f;
+        ui_data.is_color_button = is_color_button ? 1.f : 0.f;
 	}
 
 	/*

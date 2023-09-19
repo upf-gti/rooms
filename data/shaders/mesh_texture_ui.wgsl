@@ -26,11 +26,19 @@ struct CameraData {
     view_projection : mat4x4f,
 };
 
+struct UIData {
+    num_group_items : f32,
+    is_selected : f32,
+    is_hovered : f32,
+    is_color_button : f32
+};
+
 @group(0) @binding(0) var<storage, read> mesh_data : InstanceData;
 @group(0) @binding(1) var albedo_texture: texture_2d<f32>;
 @group(0) @binding(2) var texture_sampler : sampler;
 
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
+@group(2) @binding(0) var<uniform> ui_data : UIData;
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
@@ -53,13 +61,37 @@ struct FragmentOutput {
 fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     var out: FragmentOutput;
-    let color : vec4f = textureSample(albedo_texture, texture_sampler, in.uv);
+    var color : vec4f = textureSample(albedo_texture, texture_sampler, in.uv);
+    let hover_color = vec3f(0.95, 0.76, 0.17);
 
+    var _color = color.rgb;
+
+    if( ui_data.is_color_button > 0.0 )  {
+        _color *= in.color;
+    }
+
+    let selected_color = vec3f(0.47, 0.37, 0.94);
+    var widget_color = mix(in.color, hover_color, ui_data.is_hovered);
     var mask = distance(in.uv, vec2f(0.5));
-    mask = step(0.45, mask);
 
-    var masked_color = mix(in.color, color.rgb, 1.0 - mask);
+    if( ui_data.is_selected > 0.0 ) {
+
+        var icon_mask = smoothstep(1 - color.r, 0.5, 1.0);
+        _color = mix(vec3f(1 - icon_mask) * (1 - mask), selected_color, icon_mask);
+        _color = max(_color, vec3f(0.12));
+    } 
+
+    var masked_color : vec3f;
+
+    if( ui_data.is_color_button > 0.0 ) {
+        mask = step(0.45, mask);
+        var border_color = mix(widget_color, vec3f(0.2,0.2,0.2), ui_data.is_selected);
+        masked_color = mix(in.color, mix(border_color, hover_color, ui_data.is_hovered), mask);
+    } else {
+        mask = step(0.45 + (1.0 - ui_data.is_hovered), mask);
+        masked_color = mix(widget_color, _color, 1.0 - mask);
+    }
+   
     out.color = vec4f(pow(masked_color, vec3f(2.2)), color.a); // Color
-
     return out;
 }

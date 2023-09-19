@@ -10,7 +10,7 @@
 
 namespace ui {
 
-    std::map<std::string, Widget*> Controller::groups;
+    std::map<std::string, Widget*> Controller::widgets;
 
     float current_number_of_group_widgets; // store to make sure everything went well
 
@@ -35,7 +35,7 @@ namespace ui {
 
 	bool Controller::is_active()
 	{
-		return Input::get_grab_value(workspace.hand) > 0.5f;
+        return true;// Input::get_grab_value(workspace.hand) > 0.5f;
 	}
 
 	void Controller::render()
@@ -111,7 +111,7 @@ namespace ui {
         return { x, y };
     }
 
-	void Controller::append_widget(Widget* widget)
+	void Controller::append_widget(Widget* widget, const std::string& name)
 	{
         if (parent_queue.size())
         {
@@ -122,6 +122,8 @@ namespace ui {
 		{
 			root->add_child(widget);
 		}
+
+        widgets[name] = widget;
 	}
 
 	Widget* Controller::make_rect(glm::vec2 pos, glm::vec2 size, const Color& color)
@@ -136,7 +138,7 @@ namespace ui {
 		rect->set_mesh(mesh);
 
 		Widget* widget = new Widget(rect, pos);
-		append_widget(widget);
+		append_widget(widget, "ui_rect");
 		return widget;
 	}
 
@@ -151,11 +153,11 @@ namespace ui {
 		e_text->generate_mesh();
 
 		TextWidget* widget = new TextWidget(e_text, pos);
-		append_widget(widget);
+		append_widget(widget, "ui_text");
 		return widget;
 	}
 
-	Widget* Controller::make_button(const std::string& signal, const char* texture, const char* shader, const Color& color)
+	Widget* Controller::make_button(const std::string& signal, const char* texture, const char* shader, bool is_color_button, const Color& color)
 	{
         // World attributes
         glm::vec2 pos = compute_position();
@@ -178,27 +180,29 @@ namespace ui {
             e_button->set_material_diffuse(Texture::get(texture));
 
 		mesh->create_quad(size.x, size.y);
+        mesh->set_alias(signal);
 		e_button->set_mesh(mesh);
 
 		ButtonWidget* widget = new ButtonWidget(signal, e_button, pos, color, size);
+        widget->is_color_button = is_color_button;
 
         if( group_opened )
             widget->priority = 1;
 
+        if (is_color_button)
+        {
+            bind(signal, [widget = widget](const std::string& signal, Color color) {
+                // Unselect siblings
+                Widget* parent = widget->parent;
+                for (auto w : parent->children)
+                    w->set_selected(false);
+                widget->set_selected(true);
+            });
+        }
+
         widget->m_layer = static_cast<uint8_t>(layout_iterator.y);
 
-		append_widget(widget);
-
-        /*if (texture && texture_selected)
-        {
-            std::string tex(texture);
-            std::string tex_selected(texture_selected);
-
-            connect(signal, [widget = widget, tex, tex_selected, mesh = mesh](const std::string& signal, float value) {
-                widget->selected = !widget->selected;
-                mesh->set_texture(Texture::get(widget->selected ? tex_selected.c_str() : tex.c_str()));
-            });
-        }*/
+		append_widget(widget, signal);
 
 		return widget;
 	}
@@ -225,7 +229,7 @@ namespace ui {
 		e_thumb->set_mesh(thumb_mesh);
 
 		SliderWidget* widget = new SliderWidget(signal,e_track, e_thumb, default_value, pos, color, size);
-		append_widget(widget);
+		append_widget(widget, signal);
 		return widget;
 	}
 
@@ -242,7 +246,7 @@ namespace ui {
 		rect->set_material_color( default_color );
 
 		ColorPickerWidget* widget = new ColorPickerWidget(rect, default_color);
-		append_widget(widget);
+		append_widget(widget, signal);
 
 		bind(signal + "_r", [this, signal, w = widget, r = rect](const std::string& s, float value) {
 			w->rect_color.x = value;
@@ -322,9 +326,7 @@ namespace ui {
         e->set_mesh(mesh);
 
         WidgetGroup* group = new WidgetGroup(e, pos, number_of_widgets);
-        append_widget(group);
-
-        groups[group_name] = group;
+        append_widget(group, group_name);
 
         parent_queue.push_back(group);
         group_opened = true;
@@ -348,9 +350,9 @@ namespace ui {
 		signals[name].push_back(callback);
 	}
 
-    Widget* Controller::get_group_from_alias(const std::string& alias)
+    Widget* Controller::get_widget_from_name(const std::string& alias)
     {
-        if(groups.count(alias)) return groups[alias];
+        if(widgets.count(alias)) return widgets[alias];
         return nullptr;
     }
 }
