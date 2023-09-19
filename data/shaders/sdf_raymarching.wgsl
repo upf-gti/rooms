@@ -174,7 +174,7 @@ fn raymarch(ray_origin : vec3f, ray_dir : vec3f, view_proj : mat4x4f) -> vec4f
 	}
 
     // Use a two band spherical harmonic as a skymap
-    return vec4f(irradiance_spherical_harmonics(ray_dir), 0.999);
+    return vec4f(irradiance_spherical_harmonics(ray_dir.xzy), 0.999);
 }
 
 fn get_ray_direction(inv_view_projection : mat4x4f, uv : vec2f) -> vec3f
