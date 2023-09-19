@@ -68,7 +68,7 @@ class SculptEditor {
     ui::Controller                      gui;
     std::map<std::string, ui::Widget*>  widgets_loaded;
     json                                j_ui;
-    uint8_t                             max_recent_colors;
+    size_t                              max_recent_colors;
     std::vector<Color>                  recent_colors;
 
     void load_ui_layout(const std::string& filename);

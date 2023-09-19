@@ -85,7 +85,7 @@
                 {
                     "name": "g_colors",
                     "type": "group",
-                    "nitems": 5
+                    "nitems": 6
                 },
                 {
                     "name": "color_template_palette_1",
@@ -288,6 +288,45 @@
             ]
         },
         {
+            "name": "color_template_palette_5",
+            "type": "submenu",
+            "children": [
+                {
+                    "name": "g_colors_t5",
+                    "type": "group",
+                    "nitems": 4
+                },
+                {
+                    "name": "colors_t5_1",
+                    "type": "button",
+                    "texture": "data/textures/circle_white.png",
+                    "shader": "data/shaders/mesh_texture.wgsl",
+                    "color": "0.65 0.02 0.83 1"
+                },
+                {
+                    "name": "colors_t5_2",
+                    "type": "button",
+                    "texture": "data/textures/circle_white.png",
+                    "shader": "data/shaders/mesh_texture.wgsl",
+                    "color": "0.8 0.49 0.89 1"
+                },
+                {
+                    "name": "colors_t5_3",
+                    "type": "button",
+                    "texture": "data/textures/circle_white.png",
+                    "shader": "data/shaders/mesh_texture.wgsl",
+                    "color": "0.95 0.12 0.85 1"
+                },
+                {
+                    "name": "colors_t5_4",
+                    "type": "button",
+                    "texture": "data/textures/circle_white.png",
+                    "shader": "data/shaders/mesh_texture.wgsl",
+                    "color": "0.95 0.62 0.91 1"
+                }
+            ]
+        },
+        {
             "name": "color_template_palette_6",
             "type": "submenu",
             "children": [
@@ -374,16 +413,5 @@
                 }
             ]
         }
-    ],
-    "colors_to_bind": [
-        "colors_t1_1", "colors_t1_2", "colors_t1_3", "colors_t1_4",
-        "colors_t2_1", "colors_t2_2", "colors_t2_3", "colors_t2_4",
-        "colors_t3_1", "colors_t3_2", "colors_t3_3", "colors_t3_4",
-        "colors_t4_1", "colors_t4_2", "colors_t4_3", "colors_t4_4",
-        "colors_t6_1", "colors_t6_2", "colors_t6_3", "colors_t6_4"
-    ],
-    "recent_colors_to_bind": [
-        "recent_color_1", "recent_color_2", "recent_color_3", "recent_color_4",
-        "recent_color_5", "recent_color_6"
     ]
 }
