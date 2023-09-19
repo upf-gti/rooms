@@ -8,11 +8,6 @@
 
 namespace ui {
 
-    struct sUIData {
-        glm::vec3 dummy;
-        float num_group_items;
-    } ui_data;
-
 	void Widget::add_child(Widget* child)
 	{
 		if (child->parent) {
@@ -73,9 +68,21 @@ namespace ui {
     */
 
     WidgetGroup::WidgetGroup(EntityMesh* e, const glm::vec2& p, float n) : Widget(e, p) {
-        number_of_widgets = n;
+
         show_children = true;
         type = GROUP;
+
+        // Bind uniforms
+
+        auto webgpu_context = Renderer::instance->get_webgpu_context();
+
+        uniforms.data = webgpu_context->create_buffer(sizeof(sUIData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "ui_buffer");
+        uniforms.binding = 0;
+        uniforms.buffer_size = sizeof(sUIData);
+
+        ui_data.num_group_items = n;
+
+        render_bind_group_ui = webgpu_context->create_bind_group({ &uniforms }, Shader::get("data/shaders/mesh_ui.wgsl"), 2);
     }
 
 	/*

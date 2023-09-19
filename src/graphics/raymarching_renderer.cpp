@@ -214,17 +214,16 @@ void RaymarchingRenderer::render_meshes(WGPUTextureView swapchain_view, WGPUText
 
             mesh->update_instance_model_matrices();
 
-            ui::WidgetGroup* group = static_cast<ui::WidgetGroup*>( ui::Controller::get_group_from_alias(mesh->get_alias()));
-            if (group)
-            {
-                ui_data.num_group_items = group->number_of_widgets;
-                wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(u_ui.data), 0, &ui_data, sizeof(sUIData));
-            }
-
             // Set bind group
             wgpuRenderPassEncoderSetBindGroup(render_pass, 0, mesh->get_bind_group(), 0, nullptr);
             wgpuRenderPassEncoderSetBindGroup(render_pass, 1, render_bind_group_camera, 0, nullptr);
-            wgpuRenderPassEncoderSetBindGroup(render_pass, 2, render_bind_group_ui, 0, nullptr);
+
+            ui::WidgetGroup* group = static_cast<ui::WidgetGroup*>(ui::Controller::get_group_from_alias(mesh->get_alias()));
+            if (group)
+            {
+                wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(group->uniforms.data), 0, &group->ui_data, sizeof(ui::sUIData));
+                wgpuRenderPassEncoderSetBindGroup(render_pass, 2, group->render_bind_group_ui, 0, nullptr);
+            }
 
             // Set vertex buffer while encoding the render pass
             wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, mesh->get_vertex_buffer(), 0, mesh->get_byte_size());
@@ -718,17 +717,6 @@ void RaymarchingRenderer::init_render_mesh_pipelines()
     std::vector<Uniform*> uniforms = { &u_camera };
 
     render_bind_group_camera = webgpu_context.create_bind_group(uniforms, render_mesh_shader, 1);
-
-    // UI
-
-    u_ui.data = webgpu_context.create_buffer(sizeof(sUIData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "camera_buffer");
-    u_ui.binding = 0;
-    u_ui.buffer_size = sizeof(sUIData);
-
-    uniforms.clear();
-    uniforms = { &u_ui };
-
-    render_bind_group_ui = webgpu_context.create_bind_group(uniforms, render_mesh_ui_shader, 2);
 
     // ...
 

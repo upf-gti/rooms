@@ -60,7 +60,6 @@ class RaymarchingRenderer : public Renderer {
     Shader*                 render_mesh_texture_shader = nullptr;
 
     // Render UI Quads
-    WGPUBindGroup           render_bind_group_ui = nullptr;
     Pipeline                render_mesh_ui_pipeline;
     Shader*                 render_mesh_ui_shader = nullptr;
     Pipeline                render_mesh_ui_texture_pipeline;
@@ -80,7 +79,6 @@ class RaymarchingRenderer : public Renderer {
     Uniform                 u_octree;
 
     Uniform                 u_camera;
-    Uniform                 u_ui;
 
     Uniform                 u_compute_buffer_data;
     Uniform                 u_compute_preview_edit;
@@ -130,11 +128,6 @@ class RaymarchingRenderer : public Renderer {
     struct sCameraData {
         glm::mat4x4 view_projection;
     } camera_data;
-
-    struct sUIData {
-        glm::vec3 dummy;
-        float num_group_items = 2;
-    } ui_data;
 
     Edit edits[EDITS_MAX];
 
