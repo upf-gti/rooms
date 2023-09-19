@@ -63,32 +63,25 @@ void SculptEditor::initialize()
         });
         gui.bind("paint", [&](const std::string& signal, Color color) { enable_tool(PAINT); });
         gui.bind("mirror", [&](const std::string& signal, Color color) { use_mirror = !use_mirror; });
-        gui.bind("stamp", [&](const std::string& signal, Color color) { snap_to_grid = !snap_to_grid; });
+        gui.bind("snap_to_grid", [&](const std::string& signal, Color color) { snap_to_grid = !snap_to_grid; });
 
-        // Bind all colors...
+        // Bind recent color buttons...
 
-        auto on_press_color = [&](const std::string& signal, Color color) {
-            current_color = color;
-            add_recent_color(color);
-        };
-
-        auto& _colors = j_ui["colors_to_bind"];
-        for (auto& color_name : _colors) {
-            gui.bind(color_name, on_press_color);
+        ui::Widget* recent_group = widgets_loaded["g_recent_colors"];
+        if (!recent_group){
+            assert(0);
+            std::cerr << "Cannot find recent_colors button group!" << std::endl;
+            return;
         }
 
-        // Bind recent colors...
-
-        auto on_press_recent_color = [&](const std::string& signal, Color color) {
-            current_color = color;
-        };
-
-        _colors = j_ui["recent_colors_to_bind"];
-        for (auto& color_name : _colors) {
-            gui.bind(color_name, on_press_recent_color);
+        max_recent_colors = recent_group->children.size();
+        for (size_t i = 0; i < max_recent_colors; ++i)
+        {
+            ui::ButtonWidget* child = static_cast<ui::ButtonWidget*>(recent_group->children[i]);
+            gui.bind(child->signal, [&](const std::string& signal, Color color) {
+                current_color = color;
+            });
         }
-
-        max_recent_colors = _colors.size();
     }
 
     enable_tool(SCULPT);
@@ -232,7 +225,15 @@ void SculptEditor::load_ui_layout(const std::string& filename)
             assert(j.count("nitems") > 0);
             float nitems = j["nitems"];
             group_elements_pending = nitems;
-            glm::vec4 color = load_vec4(j, "color", colors::GRAY);
+
+            glm::vec4 color;
+            if (j.count("color")) {
+                color = load_vec4(j["color"]);
+            }
+            else {
+                color = colors::GRAY;
+            }
+
             ui::Widget* group = gui.make_group(name, nitems, color);
 
             if (j.count("store_widget"))
@@ -246,12 +247,23 @@ void SculptEditor::load_ui_layout(const std::string& filename)
             if (j.count("shader"))
                 shader = j["shader"];
 
+            const bool is_color_button = j.count("color") > 0;
             Color color = colors::WHITE;
-            if (j.count("color"))
-                color = load_vec4(j, "color", glm::vec4());
+            if (is_color_button)
+                color = load_vec4(j["color"]);
 
             ui::Widget* widget = gui.make_button(name, texture.c_str(), shader.c_str(), color);
             group_elements_pending--;
+
+            if (is_color_button)
+            {
+                // Bind colors callback...
+
+                gui.bind(name, [&](const std::string& signal, Color color) {
+                    current_color = color;
+                    add_recent_color(color);
+                });
+            }
 
             if (j.count("store_widget"))
                 widgets_loaded[name] = widget;
@@ -265,6 +277,13 @@ void SculptEditor::load_ui_layout(const std::string& filename)
         else if (type == "submenu")
         {
             ui::Widget* parent = widgets_loaded[name];
+
+            if (!parent) {
+                assert(0);
+                std::cerr << "Can not find parent button with name " << name << std::endl;
+                return;
+            }
+
             gui.make_submenu(parent, name);
 
             assert(j.count("children") > 0);

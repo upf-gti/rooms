@@ -2,6 +2,7 @@
 
 #include "tool.h"
 #include "ui/transform_gizmo.h"
+#include "json_utils.h"
 
 enum eTool : uint8_t {
     NONE = 0,
@@ -49,7 +50,7 @@ class SculptEditor {
     // Snap to grid
 
     bool            snap_to_grid = false;
-    float           snap_grid_size = 0.01f;
+    float           snap_grid_size = 0.05f;
 
     // Mirror
 
@@ -67,7 +68,7 @@ class SculptEditor {
     ui::Controller                      gui;
     std::map<std::string, ui::Widget*>  widgets_loaded;
     json                                j_ui;
-    uint8_t                             max_recent_colors;
+    size_t                              max_recent_colors;
     std::vector<Color>                  recent_colors;
 
     void load_ui_layout(const std::string& filename);

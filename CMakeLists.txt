@@ -57,14 +57,20 @@ if (EMSCRIPTEN)
     set(SHELL_FILE shell.html)
 
     target_link_options(${PROJECT_NAME} PRIVATE
-        -O3
         -sUSE_GLFW=3
         -sUSE_WEBGPU
         -sALLOW_MEMORY_GROWTH
         -sASYNCIFY
 #        -sWASM=0
-#        -sASSERTIONS
-        -fsanitize=address
+        -sASSERTIONS
+#        -fsanitize=address
+        -Wdeprecated-literal-operator
+        -sSTACK_SIZE=5MB
+        #        -O3
+        # only for dev
+#        -sERROR_ON_WASM_CHANGES_AFTER_LINK
+#        -sWASM_BIGINT
+        # ------------
         --shell-file "${ROOMS_DIR_ROOT}/${SHELL_FILE}"
         --preload-file "${ROOMS_DIR_ROOT}/data@/data"
 	)

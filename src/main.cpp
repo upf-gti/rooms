@@ -13,6 +13,15 @@ EM_JS(int, canvas_get_width, (), {
 EM_JS(int, canvas_get_height, (), {
   return canvas.clientHeight;
 });
+
+static EM_BOOL on_web_display_size_changed(int event_type,
+    const EmscriptenUiEvent* ui_event, void* user_data)
+{
+    RoomsEngine* engine = reinterpret_cast<RoomsEngine*>(user_data);
+    engine->resize_window(ui_event->windowInnerWidth, ui_event->windowInnerHeight);
+    return true;
+}
+
 #endif
 
 void closeWindow(GLFWwindow* window) {
@@ -43,8 +52,8 @@ int main() {
 #ifndef DISABLE_RAYMARCHER
     required_limits.limits.maxBufferSize = SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION * sizeof(float) * 4; // TODO: remove this +4 when fixed in Dawn
     required_limits.limits.maxStorageBufferBindingSize = SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION * sizeof(float) * 4;
-#endif
     required_limits.limits.maxComputeInvocationsPerWorkgroup = 512;
+#endif
     required_limits.limits.maxSamplersPerShaderStage = 1;
 
     raymarching_renderer->set_required_limits(required_limits);
@@ -53,13 +62,18 @@ int main() {
     int render_width = canvas_get_width();
     int render_height = canvas_get_height();
 
+    emscripten_set_resize_callback(
+        EMSCRIPTEN_EVENT_TARGET_WINDOW,
+        (void*)engine, 0, on_web_display_size_changed
+    );
+
 #elif defined(XR_SUPPORT)
     // Keep XR aspect ratio
-    int render_width = 992;
-    int render_height = 1000;
+    int screen_width = 992;
+    int screen_height = 1000;
 #else
-    int render_width = 1280;
-    int render_height = 720;
+    int screen_width = 1280;
+    int screen_height = 720;
 #endif
 
     const bool use_xr = raymarching_renderer->get_openxr_available();
@@ -73,8 +87,10 @@ int main() {
             return 1;
         }
 
+        glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        window = glfwCreateWindow(render_width, render_height, "WebGPU Engine", NULL, NULL);
+
+        window = glfwCreateWindow(screen_width, screen_height, "WebGPU Engine", NULL, NULL);
     }
 
     if (engine->initialize(raymarching_renderer, window, use_glfw, use_mirror_screen)) {

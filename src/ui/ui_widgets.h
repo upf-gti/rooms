@@ -13,6 +13,11 @@ namespace ui {
 
 	class Controller;
 
+    struct sUIData {
+        glm::vec3 dummy;
+        float num_group_items = 2;
+    };
+
 	enum eWidgetType {
 		NONE,
 		TEXT,
@@ -50,7 +55,10 @@ namespace ui {
     class WidgetGroup : public Widget {
     public:
 
-        float number_of_widgets;
+        sUIData ui_data;
+
+        WGPUBindGroup render_bind_group_ui = nullptr;
+        Uniform uniforms;
 
         WidgetGroup(EntityMesh* e, const glm::vec2& p, float number_of_widgets);
     };
