@@ -14,11 +14,13 @@ struct SdfData {
 
 @group(0) @binding(0) var<uniform> edits : Edits;
 @group(0) @binding(1) var<uniform> merge_data : MergeData;
-@group(0) @binding(2) var<storage, read_write> sdf_data : SdfData;
+@group(0) @binding(2) var read_sdf: texture_3d<f32>;
+@group(0) @binding(3) var write_sdf: texture_storage_3d<rgba32float, write>;
 
 fn evalSdf(position : vec3u) -> Surface
 {
-    var sSurface : Surface = sdf_data.data[position.x + position.y * 512 + position.z * 512 * 512];
+    var sdf_load : vec4f = textureLoad(read_sdf, position, 0);
+    var sSurface : Surface = Surface(sdf_load.xyz, sdf_load.w);
 
     for (var i : u32 = 0; i < merge_data.edits_to_process; i++) {
 
@@ -39,5 +41,6 @@ fn evalSdf(position : vec3u) -> Surface
 
 fn compute(@builtin(global_invocation_id) id: vec3<u32>) {
     let world_id : vec3<u32> = merge_data.edits_aabb_start + id;
-    sdf_data.data[world_id.x + world_id.y * 512 + world_id.z * 512 * 512] = evalSdf(world_id);
+    textureStore(write_sdf, world_id, evalSdf(world_id));
+    //sdf_data.data[world_id.x + world_id.y * 512 + world_id.z * 512 * 512] = evalSdf(world_id);
 }

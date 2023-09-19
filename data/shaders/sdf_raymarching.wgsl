@@ -30,14 +30,15 @@ struct SdfData {
 
 @group(0) @binding(0) var left_eye_texture: texture_storage_2d<rgba32float,write>;
 @group(0) @binding(1) var right_eye_texture: texture_storage_2d<rgba32float,write>;
-@group(0) @binding(2) var<storage, read_write> sdf_data : SdfData;
+@group(0) @binding(2) var read_sdf: texture_3d<f32>;
+@group(0) @binding(3) var texture_sampler : sampler;
 
 @group(1) @binding(0) var<uniform> compute_data : ComputeData;
 @group(1) @binding(1) var<uniform> preview_edit : Edit;
 
 const MAX_DIST = 1.5;
-const MIN_HIT_DIST = 0.0005;
-const DERIVATIVE_STEP = 1.0 / 512.0;
+const MIN_HIT_DIST = 0.00005;
+const DERIVATIVE_STEP = 1.0 / SDF_RESOLUTION;
 
 const specularCoeff = 1.0;
 const specularExponent = 4.0;
@@ -61,57 +62,57 @@ fn irradiance_spherical_harmonics(n : vec3f) -> vec3f {
 
 fn sample_sdf(position : vec3f, trilinear : bool) -> Surface
 {
-    let p = (position - compute_data.sculpt_start_position + vec3(0.5, -0.5, 0.5)) * 512.0;
+    let p = (position - compute_data.sculpt_start_position + vec3(0.5, -0.5, 0.5));
 
-    let rot_p = rotate_point_quat(p - vec3f(256.0), compute_data.sculpt_rotation) + vec3f(256.0);
+    let rot_p = rotate_point_quat(p - vec3f(0.5), compute_data.sculpt_rotation) + vec3f(0.5);
 
-    if (rot_p.x < 0.0 || rot_p.x > 511 ||
-        rot_p.y < 0.0 || rot_p.y > 511 ||
-        rot_p.z < 0.0 || rot_p.z > 511) {
+    if (rot_p.x < 0.0 || rot_p.x > 1.0 ||
+        rot_p.y < 0.0 || rot_p.y > 1.0 ||
+        rot_p.z < 0.0 || rot_p.z > 1.0) {
         return Surface(vec3(0.0, 0.0, 0.0), 0.01);
     }
 
     var data : vec4f;
 
-    // From: http://paulbourke.net/miscellaneous/interpolation/
-    if (trilinear) {
-        let x_f : f32 = abs(fract(rot_p.x));
-        let y_f : f32 = abs(fract(rot_p.y));
-        let z_f : f32 = abs(fract(rot_p.z));
+    // // From: http://paulbourke.net/miscellaneous/interpolation/
+    // if (trilinear) {
+    //     let x_f : f32 = abs(fract(rot_p.x));
+    //     let y_f : f32 = abs(fract(rot_p.y));
+    //     let z_f : f32 = abs(fract(rot_p.z));
 
-        let x : u32 = u32(floor(rot_p.x));
-        let y : u32 = u32(floor(rot_p.y));
-        let z : u32 = u32(floor(rot_p.z));
+    //     let x : u32 = u32(floor(rot_p.x));
+    //     let y : u32 = u32(floor(rot_p.y));
+    //     let z : u32 = u32(floor(rot_p.z));
 
-        let index000 : u32 = x + y * 512u + z * 512u * 512u;
-        let index100 : u32 = (x + 1) + (y + 0) * 512u + (z + 0) * 512u * 512u;
-        let index010 : u32 = (x + 0) + (y + 1) * 512u + (z + 0) * 512u * 512u;
-        let index001 : u32 = (x + 0) + (y + 0) * 512u + (z + 1) * 512u * 512u;
-        let index101 : u32 = (x + 1) + (y + 0) * 512u + (z + 1) * 512u * 512u;
-        let index011 : u32 = (x + 0) + (y + 1) * 512u + (z + 1) * 512u * 512u;
-        let index110 : u32 = (x + 1) + (y + 1) * 512u + (z + 0) * 512u * 512u;
-        let index111 : u32 = (x + 1) + (y + 1) * 512u + (z + 1) * 512u * 512u;
+    //     let index000 : u32 = x + y * 512u + z * 512u * 512u;
+    //     let index100 : u32 = (x + 1) + (y + 0) * 512u + (z + 0) * 512u * 512u;
+    //     let index010 : u32 = (x + 0) + (y + 1) * 512u + (z + 0) * 512u * 512u;
+    //     let index001 : u32 = (x + 0) + (y + 0) * 512u + (z + 1) * 512u * 512u;
+    //     let index101 : u32 = (x + 1) + (y + 0) * 512u + (z + 1) * 512u * 512u;
+    //     let index011 : u32 = (x + 0) + (y + 1) * 512u + (z + 1) * 512u * 512u;
+    //     let index110 : u32 = (x + 1) + (y + 1) * 512u + (z + 0) * 512u * 512u;
+    //     let index111 : u32 = (x + 1) + (y + 1) * 512u + (z + 1) * 512u * 512u;
 
-        data = sdf_data.data[index000] * (1.0 - x_f) * (1.0 - y_f) * (1.0 - z_f) +
-                        sdf_data.data[index100] * x_f * (1.0 - y_f) * (1.0 - z_f) +
-                        sdf_data.data[index010] * (1.0 - x_f) * y_f * (1.0 - z_f) +
-                        sdf_data.data[index001] * (1.0 - x_f) * (1.0 - y_f) * z_f +
-                        sdf_data.data[index101] * x_f * (1.0 - y_f) * z_f +
-                        sdf_data.data[index011] * (1.0 - x_f) * y_f * z_f +
-                        sdf_data.data[index110] * x_f * y_f * (1.0 - z_f) +
-                        sdf_data.data[index111] * x_f * y_f * z_f;
-    } else {
-        let x : u32 = u32(round(rot_p.x));
-        let y : u32 = u32(round(rot_p.y));
-        let z : u32 = u32(round(rot_p.z));
+    //     data = sdf_data.data[index000] * (1.0 - x_f) * (1.0 - y_f) * (1.0 - z_f) +
+    //                     sdf_data.data[index100] * x_f * (1.0 - y_f) * (1.0 - z_f) +
+    //                     sdf_data.data[index010] * (1.0 - x_f) * y_f * (1.0 - z_f) +
+    //                     sdf_data.data[index001] * (1.0 - x_f) * (1.0 - y_f) * z_f +
+    //                     sdf_data.data[index101] * x_f * (1.0 - y_f) * z_f +
+    //                     sdf_data.data[index011] * (1.0 - x_f) * y_f * z_f +
+    //                     sdf_data.data[index110] * x_f * y_f * (1.0 - z_f) +
+    //                     sdf_data.data[index111] * x_f * y_f * z_f;
+    // } else {
+        // let x : u32 = u32(round(rot_p.x));
+        // let y : u32 = u32(round(rot_p.y));
+        // let z : u32 = u32(round(rot_p.z));
 
-        let index : u32 = x + y * 512u + z * 512u * 512u;
-        data = sdf_data.data[index];
-    }
+        // let index : u32 = x + y * 512u + z * 512u * 512u;
+        data = textureSampleLevel(read_sdf, texture_sampler, rot_p, 0);
+    // }
 
     var surface : Surface = Surface(data.xyz, data.w);
 
-    surface = add_preview_edit(p + compute_data.sculpt_start_position * 512.0, surface);
+    surface = add_preview_edit(p + compute_data.sculpt_start_position, surface);
 
     return surface;
 }
@@ -161,7 +162,7 @@ fn raymarch(ray_origin : vec3f, ray_dir : vec3f, view_proj : mat4x4f) -> vec4f
 	{
 		let pos = ray_origin + ray_dir * depth;
 
-        surface = sample_sdf(pos, surface_min_dist < 0.01);
+        surface = sample_sdf(pos, surface_min_dist < 0.02);
 
 		if (surface.distance < MIN_HIT_DIST) {
             let proj_pos : vec4f = view_proj * vec4f(pos, 1.0);

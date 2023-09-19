@@ -20,6 +20,8 @@ const OP_SMOOTH_SUBSTRACTION    = 5;
 const OP_SMOOTH_INTERSECTION    = 6;
 const OP_SMOOTH_PAINT           = 7;
 
+const SDF_RESOLUTION = 256.0;
+
 // Data containers
 
 struct Surface {
@@ -306,7 +308,7 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit ) -> Surfa
 
     // Center in texture (position 0,0,0 is just in the middle)
     let offsetPosition : vec3f = edit.position + vec3f(0.5);
-    let norm_position : vec3f = vec3f(position) / vec3f(512.0);
+    let norm_position : vec3f = vec3f(position) / vec3f(SDF_RESOLUTION);
     let size : vec3f = edit.dimensions.xyz;
     let radius : f32 = edit.dimensions.x;
     let primitive_spec : f32 = edit.dimensions.w;
