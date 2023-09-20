@@ -9,5 +9,5 @@ struct SdfData {
 @compute @workgroup_size(8, 8, 8)
 
 fn compute(@builtin(global_invocation_id) id: vec3<u32>) {
-    textureStore(write_sdf, id, vec4f(0.0, 0.0, 0.0, 0.025));
+    textureStore(write_sdf, id, vec4f(0.0, 0.0, 0.0, 0.05));
 }

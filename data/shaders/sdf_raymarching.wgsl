@@ -30,15 +30,16 @@ struct SdfData {
 
 @group(0) @binding(0) var left_eye_texture: texture_storage_2d<rgba32float,write>;
 @group(0) @binding(1) var right_eye_texture: texture_storage_2d<rgba32float,write>;
-@group(0) @binding(2) var read_sdf: texture_3d<f32>;
-@group(0) @binding(3) var texture_sampler : sampler;
+
+@group(0) @binding(2) var texture_sampler : sampler;
+@group(0) @binding(3) var read_sdf: texture_3d<f32>;
 
 @group(1) @binding(0) var<uniform> compute_data : ComputeData;
 @group(1) @binding(1) var<uniform> preview_edit : Edit;
 
 const MAX_DIST = 1.5;
-const MIN_HIT_DIST = 0.00005;
-const DERIVATIVE_STEP = 1.0 / SDF_RESOLUTION;
+const MIN_HIT_DIST = 0.0003;
+const DERIVATIVE_STEP = 1.0 / (SDF_RESOLUTION / 2.0);
 
 const specularCoeff = 1.0;
 const specularExponent = 4.0;
@@ -60,7 +61,7 @@ fn irradiance_spherical_harmonics(n : vec3f) -> vec3f {
         + vec3f(-0.033, -0.033, -0.037) * (n.x * n.x - n.y * n.y);
 }
 
-fn sample_sdf(position : vec3f, trilinear : bool) -> Surface
+fn sample_sdf(position : vec3f) -> Surface
 {
     let p = (position - compute_data.sculpt_start_position + vec3(0.5, -0.5, 0.5));
 
@@ -78,7 +79,7 @@ fn sample_sdf(position : vec3f, trilinear : bool) -> Surface
 
     var surface : Surface = Surface(data.xyz, data.w);
 
-    surface = add_preview_edit(p + compute_data.sculpt_start_position, surface);
+    surface = add_preview_edit((p  + compute_data.sculpt_start_position) * SDF_RESOLUTION, surface);
 
     return surface;
 }
@@ -91,9 +92,9 @@ fn add_preview_edit(position : vec3f, surface : Surface) -> Surface
 fn estimate_normal(p : vec3f) -> vec3f
 {
     return normalize(vec3f(
-        sample_sdf(vec3f(p.x + DERIVATIVE_STEP, p.y, p.z), true).distance - sample_sdf(vec3f(p.x - DERIVATIVE_STEP, p.y, p.z), true).distance,
-        sample_sdf(vec3f(p.x, p.y + DERIVATIVE_STEP, p.z), true).distance - sample_sdf(vec3f(p.x, p.y - DERIVATIVE_STEP, p.z), true).distance,
-        sample_sdf(vec3f(p.x, p.y, p.z + DERIVATIVE_STEP), true).distance - sample_sdf(vec3f(p.x, p.y, p.z - DERIVATIVE_STEP), true).distance
+        sample_sdf(vec3f(p.x + DERIVATIVE_STEP, p.y, p.z)).distance - sample_sdf(vec3f(p.x - DERIVATIVE_STEP, p.y, p.z)).distance,
+        sample_sdf(vec3f(p.x, p.y + DERIVATIVE_STEP, p.z)).distance - sample_sdf(vec3f(p.x, p.y - DERIVATIVE_STEP, p.z)).distance,
+        sample_sdf(vec3f(p.x, p.y, p.z + DERIVATIVE_STEP)).distance - sample_sdf(vec3f(p.x, p.y, p.z - DERIVATIVE_STEP)).distance
     ));
 }
 
@@ -128,7 +129,7 @@ fn raymarch(ray_origin : vec3f, ray_dir : vec3f, view_proj : mat4x4f) -> vec4f
 	{
 		let pos = ray_origin + ray_dir * depth;
 
-        surface = sample_sdf(pos, surface_min_dist < 0.02);
+        surface = sample_sdf(pos);
 
 		if (surface.distance < MIN_HIT_DIST) {
             let proj_pos : vec4f = view_proj * vec4f(pos, 1.0);

@@ -14,7 +14,7 @@
 #endif
 
 #define EDITS_MAX 1024
-#define SDF_RESOLUTION 256
+#define SDF_RESOLUTION 512
 
 class RaymarchingRenderer : public Renderer {
 
@@ -32,20 +32,21 @@ class RaymarchingRenderer : public Renderer {
     // Compute
     Pipeline                initialize_sdf_pipeline;
     Shader*                 initialize_sdf_shader = nullptr;
-    WGPUBindGroup           initialize_sdf_bind_group[2] = {};
+    WGPUBindGroup           initialize_sdf_bind_group = nullptr;
 
     Pipeline                compute_raymarching_pipeline;
     Shader*                 compute_raymarching_shader = nullptr;
-    WGPUBindGroup           compute_raymarching_textures_bind_group[2] = {};
+    WGPUBindGroup           compute_raymarching_textures_bind_group = nullptr;
     WGPUBindGroup           compute_raymarching_data_bind_group = nullptr;
 
     Pipeline                compute_merge_pipeline;
     Shader*                 compute_merge_shader = nullptr;
-    WGPUBindGroup           compute_merge_bind_group[2] = {};
+    WGPUBindGroup           compute_merge_bind_group = nullptr;
 
-    int                     current_sdf_index = 0;
-    Texture                 sdf_textures[2];
-    Uniform                 u_compute_texture_sdf_storage[4];
+    Texture                 sdf_texture;
+    Texture                 sdf_copy_read_texture;
+    Uniform                 u_compute_texture_sdf_storage;
+    Uniform                 u_compute_texture_sdf_copy_read_storage;
 
     Texture                 left_eye_texture;
     Texture                 left_eye_depth_texture;
@@ -174,7 +175,7 @@ class RaymarchingRenderer : public Renderer {
     void init_render_quad_bind_groups();
     void init_render_mesh_pipelines();
     void init_compute_raymarching_pipeline();
-    void init_compute_raymarching_textures(int index);
+    void init_compute_raymarching_textures();
     void init_initialize_sdf_pipeline();
     void init_compute_merge_pipeline();
 
