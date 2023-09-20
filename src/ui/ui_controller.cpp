@@ -191,7 +191,7 @@ namespace ui {
 
         if (is_color_button)
         {
-            bind(signal, [widget = widget](const std::string& signal, Color color) {
+            bind(signal, [widget = widget](const std::string& signal, void* button) {
                 // Unselect siblings
                 Widget* parent = widget->parent;
                 for (auto w : parent->children)
@@ -274,7 +274,7 @@ namespace ui {
         static_cast<ButtonWidget*>(widget)->is_submenu = true;
 
         // Visibility callback...
-		bind(name, [widget = widget](const std::string& signal, Color color) {
+		bind(name, [widget = widget](const std::string& signal, void* button) {
 
             Widget* parent = widget->parent;
             if (parent->type == GROUP)
