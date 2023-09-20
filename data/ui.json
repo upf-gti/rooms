@@ -11,12 +11,14 @@
         {
             "name": "sculpt",
             "type": "button",
-            "texture": "data/textures/cube.png"
+            "texture": "data/textures/cube.png",
+            "unique_selection": true
         },
         {
             "name": "paint",
             "type": "button",
-            "texture": "data/textures/paint.png"
+            "texture": "data/textures/paint.png",
+            "unique_selection": true
         },
         {
             "name": "primitives",
@@ -50,22 +52,26 @@
                 {
                     "name": "sphere",
                     "type": "button",
-                    "texture": "data/textures/sphere.png"
+                    "texture": "data/textures/sphere.png",
+                    "unique_selection": true
                 },
                 {
                     "name": "cube",
                     "type": "button",
-                    "texture": "data/textures/cube.png"
+                    "texture": "data/textures/cube.png",
+                    "unique_selection": true
                 },
                 {
                     "name": "cylinder",
                     "type": "button",
-                    "texture": "data/textures/cylinder.png"
+                    "texture": "data/textures/cylinder.png",
+                    "unique_selection": true
                 },
                 {
                     "name": "torus",
                     "type": "button",
-                    "texture": "data/textures/torus.png"
+                    "texture": "data/textures/torus.png",
+                    "unique_selection": true
                 }
             ]
         },

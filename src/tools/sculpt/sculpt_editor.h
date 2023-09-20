@@ -24,14 +24,17 @@ class SculptEditor {
     *	Edits
     */
 
-    Color                   current_color = colors::RED;
-    sdPrimitive             current_primitive = SD_SPHERE;
+    Color                    current_color = colors::RED;
+    sdPrimitive              current_primitive = SD_SPHERE;
+
+    static ui::ButtonWidget* current_primitive_button;
+    static ui::ButtonWidget* current_tool_button;
 
     EntityMesh*             mesh_preview = nullptr;
     EntityMesh*             sphere_mesh = nullptr;
     EntityMesh*             cube_mesh = nullptr;
 
-    void set_primitive( sdPrimitive primitive, EntityMesh* mesh_preview );
+    void set_primitive( sdPrimitive primitive, EntityMesh* mesh_preview = nullptr);
 
     bool			        rotation_started = false;
 

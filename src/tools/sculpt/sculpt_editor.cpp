@@ -5,6 +5,8 @@
 
 #include "framework/scene/parse_scene.h"
 
+ui::ButtonWidget* SculptEditor::current_primitive_button = nullptr;
+
 void SculptEditor::initialize()
 {
     renderer = dynamic_cast<RaymarchingRenderer*>(Renderer::instance);
@@ -57,8 +59,8 @@ void SculptEditor::initialize()
 
         gui.bind("sphere", [&](const std::string& signal, void* button) {  set_primitive(SD_SPHERE, sphere_mesh); });
         gui.bind("cube", [&](const std::string& signal, void* button) { set_primitive(SD_BOX, cube_mesh); });
-        gui.bind("cylinder", [&](const std::string& signal, void* button) { set_primitive(SD_CYLINDER, nullptr); });
-        gui.bind("torus", [&](const std::string& signal, void* button) { set_primitive(SD_TORUS, nullptr); });
+        gui.bind("cylinder", [&](const std::string& signal, void* button) { set_primitive(SD_CYLINDER); });
+        gui.bind("torus", [&](const std::string& signal, void* button) { set_primitive(SD_TORUS); });
 
         gui.bind("mirror", [&](const std::string& signal, void* button) { use_mirror = !use_mirror; });
         gui.bind("snap_to_grid", [&](const std::string& signal, void* button) { snap_to_grid = !snap_to_grid; });
@@ -257,7 +259,8 @@ void SculptEditor::load_ui_layout(const std::string& filename)
             if (is_color_button)
                 color = load_vec4(j["color"]);
 
-            ui::ButtonWidget* widget = (ui::ButtonWidget*)gui.make_button(name, texture.c_str(), shader.c_str(), is_color_button, color);
+            const bool is_unique_selection = j.value("unique_selection", false);
+            ui::ButtonWidget* widget = (ui::ButtonWidget*)gui.make_button(name, texture.c_str(), shader.c_str(), is_unique_selection, is_color_button, color);
             group_elements_pending--;
 
             if (is_color_button)

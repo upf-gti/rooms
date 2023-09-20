@@ -35,7 +35,7 @@ namespace ui {
 
 	bool Controller::is_active()
 	{
-        return true;// Input::get_grab_value(workspace.hand) > 0.5f;
+        return Input::get_grab_value(workspace.hand) > 0.5f;
 	}
 
 	void Controller::render()
@@ -157,7 +157,7 @@ namespace ui {
 		return widget;
 	}
 
-	Widget* Controller::make_button(const std::string& signal, const char* texture, const char* shader, bool is_color_button, const Color& color)
+	Widget* Controller::make_button(const std::string& signal, const char* texture, const char* shader, bool unique_selection, bool is_color_button, const Color& color)
 	{
         // World attributes
         glm::vec2 pos = compute_position();
@@ -185,11 +185,12 @@ namespace ui {
 
 		ButtonWidget* widget = new ButtonWidget(signal, e_button, pos, color, size);
         widget->is_color_button = is_color_button;
+        widget->is_unique_selection = unique_selection;
 
         if( group_opened )
             widget->priority = 1;
 
-        if (is_color_button)
+        if (is_color_button || unique_selection)
         {
             bind(signal, [widget = widget](const std::string& signal, void* button) {
                 // Unselect siblings
