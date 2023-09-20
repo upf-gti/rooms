@@ -21,6 +21,8 @@ const OP_SMOOTH_SUBSTRACTION    = 5;
 const OP_SMOOTH_INTERSECTION    = 6;
 const OP_SMOOTH_PAINT           = 7;
 
+const SDF_RESOLUTION = 512.0;
+
 // Data containers
 
 struct Surface {
@@ -227,11 +229,11 @@ fn sminPoly(a : f32, b : f32, k : f32) -> vec2f {
 
 fn opSmoothUnion( s1 : Surface, s2 : Surface, k : f32 ) -> Surface
 {
-    //let smin : vec2f = sminN(s2.distance, s1.distance, k, 3.0);
-    let smin : vec2f = sminPoly(s2.distance, s1.distance, k);
+    let smin : vec2f = sminN(s2.distance, s1.distance, k, 10.0);
+    //let smin : vec2f = sminPoly(s2.distance, s1.distance, k);
     var sf : Surface;
     sf.distance = smin.x;
-    sf.color = colorMix(s2.color, s1.color, smin.y);
+    sf.color = mix(s2.color, s1.color, smin.y);
     return sf;
 }
 
@@ -313,11 +315,11 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit ) -> Surfa
 {
     var pSurface : Surface;
 
-    const smooth_factor = 0.005;
+    const smooth_factor = 0.01;
 
     // Center in texture (position 0,0,0 is just in the middle)
     let offsetPosition : vec3f = edit.position + vec3f(0.5);
-    let norm_position : vec3f = vec3f(position) / vec3f(512.0);
+    let norm_position : vec3f = vec3f(position) / vec3f(SDF_RESOLUTION);
     let size : vec3f = edit.dimensions.xyz;
     let radius : f32 = edit.dimensions.x;
     var primitive_spec : f32 = edit.dimensions.w;

@@ -62,7 +62,12 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     var out: FragmentOutput;
 
-    out.color = select(vec4f(0.0), vec4f(0.57, 0.57, 0.57, 1.0),  (wrapped_uvs.x > one_minus_line_width || wrapped_uvs.x < zero_plus_line_width) || (wrapped_uvs.y > one_minus_line_width || wrapped_uvs.y < zero_plus_line_width));
+    if (wrapped_uvs.x > one_minus_line_width || wrapped_uvs.x < zero_plus_line_width) || (wrapped_uvs.y > one_minus_line_width || wrapped_uvs.y < zero_plus_line_width)
+    {
+        out.color = vec4f(0.57, 0.57, 0.57, 1.0);
+    } else {
+        discard;
+    }
 
     //out.color = vec4f(wrapped_uvs.x, wrapped_uvs.y, 0.0, 1.0); // Color
 

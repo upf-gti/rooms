@@ -27,6 +27,7 @@ class RaymarchingRenderer : public Renderer {
 
     Uniform                 u_render_texture_left_eye;
     Uniform                 u_render_texture_right_eye;
+    Uniform                 u_sampler;
 
     // Compute
     Pipeline                initialize_sdf_pipeline;
@@ -41,6 +42,11 @@ class RaymarchingRenderer : public Renderer {
     Pipeline                compute_merge_pipeline;
     Shader*                 compute_merge_shader = nullptr;
     WGPUBindGroup           compute_merge_bind_group = nullptr;
+
+    Texture                 sdf_texture;
+    Texture                 sdf_copy_read_texture;
+    Uniform                 u_compute_texture_sdf_storage;
+    Uniform                 u_compute_texture_sdf_copy_read_storage;
 
     Texture                 left_eye_texture;
     Texture                 left_eye_depth_texture;
@@ -84,9 +90,6 @@ class RaymarchingRenderer : public Renderer {
     Uniform                 u_compute_preview_edit;
     Uniform                 u_compute_texture_left_eye;
     Uniform                 u_compute_texture_right_eye;
-
-    Uniform                 u_compute_texture_sdf_storage;
-    //Uniform                 u_compute_texture_sdf_read;
 
     Uniform                 u_compute_merge_data;
     Uniform                 u_compute_edits_array;
@@ -157,7 +160,7 @@ class RaymarchingRenderer : public Renderer {
     void render_xr();
 #endif
 
-    void compute_initialize_sdf();
+    void compute_initialize_sdf(int sdf_texture_idx);
     void compute_merge();
     void compute_raymarching();
 

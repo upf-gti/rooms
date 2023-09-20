@@ -6,6 +6,8 @@
 
 #include "framework/input.h"
 
+#include <algorithm>
+
 std::ostream& operator<<(std::ostream& os, const Edit& edit)
 {
     os << "Position: " << edit.position.x << ", " << edit.position.y << ", " << edit.position.z << std::endl;
@@ -35,7 +37,9 @@ int RaymarchingRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
     init_compute_merge_pipeline();
     init_initialize_sdf_pipeline();
 
-    compute_initialize_sdf();
+    for (int i = 0; i < 2; ++i) {
+        compute_initialize_sdf(i);
+    }
 
     clear_color = glm::vec3(powf(0.22f, 2.2f));
 #endif
@@ -70,8 +74,13 @@ void RaymarchingRenderer::clean()
 
     // Compute pipeline
     wgpuBindGroupRelease(compute_raymarching_textures_bind_group);
-    wgpuBindGroupRelease(compute_raymarching_data_bind_group);
     wgpuBindGroupRelease(initialize_sdf_bind_group);
+    wgpuBindGroupRelease(compute_merge_bind_group);
+
+    u_compute_texture_sdf_storage.destroy();
+    u_compute_texture_sdf_copy_read_storage.destroy();
+
+    wgpuBindGroupRelease(compute_raymarching_data_bind_group);
 
     // Texture views
     wgpuTextureViewRelease(left_eye_depth_texture_view);
@@ -146,7 +155,6 @@ void RaymarchingRenderer::render_screen()
     // Update uniform buffer
     wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(u_camera.data), 0, &(camera_data), sizeof(sCameraData));
 
-    //compute_merge();
     compute_raymarching();
 
     WGPUTextureView swapchain_view = wgpuSwapChainGetCurrentTextureView(webgpu_context.screen_swapchain);
@@ -276,7 +284,6 @@ void RaymarchingRenderer::render_xr()
     compute_raymarching_data.camera_far = proj_verts[14] / (proj_verts[10] - 1.0f);
     compute_raymarching_data.camera_near = proj_verts[14] / (proj_verts[10] + 1.0f);
 
-    //compute_merge();
     compute_raymarching();
 
     for (uint32_t i = 0; i < xr_context.view_count; ++i) {
@@ -380,7 +387,7 @@ void RaymarchingRenderer::set_sculpt_rotation(const glm::quat& rotation)
     compute_merge_data.sculpt_rotation = rotation;
 }
 
-void RaymarchingRenderer::compute_initialize_sdf()
+void RaymarchingRenderer::compute_initialize_sdf(int sdf_texture_idx)
 {
     // Initialize a command encoder
     WGPUCommandEncoderDescriptor encoder_desc = {};
@@ -433,15 +440,6 @@ void RaymarchingRenderer::compute_merge()
     WGPUCommandEncoderDescriptor encoder_desc = {};
     WGPUCommandEncoder command_encoder = wgpuDeviceCreateCommandEncoder(webgpu_context.device, &encoder_desc);
 
-    // Create compute_raymarching pass
-    WGPUComputePassDescriptor compute_pass_desc = {};
-    compute_pass_desc.timestampWriteCount = 0;
-    compute_pass_desc.timestampWrites = nullptr;
-    WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
-
-    // Use compute_raymarching pass
-    compute_merge_pipeline.set(compute_pass);
-
     // Compute the edit size
     // NOTE: 6.12557 ms to beat
     // beated by 0.01741 ms
@@ -454,12 +452,43 @@ void RaymarchingRenderer::compute_merge()
         edit_max = glm::max(edit_max, tmp_max);
     }
 
+    edit_min = glm::clamp(edit_min, { 0.0f }, { 1.0f });
+    edit_max = glm::clamp(edit_max, { 0.0f }, { 1.0f });
+
     // Calculate size
     glm::vec3 edit_size = edit_max - edit_min;
     //std::cout << "Edit size: " << edit_size.x << " " << edit_size.y << " " << edit_size.z << std::endl;
     // To SDF coords:
     edit_size = edit_size * static_cast<float>(SDF_RESOLUTION);
-    compute_merge_data.edits_aabb_start = glm::uvec3(glm::floor((edit_min) * static_cast<float>(SDF_RESOLUTION)));
+    compute_merge_data.edits_aabb_start = glm::uvec3(glm::floor(edit_min * static_cast<float>(SDF_RESOLUTION)));
+
+    WGPUImageCopyTexture src_texture = {};
+    src_texture.texture = sdf_texture.get_texture();
+    src_texture.mipLevel = 0;
+    src_texture.origin = { compute_merge_data.edits_aabb_start.x, compute_merge_data.edits_aabb_start.y, compute_merge_data.edits_aabb_start.z };
+
+    WGPUImageCopyTexture dst_texture = {};
+    dst_texture.texture = sdf_copy_read_texture.get_texture();
+    dst_texture.mipLevel = 0;
+    dst_texture.origin = { compute_merge_data.edits_aabb_start.x, compute_merge_data.edits_aabb_start.y, compute_merge_data.edits_aabb_start.z };
+
+    uint32_t workgroupSize = 8;
+
+    uint32_t copy_w = std::clamp(static_cast<uint32_t>(edit_size.x + workgroupSize), 0u, SDF_RESOLUTION - compute_merge_data.edits_aabb_start.x);
+    uint32_t copy_h = std::clamp(static_cast<uint32_t>(edit_size.y + workgroupSize), 0u, SDF_RESOLUTION - compute_merge_data.edits_aabb_start.y);
+    uint32_t copy_d = std::clamp(static_cast<uint32_t>(edit_size.z + workgroupSize), 0u, SDF_RESOLUTION - compute_merge_data.edits_aabb_start.z);
+
+    WGPUExtent3D copy_size = { copy_w, copy_h, copy_d };
+    wgpuCommandEncoderCopyTextureToTexture(command_encoder, &src_texture, &dst_texture, &copy_size);
+
+    // Create compute_raymarching pass
+    WGPUComputePassDescriptor compute_pass_desc = {};
+    compute_pass_desc.timestampWriteCount = 0;
+    compute_pass_desc.timestampWrites = nullptr;
+    WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
+
+    // Use compute_raymarching pass
+    compute_merge_pipeline.set(compute_pass);
 
     // Update uniform buffer
     wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(u_compute_edits_array.data), 0, edits, sizeof(Edit) * compute_merge_data.edits_to_process);
@@ -467,7 +496,6 @@ void RaymarchingRenderer::compute_merge()
 
     wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_merge_bind_group, 0, nullptr);
 
-    uint32_t workgroupSize = 8;
     // This ceils invocationCount / workgroupSize
     uint32_t workgroupWidth  = static_cast<uint32_t>((edit_size.x + workgroupSize - 1) / workgroupSize);
     uint32_t workgroupHeight = static_cast<uint32_t>((edit_size.y + workgroupSize - 1) / workgroupSize);
@@ -756,11 +784,28 @@ void RaymarchingRenderer::init_compute_raymarching_pipeline()
 
     //std::vector<glm::vec4> sdf_data = { SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION, glm::vec4(0.0, 0.0, 0.0, 1000.0) };
 
-    u_compute_texture_sdf_storage.data = webgpu_context.create_buffer(SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION * sizeof(float) * 4, WGPUBufferUsage_Storage, nullptr);
-    u_compute_texture_sdf_storage.binding = 2;
-    u_compute_texture_sdf_storage.buffer_size = SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION * sizeof(float) * 4;
+    sdf_texture.create(
+        WGPUTextureDimension_3D,
+        WGPUTextureFormat_RGBA32Float,
+        { SDF_RESOLUTION, SDF_RESOLUTION, SDF_RESOLUTION },
+        static_cast<WGPUTextureUsage>(WGPUTextureUsage_TextureBinding | WGPUTextureUsage_StorageBinding | WGPUTextureUsage_CopySrc),
+        1, nullptr);
+
+    sdf_copy_read_texture.create(
+        WGPUTextureDimension_3D,
+        WGPUTextureFormat_RGBA32Float,
+        { SDF_RESOLUTION, SDF_RESOLUTION, SDF_RESOLUTION },
+        static_cast<WGPUTextureUsage>(WGPUTextureUsage_TextureBinding | WGPUTextureUsage_StorageBinding | WGPUTextureUsage_CopyDst),
+        1, nullptr);
+
+    u_compute_texture_sdf_storage.data = sdf_texture.get_view();
+    u_compute_texture_sdf_storage.binding = 3;
+
+    u_compute_texture_sdf_copy_read_storage.data = sdf_copy_read_texture.get_view();
+    u_compute_texture_sdf_copy_read_storage.binding = 2;
 
     init_compute_raymarching_textures();
+    
 
     // Compute data uniforms
     {
@@ -792,7 +837,10 @@ void RaymarchingRenderer::init_compute_raymarching_textures()
     u_compute_texture_right_eye.data = right_eye_texture.get_view();
     u_compute_texture_right_eye.binding = 1;
 
-    std::vector<Uniform*> uniforms = { &u_compute_texture_left_eye, &u_compute_texture_right_eye, &u_compute_texture_sdf_storage };
+    u_sampler.data = webgpu_context.create_sampler(); // Using all default params
+    u_sampler.binding = 2;
+
+    std::vector<Uniform*> uniforms = { &u_compute_texture_left_eye, &u_compute_texture_right_eye, &u_compute_texture_sdf_storage, &u_sampler };
 
     compute_raymarching_textures_bind_group = webgpu_context.create_bind_group(uniforms, compute_raymarching_shader, 0);
 }
@@ -802,7 +850,7 @@ void RaymarchingRenderer::init_initialize_sdf_pipeline() {
 
     std::vector<Uniform*> uniforms = { &u_compute_texture_sdf_storage };
     initialize_sdf_bind_group = webgpu_context.create_bind_group(uniforms, initialize_sdf_shader, 0);
-    
+
     initialize_sdf_pipeline.create_compute(initialize_sdf_shader);
 }
 
@@ -821,8 +869,7 @@ void RaymarchingRenderer::init_compute_merge_pipeline()
         u_compute_merge_data.binding = 1;
         u_compute_merge_data.buffer_size = sizeof(sMergeData);
 
-        std::vector<Uniform*> uniforms = { &u_compute_edits_array, &u_compute_merge_data, &u_compute_texture_sdf_storage };
-
+        std::vector<Uniform*> uniforms = { &u_compute_edits_array, &u_compute_merge_data, &u_compute_texture_sdf_copy_read_storage, &u_compute_texture_sdf_storage };
         compute_merge_bind_group = webgpu_context.create_bind_group(uniforms, compute_merge_shader, 0);
     }
 
@@ -832,24 +879,24 @@ void RaymarchingRenderer::init_compute_merge_pipeline()
 void RaymarchingRenderer::init_compute_octree_pipeline()
 {
     // Load compute_raymarching shader
-    compute_octree_flag_nodes_shader = Shader::get("data/shaders/octree/flag_nodes.wgsl");
+    //compute_octree_flag_nodes_shader = Shader::get("data/shaders/octree/flag_nodes.wgsl");
 
-    // Texture uniforms
-    {
-        u_octree.data = webgpu_context.create_buffer(sizeof(edits), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr);
-        u_octree.binding = 0;
-        u_octree.buffer_size = sizeof(edits);
+    //// Texture uniforms
+    //{
+    //    u_octree.data = webgpu_context.create_buffer(sizeof(edits), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr);
+    //    u_octree.binding = 0;
+    //    u_octree.buffer_size = sizeof(edits);
 
-        u_compute_merge_data.data = webgpu_context.create_buffer(sizeof(sMergeData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr);
-        u_compute_merge_data.binding = 1;
-        u_compute_merge_data.buffer_size = sizeof(sMergeData);
+    //    u_compute_merge_data.data = webgpu_context.create_buffer(sizeof(sMergeData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr);
+    //    u_compute_merge_data.binding = 1;
+    //    u_compute_merge_data.buffer_size = sizeof(sMergeData);
 
-        std::vector<Uniform*> uniforms = { &u_compute_edits_array, &u_compute_merge_data, &u_compute_texture_sdf_storage };
+    //    std::vector<Uniform*> uniforms = { &u_compute_edits_array, &u_compute_merge_data, &u_compute_texture_sdf_storage };
 
-        compute_merge_bind_group = webgpu_context.create_bind_group(uniforms, compute_merge_shader, 0);
-    }
+    //    compute_merge_bind_group = webgpu_context.create_bind_group(uniforms, compute_merge_shader, 0);
+    //}
 
-    compute_merge_pipeline.create_compute(compute_merge_shader);
+    //compute_merge_pipeline.create_compute(compute_merge_shader);
 }
 
 #if defined(XR_SUPPORT) && defined(USE_MIRROR_WINDOW)
