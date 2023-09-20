@@ -167,7 +167,7 @@ namespace ui {
         {
             selected = !selected;
 
-			controller->emit_signal(signal, color);
+			controller->emit_signal(signal, (void*)this);
 
             if (selected && is_color_button)
             {

@@ -28,10 +28,10 @@ class SculptEditor {
     sdPrimitive             current_primitive = SD_SPHERE;
 
     EntityMesh*             mesh_preview = nullptr;
-
     EntityMesh*             sphere_mesh = nullptr;
     EntityMesh*             cube_mesh = nullptr;
 
+    void set_primitive( sdPrimitive primitive, EntityMesh* mesh_preview );
 
     bool			        rotation_started = false;
 
@@ -66,7 +66,6 @@ class SculptEditor {
     // UI
 
     ui::Controller                      gui;
-    std::map<std::string, ui::Widget*>  widgets_loaded;
     json                                j_ui;
     size_t                              max_recent_colors;
     std::vector<Color>                  recent_colors;

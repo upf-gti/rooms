@@ -8,6 +8,7 @@ const SD_CONE           = 3;
 const SD_PYRAMID        = 4;
 const SD_CYLINDER       = 5;
 const SD_CAPSULE        = 6;
+const SD_TORUS          = 7;
 
 // SD Operations
 
@@ -162,10 +163,9 @@ fn sdCylinder(p : vec3f, a : vec3f, b : vec3f, rotation : vec4f, r : f32, rr : f
     var sf : Surface;
 
     let posA : vec3f = rotate_point_quat(p - a, rotation);
-    let posB : vec3f = rotate_point_quat(b - a, rotation);
 
     let pa : vec3f = posA;
-    let ba : vec3f = posB;
+    let ba : vec3f = b - a;
     let baba : f32 = dot(ba, ba);
     let paba : f32 = dot(pa, ba);
 
@@ -176,6 +176,17 @@ fn sdCylinder(p : vec3f, a : vec3f, b : vec3f, rotation : vec4f, r : f32, rr : f
     let d  : f32 = select(select(0.0, x2, x > 0.0) + select(0.0, y2, y > 0.0), -min(x2, y2), max(x, y) < 0.0);
 
     sf.distance = sign(d) * sqrt(abs(d)) / baba - rr;
+    sf.color = color;
+    return sf;
+}
+
+// t: (circle radius, thickness radius)
+fn sdTorus( p : vec3f, c : vec3f, t : vec2f, rotation : vec4f, color : vec3f ) -> Surface
+{
+    var sf : Surface;
+    let pos : vec3f = rotate_point_quat(p - c, rotation);
+    var q = vec2f(length(pos.xz) - t.x, pos.y);
+    sf.distance = length(q) - t.y;
     sf.color = color;
     return sf;
 }
@@ -309,7 +320,7 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit ) -> Surfa
     let norm_position : vec3f = vec3f(position) / vec3f(512.0);
     let size : vec3f = edit.dimensions.xyz;
     let radius : f32 = edit.dimensions.x;
-    let primitive_spec : f32 = edit.dimensions.w;
+    var primitive_spec : f32 = edit.dimensions.w;
 
     switch (edit.primitive) {
         case SD_SPHERE: {
@@ -320,20 +331,25 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit ) -> Surfa
             pSurface = sdBox(norm_position, offsetPosition, edit.rotation, size - primitive_spec, primitive_spec, edit.color);
             break;
         }
-        case SD_CAPSULE: {
-            pSurface = sdCapsule(norm_position, offsetPosition, offsetPosition + vec3f(0.0, 0.1, 0.0), edit.rotation, radius, edit.color);
-            break;
-        }
-        case SD_CONE: {
-            pSurface = sdCone(norm_position, offsetPosition, edit.rotation, size.xy, primitive_spec, edit.color);
-            break;
-        }
-        case SD_PYRAMID: {
-            pSurface = sdPyramid(norm_position, offsetPosition, edit.rotation, radius, primitive_spec, edit.color);
-            break;
-        }
+        // case SD_CAPSULE: {
+        //     pSurface = sdCapsule(norm_position, offsetPosition, offsetPosition + vec3f(0.0, 0.1, 0.0), edit.rotation, radius, edit.color);
+        //     break;
+        // }
+        // case SD_CONE: {
+        //     pSurface = sdCone(norm_position, offsetPosition, edit.rotation, size.xy, primitive_spec, edit.color);
+        //     break;
+        // }
+        // case SD_PYRAMID: {
+        //     pSurface = sdPyramid(norm_position, offsetPosition, edit.rotation, radius, primitive_spec, edit.color);
+        //     break;
+        // }
         case SD_CYLINDER: {
-            pSurface = sdCylinder(norm_position, offsetPosition,  offsetPosition + vec3f(0.0, 0.1, 0.0), edit.rotation, radius, primitive_spec, edit.color);
+            pSurface = sdCylinder(norm_position, offsetPosition,  offsetPosition + vec3f(0.0, radius, 0.0), edit.rotation, primitive_spec, 0.0, edit.color);
+            break;
+        }
+        case SD_TORUS: {
+            primitive_spec = clamp( primitive_spec, 0.001, radius );
+            pSurface = sdTorus(norm_position, offsetPosition, vec2f(radius, primitive_spec), edit.rotation, edit.color);
             break;
         }
         default: {

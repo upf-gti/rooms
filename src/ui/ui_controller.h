@@ -10,13 +10,14 @@
 class RaymarchingRenderer;
 class EntityMesh;
 
+using FuncVoid = std::function<void(const std::string&, void*)>;
 using FuncFloat = std::function<void(const std::string&, float)>;
 using FuncString = std::function<void(const std::string&, std::string)>;
 using FuncVec2 = std::function<void(const std::string&, glm::vec2)>;
 using FuncVec3 = std::function<void(const std::string&, glm::vec3)>;
 using FuncVec4 = std::function<void(const std::string&, glm::vec4)>;
 
-using SignalType = std::variant < FuncFloat, FuncString, FuncVec2, FuncVec3, FuncVec4>;
+using SignalType = std::variant <FuncFloat, FuncString, FuncVec2, FuncVec3, FuncVec4, FuncVoid>;
 
 namespace ui {
 

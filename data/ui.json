@@ -11,14 +11,22 @@
         {
             "name": "sculpt",
             "type": "button",
-            "texture": "data/textures/cube.png",
-            "store_widget": true
+            "texture": "data/textures/cube.png"
         },
         {
             "name": "paint",
             "type": "button",
-            "texture": "data/textures/paint.png",
-            "store_widget": true
+            "texture": "data/textures/paint.png"
+        },
+        {
+            "name": "primitives",
+            "type": "button",
+            "texture": "data/textures/primitives.png"
+        },
+        {
+            "name": "colors",
+            "type": "button",
+            "texture": "data/textures/colors.png"
         },
         {
             "name": "mirror",
@@ -31,19 +39,13 @@
             "texture": "data/textures/snap_to_grid.png"
         },
         {
-            "name": "colors",
-            "type": "button",
-            "texture": "data/textures/colors.png",
-            "store_widget": true
-        },
-        {
-            "name": "sculpt",
+            "name": "primitives",
             "type": "submenu",
             "children": [
                 {
                     "name": "g0_primitives",
                     "type": "group",
-                    "nitems": 2
+                    "nitems": 4
                 },
                 {
                     "name": "sphere",
@@ -54,27 +56,16 @@
                     "name": "cube",
                     "type": "button",
                     "texture": "data/textures/cube.png"
-                }
-            ]
-        },
-        {
-            "name": "paint",
-            "type": "submenu",
-            "children": [
-                {
-                    "name": "g1_primitives",
-                    "type": "group",
-                    "nitems": 2
                 },
                 {
-                    "name": "sphere",
+                    "name": "cylinder",
                     "type": "button",
-                    "texture": "data/textures/sphere.png"
+                    "texture": "data/textures/cylinder.png"
                 },
                 {
-                    "name": "cube",
+                    "name": "torus",
                     "type": "button",
-                    "texture": "data/textures/cube.png"
+                    "texture": "data/textures/torus.png"
                 }
             ]
         },
@@ -90,44 +81,37 @@
                 {
                     "name": "color_template_palette_1",
                     "type": "button",
-                    "texture": "data/textures/colors_template_1.png",
-                    "store_widget": true
+                    "texture": "data/textures/colors_template_1.png"
                 },
                 {
                     "name": "color_template_palette_2",
                     "type": "button",
-                    "texture": "data/textures/colors_template_2.png",
-                    "store_widget": true
+                    "texture": "data/textures/colors_template_2.png"
                 },
                 {
                     "name": "color_template_palette_3",
                     "type": "button",
-                    "texture": "data/textures/colors_template_3.png",
-                    "store_widget": true
+                    "texture": "data/textures/colors_template_3.png"
                 },
                 {
                     "name": "color_template_palette_4",
                     "type": "button",
-                    "texture": "data/textures/colors_template_4.png",
-                    "store_widget": true
+                    "texture": "data/textures/colors_template_4.png"
                 },
                 {
                     "name": "color_template_palette_5",
                     "type": "button",
-                    "texture": "data/textures/colors_template_5.png",
-                    "store_widget": true
+                    "texture": "data/textures/colors_template_5.png"
                 },
                 {
                     "name": "color_template_palette_6",
                     "type": "button",
-                    "texture": "data/textures/colors_template_6.png",
-                    "store_widget": true
+                    "texture": "data/textures/colors_template_6.png"
                 },
                 {
                     "name": "recent_colors",
                     "type": "button",
-                    "texture": "data/textures/recent_colors.png",
-                    "store_widget": true
+                    "texture": "data/textures/recent_colors.png"
                 }
             ]
         },
@@ -348,8 +332,7 @@
                 {
                     "name": "g_recent_colors",
                     "type": "group",
-                    "nitems": 6,
-                    "store_widget": true
+                    "nitems": 6
                 },
                 {
                     "name": "recent_color_1",

@@ -13,6 +13,7 @@ enum sdPrimitive {
 	SD_PYRAMID,
 	SD_CYLINDER,
 	SD_CAPSULE,
+    SD_TORUS,
 	ALL_PRIMITIVES
 };
 

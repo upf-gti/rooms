@@ -28,8 +28,10 @@ glm::vec3 Edit::world_half_size() const {
         //	return glm::abs(position - size) + radius * 2.0f;
         //case SD_PYRAMID:
         //	return glm::abs(position - size) + radius * 2.0f;
-        //case SD_CYLINDER:
-        //	return glm::abs(position - size) + radius * 2.0f;
+    case SD_CYLINDER:
+        return glm::abs(position - size) + radius * 2.0f;
+    case SD_TORUS:
+        return glm::abs(size) + radius * 2.0f;
     default:
         assert(false);
         return {};

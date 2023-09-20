@@ -52,22 +52,20 @@ void SculptEditor::initialize()
 
     // Set events
     {
-        gui.bind("sculpt", [&](const std::string& signal, Color color) { enable_tool(SCULPT); });
-        gui.bind("sphere", [&](const std::string& signal, Color color) {
-            current_primitive = SD_SPHERE;
-            mesh_preview = sphere_mesh;
-        });
-        gui.bind("cube", [&](const std::string& signal, Color color) {
-            current_primitive = SD_BOX;
-            mesh_preview = cube_mesh;
-        });
-        gui.bind("paint", [&](const std::string& signal, Color color) { enable_tool(PAINT); });
-        gui.bind("mirror", [&](const std::string& signal, Color color) { use_mirror = !use_mirror; });
-        gui.bind("snap_to_grid", [&](const std::string& signal, Color color) { snap_to_grid = !snap_to_grid; });
+        gui.bind("sculpt", [&](const std::string& signal, void* button) { enable_tool(SCULPT); });
+        gui.bind("paint", [&](const std::string& signal, void* button) { enable_tool(PAINT); });
+
+        gui.bind("sphere", [&](const std::string& signal, void* button) {  set_primitive(SD_SPHERE, sphere_mesh); });
+        gui.bind("cube", [&](const std::string& signal, void* button) { set_primitive(SD_BOX, cube_mesh); });
+        gui.bind("cylinder", [&](const std::string& signal, void* button) { set_primitive(SD_CYLINDER, nullptr); });
+        gui.bind("torus", [&](const std::string& signal, void* button) { set_primitive(SD_TORUS, nullptr); });
+
+        gui.bind("mirror", [&](const std::string& signal, void* button) { use_mirror = !use_mirror; });
+        gui.bind("snap_to_grid", [&](const std::string& signal, void* button) { snap_to_grid = !snap_to_grid; });
 
         // Bind recent color buttons...
 
-        ui::Widget* recent_group = widgets_loaded["g_recent_colors"];
+        ui::Widget* recent_group = gui.get_widget_from_name("g_recent_colors");
         if (!recent_group){
             assert(0);
             std::cerr << "Cannot find recent_colors button group!" << std::endl;
@@ -78,8 +76,8 @@ void SculptEditor::initialize()
         for (size_t i = 0; i < max_recent_colors; ++i)
         {
             ui::ButtonWidget* child = static_cast<ui::ButtonWidget*>(recent_group->children[i]);
-            gui.bind(child->signal, [&](const std::string& signal, Color color) {
-                current_color = color;
+            gui.bind(child->signal, [&](const std::string& signal, void* button) {
+                current_color = (static_cast<ui::ButtonWidget*>(button))->color;
             });
         }
     }
@@ -172,10 +170,14 @@ void SculptEditor::render()
     Edit& edit_to_add = tools[current_tool]->get_edit_to_add();
 
 #ifdef XR_SUPPORT
-    // Render a hollowed edit
-    mesh_preview->set_model(Input::get_controller_pose(gui.get_workspace().select_hand));
-    mesh_preview->scale(edit_to_add.dimensions + glm::vec4(0.001f));
-    mesh_preview->render();
+
+    if(mesh_preview)
+    {
+        // Render a hollowed edit
+        mesh_preview->set_model(Input::get_controller_pose(gui.get_workspace().select_hand));
+        mesh_preview->scale(edit_to_add.dimensions + glm::vec4(0.001f));
+        mesh_preview->render();
+    }
 
     if (current_tool != NONE) {
         tools[current_tool]->render_scene();
@@ -193,6 +195,12 @@ void SculptEditor::render()
 
     floor_grid_mesh->render();
 #endif
+}
+
+void SculptEditor::set_primitive(sdPrimitive primitive, EntityMesh* preview)
+{
+    current_primitive = primitive;
+    mesh_preview = preview;
 }
 
 void SculptEditor::enable_tool(eTool tool)
@@ -235,9 +243,6 @@ void SculptEditor::load_ui_layout(const std::string& filename)
             }
 
             ui::Widget* group = gui.make_group(name, nitems, color);
-
-            if (j.count("store_widget"))
-                widgets_loaded[name] = group;
         }
         else if (type == "button")
         {
@@ -259,14 +264,12 @@ void SculptEditor::load_ui_layout(const std::string& filename)
             {
                 // Bind colors callback...
 
-                gui.bind(name, [&](const std::string& signal, Color color) {
+                gui.bind(name, [&](const std::string& signal, void* button) {
+                    const Color& color = (static_cast<ui::ButtonWidget*>(button))->color;
                     current_color = color;
                     add_recent_color(color);
                 });
             }
-
-            if (j.count("store_widget"))
-                widgets_loaded[name] = widget;
 
             if (group_elements_pending == 0.f)
             {
@@ -276,7 +279,7 @@ void SculptEditor::load_ui_layout(const std::string& filename)
         }
         else if (type == "submenu")
         {
-            ui::Widget* parent = widgets_loaded[name];
+            ui::Widget* parent = gui.get_widget_from_name(name);
 
             if (!parent) {
                 assert(0);
@@ -317,7 +320,7 @@ void SculptEditor::add_recent_color(const Color& color)
         }
     }
 
-    ui::Widget* recent_group = widgets_loaded["g_recent_colors"];
+    ui::Widget* recent_group = gui.get_widget_from_name("g_recent_colors");
 
     assert(recent_colors.size() <= recent_group->children.size());
     for (uint8_t i = 0; i < recent_colors.size(); ++i)
