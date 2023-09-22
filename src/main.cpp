@@ -59,8 +59,8 @@ int main() {
     raymarching_renderer->set_required_limits(required_limits);
 
 #ifdef __EMSCRIPTEN__
-    int render_width = canvas_get_width();
-    int render_height = canvas_get_height();
+    int screen_width = canvas_get_width();
+    int screen_height = canvas_get_height();
 
     emscripten_set_resize_callback(
         EMSCRIPTEN_EVENT_TARGET_WINDOW,
