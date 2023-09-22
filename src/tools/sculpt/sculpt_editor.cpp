@@ -157,10 +157,13 @@ void SculptEditor::update(float delta_time)
 
         // If the mirror is activated, mirror using the plane, and add another edit to the list
         if (use_mirror) {
+            glm::vec3 prev_edit_position = edit_to_add.position;
             float dist_to_plane = glm::dot(mirror_normal, edit_to_add.position - mirror_origin);
             edit_to_add.position = edit_to_add.position - mirror_normal * dist_to_plane * 2.0f;
 
             renderer->push_edit(edit_to_add);
+
+            edit_to_add.position = prev_edit_position;
         }
     }
 
