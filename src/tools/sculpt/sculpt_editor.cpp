@@ -2,10 +2,7 @@
 #include "sculpt.h"
 #include "paint.h"
 #include "graphics/raymarching_renderer.h"
-
 #include "framework/scene/parse_scene.h"
-
-ui::ButtonWidget* SculptEditor::current_primitive_button = nullptr;
 
 void SculptEditor::initialize()
 {
@@ -61,6 +58,9 @@ void SculptEditor::initialize()
         gui.bind("cube", [&](const std::string& signal, void* button) { set_primitive(SD_BOX, cube_mesh); });
         gui.bind("cylinder", [&](const std::string& signal, void* button) { set_primitive(SD_CYLINDER); });
         gui.bind("torus", [&](const std::string& signal, void* button) { set_primitive(SD_TORUS); });
+
+        gui.bind("onion", [&](const std::string& signal, void* button) { set_primitive_modifier(onion_enabled); });
+        gui.bind("capped", [&](const std::string& signal, void* button) { set_primitive_modifier(capped_enabled); });
 
         gui.bind("mirror", [&](const std::string& signal, void* button) { use_mirror = !use_mirror; });
         gui.bind("snap_to_grid", [&](const std::string& signal, void* button) { snap_to_grid = !snap_to_grid; });
@@ -141,8 +141,33 @@ void SculptEditor::update(float delta_time)
         }
     }
 
+    // Update edit dimensions
+
+    if (capped_enabled)
+    {
+        float multiplier = -Input::get_thumbstick_value(HAND_RIGHT).y * delta_time * 2.f;
+        capped_value = glm::clamp(multiplier + capped_value, -1.f, 1.f);
+    }
+    else if (onion_enabled)
+    {
+        float multiplier = Input::get_thumbstick_value(HAND_RIGHT).y * delta_time * 1.f;
+        onion_thickness = glm::clamp(multiplier + onion_thickness, 0.f, 1.f);
+    }
+    else
+    {
+        float size_multiplier = Input::get_thumbstick_value(HAND_RIGHT).y * delta_time * 0.1f;
+        glm::vec3 new_dimensions = glm::clamp(size_multiplier + glm::vec3(edit_to_add.dimensions), 0.001f, 0.1f);
+        edit_to_add.dimensions = glm::vec4(new_dimensions, edit_to_add.dimensions.w);
+
+        // Update primitive specific size
+        size_multiplier = Input::get_thumbstick_value(HAND_LEFT).y * delta_time * 0.1f;
+        edit_to_add.dimensions.w = glm::clamp(size_multiplier + edit_to_add.dimensions.w, 0.001f, 0.1f);
+    }
+
     edit_to_add.primitive = current_primitive;
     edit_to_add.color = current_color;
+    edit_to_add.parameters.x = onion_enabled ? onion_thickness : 0.f;
+    edit_to_add.parameters.y = capped_enabled ? capped_value : -1.f;
     // ...
 
     // Set position of the preview edit
@@ -203,6 +228,16 @@ void SculptEditor::set_primitive(sdPrimitive primitive, EntityMesh* preview)
 {
     current_primitive = primitive;
     mesh_preview = preview;
+}
+
+void SculptEditor::set_primitive_modifier(bool& modifier)
+{
+    // Disable all
+    capped_enabled  = false;
+    onion_enabled   = false;
+
+    // Enable specific item
+    modifier = true;
 }
 
 void SculptEditor::enable_tool(eTool tool)

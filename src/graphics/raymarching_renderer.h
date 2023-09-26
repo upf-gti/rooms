@@ -13,7 +13,7 @@
 #define DISABLE_RAYMARCHER
 #endif
 
-#define EDITS_MAX 1024
+#define EDITS_MAX 512
 #define SDF_RESOLUTION 512
 
 class RaymarchingRenderer : public Renderer {

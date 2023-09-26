@@ -72,6 +72,34 @@
                     "type": "button",
                     "texture": "data/textures/torus.png",
                     "unique_selection": true
+                },
+                {
+                    "name": "shape_editor",
+                    "type": "button",
+                    "texture": "data/textures/shape_editor.png"
+                }
+            ]
+        },
+        {
+            "name": "shape_editor",
+            "type": "submenu",
+            "children": [
+                {
+                    "name": "g_shape_editor",
+                    "type": "group",
+                    "nitems": 2
+                },
+                {
+                    "name": "onion",
+                    "type": "button",
+                    "texture": "data/textures/onion.png",
+                    "unique_selection": true
+                },
+                {
+                    "name": "capped",
+                    "type": "button",
+                    "texture": "data/textures/capped.png",
+                    "unique_selection": true
                 }
             ]
         },

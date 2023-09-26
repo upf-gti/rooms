@@ -46,7 +46,7 @@ int main() {
     required_limits.limits.maxVertexBuffers = 1;
     required_limits.limits.maxBindGroups = 2;
     required_limits.limits.maxUniformBuffersPerShaderStage = 1;
-    required_limits.limits.maxUniformBufferBindingSize = 16 * 4 * sizeof(float);
+    required_limits.limits.maxUniformBufferBindingSize = 32 * 4 * sizeof(float);
     required_limits.limits.minUniformBufferOffsetAlignment = 256;
     required_limits.limits.minStorageBufferOffsetAlignment = 256;
 #ifndef DISABLE_RAYMARCHER

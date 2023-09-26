@@ -36,11 +36,12 @@ struct Edit {
     color      : vec3f,
     operation  : u32,
     dimensions : vec4f,
-    rotation   : vec4f
+    rotation   : vec4f,
+    parameters : vec4f
 };
 
 struct Edits {
-    data : array<Edit, 1024>
+    data : array<Edit, 512>
 }
 
 // Primitives
@@ -78,10 +79,33 @@ fn sdPlane( p : vec3f, c : vec3f, n : vec3f, h : f32, color : vec3f ) -> Surface
     return sf;
 }
 
-fn sdSphere( p : vec3f, c : vec3f, s : f32, color : vec3f) -> Surface
+fn sdSphere( p : vec3f, c : vec3f, r : f32, color : vec3f) -> Surface
 {
     var sf : Surface;
-    sf.distance = length(p - c) - s;
+    sf.distance = length(p - c) - r;
+    sf.color = color;
+    return sf;
+}
+
+fn sdCutSphere( p : vec3f, c : vec3f, rotation : vec4f, r : f32, h : f32, color : vec3f ) -> Surface
+{
+    var sf : Surface;
+    // sampling independent computations (only depend on shape)
+    var w = sqrt(r*r-h*h);
+
+    let pos : vec3f = rotate_point_quat(p - c, rotation);
+
+    // sampling dependant computations
+    var q = vec2f( length(pos.xy), pos.z );
+    var s = max( (h-r)*q.x*q.x+w*w*(h+r-2.0*q.y), h*q.x-w*q.y );
+    if(s<0.0) {
+        sf.distance = length(q) - r;
+    } else if(q.x<w) {
+        sf.distance = h - q.y;
+    } else  {
+        sf.distance = length(q-vec2f(w,h));
+    }
+                    
     sf.color = color;
     return sf;
 }
@@ -311,6 +335,14 @@ fn opSmoothPaint( s1 : Surface, s2 : Surface, paintColor : vec3f, k : f32 ) -> S
     return s;
 }
 
+fn opOnion( s : Surface, t : f32 ) -> Surface
+{
+    var _s : Surface;
+    _s.distance = abs(s.distance) - t;
+    _s.color = s.color;
+    return s;
+}
+
 fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit ) -> Surface
 {
     var pSurface : Surface;
@@ -323,10 +355,15 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit ) -> Surfa
     let size : vec3f = edit.dimensions.xyz;
     let radius : f32 = edit.dimensions.x;
     var primitive_spec : f32 = edit.dimensions.w;
+    var capped_value : f32 = edit.parameters.y;
 
     switch (edit.primitive) {
         case SD_SPHERE: {
-            pSurface = sdSphere(norm_position, offsetPosition, radius, edit.color);
+            if(capped_value > -1.0) { // // -1..1 no cap..fully capped
+                pSurface = sdCutSphere(norm_position, offsetPosition, edit.rotation, radius, radius * capped_value * 0.999, edit.color);
+            } else {
+                pSurface = sdSphere(norm_position, offsetPosition, radius, edit.color);
+            }
             break;
         }
         case SD_BOX: {
@@ -357,6 +394,13 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit ) -> Surfa
         default: {
             break;
         }
+    }
+
+    // Shape edition ...
+
+    var onion_thickness : f32 = edit.parameters.x;
+    if(onion_thickness > 0.0) {
+        pSurface = opOnion(pSurface, onion_thickness);
     }
 
     switch (edit.operation) {

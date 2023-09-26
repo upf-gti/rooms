@@ -24,46 +24,52 @@ class SculptEditor {
     *	Edits
     */
 
-    Color                    current_color = colors::RED;
-    sdPrimitive              current_primitive = SD_SPHERE;
+    Color current_color = colors::RED;
+    sdPrimitive current_primitive = SD_SPHERE;
 
-    static ui::ButtonWidget* current_primitive_button;
-    static ui::ButtonWidget* current_tool_button;
-
-    EntityMesh*             mesh_preview = nullptr;
-    EntityMesh*             sphere_mesh = nullptr;
-    EntityMesh*             cube_mesh = nullptr;
+    EntityMesh* mesh_preview = nullptr;
+    EntityMesh* sphere_mesh = nullptr;
+    EntityMesh* cube_mesh = nullptr;
 
     void set_primitive( sdPrimitive primitive, EntityMesh* mesh_preview = nullptr);
+    void set_primitive_modifier(bool& modifier);
 
-    bool			        rotation_started = false;
+    bool		rotation_started = false;
 
-    glm::vec3		        sculpt_start_position;
-    glm::vec3		        initial_hand_translation = {};
-    glm::vec3		        translation_diff = {};
+    glm::vec3	sculpt_start_position;
+    glm::vec3	initial_hand_translation = {};
+    glm::vec3	translation_diff = {};
 
-    glm::quat		        initial_hand_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
-    glm::quat		        rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
-    glm::quat		        sculpt_rotation = { 0.0, 0.0, 0.0, 1.0 };
+    glm::quat	initial_hand_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
+    glm::quat	rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
+    glm::quat	sculpt_rotation = { 0.0, 0.0, 0.0, 1.0 };
 
     /*
     *	Modifiers
     */
 
+    // Shape Editor
+
+    bool onion_enabled      = false;
+    float onion_thickness   = 0.1f;
+
+    bool capped_enabled = false;
+    float capped_value  = -1.0f; // -1..1 no cap..fully capped
+
     // Snap to grid
 
-    bool            snap_to_grid = false;
-    float           snap_grid_size = 0.05f;
+    bool snap_to_grid = false;
+    float snap_grid_size = 0.05f;
 
     // Mirror
 
-    bool			use_mirror = false;
+    bool use_mirror = false;
 
-    TransformGizmo  mirror_gizmo;
-    EntityMesh*     mirror_mesh = nullptr;
+    TransformGizmo mirror_gizmo;
+    EntityMesh* mirror_mesh = nullptr;
 
-    glm::vec3		mirror_origin = glm::vec3(0.0f, 0.0f, 0.0f);
-    glm::vec3		mirror_normal = glm::vec3(1.0f, 0.0f, 0.0f);
+    glm::vec3 mirror_origin = glm::vec3(0.0f, 0.0f, 0.0f);
+    glm::vec3 mirror_normal = glm::vec3(1.0f, 0.0f, 0.0f);
 
     
     // UI
