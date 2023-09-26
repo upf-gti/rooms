@@ -50,7 +50,7 @@ int main() {
     required_limits.limits.minUniformBufferOffsetAlignment = 256;
     required_limits.limits.minStorageBufferOffsetAlignment = 256;
 #ifndef DISABLE_RAYMARCHER
-    required_limits.limits.maxBufferSize = SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION * sizeof(float) * 4; // TODO: remove this +4 when fixed in Dawn
+    required_limits.limits.maxBufferSize = SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION * sizeof(float) * 4;
     required_limits.limits.maxStorageBufferBindingSize = SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION * sizeof(float) * 4;
     required_limits.limits.maxComputeInvocationsPerWorkgroup = 512;
 #endif
@@ -59,8 +59,8 @@ int main() {
     raymarching_renderer->set_required_limits(required_limits);
 
 #ifdef __EMSCRIPTEN__
-    int render_width = canvas_get_width();
-    int render_height = canvas_get_height();
+    int screen_width = canvas_get_width();
+    int screen_height = canvas_get_height();
 
     emscripten_set_resize_callback(
         EMSCRIPTEN_EVENT_TARGET_WINDOW,
