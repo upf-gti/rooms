@@ -11,7 +11,7 @@ void SculptEditor::initialize()
 {
     renderer = dynamic_cast<RaymarchingRenderer*>(Renderer::instance);
 
-    sphere_mesh = parse_scene("data/meshes/wired_sphere.obj");
+    sphere_mesh = parse_scene("data/meshes/fef/wired_sphere.obj");
     sphere_mesh->set_material_color(colors::WHITE);
     cube_mesh = parse_scene("data/meshes/hollow_cube.obj");
     cube_mesh->set_material_color(colors::WHITE);
@@ -33,7 +33,7 @@ void SculptEditor::initialize()
     floor_grid_mesh->set_translation(glm::vec3(0.0f));
     floor_grid_mesh->rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
-    mirror_gizmo.initialize(POSITION_GIZMO, sculpt_start_position + glm::vec3(0.0f, 1.0f, 0.0f));
+    mirror_gizmo.initialize(ROTATION_GIZMO, sculpt_start_position + glm::vec3(0.0f, 1.0f, 0.0f));
 
     tools[SCULPT] = new SculptTool();
     tools[PAINT] = new PaintTool();
@@ -131,8 +131,7 @@ void SculptEditor::update(float delta_time)
         renderer->set_sculpt_start_position(sculpt_start_position + translation_diff);
 
         rotation_started = true;
-    }
-    else {
+    } else {
         if (rotation_started) {
             sculpt_rotation = sculpt_rotation * rotation_diff;
             sculpt_start_position = sculpt_start_position + translation_diff;
@@ -149,7 +148,8 @@ void SculptEditor::update(float delta_time)
     renderer->set_preview_edit(edit_to_add);
 
     if (use_mirror) {
-        mirror_origin = mirror_gizmo.update(mirror_origin);
+        mirror_origin = mirror_gizmo.update(mirror_origin, delta_time);
+        mirror_normal = mirror_gizmo.get_rotation() * glm::vec3(0.0f, 0.0f, 1.0f);
     }
 
     if (tool_used) {
@@ -158,7 +158,7 @@ void SculptEditor::update(float delta_time)
         // If the mirror is activated, mirror using the plane, and add another edit to the list
         if (use_mirror) {
             glm::vec3 prev_edit_position = edit_to_add.position;
-            float dist_to_plane = glm::dot(mirror_normal, edit_to_add.position - mirror_origin);
+            const float dist_to_plane = glm::dot(mirror_normal, edit_to_add.position + glm::vec3(0.0f, 1.0f, 0.0f) - mirror_origin);
             edit_to_add.position = edit_to_add.position - mirror_normal * dist_to_plane * 2.0f;
 
             renderer->push_edit(edit_to_add);
@@ -194,7 +194,7 @@ void SculptEditor::render()
     if (use_mirror) {
         mirror_gizmo.render();
         mirror_mesh->set_translation(mirror_origin);
-        mirror_mesh->rotate(glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        mirror_mesh->rotate(mirror_gizmo.get_rotation());
         mirror_mesh->render();
     }
 

@@ -46,6 +46,8 @@ class TransformGizmo {
 
     glm::vec3               reference_rotation_pose;
 
+    glm::quat               accum_rotation;
+    glm::quat               reference_rotation;
     glm::quat               current_rotation = {0.0f, 0.0f, 0.0f, 1.0f};
     float                   x_angle = 0.0f;
     float                   y_angle = 0.0f;
