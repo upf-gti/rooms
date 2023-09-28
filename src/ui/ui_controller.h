@@ -22,9 +22,9 @@ using SignalType = std::variant <FuncFloat, FuncString, FuncVec2, FuncVec3, Func
 namespace ui {
 
     const float BUTTON_SIZE         = 32.f;
-    const float X_MARGIN            = 8.f;
+    const float X_MARGIN            = 4.f;
     const float X_GROUP_MARGIN      = X_MARGIN * 0.5f;
-    const float Y_MARGIN            = 12.f;
+    const float Y_MARGIN            = 4.f;
 
 	struct WorkSpaceData {
 		glm::vec2 size;
@@ -88,7 +88,7 @@ namespace ui {
 
         Widget* make_rect(glm::vec2 pos, glm::vec2 size, const Color& color);
 		Widget* make_text(const std::string& text, glm::vec2 pos, const Color& color, float scale = 1.f, glm::vec2 size = {1, 1});
-		Widget* make_button(const std::string& signal, const char* texture = nullptr, const char* shader = "data/shaders/mesh_texture_ui.wgsl", bool unique_selection = false, bool is_color_button = false, const Color& color = colors::WHITE);
+		Widget* make_button(const std::string& signal, const char* texture = nullptr, const char* shader = "data/shaders/mesh_texture_ui.wgsl", bool unique_selection = false, bool allow_toggle = false, bool is_color_button = false, const Color& color = colors::WHITE);
 		Widget* make_slider(const std::string& signal, float default_value, glm::vec2 pos, glm::vec2 size, const Color& color, const char* texture = nullptr);
 		Widget* make_color_picker(const std::string& signal, const Color& default_color, glm::vec2 pos, glm::vec2 size);
         void make_submenu(Widget* parent, const std::string& name);

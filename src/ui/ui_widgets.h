@@ -85,8 +85,9 @@ namespace ui {
         Color color;
         bool is_color_button = false;
 
-        bool is_submenu = false;
-        bool is_unique_selection = false;
+        bool is_submenu             = false;
+        bool is_unique_selection    = false;
+        bool allow_toggle           = false;
 
         ButtonWidget(const std::string& sg, EntityMesh* e, const glm::vec2& p, const Color& c, const glm::vec2& s);
 

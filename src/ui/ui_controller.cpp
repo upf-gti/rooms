@@ -157,7 +157,7 @@ namespace ui {
 		return widget;
 	}
 
-	Widget* Controller::make_button(const std::string& signal, const char* texture, const char* shader, bool unique_selection, bool is_color_button, const Color& color)
+	Widget* Controller::make_button(const std::string& signal, const char* texture, const char* shader, bool unique_selection, bool allow_toggle, bool is_color_button, const Color& color)
 	{
         // World attributes
         glm::vec2 pos = compute_position();
@@ -190,14 +190,18 @@ namespace ui {
         if( group_opened )
             widget->priority = 1;
 
-        if (is_color_button || unique_selection)
+        if (is_color_button || unique_selection || allow_toggle)
         {
-            bind(signal, [widget = widget](const std::string& signal, void* button) {
+            bind(signal, [widget = widget, allow_toggle](const std::string& signal, void* button) {
                 // Unselect siblings
                 Widget* parent = widget->parent;
-                for (auto w : parent->children)
-                    w->set_selected(false);
-                widget->set_selected(true);
+                const bool last_value = widget->selected;
+                if (!allow_toggle)
+                {
+                    for (auto w : parent->children)
+                        w->set_selected(false);
+                }
+                widget->set_selected(allow_toggle ? !last_value : true);
             });
         }
 
@@ -281,10 +285,12 @@ namespace ui {
             if (parent->type == GROUP)
                 parent = parent->parent;
 
+            const bool last_value = widget->show_children;
+
             for (auto w : parent->children)
                 w->set_show_children(false);
 
-            widget->set_show_children(!widget->show_children);
+            widget->set_show_children(!last_value);
 		});
 
         layout_iterator.x = 0.f;

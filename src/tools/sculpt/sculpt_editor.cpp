@@ -166,8 +166,8 @@ void SculptEditor::update(float delta_time)
 
     edit_to_add.primitive = current_primitive;
     edit_to_add.color = current_color;
-    edit_to_add.parameters.x = onion_enabled ? onion_thickness : 0.f;
-    edit_to_add.parameters.y = capped_enabled ? capped_value : -1.f;
+    edit_to_add.parameters.x = onion_thickness;
+    edit_to_add.parameters.y = capped_value;
     // ...
 
     // Set position of the preview edit
@@ -232,12 +232,14 @@ void SculptEditor::set_primitive(sdPrimitive primitive, EntityMesh* preview)
 
 void SculptEditor::set_primitive_modifier(bool& modifier)
 {
+    const bool last_value = modifier;
+
     // Disable all
     capped_enabled  = false;
     onion_enabled   = false;
 
     // Enable specific item
-    modifier = true;
+    modifier = !last_value;
 }
 
 void SculptEditor::enable_tool(eTool tool)
@@ -295,8 +297,11 @@ void SculptEditor::load_ui_layout(const std::string& filename)
                 color = load_vec4(j["color"]);
 
             const bool is_unique_selection = j.value("unique_selection", false);
-            ui::ButtonWidget* widget = (ui::ButtonWidget*)gui.make_button(name, texture.c_str(), shader.c_str(), is_unique_selection, is_color_button, color);
+            const bool allow_toggle = j.value("allow_toggle", false);
+            ui::ButtonWidget* widget = (ui::ButtonWidget*)gui.make_button(name, texture.c_str(), shader.c_str(), is_unique_selection, allow_toggle, is_color_button, color);
             group_elements_pending--;
+
+            widget->selected = j.value("selected", false);
 
             if (is_color_button)
             {
