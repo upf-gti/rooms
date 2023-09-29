@@ -116,7 +116,7 @@ fn blinn_phong(ray_origin : vec3f, position : vec3f, lightPosition : vec3f, ambi
 
 fn raymarch(ray_origin : vec3f, ray_dir : vec3f, view_proj : mat4x4f) -> vec4f
 {
-    let ambientColor = vec3f(0.4);
+    let ambientColor = vec3f(0.1);
 	let hitColor = vec3f(1.0, 1.0, 1.0);
 	let missColor = vec3f(0.0, 0.0, 0.0);
     let lightOffset = vec3f(0.0, 0.0, 0.0);

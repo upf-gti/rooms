@@ -18,15 +18,13 @@ std::ostream& operator<<(std::ostream& os, const Edit& edit)
     return os;
 }
 
-RaymarchingRenderer::RaymarchingRenderer() : Renderer()
+RaymarchingRenderer::RaymarchingRenderer()
 {
     
 }
 
-int RaymarchingRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
+int RaymarchingRenderer::initialize(bool use_mirror_screen)
 {
-    Renderer::initialize(window, use_mirror_screen);
-
     clear_color = glm::vec3(0.22f);
 
     init_render_quad_pipeline();
@@ -53,13 +51,15 @@ int RaymarchingRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
     compute_raymarching_data.render_width = static_cast<float>(webgpu_context.render_width);
     compute_raymarching_data.render_height = static_cast<float>(webgpu_context.render_height);
 
+
+    compute_raymarching_data.camera_far = 100.0f;
+    compute_raymarching_data.camera_near = 0.1f;
+
     return 0;
 }
 
 void RaymarchingRenderer::clean()
 {
-    Renderer::clean();
-
 #ifndef DISABLE_RAYMARCHER
     // Uniforms
     u_compute_buffer_data.destroy();
@@ -123,193 +123,7 @@ void RaymarchingRenderer::render()
         }
     }
 #endif
-
-    render_mesh_pipeline.clean_renderables();
-    render_mesh_texture_pipeline.clean_renderables();
-    render_mesh_ui_pipeline.clean_renderables();
-    render_mesh_ui_texture_pipeline.clean_renderables();
-    render_fonts_pipeline.clean_renderables();
-    render_mesh_grid_pipeline.clean_renderables();
-
-    // Check validation errors
-    //webgpu_context.print_errors();
 }
-
-void RaymarchingRenderer::render_screen()
-{
-    glm::vec3 eye = glm::vec3(0.0f, 0.5f, 1.5f);
-    glm::mat4x4 view = glm::lookAt(eye, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    glm::mat4x4 projection = glm::perspective(glm::radians(45.0f), webgpu_context.render_width / static_cast<float>(webgpu_context.render_height), 0.1f, 100.0f);
-    //projection[1][1] *= -1.0f;
-
-    glm::mat4x4 view_projection = projection * view;
-
-    compute_raymarching_data.view_projection_left_eye = view_projection;
-    compute_raymarching_data.inv_view_projection_left_eye = glm::inverse(view_projection);
-    compute_raymarching_data.left_eye_pos = eye;
-    compute_raymarching_data.camera_far = 100.0f;
-    compute_raymarching_data.camera_near = 0.1f;
-
-    camera_data.view_projection = view_projection;
-
-    // Update uniform buffer
-    wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(u_camera.data), 0, &(camera_data), sizeof(sCameraData));
-
-    compute_raymarching();
-
-    WGPUTextureView swapchain_view = wgpuSwapChainGetCurrentTextureView(webgpu_context.screen_swapchain);
-
-    render_eye_quad(swapchain_view, left_eye_depth_texture_view, render_bind_group_left_eye);
-
-    render_meshes(swapchain_view, left_eye_depth_texture_view);
-    
-    wgpuTextureViewRelease(swapchain_view);
-
-#ifndef __EMSCRIPTEN__
-    wgpuSwapChainPresent(webgpu_context.screen_swapchain);
-#endif
-}
-
-void RaymarchingRenderer::render_meshes(WGPUTextureView swapchain_view, WGPUTextureView swapchain_depth)
-{
-    // Create the command encoder
-    WGPUCommandEncoderDescriptor encoder_desc = {};
-    WGPUCommandEncoder command_encoder = wgpuDeviceCreateCommandEncoder(webgpu_context.device, &encoder_desc);
-
-    // Prepare the color attachment
-    WGPURenderPassColorAttachment render_pass_color_attachment = {};
-    render_pass_color_attachment.view = swapchain_view;
-    render_pass_color_attachment.loadOp = WGPULoadOp_Load;
-    render_pass_color_attachment.storeOp = WGPUStoreOp_Store;
-    render_pass_color_attachment.clearValue = WGPUColor(clear_color.x, clear_color.y, clear_color.z, 1.0f);
-
-    // Prepate the depth attachment
-    WGPURenderPassDepthStencilAttachment render_pass_depth_attachment = {};
-    render_pass_depth_attachment.view = swapchain_depth;
-    render_pass_depth_attachment.depthClearValue = 1.0f;
-#ifndef DISABLE_RAYMARCHER
-    render_pass_depth_attachment.depthLoadOp = WGPULoadOp_Load;
-#else
-    render_pass_depth_attachment.depthLoadOp = WGPULoadOp_Clear;
-#endif
-    render_pass_depth_attachment.depthStoreOp = WGPUStoreOp_Store;
-    render_pass_depth_attachment.depthReadOnly = false;
-    render_pass_depth_attachment.stencilClearValue = 0; // Stencil config necesary, even if unused
-    render_pass_depth_attachment.stencilLoadOp = WGPULoadOp_Undefined;
-    render_pass_depth_attachment.stencilStoreOp = WGPUStoreOp_Undefined;
-    render_pass_depth_attachment.stencilReadOnly = true;
-
-    WGPURenderPassDescriptor render_pass_descr = {};
-    render_pass_descr.colorAttachmentCount = 1;
-    render_pass_descr.colorAttachments = &render_pass_color_attachment;
-    render_pass_descr.depthStencilAttachment = &render_pass_depth_attachment;
-
-    // Create & fill the render pass (encoder)
-    WGPURenderPassEncoder render_pass = wgpuCommandEncoderBeginRenderPass(command_encoder, &render_pass_descr);
-
-    static auto render_pipeline = [&](Pipeline& pipeline) {
-
-        // Bind Pipeline
-        pipeline.set(render_pass);
-
-        for (const auto mesh : pipeline.get_render_list()) {
-
-            // Not initialized
-            if (mesh->get_vertex_count() == 0) {
-                std::cerr << "Skipping not initialized mesh" << std::endl;
-                continue;
-            }
-
-            mesh->update_instance_model_matrices();
-
-            // Set bind group
-            wgpuRenderPassEncoderSetBindGroup(render_pass, 0, mesh->get_bind_group(), 0, nullptr);
-            wgpuRenderPassEncoderSetBindGroup(render_pass, 1, render_bind_group_camera, 0, nullptr);
-
-            ui::Widget* widget = ui::Controller::get_widget_from_name(mesh->get_alias());
-            if (widget)
-            {
-                wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(widget->uniforms.data), 0, &widget->ui_data, sizeof(ui::sUIData));
-                wgpuRenderPassEncoderSetBindGroup(render_pass, 2, widget->bind_group, 0, nullptr);
-            }
-
-            // Set vertex buffer while encoding the render pass
-            wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, mesh->get_vertex_buffer(), 0, mesh->get_byte_size());
-
-            // Submit drawcall
-            wgpuRenderPassEncoderDraw(render_pass, mesh->get_vertex_count(), mesh->get_instances_size(), 0, 0);
-        }
-    };
-
-    render_pipeline(render_mesh_grid_pipeline);
-    render_pipeline(render_mesh_ui_pipeline);
-    render_pipeline(render_mesh_ui_texture_pipeline);
-    render_pipeline(render_mesh_pipeline);
-    render_pipeline(render_mesh_texture_pipeline);
-    render_pipeline(render_fonts_pipeline);
-
-    wgpuRenderPassEncoderEnd(render_pass);
-
-    wgpuRenderPassEncoderRelease(render_pass);
-
-    WGPUCommandBufferDescriptor cmd_buff_descriptor = {};
-    cmd_buff_descriptor.nextInChain = NULL;
-    cmd_buff_descriptor.label = "Command buffer";
-
-    WGPUCommandBuffer commands = wgpuCommandEncoderFinish(command_encoder, &cmd_buff_descriptor);
-
-    wgpuQueueSubmit(webgpu_context.device_queue, 1, &commands);
-
-    wgpuCommandBufferRelease(commands);
-    wgpuCommandEncoderRelease(command_encoder);
-}
-
-#if defined(XR_SUPPORT)
-
-void RaymarchingRenderer::render_xr()
-{
-    xr_context.init_frame();
-
-    compute_raymarching_data.view_projection_left_eye = xr_context.per_view_data[0].view_projection_matrix;
-    compute_raymarching_data.view_projection_right_eye = xr_context.per_view_data[1].view_projection_matrix;
-
-    compute_raymarching_data.inv_view_projection_left_eye = glm::inverse(xr_context.per_view_data[0].view_projection_matrix);
-    compute_raymarching_data.inv_view_projection_right_eye = glm::inverse(xr_context.per_view_data[1].view_projection_matrix);
-
-    compute_raymarching_data.left_eye_pos = xr_context.per_view_data[0].position;
-    compute_raymarching_data.right_eye_pos = xr_context.per_view_data[1].position;
-
-    const float* proj_verts = glm::value_ptr(xr_context.per_view_data[0].projection_matrix);
-
-    compute_raymarching_data.camera_far = proj_verts[14] / (proj_verts[10] - 1.0f);
-    compute_raymarching_data.camera_near = proj_verts[14] / (proj_verts[10] + 1.0f);
-
-    compute_raymarching();
-
-    for (uint32_t i = 0; i < xr_context.view_count; ++i) {
-
-        xr_context.acquire_swapchain(i);
-
-        const sSwapchainData& swapchainData = xr_context.swapchains[i];
-
-        WGPUBindGroup bind_group = i == 0 ? render_bind_group_left_eye : render_bind_group_right_eye;
-        WGPUTextureView depth_texture_view = (i == 0) ? left_eye_depth_texture_view : right_eye_depth_texture_view;
-
-        render_eye_quad(swapchainData.images[swapchainData.image_index].textureView, depth_texture_view, bind_group);
-
-        camera_data.view_projection = xr_context.per_view_data[i].view_projection_matrix;
-
-        // Update uniform buffer
-        wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(u_camera.data), 0, &(camera_data), sizeof(sCameraData));
-
-        render_meshes(swapchainData.images[swapchainData.image_index].textureView, depth_texture_view);
-
-        xr_context.release_swapchain(i);
-    }
-
-    xr_context.end_frame();
-}
-#endif
 
 void RaymarchingRenderer::render_eye_quad(WGPUTextureView swapchain_view, WGPUTextureView swapchain_depth, WGPUBindGroup bind_group)
 {
@@ -567,6 +381,26 @@ void RaymarchingRenderer::compute_raymarching()
     wgpuCommandEncoderRelease(command_encoder);
 }
 
+void RaymarchingRenderer::set_left_eye(const glm::vec3& eye_pos, const glm::mat4x4& view_projection)
+{
+    compute_raymarching_data.view_projection_left_eye = view_projection;
+    compute_raymarching_data.inv_view_projection_left_eye = glm::inverse(view_projection);
+    compute_raymarching_data.left_eye_pos = eye_pos;
+}
+
+void RaymarchingRenderer::set_right_eye(const glm::vec3& eye_pos, const glm::mat4x4& view_projection)
+{
+    compute_raymarching_data.view_projection_right_eye = view_projection;
+    compute_raymarching_data.inv_view_projection_right_eye = glm::inverse(view_projection);
+    compute_raymarching_data.right_eye_pos = eye_pos;
+}
+
+void RaymarchingRenderer::set_near_far(float z_near, float z_far)
+{
+    compute_raymarching_data.camera_near = z_near;
+    compute_raymarching_data.camera_far = z_far;
+}
+
 #if defined(XR_SUPPORT) && defined(USE_MIRROR_WINDOW)
 
 void RaymarchingRenderer::render_mirror()
@@ -725,54 +559,6 @@ void RaymarchingRenderer::init_render_quad_bind_groups()
         render_bind_group_right_eye = webgpu_context.create_bind_group(uniforms, render_quad_shader, 0);
     }
 
-}
-
-void RaymarchingRenderer::init_render_mesh_pipelines()
-{
-    render_mesh_shader = Shader::get("data/shaders/mesh_color.wgsl");
-    render_mesh_texture_shader = Shader::get("data/shaders/mesh_texture.wgsl");
-    render_mesh_ui_shader = Shader::get("data/shaders/mesh_ui.wgsl");
-    render_mesh_ui_texture_shader = Shader::get("data/shaders/mesh_texture_ui.wgsl");
-    render_fonts_shader = Shader::get("data/shaders/sdf_fonts.wgsl");
-    render_mesh_grid_shader = Shader::get("data/shaders/mesh_grid.wgsl");
-
-    // Camera
-
-    u_camera.data = webgpu_context.create_buffer(sizeof(sCameraData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "camera_buffer");
-    u_camera.binding = 0;
-    u_camera.buffer_size = sizeof(sCameraData);
-
-    std::vector<Uniform*> uniforms = { &u_camera };
-
-    render_bind_group_camera = webgpu_context.create_bind_group(uniforms, render_mesh_shader, 1);
-
-    // ...
-
-    WGPUTextureFormat swapchain_format = is_openxr_available ? webgpu_context.xr_swapchain_format : webgpu_context.swapchain_format;
-
-    WGPUBlendState blend_state;
-    blend_state.color = {
-            .operation = WGPUBlendOperation_Add,
-            .srcFactor = WGPUBlendFactor_SrcAlpha,
-            .dstFactor = WGPUBlendFactor_OneMinusSrcAlpha,
-    };
-    blend_state.alpha = {
-            .operation = WGPUBlendOperation_Add,
-            .srcFactor = WGPUBlendFactor_Zero,
-            .dstFactor = WGPUBlendFactor_One,
-    };
-
-    WGPUColorTargetState color_target = {};
-    color_target.format = swapchain_format;
-    color_target.blend = &blend_state;
-    color_target.writeMask = WGPUColorWriteMask_All;
-
-    render_mesh_pipeline.create_render(render_mesh_shader, color_target, true);
-    render_mesh_texture_pipeline.create_render(render_mesh_texture_shader, color_target, true);
-    render_mesh_ui_pipeline.create_render(render_mesh_ui_shader, color_target, true);
-    render_mesh_ui_texture_pipeline.create_render(render_mesh_ui_texture_shader, color_target, true);
-    render_fonts_pipeline.create_render(render_fonts_shader, color_target, true);
-    render_mesh_grid_pipeline.create_render(render_mesh_grid_shader, color_target, true);
 }
 
 void RaymarchingRenderer::init_compute_raymarching_pipeline()
@@ -951,17 +737,3 @@ void RaymarchingRenderer::init_mirror_pipeline()
 
 #endif
 
-void RaymarchingRenderer::resize_window(int width, int height)
-{
-    Renderer::resize_window(width, height);
-
-    compute_raymarching_data.render_width = static_cast<float>(webgpu_context.screen_width);
-    compute_raymarching_data.render_height = static_cast<float>(webgpu_context.screen_height);
-
-    init_render_quad_bind_groups();
-
-#ifndef DISABLE_RAYMARCHER
-    init_compute_raymarching_textures();
-#endif
-
-}
