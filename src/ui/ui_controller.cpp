@@ -35,7 +35,8 @@ namespace ui {
 
 	bool Controller::is_active()
 	{
-        return Input::get_grab_value(workspace.hand) > 0.5f;
+        return workspace.hand == HAND_RIGHT ||
+            Input::get_grab_value(workspace.hand) > 0.5f;
 	}
 
 	void Controller::render()
@@ -46,7 +47,8 @@ namespace ui {
 			widget->render();
 		}
 
-		raycast_pointer->render();
+        if(workspace.hand == HAND_LEFT)
+		    raycast_pointer->render();
 	}
 
 	void Controller::update(float delta_time)
@@ -58,16 +60,22 @@ namespace ui {
 
 		// Update raycast helper
 
-		glm::mat4x4 raycast_transform = Input::get_controller_pose(workspace.select_hand, pose);
-		raycast_pointer->set_model(raycast_transform);
-		raycast_pointer->rotate(glm::radians(-90.f), glm::vec3(1.f, 0.f, 0.f));
-		raycast_pointer->scale(glm::vec3(0.1f));
+        if (hand == HAND_LEFT)
+        {
+		    glm::mat4x4 raycast_transform = Input::get_controller_pose(workspace.select_hand, pose);
+		    raycast_pointer->set_model(raycast_transform);
+		    raycast_pointer->rotate(glm::radians(-90.f), glm::vec3(1.f, 0.f, 0.f));
+		    raycast_pointer->scale(glm::vec3(0.1f));
+        }
 
 		// Update workspace
 
 		glm::mat4x4 workspace_transform = 
         global_transform = Input::get_controller_pose(hand, pose);
         global_transform = glm::rotate(global_transform, glm::radians(120.f), glm::vec3(1.f, 0.f, 0.f));
+
+        if (pose == POSE_GRIP)
+            global_transform = glm::rotate(global_transform, glm::radians(-90.f), glm::vec3(1.f, 0.f, 0.f));
 
 		// Update widgets using this controller
 
@@ -156,6 +164,46 @@ namespace ui {
 		append_widget(widget, "ui_text");
 		return widget;
 	}
+
+    Widget* Controller::make_label(const std::string& text, const char* texture, bool vertical_mode)
+    {
+        static int num_labels = 0;
+
+        // World attributes
+        float margin = 2.f;
+        glm::vec2 pos = {0.f, num_labels * BUTTON_SIZE * 0.5f + num_labels * margin };
+        glm::vec2 size = glm::vec2(workspace.size.x, BUTTON_SIZE * 0.5f);
+
+        num_labels++;
+
+        return make_text(text, pos, colors::GREEN, 28.f, size);
+
+        /*glm::vec2 _pos = pos;
+        glm::vec2 _size = size;
+
+        process_params(pos, size);*/
+
+        /*
+        *	Create button entity and set transform
+        */
+
+        // Render quad in local workspace position
+        /*EntityMesh* e_label = new EntityMesh();
+        Mesh* mesh = new Mesh();
+        if (texture)
+            e_label->set_material_diffuse(Texture::get(texture));
+
+        mesh->create_quad(size.x, size.y);
+        e_label->set_mesh(mesh);*/
+
+        /*LabelWidget* widget = new LabelWidget(text, e_label, pos, color, size);
+
+        widget->m_layer = static_cast<uint8_t>(layout_iterator.y);
+
+        append_widget(widget, text);
+
+        return widget;*/
+    }
 
 	Widget* Controller::make_button(const std::string& signal, const char* texture, const char* shader, bool unique_selection, bool allow_toggle, bool is_color_button, const Color& color)
 	{

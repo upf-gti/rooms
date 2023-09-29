@@ -134,10 +134,11 @@ fn raymarch(ray_origin : vec3f, ray_dir : vec3f, view_proj : mat4x4f) -> vec4f
 
         surface = sample_sdf(pos);
 
-        if((surface_min_dist < edge_threshold) && (surface.distance > surface_min_dist))
-        {
-            edge = 1.0;
-        }
+        // Edge detection
+        // if((surface_min_dist < edge_threshold) && (surface.distance > surface_min_dist))
+        // {
+        //     edge = 1.0;
+        // }
 
 		if (surface.distance < MIN_HIT_DIST) {
             let proj_pos : vec4f = view_proj * vec4f(pos, 1.0);

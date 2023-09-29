@@ -43,11 +43,8 @@ void SculptEditor::initialize()
 
     // UI Layout from JSON
     {
-        load_ui_layout( "data/ui.json" );
+        load_ui_layout( "data/ui/main.json", gui );
     }
-
-    /*ui::Widget* debug = gui.make_rect({0, 0}, { 256.f, 144.f }, colors::RED);
-    debug->priority = -1;*/
 
     // Set events
     {
@@ -84,6 +81,15 @@ void SculptEditor::initialize()
                 current_color = (static_cast<ui::ButtonWidget*>(button))->color;
             });
         }
+    }
+
+    // Create helper ui
+    {
+        load_ui_layout("data/ui/helper.json", helper_gui);
+
+        // Customize a little bit...
+        helper_gui.get_workspace().hand = HAND_RIGHT;
+        helper_gui.get_workspace().root_pose = POSE_GRIP;
     }
 
     enable_tool(SCULPT);
@@ -192,6 +198,7 @@ void SculptEditor::update(float delta_time)
     }
 
     gui.update(delta_time);
+    helper_gui.update(delta_time);
 }
 
 void SculptEditor::render()
@@ -214,6 +221,7 @@ void SculptEditor::render()
     }
 
     gui.render();
+    helper_gui.render();
 
     if (use_mirror) {
         mirror_gizmo.render();
@@ -254,15 +262,14 @@ void SculptEditor::enable_tool(eTool tool)
     current_tool = tool;
 }
 
-void SculptEditor::load_ui_layout(const std::string& filename)
+void SculptEditor::load_ui_layout(const std::string& filename, ui::Controller& ui)
 {
     const json& j = load_json(filename);
-    j_ui = j;
     float group_elements_pending = -1;
 
     float width = j["width"];
     float height = j["height"];
-    gui.set_workspace({ width, height });
+    ui.set_workspace({ width, height });
 
     std::function<void(const json&)> read_element = [&](const json& j) {
 
@@ -283,7 +290,7 @@ void SculptEditor::load_ui_layout(const std::string& filename)
                 color = colors::GRAY;
             }
 
-            ui::Widget* group = gui.make_group(name, nitems, color);
+            ui::Widget* group = ui.make_group(name, nitems, color);
         }
         else if (type == "button")
         {
@@ -300,7 +307,7 @@ void SculptEditor::load_ui_layout(const std::string& filename)
 
             const bool is_unique_selection = j.value("unique_selection", false);
             const bool allow_toggle = j.value("allow_toggle", false);
-            ui::ButtonWidget* widget = (ui::ButtonWidget*)gui.make_button(name, texture.c_str(), shader.c_str(), is_unique_selection, allow_toggle, is_color_button, color);
+            ui::ButtonWidget* widget = (ui::ButtonWidget*)ui.make_button(name, texture.c_str(), shader.c_str(), is_unique_selection, allow_toggle, is_color_button, color);
             group_elements_pending--;
 
             widget->selected = j.value("selected", false);
@@ -309,7 +316,7 @@ void SculptEditor::load_ui_layout(const std::string& filename)
             {
                 // Bind colors callback...
 
-                gui.bind(name, [&](const std::string& signal, void* button) {
+                ui.bind(name, [&](const std::string& signal, void* button) {
                     const Color& color = (static_cast<ui::ButtonWidget*>(button))->color;
                     current_color = color;
                     add_recent_color(color);
@@ -318,13 +325,18 @@ void SculptEditor::load_ui_layout(const std::string& filename)
 
             if (group_elements_pending == 0.f)
             {
-                gui.close_group();
+                ui.close_group();
                 group_elements_pending = -1;
             }
         }
+        else if (type == "label")
+        {
+            std::string texture = j["texture"];
+            ui.make_label(name, j.count("texture") > 0 ? texture.c_str() : nullptr);
+        }
         else if (type == "submenu")
         {
-            ui::Widget* parent = gui.get_widget_from_name(name);
+            ui::Widget* parent = ui.get_widget_from_name(name);
 
             if (!parent) {
                 assert(0);
@@ -332,7 +344,7 @@ void SculptEditor::load_ui_layout(const std::string& filename)
                 return;
             }
 
-            gui.make_submenu(parent, name);
+            ui.make_submenu(parent, name);
 
             assert(j.count("children") > 0);
             auto& _subelements = j["children"];
@@ -340,7 +352,7 @@ void SculptEditor::load_ui_layout(const std::string& filename)
                 read_element(sub_el);
             }
 
-            gui.close_submenu();
+            ui.close_submenu();
         }
     };
 

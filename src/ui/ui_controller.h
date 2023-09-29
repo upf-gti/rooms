@@ -74,7 +74,7 @@ namespace ui {
 		*	Select hand: Raycast hand
 		*/
 
-		const WorkSpaceData& get_workspace() { return workspace; };
+		WorkSpaceData& get_workspace() { return workspace; };
 		void set_workspace(glm::vec2 _workspace_size, uint8_t _select_button = 0, uint8_t _root_pose = 1, uint8_t _hand = 0, uint8_t _select_hand = 1);
 		const glm::mat4x4& get_matrix() { return global_transform; };
 		bool is_active();
@@ -88,6 +88,7 @@ namespace ui {
 
         Widget* make_rect(glm::vec2 pos, glm::vec2 size, const Color& color);
 		Widget* make_text(const std::string& text, glm::vec2 pos, const Color& color, float scale = 1.f, glm::vec2 size = {1, 1});
+        Widget* make_label(const std::string& text, const char* texture = nullptr, bool vertical_mode = true);
 		Widget* make_button(const std::string& signal, const char* texture = nullptr, const char* shader = "data/shaders/mesh_texture_ui.wgsl", bool unique_selection = false, bool allow_toggle = false, bool is_color_button = false, const Color& color = colors::WHITE);
 		Widget* make_slider(const std::string& signal, float default_value, glm::vec2 pos, glm::vec2 size, const Color& color, const char* texture = nullptr);
 		Widget* make_color_picker(const std::string& signal, const Color& default_color, glm::vec2 pos, glm::vec2 size);

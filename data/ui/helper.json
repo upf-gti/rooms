@@ -1,0 +1,21 @@
+{
+    "width": 48,
+    "height": 64,
+    "elements": [
+        {
+            "name": "First label",
+            "type": "label",
+            "texture": "data/textures/cube.png"
+        },
+        {
+            "name": "Second label",
+            "type": "label",
+            "texture": "data/textures/cube.png"
+        },
+        {
+            "name": "Third label",
+            "type": "label",
+            "texture": "data/textures/cube.png"
+        }
+    ]
+}
