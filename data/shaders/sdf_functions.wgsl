@@ -126,17 +126,13 @@ fn sdBox( p : vec3f, c : vec3f, rotation : vec4f, s : vec3f, r : f32, color : ve
 fn sdCapsule( p : vec3f, a : vec3f, b : vec3f, rotation : vec4f, r : f32, color : vec3f ) -> Surface
 {
     var sf : Surface;
-
     let posA : vec3f = rotate_point_quat(p - a, rotation);
 
     let pa : vec3f = posA;
     let ba : vec3f = b - a;
-
     let h : f32 = clamp(dot(pa,ba) / dot(ba, ba), 0.0, 1.0);
-
     sf.distance = length(pa-ba*h) - r;
     sf.color = color;
-
     return sf;
 }
 
@@ -241,12 +237,7 @@ fn sdCappedTorus( p : vec3f, c : vec3f, t : vec2f, rotation : vec4f, sc : vec2f,
     let ra = t.x;
     let rb = t.y;
     pos.x = abs(pos.x);
-    var k : f32;
-    if(sc.y*pos.x > sc.x*pos.y) {
-        k = dot(pos.xy,sc);
-    } else {
-        k = length(pos.xy);
-    }
+    var k = select(length(pos.xy), dot(pos.xy,sc), sc.y*pos.x > sc.x*pos.y);
 
     sf.distance = sqrt( dot(pos,pos) + ra*ra - 2.0*ra*k ) - rb;
     sf.color = color;
