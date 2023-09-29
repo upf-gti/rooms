@@ -24,8 +24,8 @@ glm::vec3 Edit::world_half_size() const {
         return size + glm::vec3(radius);
     case SD_CAPSULE:
         return glm::abs(position - size) + radius;
-        //case SD_CONE:
-        //	return glm::abs(position - size) + radius * 2.0f;
+    case SD_CONE:
+     	return glm::abs(position - size) + radius * 2.0f;
         //case SD_PYRAMID:
         //	return glm::abs(position - size) + radius * 2.0f;
     case SD_CYLINDER:

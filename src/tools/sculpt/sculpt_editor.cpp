@@ -56,6 +56,7 @@ void SculptEditor::initialize()
 
         gui.bind("sphere", [&](const std::string& signal, void* button) {  set_primitive(SD_SPHERE, sphere_mesh); });
         gui.bind("cube", [&](const std::string& signal, void* button) { set_primitive(SD_BOX, cube_mesh); });
+        gui.bind("cone", [&](const std::string& signal, void* button) { set_primitive(SD_CONE); });
         gui.bind("cylinder", [&](const std::string& signal, void* button) { set_primitive(SD_CYLINDER); });
         gui.bind("torus", [&](const std::string& signal, void* button) { set_primitive(SD_TORUS); });
 

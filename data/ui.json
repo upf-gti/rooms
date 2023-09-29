@@ -50,7 +50,7 @@
                 {
                     "name": "g0_primitives",
                     "type": "group",
-                    "nitems": 4
+                    "nitems": 5
                 },
                 {
                     "name": "sphere",
@@ -62,6 +62,12 @@
                     "name": "cube",
                     "type": "button",
                     "texture": "data/textures/cube.png",
+                    "unique_selection": true
+                },
+                {
+                    "name": "cone",
+                    "type": "button",
+                    "texture": "data/textures/cone.png",
                     "unique_selection": true
                 },
                 {
