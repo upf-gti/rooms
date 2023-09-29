@@ -11,7 +11,7 @@ void SculptEditor::initialize()
 {
     renderer = dynamic_cast<RaymarchingRenderer*>(Renderer::instance);
 
-    sphere_mesh = parse_scene("data/meshes/fef/wired_sphere.obj");
+    sphere_mesh = parse_scene("data/meshes/wired_sphere.obj");
     sphere_mesh->set_material_color(colors::WHITE);
     cube_mesh = parse_scene("data/meshes/hollow_cube.obj");
     cube_mesh->set_material_color(colors::WHITE);
@@ -33,7 +33,7 @@ void SculptEditor::initialize()
     floor_grid_mesh->set_translation(glm::vec3(0.0f));
     floor_grid_mesh->rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
-    mirror_gizmo.initialize(ROTATION_GIZMO, sculpt_start_position + glm::vec3(0.0f, 1.0f, 0.0f));
+    mirror_gizmo.initialize(POSITION_ROTATION_GIZMO, sculpt_start_position + glm::vec3(0.0f, 1.0f, 0.0f));
 
     tools[SCULPT] = new SculptTool();
     tools[PAINT] = new PaintTool();

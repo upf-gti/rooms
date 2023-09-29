@@ -44,7 +44,9 @@ class TransformGizmo {
     bool                    rotation_axis_y_selected = false;
     bool                    rotation_axis_z_selected = false;
 
-    glm::vec3               reference_rotation_pose;
+    glm::vec2               reference_rotation_pose_xy;
+    glm::vec2               reference_rotation_pose_yz;
+    glm::vec2               reference_rotation_pose_xz;
 
     glm::quat               accum_rotation;
     glm::quat               reference_rotation;

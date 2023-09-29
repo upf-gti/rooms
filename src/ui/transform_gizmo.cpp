@@ -69,10 +69,12 @@ glm::vec3 TransformGizmo::update(const glm::vec3 &new_position, const float delt
         const bool any_translation_grabed = position_axis_x_selected || position_axis_y_selected || position_axis_z_selected;
 
         // ROTATION GIZMO
-        rotation_axis_x_selected = !any_translation_grabed && intersection::point_circle(controller_position, gizmo_position, current_rotation * glm::vec3(1.0f, 0.0f, 0.0f), rotation_gizmo_scale.y * 0.25f);
-        rotation_axis_y_selected = !rotation_axis_x_selected && intersection::point_circle(controller_position, gizmo_position, current_rotation * glm::vec3(0.0f, 1.0f, 0.0f), rotation_gizmo_scale.x * 0.25f);
-        rotation_axis_z_selected = !rotation_axis_y_selected && intersection::point_circle(controller_position, gizmo_position, current_rotation * glm::vec3(0.0f, 0.0f, 1.0f), rotation_gizmo_scale.z * 0.25f);
+        rotation_axis_x_selected = !any_translation_grabed && intersection::point_circle(controller_position, gizmo_position,  glm::vec3(1.0f, 0.0f, 0.0f), rotation_gizmo_scale.y * 0.25f);
+        rotation_axis_y_selected = !rotation_axis_x_selected && intersection::point_circle(controller_position, gizmo_position,  glm::vec3(0.0f, 1.0f, 0.0f), rotation_gizmo_scale.x * 0.25f);
+        rotation_axis_z_selected = !rotation_axis_y_selected && intersection::point_circle(controller_position, gizmo_position, glm::vec3(0.0f, 0.0f, 1.0f), rotation_gizmo_scale.z * 0.25f);
 	}
+
+    const bool any_rotation_grabed = rotation_axis_x_selected || rotation_axis_y_selected || rotation_axis_z_selected;
 
 	// Calculate the movement vector for the gizmo
 	if (Input::get_grab_value(HAND_RIGHT) > 0.3f) {
@@ -94,44 +96,44 @@ glm::vec3 TransformGizmo::update(const glm::vec3 &new_position, const float delt
                 gizmo_position += controller_delta * constraint;
             }
 
-            if (type & ROTATION_GIZMO) {
-                x_angle = 0.0f, y_angle = 0.0f, z_angle = 0.0f;
+            if (type & ROTATION_GIZMO && any_rotation_grabed) {
                 glm::quat z_rot = { 0.0f, 0.0f, 0.0f, 1.0f }, x_rot = { 0.0f, 0.0f, 0.0f, 1.0f }, y_rot = { 0.0f, 0.0f, 0.0f, 1.0f };
 
-                const glm::vec3 new_rotation_pose = glm::normalize(controller_position - gizmo_position);
+                const glm::vec3 new_rotation_pose = (controller_position - gizmo_position);
 
-                if (rotation_axis_y_selected) {
-                    const glm::vec2 ref_pos_no_y = { reference_rotation_pose.x, reference_rotation_pose.z };
-
-                    x_angle = -glm::orientedAngle(glm::vec2(new_rotation_pose.x, new_rotation_pose.z), ref_pos_no_y);
-                    x_rot = glm::angleAxis(x_angle, reference_rotation * glm::vec3(0.0f, 1.0f, 0.0f));
-                }
+                glm::quat accum_rotation;
 
                 if (rotation_axis_x_selected) {
-                    const glm::vec2 ref_pos_no_x = { reference_rotation_pose.y, reference_rotation_pose.z };
+                    x_angle = glm::orientedAngle(glm::normalize(glm::vec2(new_rotation_pose.y, new_rotation_pose.z)), reference_rotation_pose_yz);
+                    x_rot = glm::angleAxis(x_angle, glm::vec3(1.0f, 0.0f, 0.0f));
+                    accum_rotation = glm::normalize(x_rot);
+                }
 
-                    y_angle = glm::orientedAngle(glm::vec2(new_rotation_pose.y, new_rotation_pose.z), ref_pos_no_x);
-                    y_rot = glm::angleAxis(y_angle, reference_rotation * glm::vec3(0.0f, 0.0f, 1.0f));
+                if (rotation_axis_y_selected) {
+                    y_angle = glm::orientedAngle(glm::normalize(glm::vec2(new_rotation_pose.x, new_rotation_pose.z)), reference_rotation_pose_xz);
+                    y_rot = glm::angleAxis(y_angle, glm::vec3(0.0f, 1.0f, 0.0f));
+                    accum_rotation = glm::normalize(y_rot);
                 }
 
                 if (rotation_axis_z_selected) {
-                    const glm::vec2 ref_pos_no_z = { reference_rotation_pose.x, reference_rotation_pose.y };
-
-                    z_angle = -glm::orientedAngle(glm::vec2(new_rotation_pose.x, new_rotation_pose.y), ref_pos_no_z);
-                    z_rot = glm::angleAxis(z_angle, reference_rotation * glm::vec3(1.0f, 0.0f, 0.0f));
+                    z_angle = glm::orientedAngle(glm::normalize(glm::vec2(new_rotation_pose.x, new_rotation_pose.y)), reference_rotation_pose_xy);
+                    z_rot = glm::angleAxis(z_angle, glm::vec3(0.0f, 0.0f, 1.0f));
+                    accum_rotation = glm::normalize(z_rot);
                 }
 
-                if (rotation_axis_x_selected || rotation_axis_y_selected || rotation_axis_z_selected) {
-                    glm::quat frame_rotation = z_rot * y_rot * x_rot;
-                    glm::quat rotation_diff = glm::inverse(reference_rotation) * glm::inverse(frame_rotation);
-                    current_rotation = (rotation_diff * reference_rotation);
-                }
+                 glm::quat rotation_diff = glm::normalize(reference_rotation * glm::inverse(accum_rotation));
+                 current_rotation = rotation_diff;
             }
         } else {
             // Stablish reference to rotation
             if (type & ROTATION_GIZMO) {
                 reference_rotation = current_rotation;
-                reference_rotation_pose = glm::normalize(controller_position - gizmo_position);
+                glm::vec3 reference_rotation_pose = glm::normalize(controller_position - gizmo_position);
+
+                // Reference in each plane
+                reference_rotation_pose_xz = glm::normalize(glm::vec2(reference_rotation_pose.x, reference_rotation_pose.z));
+                reference_rotation_pose_xy = glm::normalize(glm::vec2(reference_rotation_pose.x, reference_rotation_pose.y));
+                reference_rotation_pose_yz = glm::normalize(glm::vec2(reference_rotation_pose.y, reference_rotation_pose.z));
             }
         }
 
@@ -166,7 +168,7 @@ void TransformGizmo::render() {
 
     if (type & ROTATION_GIZMO) {
         wire_circle_mesh->set_translation(gizmo_position);
-        wire_circle_mesh->rotate(current_rotation);
+        //wire_circle_mesh->rotate(current_rotation);
         wire_circle_mesh->set_material_color(glm::vec4(0.0f, 1.0f, 0.0f, 1.0f) + ((rotation_axis_z_selected) ? glm::vec4(1.5f, 0.5f, 0.5f, 0.0f) : glm::vec4(0.0f)));
         wire_circle_mesh->scale(rotation_gizmo_scale * 0.5f);
         wire_circle_mesh->render();
