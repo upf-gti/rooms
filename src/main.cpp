@@ -1,5 +1,5 @@
 #include "engine/rooms_engine.h"
-#include "graphics/raymarching_renderer.h"
+#include "graphics/renderers/rooms_renderer.h"
 
 #include <GLFW/glfw3.h>
 
@@ -38,7 +38,7 @@ bool shouldClose(bool use_glfw, GLFWwindow* window) {
 int main() {
 
     RoomsEngine* engine = new RoomsEngine();
-    RaymarchingRenderer* raymarching_renderer = new RaymarchingRenderer();
+    RoomsRenderer* renderer = new RoomsRenderer();
     GLFWwindow* window = nullptr;
 
     WGPURequiredLimits required_limits = {};
@@ -56,7 +56,7 @@ int main() {
 #endif
     required_limits.limits.maxSamplersPerShaderStage = 1;
 
-    raymarching_renderer->set_required_limits(required_limits);
+    renderer->set_required_limits(required_limits);
 
 #ifdef __EMSCRIPTEN__
     int screen_width = canvas_get_width();
@@ -76,7 +76,7 @@ int main() {
     int screen_height = 720;
 #endif
 
-    const bool use_xr = raymarching_renderer->get_openxr_available();
+    const bool use_xr = renderer->get_openxr_available();
     const bool use_mirror_screen = engine->get_use_mirror_window();
 
     // Only init glfw if no xr or using mirror
@@ -93,7 +93,7 @@ int main() {
         window = glfwCreateWindow(screen_width, screen_height, "WebGPU Engine", NULL, NULL);
     }
 
-    if (engine->initialize(raymarching_renderer, window, use_glfw, use_mirror_screen)) {
+    if (engine->initialize(renderer, window, use_glfw, use_mirror_screen)) {
         std::cout << "Could not initialize engine" << std::endl;
         closeWindow(window);
         return 1;
@@ -122,7 +122,7 @@ int main() {
     closeWindow(window);
 
     delete engine;
-    delete raymarching_renderer;
+    delete renderer;
 
     return 0;
 }

@@ -116,7 +116,7 @@ fn blinn_phong(ray_origin : vec3f, position : vec3f, lightPosition : vec3f, ambi
 
 fn raymarch(ray_origin : vec3f, ray_dir : vec3f, view_proj : mat4x4f) -> vec4f
 {
-    let ambientColor = vec3f(0.4);
+    let ambientColor = vec3f(0.1);
 	let hitColor = vec3f(1.0, 1.0, 1.0);
 	let missColor = vec3f(0.0, 0.0, 0.0);
     let lightOffset = vec3f(0.0, 0.0, 0.0);
@@ -141,7 +141,8 @@ fn raymarch(ray_origin : vec3f, ray_dir : vec3f, view_proj : mat4x4f) -> vec4f
         // }
 
 		if (surface.distance < MIN_HIT_DIST) {
-            let proj_pos : vec4f = view_proj * vec4f(pos, 1.0);
+            let epsilon : f32 = 0.000001; // avoids flashing when camera inside sdf
+            let proj_pos : vec4f = view_proj * vec4f(pos + ray_dir * epsilon, 1.0);
             depth = proj_pos.z / proj_pos.w;
 			return vec4f(blinn_phong(ray_origin, pos, lightPos + lightOffset, ambientColor, surface.color * (1.0 - edge)), depth);
 		}
