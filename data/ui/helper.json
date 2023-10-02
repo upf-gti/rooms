@@ -1,21 +1,16 @@
 {
-    "width": 48,
-    "height": 64,
+    "width": 70,
+    "height": 42,
     "elements": [
         {
-            "name": "First label",
+            "name": "Stamp",
             "type": "label",
-            "texture": "data/textures/cube.png"
+            "texture": "data/textures/buttons/b.png"
         },
         {
-            "name": "Second label",
+            "name": "Pepe Luis",
             "type": "label",
-            "texture": "data/textures/cube.png"
-        },
-        {
-            "name": "Third label",
-            "type": "label",
-            "texture": "data/textures/cube.png"
+            "texture": "data/textures/buttons/a.png"
         }
     ]
 }

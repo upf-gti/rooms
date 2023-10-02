@@ -180,6 +180,20 @@ namespace ui {
         ui_data.is_color_button = is_color_button ? 1.f : 0.f;
 	}
 
+    /*
+    *	Label
+    */
+
+    void LabelWidget::render()
+    {
+        Widget::render();
+    }
+
+    void LabelWidget::update(Controller* controller)
+    {
+        Widget::update(controller);
+    }
+
 	/*
 	*	Slider
 	*/

@@ -25,6 +25,7 @@ namespace ui {
 		TEXT,
 		BUTTON,
 		SLIDER,
+        LABEL,
         GROUP
 	};
 
@@ -93,6 +94,17 @@ namespace ui {
 
 		virtual void update(Controller* controller) override;
 	};
+
+    class LabelWidget : public Widget {
+    public:
+
+        LabelWidget(EntityMesh* p_icon, const glm::vec2& p) : Widget(p_icon, p) {
+            type = eWidgetType::LABEL;
+        }
+
+        virtual void render() override;
+        virtual void update(Controller* controller) override;
+    };
 
 	class SliderWidget : public ButtonWidget {
 	public:

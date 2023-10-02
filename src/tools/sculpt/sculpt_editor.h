@@ -31,6 +31,8 @@ class SculptEditor {
     EntityMesh* sphere_mesh = nullptr;
     EntityMesh* cube_mesh = nullptr;
 
+    bool stamp_enabled = false;
+
     void set_primitive( sdPrimitive primitive, EntityMesh* mesh_preview = nullptr);
     void set_primitive_modifier(bool& modifier);
 
@@ -74,10 +76,10 @@ class SculptEditor {
     
     // UI
 
-    ui::Controller                      gui;
-    ui::Controller                      helper_gui;
-    size_t                              max_recent_colors;
-    std::vector<Color>                  recent_colors;
+    ui::Controller        gui;
+    ui::Controller        helper_gui;
+    size_t                max_recent_colors;
+    std::vector<Color>    recent_colors;
 
     void load_ui_layout(const std::string& filename, ui::Controller& ui);
     void add_recent_color(const Color& color);

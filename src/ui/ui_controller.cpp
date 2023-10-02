@@ -31,6 +31,16 @@ namespace ui {
         root = new Widget();
 
         raycast_pointer = parse_scene("data/meshes/raycast.obj");
+
+        // Debug
+        if (render_background)
+        {
+            background = new EntityMesh();
+            background->set_material_shader(Shader::get("data/shaders/mesh_color.wgsl"));
+            Mesh* mesh = new Mesh();
+            mesh->create_quad(workspace.size.x, workspace.size.y);
+            background->set_mesh(mesh);
+        }
 	}
 
 	bool Controller::is_active()
@@ -42,6 +52,8 @@ namespace ui {
 	void Controller::render()
 	{
 		if (!enabled || !is_active()) return;
+
+        if (render_background) background->render();
 
 		for (auto widget : root->children) {
 			widget->render();
@@ -76,6 +88,12 @@ namespace ui {
 
         if (pose == POSE_GRIP)
             global_transform = glm::rotate(global_transform, glm::radians(-90.f), glm::vec3(1.f, 0.f, 0.f));
+
+        if (render_background)
+        {
+            background->set_model(global_transform);
+            background->translate({ 0.f, 0.f, 1e-3f });
+        }
 
 		// Update widgets using this controller
 
@@ -170,39 +188,46 @@ namespace ui {
         static int num_labels = 0;
 
         // World attributes
+        float workspace_width = workspace.size.x / global_scale;
         float margin = 2.f;
-        glm::vec2 pos = {0.f, num_labels * BUTTON_SIZE * 0.5f + num_labels * margin };
-        glm::vec2 size = glm::vec2(workspace.size.x, BUTTON_SIZE * 0.5f);
+
+        // Text follows after icon (right)
+        glm::vec2 pos = { LABEL_BUTTON_SIZE + 4.f, num_labels * LABEL_BUTTON_SIZE + (num_labels + 1.f) * margin };
+        glm::vec2 size = glm::vec2(workspace_width, LABEL_BUTTON_SIZE);
+
+        Widget* text_widget = make_text(text, pos, colors::WHITE, 12.f);
+        text_widget->priority = -1;
+
+        // Icon 
+        EntityMesh* m_icon = new EntityMesh();
+        Mesh* mesh = new Mesh();
+        if (texture)
+        {
+            m_icon->set_material_diffuse(Texture::get(texture));
+        }
+
+        // Icon goes to the left of the workspace
+        pos = { 
+            -workspace_width * 0.5f + LABEL_BUTTON_SIZE * 0.5f,
+            num_labels * LABEL_BUTTON_SIZE + (num_labels + 1.f) * margin
+        };
+
+        process_params(pos, size);
+
+        mesh->create_quad(size.y, size.y);
+        m_icon->set_mesh(mesh);
+        m_icon->set_material_shader(Shader::get("data/shaders/mesh_texture.wgsl"));
+
+        Widget* label_widget = new LabelWidget(
+            m_icon,
+            pos
+        );
+
+        append_widget(label_widget, "ui_label");
 
         num_labels++;
 
-        return make_text(text, pos, colors::GREEN, 28.f, size);
-
-        /*glm::vec2 _pos = pos;
-        glm::vec2 _size = size;
-
-        process_params(pos, size);*/
-
-        /*
-        *	Create button entity and set transform
-        */
-
-        // Render quad in local workspace position
-        /*EntityMesh* e_label = new EntityMesh();
-        Mesh* mesh = new Mesh();
-        if (texture)
-            e_label->set_material_diffuse(Texture::get(texture));
-
-        mesh->create_quad(size.x, size.y);
-        e_label->set_mesh(mesh);*/
-
-        /*LabelWidget* widget = new LabelWidget(text, e_label, pos, color, size);
-
-        widget->m_layer = static_cast<uint8_t>(layout_iterator.y);
-
-        append_widget(widget, text);
-
-        return widget;*/
+        return label_widget;
     }
 
 	Widget* Controller::make_button(const std::string& signal, const char* texture, const char* shader, bool unique_selection, bool allow_toggle, bool is_color_button, const Color& color)

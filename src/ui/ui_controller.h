@@ -22,6 +22,7 @@ using SignalType = std::variant <FuncFloat, FuncString, FuncVec2, FuncVec3, Func
 namespace ui {
 
     const float BUTTON_SIZE         = 32.f;
+    const float LABEL_BUTTON_SIZE   = BUTTON_SIZE * 0.25f;
     const float X_MARGIN            = 4.f;
     const float X_GROUP_MARGIN      = X_MARGIN * 0.5f;
     const float Y_MARGIN            = 10.f;
@@ -39,6 +40,11 @@ namespace ui {
         RaymarchingRenderer* renderer = nullptr;
 		WorkSpaceData workspace;
 		glm::mat4x4 global_transform;
+
+        // Debug
+        bool render_background      = false;
+        EntityMesh* background      = nullptr;
+        // ...
 
 		EntityMesh* raycast_pointer = nullptr;
 

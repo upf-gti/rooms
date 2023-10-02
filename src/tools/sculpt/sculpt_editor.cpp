@@ -101,6 +101,11 @@ void SculptEditor::update(float delta_time)
         return;
     }
 
+    if (Input::was_button_pressed(XR_BUTTON_B))
+        stamp_enabled = !stamp_enabled;
+
+    tools[current_tool]->stamp_enabled = stamp_enabled;
+
     bool tool_used = tools[current_tool]->update(delta_time);
 
     if (current_tool == SCULPT && tool_used) {

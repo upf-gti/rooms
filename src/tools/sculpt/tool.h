@@ -27,14 +27,17 @@ protected:
 
     bool is_tool_activated() {
 #ifdef XR_SUPPORT
-        
-        return Input::is_key_pressed(GLFW_KEY_A) || (Input::was_button_pressed(XR_BUTTON_B) || (Input::get_trigger_value(HAND_RIGHT) > 0.5));
+        return Input::is_key_pressed(GLFW_KEY_A) ||
+            (stamp_enabled  ? Input::was_trigger_pressed(HAND_RIGHT) : Input::get_trigger_value(HAND_RIGHT) > 0.5f);
 #else
         return Input::is_key_pressed(GLFW_KEY_A);
 #endif
     }
 
 public:
+
+    bool stamp_enabled = false;
+
     virtual void initialize();
     virtual void clean();
 
