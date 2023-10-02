@@ -4,8 +4,6 @@
 #include "framework/input.h"
 #include "ui/ui_controller.h"
 
-class RaymarchingRenderer;
-
 class Tool {
 
 protected:

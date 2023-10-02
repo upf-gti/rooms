@@ -1,32 +1,16 @@
 #pragma once
 
 #include "includes.h"
-#include "graphics/renderer.h"
-#include <vector>
-#include "edit.h"
 
+#include "graphics/pipeline.h"
+#include "graphics/edit.h"
 #include "graphics/texture.h"
-
-#include "tools/sculpt/tool.h"
-
-#ifdef __EMSCRIPTEN__
-#define DISABLE_RAYMARCHER
-#endif
 
 #define EDITS_MAX 512
 #define SDF_RESOLUTION 512
 
-class RaymarchingRenderer : public Renderer {
+class RaymarchingRenderer {
 
-    // Render to screen
-    Pipeline                render_quad_pipeline;
-    Shader*                 render_quad_shader = nullptr;
-
-    WGPUBindGroup           render_bind_group_left_eye = nullptr;
-    WGPUBindGroup           render_bind_group_right_eye = nullptr;
-
-    Uniform                 u_render_texture_left_eye;
-    Uniform                 u_render_texture_right_eye;
     Uniform                 u_sampler;
 
     // Compute
@@ -45,54 +29,23 @@ class RaymarchingRenderer : public Renderer {
 
     Texture                 sdf_texture;
     Texture                 sdf_copy_read_texture;
-    Uniform                 u_compute_texture_sdf_storage;
-    Uniform                 u_compute_texture_sdf_copy_read_storage;
-
-    Texture                 left_eye_texture;
-    Texture                 left_eye_depth_texture;
-    Texture                 right_eye_texture;
-    Texture                 right_eye_depth_texture;
-
-    WGPUTextureView         left_eye_depth_texture_view = nullptr;
-    WGPUTextureView         right_eye_depth_texture_view = nullptr;
-
-    // Render meshes with material color
-    Pipeline                render_mesh_pipeline;
-    WGPUBindGroup           render_bind_group_camera = nullptr;
-    Shader*                 render_mesh_shader = nullptr;
-
-    // Render meshes with textures
-    Pipeline                render_mesh_texture_pipeline;
-    Shader*                 render_mesh_texture_shader = nullptr;
-
-    // Render UI Quads
-    Pipeline                render_mesh_ui_pipeline;
-    Shader*                 render_mesh_ui_shader = nullptr;
-    Pipeline                render_mesh_ui_texture_pipeline;
-    Shader*                 render_mesh_ui_texture_shader = nullptr;
-
-    // Render Mesh Grid
-    Pipeline                render_mesh_grid_pipeline;
-    Shader*                 render_mesh_grid_shader = nullptr;
-
-    // Font rendering
-    Pipeline                render_fonts_pipeline;
-    Shader*                 render_fonts_shader = nullptr;
+    Uniform                 compute_texture_sdf_storage_uniform;
+    Uniform                 compute_texture_sdf_copy_storage_uniform;
 
     // Octree creation
     Pipeline                compute_octree_flag_nodes_pipeline;
     Shader*                 compute_octree_flag_nodes_shader = nullptr;
-    Uniform                 u_octree;
+    Uniform                 octree_uniform;
 
-    Uniform                 u_camera;
+    Uniform                 camera_uniform;
 
-    Uniform                 u_compute_buffer_data;
-    Uniform                 u_compute_preview_edit;
-    Uniform                 u_compute_texture_left_eye;
-    Uniform                 u_compute_texture_right_eye;
+    Uniform                 compute_buffer_data_uniform;
+    Uniform                 compute_preview_edit_uniform;
+    Uniform                 compute_texture_left_eye_uniform;
+    Uniform                 compute_texture_right_eye_uniform;
 
-    Uniform                 u_compute_merge_data;
-    Uniform                 u_compute_edits_array;
+    Uniform                 compute_merge_data_uniform;
+    Uniform                 compute_edits_array_uniform;
 
     // Data needed for XR raymarching
     struct sComputeData {
@@ -128,71 +81,54 @@ class RaymarchingRenderer : public Renderer {
         glm::quat sculpt_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
     } compute_merge_data;
 
-    struct sCameraData {
-        glm::mat4x4 view_projection;
-    } camera_data;
-
     Edit edits[EDITS_MAX];
-
-    Mesh  quad_mesh;
 
     // Timestepping counters
     float updated_time = 0.0f;
 
-    glm::vec3 clear_color;
-
-    // For the XR mirror screen
-#if defined(XR_SUPPORT) && defined(USE_MIRROR_WINDOW)
-    Pipeline mirror_pipeline;
-    Shader*  mirror_shader = nullptr;
-
-    std::vector<Uniform> swapchain_uniforms;
-    std::vector<WGPUBindGroup> swapchain_bind_groups;
-#endif
-
-
     void render_eye_quad(WGPUTextureView swapchain_view, WGPUTextureView swapchain_depth, WGPUBindGroup bind_group);
     void render_screen();
-
-    void render_meshes(WGPUTextureView swapchain_view, WGPUTextureView swapchain_depth);
 
 #if defined(XR_SUPPORT)
     void render_xr();
 #endif
 
     void compute_initialize_sdf(int sdf_texture_idx);
-    void compute_merge();
-    void compute_raymarching();
 
     void init_render_quad_pipeline();
     void init_render_quad_bind_groups();
     void init_render_mesh_pipelines();
     void init_compute_raymarching_pipeline();
-    void init_compute_raymarching_textures();
     void init_initialize_sdf_pipeline();
     void init_compute_merge_pipeline();
 
     void init_compute_octree_pipeline();
 
-#if defined(XR_SUPPORT) && defined(USE_MIRROR_WINDOW)
-    void render_mirror();
-    void init_mirror_pipeline();
-#endif
-
 public:
 
     RaymarchingRenderer();
 
-    virtual int initialize(GLFWwindow* window, bool use_mirror_screen = false) override;
-    virtual void clean() override;
+    int initialize(bool use_mirror_screen);
+    void clean();
 
-    virtual void update(float delta_time) override;
-    virtual void render() override;
+    void update(float delta_time);
+    void render();
+
+    void compute_merge();
+    void compute_raymarching();
+
+    void init_compute_raymarching_textures();
+
+    void set_render_size(float width, float height);
 
     void set_sculpt_start_position(const glm::vec3& position) {
         compute_merge_data.sculpt_start_position = position;
         compute_raymarching_data.sculpt_start_position = position;
     }
+
+    void set_left_eye(const glm::vec3& eye_pos, const glm::mat4x4& view_projection);
+    void set_right_eye(const glm::vec3& eye_pos, const glm::mat4x4& view_projection);
+    void set_near_far(float z_near, float z_far);
 
     /*
     *   Edits
@@ -210,7 +146,5 @@ public:
 
     void set_preview_edit(const Edit& edit);
     void set_sculpt_rotation(const glm::quat& rotation);
-
-    void resize_window(int width, int height) override;
 
 };

@@ -3,7 +3,7 @@
 #include "utils.h"
 #include "framework/intersections.h"
 #include "framework/input.h"
-#include "graphics/raymarching_renderer.h"
+#include "graphics/renderers/rooms_renderer.h"
 #include "framework/entities/entity_text.h"
 
 #include "framework/scene/parse_scene.h"
