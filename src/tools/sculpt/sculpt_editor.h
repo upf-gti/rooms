@@ -11,9 +11,11 @@ enum eTool : uint8_t {
     TOOL_COUNT
 };
 
+class RoomsRenderer;
+
 class SculptEditor {
 
-    RaymarchingRenderer*    renderer = nullptr;
+    RoomsRenderer*          renderer = nullptr;
     bool                    sculpt_started = false;
     Tool*                   tools[TOOL_COUNT];
     eTool					current_tool = NONE;

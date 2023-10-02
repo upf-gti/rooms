@@ -9,8 +9,6 @@ MeshRenderer::MeshRenderer()
 
 int MeshRenderer::initialize()
 {
-    clear_color = glm::vec3(0.22f);
-
     init_render_mesh_pipelines();
 
     return 0;
@@ -24,9 +22,7 @@ void MeshRenderer::clean()
 void MeshRenderer::set_view_projection(const glm::mat4x4& view_projection)
 {
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
-
-    camera_data.view_projection = view_projection;
-    wgpuQueueWriteBuffer(webgpu_context->device_queue, std::get<WGPUBuffer>(u_camera.data), 0, &(camera_data), sizeof(sCameraData));
+    wgpuQueueWriteBuffer(webgpu_context->device_queue, std::get<WGPUBuffer>(camera_uniform.data), 0, &(view_projection), sizeof(view_projection));
 }
 
 void MeshRenderer::update(float delta_time)
@@ -51,7 +47,9 @@ void MeshRenderer::render(WGPUTextureView swapchain_view, WGPUTextureView swapch
     render_pass_color_attachment.loadOp = WGPULoadOp_Clear;
 #endif
     render_pass_color_attachment.storeOp = WGPUStoreOp_Store;
-    render_pass_color_attachment.clearValue = WGPUColor(clear_color.x, clear_color.y, clear_color.z, 1.0f);
+
+    glm::vec4 clear_color = RoomsRenderer::instance->get_clear_color();
+    render_pass_color_attachment.clearValue = WGPUColor(clear_color.r, clear_color.g, clear_color.b, clear_color.a);
 
     // Prepate the depth attachment
     WGPURenderPassDepthStencilAttachment render_pass_depth_attachment = {};
@@ -132,7 +130,10 @@ void MeshRenderer::render(WGPUTextureView swapchain_view, WGPUTextureView swapch
 
     wgpuCommandBufferRelease(commands);
     wgpuCommandEncoderRelease(command_encoder);
+}
 
+void MeshRenderer::clean_renderables()
+{
     render_mesh_pipeline.clean_renderables();
     render_mesh_texture_pipeline.clean_renderables();
     render_mesh_ui_pipeline.clean_renderables();
@@ -155,11 +156,11 @@ void MeshRenderer::init_render_mesh_pipelines()
 
     // Camera
 
-    u_camera.data = webgpu_context->create_buffer(sizeof(sCameraData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "camera_buffer");
-    u_camera.binding = 0;
-    u_camera.buffer_size = sizeof(sCameraData);
+    camera_uniform.data = webgpu_context->create_buffer(sizeof(glm::mat4x4), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "camera_buffer");
+    camera_uniform.binding = 0;
+    camera_uniform.buffer_size = sizeof(glm::mat4x4);
 
-    std::vector<Uniform*> uniforms = { &u_camera };
+    std::vector<Uniform*> uniforms = { &camera_uniform };
 
     render_bind_group_camera = webgpu_context->create_bind_group(uniforms, render_mesh_shader, 1);
 

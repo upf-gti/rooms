@@ -1,13 +1,10 @@
 #pragma once
 
 #include "includes.h"
+
 #include "graphics/renderer.h"
-#include <vector>
 #include "graphics/edit.h"
-
 #include "graphics/texture.h"
-
-#include "tools/sculpt/tool.h"
 
 #include "raymarching_renderer.h"
 #include "mesh_renderer.h"
@@ -16,29 +13,24 @@
 #define DISABLE_RAYMARCHER
 #endif
 
-#define EDITS_MAX 1024
-#define SDF_RESOLUTION 512
-
-enum eEYE {
-    EYE_LEFT,
-    EYE_RIGHT,
-    EYE_SIZE // Let's assume this will never be different to 2...
-};
-
 class RoomsRenderer : public Renderer {
 
     RaymarchingRenderer raymarching_renderer;
     MeshRenderer mesh_renderer;
 
-    glm::vec3 clear_color;
     Mesh  quad_mesh;
 
     // Render to screen
-    Pipeline render_quad_pipeline;
+    Pipeline render_quad_pipeline = {};
     Shader*  render_quad_shader = nullptr;
 
-    WGPUBindGroup   eye_render_bind_group[EYE_SIZE] = {};
-    WGPUTextureView eye_depth_texture_view[EYE_SIZE] = {};
+    Texture         eye_textures[EYE_COUNT] = {};
+    Texture         eye_depth_textures[EYE_COUNT] = {};
+
+    Uniform         eye_render_texture_uniform[EYE_COUNT] = {};
+
+    WGPUBindGroup   eye_render_bind_group[EYE_COUNT] = {};
+    WGPUTextureView eye_depth_texture_view[EYE_COUNT] = {};
 
     void render_eye_quad(WGPUTextureView swapchain_view, WGPUTextureView swapchain_depth, WGPUBindGroup bind_group);
     void render_screen();
@@ -68,17 +60,20 @@ public:
 
     RoomsRenderer();
 
-    virtual int initialize(GLFWwindow* window, bool use_mirror_screen = false) override;
-    virtual void clean() override;
+    int initialize(GLFWwindow* window, bool use_mirror_screen = false) override;
+    void clean() override;
 
-    virtual void update(float delta_time) override;
-    virtual void render() override;
+    void update(float delta_time) override;
+    void render() override;
 
     void resize_window(int width, int height) override;
 
     void set_sculpt_start_position(const glm::vec3& position) {
         raymarching_renderer.set_sculpt_start_position(position);
     }
+
+    Texture* get_eye_texture(eEYE eye);
+
 
     /*
     *   Edits

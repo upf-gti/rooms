@@ -1,12 +1,12 @@
 #include "sculpt_editor.h"
 #include "sculpt.h"
 #include "paint.h"
-#include "graphics/raymarching_renderer.h"
+#include "graphics/renderers/rooms_renderer.h"
 #include "framework/scene/parse_scene.h"
 
 void SculptEditor::initialize()
 {
-    renderer = dynamic_cast<RaymarchingRenderer*>(Renderer::instance);
+    renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
 
     sphere_mesh = parse_scene("data/meshes/wired_sphere.obj");
     sphere_mesh->set_material_color(colors::WHITE);

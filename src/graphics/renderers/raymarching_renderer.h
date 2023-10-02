@@ -1,21 +1,16 @@
 #pragma once
 
 #include "includes.h"
-#include "graphics/renderer.h"
-#include <vector>
-#include "graphics/edit.h"
 
+#include "graphics/pipeline.h"
+#include "graphics/edit.h"
 #include "graphics/texture.h"
 
-#include "tools/sculpt/tool.h"
-
-#define EDITS_MAX 1024
+#define EDITS_MAX 512
 #define SDF_RESOLUTION 512
 
 class RaymarchingRenderer {
 
-    Uniform                 u_render_texture_left_eye;
-    Uniform                 u_render_texture_right_eye;
     Uniform                 u_sampler;
 
     // Compute
@@ -34,28 +29,23 @@ class RaymarchingRenderer {
 
     Texture                 sdf_texture;
     Texture                 sdf_copy_read_texture;
-    Uniform                 u_compute_texture_sdf_storage;
-    Uniform                 u_compute_texture_sdf_copy_read_storage;
-
-    Texture                 left_eye_texture;
-    Texture                 left_eye_depth_texture;
-    Texture                 right_eye_texture;
-    Texture                 right_eye_depth_texture;
+    Uniform                 compute_texture_sdf_storage_uniform;
+    Uniform                 compute_texture_sdf_copy_storage_uniform;
 
     // Octree creation
     Pipeline                compute_octree_flag_nodes_pipeline;
     Shader*                 compute_octree_flag_nodes_shader = nullptr;
-    Uniform                 u_octree;
+    Uniform                 octree_uniform;
 
-    Uniform                 u_camera;
+    Uniform                 camera_uniform;
 
-    Uniform                 u_compute_buffer_data;
-    Uniform                 u_compute_preview_edit;
-    Uniform                 u_compute_texture_left_eye;
-    Uniform                 u_compute_texture_right_eye;
+    Uniform                 compute_buffer_data_uniform;
+    Uniform                 compute_preview_edit_uniform;
+    Uniform                 compute_texture_left_eye_uniform;
+    Uniform                 compute_texture_right_eye_uniform;
 
-    Uniform                 u_compute_merge_data;
-    Uniform                 u_compute_edits_array;
+    Uniform                 compute_merge_data_uniform;
+    Uniform                 compute_edits_array_uniform;
 
     // Data needed for XR raymarching
     struct sComputeData {
@@ -91,16 +81,10 @@ class RaymarchingRenderer {
         glm::quat sculpt_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
     } compute_merge_data;
 
-    struct sCameraData {
-        glm::mat4x4 view_projection;
-    } camera_data;
-
     Edit edits[EDITS_MAX];
 
     // Timestepping counters
     float updated_time = 0.0f;
-
-    glm::vec3 clear_color;
 
     void render_eye_quad(WGPUTextureView swapchain_view, WGPUTextureView swapchain_depth, WGPUBindGroup bind_group);
     void render_screen();
@@ -115,16 +99,10 @@ class RaymarchingRenderer {
     void init_render_quad_bind_groups();
     void init_render_mesh_pipelines();
     void init_compute_raymarching_pipeline();
-    void init_compute_raymarching_textures();
     void init_initialize_sdf_pipeline();
     void init_compute_merge_pipeline();
 
     void init_compute_octree_pipeline();
-
-#if defined(XR_SUPPORT) && defined(USE_MIRROR_WINDOW)
-    void render_mirror();
-    void init_mirror_pipeline();
-#endif
 
 public:
 
@@ -138,6 +116,10 @@ public:
 
     void compute_merge();
     void compute_raymarching();
+
+    void init_compute_raymarching_textures();
+
+    void set_render_size(float width, float height);
 
     void set_sculpt_start_position(const glm::vec3& position) {
         compute_merge_data.sculpt_start_position = position;

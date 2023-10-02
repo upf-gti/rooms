@@ -1,10 +1,8 @@
 #pragma once
 
 #include "includes.h"
-#include "graphics/renderer.h"
-#include <vector>
 
-#include "graphics/texture.h"
+#include "graphics/pipeline.h"
 
 #include "tools/sculpt/tool.h"
 
@@ -33,13 +31,7 @@ class MeshRenderer {
     Pipeline                render_fonts_pipeline;
     Shader*                 render_fonts_shader = nullptr;
 
-    Uniform                 u_camera;
-
-    glm::vec3 clear_color;
-
-    struct sCameraData {
-        glm::mat4x4 view_projection;
-    } camera_data;
+    Uniform                 camera_uniform;
 
     // For the XR mirror screen
 #if defined(XR_SUPPORT) && defined(USE_MIRROR_WINDOW)
@@ -58,6 +50,8 @@ public:
 
     int initialize();
     void clean();
+
+    void clean_renderables();
 
     void set_view_projection(const glm::mat4x4& view_projection);
 

@@ -13,11 +13,19 @@ int RoomsRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
 {
     Renderer::initialize(window, use_mirror_screen);
 
+    clear_color = glm::vec4(0.22f, 0.22f, 0.22f, 1.0);
+
+    init_render_quad_pipeline();
+
     raymarching_renderer.initialize(use_mirror_screen);
     mesh_renderer.initialize();
 
-    clear_color = glm::vec3(0.22f);
-    
+#ifdef XR_SUPPORT
+    if (is_openxr_available && use_mirror_screen) {
+        init_mirror_pipeline();
+    }
+#endif
+
     return 0;
 }
 
@@ -27,20 +35,34 @@ void RoomsRenderer::clean()
 
     raymarching_renderer.clean();
     mesh_renderer.clean();
+
+    eye_render_texture_uniform[EYE_LEFT].destroy();
+    eye_render_texture_uniform[EYE_RIGHT].destroy();
+
+    wgpuBindGroupRelease(eye_render_bind_group[EYE_LEFT]);
+    wgpuBindGroupRelease(eye_render_bind_group[EYE_RIGHT]);
+
+    wgpuTextureViewRelease(eye_depth_texture_view[EYE_LEFT]);
+    wgpuTextureViewRelease(eye_depth_texture_view[EYE_RIGHT]);
+
+#if defined(XR_SUPPORT) && defined(USE_MIRROR_WINDOW)
+    if (is_openxr_available) {
+        for (uint8_t i = 0; i < swapchain_uniforms.size(); i++) {
+            swapchain_uniforms[i].destroy();
+            wgpuBindGroupRelease(swapchain_bind_groups[i]);
+        }
+    }
+#endif
 }
 
 void RoomsRenderer::update(float delta_time)
 {
-    Renderer::update(delta_time);
-
     raymarching_renderer.update(delta_time);
     mesh_renderer.update(delta_time);
 }
 
 void RoomsRenderer::render()
 {
-    Renderer::render();
-
     if (!is_openxr_available) {
         render_screen();
     }
@@ -54,6 +76,8 @@ void RoomsRenderer::render()
         }
     }
 #endif
+
+    mesh_renderer.clean_renderables();
 }
 
 void RoomsRenderer::render_screen()
@@ -125,7 +149,7 @@ void RoomsRenderer::render_eye_quad(WGPUTextureView swapchain_view, WGPUTextureV
     render_pass_color_attachment.view = swapchain_view;
     render_pass_color_attachment.loadOp = WGPULoadOp_Clear;
     render_pass_color_attachment.storeOp = WGPUStoreOp_Store;
-    render_pass_color_attachment.clearValue = WGPUColor(clear_color.x, clear_color.y, clear_color.z, 1.0f);
+    render_pass_color_attachment.clearValue = WGPUColor(clear_color.r, clear_color.g, clear_color.b, clear_color.a);
 
     // Prepate the depth attachment
     WGPURenderPassDepthStencilAttachment render_pass_depth_attachment = {};
@@ -274,67 +298,40 @@ void RoomsRenderer::init_render_quad_pipeline()
 
 void RoomsRenderer::init_render_quad_bind_groups()
 {
-    left_eye_texture.create(
-        WGPUTextureDimension_2D,
-        WGPUTextureFormat_RGBA32Float,
-        { webgpu_context.render_width, webgpu_context.render_height, 1 },
-        static_cast<WGPUTextureUsage>(WGPUTextureUsage_TextureBinding | WGPUTextureUsage_StorageBinding),
-        1, nullptr);
-
-    left_eye_depth_texture.create(
-        WGPUTextureDimension_2D,
-        WGPUTextureFormat_Depth32Float,
-        { webgpu_context.render_width, webgpu_context.render_height, 1 },
-        WGPUTextureUsage_RenderAttachment,
-        1, nullptr);
-
-    right_eye_texture.create(
-        WGPUTextureDimension_2D,
-        WGPUTextureFormat_RGBA32Float,
-        { webgpu_context.render_width, webgpu_context.render_height, 1 },
-        static_cast<WGPUTextureUsage>(WGPUTextureUsage_TextureBinding | WGPUTextureUsage_StorageBinding),
-        1, nullptr);
-
-    right_eye_depth_texture.create(
-        WGPUTextureDimension_2D,
-        WGPUTextureFormat_Depth32Float,
-        { webgpu_context.render_width, webgpu_context.render_height, 1 },
-        WGPUTextureUsage_RenderAttachment,
-        1, nullptr);
-
-    if (eye_depth_texture_view[EYE_LEFT]) {
-        wgpuTextureViewRelease(eye_depth_texture_view[EYE_LEFT]);
-        wgpuTextureViewRelease(eye_depth_texture_view[EYE_RIGHT]);
-
-        wgpuBindGroupRelease(eye_render_bind_group[EYE_LEFT]);
-        wgpuBindGroupRelease(eye_render_bind_group[EYE_RIGHT]);
-    }
-
-    // Generate Texture views of depth buffers
-    eye_depth_texture_view[EYE_LEFT] = left_eye_depth_texture.get_view();
-    eye_depth_texture_view[EYE_RIGHT] = right_eye_depth_texture.get_view();
-
-    // Generate bindgroups
-    u_render_texture_left_eye.data = left_eye_texture.get_view();
-    u_render_texture_left_eye.binding = 0;
-
-    u_render_texture_right_eye.data = right_eye_texture.get_view();
-    u_render_texture_right_eye.binding = 0;
-
-    // Left eye bind group
+    for (int i = 0; i < EYE_COUNT; ++i)
     {
-        std::vector<Uniform*> uniforms = { &u_render_texture_left_eye };
+        eye_textures[i].create(
+            WGPUTextureDimension_2D,
+            WGPUTextureFormat_RGBA32Float,
+            { webgpu_context.render_width, webgpu_context.render_height, 1 },
+            static_cast<WGPUTextureUsage>(WGPUTextureUsage_TextureBinding | WGPUTextureUsage_StorageBinding),
+            1, nullptr);
 
-        render_bind_group_left_eye = webgpu_context.create_bind_group(uniforms, render_quad_shader, 0);
+        eye_depth_textures[i].create(
+            WGPUTextureDimension_2D,
+            WGPUTextureFormat_Depth32Float,
+            { webgpu_context.render_width, webgpu_context.render_height, 1 },
+            WGPUTextureUsage_RenderAttachment,
+            1, nullptr);
+
+        if (eye_depth_texture_view[i]) {
+            wgpuTextureViewRelease(eye_depth_texture_view[i]);
+        }
+
+        if (eye_render_bind_group[i]) {
+            wgpuBindGroupRelease(eye_render_bind_group[i]);
+        }
+
+        // Generate Texture views of depth buffers
+        eye_depth_texture_view[i] = eye_depth_textures[i].get_view();
+
+        // Uniforms
+        eye_render_texture_uniform[i].data = eye_textures[i].get_view();
+        eye_render_texture_uniform[i].binding = 0;
+
+        std::vector<Uniform*> uniforms = { &eye_render_texture_uniform[i] };
+        eye_render_bind_group[i] = webgpu_context.create_bind_group(uniforms, render_quad_shader, 0);
     }
-
-    // Right eye bind group
-    {
-        std::vector<Uniform*> uniforms = { &u_render_texture_right_eye };
-
-        render_bind_group_right_eye = webgpu_context.create_bind_group(uniforms, render_quad_shader, 0);
-    }
-
 }
 
 #if defined(XR_SUPPORT) && defined(USE_MIRROR_WINDOW)
@@ -393,13 +390,17 @@ void RoomsRenderer::resize_window(int width, int height)
 {
     Renderer::resize_window(width, height);
 
-    compute_raymarching_data.render_width = static_cast<float>(webgpu_context.screen_width);
-    compute_raymarching_data.render_height = static_cast<float>(webgpu_context.screen_height);
+    raymarching_renderer.set_render_size(static_cast<float>(webgpu_context.screen_width), static_cast<float>(webgpu_context.screen_height));
 
     init_render_quad_bind_groups();
 
 #ifndef DISABLE_RAYMARCHER
-    init_compute_raymarching_textures();
+    raymarching_renderer.init_compute_raymarching_textures();
 #endif
 
+}
+
+Texture* RoomsRenderer::get_eye_texture(eEYE eye)
+{
+    return &eye_textures[eye];
 }

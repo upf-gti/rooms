@@ -132,9 +132,10 @@ fn raymarch(ray_origin : vec3f, ray_dir : vec3f, view_proj : mat4x4f) -> vec4f
         surface = sample_sdf(pos);
 
 		if (surface.distance < MIN_HIT_DIST) {
-            let proj_pos : vec4f = view_proj * vec4f(pos, 1.0);
-            depth = proj_pos.z / proj_pos.w;
-			return vec4f(blinn_phong(ray_origin, pos, lightPos + lightOffset, ambientColor, surface.color), depth);
+            let epsilon : f32 = 0.000001; // avoids flashing when camera inside sdf
+            let proj_pos : vec4f = view_proj * vec4f(pos + ray_dir * epsilon, 1.0);
+            let depth_proj = proj_pos.z / proj_pos.w;
+			return vec4f(blinn_phong(ray_origin, pos, lightPos + lightOffset, ambientColor, surface.color), depth_proj);
 		}
 
         surface_min_dist = surface.distance;
