@@ -36,6 +36,7 @@ class SculptEditor {
     void set_primitive( sdPrimitive primitive, EntityMesh* mesh_preview = nullptr);
     void set_primitive_modifier(bool& modifier);
 
+    bool        stamp_enabled = false;
     bool		rotation_started = false;
 
     glm::vec3	sculpt_start_position;
@@ -81,7 +82,6 @@ class SculptEditor {
     size_t                max_recent_colors;
     std::vector<Color>    recent_colors;
 
-    void load_ui_layout(const std::string& filename, ui::Controller& ui);
     void add_recent_color(const Color& color);
 
     void enable_tool(eTool tool);

@@ -94,7 +94,7 @@ void MeshRenderer::render(WGPUTextureView swapchain_view, WGPUTextureView swapch
             wgpuRenderPassEncoderSetBindGroup(render_pass, 0, mesh->get_bind_group(), 0, nullptr);
             wgpuRenderPassEncoderSetBindGroup(render_pass, 1, render_bind_group_camera, 0, nullptr);
 
-            ui::Widget* widget = ui::Controller::get_widget_from_name(mesh->get_alias());
+            ui::Widget* widget = ui::Controller::get(mesh->get_alias());
             if (widget)
             {
                 wgpuQueueWriteBuffer(webgpu_context->device_queue, std::get<WGPUBuffer>(widget->uniforms.data), 0, &widget->ui_data, sizeof(ui::sUIData));

@@ -1,5 +1,6 @@
 #pragma once
 #include "ui/ui_widgets.h"
+#include "json_utils.h"
 #include "framework/colors.h"
 #include <variant>
 #include <functional>
@@ -51,7 +52,9 @@ namespace ui {
 		ui::Widget* root = nullptr;
 		std::map<std::string, std::vector<SignalType>> signals;
 
-        static std::map<std::string, Widget*> widgets;
+        json mjson;
+        std::map<std::string, Widget*> widgets;
+        static std::map<std::string, Widget*> all_widgets;
 
 		/*
 		*	Widget Helpers
@@ -94,8 +97,8 @@ namespace ui {
 
         Widget* make_rect(glm::vec2 pos, glm::vec2 size, const Color& color);
 		Widget* make_text(const std::string& text, const std::string& alias, glm::vec2 pos, const Color& color, float scale = 1.f, glm::vec2 size = {1, 1});
-        Widget* make_label(const std::string& text, const std::string& alias, const char* texture = nullptr, bool vertical_mode = true);
-		Widget* make_button(const std::string& signal, const char* texture = nullptr, const char* shader = "data/shaders/mesh_texture_ui.wgsl", bool unique_selection = false, bool allow_toggle = false, bool is_color_button = false, const Color& color = colors::WHITE);
+        Widget* make_label(const json& j);
+		Widget* make_button(const json& j);
 		Widget* make_slider(const std::string& signal, float default_value, glm::vec2 pos, glm::vec2 size, const Color& color, const char* texture = nullptr);
 		Widget* make_color_picker(const std::string& signal, const Color& default_color, glm::vec2 pos, glm::vec2 size);
         void make_submenu(Widget* parent, const std::string& name);
@@ -104,7 +107,12 @@ namespace ui {
         Widget* make_group(const std::string& group_name, float number_of_widgets, const Color& color = colors::WHITE);
         void close_group();
 
-        static Widget* get_widget_from_name(const std::string& alias);
+        const std::map<std::string, Widget*>& get_widgets() { return widgets; };
+        static Widget* get(const std::string& alias);
+        Widget* get_widget_from_name(const std::string& alias);
+
+        void load_layout(const std::string& filename);
+        void change_list_layout(const std::string& list_name);
 
 		/*
 		*	Callbacks

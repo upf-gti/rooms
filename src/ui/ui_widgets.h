@@ -42,6 +42,7 @@ namespace ui {
 
 		std::vector<Widget*> children;
 		bool show_children  = false;
+        bool active         = true;
         bool selected       = false;
 
 		EntityMesh* entity = nullptr;
@@ -98,7 +99,12 @@ namespace ui {
     class LabelWidget : public Widget {
     public:
 
-        LabelWidget(EntityMesh* p_icon, const glm::vec2& p) : Widget(p_icon, p) {
+        int button = -1;
+
+        std::string text;
+        std::string subtext;
+
+        LabelWidget(const std::string& p_text, EntityMesh* p_icon, const glm::vec2& p) : Widget(p_icon, p), text(p_text) {
             type = eWidgetType::LABEL;
         }
 

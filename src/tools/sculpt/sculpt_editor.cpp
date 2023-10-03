@@ -43,7 +43,7 @@ void SculptEditor::initialize()
 
     // UI Layout from JSON
     {
-        load_ui_layout( "data/ui/main.json", gui );
+        gui.load_layout( "data/ui/main.json" );
     }
 
     // Set events
@@ -73,6 +73,21 @@ void SculptEditor::initialize()
             return;
         }
 
+        // Bind colors callback...
+
+        for (auto it : gui.get_widgets())
+        {
+            if (it.second->type != ui::BUTTON) continue;
+            ui::ButtonWidget* child = static_cast<ui::ButtonWidget*>(it.second);
+            if (child->is_color_button) {
+                gui.bind(child->signal, [&](const std::string& signal, void* button) {
+                    const Color& color = (static_cast<ui::ButtonWidget*>(button))->color;
+                    current_color = color;
+                    add_recent_color(color);
+                });
+            }
+        }
+
         max_recent_colors = recent_group->children.size();
         for (size_t i = 0; i < max_recent_colors; ++i)
         {
@@ -85,7 +100,7 @@ void SculptEditor::initialize()
 
     // Create helper ui
     {
-        load_ui_layout("data/ui/helper.json", helper_gui);
+        helper_gui.load_layout("data/ui/helper.json");
 
         // Customize a little bit...
         helper_gui.get_workspace().hand = HAND_RIGHT;
@@ -104,12 +119,11 @@ void SculptEditor::update(float delta_time)
     Tool& tool_used = *tools[current_tool];
 
     if (Input::was_button_pressed(XR_BUTTON_B))
-    {
-        tool_used.stamp_enabled = !tool_used.stamp_enabled;
-        ui::TextWidget* text_label = static_cast<ui::TextWidget*>(helper_gui.get_widget_from_name("text@smear_stamp"));
-        TextEntity* text = (TextEntity*)text_label->entity;
-        text->set_text(tool_used.stamp_enabled ? "Smear" : "Stamp");
-    }
+        stamp_enabled = !stamp_enabled;
+
+    // Update tool properties...
+    tool_used.stamp = stamp_enabled;
+    // ...
 
     bool is_tool_used = tool_used.update(delta_time);
 
@@ -130,7 +144,6 @@ void SculptEditor::update(float delta_time)
     if (!sculpt_started) {
         sculpt_start_position = edit_to_add.position;
         renderer->set_sculpt_start_position(sculpt_start_position);
-
         mirror_origin = sculpt_start_position + glm::vec3(0.0f, 1.0f, 0.0f);
     }
 
@@ -180,6 +193,7 @@ void SculptEditor::update(float delta_time)
         edit_to_add.dimensions.w = glm::clamp(size_multiplier + edit_to_add.dimensions.w, 0.001f, 0.1f);
     }
 
+    // Update current edit properties...
     edit_to_add.primitive = current_primitive;
     edit_to_add.color = current_color;
     edit_to_add.parameters.x = onion_thickness;
@@ -274,105 +288,17 @@ void SculptEditor::enable_tool(eTool tool)
 
     tools[tool]->start();
     current_tool = tool;
-}
 
-void SculptEditor::load_ui_layout(const std::string& filename, ui::Controller& ui)
-{
-    const json& j = load_json(filename);
-    float group_elements_pending = -1;
-
-    float width = j["width"];
-    float height = j["height"];
-    ui.set_workspace({ width, height });
-
-    std::function<void(const json&)> read_element = [&](const json& j) {
-
-        std::string name = j["name"];
-        std::string type = j["type"];
-
-        if (type == "group")
-        {
-            assert(j.count("nitems") > 0);
-            float nitems = j["nitems"];
-            group_elements_pending = nitems;
-
-            glm::vec4 color;
-            if (j.count("color")) {
-                color = load_vec4(j["color"]);
-            }
-            else {
-                color = colors::GRAY;
-            }
-
-            ui::Widget* group = ui.make_group(name, nitems, color);
-        }
-        else if (type == "button")
-        {
-            std::string texture = j["texture"];
-            std::string shader = "data/shaders/mesh_texture_ui.wgsl";
-
-            if (j.count("shader"))
-                shader = j["shader"];
-
-            const bool is_color_button = j.count("color") > 0;
-            Color color = colors::WHITE;
-            if (is_color_button)
-                color = load_vec4(j["color"]);
-
-            const bool is_unique_selection = j.value("unique_selection", false);
-            const bool allow_toggle = j.value("allow_toggle", false);
-            ui::ButtonWidget* widget = (ui::ButtonWidget*)ui.make_button(name, texture.c_str(), shader.c_str(), is_unique_selection, allow_toggle, is_color_button, color);
-            group_elements_pending--;
-
-            widget->selected = j.value("selected", false);
-
-            if (is_color_button)
-            {
-                // Bind colors callback...
-
-                ui.bind(name, [&](const std::string& signal, void* button) {
-                    const Color& color = (static_cast<ui::ButtonWidget*>(button))->color;
-                    current_color = color;
-                    add_recent_color(color);
-                });
-            }
-
-            if (group_elements_pending == 0.f)
-            {
-                ui.close_group();
-                group_elements_pending = -1;
-            }
-        }
-        else if (type == "label")
-        {
-            std::string texture = j["texture"];
-            ui.make_label(name, j.count("alias") > 0 ? j.value("alias", name).c_str() : name.c_str(), j.count("texture") > 0 ? texture.c_str() : nullptr);
-        }
-        else if (type == "submenu")
-        {
-            ui::Widget* parent = ui.get_widget_from_name(name);
-
-            if (!parent) {
-                assert(0);
-                std::cerr << "Can not find parent button with name " << name << std::endl;
-                return;
-            }
-
-            ui.make_submenu(parent, name);
-
-            assert(j.count("children") > 0);
-            auto& _subelements = j["children"];
-            for (auto& sub_el : _subelements) {
-                read_element(sub_el);
-            }
-
-            ui.close_submenu();
-        }
-    };
-
-    auto& _elements = j["elements"];
-    for (auto& el : _elements) {
-        read_element(el);
+    switch (tool)
+    {
+    case SCULPT:
+        helper_gui.change_list_layout("sculpt");
+        break;
+    case PAINT:
+        helper_gui.change_list_layout("paint");
+        break;
+    default:
+        break;
     }
 }
 
