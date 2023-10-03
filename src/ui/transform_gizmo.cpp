@@ -97,7 +97,7 @@ glm::vec3 TransformGizmo::update(const glm::vec3 &new_position, const float delt
 
                 const glm::vec3 new_rotation_pose = controller_position;
                 glm::vec3 t = new_rotation_pose - reference_rotation_pose;
-                std::cout << t.x << " " << t.y << " " << t.z << std::endl;
+
                 if (rotation_axis_x_selected) {
                     // x_angle = acos(dot(v.yz, u.yx)
                     x_angle = get_angle(glm::vec2(new_rotation_pose.y, new_rotation_pose.z),

@@ -187,7 +187,7 @@ void SculptEditor::update(float delta_time)
     renderer->set_preview_edit(edit_to_add);
 
     if (use_mirror) {
-        mirror_origin = mirror_gizmo.update(mirror_origin);
+        mirror_origin = mirror_gizmo.update(mirror_origin, delta_time);
     }
 
     if (tool_used) {
