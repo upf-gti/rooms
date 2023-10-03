@@ -1,6 +1,7 @@
 #include "sculpt_editor.h"
 #include "sculpt.h"
 #include "paint.h"
+#include "sweep.h"
 #include "graphics/renderers/rooms_renderer.h"
 #include "framework/scene/parse_scene.h"
 
@@ -34,6 +35,7 @@ void SculptEditor::initialize()
 
     tools[SCULPT] = new SculptTool();
     tools[PAINT] = new PaintTool();
+    tools[SWEEP] = new SweepTool();
 
     for (auto& tool : tools) {
         if (tool) {
@@ -92,7 +94,7 @@ void SculptEditor::initialize()
         helper_gui.get_workspace().root_pose = POSE_GRIP;
     }
 
-    enable_tool(SCULPT);
+    enable_tool(SWEEP);
 }
 
 void SculptEditor::update(float delta_time)

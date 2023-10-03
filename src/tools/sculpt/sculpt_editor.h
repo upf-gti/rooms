@@ -8,6 +8,7 @@ enum eTool : uint8_t {
     NONE = 0,
     SCULPT,
     PAINT,
+    SWEEP,
     TOOL_COUNT
 };
 

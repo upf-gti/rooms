@@ -6,7 +6,7 @@
 #include "graphics/edit.h"
 #include "graphics/texture.h"
 
-#define PREVIEW_EDITS_MAX 32
+#define PREVIEW_EDITS_MAX 128
 #define EDITS_MAX 512
 #define SDF_RESOLUTION 512
 
