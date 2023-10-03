@@ -39,6 +39,13 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 	return error;
 }
 
+void RoomsEngine::clean()
+{
+    Engine::clean();
+
+    sculpt_editor.clean();
+}
+
 void RoomsEngine::update(float delta_time)
 {
     //entities[0]->rotate(0.8f * delta_time, glm::vec3(0.0f, 0.0f, 1.0f));
