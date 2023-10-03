@@ -11,14 +11,16 @@
             "texture": "data/textures/buttons/b.png"
         },
         {
-            "name": "Test",
-            "alias": "test",
+            "name": "Substract",
+            "subtext": "Add",
+            "alias": "add_substract",
+            "button": 3,
             "type": "label",
-            "texture": "data/textures/buttons/b.png"
+            "texture": "data/textures/buttons/y.png"
         }
     ],
     "lists": {
-        "sculpt": ["smear_stamp"],
-        "paint": ["smear_stamp", "test"]
+        "sculpt": ["smear_stamp", "add_substract"],
+        "paint": ["smear_stamp"]
     }
 }
