@@ -4,6 +4,7 @@
     "elements": [
         {
             "name": "Stamp",
+            "alias": "smear_stamp",
             "type": "label",
             "texture": "data/textures/buttons/b.png"
         },

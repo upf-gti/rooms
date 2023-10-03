@@ -168,7 +168,7 @@ namespace ui {
 		return widget;
 	}
 
-	Widget* Controller::make_text(const std::string& text, glm::vec2 pos, const Color& color, float scale, glm::vec2 size)
+	Widget* Controller::make_text(const std::string& text, const std::string& alias, glm::vec2 pos, const Color& color, float scale, glm::vec2 size)
 	{
 		process_params(pos, size);
 		scale *= global_scale;
@@ -179,11 +179,11 @@ namespace ui {
 		e_text->generate_mesh();
 
 		TextWidget* widget = new TextWidget(e_text, pos);
-		append_widget(widget, "ui_text");
+		append_widget(widget, alias);
 		return widget;
 	}
 
-    Widget* Controller::make_label(const std::string& text, const char* texture, bool vertical_mode)
+    Widget* Controller::make_label(const std::string& text, const std::string& alias, const char* texture, bool vertical_mode)
     {
         static int num_labels = 0;
 
@@ -195,7 +195,7 @@ namespace ui {
         glm::vec2 pos = { LABEL_BUTTON_SIZE + 4.f, num_labels * LABEL_BUTTON_SIZE + (num_labels + 1.f) * margin };
         glm::vec2 size = glm::vec2(workspace_width, LABEL_BUTTON_SIZE);
 
-        Widget* text_widget = make_text(text, pos, colors::WHITE, 12.f);
+        Widget* text_widget = make_text(text, "text@" + alias, pos, colors::WHITE, 12.f);
         text_widget->priority = -1;
 
         // Icon 
@@ -223,7 +223,7 @@ namespace ui {
             pos
         );
 
-        append_widget(label_widget, "ui_label");
+        append_widget(label_widget, alias);
 
         num_labels++;
 

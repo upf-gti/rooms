@@ -101,18 +101,23 @@ void SculptEditor::update(float delta_time)
         return;
     }
 
+    Tool& tool_used = *tools[current_tool];
+
     if (Input::was_button_pressed(XR_BUTTON_B))
-        stamp_enabled = !stamp_enabled;
+    {
+        tool_used.stamp_enabled = !tool_used.stamp_enabled;
+        ui::TextWidget* text_label = static_cast<ui::TextWidget*>(helper_gui.get_widget_from_name("text@smear_stamp"));
+        TextEntity* text = (TextEntity*)text_label->entity;
+        text->set_text(tool_used.stamp_enabled ? "Smear" : "Stamp");
+    }
 
-    tools[current_tool]->stamp_enabled = stamp_enabled;
+    bool is_tool_used = tool_used.update(delta_time);
 
-    bool tool_used = tools[current_tool]->update(delta_time);
-
-    if (current_tool == SCULPT && tool_used) {
+    if (current_tool == SCULPT && is_tool_used) {
         sculpt_started = true;
     }
 
-    Edit& edit_to_add = tools[current_tool]->get_edit_to_add();
+    Edit& edit_to_add = tool_used.get_edit_to_add();
 
     if (snap_to_grid) {
         float grid_multiplier = 1.0f / snap_grid_size;
@@ -145,13 +150,11 @@ void SculptEditor::update(float delta_time)
 
         rotation_started = true;
     }
-    else {
-        if (rotation_started) {
-            sculpt_rotation = sculpt_rotation * rotation_diff;
-            sculpt_start_position = sculpt_start_position + translation_diff;
-            rotation_started = false;
-            rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
-        }
+    else if (rotation_started) {
+        sculpt_rotation = sculpt_rotation * rotation_diff;
+        sculpt_start_position = sculpt_start_position + translation_diff;
+        rotation_started = false;
+        rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
     }
 
     // Update edit dimensions
@@ -190,7 +193,7 @@ void SculptEditor::update(float delta_time)
         mirror_origin = mirror_gizmo.update(mirror_origin, delta_time);
     }
 
-    if (tool_used) {
+    if (is_tool_used) {
         renderer->push_edit(edit_to_add);
 
         // If the mirror is activated, mirror using the plane, and add another edit to the list
@@ -211,11 +214,12 @@ void SculptEditor::update(float delta_time)
 
 void SculptEditor::render()
 {
-    Edit& edit_to_add = tools[current_tool]->get_edit_to_add();
+    Tool& tool_used = *tools[current_tool];
+    Edit& edit_to_add = tool_used.get_edit_to_add();
 
 #ifdef XR_SUPPORT
 
-    if(mesh_preview)
+    if (mesh_preview)
     {
         // Render a hollowed edit
         mesh_preview->set_model(Input::get_controller_pose(gui.get_workspace().select_hand));
@@ -224,8 +228,8 @@ void SculptEditor::render()
     }
 
     if (current_tool != NONE) {
-        tools[current_tool]->render_scene();
-        tools[current_tool]->render_ui();
+        tool_used.render_scene();
+        tool_used.render_ui();
     }
 
     gui.render();
@@ -340,7 +344,7 @@ void SculptEditor::load_ui_layout(const std::string& filename, ui::Controller& u
         else if (type == "label")
         {
             std::string texture = j["texture"];
-            ui.make_label(name, j.count("texture") > 0 ? texture.c_str() : nullptr);
+            ui.make_label(name, j.count("alias") > 0 ? j.value("alias", name).c_str() : name.c_str(), j.count("texture") > 0 ? texture.c_str() : nullptr);
         }
         else if (type == "submenu")
         {

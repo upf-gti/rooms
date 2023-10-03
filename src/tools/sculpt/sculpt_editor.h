@@ -33,8 +33,6 @@ class SculptEditor {
     EntityMesh* sphere_mesh = nullptr;
     EntityMesh* cube_mesh = nullptr;
 
-    bool stamp_enabled = false;
-
     void set_primitive( sdPrimitive primitive, EntityMesh* mesh_preview = nullptr);
     void set_primitive_modifier(bool& modifier);
 
