@@ -24,6 +24,12 @@ struct ComputeData {
 
 };
 
+struct PreviewEditData {
+    padding : vec3f,
+    preview_edit_count : u32,
+    preview_edits : array<Edit, 32>
+};
+
 struct SdfData {
     data : array<vec4f>
 };
@@ -35,7 +41,7 @@ struct SdfData {
 @group(0) @binding(3) var read_sdf: texture_3d<f32>;
 
 @group(1) @binding(0) var<uniform> compute_data : ComputeData;
-@group(1) @binding(1) var<uniform> preview_edit : Edit;
+@group(1) @binding(1) var<uniform> preview_edit_data : PreviewEditData;
 
 const MAX_DIST = 1.5;
 const MIN_HIT_DIST = 0.0003;
@@ -79,14 +85,18 @@ fn sample_sdf(position : vec3f) -> Surface
 
     var surface : Surface = Surface(data.xyz, data.w);
 
-    surface = add_preview_edit((p  + compute_data.sculpt_start_position) * SDF_RESOLUTION, surface);
+    surface = add_preview_edits((p  + compute_data.sculpt_start_position) * SDF_RESOLUTION, surface);
 
     return surface;
 }
 
-fn add_preview_edit(position : vec3f, surface : Surface) -> Surface
+fn add_preview_edits(position : vec3f, surface : Surface) -> Surface
 {
-    return evalEdit(position, surface, preview_edit);
+    var it_surface : Surface = surface;
+    for(var i : u32 = 0u; i < preview_edit_data.preview_edit_count; i++) {
+        it_surface = evalEdit(position, it_surface, preview_edit_data.preview_edits[i]);
+    }
+    return it_surface;
 }
 
 fn estimate_normal(p : vec3f) -> vec3f

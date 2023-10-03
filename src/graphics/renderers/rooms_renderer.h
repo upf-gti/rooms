@@ -87,8 +87,8 @@ public:
         raymarching_renderer.push_edit_list(edits);
     };
 
-    void set_preview_edit(const Edit& edit) {
-        raymarching_renderer.set_preview_edit(edit);
+    void add_preview_edit(const Edit& edit) {
+        raymarching_renderer.add_preview_edit(edit);
     }
 
     void set_sculpt_rotation(const glm::quat& rotation) {

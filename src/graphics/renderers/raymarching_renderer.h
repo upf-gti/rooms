@@ -6,6 +6,7 @@
 #include "graphics/edit.h"
 #include "graphics/texture.h"
 
+#define PREVIEW_EDITS_MAX 32
 #define EDITS_MAX 512
 #define SDF_RESOLUTION 512
 
@@ -83,6 +84,13 @@ class RaymarchingRenderer {
 
     Edit edits[EDITS_MAX];
 
+    // Preview edits
+    struct sPreviewEditsData {
+        glm::vec3 padding;
+        uint32_t preview_edits_count = 0u;
+        Edit preview_edits[PREVIEW_EDITS_MAX];
+    } preview_edit_data;
+
     // Timestepping counters
     float updated_time = 0.0f;
 
@@ -144,7 +152,7 @@ public:
         }
     };
 
-    void set_preview_edit(const Edit& edit);
+    void add_preview_edit(const Edit& edit);
     void set_sculpt_rotation(const glm::quat& rotation);
 
 };
