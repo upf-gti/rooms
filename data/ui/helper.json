@@ -4,13 +4,21 @@
     "elements": [
         {
             "name": "Stamp",
+            "subtext": "Smear",
+            "alias": "smear_stamp",
+            "button": 1,
             "type": "label",
             "texture": "data/textures/buttons/b.png"
         },
         {
-            "name": "Pepe Luis",
+            "name": "Test",
+            "alias": "test",
             "type": "label",
-            "texture": "data/textures/buttons/a.png"
+            "texture": "data/textures/buttons/b.png"
         }
-    ]
+    ],
+    "lists": {
+        "sculpt": ["smear_stamp"],
+        "paint": ["smear_stamp", "test"]
+    }
 }

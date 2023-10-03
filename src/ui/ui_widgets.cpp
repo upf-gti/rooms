@@ -69,6 +69,8 @@ namespace ui {
 
 	void Widget::render()
 	{
+        if (!active) return;
+
 		entity->render();
 
 		if (!show_children)
@@ -80,6 +82,8 @@ namespace ui {
 
 	void Widget::update(Controller* controller)
 	{
+        if (!active) return;
+
 		entity->set_model(controller->get_matrix());
 		entity->translate(glm::vec3(position.x, position.y, -1e-3f - priority * 1e-3f));
 

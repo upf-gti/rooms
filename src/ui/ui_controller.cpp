@@ -10,7 +10,7 @@
 
 namespace ui {
 
-    std::map<std::string, Widget*> Controller::widgets;
+    std::map<std::string, Widget*> Controller::all_widgets;
 
     float current_number_of_group_widgets; // store to make sure everything went well
 
@@ -100,6 +100,23 @@ namespace ui {
 		for (auto element : root->children) {
 			element->update( this );
 		}
+
+        // Update labels
+
+        for (auto& it : get_widgets())
+        {
+            ui::LabelWidget* widget = static_cast<ui::LabelWidget*>(it.second);
+
+            if (!widget->active || widget->type != ui::LABEL)
+                continue;
+
+            if (widget->button != -1 && Input::was_button_pressed(widget->button))
+            {
+                widget->selected = !widget->selected;
+                ui::TextWidget* text_label = static_cast<ui::TextWidget*>(get_widget_from_name("text@" + it.first));
+                ((TextEntity*)text_label->entity)->set_text(widget->selected ? widget->subtext : widget->text);
+            }
+        }
 	}
 
 	void Controller::process_params(glm::vec2& position, glm::vec2& size, bool skip_to_local)
@@ -150,6 +167,7 @@ namespace ui {
 		}
 
         widgets[name] = widget;
+        all_widgets[name] = widget;
 	}
 
 	Widget* Controller::make_rect(glm::vec2 pos, glm::vec2 size, const Color& color)
@@ -168,7 +186,7 @@ namespace ui {
 		return widget;
 	}
 
-	Widget* Controller::make_text(const std::string& text, glm::vec2 pos, const Color& color, float scale, glm::vec2 size)
+	Widget* Controller::make_text(const std::string& text, const std::string& alias, glm::vec2 pos, const Color& color, float scale, glm::vec2 size)
 	{
 		process_params(pos, size);
 		scale *= global_scale;
@@ -179,12 +197,15 @@ namespace ui {
 		e_text->generate_mesh();
 
 		TextWidget* widget = new TextWidget(e_text, pos);
-		append_widget(widget, "ui_text");
+		append_widget(widget, alias);
 		return widget;
 	}
 
-    Widget* Controller::make_label(const std::string& text, const char* texture, bool vertical_mode)
+    Widget* Controller::make_label(const json& j)
     {
+        std::string text = j["name"];
+        std::string alias = j.value("alias", text);
+
         static int num_labels = 0;
 
         // World attributes
@@ -195,14 +216,15 @@ namespace ui {
         glm::vec2 pos = { LABEL_BUTTON_SIZE + 4.f, num_labels * LABEL_BUTTON_SIZE + (num_labels + 1.f) * margin };
         glm::vec2 size = glm::vec2(workspace_width, LABEL_BUTTON_SIZE);
 
-        Widget* text_widget = make_text(text, pos, colors::WHITE, 12.f);
+        Widget* text_widget = make_text(text, "text@" + alias, pos, colors::WHITE, 12.f);
         text_widget->priority = -1;
 
         // Icon 
         EntityMesh* m_icon = new EntityMesh();
         Mesh* mesh = new Mesh();
-        if (texture)
+        if (j.count("texture") > 0)
         {
+            std::string texture = j["texture"];
             m_icon->set_material_diffuse(Texture::get(texture));
         }
 
@@ -218,20 +240,21 @@ namespace ui {
         m_icon->set_mesh(mesh);
         m_icon->set_material_shader(Shader::get("data/shaders/mesh_texture.wgsl"));
 
-        Widget* label_widget = new LabelWidget(
-            m_icon,
-            pos
-        );
+        LabelWidget* label_widget = new LabelWidget(text, m_icon, pos);
+        label_widget->button = j.value("button", -1);
+        label_widget->subtext = j.value("subtext", "");
 
-        append_widget(label_widget, "ui_label");
+        append_widget(label_widget, alias);
 
         num_labels++;
 
         return label_widget;
     }
 
-	Widget* Controller::make_button(const std::string& signal, const char* texture, const char* shader, bool unique_selection, bool allow_toggle, bool is_color_button, const Color& color)
+	Widget* Controller::make_button(const json& j)
 	{
+        std::string signal = j["name"];
+
         // World attributes
         glm::vec2 pos = compute_position();
         glm::vec2 size = glm::vec2(BUTTON_SIZE);
@@ -245,25 +268,34 @@ namespace ui {
 		*	Create button entity and set transform
 		*/
 
+        std::string texture = j["texture"];
+        std::string shader = "data/shaders/mesh_texture_ui.wgsl";
+
+        if (j.count("shader"))
+            shader = j["shader"];
+
 		// Render quad in local workspace position
 		EntityMesh* e_button = new EntityMesh();
 		e_button->set_material_shader(Shader::get(shader));
-		Mesh* mesh = new Mesh();
-		if (texture)
-            e_button->set_material_diffuse(Texture::get(texture));
+		e_button->set_material_diffuse(Texture::get(texture));
 
+		Mesh* mesh = new Mesh();
 		mesh->create_quad(size.x, size.y);
         mesh->set_alias(signal);
 		e_button->set_mesh(mesh);
 
+        const bool allow_toggle = j.value("allow_toggle", false);
+        const bool is_color_button = j.count("color") > 0;
+        Color color = is_color_button ? load_vec4(j["color"]) : colors::WHITE;
+
 		ButtonWidget* widget = new ButtonWidget(signal, e_button, pos, color, size);
         widget->is_color_button = is_color_button;
-        widget->is_unique_selection = unique_selection;
+        widget->is_unique_selection = j.value("unique_selection", false);
 
         if( group_opened )
             widget->priority = 1;
 
-        if (is_color_button || unique_selection || allow_toggle)
+        if (is_color_button || widget->is_unique_selection || allow_toggle)
         {
             bind(signal, [widget = widget, allow_toggle](const std::string& signal, void* button) {
                 // Unselect siblings
@@ -430,9 +462,124 @@ namespace ui {
 		signals[name].push_back(callback);
 	}
 
+    Widget* Controller::get(const std::string& alias)
+    {
+        if (all_widgets.count(alias)) return all_widgets[alias];
+        return nullptr;
+    }
+
     Widget* Controller::get_widget_from_name(const std::string& alias)
     {
         if(widgets.count(alias)) return widgets[alias];
         return nullptr;
+    }
+
+    void Controller::load_layout(const std::string& filename)
+    {
+        const json& j = load_json(filename);
+        mjson = j;
+        float group_elements_pending = -1;
+
+        float width = j["width"];
+        float height = j["height"];
+        set_workspace({ width, height });
+
+        std::function<void(const json&)> read_element = [&](const json& j) {
+
+            std::string name = j["name"];
+            std::string type = j["type"];
+
+            if (type == "group")
+            {
+                assert(j.count("nitems") > 0);
+                float nitems = j["nitems"];
+                group_elements_pending = nitems;
+
+                glm::vec4 color;
+                if (j.count("color")) {
+                    color = load_vec4(j["color"]);
+                }
+                else {
+                    color = colors::GRAY;
+                }
+
+                Widget* group = make_group(name, nitems, color);
+            }
+            else if (type == "button")
+            {
+                ButtonWidget* widget = (ButtonWidget*)make_button(j);
+                group_elements_pending--;
+
+                widget->selected = j.value("selected", false);
+
+                if (group_elements_pending == 0.f)
+                {
+                    close_group();
+                    group_elements_pending = -1;
+                }
+            }
+            else if (type == "label")
+            {
+                make_label(j);
+            }
+            else if (type == "submenu")
+            {
+                Widget* parent = get_widget_from_name(name);
+
+                if (!parent) {
+                    assert(0);
+                    std::cerr << "Can not find parent button with name " << name << std::endl;
+                    return;
+                }
+
+                make_submenu(parent, name);
+
+                assert(j.count("children") > 0);
+                auto& _subelements = j["children"];
+                for (auto& sub_el : _subelements) {
+                    read_element(sub_el);
+                }
+
+                close_submenu();
+            }
+            };
+
+        auto& _elements = j["elements"];
+        for (auto& el : _elements) {
+            read_element(el);
+        }
+    }
+
+    void Controller::change_list_layout(const std::string& list_name)
+    {
+        if (mjson.count("lists") == 0) {
+            std::cerr << "Controller doesn't have layout lists..." << std::endl;
+            return;
+        }
+
+        // Disable all widgets
+        for (auto& w : widgets) {
+            w.second->active = false;
+        }
+
+        // Enable only widgets in list...
+        const json& lists = mjson["lists"];
+        if (lists.count(list_name) == 0) {
+            std::cerr << "Controller doesn't have a layout list named '" << list_name << "'" << std::endl;
+            return;
+        }
+
+        for (auto& it : lists[list_name]) {
+            const std::string& name = it;
+            auto widget = get_widget_from_name(name);
+            widget->active = true;
+
+            // Display also its text...
+            if (widget->type == LABEL)
+            {
+                widget = get_widget_from_name("text@" + name);
+                widget->active = true;
+            }
+        }
     }
 }
