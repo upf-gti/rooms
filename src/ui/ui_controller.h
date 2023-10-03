@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-class RaymarchingRenderer;
+class RoomsRenderer;
 class EntityMesh;
 
 using FuncVoid = std::function<void(const std::string&, void*)>;
@@ -37,7 +37,7 @@ namespace ui {
 
 	class Controller {
 
-        RaymarchingRenderer* renderer = nullptr;
+        RoomsRenderer* renderer = nullptr;
 		WorkSpaceData workspace;
 		glm::mat4x4 global_transform;
 

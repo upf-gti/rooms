@@ -75,46 +75,7 @@ void MeshRenderer::render(WGPUTextureView swapchain_view, WGPUTextureView swapch
     // Create & fill the render pass (encoder)
     WGPURenderPassEncoder render_pass = wgpuCommandEncoderBeginRenderPass(command_encoder, &render_pass_descr);
 
-    static auto render_pipeline = [&](Pipeline& pipeline) {
-
-        // Bind Pipeline
-        pipeline.set(render_pass);
-
-        for (const auto mesh : pipeline.get_render_list()) {
-
-            // Not initialized
-            if (mesh->get_vertex_count() == 0) {
-                std::cerr << "Skipping not initialized mesh" << std::endl;
-                continue;
-            }
-
-            mesh->update_instance_model_matrices();
-
-            // Set bind group
-            wgpuRenderPassEncoderSetBindGroup(render_pass, 0, mesh->get_bind_group(), 0, nullptr);
-            wgpuRenderPassEncoderSetBindGroup(render_pass, 1, render_bind_group_camera, 0, nullptr);
-
-            ui::Widget* widget = ui::Controller::get_widget_from_name(mesh->get_alias());
-            if (widget)
-            {
-                wgpuQueueWriteBuffer(webgpu_context->device_queue, std::get<WGPUBuffer>(widget->uniforms.data), 0, &widget->ui_data, sizeof(ui::sUIData));
-                wgpuRenderPassEncoderSetBindGroup(render_pass, 2, widget->bind_group, 0, nullptr);
-            }
-
-            // Set vertex buffer while encoding the render pass
-            wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, mesh->get_vertex_buffer(), 0, mesh->get_byte_size());
-
-            // Submit drawcall
-            wgpuRenderPassEncoderDraw(render_pass, mesh->get_vertex_count(), mesh->get_instances_size(), 0, 0);
-        }
-    };
-
-    render_pipeline(render_mesh_grid_pipeline);
-    render_pipeline(render_mesh_ui_pipeline);
-    render_pipeline(render_mesh_ui_texture_pipeline);
-    render_pipeline(render_mesh_pipeline);
-    render_pipeline(render_mesh_texture_pipeline);
-    render_pipeline(render_fonts_pipeline);
+    Pipeline::render_registered_pipelines_renderables(render_pass, render_bind_group_camera);
 
     wgpuRenderPassEncoderEnd(render_pass);
 
@@ -132,27 +93,17 @@ void MeshRenderer::render(WGPUTextureView swapchain_view, WGPUTextureView swapch
     wgpuCommandEncoderRelease(command_encoder);
 }
 
-void MeshRenderer::clean_renderables()
-{
-    render_mesh_pipeline.clean_renderables();
-    render_mesh_texture_pipeline.clean_renderables();
-    render_mesh_ui_pipeline.clean_renderables();
-    render_mesh_ui_texture_pipeline.clean_renderables();
-    render_fonts_pipeline.clean_renderables();
-    render_mesh_grid_pipeline.clean_renderables();
-}
-
 void MeshRenderer::init_render_mesh_pipelines()
 {
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
     bool is_openxr_available = RoomsRenderer::instance->get_openxr_available();
 
     render_mesh_shader = Shader::get("data/shaders/mesh_color.wgsl");
-    render_mesh_texture_shader = Shader::get("data/shaders/mesh_texture.wgsl");
-    render_mesh_ui_shader = Shader::get("data/shaders/mesh_ui.wgsl");
-    render_mesh_ui_texture_shader = Shader::get("data/shaders/mesh_texture_ui.wgsl");
-    render_fonts_shader = Shader::get("data/shaders/sdf_fonts.wgsl");
-    render_mesh_grid_shader = Shader::get("data/shaders/mesh_grid.wgsl");
+    Shader* render_mesh_texture_shader = Shader::get("data/shaders/mesh_texture.wgsl");
+    Shader* render_mesh_ui_shader = Shader::get("data/shaders/mesh_ui.wgsl");
+    Shader* render_mesh_ui_texture_shader = Shader::get("data/shaders/mesh_texture_ui.wgsl");
+    Shader* render_fonts_shader = Shader::get("data/shaders/sdf_fonts.wgsl");
+    Shader* render_mesh_grid_shader = Shader::get("data/shaders/mesh_grid.wgsl");
 
     // Camera
 
@@ -183,10 +134,10 @@ void MeshRenderer::init_render_mesh_pipelines()
     color_target.blend = &blend_state;
     color_target.writeMask = WGPUColorWriteMask_All;
 
-    render_mesh_pipeline.create_render(render_mesh_shader, color_target, true);
-    render_mesh_texture_pipeline.create_render(render_mesh_texture_shader, color_target, true);
-    render_mesh_ui_pipeline.create_render(render_mesh_ui_shader, color_target, true);
-    render_mesh_ui_texture_pipeline.create_render(render_mesh_ui_texture_shader, color_target, true);
-    render_fonts_pipeline.create_render(render_fonts_shader, color_target, true);
-    render_mesh_grid_pipeline.create_render(render_mesh_grid_shader, color_target, true);
+    Pipeline::register_render_pipeline(render_mesh_shader, color_target, true);
+    Pipeline::register_render_pipeline(render_mesh_texture_shader, color_target, true);
+    Pipeline::register_render_pipeline(render_mesh_ui_shader, color_target, true);
+    Pipeline::register_render_pipeline(render_mesh_ui_texture_shader, color_target, true);
+    Pipeline::register_render_pipeline(render_fonts_shader, color_target, true);
+    Pipeline::register_render_pipeline(render_mesh_grid_shader, color_target, true);
 }

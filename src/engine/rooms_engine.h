@@ -12,8 +12,9 @@ class RoomsEngine : public Engine {
 
 public:
 
-	virtual int initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen) override;
+	int initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen) override;
+    void clean() override;
 
-	virtual void update(float delta_time) override;
-	virtual void render() override;
+	void update(float delta_time) override;
+	void render() override;
 };

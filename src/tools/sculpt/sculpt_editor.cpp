@@ -95,6 +95,17 @@ void SculptEditor::initialize()
     enable_tool(SCULPT);
 }
 
+void SculptEditor::clean()
+{
+    if (mirror_mesh) {
+        delete mirror_mesh;
+    }
+
+    if (floor_grid_mesh) {
+        delete floor_grid_mesh;
+    }
+}
+
 void SculptEditor::update(float delta_time)
 {
     if (current_tool == NONE) {

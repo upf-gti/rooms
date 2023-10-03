@@ -16,7 +16,7 @@ namespace ui {
 
 	void Controller::set_workspace(glm::vec2 _workspace_size, uint8_t _select_button, uint8_t _root_pose, uint8_t _hand, uint8_t _select_hand)
 	{
-        renderer = dynamic_cast<RaymarchingRenderer*>(Renderer::instance);
+        renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
 
 		global_scale = 0.001f;
 

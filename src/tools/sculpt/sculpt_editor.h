@@ -95,6 +95,7 @@ class SculptEditor {
 public:
 
     void initialize();
+    void clean();
     void update(float delta_time);
     void render();
 };
