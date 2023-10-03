@@ -220,6 +220,8 @@ void RaymarchingRenderer::compute_merge()
 
 void RaymarchingRenderer::compute_raymarching()
 {
+    preview_edit_data.preview_edits_count = 0u;
+
     if (!compute_raymarching_shader || !compute_raymarching_shader->is_loaded()) return;
 
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
@@ -241,7 +243,6 @@ void RaymarchingRenderer::compute_raymarching()
     wgpuQueueWriteBuffer(webgpu_context->device_queue, std::get<WGPUBuffer>(compute_buffer_data_uniform.data), 0, &(compute_raymarching_data), sizeof(sComputeData));
     // Update preview edits
     wgpuQueueWriteBuffer(webgpu_context->device_queue, std::get<WGPUBuffer>(compute_preview_edit_uniform.data), 0, &preview_edit_data, sizeof(sPreviewEditsData));
-    preview_edit_data.preview_edits_count = 0u; // Restart the counter after uploading
 
     wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_raymarching_textures_bind_group, 0, nullptr);
     wgpuComputePassEncoderSetBindGroup(compute_pass, 1, compute_raymarching_data_bind_group, 0, nullptr);

@@ -6,6 +6,8 @@
 #include "graphics/shader.h"
 #include "sculpt_editor.h"
 
+#include "graphics/renderer.h"
+
 void SculptTool::initialize()
 {
     Tool::initialize();
@@ -50,12 +52,12 @@ bool SculptTool::update(float delta_time)
 	if (is_tool_activated()) {
 
 		// For debugging sculpture without a headset
-		//if (!renderer->get_openxr_available()) {
-		//	edit_to_add.position = glm::vec3(0.4 * (random_f() * 2 - 1), 0.4 * (random_f() * 2 - 1), 0.4 * (random_f() * 2 - 1));
-		//	glm::vec3 euler_angles(random_f() * 90, random_f() * 90, random_f() * 90);
-		//	edit_to_add.dimensions = glm::vec4(0.01f, 0.01f, 0.05f, 0.01f);
-		//	edit_to_add.rotation = glm::inverse(glm::quat(euler_angles));
-		//}
+		if (!Renderer::instance->get_openxr_available()) {
+			edit_to_add.position = glm::vec3((random_f() * 2 - 1), (random_f() * 2 - 1), (random_f() * 2 - 1));
+			glm::vec3 euler_angles(random_f() * 90, random_f() * 90, random_f() * 90);
+			edit_to_add.dimensions = glm::vec4(0.1f, 0.1f, 0.1f, 0.1f);
+			edit_to_add.rotation = glm::inverse(glm::quat(euler_angles));
+		}
 
         return use_tool();
 	}

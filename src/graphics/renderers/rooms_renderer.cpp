@@ -82,10 +82,10 @@ void RoomsRenderer::render()
 
 void RoomsRenderer::render_screen()
 {
-    glm::vec3 eye = glm::vec3(0.0f, -5.5f, -5.5f);
+    glm::vec3 eye = glm::vec3(0.0f, 5.5f, -5.5f);
     glm::mat4x4 view = glm::lookAt(eye, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     glm::mat4x4 projection = glm::perspective(glm::radians(45.0f), webgpu_context.render_width / static_cast<float>(webgpu_context.render_height), 0.1f, 100.0f);
-    projection[1][1] *= -1.0f;
+    //projection[1][1] *= -1.0f;
 
     glm::mat4x4 view_projection = projection * view;
 
