@@ -12,7 +12,8 @@
             "name": "sculpt",
             "type": "button",
             "texture": "data/textures/cube.png",
-            "unique_selection": true
+            "unique_selection": true,
+            "selected":   true
         },
         {
             "name": "paint",
@@ -33,12 +34,14 @@
         {
             "name": "mirror",
             "type": "button",
-            "texture": "data/textures/mirror.png"
+            "texture": "data/textures/mirror.png",
+            "allow_toggle": true
         },
         {
             "name": "snap_to_grid",
             "type": "button",
-            "texture": "data/textures/snap_to_grid.png"
+            "texture": "data/textures/snap_to_grid.png",
+            "allow_toggle": true
         },
         {
             "name": "primitives",
@@ -47,7 +50,7 @@
                 {
                     "name": "g0_primitives",
                     "type": "group",
-                    "nitems": 4
+                    "nitems": 6
                 },
                 {
                     "name": "sphere",
@@ -62,6 +65,18 @@
                     "unique_selection": true
                 },
                 {
+                    "name": "cone",
+                    "type": "button",
+                    "texture": "data/textures/cone.png",
+                    "unique_selection": true
+                },
+                {
+                    "name": "capsule",
+                    "type": "button",
+                    "texture": "data/textures/capsule.png",
+                    "unique_selection": true
+                },
+                {
                     "name": "cylinder",
                     "type": "button",
                     "texture": "data/textures/cylinder.png",
@@ -72,6 +87,36 @@
                     "type": "button",
                     "texture": "data/textures/torus.png",
                     "unique_selection": true
+                },
+                {
+                    "name": "shape_editor",
+                    "type": "button",
+                    "texture": "data/textures/shape_editor.png"
+                }
+            ]
+        },
+        {
+            "name": "shape_editor",
+            "type": "submenu",
+            "children": [
+                {
+                    "name": "g_shape_editor",
+                    "type": "group",
+                    "nitems": 2
+                },
+                {
+                    "name": "onion",
+                    "type": "button",
+                    "texture": "data/textures/onion.png",
+                    "unique_selection": true,
+                    "allow_toggle": true
+                },
+                {
+                    "name": "capped",
+                    "type": "button",
+                    "texture": "data/textures/capped.png",
+                    "unique_selection": true,
+                    "allow_toggle": true
                 }
             ]
         },

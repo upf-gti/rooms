@@ -32,15 +32,16 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     //text->translate(glm::vec3(0.0f, 0.0, -5.0));
     //entities.push_back(text);
 
-    //EntityMesh* juan = parse_scene("data/meshes/juan/juan.gltf");
-    //entities.push_back(juan);
+    //EntityMesh* gate = parse_scene("data/meshes/gate/gate.obj");
+    //gate->rotate(glm::pi<float>() * 0.5f, glm::vec3(1.0f, 0.0, 0.0));
+    //entities.push_back(gate);
 
 	return error;
 }
 
 void RoomsEngine::update(float delta_time)
 {
-    //entities[0]->rotate(0.8f * delta_time, glm::vec3(0.0f, 1.0f, 0.0f));
+    //entities[0]->rotate(0.8f * delta_time, glm::vec3(0.0f, 0.0f, 1.0f));
 
 	Engine::update(delta_time);
 

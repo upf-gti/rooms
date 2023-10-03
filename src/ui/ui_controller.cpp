@@ -3,7 +3,7 @@
 #include "utils.h"
 #include "framework/intersections.h"
 #include "framework/input.h"
-#include "graphics/raymarching_renderer.h"
+#include "graphics/renderers/rooms_renderer.h"
 #include "framework/entities/entity_text.h"
 
 #include "framework/scene/parse_scene.h"
@@ -31,22 +31,36 @@ namespace ui {
         root = new Widget();
 
         raycast_pointer = parse_scene("data/meshes/raycast.obj");
+
+        // Debug
+        if (render_background)
+        {
+            background = new EntityMesh();
+            background->set_material_shader(Shader::get("data/shaders/mesh_color.wgsl"));
+            Mesh* mesh = new Mesh();
+            mesh->create_quad(workspace.size.x, workspace.size.y);
+            background->set_mesh(mesh);
+        }
 	}
 
 	bool Controller::is_active()
 	{
-        return Input::get_grab_value(workspace.hand) > 0.5f;
+        return workspace.hand == HAND_RIGHT ||
+            Input::get_grab_value(workspace.hand) > 0.5f;
 	}
 
 	void Controller::render()
 	{
 		if (!enabled || !is_active()) return;
 
+        if (render_background) background->render();
+
 		for (auto widget : root->children) {
 			widget->render();
 		}
 
-		raycast_pointer->render();
+        if(workspace.hand == HAND_LEFT)
+		    raycast_pointer->render();
 	}
 
 	void Controller::update(float delta_time)
@@ -58,16 +72,28 @@ namespace ui {
 
 		// Update raycast helper
 
-		glm::mat4x4 raycast_transform = Input::get_controller_pose(workspace.select_hand, pose);
-		raycast_pointer->set_model(raycast_transform);
-		raycast_pointer->rotate(glm::radians(-90.f), glm::vec3(1.f, 0.f, 0.f));
-		raycast_pointer->scale(glm::vec3(0.1f));
+        if (hand == HAND_LEFT)
+        {
+		    glm::mat4x4 raycast_transform = Input::get_controller_pose(workspace.select_hand, pose);
+		    raycast_pointer->set_model(raycast_transform);
+		    raycast_pointer->rotate(glm::radians(-90.f), glm::vec3(1.f, 0.f, 0.f));
+		    raycast_pointer->scale(glm::vec3(0.1f));
+        }
 
 		// Update workspace
 
 		glm::mat4x4 workspace_transform = 
         global_transform = Input::get_controller_pose(hand, pose);
         global_transform = glm::rotate(global_transform, glm::radians(120.f), glm::vec3(1.f, 0.f, 0.f));
+
+        if (pose == POSE_GRIP)
+            global_transform = glm::rotate(global_transform, glm::radians(-90.f), glm::vec3(1.f, 0.f, 0.f));
+
+        if (render_background)
+        {
+            background->set_model(global_transform);
+            background->translate({ 0.f, 0.f, 1e-3f });
+        }
 
 		// Update widgets using this controller
 
@@ -157,7 +183,54 @@ namespace ui {
 		return widget;
 	}
 
-	Widget* Controller::make_button(const std::string& signal, const char* texture, const char* shader, bool unique_selection, bool is_color_button, const Color& color)
+    Widget* Controller::make_label(const std::string& text, const char* texture, bool vertical_mode)
+    {
+        static int num_labels = 0;
+
+        // World attributes
+        float workspace_width = workspace.size.x / global_scale;
+        float margin = 2.f;
+
+        // Text follows after icon (right)
+        glm::vec2 pos = { LABEL_BUTTON_SIZE + 4.f, num_labels * LABEL_BUTTON_SIZE + (num_labels + 1.f) * margin };
+        glm::vec2 size = glm::vec2(workspace_width, LABEL_BUTTON_SIZE);
+
+        Widget* text_widget = make_text(text, pos, colors::WHITE, 12.f);
+        text_widget->priority = -1;
+
+        // Icon 
+        EntityMesh* m_icon = new EntityMesh();
+        Mesh* mesh = new Mesh();
+        if (texture)
+        {
+            m_icon->set_material_diffuse(Texture::get(texture));
+        }
+
+        // Icon goes to the left of the workspace
+        pos = { 
+            -workspace_width * 0.5f + LABEL_BUTTON_SIZE * 0.5f,
+            num_labels * LABEL_BUTTON_SIZE + (num_labels + 1.f) * margin
+        };
+
+        process_params(pos, size);
+
+        mesh->create_quad(size.y, size.y);
+        m_icon->set_mesh(mesh);
+        m_icon->set_material_shader(Shader::get("data/shaders/mesh_texture.wgsl"));
+
+        Widget* label_widget = new LabelWidget(
+            m_icon,
+            pos
+        );
+
+        append_widget(label_widget, "ui_label");
+
+        num_labels++;
+
+        return label_widget;
+    }
+
+	Widget* Controller::make_button(const std::string& signal, const char* texture, const char* shader, bool unique_selection, bool allow_toggle, bool is_color_button, const Color& color)
 	{
         // World attributes
         glm::vec2 pos = compute_position();
@@ -190,14 +263,18 @@ namespace ui {
         if( group_opened )
             widget->priority = 1;
 
-        if (is_color_button || unique_selection)
+        if (is_color_button || unique_selection || allow_toggle)
         {
-            bind(signal, [widget = widget](const std::string& signal, void* button) {
+            bind(signal, [widget = widget, allow_toggle](const std::string& signal, void* button) {
                 // Unselect siblings
                 Widget* parent = widget->parent;
-                for (auto w : parent->children)
-                    w->set_selected(false);
-                widget->set_selected(true);
+                const bool last_value = widget->selected;
+                if (!allow_toggle)
+                {
+                    for (auto w : parent->children)
+                        w->set_selected(false);
+                }
+                widget->set_selected(allow_toggle ? !last_value : true);
             });
         }
 
@@ -281,10 +358,12 @@ namespace ui {
             if (parent->type == GROUP)
                 parent = parent->parent;
 
+            const bool last_value = widget->show_children;
+
             for (auto w : parent->children)
                 w->set_show_children(false);
 
-            widget->set_show_children(!widget->show_children);
+            widget->set_show_children(!last_value);
 		});
 
         layout_iterator.x = 0.f;

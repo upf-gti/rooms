@@ -1,15 +1,12 @@
 #include "sculpt_editor.h"
 #include "sculpt.h"
 #include "paint.h"
-#include "graphics/raymarching_renderer.h"
-
+#include "graphics/renderers/rooms_renderer.h"
 #include "framework/scene/parse_scene.h"
-
-ui::ButtonWidget* SculptEditor::current_primitive_button = nullptr;
 
 void SculptEditor::initialize()
 {
-    renderer = dynamic_cast<RaymarchingRenderer*>(Renderer::instance);
+    renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
 
     sphere_mesh = parse_scene("data/meshes/wired_sphere.obj");
     sphere_mesh->set_material_color(colors::WHITE);
@@ -46,11 +43,8 @@ void SculptEditor::initialize()
 
     // UI Layout from JSON
     {
-        load_ui_layout( "data/ui.json" );
+        load_ui_layout( "data/ui/main.json", gui );
     }
-
-    /*ui::Widget* debug = gui.make_rect({0, 0}, { 256.f, 144.f }, colors::RED);
-    debug->priority = -1;*/
 
     // Set events
     {
@@ -59,8 +53,13 @@ void SculptEditor::initialize()
 
         gui.bind("sphere", [&](const std::string& signal, void* button) {  set_primitive(SD_SPHERE, sphere_mesh); });
         gui.bind("cube", [&](const std::string& signal, void* button) { set_primitive(SD_BOX, cube_mesh); });
+        gui.bind("cone", [&](const std::string& signal, void* button) { set_primitive(SD_CONE); });
+        gui.bind("capsule", [&](const std::string& signal, void* button) { set_primitive(SD_CAPSULE); });
         gui.bind("cylinder", [&](const std::string& signal, void* button) { set_primitive(SD_CYLINDER); });
         gui.bind("torus", [&](const std::string& signal, void* button) { set_primitive(SD_TORUS); });
+
+        gui.bind("onion", [&](const std::string& signal, void* button) { set_primitive_modifier(onion_enabled); });
+        gui.bind("capped", [&](const std::string& signal, void* button) { set_primitive_modifier(capped_enabled); });
 
         gui.bind("mirror", [&](const std::string& signal, void* button) { use_mirror = !use_mirror; });
         gui.bind("snap_to_grid", [&](const std::string& signal, void* button) { snap_to_grid = !snap_to_grid; });
@@ -84,6 +83,15 @@ void SculptEditor::initialize()
         }
     }
 
+    // Create helper ui
+    {
+        load_ui_layout("data/ui/helper.json", helper_gui);
+
+        // Customize a little bit...
+        helper_gui.get_workspace().hand = HAND_RIGHT;
+        helper_gui.get_workspace().root_pose = POSE_GRIP;
+    }
+
     enable_tool(SCULPT);
 }
 
@@ -92,6 +100,11 @@ void SculptEditor::update(float delta_time)
     if (current_tool == NONE) {
         return;
     }
+
+    if (Input::was_button_pressed(XR_BUTTON_B))
+        stamp_enabled = !stamp_enabled;
+
+    tools[current_tool]->stamp_enabled = stamp_enabled;
 
     bool tool_used = tools[current_tool]->update(delta_time);
 
@@ -141,8 +154,33 @@ void SculptEditor::update(float delta_time)
         }
     }
 
+    // Update edit dimensions
+
+    if (capped_enabled)
+    {
+        float multiplier = -Input::get_thumbstick_value(HAND_RIGHT).y * delta_time * 2.f;
+        capped_value = glm::clamp(multiplier + capped_value, -1.f, 1.f);
+    }
+    else if (onion_enabled)
+    {
+        float multiplier = Input::get_thumbstick_value(HAND_RIGHT).y * delta_time * 1.f;
+        onion_thickness = glm::clamp(multiplier + onion_thickness, 0.f, 1.f);
+    }
+    else
+    {
+        float size_multiplier = Input::get_thumbstick_value(HAND_RIGHT).y * delta_time * 0.1f;
+        glm::vec3 new_dimensions = glm::clamp(size_multiplier + glm::vec3(edit_to_add.dimensions), 0.001f, 0.1f);
+        edit_to_add.dimensions = glm::vec4(new_dimensions, edit_to_add.dimensions.w);
+
+        // Update primitive specific size
+        size_multiplier = Input::get_thumbstick_value(HAND_LEFT).y * delta_time * 0.1f;
+        edit_to_add.dimensions.w = glm::clamp(size_multiplier + edit_to_add.dimensions.w, 0.001f, 0.1f);
+    }
+
     edit_to_add.primitive = current_primitive;
     edit_to_add.color = current_color;
+    edit_to_add.parameters.x = onion_thickness;
+    edit_to_add.parameters.y = capped_value;
     // ...
 
     // Set position of the preview edit
@@ -168,6 +206,7 @@ void SculptEditor::update(float delta_time)
     }
 
     gui.update(delta_time);
+    helper_gui.update(delta_time);
 }
 
 void SculptEditor::render()
@@ -190,6 +229,7 @@ void SculptEditor::render()
     }
 
     gui.render();
+    helper_gui.render();
 
     if (use_mirror) {
         mirror_gizmo.render();
@@ -208,6 +248,18 @@ void SculptEditor::set_primitive(sdPrimitive primitive, EntityMesh* preview)
     mesh_preview = preview;
 }
 
+void SculptEditor::set_primitive_modifier(bool& modifier)
+{
+    const bool last_value = modifier;
+
+    // Disable all
+    capped_enabled  = false;
+    onion_enabled   = false;
+
+    // Enable specific item
+    modifier = !last_value;
+}
+
 void SculptEditor::enable_tool(eTool tool)
 {
     if (current_tool != NONE) {
@@ -218,15 +270,14 @@ void SculptEditor::enable_tool(eTool tool)
     current_tool = tool;
 }
 
-void SculptEditor::load_ui_layout(const std::string& filename)
+void SculptEditor::load_ui_layout(const std::string& filename, ui::Controller& ui)
 {
     const json& j = load_json(filename);
-    j_ui = j;
     float group_elements_pending = -1;
 
     float width = j["width"];
     float height = j["height"];
-    gui.set_workspace({ width, height });
+    ui.set_workspace({ width, height });
 
     std::function<void(const json&)> read_element = [&](const json& j) {
 
@@ -247,7 +298,7 @@ void SculptEditor::load_ui_layout(const std::string& filename)
                 color = colors::GRAY;
             }
 
-            ui::Widget* group = gui.make_group(name, nitems, color);
+            ui::Widget* group = ui.make_group(name, nitems, color);
         }
         else if (type == "button")
         {
@@ -263,14 +314,17 @@ void SculptEditor::load_ui_layout(const std::string& filename)
                 color = load_vec4(j["color"]);
 
             const bool is_unique_selection = j.value("unique_selection", false);
-            ui::ButtonWidget* widget = (ui::ButtonWidget*)gui.make_button(name, texture.c_str(), shader.c_str(), is_unique_selection, is_color_button, color);
+            const bool allow_toggle = j.value("allow_toggle", false);
+            ui::ButtonWidget* widget = (ui::ButtonWidget*)ui.make_button(name, texture.c_str(), shader.c_str(), is_unique_selection, allow_toggle, is_color_button, color);
             group_elements_pending--;
+
+            widget->selected = j.value("selected", false);
 
             if (is_color_button)
             {
                 // Bind colors callback...
 
-                gui.bind(name, [&](const std::string& signal, void* button) {
+                ui.bind(name, [&](const std::string& signal, void* button) {
                     const Color& color = (static_cast<ui::ButtonWidget*>(button))->color;
                     current_color = color;
                     add_recent_color(color);
@@ -279,13 +333,18 @@ void SculptEditor::load_ui_layout(const std::string& filename)
 
             if (group_elements_pending == 0.f)
             {
-                gui.close_group();
+                ui.close_group();
                 group_elements_pending = -1;
             }
         }
+        else if (type == "label")
+        {
+            std::string texture = j["texture"];
+            ui.make_label(name, j.count("texture") > 0 ? texture.c_str() : nullptr);
+        }
         else if (type == "submenu")
         {
-            ui::Widget* parent = gui.get_widget_from_name(name);
+            ui::Widget* parent = ui.get_widget_from_name(name);
 
             if (!parent) {
                 assert(0);
@@ -293,7 +352,7 @@ void SculptEditor::load_ui_layout(const std::string& filename)
                 return;
             }
 
-            gui.make_submenu(parent, name);
+            ui.make_submenu(parent, name);
 
             assert(j.count("children") > 0);
             auto& _subelements = j["children"];
@@ -301,7 +360,7 @@ void SculptEditor::load_ui_layout(const std::string& filename)
                 read_element(sub_el);
             }
 
-            gui.close_submenu();
+            ui.close_submenu();
         }
     };
 

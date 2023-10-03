@@ -3,7 +3,7 @@
 #include "utils.h"
 #include "framework/intersections.h"
 #include "framework/input.h"
-#include "graphics/raymarching_renderer.h"
+#include "graphics/renderers/rooms_renderer.h"
 #include "framework/entities/entity_text.h"
 
 namespace ui {
@@ -165,8 +165,6 @@ namespace ui {
 		
         if (was_pressed)
         {
-            selected = !selected;
-
 			controller->emit_signal(signal, (void*)this);
 
             if (selected && is_color_button)
@@ -181,6 +179,20 @@ namespace ui {
         ui_data.is_selected = selected ? 1.f : 0.f;
         ui_data.is_color_button = is_color_button ? 1.f : 0.f;
 	}
+
+    /*
+    *	Label
+    */
+
+    void LabelWidget::render()
+    {
+        Widget::render();
+    }
+
+    void LabelWidget::update(Controller* controller)
+    {
+        Widget::update(controller);
+    }
 
 	/*
 	*	Slider

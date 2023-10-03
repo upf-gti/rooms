@@ -1,0 +1,16 @@
+{
+    "width": 70,
+    "height": 42,
+    "elements": [
+        {
+            "name": "Stamp",
+            "type": "label",
+            "texture": "data/textures/buttons/b.png"
+        },
+        {
+            "name": "Pepe Luis",
+            "type": "label",
+            "texture": "data/textures/buttons/a.png"
+        }
+    ]
+}

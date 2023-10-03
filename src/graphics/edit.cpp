@@ -1,5 +1,15 @@
 #include "edit.h"
 
+std::ostream& operator<<(std::ostream& os, const Edit& edit)
+{
+    os << "Position: " << edit.position.x << ", " << edit.position.y << ", " << edit.position.z << std::endl;
+    os << "Primitive: " << edit.primitive << std::endl;
+    os << "Color: " << edit.color.x << ", " << edit.color.y << ", " << edit.color.z << std::endl;
+    os << "Operation: " << edit.operation << std::endl;
+    os << "Dimensions: " << edit.dimensions.x << ", " << edit.dimensions.y << ", " << edit.dimensions.z << edit.dimensions.w << std::endl;
+    return os;
+}
+
 float Edit::weigth_difference(const Edit& edit) {
 
     float position_diff = glm::length(position - edit.position);
@@ -24,8 +34,8 @@ glm::vec3 Edit::world_half_size() const {
         return size + glm::vec3(radius);
     case SD_CAPSULE:
         return glm::abs(position - size) + radius;
-        //case SD_CONE:
-        //	return glm::abs(position - size) + radius * 2.0f;
+    case SD_CONE:
+     	return glm::abs(position - size) + radius * 2.0f;
         //case SD_PYRAMID:
         //	return glm::abs(position - size) + radius * 2.0f;
     case SD_CYLINDER:

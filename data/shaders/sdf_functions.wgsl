@@ -1,3 +1,4 @@
+const M_PI = 3.14159265359;
 
 // SD Primitives
 
@@ -36,11 +37,12 @@ struct Edit {
     color      : vec3f,
     operation  : u32,
     dimensions : vec4f,
-    rotation   : vec4f
+    rotation   : vec4f,
+    parameters : vec4f
 };
 
 struct Edits {
-    data : array<Edit, 1024>
+    data : array<Edit, 512>
 }
 
 // Primitives
@@ -78,10 +80,33 @@ fn sdPlane( p : vec3f, c : vec3f, n : vec3f, h : f32, color : vec3f ) -> Surface
     return sf;
 }
 
-fn sdSphere( p : vec3f, c : vec3f, s : f32, color : vec3f) -> Surface
+fn sdSphere( p : vec3f, c : vec3f, r : f32, color : vec3f) -> Surface
 {
     var sf : Surface;
-    sf.distance = length(p - c) - s;
+    sf.distance = length(p - c) - r;
+    sf.color = color;
+    return sf;
+}
+
+fn sdCutSphere( p : vec3f, c : vec3f, rotation : vec4f, r : f32, h : f32, color : vec3f ) -> Surface
+{
+    var sf : Surface;
+    // sampling independent computations (only depend on shape)
+    var w = sqrt(r*r-h*h);
+
+    let pos : vec3f = rotate_point_quat(p - c, rotation);
+
+    // sampling dependant computations
+    var q = vec2f( length(pos.xy), pos.z );
+    var s = max( (h-r)*q.x*q.x+w*w*(h+r-2.0*q.y), h*q.x-w*q.y );
+    if(s<0.0) {
+        sf.distance = length(q) - r;
+    } else if(q.x<w) {
+        sf.distance = h - q.y;
+    } else  {
+        sf.distance = length(q-vec2f(w,h));
+    }
+                    
     sf.color = color;
     return sf;
 }
@@ -101,35 +126,45 @@ fn sdBox( p : vec3f, c : vec3f, rotation : vec4f, s : vec3f, r : f32, color : ve
 fn sdCapsule( p : vec3f, a : vec3f, b : vec3f, rotation : vec4f, r : f32, color : vec3f ) -> Surface
 {
     var sf : Surface;
-
     let posA : vec3f = rotate_point_quat(p - a, rotation);
 
     let pa : vec3f = posA;
     let ba : vec3f = b - a;
-
     let h : f32 = clamp(dot(pa,ba) / dot(ba, ba), 0.0, 1.0);
-
     sf.distance = length(pa-ba*h) - r;
     sf.color = color;
-
     return sf;
 }
 
-fn sdCone( p : vec3f, c : vec3f, rotation : vec4f, t : vec2f, h : f32, color : vec3f ) -> Surface
+// t: (base radius, top radius)
+fn sdCone( p : vec3f, a : vec3f, b : vec3f, rotation : vec4f, t : vec2f, color : vec3f ) -> Surface
 {
     var sf : Surface;
+    var ra = t.x;
+    var rb = t.y;
 
-    let pos : vec3f = rotate_point_quat(p - c, rotation);
+    let pa : vec3f = rotate_point_quat(p - a, rotation);
+    let ba = b - a;
+    var rba  = rb-ra;
+    var baba = dot(ba,ba);
+    var papa = dot(pa,pa);
+    var paba = dot(pa,ba)/baba;
 
-    let q : vec2f = h * vec2(t.x / t.y, -1.0);
-    let w : vec2f = vec2(length(pos.xz), pos.y);
-    let a : vec2f = w - q * clamp(dot(w,q) / dot(q, q), 0.0, 1.0);
-    let b : vec2f = w - q * vec2(clamp( w.x / q.x, 0.0, 1.0 ), 1.0);
-    let k : f32 = sign(q.y);
-    let d : f32 = min(dot(a, a), dot(b, b));
-    let s : f32 = max(k*(w.x * q.y - w.y * q.x), k * (w.y - q.y));
+    var x = sqrt( papa - paba*paba*baba );
 
-    sf.distance = sqrt(d) * sign(s);
+    var cax = max(0.0,x-select(rb, ra, paba < 0.5));
+    var cay = abs(paba-0.5) - 0.5;
+
+    var k = rba*rba + baba;
+    var f = clamp( (rba*(x-ra)+paba*baba)/k, 0.0, 1.0 );
+
+    var cbx = x-ra - f*rba;
+    var cby = paba - f;
+    
+    var s = select(1.0, -1.0, cbx < 0.0 && cay < 0.0);
+    
+    sf.distance = s*sqrt( min(cax*cax + cay*cay*baba,
+                       cbx*cbx + cby*cby*baba) );
     sf.color = color;
     return sf;
 }
@@ -187,8 +222,24 @@ fn sdTorus( p : vec3f, c : vec3f, t : vec2f, rotation : vec4f, color : vec3f ) -
 {
     var sf : Surface;
     let pos : vec3f = rotate_point_quat(p - c, rotation);
-    var q = vec2f(length(pos.xz) - t.x, pos.y);
+    var q = vec2f(length(pos.xy) - t.x, pos.z);
     sf.distance = length(q) - t.y;
+    sf.color = color;
+    return sf;
+}
+
+// t: (circle radius, thickness radius)
+fn sdCappedTorus( p : vec3f, c : vec3f, t : vec2f, rotation : vec4f, sc : vec2f, color : vec3f ) -> Surface
+{
+    var sf : Surface;
+    var pos : vec3f = rotate_point_quat(p - c, rotation);
+
+    let ra = t.x;
+    let rb = t.y;
+    pos.x = abs(pos.x);
+    var k = select(length(pos.xy), dot(pos.xy,sc), sc.y*pos.x > sc.x*pos.y);
+
+    sf.distance = sqrt( dot(pos,pos) + ra*ra - 2.0*ra*k ) - rb;
     sf.color = color;
     return sf;
 }
@@ -311,6 +362,14 @@ fn opSmoothPaint( s1 : Surface, s2 : Surface, paintColor : vec3f, k : f32 ) -> S
     return s;
 }
 
+fn opOnion( s : Surface, t : f32 ) -> Surface
+{
+    var _s : Surface;
+    _s.distance = abs(s.distance) - t;
+    _s.color = s.color;
+    return s;
+}
+
 fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit ) -> Surface
 {
     var pSurface : Surface;
@@ -318,46 +377,68 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit ) -> Surfa
     const smooth_factor = 0.01;
 
     // Center in texture (position 0,0,0 is just in the middle)
-    let offsetPosition : vec3f = edit.position + vec3f(0.5);
-    let norm_position : vec3f = vec3f(position) / vec3f(SDF_RESOLUTION);
-    let size : vec3f = edit.dimensions.xyz;
-    let radius : f32 = edit.dimensions.x;
-    var primitive_spec : f32 = edit.dimensions.w;
+    let offset_pos : vec3f = edit.position + vec3f(0.5);
+    let norm_pos : vec3f = vec3f(position) / vec3f(SDF_RESOLUTION);
+    var size : vec3f = edit.dimensions.xyz;
+    var radius : f32 = edit.dimensions.x;
+    var size_param : f32 = edit.dimensions.w;
+    var cap_value : f32 = edit.parameters.y;
 
     switch (edit.primitive) {
         case SD_SPHERE: {
-            pSurface = sdSphere(norm_position, offsetPosition, radius, edit.color);
+            if(cap_value > -1.0) { // // -1..1 no cap..fully capped
+                pSurface = sdCutSphere(norm_pos, offset_pos, edit.rotation, radius, radius * cap_value * 0.999, edit.color);
+            } else {
+                pSurface = sdSphere(norm_pos, offset_pos, radius, edit.color);
+            }
             break;
         }
         case SD_BOX: {
-            pSurface = sdBox(norm_position, offsetPosition, edit.rotation, size - primitive_spec, primitive_spec, edit.color);
+            pSurface = sdBox(norm_pos, offset_pos, edit.rotation, size - size_param, size_param, edit.color);
             break;
         }
-        // case SD_CAPSULE: {
-        //     pSurface = sdCapsule(norm_position, offsetPosition, offsetPosition + vec3f(0.0, 0.1, 0.0), edit.rotation, radius, edit.color);
-        //     break;
-        // }
-        // case SD_CONE: {
-        //     pSurface = sdCone(norm_position, offsetPosition, edit.rotation, size.xy, primitive_spec, edit.color);
-        //     break;
-        // }
+        case SD_CAPSULE: {
+            pSurface = sdCapsule(norm_pos, offset_pos, offset_pos - vec3f(0.0, 0.0, radius), edit.rotation, size_param, edit.color);
+            break;
+        }
+        case SD_CONE: {
+            cap_value = cap_value * 0.5 + 0.5;
+            radius = max(radius * (1.0 - cap_value), 0.0025);
+            var dims = vec2f(size_param, size_param * cap_value);
+            pSurface = sdCone(norm_pos, offset_pos,  offset_pos - vec3f(0.0, 0.0, radius), edit.rotation, dims, edit.color);
+            break;
+        }
         // case SD_PYRAMID: {
-        //     pSurface = sdPyramid(norm_position, offsetPosition, edit.rotation, radius, primitive_spec, edit.color);
+        //     pSurface = sdPyramid(norm_pos, offset_pos, edit.rotation, radius, size_param, edit.color);
         //     break;
         // }
         case SD_CYLINDER: {
-            pSurface = sdCylinder(norm_position, offsetPosition,  offsetPosition + vec3f(0.0, radius, 0.0), edit.rotation, primitive_spec, 0.0, edit.color);
+            pSurface = sdCylinder(norm_pos, offset_pos,  offset_pos - vec3f(0.0, 0.0, radius), edit.rotation, size_param, 0.0, edit.color);
             break;
         }
         case SD_TORUS: {
-            primitive_spec = clamp( primitive_spec, 0.001, radius );
-            pSurface = sdTorus(norm_position, offsetPosition, vec2f(radius, primitive_spec), edit.rotation, edit.color);
+            size_param = clamp( size_param, 0.001, radius );
+            if(cap_value > -1.0) { // // -1..1 no cap..fully capped
+                cap_value = cap_value * 0.5 + 0.5;
+                var an = M_PI * (1.0 - cap_value);
+                var angles = vec2f(sin(an), cos(an));
+                pSurface = sdCappedTorus(norm_pos, offset_pos, vec2f(radius, size_param), edit.rotation, angles, edit.color);
+            } else {
+                pSurface = sdTorus(norm_pos, offset_pos, vec2f(radius, size_param), edit.rotation, edit.color);
+            }
             break;
         }
         default: {
             break;
         }
     }
+
+    // Shape edition ...
+
+    // var onion_thickness : f32 = edit.parameters.x;
+    // if(onion_thickness > 0.0) {
+    //     pSurface = opOnion(pSurface, onion_thickness);
+    // }
 
     switch (edit.operation) {
         case OP_UNION: {
