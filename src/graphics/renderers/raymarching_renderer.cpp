@@ -68,12 +68,9 @@ void RaymarchingRenderer::render()
 
 }
 
-void RaymarchingRenderer::set_preview_edit(const Edit& edit)
+void RaymarchingRenderer::add_preview_edit(const Edit& edit)
 {
-#ifndef DISABLE_RAYMARCHER
-    WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
-    wgpuQueueWriteBuffer(webgpu_context->device_queue, std::get<WGPUBuffer>(compute_preview_edit_uniform.data), 0, &(edit), sizeof(Edit));
-#endif
+    preview_edit_data.preview_edits[preview_edit_data.preview_edits_count++] = edit;
 }
 
 void RaymarchingRenderer::set_sculpt_rotation(const glm::quat& rotation)
@@ -242,6 +239,9 @@ void RaymarchingRenderer::compute_raymarching()
 
     // Update uniform buffer
     wgpuQueueWriteBuffer(webgpu_context->device_queue, std::get<WGPUBuffer>(compute_buffer_data_uniform.data), 0, &(compute_raymarching_data), sizeof(sComputeData));
+    // Update preview edits
+    wgpuQueueWriteBuffer(webgpu_context->device_queue, std::get<WGPUBuffer>(compute_preview_edit_uniform.data), 0, &preview_edit_data, sizeof(sPreviewEditsData));
+    preview_edit_data.preview_edits_count = 0u; // Restart the counter after uploading
 
     wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_raymarching_textures_bind_group, 0, nullptr);
     wgpuComputePassEncoderSetBindGroup(compute_pass, 1, compute_raymarching_data_bind_group, 0, nullptr);
@@ -330,9 +330,9 @@ void RaymarchingRenderer::init_compute_raymarching_pipeline()
         compute_buffer_data_uniform.binding = 0;
         compute_buffer_data_uniform.buffer_size = sizeof(sComputeData);
 
-        compute_preview_edit_uniform.data = webgpu_context->create_buffer(sizeof(Edit), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr);
+        compute_preview_edit_uniform.data = webgpu_context->create_buffer(sizeof(sPreviewEditsData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr);
         compute_preview_edit_uniform.binding = 1;
-        compute_preview_edit_uniform.buffer_size = sizeof(Edit);
+        compute_preview_edit_uniform.buffer_size = sizeof(sPreviewEditsData);
 
         std::vector<Uniform*> uniforms = { &compute_buffer_data_uniform, &compute_preview_edit_uniform };
 
