@@ -10,7 +10,7 @@ namespace ui {
 
     Widget* Widget::current_selected = nullptr;
 
-    Widget::Widget(EntityMesh* e, const glm::vec2& p) : entity(e), position(p)
+    Widget::Widget(EntityMesh* e, const glm::vec2& p, const glm::vec2& s) : entity(e), position(p), scale(s)
     {
         // Bind uniforms
 
@@ -86,6 +86,7 @@ namespace ui {
 
 		entity->set_model(controller->get_matrix());
 		entity->translate(glm::vec3(position.x, position.y, -1e-3f - priority * 1e-3f));
+        entity->scale(glm::vec3(scale.x, scale.y, 1.f));
 
 		if (!show_children)
 			return;
@@ -98,7 +99,7 @@ namespace ui {
     *   Widget Group
     */
 
-    WidgetGroup::WidgetGroup(EntityMesh* e, const glm::vec2& p, float n) : Widget(e, p) {
+    WidgetGroup::WidgetGroup(EntityMesh* e, const glm::vec2& p, const glm::vec2& s, float n) : Widget(e, p, s) {
 
         show_children = true;
         type = eWidgetType::GROUP;
@@ -113,8 +114,8 @@ namespace ui {
 	*	Button
 	*/
 
-    ButtonWidget::ButtonWidget(const std::string& sg, EntityMesh* e, const glm::vec2& p, const Color& c, const glm::vec2& s)
-        : Widget(e, p), signal(sg), size(s), color(c) {
+    ButtonWidget::ButtonWidget(const std::string& sg, EntityMesh* e, const glm::vec2& p, const glm::vec2& s, const Color& c)
+        : Widget(e, p, s), signal(sg), color(c) {
 
         type = eWidgetType::BUTTON;
 
@@ -152,7 +153,7 @@ namespace ui {
 			ray_origin,
 			ray_direction,
 			quad_position,
-			size,
+			scale,
 			quad_rotation,
 			intersection,
 			collision_dist
@@ -184,20 +185,6 @@ namespace ui {
         ui_data.is_color_button = is_color_button ? 1.f : 0.f;*/
 	}
 
-    /*
-    *	Label
-    */
-
-    void LabelWidget::render()
-    {
-        Widget::render();
-    }
-
-    void LabelWidget::update(Controller* controller)
-    {
-        Widget::update(controller);
-    }
-
 	/*
 	*	Slider
 	*/
@@ -214,19 +201,19 @@ namespace ui {
 
 		// We need to store this position before converting to local size
 		glm::vec2 pos = position;
-		glm::vec2 thumb_size = { size.y, size.y };
+		glm::vec2 thumb_size = { scale.y, scale.y };
 
 		// No value assigned
 		if (current_slider_pos == -1)
 		{
-			max_slider_pos = (size.x * 2.f - thumb_size.x * 2.f) / controller->global_scale;
+			max_slider_pos = (scale.x * 2.f - thumb_size.x * 2.f) / controller->global_scale;
 			current_slider_pos = current_value * max_slider_pos;
 		}
 
 		float thumb_pos = current_slider_pos * controller->global_scale - workspace.size.x + thumb_size.x + pos.x * 2.f;
 
 		// To workspace local size
-		pos -= (workspace.size - size - pos);
+		pos -= (workspace.size - scale - pos);
 
 		/*
 		*	Update elements
@@ -234,9 +221,11 @@ namespace ui {
 
 		entity->set_model(controller->get_matrix());
 		entity->translate(glm::vec3(pos.x, pos.y, -1e-3f));
+        entity->translate(glm::vec3(scale.x, scale.y, 0.f));
 
 		thumb_entity->set_model(controller->get_matrix());
 		thumb_entity->translate(glm::vec3(thumb_pos, pos.y, -2e-3f));
+        thumb_entity->translate(glm::vec3(scale.y, scale.y, 0.f));
 
 		/*
 		*	Manage intersection
@@ -274,7 +263,7 @@ namespace ui {
 			ray_origin,
 			ray_direction,
 			slider_quad_position,
-			size,
+            scale,
 			quad_rotation,
 			intersection,
 			collision_dist
@@ -289,7 +278,7 @@ namespace ui {
 
 		if (is_pressed)
 		{
-			current_slider_pos = glm::clamp((intersection.x + size.x - thumb_size.x) / controller->global_scale, 0.f, max_slider_pos);
+			current_slider_pos = glm::clamp((intersection.x + scale.x - thumb_size.x) / controller->global_scale, 0.f, max_slider_pos);
 			current_value = glm::clamp(current_slider_pos / max_slider_pos, 0.f, 1.f);
 			controller->emit_signal(signal, current_value);
 		}
