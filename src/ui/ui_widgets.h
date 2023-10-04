@@ -50,9 +50,9 @@ namespace ui {
         uint8_t     m_layer = 0;
 		int         priority = 0;
 
-        sUIData         ui_data;
+        /*sUIData         ui_data;
         WGPUBindGroup   bind_group = nullptr;
-        Uniform         uniforms;
+        Uniform         uniforms;*/
 
 		void add_child(Widget* child);
 

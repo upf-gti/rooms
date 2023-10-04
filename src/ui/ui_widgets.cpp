@@ -14,11 +14,11 @@ namespace ui {
     {
         // Bind uniforms
 
-        auto webgpu_context = Renderer::instance->get_webgpu_context();
+        /*auto webgpu_context = Renderer::instance->get_webgpu_context();
 
         uniforms.data = webgpu_context->create_buffer(sizeof(sUIData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "ui_buffer");
         uniforms.binding = 0;
-        uniforms.buffer_size = sizeof(sUIData);
+        uniforms.buffer_size = sizeof(sUIData);*/
     }
 
 	void Widget::add_child(Widget* child)
@@ -103,10 +103,10 @@ namespace ui {
         show_children = true;
         type = eWidgetType::GROUP;
 
-        ui_data.num_group_items = n;
+        /*ui_data.num_group_items = n;
 
         auto webgpu_context = Renderer::instance->get_webgpu_context();
-        bind_group = webgpu_context->create_bind_group({ &uniforms }, Shader::get("data/shaders/mesh_ui.wgsl"), 2);
+        bind_group = webgpu_context->create_bind_group({ &uniforms }, Shader::get("data/shaders/mesh_ui.wgsl"), 2);*/
     }
 
 	/*
@@ -118,8 +118,8 @@ namespace ui {
 
         type = eWidgetType::BUTTON;
 
-        auto webgpu_context = Renderer::instance->get_webgpu_context();
-        bind_group = webgpu_context->create_bind_group({ &uniforms }, Shader::get("data/shaders/mesh_texture_ui.wgsl"), 2);
+       /* auto webgpu_context = Renderer::instance->get_webgpu_context();
+        bind_group = webgpu_context->create_bind_group({ &uniforms }, Shader::get("data/shaders/mesh_texture_ui.wgsl"), 2);*/
     }
 
 	void ButtonWidget::update(Controller* controller)
@@ -179,9 +179,9 @@ namespace ui {
         }
 
         // Update uniforms
-        ui_data.is_hovered = hovered ? 1.f : 0.f;
+        /*ui_data.is_hovered = hovered ? 1.f : 0.f;
         ui_data.is_selected = selected ? 1.f : 0.f;
-        ui_data.is_color_button = is_color_button ? 1.f : 0.f;
+        ui_data.is_color_button = is_color_button ? 1.f : 0.f;*/
 	}
 
     /*
