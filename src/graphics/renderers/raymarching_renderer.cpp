@@ -298,7 +298,7 @@ void RaymarchingRenderer::set_near_far(float z_near, float z_far)
 void RaymarchingRenderer::init_compute_raymarching_pipeline()
 {
     // Load compute_raymarching shader
-    compute_raymarching_shader = Shader::get("data/shaders/sdf_raymarching.wgsl");
+    compute_raymarching_shader = RendererStorage::get_shader("data/shaders/sdf_raymarching.wgsl");
 
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
 
@@ -369,7 +369,7 @@ void RaymarchingRenderer::init_compute_raymarching_textures()
 
 void RaymarchingRenderer::init_initialize_sdf_pipeline()
 {
-    initialize_sdf_shader = Shader::get("data/shaders/sdf_initialization.wgsl");
+    initialize_sdf_shader = RendererStorage::get_shader("data/shaders/sdf_initialization.wgsl");
 
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
 
@@ -382,7 +382,7 @@ void RaymarchingRenderer::init_initialize_sdf_pipeline()
 void RaymarchingRenderer::init_compute_merge_pipeline()
 {
     // Load compute_raymarching shader
-    compute_merge_shader = Shader::get("data/shaders/sdf_merge.wgsl");
+    compute_merge_shader = RendererStorage::get_shader("data/shaders/sdf_merge.wgsl");
 
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
 
@@ -406,7 +406,7 @@ void RaymarchingRenderer::init_compute_merge_pipeline()
 void RaymarchingRenderer::init_compute_octree_pipeline()
 {
     // Load compute_raymarching shader
-    //compute_octree_flag_nodes_shader = Shader::get("data/shaders/octree/flag_nodes.wgsl");
+    //compute_octree_flag_nodes_shader = RendererStorage::get_shader("data/shaders/octree/flag_nodes.wgsl");
 
     //// Texture uniforms
     //{

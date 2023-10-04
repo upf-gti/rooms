@@ -36,7 +36,7 @@ namespace ui {
         if (render_background)
         {
             background = new EntityMesh();
-            background->set_material_shader(Shader::get("data/shaders/mesh_color.wgsl"));
+            background->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_color.wgsl"));
             Mesh* mesh = new Mesh();
             mesh->create_quad(workspace.size.x, workspace.size.y);
             background->set_mesh(mesh);
@@ -176,7 +176,7 @@ namespace ui {
 
 		// Render quad in local workspace position
 		EntityMesh* rect = new EntityMesh();
-		rect->set_material_shader(Shader::get("data/shaders/mesh_color.wgsl"));
+		rect->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_color.wgsl"));
 		Mesh* mesh = new Mesh();
 		mesh->create_quad(size.x, size.y, color);
 		rect->set_mesh(mesh);
@@ -225,7 +225,7 @@ namespace ui {
         if (j.count("texture") > 0)
         {
             std::string texture = j["texture"];
-            m_icon->set_material_diffuse(Texture::get(texture));
+            m_icon->set_material_diffuse(RendererStorage::get_texture(texture));
         }
 
         // Icon goes to the left of the workspace
@@ -238,7 +238,7 @@ namespace ui {
 
         mesh->create_quad(size.y, size.y);
         m_icon->set_mesh(mesh);
-        m_icon->set_material_shader(Shader::get("data/shaders/mesh_texture.wgsl"));
+        m_icon->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_texture.wgsl"));
 
         LabelWidget* label_widget = new LabelWidget(text, m_icon, pos);
         label_widget->button = j.value("button", -1);
@@ -276,8 +276,8 @@ namespace ui {
 
 		// Render quad in local workspace position
 		EntityMesh* e_button = new EntityMesh();
-		e_button->set_material_shader(Shader::get(shader));
-		e_button->set_material_diffuse(Texture::get(texture));
+		e_button->set_material_shader(RendererStorage::get_shader(shader));
+		e_button->set_material_diffuse(RendererStorage::get_texture(texture));
 
 		Mesh* mesh = new Mesh();
 		mesh->create_quad(size.x, size.y);
@@ -327,13 +327,13 @@ namespace ui {
 
 		// Render quad in local workspace position
 		EntityMesh* e_track = new EntityMesh();
-		e_track->set_material_shader(Shader::get("data/shaders/mesh_color.wgsl"));
+		e_track->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_color.wgsl"));
 		Mesh * mesh = new Mesh();
 		mesh->create_quad(size.x, size.y, colors::GRAY);
 		e_track->set_mesh(mesh);
 		
 		EntityMesh* e_thumb = new EntityMesh();
-		e_thumb->set_material_shader(Shader::get("data/shaders/mesh_color.wgsl"));
+		e_thumb->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_color.wgsl"));
 		Mesh* thumb_mesh = new Mesh();
 		thumb_mesh->create_quad(size.y, size.y, color);
 		e_thumb->set_mesh(thumb_mesh);
@@ -431,7 +431,7 @@ namespace ui {
         process_params(pos, size);
 
         EntityMesh* e = new EntityMesh();
-        e->set_material_shader(Shader::get("data/shaders/mesh_ui.wgsl"));
+        e->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_ui.wgsl"));
         Mesh* mesh = new Mesh();
         mesh->create_quad(size.x, size.y, color);
         mesh->set_alias(group_name);

@@ -98,12 +98,12 @@ void MeshRenderer::init_render_mesh_pipelines()
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
     bool is_openxr_available = RoomsRenderer::instance->get_openxr_available();
 
-    render_mesh_shader = Shader::get("data/shaders/mesh_color.wgsl");
-    Shader* render_mesh_texture_shader = Shader::get("data/shaders/mesh_texture.wgsl");
-    Shader* render_mesh_ui_shader = Shader::get("data/shaders/mesh_ui.wgsl");
-    Shader* render_mesh_ui_texture_shader = Shader::get("data/shaders/mesh_texture_ui.wgsl");
-    Shader* render_fonts_shader = Shader::get("data/shaders/sdf_fonts.wgsl");
-    Shader* render_mesh_grid_shader = Shader::get("data/shaders/mesh_grid.wgsl");
+    render_mesh_shader = RendererStorage::get_shader("data/shaders/mesh_color.wgsl");
+    Shader* render_mesh_texture_shader = RendererStorage::get_shader("data/shaders/mesh_texture.wgsl");
+    Shader* render_mesh_ui_shader = RendererStorage::get_shader("data/shaders/mesh_ui.wgsl");
+    Shader* render_mesh_ui_texture_shader = RendererStorage::get_shader("data/shaders/mesh_texture_ui.wgsl");
+    Shader* render_fonts_shader = RendererStorage::get_shader("data/shaders/sdf_fonts.wgsl");
+    Shader* render_mesh_grid_shader = RendererStorage::get_shader("data/shaders/mesh_grid.wgsl");
 
     // Camera
 

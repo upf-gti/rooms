@@ -106,7 +106,7 @@ namespace ui {
         ui_data.num_group_items = n;
 
         auto webgpu_context = Renderer::instance->get_webgpu_context();
-        bind_group = webgpu_context->create_bind_group({ &uniforms }, Shader::get("data/shaders/mesh_ui.wgsl"), 2);
+        bind_group = webgpu_context->create_bind_group({ &uniforms }, RendererStorage::get_shader("data/shaders/mesh_ui.wgsl"), 2);
     }
 
 	/*
@@ -119,7 +119,7 @@ namespace ui {
         type = eWidgetType::BUTTON;
 
         auto webgpu_context = Renderer::instance->get_webgpu_context();
-        bind_group = webgpu_context->create_bind_group({ &uniforms }, Shader::get("data/shaders/mesh_texture_ui.wgsl"), 2);
+        bind_group = webgpu_context->create_bind_group({ &uniforms }, RendererStorage::get_shader("data/shaders/mesh_texture_ui.wgsl"), 2);
     }
 
 	void ButtonWidget::update(Controller* controller)

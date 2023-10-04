@@ -268,7 +268,7 @@ void RoomsRenderer::render_mirror()
 
 void RoomsRenderer::init_render_quad_pipeline()
 {
-    render_quad_shader = Shader::get("data/shaders/quad_eye.wgsl");
+    render_quad_shader = RendererStorage::get_shader("data/shaders/quad_eye.wgsl");
 
     init_render_quad_bind_groups();
 
@@ -338,7 +338,7 @@ void RoomsRenderer::init_render_quad_bind_groups()
 
 void RoomsRenderer::init_mirror_pipeline()
 {
-    mirror_shader = Shader::get("data/shaders/quad_mirror.wgsl");
+    mirror_shader = RendererStorage::get_shader("data/shaders/quad_mirror.wgsl");
 
     WGPUTextureFormat swapchain_format = webgpu_context.swapchain_format;
 
