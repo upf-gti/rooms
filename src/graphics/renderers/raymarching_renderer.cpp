@@ -220,8 +220,6 @@ void RaymarchingRenderer::compute_merge()
 
 void RaymarchingRenderer::compute_raymarching()
 {
-    preview_edit_data.preview_edits_count = 0u;
-
     if (!compute_raymarching_shader || !compute_raymarching_shader->is_loaded()) return;
 
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
@@ -267,6 +265,8 @@ void RaymarchingRenderer::compute_raymarching()
     wgpuCommandBufferRelease(commands);
     wgpuComputePassEncoderRelease(compute_pass);
     wgpuCommandEncoderRelease(command_encoder);
+
+    preview_edit_data.preview_edits_count = 0u;
 }
 
 void RaymarchingRenderer::set_render_size(float width, float height)

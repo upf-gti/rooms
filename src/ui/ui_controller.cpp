@@ -38,7 +38,7 @@ namespace ui {
             background = new EntityMesh();
             background->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_color.wgsl"));
             Mesh* mesh = new Mesh();
-            mesh->create_quad(workspace.size.x, workspace.size.y);
+            mesh->create_quad();
             background->set_mesh(mesh);
         }
 	}
@@ -92,7 +92,9 @@ namespace ui {
         if (render_background)
         {
             background->set_model(global_transform);
-            background->translate({ 0.f, 0.f, 1e-3f });
+            background->translate(glm::vec3(0.f, 0.f, 1e-3f));
+            background->scale(glm::vec3(workspace.size.x, workspace.size.y, 1.f));
+            
         }
 
 		// Update widgets using this controller
@@ -178,10 +180,11 @@ namespace ui {
 		EntityMesh* rect = new EntityMesh();
 		rect->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_color.wgsl"));
 		Mesh* mesh = new Mesh();
-		mesh->create_quad(size.x, size.y, color);
+		mesh->create_quad();
 		rect->set_mesh(mesh);
+        rect->set_material_color(color);
 
-		Widget* widget = new Widget(rect, pos);
+		Widget* widget = new Widget(rect, pos, size);
 		append_widget(widget, "ui_rect");
 		return widget;
 	}
@@ -236,11 +239,11 @@ namespace ui {
 
         process_params(pos, size);
 
-        mesh->create_quad(size.y, size.y);
+        mesh->create_quad();
         m_icon->set_mesh(mesh);
         m_icon->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_texture.wgsl"));
 
-        LabelWidget* label_widget = new LabelWidget(text, m_icon, pos);
+        LabelWidget* label_widget = new LabelWidget(text, m_icon, pos, glm::vec2(size.y, size.y));
         label_widget->button = j.value("button", -1);
         label_widget->subtext = j.value("subtext", "");
 
@@ -280,7 +283,7 @@ namespace ui {
 		e_button->set_material_diffuse(RendererStorage::get_texture(texture));
 
 		Mesh* mesh = new Mesh();
-		mesh->create_quad(size.x, size.y);
+		mesh->create_quad();
         mesh->set_alias(signal);
 		e_button->set_mesh(mesh);
 
@@ -288,7 +291,7 @@ namespace ui {
         const bool is_color_button = j.count("color") > 0;
         Color color = is_color_button ? load_vec4(j["color"]) : colors::WHITE;
 
-		ButtonWidget* widget = new ButtonWidget(signal, e_button, pos, color, size);
+		ButtonWidget* widget = new ButtonWidget(signal, e_button, pos, size, color);
         widget->is_color_button = is_color_button;
         widget->is_unique_selection = j.value("unique_selection", false);
 
@@ -329,14 +332,16 @@ namespace ui {
 		EntityMesh* e_track = new EntityMesh();
 		e_track->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_color.wgsl"));
 		Mesh * mesh = new Mesh();
-		mesh->create_quad(size.x, size.y, colors::GRAY);
+		mesh->create_quad();
 		e_track->set_mesh(mesh);
+        e_track->set_material_color(colors::GRAY);
 		
 		EntityMesh* e_thumb = new EntityMesh();
 		e_thumb->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_color.wgsl"));
 		Mesh* thumb_mesh = new Mesh();
-		thumb_mesh->create_quad(size.y, size.y, color);
+		thumb_mesh->create_quad();
 		e_thumb->set_mesh(thumb_mesh);
+        e_thumb->set_material_color(color);
 
 		SliderWidget* widget = new SliderWidget(signal,e_track, e_thumb, default_value, pos, color, size);
 		append_widget(widget, signal);
@@ -433,11 +438,12 @@ namespace ui {
         EntityMesh* e = new EntityMesh();
         e->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_ui.wgsl"));
         Mesh* mesh = new Mesh();
-        mesh->create_quad(size.x, size.y, color);
+        mesh->create_quad();
         mesh->set_alias(group_name);
         e->set_mesh(mesh);
+        e->set_material_color(color);
 
-        WidgetGroup* group = new WidgetGroup(e, pos, number_of_widgets);
+        WidgetGroup* group = new WidgetGroup(e, pos, size, number_of_widgets);
         append_widget(group, group_name);
 
         parent_queue.push_back(group);

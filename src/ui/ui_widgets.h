@@ -33,26 +33,29 @@ namespace ui {
 	public:
 
         Widget() {}
-        Widget(EntityMesh* e, const glm::vec2& p);
+        Widget(EntityMesh* e, const glm::vec2& p, const glm::vec2& s = {1.f, 1.f});
 
         uint8_t type = eWidgetType::NONE;
-		Widget* parent = nullptr;
+        Widget* parent = nullptr;
+        std::vector<Widget*> children;
 
         static Widget* current_selected;
 
-		std::vector<Widget*> children;
 		bool show_children  = false;
         bool active         = true;
         bool selected       = false;
 
 		EntityMesh* entity = nullptr;
-		glm::vec2   position;
+
+        glm::vec2   position = { 0.f, 0.f };
+        glm::vec2   scale = { 1.f, 1.f };
+
         uint8_t     m_layer = 0;
 		int         priority = 0;
 
-        sUIData         ui_data;
+        /*sUIData         ui_data;
         WGPUBindGroup   bind_group = nullptr;
-        Uniform         uniforms;
+        Uniform         uniforms;*/
 
 		void add_child(Widget* child);
 
@@ -66,14 +69,14 @@ namespace ui {
     class WidgetGroup : public Widget {
     public:
 
-        WidgetGroup(EntityMesh* e, const glm::vec2& p, float number_of_widgets);
+        WidgetGroup(EntityMesh* e, const glm::vec2& p, const glm::vec2& s, float number_of_widgets);
     };
 
 	class TextWidget : public Widget {
 	public:
 
 		TextWidget(EntityMesh* e, const glm::vec2& pos)
-			: Widget(e, pos) {
+            : Widget(e, pos) {
 			type = eWidgetType::TEXT;
 		}
 	};
@@ -81,7 +84,6 @@ namespace ui {
 	class ButtonWidget : public Widget {
 	public:
 
-		glm::vec2 size;
 		std::string signal;
 
         Color color;
@@ -91,7 +93,7 @@ namespace ui {
         bool is_unique_selection    = false;
         bool allow_toggle           = false;
 
-        ButtonWidget(const std::string& sg, EntityMesh* e, const glm::vec2& p, const Color& c, const glm::vec2& s);
+        ButtonWidget(const std::string& sg, EntityMesh* e, const glm::vec2& p, const glm::vec2& s, const Color& c);
 
 		virtual void update(Controller* controller) override;
 	};
@@ -104,12 +106,9 @@ namespace ui {
         std::string text;
         std::string subtext;
 
-        LabelWidget(const std::string& p_text, EntityMesh* p_icon, const glm::vec2& p) : Widget(p_icon, p), text(p_text) {
+        LabelWidget(const std::string& p_text, EntityMesh* p_icon, const glm::vec2& p, const glm::vec2& s) : Widget(p_icon, p, s), text(p_text) {
             type = eWidgetType::LABEL;
         }
-
-        virtual void render() override;
-        virtual void update(Controller* controller) override;
     };
 
 	class SliderWidget : public ButtonWidget {
@@ -122,7 +121,7 @@ namespace ui {
 		float max_slider_pos = -1.f;
 
 		SliderWidget(const std::string& sg, EntityMesh* tr, EntityMesh* th, float v, const glm::vec2& p, const Color& c, const glm::vec2& s)
-			: ButtonWidget(sg, tr, p, c, s), thumb_entity(th), current_value(v) {
+			: ButtonWidget(sg, tr, p, s, c), thumb_entity(th), current_value(v) {
 			type = eWidgetType::SLIDER;
 		}
 

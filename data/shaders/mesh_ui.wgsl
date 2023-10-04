@@ -26,16 +26,16 @@ struct CameraData {
     view_projection : mat4x4f
 };
 
-struct UIData {
-    num_group_items : f32,
-    is_selected : f32,
-    is_hovered : f32,
-    is_color_button : f32
-};
+// struct UIData {
+//     num_group_items : f32,
+//     is_selected : f32,
+//     is_hovered : f32,
+//     is_color_button : f32
+// };
 
 @group(0) @binding(0) var<storage, read> mesh_data : InstanceData;
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
-@group(2) @binding(0) var<uniform> ui_data : UIData;
+// @group(2) @binding(0) var<uniform> ui_data : UIData;
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
@@ -59,15 +59,16 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     var out: FragmentOutput;
 
-    var uvs = in.uv;
-    var button_size = 32.0;
-    // var items = 2.0;
-    var tx = max(button_size, 32.0 * ui_data.num_group_items);
-    var divisions = tx / button_size;
-    uvs.x *= divisions;
-    var p = vec2f(clamp(uvs.x, 0.5, divisions - 0.5), 0.5);
-    var d = 1.0 - step(0.5, distance(uvs, p));
+    // var uvs = in.uv;
+    // var button_size = 32.0;
+    // var tx = max(button_size, 32.0 * ui_data.num_group_items);
+    // var divisions = tx / button_size;
+    // uvs.x *= divisions;
+    // var p = vec2f(clamp(uvs.x, 0.5, divisions - 0.5), 0.5);
+    // var d = 1.0 - step(0.5, distance(uvs, p));
+    // out.color = vec4f(pow(in.color * d, vec3f(2.2)), d);
 
-    out.color = vec4f(pow(in.color * d, vec3f(2.2)), d);
+    out.color = vec4f(pow(in.color, vec3f(2.2)), 1.0);
+
     return out;
 }
