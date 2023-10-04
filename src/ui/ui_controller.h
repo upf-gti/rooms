@@ -67,7 +67,7 @@ namespace ui {
         glm::vec2 last_layout_pos;
 		std::vector<Widget*> parent_queue;
 
-		void append_widget( Widget* widget, const std::string& name );
+		void append_widget( Widget* widget, const std::string& name, Widget* force_parent = nullptr);
 		void process_params(glm::vec2& position, glm::vec2& size, bool skip_to_local = false);
         glm::vec2 compute_position();
 

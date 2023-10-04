@@ -81,23 +81,6 @@ namespace ui {
 		}
 	};
 
-	class ButtonWidget : public Widget {
-	public:
-
-		std::string signal;
-
-        Color color;
-        bool is_color_button = false;
-
-        bool is_submenu             = false;
-        bool is_unique_selection    = false;
-        bool allow_toggle           = false;
-
-        ButtonWidget(const std::string& sg, EntityMesh* e, const glm::vec2& p, const glm::vec2& s, const Color& c);
-
-		virtual void update(Controller* controller) override;
-	};
-
     class LabelWidget : public Widget {
     public:
 
@@ -106,10 +89,28 @@ namespace ui {
         std::string text;
         std::string subtext;
 
-        LabelWidget(const std::string& p_text, EntityMesh* p_icon, const glm::vec2& p, const glm::vec2& s) : Widget(p_icon, p, s), text(p_text) {
+        LabelWidget(const std::string& p_text, EntityMesh* p_icon, const glm::vec2& p, const glm::vec2& s = {0.f, 0.f}) : Widget(p_icon, p, s), text(p_text) {
             type = eWidgetType::LABEL;
         }
     };
+
+	class ButtonWidget : public Widget {
+	public:
+
+        TextWidget* label = nullptr;
+        Color color;
+		std::string signal;
+
+        bool is_color_button        = false;
+        bool is_submenu             = false;
+        bool is_unique_selection    = false;
+        bool allow_toggle           = false;
+
+        ButtonWidget(const std::string& sg, EntityMesh* e, const glm::vec2& p, const glm::vec2& s, const Color& c);
+
+        virtual void render() override;
+		virtual void update(Controller* controller) override;
+	};
 
 	class SliderWidget : public ButtonWidget {
 	public:

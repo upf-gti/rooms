@@ -119,8 +119,23 @@ namespace ui {
 
         type = eWidgetType::BUTTON;
 
+        TextEntity* e_text = new TextEntity(sg);
+        e_text->set_material_color(colors::GRAY);
+        e_text->set_scale(0.01f);
+        e_text->generate_mesh();
+
+        float magic = 0.002125f;
+        label = new TextWidget(e_text, {p.x - sg.length() * magic, p.y + s.y * 0.5f});
+        label->priority = 2;
+
         //auto webgpu_context = Renderer::instance->get_webgpu_context();
         //bind_group = webgpu_context->create_bind_group({ &uniforms }, RendererStorage::get_shader("data/shaders/mesh_texture_ui.wgsl"), 2);
+    }
+
+    void ButtonWidget::render()
+    {
+        Widget::render();
+        label->render();
     }
 
 	void ButtonWidget::update(Controller* controller)
@@ -159,6 +174,8 @@ namespace ui {
 			collision_dist
 		);
 
+        label->active = hovered;
+
 		/*
 		*	Create mesh and render button
 		*/
@@ -183,6 +200,8 @@ namespace ui {
         /*ui_data.is_hovered = hovered ? 1.f : 0.f;
         ui_data.is_selected = selected ? 1.f : 0.f;
         ui_data.is_color_button = is_color_button ? 1.f : 0.f;*/
+
+        label->update(controller);
 	}
 
 	/*

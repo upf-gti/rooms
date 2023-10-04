@@ -156,9 +156,13 @@ namespace ui {
         return { x, y };
     }
 
-	void Controller::append_widget(Widget* widget, const std::string& name)
+	void Controller::append_widget(Widget* widget, const std::string& name, Widget* force_parent)
 	{
-        if (parent_queue.size())
+        if(force_parent)
+        {
+            force_parent->add_child(widget);
+        }
+        else if (parent_queue.size())
         {
             Widget* active_submenu = parent_queue.back();
 			active_submenu->add_child(widget);
@@ -221,6 +225,7 @@ namespace ui {
 
         Widget* text_widget = make_text(text, "text@" + alias, pos, colors::WHITE, 12.f);
         text_widget->priority = -1;
+        text_widget->show_children = true;
 
         // Icon 
         EntityMesh* m_icon = new EntityMesh();
@@ -247,7 +252,7 @@ namespace ui {
         label_widget->button = j.value("button", -1);
         label_widget->subtext = j.value("subtext", "");
 
-        append_widget(label_widget, alias);
+        append_widget(label_widget, alias, text_widget);
 
         num_labels++;
 
@@ -294,6 +299,7 @@ namespace ui {
 		ButtonWidget* widget = new ButtonWidget(signal, e_button, pos, size, color);
         widget->is_color_button = is_color_button;
         widget->is_unique_selection = j.value("unique_selection", false);
+        widget->selected = j.value("selected", false);
 
         if( group_opened )
             widget->priority = 1;
@@ -513,13 +519,11 @@ namespace ui {
             }
             else if (type == "button")
             {
-                ButtonWidget* widget = (ButtonWidget*)make_button(j);
+                make_button(j);
+
                 group_elements_pending--;
 
-                widget->selected = j.value("selected", false);
-
-                if (group_elements_pending == 0.f)
-                {
+                if (group_elements_pending == 0.f) {
                     close_group();
                     group_elements_pending = -1;
                 }
