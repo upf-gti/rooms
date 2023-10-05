@@ -96,4 +96,6 @@ public:
     void clean();
     void update(float delta_time);
     void render();
+
+    void set_sculpt_started(bool value);
 };

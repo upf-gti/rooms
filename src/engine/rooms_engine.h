@@ -6,9 +6,12 @@
 
 class RoomsEngine : public Engine {
 
-	std::vector<Entity*>	entities;
+    std::vector<Entity*> entities;
 
-    SculptEditor            sculpt_editor;
+    SculptEditor sculpt_editor;
+
+    bool export_scene();
+    bool import_scene();
 
 public:
 
