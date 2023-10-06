@@ -28,7 +28,6 @@ struct CameraData {
 
 @group(0) @binding(0) var<storage, read> mesh_data : InstanceData;
 
-
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
 
 @vertex

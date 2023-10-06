@@ -34,10 +34,12 @@ struct CameraData {
 // };
 
 @group(0) @binding(0) var<storage, read> mesh_data : InstanceData;
-@group(0) @binding(1) var albedo_texture: texture_2d<f32>;
-@group(0) @binding(2) var texture_sampler : sampler;
 
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
+
+@group(2) @binding(0) var albedo_texture: texture_2d<f32>;
+@group(2) @binding(1) var texture_sampler : sampler;
+
 // @group(2) @binding(0) var<uniform> ui_data : UIData;
 
 @vertex

@@ -75,7 +75,7 @@ void MeshRenderer::render(WGPUTextureView swapchain_view, WGPUTextureView swapch
     // Create & fill the render pass (encoder)
     WGPURenderPassEncoder render_pass = wgpuCommandEncoderBeginRenderPass(command_encoder, &render_pass_descr);
 
-    Pipeline::render_registered_pipelines_renderables(render_pass, render_bind_group_camera);
+    RoomsRenderer::instance->render(render_pass, render_bind_group_camera);
 
     wgpuRenderPassEncoderEnd(render_pass);
 
