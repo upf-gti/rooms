@@ -23,6 +23,9 @@ class SculptEditor {
 
     EntityMesh*             floor_grid_mesh = nullptr;
 
+    std::vector<Edit>       preview_tmp_edits;
+    std::vector<Edit>       new_edits;
+
     /*
     *	Edits
     */
@@ -96,4 +99,16 @@ public:
     void initialize();
     void update(float delta_time);
     void render();
+
+    void add_preview_edit_list(std::vector<Edit>& new_edit_lists) {
+        for (Edit& edit : new_edit_lists) {
+            preview_tmp_edits.push_back(edit);
+        }
+    }
+
+    void add_edit_list(std::vector<Edit>& new_edit_lists) {
+        for (Edit& edit : new_edit_lists) {
+            new_edits.push_back(edit);
+        }
+    }
 };

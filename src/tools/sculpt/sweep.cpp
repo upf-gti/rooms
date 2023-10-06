@@ -11,8 +11,6 @@ void SweepTool::initialize()
 {
     Tool::initialize();
 
-    renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
-
     arc_length_LUT = new float[STARTING_ARC_LENGTH];
     arc_length_LUT_storeage_size = STARTING_ARC_LENGTH;
 }
@@ -143,12 +141,12 @@ bool SweepTool::update(float delta_time)
 		}
 	}
 
+    // TODO: refactor with sculpt editor
     glm::vec3 controller_position = Input::get_controller_position(HAND_RIGHT) - glm::vec3(0.0f, 1.0f, 0.0f);
 
 	// Sculpting (adding edits)
     stroke_prev_state = stroke_state;
 	if (use_tool()) {
-
         if (stroke_prev_state == NO_STROKE && stroke_state == IN_STROKE) {
             stroke_start_position = controller_position;
             return false;
@@ -157,19 +155,16 @@ bool SweepTool::update(float delta_time)
         if (stroke_prev_state == IN_STROKE && stroke_state == IN_STROKE) {
             fill_edits_with_arc();
 
-            for(uint32_t i = 0u; i < tmp_edit_storage.size(); i++) {
-                renderer->add_preview_edit(tmp_edit_storage[i]);
-            }
+            sculpt_editor->add_preview_edit_list(tmp_edit_storage);
             return false;
         }
-
+    } else {
         if (stroke_prev_state == IN_STROKE && stroke_state == NO_STROKE) {
-            // Submit tmp_edit_list
-            //return true;
-            renderer->push_edit_list(tmp_edit_storage);
+            fill_edits_with_arc();
+            sculpt_editor->add_edit_list(tmp_edit_storage);
             return true;
         }
-	}
+    }
 
     return false;
 }

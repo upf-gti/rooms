@@ -91,6 +91,12 @@ public:
         raymarching_renderer.add_preview_edit(edit);
     }
 
+    void push_preview_edit_list(std::vector<Edit>& edits) {
+        for (uint32_t i = 0u; i < edits.size(); i++) {
+            raymarching_renderer.add_preview_edit(edits[i]);
+        }
+    }
+
     void set_sculpt_rotation(const glm::quat& rotation) {
         raymarching_renderer.set_sculpt_rotation(rotation);
     }

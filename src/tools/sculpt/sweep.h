@@ -6,6 +6,7 @@
 #define ARC_LENGTH_INCREASE 50u
 
 class RoomsRenderer;
+class SculptEditor;
 
 enum eSweepStrokeState : uint8_t {
     NO_STROKE = 0,
@@ -14,8 +15,7 @@ enum eSweepStrokeState : uint8_t {
 };
 
 class SweepTool : public Tool {
-
-    RoomsRenderer* renderer = nullptr;
+    SculptEditor* sculpt_editor = nullptr;
 
     // Stroke state
     eSweepStrokeState stroke_prev_state = NO_STROKE;
@@ -62,6 +62,10 @@ public:
 
 	void initialize() override;
 	void clean() override;
+
+    void set_sculpt_editor(SculptEditor* editor) {
+        sculpt_editor = editor;
+    }
 
 	bool update(float delta_time) override;
 	void render_scene() override;

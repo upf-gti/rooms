@@ -146,8 +146,8 @@ public:
         edits[compute_merge_data.edits_to_process++] = edit;
     };
 
-    void push_edit_list(std::vector<Edit> &edits) {
-        for (Edit edit : edits) {
+    void push_edit_list(std::vector<Edit> &new_edits) {
+        for (Edit &edit : new_edits) {
             edits[compute_merge_data.edits_to_process++] = edit;
         }
     };
