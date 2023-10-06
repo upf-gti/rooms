@@ -15,8 +15,6 @@ void SweepTool::initialize()
 
     arc_length_LUT = new float[STARTING_ARC_LENGTH];
     arc_length_LUT_storeage_size = STARTING_ARC_LENGTH;
-
-    fill_edits_with_arc();
 }
 
 void SweepTool::clean()
@@ -26,43 +24,38 @@ void SweepTool::clean()
 
 
 // Curve functions =============
-inline float SweepTool::sParametricParabola::x(const float t) const {
-    return -(curve_segment_size_pow_2) / (2 * curve_height) * t;
-}
-inline float SweepTool::sParametricParabola::y(const float t) const {
-    return -curve_segment_size_pow_2 / (4.0 * curve_height) * t * t + curve_height;
+inline glm::vec3 SweepTool::sBezierCurve::evaluate(const float t) const {
+    const float t_inv = (1.0f - t);
+    return t_inv * t_inv * start + 2.0f * t * t_inv * control + t * t * end;
 }
 
-inline void SweepTool::fill_arc_length_LUT(const uint32_t element_count) {
-    const float step = 1.0f / (element_count * 0.25f);
-    float current_length = 0.0f, prev_x = curve.x(0.0f), prev_y = curve.y(0.0f);
+inline void SweepTool::fill_arc_length_LUT(const uint32_t element_count, const float bowstring_length) {
+    const float step = 1.0f / (element_count);
+    float current_length = 0.0f;// prev_x = curve.x(0.0f), prev_y = curve.y(0.0f);
+    glm::vec3 prev_pos = curve.evaluate(0.0f);
     arc_length_LUT_size = 0u;
 
-    for (float i = 0.0f; i < element_count; i++) {
-        const float curr_x = curve.x(i * step);
-        const float curr_y = curve.y(i * step);
+    for (float i = 1.0f; i < element_count; i++) {
+        const glm::vec3 curr_pos = curve.evaluate(i * step);
 
-        const float delta_x = prev_x - curr_x;
-        const float delta_y = prev_y - curr_y;
+        const glm::vec3 delta_pos = prev_pos - curr_pos;
 
-        current_length += sqrt(delta_x * delta_x + delta_y * delta_y);
+        current_length += glm::length(delta_pos);
 
         arc_length_LUT[arc_length_LUT_size++] = current_length;
 
-        prev_x = curr_x;
-        prev_y = curr_y;
+        prev_pos = curr_pos;
     }
 }
 
 uint32_t SweepTool::get_closest_arc_length(const float length) const {
-    uint32_t i = 0u;
+    uint32_t i = 1u;
 
     for (; i < arc_length_LUT_size; i++) {
         if (arc_length_LUT[i] > length) {
             return i-1u;
         }
     }
-    assert(false); // Should never happen: could not find a bigget length than the target
     return 0u;
 }
 
@@ -74,15 +67,28 @@ inline float SweepTool::aprox_inverse_curve_length(const float length) const {
 
     const float clossest_length = arc_length_LUT[closest_index];
 
-    return (closest_index + (target_length - clossest_length) / (arc_length_LUT[closest_index + 1] - clossest_length)) / arc_length_LUT_size;
+    return (closest_index + (target_length - clossest_length) / (arc_length_LUT[closest_index + 1u] - clossest_length)) / arc_length_LUT_size;
 }
 
 void SweepTool::fill_edits_with_arc() {
-    curve.set_parabola(5.0, 1.0);
+    const glm::vec3 stroke_end_position = Input::get_controller_position(HAND_RIGHT) - glm::vec3(0.0f, 1.0f, 0.0f);
+    const glm::vec3 stroke_direction = glm::normalize(stroke_end_position - stroke_start_position);
+    const glm::vec3 segment_normal = glm::cross(stroke_direction, Input::get_controller_rotation(HAND_RIGHT) * stroke_direction);
 
-    fill_arc_length_LUT(25u);
+    const float stroke_length = glm::length(stroke_end_position - stroke_start_position);
+    const glm::vec3 half_point = stroke_start_position + stroke_direction * (stroke_length * 0.5f);
+    const uint32_t number_of_edits = (uint32_t)glm::ceil(stroke_length / inter_edit_distance);
 
-    std::cout << aprox_inverse_curve_length(0.0f) << "  " << aprox_inverse_curve_length(2.0 / 25.0) << "  " << aprox_inverse_curve_length(22.0 / 25.0) << std::endl;
+    curve.set_curve(stroke_start_position, segment_normal * stroke_length + half_point, stroke_end_position);
+    fill_arc_length_LUT(number_of_edits, stroke_length);
+    tmp_edit_storage.clear();
+
+    for (float i = 1.0f; i < number_of_edits; i++) {
+        const float t = aprox_inverse_curve_length(i / number_of_edits);
+
+        edit_to_add.position = curve.evaluate(t);
+        tmp_edit_storage.push_back(edit_to_add);
+    }
 }
 
 
@@ -149,7 +155,7 @@ bool SweepTool::update(float delta_time)
         }
 
         if (stroke_prev_state == IN_STROKE && stroke_state == IN_STROKE) {
-            fill_edits_with_stroke();
+            fill_edits_with_arc();
 
             for(uint32_t i = 0u; i < tmp_edit_storage.size(); i++) {
                 renderer->add_preview_edit(tmp_edit_storage[i]);

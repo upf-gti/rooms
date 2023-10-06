@@ -35,21 +35,22 @@ class SweepTool : public Tool {
     uint32_t arc_length_LUT_storeage_size = 0u;
     uint32_t arc_length_LUT_size = 0u;
 
-    struct sParametricParabola {
-        float curve_height = 0.0f;
-        float curve_segment_size_pow_2 = 0.0f;
+    struct sBezierCurve {
+        glm::vec3 start;
+        glm::vec3 control;
+        glm::vec3 end;
 
-        float x(const float t) const;
-        float y(const float t) const;
-
-        inline void set_parabola(const float height, const float segment_size) {
-            curve_height = height;
-            curve_segment_size_pow_2 = segment_size * segment_size;
+        inline void set_curve(const glm::vec3& s, const glm::vec3& c, const glm::vec3& e) {
+            start = s;
+            control = c;
+            end = e;
         }
+
+        glm::vec3 evaluate(const float t) const;
     } curve;
 
 
-    void fill_arc_length_LUT(const uint32_t element_count);
+    void fill_arc_length_LUT(const uint32_t element_count, const float bowstring_length);
     uint32_t get_closest_arc_length(const float length) const;
     float aprox_inverse_curve_length(const float length) const;
     void fill_edits_with_arc();
