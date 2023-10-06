@@ -277,6 +277,11 @@ void SculptEditor::render()
 #endif
 }
 
+void SculptEditor::set_sculpt_started(bool value)
+{
+    sculpt_started = true;
+}
+
 void SculptEditor::set_primitive(sdPrimitive primitive, EntityMesh* preview)
 {
     current_primitive = primitive;

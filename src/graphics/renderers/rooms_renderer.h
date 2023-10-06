@@ -74,6 +74,7 @@ public:
 
     Texture* get_eye_texture(eEYE eye);
 
+    RaymarchingRenderer* get_raymarching_renderer() { return &raymarching_renderer; }
 
     /*
     *   Edits

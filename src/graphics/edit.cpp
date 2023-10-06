@@ -1,4 +1,5 @@
 #include "edit.h"
+#include <sstream>
 
 std::ostream& operator<<(std::ostream& os, const Edit& edit)
 {
@@ -10,13 +11,48 @@ std::ostream& operator<<(std::ostream& os, const Edit& edit)
     return os;
 }
 
+std::string Edit::to_string() const {
+
+    std::string text;
+    text += std::to_string(position.x) + " " + std::to_string(position.y) + " " + std::to_string(position.z) + "/";
+    text += std::to_string(primitive) + "/";
+    text += std::to_string(color.x) + " " + std::to_string(color.y) + " " + std::to_string(color.z) + "/";
+    text += std::to_string(operation) + "/";
+    text += std::to_string(dimensions.x) + " " + std::to_string(dimensions.y) + " " + std::to_string(dimensions.z) + " " + std::to_string(dimensions.w) + "/";
+    text += std::to_string(rotation.x) + " " + std::to_string(rotation.y) + " " + std::to_string(rotation.z) + " " + std::to_string(rotation.w) + "/";
+    text += std::to_string(parameters.x) + " " + std::to_string(parameters.y) + " " + std::to_string(parameters.z) + " " + std::to_string(parameters.w);
+    return text;
+}
+
+void Edit::parse_string(const std::string& str) {
+
+    size_t pos = 0;
+    std::vector<std::string> tokens;
+    std::string s = str;
+
+    while ((pos = s.find("/")) != std::string::npos) {
+        tokens.push_back(s.substr(0, pos));
+        s = s.substr(pos + 1);
+    }
+
+    // Add last token...
+    tokens.push_back(s.substr(0, pos));
+
+    // Set data...
+    position    = load_vec3(tokens[0]);
+    primitive   = (sdPrimitive)std::atoi(tokens[1].c_str());
+    color       = load_vec3(tokens[2]);
+    operation   = (sdOperation)std::atoi(tokens[3].c_str());
+    dimensions  = load_vec4(tokens[4]);
+    rotation    = load_quat(tokens[5]);
+    parameters  = load_vec4(tokens[6]);
+}
+
 float Edit::weigth_difference(const Edit& edit) {
 
     float position_diff = glm::length(position - edit.position);
-
     glm::quat quat_diff = rotation * glm::inverse(edit.rotation);
     float angle_diff = 2.0f * atan2(glm::length(glm::vec3(quat_diff.x, quat_diff.y, quat_diff.z)), quat_diff.w);
-
     float size_diff = glm::length(dimensions - edit.dimensions);
 
     return position_diff + angle_diff + size_diff;

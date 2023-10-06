@@ -215,7 +215,6 @@ void RaymarchingRenderer::compute_merge()
     wgpuCommandEncoderRelease(command_encoder);
 
     compute_merge_data.edits_to_process = 0;
-
 }
 
 void RaymarchingRenderer::compute_raymarching()
@@ -267,6 +266,12 @@ void RaymarchingRenderer::compute_raymarching()
     wgpuCommandEncoderRelease(command_encoder);
 
     preview_edit_data.preview_edits_count = 0u;
+}
+
+void RaymarchingRenderer::set_sculpt_start_position(const glm::vec3& position)
+{
+    compute_merge_data.sculpt_start_position = position;
+    compute_raymarching_data.sculpt_start_position = position;
 }
 
 void RaymarchingRenderer::set_render_size(float width, float height)

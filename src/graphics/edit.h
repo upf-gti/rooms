@@ -2,7 +2,6 @@
 
 #include "includes.h"
 #include "utils.h"
-
 #include <iostream>
 
 enum sdPrimitive {
@@ -39,6 +38,9 @@ struct Edit {
     glm::vec4	parameters = { 0.f, 0.f, 0.f, 0.f };
 
     friend std::ostream& operator<<(std::ostream& os, const Edit& edit);
+
+    std::string to_string() const;
+    void parse_string(const std::string& str);
 
     float weigth_difference(const Edit& edit);
 

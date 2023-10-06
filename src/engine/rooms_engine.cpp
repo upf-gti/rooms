@@ -2,8 +2,11 @@
 #include "framework/entities/entity_mesh.h"
 #include "framework/entities/entity_text.h"
 #include "framework/input.h"
-
 #include "framework/scene/parse_scene.h"
+#include "graphics/renderers/rooms_renderer.h"
+
+#include <iostream>
+#include <fstream>
 
 int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen)
 {
@@ -36,6 +39,8 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     //gate->rotate(glm::pi<float>() * 0.5f, glm::vec3(1.0f, 0.0, 0.0));
     //entities.push_back(gate);
 
+    import_scene();
+
 	return error;
 }
 
@@ -53,6 +58,11 @@ void RoomsEngine::update(float delta_time)
 	Engine::update(delta_time);
 
     sculpt_editor.update(delta_time);
+
+    if (Input::was_key_pressed(GLFW_KEY_SPACE))
+    {
+        export_scene();
+    }
 }
 
 void RoomsEngine::render()
@@ -64,4 +74,88 @@ void RoomsEngine::render()
     sculpt_editor.render();
 
 	Engine::render();
+}
+
+bool RoomsEngine::export_scene()
+{
+    std::cout << "Exporting scene...";
+
+    std::ofstream file("data/exports/myscene.txt");
+
+    if (!file.is_open())
+        return false;
+
+    // Write scene info
+    RoomsRenderer* renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
+    RaymarchingRenderer* rmr = renderer->get_raymarching_renderer();
+
+    auto edits = rmr->get_scene_edits();
+
+    file << "@" << edits.size() << "\n";
+
+    glm::vec3 position = rmr->get_sculpt_start_position();
+    file << "@" << std::to_string(position.x) << " " + std::to_string(position.y) + " " + std::to_string(position.z) << "\n";
+
+    for (const Edit& edit : edits)
+        file << edit.to_string() << "\n";
+
+    file.close();
+
+    std::cout << "[OK]" << std::endl;
+
+    return true;
+}
+
+bool RoomsEngine::import_scene()
+{
+    std::cout << "Importing scene...";
+
+    std::ifstream file("data/exports/myscene.txt");
+
+    if (!file.is_open())
+        return false;
+
+    std::string line = "";
+
+    // Write scene info
+    RoomsRenderer* renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
+    RaymarchingRenderer* rmr = renderer->get_raymarching_renderer();
+
+    struct {
+        int num_edits = 0;
+        // ...
+    } scene_header;
+
+    int edit_count = 0;
+
+    // Num edits
+    std::getline(file, line);
+    scene_header.num_edits = std::stoi(line.substr(1));
+
+    // Starting sculpt position
+    std::getline(file, line);
+    glm::vec3 position = load_vec3(line.substr(1));
+    rmr->set_sculpt_start_position(position);
+    sculpt_editor.set_sculpt_started(true);
+
+    // Parse edits
+    while (std::getline(file, line))
+    {
+        Edit edit;
+        edit.parse_string(line);
+        rmr->push_edit(edit);
+        edit_count++;
+    }
+
+    file.close();
+
+    if (edit_count != scene_header.num_edits)
+    {
+        std::cerr << "[ERROR] Some edits couldn't be imported!" << std::endl;
+        return false;
+    }
+
+    std::cout << "[OK] " << scene_header.num_edits << " edits imported!" << std::endl;
+
+    return true;
 }
