@@ -21,7 +21,6 @@ void SweepTool::clean()
     delete arc_length_LUT;
 }
 
-
 // Curve functions =============
 inline glm::vec3 SweepTool::sBezierCurve::evaluate(const float t) const {
     const float t_inv = (1.0f - t);
@@ -192,7 +191,10 @@ bool SweepTool::update(float delta_time)
 		}
 	}
 
-    // TODO: refactor with sculpt editor
+    // Set the inter-edit distance TODO: How and where? For now in here
+    const float size_multiplier = Input::get_thumbstick_value(HAND_RIGHT).x * delta_time * 0.1f;
+    inter_edit_distance = glm::clamp(size_multiplier + inter_edit_distance, 0.006f, 0.1f);
+
     glm::vec3 controller_position = Input::get_controller_position(HAND_RIGHT) - glm::vec3(0.0f, 1.0f, 0.0f);
 
 	// Sculpting (adding edits)
