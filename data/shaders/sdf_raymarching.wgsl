@@ -69,7 +69,7 @@ fn irradiance_spherical_harmonics(n : vec3f) -> vec3f {
 
 fn sample_sdf(position : vec3f) -> Surface
 {
-    let p = (position - compute_data.sculpt_start_position + vec3(0.5, -0.5, 0.5));
+    let p = (position - compute_data.sculpt_start_position + vec3(0.5, 0.5, 0.5));
 
     let rot_p = rotate_point_quat(p - vec3f(0.5), compute_data.sculpt_rotation) + vec3f(0.5);
 
