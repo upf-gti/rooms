@@ -2,6 +2,8 @@
 
 #include "framework/colors.h"
 #include "graphics/webgpu_context.h"
+#include "graphics/renderer_storage.h"
+
 #include <functional>
 #include <map>
 #include <string>
@@ -12,13 +14,6 @@ class EntityMesh;
 namespace ui {
 
 	class Controller;
-
-    struct sUIData {
-        float num_group_items   = 2;
-        float is_selected       = 0.f;
-        float is_hovered        = 0.f;
-        float is_color_button   = 0.f;
-    };
 
 	enum eWidgetType {
 		NONE,
@@ -53,9 +48,7 @@ namespace ui {
         uint8_t     m_layer = 0;
 		int         priority = 0;
 
-        /*sUIData         ui_data;
-        WGPUBindGroup   bind_group = nullptr;
-        Uniform         uniforms;*/
+        RendererStorage::sUIData ui_data;
 
 		void add_child(Widget* child);
 

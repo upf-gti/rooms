@@ -101,13 +101,15 @@ namespace ui {
 
     WidgetGroup::WidgetGroup(EntityMesh* e, const glm::vec2& p, const glm::vec2& s, float n) : Widget(e, p, s) {
 
+        entity->set_material_flag(MATERIAL_UI);
+
         show_children = true;
         type = eWidgetType::GROUP;
 
-        //ui_data.num_group_items = n;
+        ui_data.num_group_items = n;
 
-        //auto webgpu_context = Renderer::instance->get_webgpu_context();
-        //bind_group = webgpu_context->create_bind_group({ &uniforms }, RendererStorage::get_shader("data/shaders/mesh_ui.wgsl"), 2);
+        auto webgpu_context = Renderer::instance->get_webgpu_context();
+        RendererStorage::register_ui_widget(webgpu_context, RendererStorage::get_shader("data/shaders/mesh_ui.wgsl"), entity, ui_data, 2);
     }
 
 	/*
@@ -116,6 +118,8 @@ namespace ui {
 
     ButtonWidget::ButtonWidget(const std::string& sg, EntityMesh* e, const glm::vec2& p, const glm::vec2& s, const Color& c)
         : Widget(e, p, s), signal(sg), color(c) {
+
+        entity->set_material_flag(MATERIAL_UI);
 
         type = eWidgetType::BUTTON;
 
@@ -128,8 +132,8 @@ namespace ui {
         label = new TextWidget(e_text, {p.x - sg.length() * magic, p.y + s.y * 0.5f});
         label->priority = 2;
 
-        //auto webgpu_context = Renderer::instance->get_webgpu_context();
-        //bind_group = webgpu_context->create_bind_group({ &uniforms }, RendererStorage::get_shader("data/shaders/mesh_texture_ui.wgsl"), 2);
+        auto webgpu_context = Renderer::instance->get_webgpu_context();
+        RendererStorage::register_ui_widget(webgpu_context, RendererStorage::get_shader("data/shaders/mesh_texture_ui.wgsl"), entity, ui_data, 3);
     }
 
     void ButtonWidget::render()
@@ -197,9 +201,13 @@ namespace ui {
         }
 
         // Update uniforms
-        /*ui_data.is_hovered = hovered ? 1.f : 0.f;
+        ui_data.is_hovered = hovered ? 1.f : 0.f;
         ui_data.is_selected = selected ? 1.f : 0.f;
-        ui_data.is_color_button = is_color_button ? 1.f : 0.f;*/
+        ui_data.is_color_button = is_color_button ? 1.f : 0.f;
+
+        auto webgpu_context = Renderer::instance->get_webgpu_context();
+
+        RendererStorage::update_ui_widget(webgpu_context, entity, ui_data);
 
         label->update(controller);
 	}

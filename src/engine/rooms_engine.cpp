@@ -39,7 +39,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     //gate->rotate(glm::pi<float>() * 0.5f, glm::vec3(1.0f, 0.0, 0.0));
     //entities.push_back(gate);
 
-    import_scene();
+    //import_scene();
 
 	return error;
 }
