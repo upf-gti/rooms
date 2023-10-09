@@ -167,11 +167,11 @@ void SculptEditor::update(float delta_time)
 
         if (!rotation_started) {
             initial_hand_rotation = glm::inverse(Input::get_controller_rotation(HAND_LEFT));
-            initial_hand_translation = Input::get_controller_position(HAND_LEFT, POSE_AIM);
+            initial_hand_translation = Input::get_controller_position(HAND_LEFT);
         }
 
         rotation_diff = glm::inverse(initial_hand_rotation) * glm::inverse(Input::get_controller_rotation(HAND_LEFT));
-        translation_diff = Input::get_controller_position(HAND_LEFT, POSE_AIM) - initial_hand_translation;
+        translation_diff = Input::get_controller_position(HAND_LEFT) - initial_hand_translation;
 
         renderer->set_sculpt_rotation(sculpt_rotation * rotation_diff);
         renderer->set_sculpt_start_position(sculpt_start_position + translation_diff);
