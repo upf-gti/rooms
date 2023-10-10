@@ -92,7 +92,6 @@ void RaymarchingRenderer::compute_initialize_sdf(int sdf_texture_idx)
 
     // Create compute_raymarching pass
     WGPUComputePassDescriptor compute_pass_desc = {};
-    compute_pass_desc.timestampWriteCount = 0;
     compute_pass_desc.timestampWrites = nullptr;
     WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
 
@@ -182,7 +181,6 @@ void RaymarchingRenderer::compute_merge()
 
     // Create compute_raymarching pass
     WGPUComputePassDescriptor compute_pass_desc = {};
-    compute_pass_desc.timestampWriteCount = 0;
     compute_pass_desc.timestampWrites = nullptr;
     WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
 
@@ -232,7 +230,6 @@ void RaymarchingRenderer::compute_raymarching()
 
     // Create compute_raymarching pass
     WGPUComputePassDescriptor compute_pass_desc = {};
-    compute_pass_desc.timestampWriteCount = 0;
     compute_pass_desc.timestampWrites = nullptr;
     WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
 
