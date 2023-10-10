@@ -94,12 +94,6 @@ void Edit::get_world_AABB(glm::vec3* min, glm::vec3* max, const glm::vec3& start
     glm::vec3 rotated_mx_size = glm::vec3(-1000.0f, -1000.0f, -1000.0f);
     glm::vec3 rotated_min_size = glm::vec3(1000.0f, 1000.0f, 1000.0f);
 
-    // Avoid rotation if primitive is a sphere, and the rotation is unitary
-    //if (primitive == SD_SPHERE || glm::all(glm::epsilonEqual(rotation, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), 0.001f))) {
-    //	rotated_mx_size = pure_edit_half_size;
-    //	rotated_min_size = -pure_edit_half_size;
-    //} else {
-
     glm::quat quat_rot = glm::quat{ rotation.w, rotation.x, rotation.y, rotation.z };
 
     // Rotate the AABB (turning it into an OBB) and compute the AABB
@@ -121,7 +115,6 @@ void Edit::get_world_AABB(glm::vec3* min, glm::vec3* max, const glm::vec3& start
         rotated_min_size.y = glm::min(rotated_min_size.y, axis[i].y);
         rotated_min_size.z = glm::min(rotated_min_size.z, axis[i].z);
     }
-    //}
 
     const glm::vec3 edit_half_size = (rotated_mx_size - rotated_min_size) / 2.0f;
 

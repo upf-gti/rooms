@@ -25,7 +25,9 @@ struct ComputeData {
 };
 
 struct PreviewEditData {
-    padding : vec3f,
+    aabb_center : vec3f,
+    padding: f32,
+    aabb_size : vec3f,
     preview_edit_count : u32,
     preview_edits : array<Edit, 128>
 };
@@ -93,9 +95,17 @@ fn sample_sdf(position : vec3f) -> Surface
 fn add_preview_edits(position : vec3f, surface : Surface) -> Surface
 {
     var it_surface : Surface = surface;
-    for(var i : u32 = 0u; i < preview_edit_data.preview_edit_count; i++) {
-        it_surface = evalEdit(position, it_surface, preview_edit_data.preview_edits[i]);
+    if (sdBox(position / vec3f(SDF_RESOLUTION), 
+              preview_edit_data.aabb_center, 
+              vec4f(0.0, 0.0, 0.0, 1.0), 
+              preview_edit_data.aabb_size, 
+              0.010, 
+              vec3f(0.0, 0.0, 0.0)).distance < MIN_HIT_DIST) {
+        for(var i : u32 = 0u; i < preview_edit_data.preview_edit_count; i++) {
+            it_surface = evalEdit(position, it_surface, preview_edit_data.preview_edits[i]);
+        }
     }
+    
     return it_surface;
 }
 

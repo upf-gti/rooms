@@ -139,8 +139,6 @@ void RaymarchingRenderer::compute_merge()
     WGPUCommandEncoder command_encoder = wgpuDeviceCreateCommandEncoder(webgpu_context->device, &encoder_desc);
 
     // Compute the edit size
-    // NOTE: 6.12557 ms to beat
-    // beated by 0.01741 ms
     glm::vec3 edit_min = { 100.0f, 100.0f, 100.0f };
     glm::vec3 edit_max = { -100.0f, -100.0f, -100.0f };
     glm::vec3 tmp_min, tmp_max;
@@ -155,7 +153,7 @@ void RaymarchingRenderer::compute_merge()
 
     // Calculate size
     glm::vec3 edit_size = edit_max - edit_min;
-    //std::cout << "Edit size: " << edit_size.x << " " << edit_size.y << " " << edit_size.z << std::endl;
+
     // To SDF coords:
     edit_size = edit_size * static_cast<float>(SDF_RESOLUTION);
     compute_merge_data.edits_aabb_start = glm::uvec3(glm::floor(edit_min * static_cast<float>(SDF_RESOLUTION)));
@@ -198,7 +196,6 @@ void RaymarchingRenderer::compute_merge()
     uint32_t workgroupHeight = static_cast<uint32_t>((edit_size.y + workgroupSize - 1) / workgroupSize);
     uint32_t workgroupDepth  = static_cast<uint32_t>((edit_size.z + workgroupSize - 1) / workgroupSize);
     wgpuComputePassEncoderDispatchWorkgroups(compute_pass, workgroupWidth, workgroupHeight, workgroupDepth);
-    //std::cout << "Dispatch size: " << workgroupWidth << " " << workgroupHeight << " " << workgroupDepth << std::endl;
 
     // Finalize compute_raymarching pass
     wgpuComputePassEncoderEnd(compute_pass);
@@ -222,6 +219,21 @@ void RaymarchingRenderer::compute_raymarching()
 {
     if (!compute_raymarching_shader || !compute_raymarching_shader->is_loaded()) return;
 
+    // Compute thre preview edit AABB
+    glm::vec3 edit_AABB_min = { 100.0f, 100.0f, 100.0f };
+    glm::vec3 edit_AABB_max = { -100.0f, -100.0f, -100.0f };
+    glm::vec3 tmp_min, tmp_max;
+    for (uint16_t i = 0; i < preview_edit_data.preview_edits_count; i++) {
+        preview_edit_data.preview_edits[i].get_world_AABB(&tmp_min, &tmp_max, glm::vec3(0.0f), compute_merge_data.sculpt_rotation, true);
+        edit_AABB_min = glm::min(edit_AABB_min, tmp_min);
+        edit_AABB_max = glm::max(edit_AABB_max, tmp_max);
+    }
+
+    const glm::vec3 preview_edits_AABB_half_size = (edit_AABB_max - edit_AABB_min) / 2.0f;
+
+    preview_edit_data.aabb_center = edit_AABB_min + preview_edits_AABB_half_size;
+    preview_edit_data.aabb_size = preview_edits_AABB_half_size;
+
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
 
     // Initialize a command encoder
@@ -239,6 +251,7 @@ void RaymarchingRenderer::compute_raymarching()
     // Update uniform buffer
     wgpuQueueWriteBuffer(webgpu_context->device_queue, std::get<WGPUBuffer>(compute_buffer_data_uniform.data), 0, &(compute_raymarching_data), sizeof(sComputeData));
     // Update preview edits
+    // TODO: compute bounidng box of edits
     wgpuQueueWriteBuffer(webgpu_context->device_queue, std::get<WGPUBuffer>(compute_preview_edit_uniform.data), 0, &preview_edit_data, sizeof(sPreviewEditsData));
 
     wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_raymarching_textures_bind_group, 0, nullptr);
