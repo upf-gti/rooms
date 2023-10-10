@@ -1,6 +1,7 @@
 #include "sculpt_editor.h"
 #include "sculpt.h"
 #include "paint.h"
+#include "sweep.h"
 #include "graphics/renderers/rooms_renderer.h"
 #include "framework/scene/parse_scene.h"
 
@@ -38,6 +39,9 @@ void SculptEditor::initialize()
 
     tools[SCULPT] = new SculptTool();
     tools[PAINT] = new PaintTool();
+    tools[SWEEP] = new SweepTool();
+
+    dynamic_cast<SweepTool*>(tools[SWEEP])->set_sculpt_editor(this);
 
     for (auto& tool : tools) {
         if (tool) {
@@ -66,7 +70,7 @@ void SculptEditor::initialize()
         gui.bind("capped", [&](const std::string& signal, void* button) { set_primitive_modifier(capped_enabled); });
 
         gui.bind("mirror", [&](const std::string& signal, void* button) { use_mirror = !use_mirror; });
-        gui.bind("snap_to_grid", [&](const std::string& signal, void* button) { snap_to_grid = !snap_to_grid; });
+        gui.bind("snap_to_grid", [&](const std::string& signal, void* button) { enable_tool(SWEEP);});//snap_to_grid = !snap_to_grid; });
 
         // Bind recent color buttons...
 
@@ -131,6 +135,9 @@ void SculptEditor::update(float delta_time)
         return;
     }
 
+    preview_tmp_edits.clear();
+    new_edits.clear();
+
     Tool& tool_used = *tools[current_tool];
 
     if (Input::was_button_pressed(XR_BUTTON_B))
@@ -162,7 +169,7 @@ void SculptEditor::update(float delta_time)
         mirror_origin = sculpt_start_position + glm::vec3(0.0f, 1.0f, 0.0f);
     }
 
-    // Rotate the scene TODO: when ready move this out of tool to engine
+    // Rotate the scene
     if (is_rotation_being_used()) {
 
         if (!rotation_started) {
@@ -213,34 +220,41 @@ void SculptEditor::update(float delta_time)
     edit_to_add.color = current_color;
     edit_to_add.parameters.x = onion_thickness;
     edit_to_add.parameters.y = capped_value;
-    // ...
 
-    // Set position of the preview edit
-    renderer->add_preview_edit(edit_to_add);
+    if (is_tool_used) {
+        new_edits.push_back(edit_to_add);
+    }
+    preview_tmp_edits.push_back(edit_to_add);
 
-    Edit mirrored_edit = {};
+    // Mirror functionality
     if (use_mirror) {
         mirror_origin = mirror_gizmo.update(mirror_origin, delta_time);
 
-        // Generate the mirror edit
-        mirrored_edit = edit_to_add;
-        float dist_to_plane = glm::dot(mirror_normal, mirrored_edit.position - mirror_origin);
-        mirrored_edit.position = mirrored_edit.position - mirror_normal * dist_to_plane * 2.0f;
+        uint32_t preview_edit_count = preview_tmp_edits.size();
+        for (uint32_t i = 0u; i < preview_edit_count; i++) {
+            Edit inverted_preview_edit = preview_tmp_edits[i];
+            float dist_to_plane = glm::dot(mirror_normal, inverted_preview_edit.position - mirror_origin);
+            inverted_preview_edit.position = inverted_preview_edit.position - mirror_normal * dist_to_plane * 2.0f;
 
-        renderer->add_preview_edit(mirrored_edit);
-    }
+            preview_tmp_edits.push_back(inverted_preview_edit);
+        }
 
-    if (is_tool_used) {
-        renderer->push_edit(edit_to_add);
+        uint32_t edit_count = new_edits.size();
+        for (uint32_t i = 0u; i < edit_count; i++) {
+            Edit inverted_edit = new_edits[i];
+            float dist_to_plane = glm::dot(mirror_normal, inverted_edit.position - mirror_origin);
+            inverted_edit.position = inverted_edit.position - mirror_normal * dist_to_plane * 2.0f;
 
-        // If the mirror is activated, mirror using the plane, and add another edit to the list
-        if (use_mirror) {
-            renderer->push_edit(mirrored_edit);
+            new_edits.push_back(inverted_edit);
         }
     }
 
     gui.update(delta_time);
     helper_gui.update(delta_time);
+
+    // Push to the renderer the edits and the previews
+    renderer->push_preview_edit_list(preview_tmp_edits);
+    renderer->push_edit_list(new_edits);
 }
 
 void SculptEditor::render()

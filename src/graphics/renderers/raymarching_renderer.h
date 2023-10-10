@@ -6,7 +6,7 @@
 #include "graphics/edit.h"
 #include "graphics/texture.h"
 
-#define PREVIEW_EDITS_MAX 32
+#define PREVIEW_EDITS_MAX 128
 #define EDITS_MAX 512
 #define SDF_RESOLUTION 512
 
@@ -132,8 +132,8 @@ public:
         scene_edits.push_back(edit);
     };
 
-    void push_edit_list(std::vector<Edit> &edits) {
-        for (Edit edit : edits) {
+    void push_edit_list(std::vector<Edit> &new_edits) {
+        for (Edit &edit : new_edits) {
             edits[compute_merge_data.edits_to_process++] = edit;
             scene_edits.push_back(edit);
         }
