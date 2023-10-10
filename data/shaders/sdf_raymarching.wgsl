@@ -131,14 +131,16 @@ fn raymarch(ray_origin : vec3f, ray_dir : vec3f, view_proj : mat4x4f) -> vec4f
 	let missColor = vec3f(0.0, 0.0, 0.0);
     let lightOffset = vec3f(0.0, 0.0, 0.0);
 
-	var depth : f32 = clamp(length(ray_origin - compute_data.sculpt_start_position) - 1.412, 0.0, MAX_DIST);
+	var depth : f32 = clamp(length(ray_origin - compute_data.sculpt_start_position) - 1.412 * 0.5, 0.0, MAX_DIST);
     var surface_min_dist : f32 = 50.0;
     var surface : Surface;
 
     var edge_threshold = 0.003;
     var edge : f32 = 0.0;
 
-	for (var i : i32 = 0; depth < MAX_DIST && i < 200; i++)
+    let max_depth : f32 = depth + MAX_DIST;
+
+	for (var i : i32 = 0; depth < max_depth && i < 200; i++)
 	{
 		let pos = ray_origin + ray_dir * depth;
 
