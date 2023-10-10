@@ -70,6 +70,9 @@ void RaymarchingRenderer::render()
 
 void RaymarchingRenderer::add_preview_edit(const Edit& edit)
 {
+    if (preview_edit_data.preview_edits_count >= PREVIEW_EDITS_MAX) {
+        return;
+    }
     preview_edit_data.preview_edits[preview_edit_data.preview_edits_count++] = edit;
 }
 

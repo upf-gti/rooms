@@ -27,7 +27,7 @@ struct ComputeData {
 struct PreviewEditData {
     padding : vec3f,
     preview_edit_count : u32,
-    preview_edits : array<Edit, 32>
+    preview_edits : array<Edit, 128>
 };
 
 struct SdfData {

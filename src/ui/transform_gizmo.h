@@ -23,7 +23,9 @@ class TransformGizmo {
 	eGizmoType				type;
 	bool					enabled = true;
 	
-	EntityMesh*				arrow_mesh = nullptr;
+	EntityMesh*				arrow_mesh_x = nullptr;
+    EntityMesh*             arrow_mesh_y = nullptr;
+    EntityMesh*             arrow_mesh_z = nullptr;
     EntityMesh*             wire_circle_mesh = nullptr;
 
 	glm::vec3				prev_controller_position;
