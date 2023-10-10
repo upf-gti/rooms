@@ -23,6 +23,7 @@ void SculptEditor::initialize()
     quad_mesh->create_quad();
     mirror_mesh->set_material_diffuse(RendererStorage::get_texture("data/textures/mirror_quad_texture.png"));
     mirror_mesh->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_texture.wgsl"));
+    mirror_mesh->set_material_flag(MATERIAL_TRANSPARENT);
     mirror_mesh->set_mesh(quad_mesh);
     mirror_mesh->scale(glm::vec3(0.5f));
 

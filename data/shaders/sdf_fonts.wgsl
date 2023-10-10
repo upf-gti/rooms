@@ -77,6 +77,10 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var sd : f32 = median(msd.r, msd.g, msd.b);
     var screenPxDistance = screenPxRange(4.0, in.uv) * (sd - 0.5);
     var opacity = clamp(screenPxDistance + 0.5, 0.0, 1.0);
+
+    if (opacity < 0.01) {
+        discard;
+    }
     
     out.color = mix(bgColor, fgColor, opacity);
     return out;
