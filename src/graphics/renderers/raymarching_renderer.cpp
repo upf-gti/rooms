@@ -222,7 +222,6 @@ void RaymarchingRenderer::compute_raymarching()
     if (!compute_raymarching_shader || !compute_raymarching_shader->is_loaded()) return;
 
     // Compute thre preview edit AABB
-    // Compute the edit size
     glm::vec3 edit_AABB_min = { 100.0f, 100.0f, 100.0f };
     glm::vec3 edit_AABB_max = { -100.0f, -100.0f, -100.0f };
     glm::vec3 tmp_min, tmp_max;
@@ -231,9 +230,6 @@ void RaymarchingRenderer::compute_raymarching()
         edit_AABB_min = glm::min(edit_AABB_min, tmp_min);
         edit_AABB_max = glm::max(edit_AABB_max, tmp_max);
     }
-
-    //edit_AABB_min = glm::clamp(edit_AABB_min, { 0.0f }, { 1.0f });
-    //edit_AABB_max = glm::clamp(edit_AABB_max, { 0.0f }, { 1.0f });
 
     const glm::vec3 preview_edits_AABB_half_size = (edit_AABB_max - edit_AABB_min) / 2.0f;
 
