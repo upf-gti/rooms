@@ -225,7 +225,10 @@ void SculptEditor::update(float delta_time)
     if (is_tool_used) {
         new_edits.push_back(edit_to_add);
     }
-    preview_tmp_edits.push_back(edit_to_add);
+
+    if (renderer->get_openxr_available()) {
+        preview_tmp_edits.push_back(edit_to_add);
+    }
 
     // Mirror functionality
     if (use_mirror) {
