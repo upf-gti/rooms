@@ -35,7 +35,7 @@ void SculptEditor::initialize()
     floor_grid_mesh->rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
     floor_grid_mesh->scale(glm::vec3(3.f));
 
-    mirror_gizmo.initialize(POSITION_GIZMO, sculpt_start_position + glm::vec3(0.0f, 1.0f, 0.0f));
+    mirror_gizmo.initialize(POSITION_GIZMO, sculpt_start_position);
 
     tools[SCULPT] = new SculptTool();
     tools[PAINT] = new PaintTool();
@@ -166,7 +166,7 @@ void SculptEditor::update(float delta_time)
     if (!sculpt_started) {
         sculpt_start_position = edit_to_add.position;
         renderer->set_sculpt_start_position(sculpt_start_position);
-        mirror_origin = sculpt_start_position + glm::vec3(0.0f, 1.0f, 0.0f);
+        mirror_origin = sculpt_start_position;
     }
 
     // Rotate the scene

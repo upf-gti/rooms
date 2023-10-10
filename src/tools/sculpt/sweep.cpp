@@ -77,7 +77,7 @@ inline float SweepTool::aprox_inverse_curve_length(const float length) const {
 }
 
 void SweepTool::fill_edits_with_arc(const float delta) {
-    const glm::vec3 stroke_end_position = Input::get_controller_position(HAND_RIGHT) - glm::vec3(0.0f, 1.0f, 0.0f);
+    const glm::vec3 stroke_end_position = Input::get_controller_position(HAND_RIGHT);
     const glm::vec3 stroke_direction = glm::normalize(stroke_end_position - stroke_start_position);
 
     const float stroke_length = glm::length(stroke_end_position - stroke_start_position);
@@ -145,7 +145,7 @@ uint32_t SweepTool::get_number_of_edits_in_stroke(const glm::vec3 &stroke_end_po
 }
 
 void SweepTool::fill_edits_with_stroke() {
-    const glm::vec3 stroke_end_position = Input::get_controller_position(HAND_RIGHT) - glm::vec3(0.0f, 1.0f, 0.0f);
+    const glm::vec3 stroke_end_position = Input::get_controller_position(HAND_RIGHT);
 
     const glm::vec3 stroke_direction = glm::normalize(stroke_end_position - stroke_start_position);
 
@@ -195,7 +195,7 @@ bool SweepTool::update(float delta_time)
     const float size_multiplier = Input::get_thumbstick_value(HAND_RIGHT).x * delta_time * 0.1f;
     inter_edit_distance = glm::clamp(size_multiplier + inter_edit_distance, 0.006f, 0.1f);
 
-    glm::vec3 controller_position = Input::get_controller_position(HAND_RIGHT) - glm::vec3(0.0f, 1.0f, 0.0f);
+    glm::vec3 controller_position = Input::get_controller_position(HAND_RIGHT);
 
 	// Sculpting (adding edits)
     stroke_prev_state = stroke_state;
