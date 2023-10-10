@@ -216,7 +216,9 @@ void SculptEditor::update(float delta_time)
     // ...
 
     // Set position of the preview edit
-    renderer->add_preview_edit(edit_to_add);
+    if (renderer->get_openxr_available()) {
+        renderer->add_preview_edit(edit_to_add);
+    }
 
     Edit mirrored_edit = {};
     if (use_mirror) {
