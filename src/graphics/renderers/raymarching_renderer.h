@@ -87,7 +87,9 @@ class RaymarchingRenderer {
 
     // Preview edits
     struct sPreviewEditsData {
-        glm::vec3 padding;
+        glm::vec3 aabb_center;
+        float padding;
+        glm::vec3 aabb_size;
         uint32_t preview_edits_count = 0u;
         Edit preview_edits[PREVIEW_EDITS_MAX];
     } preview_edit_data;
