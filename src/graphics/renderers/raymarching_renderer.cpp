@@ -16,12 +16,11 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
 
 #ifndef DISABLE_RAYMARCHER
     init_compute_raymarching_pipeline();
+    init_compute_octree_pipeline();
     init_compute_merge_pipeline();
     init_initialize_sdf_pipeline();
 
-    for (int i = 0; i < 2; ++i) {
-        compute_initialize_sdf(i);
-    }
+    compute_initialize_sdf();
 #endif
 
     compute_raymarching_data.render_width = static_cast<float>(webgpu_context->render_width);
@@ -82,7 +81,7 @@ void RaymarchingRenderer::set_sculpt_rotation(const glm::quat& rotation)
     compute_merge_data.sculpt_rotation = rotation;
 }
 
-void RaymarchingRenderer::compute_initialize_sdf(int sdf_texture_idx)
+void RaymarchingRenderer::compute_initialize_sdf()
 {
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
 
@@ -106,6 +105,48 @@ void RaymarchingRenderer::compute_initialize_sdf(int sdf_texture_idx)
     uint32_t workgroupHeight = (SDF_RESOLUTION + workgroupSize - 1) / workgroupSize;
     uint32_t workgroupDepth = (SDF_RESOLUTION + workgroupSize - 1) / workgroupSize;
     wgpuComputePassEncoderDispatchWorkgroups(compute_pass, workgroupWidth, workgroupHeight, workgroupDepth);
+
+    // Finalize compute_raymarching pass
+    wgpuComputePassEncoderEnd(compute_pass);
+
+    WGPUCommandBufferDescriptor cmd_buff_descriptor = {};
+    cmd_buff_descriptor.nextInChain = NULL;
+    cmd_buff_descriptor.label = "Initialize SDF Command buffer";
+
+    // Encode and submit the GPU commands
+    WGPUCommandBuffer commands = wgpuCommandEncoderFinish(command_encoder, &cmd_buff_descriptor);
+    wgpuQueueSubmit(webgpu_context->device_queue, 1, &commands);
+
+    wgpuCommandBufferRelease(commands);
+    wgpuComputePassEncoderRelease(compute_pass);
+    wgpuCommandEncoderRelease(command_encoder);
+}
+
+void RaymarchingRenderer::compute_octree()
+{
+    WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
+
+    // Initialize a command encoder
+    WGPUCommandEncoderDescriptor encoder_desc = {};
+    WGPUCommandEncoder command_encoder = wgpuDeviceCreateCommandEncoder(webgpu_context->device, &encoder_desc);
+
+    // Create compute_raymarching pass
+    WGPUComputePassDescriptor compute_pass_desc = {};
+    compute_pass_desc.timestampWrites = nullptr;
+    WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
+
+    // Use compute_raymarching pass
+    compute_octree_evaluate_pipeline.set(compute_pass);
+
+    wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_evaluate_bind_group, 0, nullptr);
+
+    for (int i = 0; i < octree_depth; ++i) {
+
+        uint32_t workgroupWidth  = 0;
+        uint32_t workgroupHeight = 0;
+        uint32_t workgroupDepth  = 0;
+        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, workgroupWidth, workgroupHeight, workgroupDepth);
+    }
 
     // Finalize compute_raymarching pass
     wgpuComputePassEncoderEnd(compute_pass);
@@ -424,22 +465,60 @@ void RaymarchingRenderer::init_compute_merge_pipeline()
 void RaymarchingRenderer::init_compute_octree_pipeline()
 {
     // Load compute_raymarching shader
-    //compute_octree_flag_nodes_shader = RendererStorage::get_shader("data/shaders/octree/flag_nodes.wgsl");
+    compute_octree_evaluate_shader = RendererStorage::get_shader("data/shaders/octree/evaluator.wgsl");
 
-    //// Texture uniforms
-    //{
-    //    octree_uniform.data = webgpu_context.create_buffer(sizeof(edits), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr);
-    //    octree_uniform.binding = 0;
-    //    octree_uniform.buffer_size = sizeof(edits);
+    WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
 
-    //    compute_merge_data_uniform.data = webgpu_context.create_buffer(sizeof(sMergeData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr);
-    //    compute_merge_data_uniform.binding = 1;
-    //    compute_merge_data_uniform.buffer_size = sizeof(sMergeData);
+    // Texture uniforms
+    {
+        // 2^3 give 8x8x8 pixel cells
+        octree_depth = log2(SDF_RESOLUTION) - 3;
 
-    //    std::vector<Uniform*> uniforms = { &compute_edits_array_uniform, &compute_merge_data_uniform, &compute_texture_sdf_storage_uniform };
+        uint32_t total_size = 0;
 
-    //    compute_merge_bind_group = webgpu_context.create_bind_group(uniforms, compute_merge_shader, 0);
-    //}
+        for (int i = 0; i < octree_depth; ++i) {
+            total_size += pow(pow(2, i), 3);
+        }
 
-    //compute_merge_pipeline.create_compute(compute_merge_shader);
+        total_size *= sizeof(sOctreeNode);
+
+        octree_uniform.data = webgpu_context->create_buffer(total_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr);
+        octree_uniform.binding = 1;
+        octree_uniform.buffer_size = total_size;
+
+        uint32_t default_vals[3] = {};
+        octree_indirect_buffer.data = webgpu_context->create_buffer(sizeof(uint32_t) * 3, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage | WGPUBufferUsage_Indirect, default_vals);
+        octree_indirect_buffer.binding = 2;
+        octree_indirect_buffer.buffer_size = sizeof(uint32_t) * 3;
+
+        octree_atomic_counter.data = webgpu_context->create_buffer(sizeof(uint32_t), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, &default_vals);
+        octree_atomic_counter.binding = 4;
+        octree_atomic_counter.buffer_size = sizeof(uint32_t);
+
+        std::vector<Uniform*> uniforms = { &octree_uniform, &compute_edits_array_uniform, &compute_texture_sdf_storage_uniform, &octree_indirect_buffer, &octree_atomic_counter };
+
+        compute_octree_evaluate_bind_group = webgpu_context->create_bind_group(uniforms, compute_merge_shader, 0);
+    }
+
+    uint32_t octants_max_size = pow(pow(2, octree_depth - 1), 3) * sizeof(uint32_t);
+
+    WGPUBuffer octant_usage_buffers[2];
+
+    // Ping pong buffers
+    for (int i = 0; i < 2; ++i) {
+        octant_usage_buffers[i] = webgpu_context->create_buffer(octants_max_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr);
+    }
+
+    for (int i = 0; i < 4; ++i) {
+        octant_usage_uniform[i].data = octant_usage_buffers[i / 2];
+        octant_usage_uniform[i].binding = i % 2;
+        octant_usage_uniform[i].buffer_size = octants_max_size;
+    }
+
+    for (int i = 0; i < 2; ++i) {
+        std::vector<Uniform*> uniforms = { &octant_usage_uniform[i], &octant_usage_uniform[3 - i] }; // im sorry
+        compute_octant_usage_bind_groups[i] = webgpu_context->create_bind_group(uniforms, compute_octree_evaluate_shader, 1);
+    }
+
+    compute_octree_evaluate_pipeline.create_compute(compute_octree_evaluate_shader);
 }

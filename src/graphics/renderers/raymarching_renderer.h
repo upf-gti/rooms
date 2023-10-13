@@ -34,9 +34,15 @@ class RaymarchingRenderer {
     Uniform         compute_texture_sdf_copy_storage_uniform;
 
     // Octree creation
-    Pipeline        compute_octree_flag_nodes_pipeline;
-    Shader*         compute_octree_flag_nodes_shader = nullptr;
+    Pipeline        compute_octree_evaluate_pipeline;
+    Shader*         compute_octree_evaluate_shader = nullptr;
+    WGPUBindGroup   compute_octree_evaluate_bind_group = nullptr;
+    WGPUBindGroup   compute_octant_usage_bind_groups[2] = {};
     Uniform         octree_uniform;
+    Uniform         octant_usage_uniform[4];
+    uint8_t         octree_depth = 0;
+    Uniform         octree_indirect_buffer;
+    Uniform         octree_atomic_counter;
 
     Uniform         camera_uniform;
 
@@ -82,6 +88,10 @@ class RaymarchingRenderer {
         glm::quat sculpt_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
     } compute_merge_data;
 
+    struct sOctreeNode {
+        uint32_t tile_pointer = 0;
+    };
+
     std::vector<Edit> scene_edits;
     Edit edits[EDITS_MAX];
 
@@ -97,7 +107,7 @@ class RaymarchingRenderer {
     // Timestepping counters
     float updated_time = 0.0f;
 
-    void compute_initialize_sdf(int sdf_texture_idx);
+    void compute_initialize_sdf();
 
     void init_compute_raymarching_pipeline();
     void init_initialize_sdf_pipeline();
@@ -114,6 +124,7 @@ public:
     void update(float delta_time);
     void render();
 
+    void compute_octree();
     void compute_merge();
     void compute_raymarching();
 
