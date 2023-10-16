@@ -101,12 +101,12 @@ namespace ui {
 
     WidgetGroup::WidgetGroup(EntityMesh* e, const glm::vec2& p, const glm::vec2& s, float n) : Widget(e, p, s) {
 
-        entity->set_material_flag(MATERIAL_UI);
-
         show_children = true;
         type = eWidgetType::GROUP;
 
         ui_data.num_group_items = n;
+
+        entity->set_material_flag(MATERIAL_UI);
 
         auto webgpu_context = Renderer::instance->get_webgpu_context();
         RendererStorage::register_ui_widget(webgpu_context, RendererStorage::get_shader("data/shaders/mesh_ui.wgsl"), entity, ui_data, 2);
@@ -119,8 +119,6 @@ namespace ui {
     ButtonWidget::ButtonWidget(const std::string& sg, EntityMesh* e, const glm::vec2& p, const glm::vec2& s, const Color& c)
         : Widget(e, p, s), signal(sg), color(c) {
 
-        entity->set_material_flag(MATERIAL_UI);
-
         type = eWidgetType::BUTTON;
 
         TextEntity* e_text = new TextEntity(sg);
@@ -131,6 +129,8 @@ namespace ui {
         float magic = 0.002125f;
         label = new TextWidget(e_text, {p.x - sg.length() * magic, p.y + s.y * 0.5f});
         label->priority = 2;
+
+        entity->set_material_flag(MATERIAL_UI);
 
         auto webgpu_context = Renderer::instance->get_webgpu_context();
         RendererStorage::register_ui_widget(webgpu_context, RendererStorage::get_shader("data/shaders/mesh_texture_ui.wgsl"), entity, ui_data, 3);
@@ -310,4 +310,13 @@ namespace ui {
 			controller->emit_signal(signal, current_value);
 		}
 	}
+
+    TextWidget::TextWidget(EntityMesh* e, const glm::vec2& pos)
+        : Widget(e, pos) {
+        type = eWidgetType::TEXT;
+    }
+
+    LabelWidget::LabelWidget(const std::string& p_text, EntityMesh* p_icon, const glm::vec2& p, const glm::vec2& s) : Widget(p_icon, p, s), text(p_text) {
+        type = eWidgetType::LABEL;
+    }
 }

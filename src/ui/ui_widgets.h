@@ -68,10 +68,7 @@ namespace ui {
 	class TextWidget : public Widget {
 	public:
 
-		TextWidget(EntityMesh* e, const glm::vec2& pos)
-            : Widget(e, pos) {
-			type = eWidgetType::TEXT;
-		}
+		TextWidget(EntityMesh* e, const glm::vec2& pos);
 	};
 
     class LabelWidget : public Widget {
@@ -82,9 +79,7 @@ namespace ui {
         std::string text;
         std::string subtext;
 
-        LabelWidget(const std::string& p_text, EntityMesh* p_icon, const glm::vec2& p, const glm::vec2& s = {0.f, 0.f}) : Widget(p_icon, p, s), text(p_text) {
-            type = eWidgetType::LABEL;
-        }
+        LabelWidget(const std::string& p_text, EntityMesh* p_icon, const glm::vec2& p, const glm::vec2& s = {0.f, 0.f});
     };
 
 	class ButtonWidget : public Widget {

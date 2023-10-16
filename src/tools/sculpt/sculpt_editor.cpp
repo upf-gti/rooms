@@ -19,19 +19,15 @@ void SculptEditor::initialize()
     mesh_preview = sphere_mesh;
 
     mirror_mesh = new EntityMesh();
-    Mesh* quad_mesh = new Mesh();
-    quad_mesh->create_quad();
     mirror_mesh->set_material_diffuse(RendererStorage::get_texture("data/textures/mirror_quad_texture.png"));
     mirror_mesh->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_texture.wgsl"));
     mirror_mesh->set_material_flag(MATERIAL_TRANSPARENT);
-    mirror_mesh->set_mesh(quad_mesh);
+    mirror_mesh->set_mesh(RendererStorage::get_mesh("quad"));
     mirror_mesh->scale(glm::vec3(0.5f));
 
     floor_grid_mesh = new EntityMesh();
-    Mesh* q_mesh = new Mesh();
-    q_mesh->create_quad();
     floor_grid_mesh->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_grid.wgsl"));
-    floor_grid_mesh->set_mesh(q_mesh);
+    floor_grid_mesh->set_mesh(RendererStorage::get_mesh("quad"));
     floor_grid_mesh->set_translation(glm::vec3(0.0f));
     floor_grid_mesh->rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
     floor_grid_mesh->scale(glm::vec3(3.f));

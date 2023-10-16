@@ -37,9 +37,7 @@ namespace ui {
         {
             background = new EntityMesh();
             background->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_color.wgsl"));
-            Mesh* mesh = new Mesh();
-            mesh->create_quad();
-            background->set_mesh(mesh);
+            background->set_mesh(RendererStorage::get_mesh("quad"));
         }
 	}
 
@@ -183,9 +181,7 @@ namespace ui {
 		// Render quad in local workspace position
 		EntityMesh* rect = new EntityMesh();
 		rect->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_color.wgsl"));
-		Mesh* mesh = new Mesh();
-		mesh->create_quad();
-		rect->set_mesh(mesh);
+		rect->set_mesh(RendererStorage::get_mesh("quad"));
         rect->set_material_color(color);
 
 		Widget* widget = new Widget(rect, pos, size);
@@ -229,7 +225,7 @@ namespace ui {
 
         // Icon 
         EntityMesh* m_icon = new EntityMesh();
-        Mesh* mesh = new Mesh();
+
         if (j.count("texture") > 0)
         {
             std::string texture = j["texture"];
@@ -244,8 +240,7 @@ namespace ui {
 
         process_params(pos, size);
 
-        mesh->create_quad();
-        m_icon->set_mesh(mesh);
+        m_icon->set_mesh(RendererStorage::get_mesh("quad"));
         m_icon->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_texture.wgsl"));
 
         LabelWidget* label_widget = new LabelWidget(text, m_icon, pos, glm::vec2(size.y, size.y));
@@ -284,13 +279,9 @@ namespace ui {
 
 		// Render quad in local workspace position
 		EntityMesh* e_button = new EntityMesh();
+		e_button->set_mesh(RendererStorage::get_mesh("quad"));
 		e_button->set_material_shader(RendererStorage::get_shader(shader));
 		e_button->set_material_diffuse(RendererStorage::get_texture(texture));
-
-		Mesh* mesh = new Mesh();
-		mesh->create_quad();
-        mesh->set_alias(signal);
-		e_button->set_mesh(mesh);
 
         const bool allow_toggle = j.value("allow_toggle", false);
         const bool is_color_button = j.count("color") > 0;
@@ -337,16 +328,12 @@ namespace ui {
 		// Render quad in local workspace position
 		EntityMesh* e_track = new EntityMesh();
 		e_track->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_color.wgsl"));
-		Mesh * mesh = new Mesh();
-		mesh->create_quad();
-		e_track->set_mesh(mesh);
+		e_track->set_mesh(RendererStorage::get_mesh("quad"));
         e_track->set_material_color(colors::GRAY);
 		
 		EntityMesh* e_thumb = new EntityMesh();
 		e_thumb->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_color.wgsl"));
-		Mesh* thumb_mesh = new Mesh();
-		thumb_mesh->create_quad();
-		e_thumb->set_mesh(thumb_mesh);
+		e_thumb->set_mesh(RendererStorage::get_mesh("quad"));
         e_thumb->set_material_color(color);
 
 		SliderWidget* widget = new SliderWidget(signal,e_track, e_thumb, default_value, pos, color, size);
@@ -443,10 +430,7 @@ namespace ui {
 
         EntityMesh* e = new EntityMesh();
         e->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_ui.wgsl"));
-        Mesh* mesh = new Mesh();
-        mesh->create_quad();
-        mesh->set_alias(group_name);
-        e->set_mesh(mesh);
+        e->set_mesh(RendererStorage::get_mesh("quad"));
         e->set_material_color(color);
 
         WidgetGroup* group = new WidgetGroup(e, pos, size, number_of_widgets);
