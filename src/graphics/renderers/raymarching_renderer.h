@@ -35,14 +35,18 @@ class RaymarchingRenderer {
 
     // Octree creation
     Pipeline        compute_octree_evaluate_pipeline;
+    Pipeline        compute_octree_increment_level_pipeline;
     Shader*         compute_octree_evaluate_shader = nullptr;
+    Shader*         compute_octree_increment_level_shader = nullptr;
     WGPUBindGroup   compute_octree_evaluate_bind_group = nullptr;
+    WGPUBindGroup   compute_octree_increment_level_bind_group = nullptr;
     WGPUBindGroup   compute_octant_usage_bind_groups[2] = {};
     Uniform         octree_uniform;
     Uniform         octant_usage_uniform[4];
     uint8_t         octree_depth = 0;
     Uniform         octree_indirect_buffer;
     Uniform         octree_atomic_counter;
+    Uniform         octree_current_level;
 
     Uniform         camera_uniform;
 
