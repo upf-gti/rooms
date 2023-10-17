@@ -71,7 +71,7 @@ void SculptEditor::initialize()
 
         // Bind recent color buttons...
 
-        ui::Widget* recent_group = gui.get_widget_from_name("g_recent_colors");
+        ui::UIEntity* recent_group = gui.get_widget_from_name("g_recent_colors");
         if (!recent_group){
             assert(0);
             std::cerr << "Cannot find recent_colors button group!" << std::endl;
@@ -93,10 +93,10 @@ void SculptEditor::initialize()
             }
         }
 
-        max_recent_colors = recent_group->children.size();
+        max_recent_colors = recent_group->get_children().size();
         for (size_t i = 0; i < max_recent_colors; ++i)
         {
-            ui::ButtonWidget* child = static_cast<ui::ButtonWidget*>(recent_group->children[i]);
+            ui::ButtonWidget* child = static_cast<ui::ButtonWidget*>(recent_group->get_children()[i]);
             gui.bind(child->signal, [&](const std::string& signal, void* button) {
                 current_color = (static_cast<ui::ButtonWidget*>(button))->color;
             });
@@ -351,12 +351,12 @@ void SculptEditor::add_recent_color(const Color& color)
         }
     }
 
-    ui::Widget* recent_group = gui.get_widget_from_name("g_recent_colors");
+    ui::UIEntity* recent_group = gui.get_widget_from_name("g_recent_colors");
 
-    assert(recent_colors.size() <= recent_group->children.size());
+    assert(recent_colors.size() <= recent_group->get_children().size());
     for (uint8_t i = 0; i < recent_colors.size(); ++i)
     {
-        ui::ButtonWidget* child = static_cast<ui::ButtonWidget*>(recent_group->children[i]);
+        ui::ButtonWidget* child = static_cast<ui::ButtonWidget*>(recent_group->get_children()[i]);
         child->color = recent_colors[i];
     }
 }

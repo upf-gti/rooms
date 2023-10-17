@@ -1,8 +1,9 @@
 #pragma once
 
 #include "tool.h"
-#include "ui/transform_gizmo.h"
+#include "framework/ui/transform_gizmo.h"
 #include "json_utils.h"
+#include "framework/ui/ui_controller.h"
 
 enum eTool : uint8_t {
     NONE = 0,
