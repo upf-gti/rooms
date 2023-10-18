@@ -36,10 +36,13 @@ class RaymarchingRenderer {
     // Octree creation
     Pipeline        compute_octree_evaluate_pipeline;
     Pipeline        compute_octree_increment_level_pipeline;
+    Pipeline        compute_octree_write_to_texture_pipeline;
     Shader*         compute_octree_evaluate_shader = nullptr;
     Shader*         compute_octree_increment_level_shader = nullptr;
+    Shader*         compute_octree_write_to_texture_shader = nullptr;
     WGPUBindGroup   compute_octree_evaluate_bind_group = nullptr;
     WGPUBindGroup   compute_octree_increment_level_bind_group = nullptr;
+    WGPUBindGroup   compute_octree_write_to_texture_bind_group = nullptr;
     WGPUBindGroup   compute_octant_usage_bind_groups[2] = {};
     Uniform         octree_uniform;
     Uniform         octant_usage_uniform[4];
@@ -97,7 +100,7 @@ class RaymarchingRenderer {
     };
 
     std::vector<Edit> scene_edits;
-    Edit edits[EDITS_MAX];
+    Edit* edits = nullptr;
 
     // Preview edits
     struct sPreviewEditsData {

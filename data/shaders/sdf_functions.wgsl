@@ -24,6 +24,17 @@ const OP_SMOOTH_PAINT           = 7;
 
 const SDF_RESOLUTION = 512.0;
 
+const OFFSET_LUT : array<vec3f, 8> = array<vec3f, 8>(
+    vec3f(-1.0, -1.0, -1.0),
+    vec3f( 1.0, -1.0, -1.0),
+    vec3f(-1.0,  1.0, -1.0),
+    vec3f( 1.0,  1.0, -1.0),
+    vec3f(-1.0, -1.0,  1.0),
+    vec3f( 1.0, -1.0,  1.0),
+    vec3f(-1.0,  1.0,  1.0),
+    vec3f( 1.0,  1.0,  1.0)
+);
+
 // Data containers
 
 struct Surface {

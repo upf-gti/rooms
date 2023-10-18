@@ -213,10 +213,12 @@ void SculptEditor::update(float delta_time)
     }
 
     // Update current edit properties...
-    edit_to_add.primitive = current_primitive;
-    edit_to_add.color = current_color;
-    edit_to_add.parameters.x = onion_thickness;
-    edit_to_add.parameters.y = capped_value;
+    if (Renderer::instance->get_openxr_available()) {
+        edit_to_add.primitive = current_primitive;
+        edit_to_add.color = current_color;
+        edit_to_add.parameters.x = onion_thickness;
+        edit_to_add.parameters.y = capped_value;
+    }
 
     if (is_tool_used) {
         new_edits.push_back(edit_to_add);

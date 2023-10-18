@@ -35,7 +35,7 @@ struct Edit {
     sdOperation operation;
     glm::vec4	dimensions;
     glm::quat   rotation = { 0.f, 0.f, 0.f, 1.f };
-    glm::vec4	parameters = { 0.f, 0.f, 0.f, 0.f };
+    glm::vec4	parameters = { 0.f, -1.f, 0.f, 0.f };
 
     friend std::ostream& operator<<(std::ostream& os, const Edit& edit);
 
