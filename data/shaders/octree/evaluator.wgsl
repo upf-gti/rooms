@@ -39,15 +39,17 @@ const OFFSET_LUT : array<vec3f, 8> = array<vec3f, 8>(
 );
 
 @compute @workgroup_size(1, 1, 1)
-fn compute(@builtin(local_invocation_index) id: u32) 
+fn compute(@builtin(global_invocation_id) global_id: vec3u, @builtin(num_workgroups) workgroup_size : vec3u) 
 {
+    let id : u32 = global_id.x;
+
     let octant_id : u32 = octant_usage_read[id];
 
     let level : u32 = atomicLoad(&current_level);
 
     let octree_index : u32 = octant_id + u32((pow(8.0, f32(level)) - 1) / 7);
 
-    var world_pos : vec3f = vec3f(0.0);
+    var world_pos : vec3f = vec3f(0.50);
 
     var level_half_size : f32 = 0.5;
 
@@ -63,12 +65,12 @@ fn compute(@builtin(local_invocation_index) id: u32)
 
         var edit : Edit = edits.data[i];
 
-        edit.position -= merge_data.sculpt_start_position;
+        //edit.position -= merge_data.sculpt_start_position;
         edit.position = rotate_point_quat(edit.position, merge_data.sculpt_rotation);
 
         edit.rotation = quat_mult(edit.rotation, quat_inverse(merge_data.sculpt_rotation));
 
-        sSurface = evalEdit(world_pos + merge_data.sculpt_start_position, sSurface, edit);
+        sSurface = evalEdit(world_pos, sSurface, edit);
     }
 
     if (sSurface.distance < level_half_size * SQRT_3) {

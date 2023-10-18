@@ -289,7 +289,7 @@ namespace ui {
 
 		Mesh* mesh = new Mesh();
 		mesh->create_quad();
-        mesh->set_alias(signal);
+        //mesh->set_alias(signal);
 		e_button->set_mesh(mesh);
 
         const bool allow_toggle = j.value("allow_toggle", false);
@@ -445,7 +445,7 @@ namespace ui {
         e->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_ui.wgsl"));
         Mesh* mesh = new Mesh();
         mesh->create_quad();
-        mesh->set_alias(group_name);
+        //mesh->set_alias(group_name);
         e->set_mesh(mesh);
         e->set_material_color(color);
 

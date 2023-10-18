@@ -53,11 +53,11 @@ bool SculptTool::update(float delta_time)
 
 		// For debugging sculpture without a headset
 		if (!Renderer::instance->get_openxr_available()) {
-			edit_to_add.position = glm::vec3(0.5f * (random_f() * 2 - 1), 0.5f * (random_f() * 2 - 1), 0.5f * (random_f() * 2 - 1));
+			edit_to_add.position = glm::vec3(0.0f , 0.0f, 0.0f);
 			glm::vec3 euler_angles(random_f() * 90, random_f() * 90, random_f() * 90);
 			edit_to_add.dimensions = glm::vec4(0.025f, 0.025f, 0.025f, 0.025f);
 			edit_to_add.rotation = glm::inverse(glm::quat(euler_angles));
-            edit_to_add.operation = random_f() > 0.5 ? OP_SMOOTH_UNION : OP_SMOOTH_SUBSTRACTION;
+            edit_to_add.operation = OP_SMOOTH_UNION;
 		}
 
         return use_tool();

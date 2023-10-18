@@ -377,8 +377,8 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit ) -> Surfa
     const smooth_factor = 0.01;
 
     // Center in texture (position 0,0,0 is just in the middle)
-    let offset_pos : vec3f = edit.position + vec3f(0.5);
-    let norm_pos : vec3f = vec3f(position) / vec3f(SDF_RESOLUTION);
+    let offset_pos : vec3f = edit.position;
+    let norm_pos : vec3f = vec3f(position);
     var size : vec3f = edit.dimensions.xyz;
     var radius : f32 = edit.dimensions.x;
     var size_param : f32 = edit.dimensions.w;
