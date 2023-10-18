@@ -19,19 +19,15 @@ void SculptEditor::initialize()
     mesh_preview = sphere_mesh;
 
     mirror_mesh = new EntityMesh();
-    Mesh* quad_mesh = new Mesh();
-    quad_mesh->create_quad();
     mirror_mesh->set_material_diffuse(RendererStorage::get_texture("data/textures/mirror_quad_texture.png"));
     mirror_mesh->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_texture.wgsl"));
     mirror_mesh->set_material_flag(MATERIAL_TRANSPARENT);
-    mirror_mesh->set_mesh(quad_mesh);
+    mirror_mesh->set_mesh(RendererStorage::get_mesh("quad"));
     mirror_mesh->scale(glm::vec3(0.5f));
 
     floor_grid_mesh = new EntityMesh();
-    Mesh* q_mesh = new Mesh();
-    q_mesh->create_quad();
     floor_grid_mesh->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_grid.wgsl"));
-    floor_grid_mesh->set_mesh(q_mesh);
+    floor_grid_mesh->set_mesh(RendererStorage::get_mesh("quad"));
     floor_grid_mesh->set_translation(glm::vec3(0.0f));
     floor_grid_mesh->rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
     floor_grid_mesh->scale(glm::vec3(3.f));
@@ -75,7 +71,7 @@ void SculptEditor::initialize()
 
         // Bind recent color buttons...
 
-        ui::Widget* recent_group = gui.get_widget_from_name("g_recent_colors");
+        ui::UIEntity* recent_group = gui.get_widget_from_name("g_recent_colors");
         if (!recent_group){
             assert(0);
             std::cerr << "Cannot find recent_colors button group!" << std::endl;
@@ -97,10 +93,10 @@ void SculptEditor::initialize()
             }
         }
 
-        max_recent_colors = recent_group->children.size();
+        max_recent_colors = recent_group->get_children().size();
         for (size_t i = 0; i < max_recent_colors; ++i)
         {
-            ui::ButtonWidget* child = static_cast<ui::ButtonWidget*>(recent_group->children[i]);
+            ui::ButtonWidget* child = static_cast<ui::ButtonWidget*>(recent_group->get_children()[i]);
             gui.bind(child->signal, [&](const std::string& signal, void* button) {
                 current_color = (static_cast<ui::ButtonWidget*>(button))->color;
             });
@@ -355,12 +351,12 @@ void SculptEditor::add_recent_color(const Color& color)
         }
     }
 
-    ui::Widget* recent_group = gui.get_widget_from_name("g_recent_colors");
+    ui::UIEntity* recent_group = gui.get_widget_from_name("g_recent_colors");
 
-    assert(recent_colors.size() <= recent_group->children.size());
+    assert(recent_colors.size() <= recent_group->get_children().size());
     for (uint8_t i = 0; i < recent_colors.size(); ++i)
     {
-        ui::ButtonWidget* child = static_cast<ui::ButtonWidget*>(recent_group->children[i]);
+        ui::ButtonWidget* child = static_cast<ui::ButtonWidget*>(recent_group->get_children()[i]);
         child->color = recent_colors[i];
     }
 }

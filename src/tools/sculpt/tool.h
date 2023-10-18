@@ -2,7 +2,6 @@
 
 #include "graphics/edit.h"
 #include "framework/input.h"
-#include "ui/ui_controller.h"
 
 class Tool {
 
