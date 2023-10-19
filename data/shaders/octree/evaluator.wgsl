@@ -21,6 +21,7 @@ struct MergeData {
 @group(0) @binding(2) var<storage, read_write> octree : Octree;
 @group(0) @binding(4) var<storage, read_write> current_level : atomic<u32>;
 @group(0) @binding(5) var<storage, read_write> atomic_counter : atomic<u32>;
+@group(0) @binding(6) var<storage, read_write> proxy_box_position_buffer: array<vec3f>;
 
 @group(1) @binding(0) var<storage, read> octant_usage_read : array<u32>;
 @group(1) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
@@ -75,6 +76,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         } else {
             let prev_counter : u32 = atomicAdd(&atomic_counter, 1);
             octant_usage_write[prev_counter] = octant_id;
+            proxy_box_position_buffer[prev_counter] = octant_center;
         }
 
         octree.data[octree_index].tile_pointer = 1;

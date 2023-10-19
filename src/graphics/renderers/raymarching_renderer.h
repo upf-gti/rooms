@@ -24,6 +24,10 @@ class RaymarchingRenderer {
     WGPUBindGroup   compute_raymarching_textures_bind_group = nullptr;
     WGPUBindGroup   compute_raymarching_data_bind_group = nullptr;
 
+    Pipeline        render_proxy_geometry_pipeline;
+    Shader*         render_proxy_shader = nullptr;
+    WGPUBindGroup   render_proxy_geometry_bind_group = nullptr;
+
     Pipeline        compute_merge_pipeline;
     Shader*         compute_merge_shader = nullptr;
     WGPUBindGroup   compute_merge_bind_group = nullptr;
@@ -50,6 +54,8 @@ class RaymarchingRenderer {
     Uniform         octree_indirect_buffer;
     Uniform         octree_atomic_counter;
     Uniform         octree_current_level;
+    Uniform         octree_proxy_instance_buffer;
+    Uniform         octree_proxy_indirect_buffer;
 
     Uniform         camera_uniform;
 
@@ -120,6 +126,7 @@ class RaymarchingRenderer {
     void init_initialize_sdf_pipeline();
     void init_compute_merge_pipeline();
     void init_compute_octree_pipeline();
+    void init_raymarching_proxy_pipeline();
 
 public:
 
@@ -134,6 +141,7 @@ public:
     void compute_octree();
     void compute_merge();
     void compute_raymarching();
+    void render_raymarching_proxy();
 
     void init_compute_raymarching_textures();
 

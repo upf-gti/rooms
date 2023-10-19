@@ -1,6 +1,7 @@
 #include "raymarching_renderer.h"
 
 #include "rooms_renderer.h"
+#include "framework/scene/parse_scene.h"
 
 #include <algorithm>
 
@@ -19,6 +20,7 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
     //init_compute_merge_pipeline();
     init_initialize_sdf_pipeline();
     init_compute_octree_pipeline();
+    init_raymarching_proxy_pipeline();
 
     compute_initialize_sdf();
 
@@ -395,6 +397,49 @@ void RaymarchingRenderer::compute_raymarching()
     preview_edit_data.preview_edits_count = 0u;
 }
 
+void RaymarchingRenderer::render_raymarching_proxy()
+{
+    WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
+
+    // Initialize a command encoder
+    WGPUCommandEncoderDescriptor encoder_desc = {};
+    WGPUCommandEncoder command_encoder = wgpuDeviceCreateCommandEncoder(webgpu_context->device, &encoder_desc);
+
+    // Create compute_raymarching pass
+    WGPURenderPassDescriptor render_pass_desc = {};
+    render_pass_desc.timestampWrites = nullptr;
+    WGPURenderPassEncoder render_pass = wgpuCommandEncoderBeginRenderPass(command_encoder, &render_pass_desc);
+
+    // Use compute_raymarching pass
+    //compute_raymarching_pipeline.set(render_pass);
+
+    EntityMesh* entity_mesh = parse_scene("data/meshes/cube/cube.obj");
+    Mesh* mesh = entity_mesh->get_mesh();
+    Material& material = entity_mesh->get_material();
+
+    uint8_t bind_group_index = 0;
+
+    // Set bind groups
+    wgpuRenderPassEncoderSetBindGroup(render_pass, bind_group_index++, render_proxy_geometry_bind_group, 0, nullptr);
+    wgpuRenderPassEncoderSetBindGroup(render_pass, bind_group_index++, compute_raymarching_data_bind_group, 0, nullptr);
+    // Set vertex buffer while encoding the render pass
+    wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, mesh->get_vertex_buffer(), 0, mesh->get_byte_size());
+
+    // Submit indirect drawcalls
+    wgpuRenderPassEncoderDrawIndirect(render_pass, std::get<WGPUBuffer>(octree_proxy_indirect_buffer.data), 0u);
+
+    WGPUCommandBufferDescriptor cmd_buff_descriptor = {};
+    cmd_buff_descriptor.nextInChain = NULL;
+    cmd_buff_descriptor.label = "Proxy geometry command buffer";
+
+    WGPUCommandBuffer commands = wgpuCommandEncoderFinish(command_encoder, &cmd_buff_descriptor);
+    wgpuQueueSubmit(webgpu_context->device_queue, 1, &commands);
+
+    wgpuCommandBufferRelease(commands);
+    wgpuRenderPassEncoderRelease(render_pass);
+    wgpuCommandEncoderRelease(command_encoder);
+}
+
 void RaymarchingRenderer::set_sculpt_start_position(const glm::vec3& position)
 {
     compute_merge_data.sculpt_start_position = position;
@@ -536,11 +581,16 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
 
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
 
+    // 2^3 give 8x8x8 pixel cells, and we need one iteration less, so substract 3
+    octree_depth = log2(SDF_RESOLUTION) - 3;
+
+    // Size of penultimate level
+    uint32_t octants_max_size = pow(pow(2, octree_depth - 1), 3);
+    uint32_t octants_max_index_buffer_size = octants_max_size * sizeof(uint32_t);
+    uint32_t octants_max_position_buffer_size = octants_max_size * sizeof(glm::vec3);
+
     // Texture uniforms
     {
-        // 2^3 give 8x8x8 pixel cells, and we need one iteration less, so substract 3
-        octree_depth = log2(SDF_RESOLUTION) - 3;
-
         compute_merge_data.max_octree_depth = octree_depth;
 
         // total size considering leaves and intermediate levels
@@ -561,15 +611,19 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         octree_uniform.buffer_size = total_size;
 
         uint32_t default_val = 0;
-        octree_atomic_counter.data = webgpu_context->create_buffer(sizeof(uint32_t), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, &default_val, "atomic_counter");
-        octree_atomic_counter.binding = 5;
-        octree_atomic_counter.buffer_size = sizeof(uint32_t);
-
         octree_current_level.data = webgpu_context->create_buffer(sizeof(uint32_t), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, &default_val, "current_level");
         octree_current_level.binding = 4;
         octree_current_level.buffer_size = sizeof(uint32_t);
 
-        std::vector<Uniform*> uniforms = { &octree_uniform, &compute_edits_array_uniform, &compute_merge_data_uniform, &octree_atomic_counter, &octree_current_level };
+        octree_atomic_counter.data = webgpu_context->create_buffer(sizeof(uint32_t), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, &default_val, "atomic_counter");
+        octree_atomic_counter.binding = 5;
+        octree_atomic_counter.buffer_size = sizeof(uint32_t);
+
+        octree_proxy_instance_buffer.data = webgpu_context->create_buffer(octants_max_position_buffer_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "proxy_boxes_position_buffer");
+        octree_proxy_instance_buffer.binding = 6;
+        octree_proxy_instance_buffer.buffer_size = octants_max_position_buffer_size;
+
+        std::vector<Uniform*> uniforms = { &octree_uniform, &compute_edits_array_uniform, &compute_merge_data_uniform, &octree_atomic_counter, &octree_current_level, &octree_proxy_instance_buffer };
 
         compute_octree_evaluate_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_evaluate_shader, 0);
     }
@@ -580,13 +634,17 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         octree_indirect_buffer.binding = 0;
         octree_indirect_buffer.buffer_size = sizeof(uint32_t) * 3;
 
-        std::vector<Uniform*> uniforms = { &octree_indirect_buffer, &octree_atomic_counter, &octree_current_level };
+        EntityMesh* cube = parse_scene("data/meshes/cube/cube.obj");
+
+        uint32_t default_indirect_buffer[4] = { cube->get_mesh()->get_vertex_count(), 0, 0 ,0};
+        octree_proxy_indirect_buffer.data = webgpu_context->create_buffer(sizeof(uint32_t) * 4, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage | WGPUBufferUsage_Indirect, default_indirect_buffer, "proxy_boxes_indirect_buffer");
+        octree_proxy_indirect_buffer.binding = 2;
+        octree_proxy_indirect_buffer.buffer_size = sizeof(uint32_t) * 4;
+
+        std::vector<Uniform*> uniforms = { &octree_indirect_buffer, &octree_atomic_counter, &octree_current_level, &octree_proxy_indirect_buffer, &compute_merge_data_uniform };
 
         compute_octree_increment_level_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_increment_level_shader, 0);
     }
-
-    // Size of penultimate level
-    uint32_t octants_max_size = pow(pow(2, octree_depth - 1), 3) * sizeof(uint32_t);
 
     WGPUBuffer octant_usage_buffers[2];
 
@@ -618,4 +676,16 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
     compute_octree_increment_level_pipeline.create_compute(compute_octree_increment_level_shader);
     compute_octree_write_to_texture_pipeline.create_compute(compute_octree_write_to_texture_shader);
 
+}
+
+
+void RaymarchingRenderer::init_raymarching_proxy_pipeline()
+{
+    WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
+
+    render_proxy_shader = RendererStorage::get_shader("");
+
+    std::vector<Uniform*> uniforms = { &compute_texture_sdf_storage_uniform, &octree_proxy_instance_buffer };
+
+    render_proxy_geometry_bind_group = webgpu_context->create_bind_group(uniforms, render_proxy_shader, 1);
 }

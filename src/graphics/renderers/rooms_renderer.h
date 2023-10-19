@@ -16,7 +16,6 @@
 class RoomsRenderer : public Renderer {
 
     RaymarchingRenderer raymarching_renderer;
-    MeshRenderer mesh_renderer;
 
     Mesh  quad_mesh;
 
@@ -57,6 +56,8 @@ class RoomsRenderer : public Renderer {
 #endif // XR_SUPPORT
 
 public:
+    MeshRenderer mesh_renderer;
+
 
     RoomsRenderer();
 
