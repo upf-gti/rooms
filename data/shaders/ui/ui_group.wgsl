@@ -27,10 +27,11 @@ struct CameraData {
 };
 
 struct UIData {
+    is_hovered : f32,
     num_group_items : f32,
     is_selected : f32,
-    is_hovered : f32,
-    is_color_button : f32
+    is_color_button : f32,
+    slider_info: vec4f
 };
 
 @group(0) @binding(0) var<storage, read> mesh_data : InstanceData;

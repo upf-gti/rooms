@@ -4,6 +4,12 @@
     "elements": [
 
         {
+            "name": "test_slider",
+            "type": "slider",
+            "default": 1,
+            "color": "0.95 0.76 0.17 1"
+        },
+        {
             "name": "g_main_tools",
             "type": "group",
             "nitems": 2
