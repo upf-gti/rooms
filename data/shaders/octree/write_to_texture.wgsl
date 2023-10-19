@@ -4,7 +4,7 @@ struct MergeData {
     edits_aabb_start      : vec3<u32>,
     edits_to_process      : u32,
     sculpt_start_position : vec3f,
-    dummy0                : f32,
+    max_octree_depth      : u32,
     sculpt_rotation       : vec4f
 };
 

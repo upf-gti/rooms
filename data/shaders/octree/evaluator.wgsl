@@ -12,7 +12,7 @@ struct MergeData {
     edits_aabb_start      : vec3<u32>,
     edits_to_process      : u32,
     sculpt_start_position : vec3f,
-    dummy0                : f32,
+    max_octree_depth      : u32,
     sculpt_rotation       : vec4f
 };
 
@@ -56,17 +56,25 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
         //edit.position -= merge_data.sculpt_start_position;
         edit.position = rotate_point_quat(edit.position, merge_data.sculpt_rotation);
-
+        
         edit.rotation = quat_mult(edit.rotation, quat_inverse(merge_data.sculpt_rotation));
 
         sSurface = evalEdit(octant_center, sSurface, edit);
     }
 
     if (abs(sSurface.distance) < (level_half_size * SQRT_3)) {
-        let prev_counter : u32 = atomicAdd(&atomic_counter, 8);
 
-        for (var i : u32 = 0; i < 8; i++) {
-            octant_usage_write[prev_counter + i] = octant_id | (i << (3 * level));
+        if (level < merge_data.max_octree_depth) {
+
+            let prev_counter : u32 = atomicAdd(&atomic_counter, 8);
+
+            for (var i : u32 = 0; i < 8; i++) {
+                octant_usage_write[prev_counter + i] = octant_id | (i << (3 * level));
+            }
+
+        } else {
+            let prev_counter : u32 = atomicAdd(&atomic_counter, 1);
+            octant_usage_write[prev_counter] = octant_id;
         }
 
         octree.data[octree_index].tile_pointer = 1;

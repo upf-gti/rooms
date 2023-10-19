@@ -52,7 +52,7 @@ int main() {
 #ifndef DISABLE_RAYMARCHER
     required_limits.limits.maxBufferSize = SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION * sizeof(float) * 4;
     required_limits.limits.maxStorageBufferBindingSize = SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION * sizeof(float) * 4;
-    required_limits.limits.maxComputeInvocationsPerWorkgroup = 512;
+    required_limits.limits.maxComputeInvocationsPerWorkgroup = 1024;
 #endif
     required_limits.limits.maxSamplersPerShaderStage = 1;
 

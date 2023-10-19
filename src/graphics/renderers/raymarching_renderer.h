@@ -91,7 +91,7 @@ class RaymarchingRenderer {
         glm::uvec3 edits_aabb_start = {};
         uint32_t edits_to_process = 0;
         glm::vec3  sculpt_start_position = { 0.f, 0.f, 0.f };
-        float dummy0;
+        uint32_t max_octree_depth = 0;
         glm::quat sculpt_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
     } compute_merge_data;
 

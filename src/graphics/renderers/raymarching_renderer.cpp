@@ -24,15 +24,15 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
 
     edits = new Edit[EDITS_MAX];
 
-    //edits[compute_merge_data.edits_to_process++] = {
-    //    .position = { -0.1, 0.0, 0.0 },
-    //    .primitive = SD_SPHERE,
-    //    .color = { 1.0, 0.0, 0.0 },
-    //    .operation = OP_SMOOTH_UNION,
-    //    .dimensions = { 0.025, 0.025, 0.025, 0.025 },
-    //    .rotation = { 0.f, 0.f, 0.f, 1.f },
-    //    .parameters = { 0.0, -1.0, 0.0, 0.0 },
-    //};
+    edits[compute_merge_data.edits_to_process++] = {
+        .position = { 0.0, 0.0, 0.0 },
+        .primitive = SD_SPHERE,
+        .color = { 1.0, 0.0, 0.0 },
+        .operation = OP_SMOOTH_UNION,
+        .dimensions = { 0.4, 0.4, 0.4, 0.4 },
+        .rotation = { 0.f, 0.f, 0.f, 1.f },
+        .parameters = { 0.0, -1.0, 0.0, 0.0 },
+    };
 
     //edits[compute_merge_data.edits_to_process++] = {
     //    .position = { 0.1, 0.0, 0.0 },
@@ -194,7 +194,7 @@ void RaymarchingRenderer::compute_octree()
 
     int ping_pong_idx = 0;
 
-    for (int i = 0; i < octree_depth; ++i) {
+    for (int i = 0; i <= octree_depth; ++i) {
 
         compute_octree_evaluate_pipeline.set(compute_pass);
 
@@ -491,7 +491,7 @@ void RaymarchingRenderer::init_compute_raymarching_textures()
     compute_texture_right_eye_uniform.data = rooms_renderer->get_eye_texture(EYE_RIGHT)->get_view();
     compute_texture_right_eye_uniform.binding = 1;
 
-    u_sampler.data = webgpu_context->create_sampler(); // Using all default params
+    u_sampler.data = webgpu_context->create_sampler(WGPUAddressMode_ClampToEdge, WGPUFilterMode_Nearest, WGPUFilterMode_Nearest, WGPUMipmapFilterMode_Nearest); // Using all default params
     u_sampler.binding = 2;
 
     std::vector<Uniform*> uniforms = { &compute_texture_left_eye_uniform, &compute_texture_right_eye_uniform, &compute_texture_sdf_storage_uniform, &u_sampler };
@@ -540,6 +540,8 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
     {
         // 2^3 give 8x8x8 pixel cells, and we need one iteration less, so substract 3
         octree_depth = log2(SDF_RESOLUTION) - 3;
+
+        compute_merge_data.max_octree_depth = octree_depth;
 
         // total size considering leaves and intermediate levels
         uint32_t total_size = (pow(8, octree_depth + 1) - 1) / 7;
