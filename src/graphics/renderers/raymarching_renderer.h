@@ -31,7 +31,7 @@ class RaymarchingRenderer {
     Texture         sdf_texture;
     Texture         sdf_copy_read_texture;
     Uniform         compute_texture_sdf_storage_uniform;
-    Uniform         compute_texture_sdf_copy_storage_uniform;
+    //Uniform         compute_texture_sdf_copy_storage_uniform;
 
     // Octree creation
     Pipeline        compute_octree_evaluate_pipeline;
