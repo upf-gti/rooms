@@ -1,3 +1,5 @@
+#include ../sdf_functions.wgsl
+
 struct VertexInput {
     @builtin(instance_index) instance_id : u32,
     @location(0) position: vec3f,
@@ -25,8 +27,8 @@ struct CameraData {
 
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
 
-
-const BOX_SIZE : f32 = 0.015625;
+// 1 / SDF_SIZE * 8 (texels that compose a brick) / 2 (the cube is centered, so its the halfsize) = 0.0078125
+const BOX_SIZE : f32 = ((1.0 / SDF_RESOLUTION) * 8.0) / 2.0;
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
