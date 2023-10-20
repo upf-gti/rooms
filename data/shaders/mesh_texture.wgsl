@@ -55,6 +55,11 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     var out: FragmentOutput;
     let color : vec4f = textureSample(albedo_texture, texture_sampler, in.uv);
+
+    if (color.a < 0.01) {
+        discard;
+    }
+
     out.color = vec4f(pow(in.color * color.rgb, vec3f(2.2)), color.a); // Color
 
     return out;

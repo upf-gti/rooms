@@ -31,7 +31,8 @@ struct UIData {
     num_group_items : f32,
     is_selected : f32,
     is_color_button : f32,
-    slider_info: vec4f
+    picker_color: vec3f,
+    slider_value : f32,
 };
 
 @group(0) @binding(0) var<storage, read> mesh_data : InstanceData;
@@ -75,7 +76,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
         discard;
     }
 
-    var value = ui_data.slider_info.x;
+    var value = ui_data.slider_value;
 
     // Mask
     var uvs = in.uv;
