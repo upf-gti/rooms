@@ -26,7 +26,7 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
 
     edits = new Edit[EDITS_MAX];
 
-    edits[compute_merge_data.edits_to_process++] = {
+    /*edits[compute_merge_data.edits_to_process++] = {
         .position = { 0.0, 0.0, 0.0 },
         .primitive = SD_SPHERE,
         .color = { 1.0, 0.0, 0.0 },
@@ -34,7 +34,7 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
         .dimensions = { 0.4, 0.4, 0.4, 0.4 },
         .rotation = { 0.f, 0.f, 0.f, 1.f },
         .parameters = { 0.0, -1.0, 0.0, 0.0 },
-    };
+    };*/
 
     //edits[compute_merge_data.edits_to_process++] = {
     //    .position = { 0.1, 0.0, 0.0 },
