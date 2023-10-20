@@ -60,6 +60,10 @@ struct FragmentOutput {
     @location(0) color: vec4f
 }
 
+fn remap_range(oldValue : f32, oldMin: f32, oldMax : f32, newMin : f32, newMax : f32) -> f32 {
+    return (((oldValue - oldMin) * (newMax - newMin)) / (oldMax - oldMin)) + newMin;
+}
+
 @fragment
 fn fs_main(in: VertexOutput) -> FragmentOutput {
 
@@ -71,11 +75,27 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
         discard;
     }
 
-    // let hover_color = vec3f(0.95, 0.76, 0.17);
-    let back_color = vec3f(0.6);
+    var value = ui_data.slider_info.x;
 
-    let value = ui_data.slider_info.x;
-    let final_color = select( in.color, back_color, in.uv.x > value );
+    // Mask
+    var uvs = in.uv;
+    var divisions = 2.0;
+    uvs.x *= divisions;
+    var p = vec2f(clamp(uvs.x, 0.5, divisions - 0.5), 0.5);
+    var d = 1.0 - step(0.45, distance(uvs, p));
+
+    // add gradient at the end to simulate the slider thumb
+    var mesh_color = in.color;
+
+    var grad = smoothstep(value, 1.0, in.uv.x / value);
+    grad = pow(grad, 12.0);
+    mesh_color += grad * 0.4;
+
+    let back_color = vec3f(0.3);
+    var final_color = select( mesh_color, back_color, in.uv.x > value || d < 1.0 );
+
+    let hover_color = vec3f(0.95, 0.76, 0.17);
+    final_color = select( final_color, hover_color, d < 1.0 && ui_data.is_hovered > 0.0 );
 
     out.color = vec4f(pow(final_color, vec3f(2.2)), color.a);
     return out;
