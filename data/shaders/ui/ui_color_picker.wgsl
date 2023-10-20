@@ -31,8 +31,11 @@ struct UIData {
     num_group_items : f32,
     is_selected : f32,
     is_color_button : f32,
-    picker_color: vec3f,
+    picker_color: vec4f,
     slider_value : f32,
+    dummy0 : f32,
+    dummy1 : f32,
+    dummy2 : f32,
 };
 
 @group(0) @binding(0) var<storage, read> mesh_data : InstanceData;
@@ -128,10 +131,11 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var divisions = 1.0;
     uvs.x *= divisions;
     var p = vec2f(clamp(uvs.x, 0.5, 0.5), 0.5);
-    var d = 1.0 - step(0.45, distance(uvs, p));
+    var d = 1.0 - step(0.435, distance(uvs, p));
 
     uvs = in.uv;
-    var final_color = getColor(uvs * 2 - 1) * d + ui_data.picker_color * (1 - d);
+    var current_color = ui_data.picker_color.rgb * ui_data.picker_color.a;
+    var final_color = getColor(uvs * 2 - 1) * d + current_color * (1 - d);
 
     out.color = vec4f(pow(final_color, vec3f(2.2)), color.a);
     return out;

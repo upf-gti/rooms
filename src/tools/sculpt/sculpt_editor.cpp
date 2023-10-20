@@ -69,7 +69,9 @@ void SculptEditor::initialize()
         gui.bind("mirror", [&](const std::string& signal, void* button) { use_mirror = !use_mirror; });
         gui.bind("snap_to_grid", [&](const std::string& signal, void* button) { enable_tool(SWEEP);});//snap_to_grid = !snap_to_grid; });
 
-        gui.bind("color_picker", [&](const std::string& signal, Color color) { current_color = color; });
+        gui.bind("color_picker", [&](const std::string& signal, Color color) {
+            current_color = color;
+            });
         gui.bind("color_picker@released", [&](const std::string& signal, Color color) { add_recent_color(color); });
 
         // Bind recent color buttons...

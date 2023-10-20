@@ -31,8 +31,11 @@ struct UIData {
     num_group_items : f32,
     is_selected : f32,
     is_color_button : f32,
-    picker_color: vec3f,
+    picker_color: vec4f,
     slider_value : f32,
+    dummy0 : f32,
+    dummy1 : f32,
+    dummy2 : f32,
 };
 
 @group(0) @binding(0) var<storage, read> mesh_data : InstanceData;
@@ -80,20 +83,24 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     // Mask
     var uvs = in.uv;
-    var divisions = 2.0;
+    var button_size = 32.0;
+    var tx = max(button_size, 32.0 * ui_data.num_group_items);
+    var divisions = tx / button_size;
     uvs.x *= divisions;
+    uvs.y = 1.0 - uvs.y;
     var p = vec2f(clamp(uvs.x, 0.5, divisions - 0.5), 0.5);
     var d = 1.0 - step(0.45, distance(uvs, p));
 
     // add gradient at the end to simulate the slider thumb
     var mesh_color = in.color;
 
-    var grad = smoothstep(value, 1.0, in.uv.x / value);
+    var axis = select( in.uv.x, uvs.y, ui_data.num_group_items == 1.0 );
+    var grad = smoothstep(value, 1.0, axis / value);
     grad = pow(grad, 12.0);
     mesh_color += grad * 0.4;
 
     let back_color = vec3f(0.3);
-    var final_color = select( mesh_color, back_color, in.uv.x > value || d < 1.0 );
+    var final_color = select( mesh_color, back_color, axis > value || d < 1.0 );
 
     let hover_color = vec3f(0.95, 0.76, 0.17);
     final_color = select( final_color, hover_color, d < 1.0 && ui_data.is_hovered > 0.0 );

@@ -31,8 +31,11 @@ struct UIData {
     num_group_items : f32,
     is_selected : f32,
     is_color_button : f32,
-    picker_color: vec3f,
+    picker_color: vec4f,
     slider_value : f32,
+    dummy0 : f32,
+    dummy1 : f32,
+    dummy2 : f32,
 };
 
 @group(0) @binding(0) var<storage, read> mesh_data : InstanceData;
