@@ -397,7 +397,7 @@ void RaymarchingRenderer::compute_raymarching()
     preview_edit_data.preview_edits_count = 0u;
 }
 
-void RaymarchingRenderer::render_raymarching_proxy()
+void RaymarchingRenderer::render_raymarching_proxy(WGPUTextureView swapchain_view, WGPUTextureView swapchain_depth)
 {
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
 
@@ -405,28 +405,50 @@ void RaymarchingRenderer::render_raymarching_proxy()
     WGPUCommandEncoderDescriptor encoder_desc = {};
     WGPUCommandEncoder command_encoder = wgpuDeviceCreateCommandEncoder(webgpu_context->device, &encoder_desc);
 
-    // Create compute_raymarching pass
-    WGPURenderPassDescriptor render_pass_desc = {};
-    render_pass_desc.timestampWrites = nullptr;
-    WGPURenderPassEncoder render_pass = wgpuCommandEncoderBeginRenderPass(command_encoder, &render_pass_desc);
+    // Prepare the color attachment
+    WGPURenderPassColorAttachment render_pass_color_attachment = {};
+    render_pass_color_attachment.view = swapchain_view;
+    render_pass_color_attachment.loadOp = WGPULoadOp_Clear;
+    render_pass_color_attachment.storeOp = WGPUStoreOp_Store;
 
-    // Use compute_raymarching pass
-    //compute_raymarching_pipeline.set(render_pass);
+    glm::vec4 clear_color = RoomsRenderer::instance->get_clear_color();
+    render_pass_color_attachment.clearValue = WGPUColor(clear_color.r, clear_color.g, clear_color.b, clear_color.a);
 
-    EntityMesh* entity_mesh = parse_scene("data/meshes/cube/cube.obj");
-    Mesh* mesh = entity_mesh->get_mesh();
-    Material& material = entity_mesh->get_material();
+    // Prepate the depth attachment
+    WGPURenderPassDepthStencilAttachment render_pass_depth_attachment = {};
+    render_pass_depth_attachment.view = swapchain_depth;
+    render_pass_depth_attachment.depthClearValue = 1.0f;
+    render_pass_depth_attachment.depthLoadOp = WGPULoadOp_Clear;
+    render_pass_depth_attachment.depthStoreOp = WGPUStoreOp_Store;
+    render_pass_depth_attachment.depthReadOnly = false;
+    render_pass_depth_attachment.stencilClearValue = 0; // Stencil config necesary, even if unused
+    render_pass_depth_attachment.stencilLoadOp = WGPULoadOp_Undefined;
+    render_pass_depth_attachment.stencilStoreOp = WGPUStoreOp_Undefined;
+    render_pass_depth_attachment.stencilReadOnly = true;
+
+    WGPURenderPassDescriptor render_pass_descr = {};
+    render_pass_descr.colorAttachmentCount = 1;
+    render_pass_descr.colorAttachments = &render_pass_color_attachment;
+    render_pass_descr.depthStencilAttachment = &render_pass_depth_attachment;
+    WGPURenderPassEncoder render_pass = wgpuCommandEncoderBeginRenderPass(command_encoder, &render_pass_descr);
+
+    // Use render_raymarching pass
+    render_proxy_geometry_pipeline.set(render_pass);
+
+    Mesh* mesh = cube_mesh->get_mesh();
 
     uint8_t bind_group_index = 0;
 
     // Set bind groups
     wgpuRenderPassEncoderSetBindGroup(render_pass, bind_group_index++, render_proxy_geometry_bind_group, 0, nullptr);
-    wgpuRenderPassEncoderSetBindGroup(render_pass, bind_group_index++, compute_raymarching_data_bind_group, 0, nullptr);
+    wgpuRenderPassEncoderSetBindGroup(render_pass, bind_group_index++, render_camera_bind_group, 0, nullptr);
     // Set vertex buffer while encoding the render pass
     wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, mesh->get_vertex_buffer(), 0, mesh->get_byte_size());
 
     // Submit indirect drawcalls
     wgpuRenderPassEncoderDrawIndirect(render_pass, std::get<WGPUBuffer>(octree_proxy_indirect_buffer.data), 0u);
+
+    wgpuRenderPassEncoderEnd(render_pass);
 
     WGPUCommandBufferDescriptor cmd_buff_descriptor = {};
     cmd_buff_descriptor.nextInChain = NULL;
@@ -470,6 +492,11 @@ void RaymarchingRenderer::set_near_far(float z_near, float z_far)
 {
     compute_raymarching_data.camera_near = z_near;
     compute_raymarching_data.camera_far = z_far;
+}
+
+void RaymarchingRenderer::set_camera_eye(const glm::vec3& eye_pos) {
+    WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
+    wgpuQueueWriteBuffer(webgpu_context->device_queue, std::get<WGPUBuffer>(proxy_geometry_eye_position.data), 0,&eye_pos , sizeof(eye_pos));
 }
 
 void RaymarchingRenderer::init_compute_raymarching_pipeline()
@@ -619,6 +646,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         octree_atomic_counter.binding = 5;
         octree_atomic_counter.buffer_size = sizeof(uint32_t);
 
+        octree_proxy_instance_buffer.visibility = WGPUBufferUsage_Vertex;
         octree_proxy_instance_buffer.data = webgpu_context->create_buffer(octants_max_position_buffer_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "proxy_boxes_position_buffer");
         octree_proxy_instance_buffer.binding = 6;
         octree_proxy_instance_buffer.buffer_size = octants_max_position_buffer_size;
@@ -682,10 +710,42 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
 void RaymarchingRenderer::init_raymarching_proxy_pipeline()
 {
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
+    bool is_openxr_available = RoomsRenderer::instance->get_openxr_available();
 
-    render_proxy_shader = RendererStorage::get_shader("");
+    cube_mesh = parse_scene("data/meshes/cube/cube.obj");
 
-    std::vector<Uniform*> uniforms = { &compute_texture_sdf_storage_uniform, &octree_proxy_instance_buffer };
+    render_proxy_shader = RendererStorage::get_shader("data/shaders/octree/proxy_geometry_plain.wgsl");
 
-    render_proxy_geometry_bind_group = webgpu_context->create_bind_group(uniforms, render_proxy_shader, 1);
+    proxy_geometry_eye_position.data = webgpu_context->create_buffer(sizeof(glm::vec3), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "proxy geometry eye position");
+    proxy_geometry_eye_position.binding = 1;
+    proxy_geometry_eye_position.buffer_size = sizeof(glm::vec3);
+
+    Uniform* camera_uniform = static_cast<RoomsRenderer*>(RoomsRenderer::instance)->get_current_camera_uniform();
+
+    std::vector<Uniform*> uniforms = { &u_sampler, &compute_texture_sdf_storage_uniform, &octree_proxy_instance_buffer, &proxy_geometry_eye_position };
+
+    render_proxy_geometry_bind_group = webgpu_context->create_bind_group(uniforms, render_proxy_shader, 0);
+    uniforms = { camera_uniform };
+    render_camera_bind_group = webgpu_context->create_bind_group(uniforms, render_proxy_shader, 1);
+
+    WGPUTextureFormat swapchain_format = is_openxr_available ? webgpu_context->xr_swapchain_format : webgpu_context->swapchain_format;
+
+    WGPUBlendState blend_state;
+    blend_state.color = {
+            .operation = WGPUBlendOperation_Add,
+            .srcFactor = WGPUBlendFactor_SrcAlpha,
+            .dstFactor = WGPUBlendFactor_OneMinusSrcAlpha,
+    };
+    blend_state.alpha = {
+            .operation = WGPUBlendOperation_Add,
+            .srcFactor = WGPUBlendFactor_Zero,
+            .dstFactor = WGPUBlendFactor_One,
+    };
+
+    WGPUColorTargetState color_target = {};
+    color_target.format = swapchain_format;
+    color_target.blend = &blend_state;
+    color_target.writeMask = WGPUColorWriteMask_All;
+
+    render_proxy_geometry_pipeline.create_render(render_proxy_shader, color_target, true);
 }

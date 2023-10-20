@@ -10,6 +10,8 @@
 #define EDITS_MAX 512
 #define SDF_RESOLUTION 512
 
+class EntityMesh;
+
 class RaymarchingRenderer {
 
     Uniform         u_sampler;
@@ -56,6 +58,8 @@ class RaymarchingRenderer {
     Uniform         octree_current_level;
     Uniform         octree_proxy_instance_buffer;
     Uniform         octree_proxy_indirect_buffer;
+    Uniform         proxy_geometry_eye_position;
+    WGPUBindGroup   render_camera_bind_group;
 
     Uniform         camera_uniform;
 
@@ -66,6 +70,8 @@ class RaymarchingRenderer {
 
     Uniform         compute_merge_data_uniform;
     Uniform         compute_edits_array_uniform;
+
+    EntityMesh*     cube_mesh = nullptr;
 
     // Data needed for XR raymarching
     struct sComputeData {
@@ -117,6 +123,12 @@ class RaymarchingRenderer {
         Edit preview_edits[PREVIEW_EDITS_MAX];
     } preview_edit_data;
 
+    struct sRaymarchingData {
+        glm::mat4   view_proj_mat;
+        glm::vec3   eye_pos;
+        float       pad;
+    };
+
     // Timestepping counters
     float updated_time = 0.0f;
 
@@ -141,7 +153,7 @@ public:
     void compute_octree();
     void compute_merge();
     void compute_raymarching();
-    void render_raymarching_proxy();
+    void render_raymarching_proxy(WGPUTextureView swapchain_view, WGPUTextureView swapchain_depth);
 
     void init_compute_raymarching_textures();
 
@@ -150,6 +162,7 @@ public:
     void set_left_eye(const glm::vec3& eye_pos, const glm::mat4x4& view_projection);
     void set_right_eye(const glm::vec3& eye_pos, const glm::mat4x4& view_projection);
     void set_near_far(float z_near, float z_far);
+    void set_camera_eye(const glm::vec3& eye_pos);
 
     /*
     *   Edits

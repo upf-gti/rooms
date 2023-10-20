@@ -12,8 +12,6 @@ class MeshRenderer {
     WGPUBindGroup           render_bind_group_camera = nullptr;
     Shader*                 render_mesh_shader = nullptr;
 
-    Uniform                 camera_uniform;
-
     // For the XR mirror screen
 #if defined(XR_SUPPORT) && defined(USE_MIRROR_WINDOW)
     Pipeline mirror_pipeline;

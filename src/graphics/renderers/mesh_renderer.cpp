@@ -21,8 +21,7 @@ void MeshRenderer::clean()
 
 void MeshRenderer::set_view_projection(const glm::mat4x4& view_projection)
 {
-    WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
-    wgpuQueueWriteBuffer(webgpu_context->device_queue, std::get<WGPUBuffer>(camera_uniform.data), 0, &(view_projection), sizeof(view_projection));
+    
 }
 
 void MeshRenderer::update(float delta_time)
@@ -106,12 +105,7 @@ void MeshRenderer::init_render_mesh_pipelines()
     Shader* render_mesh_grid_shader = RendererStorage::get_shader("data/shaders/mesh_grid.wgsl");
 
     // Camera
-
-    camera_uniform.data = webgpu_context->create_buffer(sizeof(glm::mat4x4), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "camera_buffer");
-    camera_uniform.binding = 0;
-    camera_uniform.buffer_size = sizeof(glm::mat4x4);
-
-    std::vector<Uniform*> uniforms = { &camera_uniform };
+    std::vector<Uniform*> uniforms = { dynamic_cast<RoomsRenderer*>(RoomsRenderer::instance)->get_current_camera_uniform() };
 
     render_bind_group_camera = webgpu_context->create_bind_group(uniforms, render_mesh_shader, 1);
 

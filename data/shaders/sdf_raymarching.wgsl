@@ -188,10 +188,6 @@ fn get_ray_direction(inv_view_projection : mat4x4f, uv : vec2f) -> vec3f
 	return normalize(ray_dir.xyz);
 }
 
-fn map_depths_to_log(depth: f32) -> f32 {
-    return log(depth + 1.0) / log(compute_data.camera_far + 1.0);
-}
-
 @compute @workgroup_size(16, 16, 1)
 fn compute(@builtin(global_invocation_id) id: vec3<u32>) {
 

@@ -18,10 +18,11 @@ class RoomsRenderer : public Renderer {
     RaymarchingRenderer raymarching_renderer;
 
     Mesh  quad_mesh;
+    Uniform         camera_uniform;
 
     // Render to screen
-    Pipeline render_quad_pipeline = {};
-    Shader*  render_quad_shader = nullptr;
+    Pipeline        render_quad_pipeline = {};
+    Shader*         render_quad_shader = nullptr;
 
     Texture         eye_textures[EYE_COUNT] = {};
     Texture         eye_depth_textures[EYE_COUNT] = {};
@@ -36,7 +37,7 @@ class RoomsRenderer : public Renderer {
 
     void init_render_quad_pipeline();
     void init_render_quad_bind_groups();
-
+    void init_camera_bindgroup();
 #if defined(XR_SUPPORT)
 
     void render_xr();
@@ -68,6 +69,10 @@ public:
     void render() override;
 
     void resize_window(int width, int height) override;
+
+    inline Uniform* get_current_camera_uniform() {
+        return &camera_uniform;
+    }
 
     void set_sculpt_start_position(const glm::vec3& position) {
         raymarching_renderer.set_sculpt_start_position(position);
