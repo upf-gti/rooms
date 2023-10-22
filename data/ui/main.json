@@ -1,12 +1,31 @@
 {
-    "width": 256,
+    "width": 328,
     "height": 144,
     "elements": [
 
         {
             "name": "g_main_tools",
             "type": "group",
-            "nitems": 2
+            "nitems": 6,
+            "user-note": "There are 4 elements, but 2 of them use 2 slots"
+        },
+        {
+            "name": "test_slider",
+            "type": "slider",
+            "default": 0.6,
+            "color": "0.47 0.37 0.94 1"
+        },
+        {
+            "name": "color_picker",
+            "type": "picker",
+            "default": "1 0 0 1",
+            "slider": {
+                "name": "intensity",
+                "type": "slider",
+                "mode": "vertical",
+                "default": 1,
+                "color": "0.47 0.37 0.94 1"
+            }
         },
         {
             "name": "sculpt",

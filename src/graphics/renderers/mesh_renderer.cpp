@@ -99,8 +99,10 @@ void MeshRenderer::init_render_mesh_pipelines()
 
     render_mesh_shader = RendererStorage::get_shader("data/shaders/mesh_color.wgsl");
     Shader* render_mesh_texture_shader = RendererStorage::get_shader("data/shaders/mesh_texture.wgsl");
-    Shader* render_mesh_ui_shader = RendererStorage::get_shader("data/shaders/mesh_ui.wgsl");
-    Shader* render_mesh_ui_texture_shader = RendererStorage::get_shader("data/shaders/mesh_texture_ui.wgsl");
+    Shader* render_mesh_ui_shader = RendererStorage::get_shader("data/shaders/ui/ui_group.wgsl");
+    Shader* render_mesh_ui_texture_shader = RendererStorage::get_shader("data/shaders/ui/ui_button.wgsl");
+    Shader* render_mesh_ui_slider_shader = RendererStorage::get_shader("data/shaders/ui/ui_slider.wgsl");
+    Shader* render_mesh_color_picker_shader = RendererStorage::get_shader("data/shaders/ui/ui_color_picker.wgsl");
     Shader* render_fonts_shader = RendererStorage::get_shader("data/shaders/sdf_fonts.wgsl");
     Shader* render_mesh_grid_shader = RendererStorage::get_shader("data/shaders/mesh_grid.wgsl");
 
@@ -132,6 +134,8 @@ void MeshRenderer::init_render_mesh_pipelines()
     Pipeline::register_render_pipeline(render_mesh_texture_shader, color_target, true);
     Pipeline::register_render_pipeline(render_mesh_ui_shader, color_target, true);
     Pipeline::register_render_pipeline(render_mesh_ui_texture_shader, color_target, true);
+    Pipeline::register_render_pipeline(render_mesh_ui_slider_shader, color_target, true);
+    Pipeline::register_render_pipeline(render_mesh_color_picker_shader, color_target, true);
     Pipeline::register_render_pipeline(render_fonts_shader, color_target, true);
     Pipeline::register_render_pipeline(render_mesh_grid_shader, color_target, true);
 }

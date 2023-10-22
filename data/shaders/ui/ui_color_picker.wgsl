@@ -27,10 +27,15 @@ struct CameraData {
 };
 
 struct UIData {
+    is_hovered : f32,
     num_group_items : f32,
     is_selected : f32,
-    is_hovered : f32,
-    is_color_button : f32
+    is_color_button : f32,
+    picker_color: vec4f,
+    slider_value : f32,
+    dummy0 : f32,
+    dummy1 : f32,
+    dummy2 : f32,
 };
 
 @group(0) @binding(0) var<storage, read> mesh_data : InstanceData;
@@ -59,6 +64,57 @@ struct FragmentOutput {
     @location(0) color: vec4f
 }
 
+fn modulo_euclidean(a: f32, b: f32) -> f32
+{
+	var m = a % b;
+	if (m < 0.0) {
+		if (b < 0.0) {
+			m -= b;
+		} else {
+			m += b;
+		}
+	}
+	return m;
+}
+
+fn modulo_euclidean_vec3( v : vec3f, m: f32) -> vec3f
+{
+	return vec3f(
+        modulo_euclidean(v.x, m),
+        modulo_euclidean(v.y, m),
+        modulo_euclidean(v.z, m)
+    );
+}
+
+fn hsv2rgb_smooth( c : vec3f ) -> vec3f
+{
+    var m = modulo_euclidean_vec3(c.x * 6.0 + vec3f(0.0, 4.0, 2.0), 6.0);
+    var rgb = clamp( abs(m - 3.0) - 1.0, vec3f(0.0), vec3f(1.0) );
+
+	rgb = rgb*rgb*(3.0-2.0*rgb); // cubic smoothing	
+
+	return mix(vec3(1.0),mix( vec3(1.0), rgb, c.y), c.z);
+}
+
+fn getColor( uvs : vec2f ) -> vec3f
+{
+    let pi = 3.1415927;
+
+    var p = uvs;
+    
+    var r = pi / 2.0;
+
+    p *= mat2x2f(cos(r),sin(r),-sin(r), cos(r));
+
+    var polar = vec2f(atan2(p.y, p.x), length(p));
+    
+    var percent = (polar.x + pi) / (2.0 * pi);
+    
+    var hsv = vec3f(percent, 1., polar.y);
+    
+    return hsv2rgb_smooth(hsv);
+}
+
 @fragment
 fn fs_main(in: VertexOutput) -> FragmentOutput {
 
@@ -69,37 +125,18 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     if (color.a < 0.01) {
         discard;
     }
-    
-    let hover_color = vec3f(0.95, 0.76, 0.17);
-    var _color = color.rgb;
 
-    if( ui_data.is_color_button > 0.0 )  {
-        _color *= in.color;
-    }
+    // Mask
+    var uvs = in.uv;
+    var divisions = 1.0;
+    uvs.x *= divisions;
+    var p = vec2f(clamp(uvs.x, 0.5, 0.5), 0.5);
+    var d = 1.0 - step(0.435, distance(uvs, p));
 
-    let selected_color = vec3f(0.47, 0.37, 0.94);
-    var widget_color = mix(in.color, hover_color, ui_data.is_hovered);
-    var mask = distance(in.uv, vec2f(0.5));
+    uvs = in.uv;
+    var current_color = ui_data.picker_color.rgb * ui_data.picker_color.a;
+    var final_color = getColor(uvs * 2 - 1) * d + current_color * (1 - d);
 
-    if( ui_data.is_selected > 0.0 ) {
-
-        var icon_mask = smoothstep(1 - color.r, 0.5, 1.0);
-        _color = mix(vec3f(1 - icon_mask) * (1 - mask), selected_color, icon_mask);
-        _color = max(_color, vec3f(0.12));
-    } 
-
-    var masked_color : vec3f;
-
-    if( ui_data.is_color_button > 0.0 ) {
-        mask = step(0.45, mask);
-        var border_color = mix(widget_color, vec3f(0.2,0.2,0.2), ui_data.is_selected);
-        masked_color = mix(in.color, mix(border_color, hover_color, ui_data.is_hovered), mask);
-    } else {
-        mask = step(0.45 + (1.0 - ui_data.is_hovered), mask);
-        masked_color = mix(widget_color, _color, 1.0 - mask);
-    }
-   
-    out.color = vec4f(pow(masked_color, vec3f(2.2)), color.a);
-
+    out.color = vec4f(pow(final_color, vec3f(2.2)), color.a);
     return out;
 }
