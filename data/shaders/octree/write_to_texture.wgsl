@@ -18,7 +18,7 @@ struct MergeData {
 
 const SQRT_3 = 1.73205080757;
 
-@compute @workgroup_size(8, 8, 8)
+@compute @workgroup_size(10,10,10)
 fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation_id) local_id: vec3<u32>)
 {
 
@@ -49,7 +49,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
     var sSurface : Surface = Surface(vec3f(0.0, 0.0, 0.0), 10000.0);
 
-    let pixel_offset : vec3f = vec3f(local_id) / SDF_RESOLUTION;
+    let pixel_offset : vec3f = (vec3f(local_id) - 1.0) / SDF_RESOLUTION;
 
     for (var i : u32 = 0; i < merge_data.edits_to_process; i++) {
 
@@ -63,9 +63,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
         sSurface = evalEdit(octant_corner + pixel_offset, sSurface, edit);
     }
 
-    // if (abs(sSurface.distance) < (level_half_size * SQRT_3)) {
-        textureStore(write_sdf, start_writing_pos + local_id, vec4f(sSurface.color, sSurface.distance));
-    // }
+    textureStore(write_sdf, start_writing_pos + local_id - 1, vec4f(sSurface.color, sSurface.distance));
 
     octant_usage_write[0] = 0;
 }

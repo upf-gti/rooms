@@ -55,8 +55,8 @@ struct FragmentOutput {
 
 @group(0) @binding(1) var<uniform> eye_position : vec3f;
 
-const MAX_DIST = 1.5;
-const MIN_HIT_DIST = 0.0003;
+const MAX_DIST = sqrt(3.0) * 8.0 * (1.0 / SDF_RESOLUTION);
+const MIN_HIT_DIST = 0.000001;
 const DERIVATIVE_STEP = 1.0 / (SDF_RESOLUTION / 2.0);
 
 const specularCoeff = 1.0;
@@ -147,9 +147,7 @@ fn raymarch(ray_origin : vec3f, ray_dir : vec3f, view_proj : mat4x4f) -> vec4f
     var edge_threshold = 0.003;
     var edge : f32 = 0.0;
 
-    let max_depth : f32 = depth + MAX_DIST;
-
-	for (var i : i32 = 0; depth < max_depth && i < 200; i++)
+	for (var i : i32 = 0; depth < MAX_DIST && i < 60; i++)
 	{
 		let pos = ray_origin + ray_dir * depth;
 

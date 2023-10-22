@@ -26,15 +26,15 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
 
     edits = new Edit[EDITS_MAX];
 
-    /*edits[compute_merge_data.edits_to_process++] = {
+    edits[compute_merge_data.edits_to_process++] = {
         .position = { 0.0, 0.0, 0.0 },
         .primitive = SD_SPHERE,
         .color = { 1.0, 0.0, 0.0 },
         .operation = OP_SMOOTH_UNION,
-        .dimensions = { 0.4, 0.4, 0.4, 0.4 },
+        .dimensions = { 0.05f, 0.05f, 0.05f, 0.05f },
         .rotation = { 0.f, 0.f, 0.f, 1.f },
         .parameters = { 0.0, -1.0, 0.0, 0.0 },
-    };*/
+    };
 
     //edits[compute_merge_data.edits_to_process++] = {
     //    .position = { 0.1, 0.0, 0.0 },
@@ -563,7 +563,7 @@ void RaymarchingRenderer::init_compute_raymarching_textures()
     compute_texture_right_eye_uniform.data = rooms_renderer->get_eye_texture(EYE_RIGHT)->get_view();
     compute_texture_right_eye_uniform.binding = 1;
 
-    u_sampler.data = webgpu_context->create_sampler(WGPUAddressMode_ClampToEdge, WGPUFilterMode_Nearest, WGPUFilterMode_Nearest, WGPUMipmapFilterMode_Nearest); // Using all default params
+    u_sampler.data = webgpu_context->create_sampler(); // Using all default params
     u_sampler.binding = 2;
 
     std::vector<Uniform*> uniforms = { &compute_texture_left_eye_uniform, &compute_texture_right_eye_uniform, &compute_texture_sdf_storage_uniform, &u_sampler };
