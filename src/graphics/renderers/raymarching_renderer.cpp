@@ -224,7 +224,7 @@ void RaymarchingRenderer::compute_raymarching()
     glm::vec3 edit_AABB_max = { -100.0f, -100.0f, -100.0f };
     glm::vec3 tmp_min, tmp_max;
     for (uint16_t i = 0; i < preview_edit_data.preview_edits_count; i++) {
-        preview_edit_data.preview_edits[i].get_world_AABB(&tmp_min, &tmp_max, glm::vec3(0.0f), compute_merge_data.sculpt_rotation, true);
+        preview_edit_data.preview_edits[i].get_world_AABB(&tmp_min, &tmp_max, glm::vec3(0.0f), glm::quat(), true);
         edit_AABB_min = glm::min(edit_AABB_min, tmp_min);
         edit_AABB_max = glm::max(edit_AABB_max, tmp_max);
     }
