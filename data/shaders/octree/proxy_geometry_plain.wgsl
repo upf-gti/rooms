@@ -56,8 +56,8 @@ struct FragmentOutput {
 @group(0) @binding(1) var<uniform> eye_position : vec3f;
 
 const MAX_DIST = sqrt(3.0) * 8.0 * (1.0 / SDF_RESOLUTION);
-const MIN_HIT_DIST = 0.000001;
-const DERIVATIVE_STEP = 1.0 / (SDF_RESOLUTION / 2.0);
+const MIN_HIT_DIST = 0.00005;
+const DERIVATIVE_STEP = 1.0 / SDF_RESOLUTION;
 
 const specularCoeff = 1.0;
 const specularExponent = 4.0;
@@ -117,10 +117,9 @@ fn estimate_normal(p : vec3f) -> vec3f
     ));
 }
 
-fn blinn_phong(ray_origin : vec3f, position : vec3f, lightPosition : vec3f, ambient : vec3f, diffuse : vec3f) -> vec3f
+fn blinn_phong(toEye : vec3f, position : vec3f, lightPosition : vec3f, ambient : vec3f, diffuse : vec3f) -> vec3f
 {
     let normal : vec3f = estimate_normal(position);
-    let toEye : vec3f = normalize(ray_origin - position);
     let toLight : vec3f = normalize(lightPosition - position);
     let reflection : vec3f = normalize(reflect(-toLight, normal)); // uncomment for Phong model
     let halfwayDir : vec3f = normalize(toLight + toEye);
@@ -163,7 +162,7 @@ fn raymarch(ray_origin : vec3f, ray_dir : vec3f, view_proj : mat4x4f) -> vec4f
             let epsilon : f32 = 0.000001; // avoids flashing when camera inside sdf
             let proj_pos : vec4f = view_proj * vec4f(pos + ray_dir * epsilon, 1.0);
             depth = proj_pos.z / proj_pos.w;
-			return vec4f(blinn_phong(ray_origin, pos, lightPos + lightOffset, ambientColor, surface.color * (1.0 - edge)), depth);
+			return vec4f(blinn_phong(-ray_dir, pos, lightPos + lightOffset, ambientColor, surface.color * (1.0 - edge)), depth);
 		}
 
         surface_min_dist = surface.distance;
