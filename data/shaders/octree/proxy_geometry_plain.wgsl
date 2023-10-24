@@ -14,9 +14,16 @@ struct VertexOutput {
     @location(1) normal: vec3f,
     @location(2) color: vec3f,
     @location(3) world_pos : vec3f,
-    @location(4) voxel_center : vec3f
+    @location(4) voxel_pos : vec3f,
+    @location(5) voxel_center : vec3f
 };
 
+struct SculptData {
+    sculpt_start_position   : vec3f,
+    dummy1                  : f32,
+    sculpt_rotation         : vec4f,
+    sculpt_inv_rotation     : vec4f
+};
 
 struct CameraData {
     view_projection : mat4x4f,
@@ -36,15 +43,20 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 
     let instance_pos : vec3f = proxy_box_position_buffer[in.instance_id];
 
-    let model_mat = mat4x4f(vec4f(BOX_SIZE, 0.0, 0.0, 0.0), vec4f(0.0, BOX_SIZE, 0.0, 0.0), vec4f(0.0, 0.0, BOX_SIZE, 0.0), vec4f(instance_pos.x, instance_pos.y, instance_pos.z, 1.0));
+    var voxel_pos : vec3f = in.position * BOX_SIZE + instance_pos;
+    var world_pos : vec3f = rotate_point_quat(voxel_pos, sculpt_data.sculpt_rotation);
+    world_pos += sculpt_data.sculpt_start_position;
+
+    // let model_mat = mat4x4f(vec4f(BOX_SIZE, 0.0, 0.0, 0.0), vec4f(0.0, BOX_SIZE, 0.0, 0.0), vec4f(0.0, 0.0, BOX_SIZE, 0.0), vec4f(instance_pos.x, instance_pos.y, instance_pos.z, 1.0));
 
     var out: VertexOutput;
-    let world_pos : vec4f = model_mat * vec4f(in.position, 1.0);
-    out.position = camera_data.view_projection * world_pos;
+    // world_pos = vec4f(rotate_point_quat(world_pos.xyz, sculpt_data.sculpt_rotation), 1.0);
+    out.position = camera_data.view_projection * vec4f(world_pos, 1.0);
     out.uv = in.uv; // forward to the fragment shader
     out.color = in.color;
     out.normal = in.normal;
     out.world_pos = world_pos.xyz;
+    out.voxel_pos = voxel_pos;
     out.voxel_center = instance_pos;
 
     return out;
@@ -56,6 +68,7 @@ struct FragmentOutput {
 }
 
 @group(0) @binding(1) var<uniform> eye_position : vec3f;
+@group(2) @binding(0) var<uniform> sculpt_data : SculptData;
 
 const VOXEL_SIZE = vec3f(8.0 * (1.0 / SDF_RESOLUTION));
 const MAX_DIST = sqrt(3.0) * 8.0 * (1.0 / SDF_RESOLUTION);
@@ -112,25 +125,17 @@ fn ray_AABB_intersection_distance(ray_origin : vec3f,
 
 fn sample_sdf(position : vec3f) -> Surface
 {
-    let p = (position + vec3(0.5));
+    let rot_p = rotate_point_quat(position - sculpt_data.sculpt_start_position, sculpt_data.sculpt_inv_rotation) + vec3f(0.5);
 
-    //let rot_p = rotate_point_quat(p - vec3f(0.5), compute_data.sculpt_rotation) + vec3f(0.5);
-
-    if (p.x < 0.0 || p.x > 1.0 ||
-        p.y < 0.0 || p.y > 1.0 ||
-        p.z < 0.0 || p.z > 1.0) {
-        return Surface(vec3(0.0, 0.0, 0.0), 0.01);
-    }
-    /*if (rot_p.x < 0.0 || rot_p.x > 1.0 ||
+    if (rot_p.x < 0.0 || rot_p.x > 1.0 ||
         rot_p.y < 0.0 || rot_p.y > 1.0 ||
         rot_p.z < 0.0 || rot_p.z > 1.0) {
         return Surface(vec3(0.0, 0.0, 0.0), 0.01);
-    }*/
+    }
 
     var data : vec4f;
 
-    //data = textureSampleLevel(read_sdf, texture_sampler, rot_p, 0.0);
-    data = textureSampleLevel(read_sdf, texture_sampler, p, 0.0);
+    data = textureSampleLevel(read_sdf, texture_sampler, rot_p, 0.0);
 
     var surface : Surface = Surface(data.xyz, data.w);
 
@@ -177,7 +182,7 @@ fn raymarch(ray_origin : vec3f, ray_dir : vec3f, max_distance : f32, view_proj :
     var edge_threshold = 0.003;
     var edge : f32 = 0.0;
 
-	for (var i : i32 = 0; depth < max_distance && i < 60; i++)
+	for (var i : i32 = 0; depth < max_distance && i < 80; i++)
 	{
 		let pos = ray_origin + ray_dir * depth;
 
@@ -189,15 +194,15 @@ fn raymarch(ray_origin : vec3f, ray_dir : vec3f, max_distance : f32, view_proj :
         //     edge = 1.0;
         // }
 
-		if (surface.distance < MIN_HIT_DIST) {
+		if ((surface.distance) < MIN_HIT_DIST) {
             let epsilon : f32 = 0.000001; // avoids flashing when camera inside sdf
             let proj_pos : vec4f = view_proj * vec4f(pos + ray_dir * epsilon, 1.0);
             depth = proj_pos.z / proj_pos.w;
 			return vec4f(blinn_phong(-ray_dir, pos, lightPos + lightOffset, ambientColor, surface.color * (1.0 - edge)), depth);
 		}
 
-        surface_min_dist = surface.distance;
-        depth += surface.distance;
+        surface_min_dist = (surface.distance);
+        depth += (surface.distance);
 	}
 
     // Use a two band spherical harmonic as a skymap
@@ -209,13 +214,17 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     var out: FragmentOutput;
     let ray_dir : vec3f = normalize(in.world_pos.xyz - eye_position);
+    let ray_dir_voxel_space : vec3f = normalize(in.voxel_pos - rotate_point_quat(eye_position - sculpt_data.sculpt_start_position, sculpt_data.sculpt_inv_rotation));
 
-    let raymarch_distance : f32 = ray_AABB_intersection_distance(in.world_pos.xyz, ray_dir, in.voxel_center, VOXEL_SIZE);
+    let raymarch_distance : f32 = ray_AABB_intersection_distance(in.voxel_pos, ray_dir_voxel_space, in.voxel_center, VOXEL_SIZE);
 
     let ray_result = raymarch(in.world_pos.xyz, ray_dir, raymarch_distance, camera_data.view_projection);
 
     out.color = vec4f(pow(ray_result.rgb, vec3f(2.2, 2.2, 2.2)), 1.0); // Color
     out.depth = ray_result.a;
+
+    // out.color = vec4f(1.0, 0.0, 0.0, 1.0); // Color
+    // out.depth = 0.0;
 
     if (out.depth == 0.999) {
         discard;

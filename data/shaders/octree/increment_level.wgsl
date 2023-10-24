@@ -33,7 +33,7 @@ fn compute(@builtin(global_invocation_id) id: vec3<u32>)
     atomicStore(&atomic_counter, 0);
     let prev_level : u32 = atomicAdd(&current_level, 1);
 
-    if (merge_data.max_octree_depth == prev_level + 1) {
+    if (merge_data.max_octree_depth == prev_level) {
         proxy_box_indirect[1] = num_dispatches;
     }
 }

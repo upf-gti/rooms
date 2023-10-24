@@ -151,10 +151,6 @@ void SculptEditor::update(float delta_time)
 
     bool is_tool_used = tool_used.update(delta_time);
 
-    if (current_tool == SCULPT && is_tool_used) {
-        sculpt_started = true;
-    }
-
     Edit& edit_to_add = tool_used.get_edit_to_add();
 
     if (snap_to_grid) {
@@ -169,6 +165,10 @@ void SculptEditor::update(float delta_time)
         sculpt_start_position = edit_to_add.position;
         renderer->set_sculpt_start_position(sculpt_start_position);
         mirror_origin = sculpt_start_position;
+    }
+
+    if (current_tool == SCULPT && is_tool_used) {
+        sculpt_started = true;
     }
 
     // Rotate the scene
@@ -192,6 +192,7 @@ void SculptEditor::update(float delta_time)
         sculpt_start_position = sculpt_start_position + translation_diff;
         rotation_started = false;
         rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
+        translation_diff = {};
     }
 
     // Update edit dimensions
@@ -224,6 +225,12 @@ void SculptEditor::update(float delta_time)
         edit_to_add.parameters.x = onion_thickness;
         edit_to_add.parameters.y = capped_value;
     }
+
+    // Push edits in 3d texture space
+    edit_to_add.position -= (sculpt_start_position + translation_diff);
+    edit_to_add.position = (sculpt_rotation * rotation_diff) * edit_to_add.position;
+
+    edit_to_add.rotation *= (sculpt_rotation * rotation_diff);
 
     if (is_tool_used) {
         new_edits.push_back(edit_to_add);

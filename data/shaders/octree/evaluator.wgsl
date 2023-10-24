@@ -52,15 +52,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     var sSurface : Surface = Surface(vec3f(0.0, 0.0, 0.0), 10000.0);
 
     for (var i : u32 = 0; i < merge_data.edits_to_process; i++) {
-
-        var edit : Edit = edits.data[i];
-
-        //edit.position -= merge_data.sculpt_start_position;
-        edit.position = rotate_point_quat(edit.position, merge_data.sculpt_rotation);
-        
-        edit.rotation = quat_mult(edit.rotation, quat_inverse(merge_data.sculpt_rotation));
-
-        sSurface = evalEdit(octant_center, sSurface, edit);
+        sSurface = evalEdit(octant_center, sSurface, edits.data[i]);
     }
 
     if (abs(sSurface.distance) < (level_half_size * SQRT_3)) {

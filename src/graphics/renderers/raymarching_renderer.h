@@ -14,30 +14,19 @@ class EntityMesh;
 
 class RaymarchingRenderer {
 
-    Uniform         u_sampler;
+    Uniform         linear_sampler_uniform;
 
     // Compute
     Pipeline        initialize_sdf_pipeline;
     Shader*         initialize_sdf_shader = nullptr;
     WGPUBindGroup   initialize_sdf_bind_group = nullptr;
 
-    Pipeline        compute_raymarching_pipeline;
-    Shader*         compute_raymarching_shader = nullptr;
-    WGPUBindGroup   compute_raymarching_textures_bind_group = nullptr;
-    WGPUBindGroup   compute_raymarching_data_bind_group = nullptr;
-
     Pipeline        render_proxy_geometry_pipeline;
     Shader*         render_proxy_shader = nullptr;
     WGPUBindGroup   render_proxy_geometry_bind_group = nullptr;
 
-    Pipeline        compute_merge_pipeline;
-    Shader*         compute_merge_shader = nullptr;
-    WGPUBindGroup   compute_merge_bind_group = nullptr;
-
     Texture         sdf_texture;
-    Texture         sdf_copy_read_texture;
-    Uniform         compute_texture_sdf_storage_uniform;
-    //Uniform         compute_texture_sdf_copy_storage_uniform;
+    Uniform         sdf_texture_uniform;
 
     // Octree creation
     Pipeline        compute_octree_evaluate_pipeline;
@@ -61,42 +50,26 @@ class RaymarchingRenderer {
     Uniform         proxy_geometry_eye_position;
     WGPUBindGroup   render_camera_bind_group;
 
+    Uniform         sculpt_data_uniform;
+    WGPUBindGroup   sculpt_data_bind_group = nullptr;
+
     Uniform         camera_uniform;
 
-    Uniform         compute_buffer_data_uniform;
     Uniform         compute_preview_edit_uniform;
-    Uniform         compute_texture_left_eye_uniform;
-    Uniform         compute_texture_right_eye_uniform;
 
     Uniform         compute_merge_data_uniform;
     Uniform         compute_edits_array_uniform;
 
     EntityMesh*     cube_mesh = nullptr;
 
-    // Data needed for XR raymarching
-    struct sComputeData {
-        glm::mat4x4 view_projection_left_eye;
-        glm::mat4x4 view_projection_right_eye;
+    uint32_t        last_edits_to_process = 0;
 
-        glm::mat4x4 inv_view_projection_left_eye;
-        glm::mat4x4 inv_view_projection_right_eye;
-
-        glm::vec3 left_eye_pos;
-        float render_height = 0.0f;
-        glm::vec3 right_eye_pos;
-        float render_width = 0.0f;
-
-        float time          = 0.0f;
-        float camera_near   = 0.0f;
-        float camera_far    = 0.0f;
-        float dummy0        = 0.0f;
-
+    struct sSculptData {
         glm::vec3 sculpt_start_position = {0.f, 0.f, 0.f};
         float dummy1 = 0.0f;
-
         glm::quat sculpt_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
-
-    } compute_raymarching_data;
+        glm::quat sculpt_inv_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
+    } sculpt_data;
 
     // Data needed for sdf merging
     struct sMergeData {
@@ -123,20 +96,12 @@ class RaymarchingRenderer {
         Edit preview_edits[PREVIEW_EDITS_MAX];
     } preview_edit_data;
 
-    struct sRaymarchingData {
-        glm::mat4   view_proj_mat;
-        glm::vec3   eye_pos;
-        float       pad;
-    };
-
     // Timestepping counters
     float updated_time = 0.0f;
 
     void compute_initialize_sdf();
 
-    void init_compute_raymarching_pipeline();
     void init_initialize_sdf_pipeline();
-    void init_compute_merge_pipeline();
     void init_compute_octree_pipeline();
     void init_raymarching_proxy_pipeline();
 
@@ -151,17 +116,10 @@ public:
     void render();
 
     void compute_octree();
-    void compute_merge();
-    void compute_raymarching();
     void render_raymarching_proxy(WGPUTextureView swapchain_view, WGPUTextureView swapchain_depth);
 
-    void init_compute_raymarching_textures();
-
     void set_sculpt_start_position(const glm::vec3& position);
-    void set_render_size(float width, float height);
-    void set_left_eye(const glm::vec3& eye_pos, const glm::mat4x4& view_projection);
-    void set_right_eye(const glm::vec3& eye_pos, const glm::mat4x4& view_projection);
-    void set_near_far(float z_near, float z_far);
+    void set_sculpt_rotation(const glm::quat& rotation);
     void set_camera_eye(const glm::vec3& eye_pos);
 
     /*
@@ -181,7 +139,6 @@ public:
     };
 
     void add_preview_edit(const Edit& edit);
-    void set_sculpt_rotation(const glm::quat& rotation);
 
     const std::vector<Edit>& get_scene_edits() { return scene_edits; }
     const glm::vec3& get_sculpt_start_position() { return compute_merge_data.sculpt_start_position; }
