@@ -33,7 +33,7 @@
         {
             "name": "g_guides",
             "type": "group",
-            "nitems": 2
+            "nitems": 3
         },
         {
             "name": "mirror",
@@ -45,6 +45,12 @@
             "name": "snap_to_grid",
             "type": "button",
             "texture": "data/textures/snap_to_grid.png",
+            "allow_toggle": true
+        },
+        {
+            "name": "lock_axis",
+            "type": "button",
+            "texture": "data/textures/lock_axis.png",
             "allow_toggle": true
         },
         {

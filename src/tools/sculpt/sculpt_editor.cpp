@@ -32,6 +32,7 @@ void SculptEditor::initialize()
     floor_grid_mesh->rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
     floor_grid_mesh->scale(glm::vec3(3.f));
 
+    axis_lock_gizmo.initialize(POSITION_GIZMO, sculpt_start_position);
     mirror_gizmo.initialize(POSITION_GIZMO, sculpt_start_position);
 
     tools[SCULPT] = new SculptTool();
@@ -67,7 +68,8 @@ void SculptEditor::initialize()
         gui.bind("capped", [&](const std::string& signal, void* button) { set_primitive_modifier(capped_enabled); });
 
         gui.bind("mirror", [&](const std::string& signal, void* button) { use_mirror = !use_mirror; });
-        gui.bind("snap_to_grid", [&](const std::string& signal, void* button) { enable_tool(SWEEP);});//snap_to_grid = !snap_to_grid; });
+        gui.bind("snap_to_grid", [&](const std::string& signal, void* button) { /*enable_tool(SWEEP);*/ snap_to_grid = !snap_to_grid; });
+        gui.bind("lock_axis", [&](const std::string& signal, void* button) { axis_lock = !axis_lock; });
 
         gui.bind("color_picker", [&](const std::string& signal, Color color) {
             current_color = color;
@@ -158,9 +160,9 @@ void SculptEditor::update(float delta_time)
     Edit& edit_to_add = tool_used.get_edit_to_add();
 
     if (snap_to_grid) {
-        float grid_multiplier = 1.0f / snap_grid_size;
+        float grid_multiplier = 1.f / snap_grid_size;
         // Uncomment for grid size of half of the edit radius
-        // grid_multiplier = 1.0f / (edit_to_add.dimensions.x / 2.0f);
+        // grid_multiplier = 1.f / (edit_to_add.dimensions.x / 2.f);
         edit_to_add.position = glm::round(edit_to_add.position * grid_multiplier) / grid_multiplier;
     }
 
@@ -169,6 +171,24 @@ void SculptEditor::update(float delta_time)
         sculpt_start_position = edit_to_add.position;
         renderer->set_sculpt_start_position(sculpt_start_position);
         mirror_origin = sculpt_start_position;
+        axis_lock_position = sculpt_start_position;
+    }
+
+    if (axis_lock) {
+
+        axis_lock_position = axis_lock_gizmo.update(axis_lock_position, delta_time);
+
+        glm::vec3 locked_pos = edit_to_add.position;
+
+        if (axis_lock_mode & AXIS_LOCK_X)
+            locked_pos.x = axis_lock_position.x;
+        else if (axis_lock_mode & AXIS_LOCK_Y)
+            locked_pos.y = axis_lock_position.y;
+        else if (axis_lock_mode & AXIS_LOCK_Z)
+            locked_pos.z = axis_lock_position.z;
+
+        edit_to_add.position = locked_pos;
+        edit_to_add.rotation = glm::quat();
     }
 
     // Rotate the scene
@@ -285,7 +305,27 @@ void SculptEditor::render()
     gui.render();
     helper_gui.render();
 
-    if (use_mirror) {
+    if (axis_lock) {
+        axis_lock_gizmo.render();
+
+        mirror_mesh->set_translation(axis_lock_position);
+        if (axis_lock_mode & AXIS_LOCK_X)
+            mirror_mesh->rotate(glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        else if (axis_lock_mode & AXIS_LOCK_Y)
+            mirror_mesh->rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+
+        // debug
+        if (Input::was_key_pressed(GLFW_KEY_X))
+            axis_lock_mode = AXIS_LOCK_X;
+        if (Input::was_key_pressed(GLFW_KEY_Y))
+            axis_lock_mode = AXIS_LOCK_Y;
+        if (Input::was_key_pressed(GLFW_KEY_Z))
+            axis_lock_mode = AXIS_LOCK_Z;
+
+        mirror_mesh->render();
+    }
+
+    else if (use_mirror) {
         mirror_gizmo.render();
         mirror_mesh->set_translation(mirror_origin);
         mirror_mesh->rotate(glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
