@@ -64,6 +64,19 @@ class SculptEditor {
     bool capped_enabled = false;
     float capped_value  = -1.0f; // -1..1 no cap..fully capped
 
+    // Axis lock
+
+    enum : uint8_t {
+        AXIS_LOCK_X = 1 << 0,
+        AXIS_LOCK_Y = 1 << 1,
+        AXIS_LOCK_Z = 1 << 2,
+    };
+
+    bool axis_lock = false;
+    TransformGizmo axis_lock_gizmo;
+    uint8_t axis_lock_mode = AXIS_LOCK_Z;
+    glm::vec3 axis_lock_position = glm::vec3(0.f);
+
     // Snap to grid
 
     bool snap_to_grid = false;
@@ -76,8 +89,8 @@ class SculptEditor {
     TransformGizmo mirror_gizmo;
     EntityMesh* mirror_mesh = nullptr;
 
-    glm::vec3 mirror_origin = glm::vec3(0.0f, 0.0f, 0.0f);
-    glm::vec3 mirror_normal = glm::vec3(1.0f, 0.0f, 0.0f);
+    glm::vec3 mirror_origin = glm::vec3(0.f);
+    glm::vec3 mirror_normal = glm::vec3(1.f, 0.f, 0.f);
 
     
     // UI

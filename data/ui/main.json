@@ -1,31 +1,11 @@
 {
-    "width": 328,
+    "width": 512,
     "height": 144,
     "elements": [
-
         {
             "name": "g_main_tools",
             "type": "group",
-            "nitems": 6,
-            "user-note": "There are 4 elements, but 2 of them use 2 slots"
-        },
-        {
-            "name": "test_slider",
-            "type": "slider",
-            "default": 0.6,
-            "color": "0.47 0.37 0.94 1"
-        },
-        {
-            "name": "color_picker",
-            "type": "picker",
-            "default": "1 0 0 1",
-            "slider": {
-                "name": "intensity",
-                "type": "slider",
-                "mode": "vertical",
-                "default": 1,
-                "color": "0.47 0.37 0.94 1"
-            }
+            "nitems": 2
         },
         {
             "name": "sculpt",
@@ -51,6 +31,11 @@
             "texture": "data/textures/colors.png"
         },
         {
+            "name": "g_guides",
+            "type": "group",
+            "nitems": 3
+        },
+        {
             "name": "mirror",
             "type": "button",
             "texture": "data/textures/mirror.png",
@@ -60,6 +45,12 @@
             "name": "snap_to_grid",
             "type": "button",
             "texture": "data/textures/snap_to_grid.png",
+            "allow_toggle": true
+        },
+        {
+            "name": "lock_axis",
+            "type": "button",
+            "texture": "data/textures/lock_axis.png",
             "allow_toggle": true
         },
         {
@@ -143,6 +134,23 @@
             "name": "colors",
             "type": "submenu",
             "children": [
+                {
+                    "name": "g_picker",
+                    "type": "group",
+                    "nitems": 2
+                },
+                {
+                    "name": "color_picker",
+                    "type": "picker",
+                    "default": "1 0 0 1",
+                    "slider": {
+                        "name": "intensity",
+                        "type": "slider",
+                        "mode": "vertical",
+                        "default": 1,
+                        "color": "0.47 0.37 0.94 1"
+                    }
+                },
                 {
                     "name": "g_colors",
                     "type": "group",
