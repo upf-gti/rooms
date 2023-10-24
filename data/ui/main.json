@@ -110,7 +110,7 @@
             "type": "submenu",
             "children": [
                 {
-                    "name": "g_shape_editor",
+                    "name": "g_onion",
                     "type": "group",
                     "nitems": 2
                 },
@@ -122,11 +122,29 @@
                     "allow_toggle": true
                 },
                 {
+                    "name": "onion_value",
+                    "type": "slider",
+                    "mode": "vertical",
+                    "min": 0.01,
+                    "default": 0
+                },
+                {
+                    "name": "g_capped",
+                    "type": "group",
+                    "nitems": 2
+                },
+                {
                     "name": "capped",
                     "type": "button",
                     "texture": "data/textures/capped.png",
                     "unique_selection": true,
                     "allow_toggle": true
+                },
+                {
+                    "name": "cap_value",
+                    "type": "slider",
+                    "mode": "vertical",
+                    "default": 0
                 }
             ]
         },
@@ -147,8 +165,7 @@
                         "name": "intensity",
                         "type": "slider",
                         "mode": "vertical",
-                        "default": 1,
-                        "color": "0.47 0.37 0.94 1"
+                        "default": 1
                     }
                 },
                 {

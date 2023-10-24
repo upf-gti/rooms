@@ -65,15 +65,15 @@ void SculptEditor::initialize()
         gui.bind("torus", [&](const std::string& signal, void* button) { set_primitive(SD_TORUS); });
 
         gui.bind("onion", [&](const std::string& signal, void* button) { set_primitive_modifier(onion_enabled); });
+        gui.bind("onion_value", [&](const std::string& signal, float value) { onion_thickness = glm::clamp(value, 0.f, 1.f); });
         gui.bind("capped", [&](const std::string& signal, void* button) { set_primitive_modifier(capped_enabled); });
+        gui.bind("cap_value", [&](const std::string& signal, float value) { capped_value = glm::clamp(value * 2.f - 1.f, -1.f, 1.f); }); 
 
         gui.bind("mirror", [&](const std::string& signal, void* button) { use_mirror = !use_mirror; });
         gui.bind("snap_to_grid", [&](const std::string& signal, void* button) { /*enable_tool(SWEEP);*/ snap_to_grid = !snap_to_grid; });
         gui.bind("lock_axis", [&](const std::string& signal, void* button) { axis_lock = !axis_lock; });
 
-        gui.bind("color_picker", [&](const std::string& signal, Color color) {
-            current_color = color;
-            });
+        gui.bind("color_picker", [&](const std::string& signal, Color color) { current_color = color; });
         gui.bind("color_picker@released", [&](const std::string& signal, Color color) { add_recent_color(color); });
 
         // Bind recent color buttons...
@@ -215,18 +215,6 @@ void SculptEditor::update(float delta_time)
     }
 
     // Update edit dimensions
-
-    if (capped_enabled)
-    {
-        float multiplier = -Input::get_thumbstick_value(HAND_RIGHT).y * delta_time * 2.f;
-        capped_value = glm::clamp(multiplier + capped_value, -1.f, 1.f);
-    }
-    else if (onion_enabled)
-    {
-        float multiplier = Input::get_thumbstick_value(HAND_RIGHT).y * delta_time * 1.f;
-        onion_thickness = glm::clamp(multiplier + onion_thickness, 0.f, 1.f);
-    }
-    else
     {
         float size_multiplier = Input::get_thumbstick_value(HAND_RIGHT).y * delta_time * 0.1f;
         glm::vec3 new_dimensions = glm::clamp(size_multiplier + glm::vec3(edit_to_add.dimensions), 0.001f, 0.1f);
@@ -240,8 +228,8 @@ void SculptEditor::update(float delta_time)
     // Update current edit properties...
     edit_to_add.primitive = current_primitive;
     edit_to_add.color = current_color;
-    edit_to_add.parameters.x = onion_thickness;
-    edit_to_add.parameters.y = capped_value;
+    edit_to_add.parameters.x = onion_enabled ? onion_thickness : 0.f;
+    edit_to_add.parameters.y = capped_enabled ? capped_value : -1.f;
 
     if (is_tool_used) {
         new_edits.push_back(edit_to_add);
