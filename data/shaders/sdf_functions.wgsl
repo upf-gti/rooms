@@ -373,11 +373,11 @@ fn opSmoothPaint( s1 : Surface, s2 : Surface, paintColor : vec3f, k : f32 ) -> S
     return s;
 }
 
-fn opOnion( s : Surface, t : f32 ) -> Surface
+fn opOnion( s1 : Surface, t : f32 ) -> Surface
 {
-    var _s : Surface;
-    _s.distance = abs(s.distance) - t;
-    _s.color = s.color;
+    var s : Surface;
+    s.distance = abs(s1.distance) - t;
+    s.color = s1.color;
     return s;
 }
 
@@ -393,23 +393,27 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit ) -> Surfa
     var size : vec3f = edit.dimensions.xyz;
     var radius : f32 = edit.dimensions.x;
     var size_param : f32 = edit.dimensions.w;
+    var onion_thickness : f32 = edit.parameters.x;
     var cap_value : f32 = edit.parameters.y;
 
     switch (edit.primitive) {
         case SD_SPHERE: {
-            if(cap_value > -1.0) { // // -1..1 no cap..fully capped
+            if(cap_value > -1.0) { // -1..1 no cap..fully capped
                 pSurface = sdCutSphere(norm_pos, offset_pos, edit.rotation, radius, radius * cap_value * 0.999, edit.color);
             } else {
                 pSurface = sdSphere(norm_pos, offset_pos, radius, edit.color);
             }
+            onion_thickness *= radius; // max thickness is the radius
             break;
         }
         case SD_BOX: {
             pSurface = sdBox(norm_pos, offset_pos, edit.rotation, size - size_param, size_param, edit.color);
+            onion_thickness *= size.x; // max thickness is the side length
             break;
         }
         case SD_CAPSULE: {
             pSurface = sdCapsule(norm_pos, offset_pos, offset_pos - vec3f(0.0, 0.0, radius), edit.rotation, size_param, edit.color);
+            onion_thickness *= size_param;
             break;
         }
         case SD_CONE: {
@@ -417,6 +421,7 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit ) -> Surfa
             radius = max(radius * (1.0 - cap_value), 0.0025);
             var dims = vec2f(size_param, size_param * cap_value);
             pSurface = sdCone(norm_pos, offset_pos,  offset_pos - vec3f(0.0, 0.0, radius), edit.rotation, dims, edit.color);
+            onion_thickness *= 0.01;
             break;
         }
         // case SD_PYRAMID: {
@@ -425,6 +430,7 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit ) -> Surfa
         // }
         case SD_CYLINDER: {
             pSurface = sdCylinder(norm_pos, offset_pos,  offset_pos - vec3f(0.0, 0.0, radius), edit.rotation, size_param, 0.0, edit.color);
+            onion_thickness *= size_param;
             break;
         }
         case SD_TORUS: {
@@ -437,6 +443,7 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit ) -> Surfa
             } else {
                 pSurface = sdTorus(norm_pos, offset_pos, vec2f(radius, size_param), edit.rotation, edit.color);
             }
+            onion_thickness *= size_param;
             break;
         }
         default: {
@@ -445,11 +452,11 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit ) -> Surfa
     }
 
     // Shape edition ...
-
-    // var onion_thickness : f32 = edit.parameters.x;
-    // if(onion_thickness > 0.0) {
-    //     pSurface = opOnion(pSurface, onion_thickness);
-    // }
+    if( onion_thickness > 0.0 && (edit.operation == OP_UNION || edit.operation == OP_SMOOTH_UNION) )
+    {
+        // pSurface = opOnion(pSurface, max(onion_thickness * 0.05, 0.0025) );
+        pSurface = opOnion(pSurface, max(onion_thickness, 0.0025) );
+    }
 
     switch (edit.operation) {
         case OP_UNION: {
