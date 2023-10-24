@@ -19,9 +19,6 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
 
     init_compute_octree_pipeline();
     init_raymarching_proxy_pipeline();
-    init_initialize_sdf_pipeline();
-
-    compute_initialize_sdf();
 
     edits = new Edit[EDITS_MAX];
 
@@ -94,47 +91,6 @@ void RaymarchingRenderer::add_preview_edit(const Edit& edit)
         return;
     }
     preview_edit_data.preview_edits[preview_edit_data.preview_edits_count++] = edit;
-}
-
-void RaymarchingRenderer::compute_initialize_sdf()
-{
-    WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
-
-    // Initialize a command encoder
-    WGPUCommandEncoderDescriptor encoder_desc = {};
-    WGPUCommandEncoder command_encoder = wgpuDeviceCreateCommandEncoder(webgpu_context->device, &encoder_desc);
-
-    // Create compute_raymarching pass
-    WGPUComputePassDescriptor compute_pass_desc = {};
-    compute_pass_desc.timestampWrites = nullptr;
-    WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
-
-    // Use compute_raymarching pass
-    initialize_sdf_pipeline.set(compute_pass);
-
-    wgpuComputePassEncoderSetBindGroup(compute_pass, 0, initialize_sdf_bind_group, 0, nullptr);
-
-    uint32_t workgroupSize = 8;
-    // This ceils invocationCount / workgroupSize
-    uint32_t workgroupWidth = (SDF_RESOLUTION + workgroupSize - 1) / workgroupSize;
-    uint32_t workgroupHeight = (SDF_RESOLUTION + workgroupSize - 1) / workgroupSize;
-    uint32_t workgroupDepth = (SDF_RESOLUTION + workgroupSize - 1) / workgroupSize;
-    wgpuComputePassEncoderDispatchWorkgroups(compute_pass, workgroupWidth, workgroupHeight, workgroupDepth);
-
-    // Finalize compute_raymarching pass
-    wgpuComputePassEncoderEnd(compute_pass);
-
-    WGPUCommandBufferDescriptor cmd_buff_descriptor = {};
-    cmd_buff_descriptor.nextInChain = NULL;
-    cmd_buff_descriptor.label = "Initialize SDF Command buffer";
-
-    // Encode and submit the GPU commands
-    WGPUCommandBuffer commands = wgpuCommandEncoderFinish(command_encoder, &cmd_buff_descriptor);
-    wgpuQueueSubmit(webgpu_context->device_queue, 1, &commands);
-
-    wgpuCommandBufferRelease(commands);
-    wgpuComputePassEncoderRelease(compute_pass);
-    wgpuCommandEncoderRelease(command_encoder);
 }
 
 void RaymarchingRenderer::compute_octree()
@@ -303,18 +259,6 @@ void RaymarchingRenderer::set_sculpt_rotation(const glm::quat& rotation)
 void RaymarchingRenderer::set_camera_eye(const glm::vec3& eye_pos) {
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
     wgpuQueueWriteBuffer(webgpu_context->device_queue, std::get<WGPUBuffer>(proxy_geometry_eye_position.data), 0,&eye_pos , sizeof(eye_pos));
-}
-
-void RaymarchingRenderer::init_initialize_sdf_pipeline()
-{
-    initialize_sdf_shader = RendererStorage::get_shader("data/shaders/sdf_initialization.wgsl");
-
-    WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
-
-    std::vector<Uniform*> uniforms = { &sdf_texture_uniform };
-    initialize_sdf_bind_group = webgpu_context->create_bind_group(uniforms, initialize_sdf_shader, 0);
-
-    initialize_sdf_pipeline.create_compute(initialize_sdf_shader);
 }
 
 void RaymarchingRenderer::init_compute_octree_pipeline()

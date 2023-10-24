@@ -16,11 +16,6 @@ class RaymarchingRenderer {
 
     Uniform         linear_sampler_uniform;
 
-    // Compute
-    Pipeline        initialize_sdf_pipeline;
-    Shader*         initialize_sdf_shader = nullptr;
-    WGPUBindGroup   initialize_sdf_bind_group = nullptr;
-
     Pipeline        render_proxy_geometry_pipeline;
     Shader*         render_proxy_shader = nullptr;
     WGPUBindGroup   render_proxy_geometry_bind_group = nullptr;
@@ -99,9 +94,6 @@ class RaymarchingRenderer {
     // Timestepping counters
     float updated_time = 0.0f;
 
-    void compute_initialize_sdf();
-
-    void init_initialize_sdf_pipeline();
     void init_compute_octree_pipeline();
     void init_raymarching_proxy_pipeline();
 

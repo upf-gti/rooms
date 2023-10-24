@@ -95,6 +95,7 @@ fn irradiance_spherical_harmonics(n : vec3f) -> vec3f {
         + vec3f(-0.033, -0.033, -0.037) * (n.x * n.x - n.y * n.y);
 }
 
+// https://community.khronos.org/t/ray-vs-aabb-exit-point-knowing-entry-point/66307/3
 fn ray_AABB_intersection_distance(ray_origin : vec3f,
                                   ray_dir : vec3f,
                                   box_origin : vec3f,
@@ -102,25 +103,16 @@ fn ray_AABB_intersection_distance(ray_origin : vec3f,
     let box_min : vec3f = box_origin - (box_size / 2.0);
     let box_max : vec3f = box_min + box_size;
 
-    // Testing X axis slab
-    let tx1 : f32 = (box_min.x - ray_origin.x) / ray_dir.x;
-    let tx2 : f32 = (box_max.x - ray_origin.x) / ray_dir.x;
-    var tmin : f32 = min(tx1, tx2);
-    var tmax :f32 = max(tx1, tx2);
+    let min_max : array<vec3f, 2> = array<vec3f, 2>(box_min, box_max);
 
-    // Testing Y axis slab
-    let ty1 : f32 = (box_min.y - ray_origin.y) / ray_dir.y;
-    let ty2 : f32= (box_max.y - ray_origin.y) / ray_dir.y;
-    tmin = max(min(ty1, ty2), tmin);
-    tmax = min(max(ty1, ty2), tmax);
+    var tmax : vec3f;
+	let div : vec3f = 1.0 / ray_dir;
+	let indexes : vec3i = vec3i(i32(step(0.0, div.x)), i32((step(0.0, div.y))), i32(step(0.0, div.z)));
+	tmax.x = (min_max[indexes[0]].x - ray_origin.x) * div.x;
+	tmax.y = (min_max[indexes[1]].y - ray_origin.y) * div.y;
+	tmax.z = (min_max[indexes[2]].z - ray_origin.z) * div.z;
 
-    // Testing Z axis slab
-    let tz1 : f32 = (box_min.z - ray_origin.z) / ray_dir.z;
-    let tz2 : f32 = (box_max.z - ray_origin.z) / ray_dir.z;
-    tmin = max(min(tz1, tz2), tmin);
-    tmax = min(max(tz1, tz2), tmax);
-
-    return tmax - tmin;
+	return min(min(tmax.x, tmax.y), tmax.z);
 }
 
 fn sample_sdf(position : vec3f) -> Surface
