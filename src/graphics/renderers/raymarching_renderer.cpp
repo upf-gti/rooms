@@ -60,13 +60,19 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
 void RaymarchingRenderer::clean()
 {
 #ifndef DISABLE_RAYMARCHER
+    wgpuBindGroupRelease(render_proxy_geometry_bind_group);
+    wgpuBindGroupRelease(compute_octree_evaluate_bind_group);
+    wgpuBindGroupRelease(compute_octree_increment_level_bind_group);
+    wgpuBindGroupRelease(compute_octree_write_to_texture_bind_group);
+    wgpuBindGroupRelease(compute_octant_usage_bind_groups[0]);
+    wgpuBindGroupRelease(compute_octant_usage_bind_groups[1]);
+    wgpuBindGroupRelease(render_camera_bind_group);
+    wgpuBindGroupRelease(sculpt_data_bind_group);
 
-    // Uniforms
-
-    // Compute pipeline
-    //wgpuBindGroupRelease(initialize_sdf_bind_group);
-
-    sdf_texture_uniform.destroy();
+    delete render_proxy_shader;
+    delete compute_octree_evaluate_shader;
+    delete compute_octree_increment_level_shader;
+    delete compute_octree_write_to_texture_shader;
 
     delete[] edits;
 #endif
@@ -281,7 +287,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
     sdf_texture_uniform.binding = 3;
 
     // 2^3 give 8x8x8 pixel cells, and we need one iteration less, so substract 3
-    octree_depth = log2(SDF_RESOLUTION) - 3;
+    octree_depth = static_cast<uint8_t>(log2(SDF_RESOLUTION) - 3);
 
     // Size of penultimate level
     uint32_t octants_max_size = pow(pow(2, octree_depth), 3);
@@ -318,7 +324,6 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         octree_atomic_counter.binding = 5;
         octree_atomic_counter.buffer_size = sizeof(uint32_t);
 
-        octree_proxy_instance_buffer.visibility = WGPUBufferUsage_Vertex;
         octree_proxy_instance_buffer.data = webgpu_context->create_buffer(octants_max_position_buffer_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "proxy_boxes_position_buffer");
         octree_proxy_instance_buffer.binding = 6;
         octree_proxy_instance_buffer.buffer_size = octants_max_position_buffer_size;

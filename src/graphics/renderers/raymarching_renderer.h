@@ -43,7 +43,7 @@ class RaymarchingRenderer {
     Uniform         octree_proxy_instance_buffer;
     Uniform         octree_proxy_indirect_buffer;
     Uniform         proxy_geometry_eye_position;
-    WGPUBindGroup   render_camera_bind_group;
+    WGPUBindGroup   render_camera_bind_group = nullptr;
 
     Uniform         sculpt_data_uniform;
     WGPUBindGroup   sculpt_data_bind_group = nullptr;
@@ -85,7 +85,7 @@ class RaymarchingRenderer {
     // Preview edits
     struct sPreviewEditsData {
         glm::vec3 aabb_center;
-        float padding;
+        float padding = 0.0f;
         glm::vec3 aabb_size;
         uint32_t preview_edits_count = 0u;
         Edit preview_edits[PREVIEW_EDITS_MAX];

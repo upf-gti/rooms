@@ -251,8 +251,8 @@ void SculptEditor::update(float delta_time)
     if (use_mirror) {
         mirror_origin = mirror_gizmo.update(mirror_origin, delta_time);
 
-        uint32_t preview_edit_count = preview_tmp_edits.size();
-        for (uint32_t i = 0u; i < preview_edit_count; i++) {
+        uint64_t preview_edit_count = preview_tmp_edits.size();
+        for (uint64_t i = 0u; i < preview_edit_count; i++) {
             Edit inverted_preview_edit = preview_tmp_edits[i];
             float dist_to_plane = glm::dot(mirror_normal, inverted_preview_edit.position - mirror_origin);
             inverted_preview_edit.position = inverted_preview_edit.position - mirror_normal * dist_to_plane * 2.0f;
@@ -260,8 +260,8 @@ void SculptEditor::update(float delta_time)
             preview_tmp_edits.push_back(inverted_preview_edit);
         }
 
-        uint32_t edit_count = new_edits.size();
-        for (uint32_t i = 0u; i < edit_count; i++) {
+        uint64_t edit_count = new_edits.size();
+        for (uint64_t i = 0u; i < edit_count; i++) {
             Edit inverted_edit = new_edits[i];
             float dist_to_plane = glm::dot(mirror_normal, inverted_edit.position - mirror_origin);
             inverted_edit.position = inverted_edit.position - mirror_normal * dist_to_plane * 2.0f;
