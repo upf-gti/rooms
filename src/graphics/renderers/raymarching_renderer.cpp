@@ -425,5 +425,5 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
     color_target.blend = nullptr;
     color_target.writeMask = WGPUColorWriteMask_All;
 
-    render_proxy_geometry_pipeline.create_render(render_proxy_shader, color_target, true);
+    render_proxy_geometry_pipeline.create_render(render_proxy_shader, color_target, true, WGPUCullMode_Back);
 }
