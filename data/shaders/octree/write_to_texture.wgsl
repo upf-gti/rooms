@@ -51,8 +51,10 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
     let pixel_offset : vec3f = (vec3f(local_id) - 1.0) / SDF_RESOLUTION;
 
+    var current_edit_surface : Surface;
+
     for (var i : u32 = 0; i < merge_data.edits_to_process; i++) {
-        sSurface = evalEdit(octant_corner + pixel_offset, sSurface, edits.data[i]);
+        sSurface = evalEdit(octant_corner + pixel_offset, sSurface, edits.data[i], &current_edit_surface);
     }
 
     textureStore(write_sdf, start_writing_pos + local_id - 1, vec4f(sSurface.color, sSurface.distance));

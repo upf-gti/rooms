@@ -381,7 +381,7 @@ fn opOnion( s1 : Surface, t : f32 ) -> Surface
     return s;
 }
 
-fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit ) -> Surface
+fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit, current_edit_surface : ptr<function, Surface> ) -> Surface
 {
     var pSurface : Surface;
 
@@ -450,6 +450,8 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit ) -> Surfa
             break;
         }
     }
+
+    *current_edit_surface = pSurface;
 
     // Shape edition ...
     if( onion_thickness > 0.0 && (edit.operation == OP_UNION || edit.operation == OP_SMOOTH_UNION) )

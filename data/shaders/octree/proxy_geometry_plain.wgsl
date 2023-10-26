@@ -136,26 +136,27 @@ fn sample_sdf(position : vec3f) -> Surface
     return surface;
 }
 
-fn estimate_normal(p : vec3f) -> vec3f
+// https://iquilezles.org/articles/normalsSDF/
+fn estimate_normal( p : vec3f) -> vec3f
 {
-    return normalize(vec3f(
-        sample_sdf(vec3f(p.x + DERIVATIVE_STEP, p.y, p.z)).distance - sample_sdf(vec3f(p.x - DERIVATIVE_STEP, p.y, p.z)).distance,
-        sample_sdf(vec3f(p.x, p.y + DERIVATIVE_STEP, p.z)).distance - sample_sdf(vec3f(p.x, p.y - DERIVATIVE_STEP, p.z)).distance,
-        sample_sdf(vec3f(p.x, p.y, p.z + DERIVATIVE_STEP)).distance - sample_sdf(vec3f(p.x, p.y, p.z - DERIVATIVE_STEP)).distance
-    ));
+    let k : vec2f = vec2f(1.0, -1.0);
+    return normalize( k.xyy * sample_sdf( p + k.xyy * DERIVATIVE_STEP ).distance + 
+                      k.yyx * sample_sdf( p + k.yyx * DERIVATIVE_STEP ).distance + 
+                      k.yxy * sample_sdf( p + k.yxy * DERIVATIVE_STEP ).distance + 
+                      k.xxx * sample_sdf( p + k.xxx * DERIVATIVE_STEP ).distance );
 }
 
+// TODO: if diffuse variable is not used, performance is increased by 20% (????)
 fn blinn_phong(toEye : vec3f, position : vec3f, lightPosition : vec3f, ambient : vec3f, diffuse : vec3f) -> vec3f
 {
     let normal : vec3f = estimate_normal(position);
     let toLight : vec3f = normalize(lightPosition - position);
-    let reflection : vec3f = normalize(reflect(-toLight, normal)); // uncomment for Phong model
+    let reflection : vec3f = normalize(reflect(-toLight, normal));
     let halfwayDir : vec3f = normalize(toLight + toEye);
 
     let ambientFactor : vec3f = ambient * diffuse;
     let diffuseFactor : vec3f = 0.4 * diffuse * max(0.0, dot(normal, toLight));
-    let specularFactor : vec3f = vec3f(0.3) * pow(max(0.0, dot(toEye, reflection)), specularExponent); // uncomment for Phong model
-    //let specularFactor : vec3f = diffuse * pow(max(0.0, dot(normal, halfwayDir)), specularExponent) * specularCoeff;
+    let specularFactor : vec3f = vec3f(0.3) * pow(max(0.0, dot(toEye, reflection)), specularExponent);
 
     return ambientFactor + diffuseFactor + specularFactor;
 }
@@ -168,11 +169,7 @@ fn raymarch(ray_origin : vec3f, ray_dir : vec3f, max_distance : f32, view_proj :
     let lightOffset = vec3f(0.0, 0.0, 0.0);
 
 	var depth : f32 = 0.0;
-    var surface_min_dist : f32 = 50.0;
     var surface : Surface;
-
-    var edge_threshold = 0.003;
-    var edge : f32 = 0.0;
 
 	for (var i : i32 = 0; depth < max_distance && i < 80; i++)
 	{
@@ -180,25 +177,18 @@ fn raymarch(ray_origin : vec3f, ray_dir : vec3f, max_distance : f32, view_proj :
 
         surface = sample_sdf(pos);
 
-        // Edge detection
-        // if((surface_min_dist < edge_threshold) && (surface.distance > surface_min_dist))
-        // {
-        //     edge = 1.0;
-        // }
-
 		if ((surface.distance) < MIN_HIT_DIST) {
             let epsilon : f32 = 0.000001; // avoids flashing when camera inside sdf
             let proj_pos : vec4f = view_proj * vec4f(pos + ray_dir * epsilon, 1.0);
             depth = proj_pos.z / proj_pos.w;
-			return vec4f(blinn_phong(-ray_dir, pos, lightPos + lightOffset, ambientColor, surface.color * (1.0 - edge)), depth);
+			return vec4f(blinn_phong(-ray_dir, pos, lightPos + lightOffset, ambientColor, surface.color), depth);
 		}
 
-        surface_min_dist = (surface.distance);
         depth += (surface.distance);
 	}
 
     // Use a two band spherical harmonic as a skymap
-    return vec4f(irradiance_spherical_harmonics(ray_dir.xzy)* (1.0 - edge), 0.999);
+    return vec4f(irradiance_spherical_harmonics(ray_dir.xzy), 0.999);
 }
 
 @fragment

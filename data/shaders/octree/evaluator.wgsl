@@ -22,6 +22,7 @@ struct MergeData {
 @group(0) @binding(4) var<storage, read_write> current_level : atomic<u32>;
 @group(0) @binding(5) var<storage, read_write> atomic_counter : atomic<u32>;
 @group(0) @binding(6) var<storage, read_write> proxy_box_position_buffer: array<vec3f>;
+@group(0) @binding(7) var<storage, read_write> edit_culling_lists: array<u32>;
 
 @group(1) @binding(0) var<storage, read> octant_usage_read : array<u32>;
 @group(1) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
@@ -31,13 +32,23 @@ const SQRT_3 = 1.73205080757;
 @compute @workgroup_size(1, 1, 1)
 fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) workgroup_size : vec3u) 
 {
-    let id : u32 = group_id.x;
-
-    let octant_id : u32 = octant_usage_read[id];
-
     let level : u32 = atomicLoad(&current_level);
 
+    let id : u32 = group_id.x;
+
+    var parent_level : u32;
+
+    if (level == 0) {
+        parent_level = level;
+    } else {
+        parent_level = level - 1;
+    }
+
+    let octant_id : u32 = octant_usage_read[id];
+    let parent_octant_id : u32 = octant_id & (0x0003FFFFu >> (3u * (merge_data.max_octree_depth - parent_level)));
+
     let octree_index : u32 = octant_id + u32((pow(8.0, f32(level)) - 1) / 7);
+    let parent_octree_index : u32 = parent_octant_id + u32((pow(8.0, f32(parent_level)) - 1) / 7);
 
     var octant_center : vec3f = vec3f(0.0);
 
@@ -50,9 +61,34 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     }
 
     var sSurface : Surface = Surface(vec3f(0.0, 0.0, 0.0), 10000.0);
+    var current_edit_surface : Surface;
+    var edit_counter : u32 = 0;
+    let packed_list_size : u32 = (256 / 4);
 
-    for (var i : u32 = 0; i < merge_data.edits_to_process; i++) {
-        sSurface = evalEdit(octant_center, sSurface, edits.data[i]);
+    var num_indices : u32 = 0;
+
+    var new_packed_edit_idx : u32 = 0;
+
+    for (var i : u32 = 0; i < octree.data[parent_octree_index].tile_pointer; i++) {
+
+        let current_packed_edit_idx : u32 = edit_culling_lists[i / 4 + parent_octree_index * packed_list_size];
+
+        let packed_index : u32 = 3 - i % 4;
+
+        let current_unpacked_edit_idx : u32 = (current_packed_edit_idx & (0xFFu << (packed_index * 8u))) >> (packed_index * 8u);
+
+        sSurface = evalEdit(octant_center, sSurface, edits.data[current_unpacked_edit_idx], &current_edit_surface);
+
+        if (abs(current_edit_surface.distance) < (level_half_size * SQRT_3)) {
+            new_packed_edit_idx = new_packed_edit_idx | (current_unpacked_edit_idx << ((3 - edit_counter % 4) * 8)); 
+            edit_culling_lists[edit_counter / 4 + octree_index * packed_list_size] = new_packed_edit_idx;
+
+            edit_counter++;
+
+            if (edit_counter % 4 == 0) {
+                new_packed_edit_idx = 0;
+            }
+        }
     }
 
     if (abs(sSurface.distance) < (level_half_size * SQRT_3)) {
@@ -71,7 +107,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             proxy_box_position_buffer[prev_counter] = octant_center;
         }
 
-        octree.data[octree_index].tile_pointer = 1;
+        octree.data[octree_index].tile_pointer = edit_counter;
     } else {
         octree.data[octree_index].tile_pointer = 0;
     }
