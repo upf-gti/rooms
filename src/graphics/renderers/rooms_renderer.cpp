@@ -365,7 +365,6 @@ void RoomsRenderer::init_mirror_pipeline()
 
         swapchain_uni.data = xr_context.swapchains[0].images[i].textureView;
         swapchain_uni.binding = 0;
-        swapchain_uni.visibility = WGPUShaderStage_Fragment;
 
         swapchain_uniforms.push_back(swapchain_uni);
     }
