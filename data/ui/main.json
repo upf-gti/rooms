@@ -106,49 +106,6 @@
             ]
         },
         {
-            "name": "shape_editor",
-            "type": "submenu",
-            "children": [
-                {
-                    "name": "g_onion",
-                    "type": "group",
-                    "nitems": 2
-                },
-                {
-                    "name": "onion",
-                    "type": "button",
-                    "texture": "data/textures/onion.png",
-                    "unique_selection": true,
-                    "allow_toggle": true
-                },
-                {
-                    "name": "onion_value",
-                    "type": "slider",
-                    "mode": "vertical",
-                    "min": 0.01,
-                    "default": 0
-                },
-                {
-                    "name": "g_capped",
-                    "type": "group",
-                    "nitems": 2
-                },
-                {
-                    "name": "capped",
-                    "type": "button",
-                    "texture": "data/textures/capped.png",
-                    "unique_selection": true,
-                    "allow_toggle": true
-                },
-                {
-                    "name": "cap_value",
-                    "type": "slider",
-                    "mode": "vertical",
-                    "default": 0
-                }
-            ]
-        },
-        {
             "name": "colors",
             "type": "submenu",
             "children": [
@@ -207,6 +164,49 @@
                     "name": "recent_colors",
                     "type": "button",
                     "texture": "data/textures/recent_colors.png"
+                }
+            ]
+        },
+        {
+            "name": "shape_editor",
+            "type": "submenu",
+            "children": [
+                {
+                    "name": "g_onion",
+                    "type": "group",
+                    "nitems": 2
+                },
+                {
+                    "name": "onion",
+                    "type": "button",
+                    "texture": "data/textures/onion.png",
+                    "unique_selection": true,
+                    "allow_toggle": true
+                },
+                {
+                    "name": "onion_value",
+                    "type": "slider",
+                    "mode": "vertical",
+                    "min": 0.01,
+                    "default": 0
+                },
+                {
+                    "name": "g_capped",
+                    "type": "group",
+                    "nitems": 2
+                },
+                {
+                    "name": "capped",
+                    "type": "button",
+                    "texture": "data/textures/capped.png",
+                    "unique_selection": true,
+                    "allow_toggle": true
+                },
+                {
+                    "name": "cap_value",
+                    "type": "slider",
+                    "mode": "vertical",
+                    "default": 0
                 }
             ]
         },
