@@ -73,14 +73,14 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
         let current_packed_edit_idx : u32 = edit_culling_lists[i / 4 + parent_octree_index * packed_list_size];
 
-        let packed_index : u32 = 3 - i % 4;
+        let packed_index : u32 = 3 - (i % 4);
 
         let current_unpacked_edit_idx : u32 = (current_packed_edit_idx & (0xFFu << (packed_index * 8u))) >> (packed_index * 8u);
 
         sSurface = evalEdit(octant_corner + pixel_offset, sSurface, edits.data[current_unpacked_edit_idx], &current_edit_surface);
     }
 
-    let interpolant : f32 = (f32(octree.data[parent_octree_index].tile_pointer) /f32(50)) * (3.14159265 / 2.0);
+    let interpolant : f32 = (f32(octree.data[parent_octree_index].tile_pointer) /f32(5)) * (3.14159265 / 2.0);
 
     var heatmap_color : vec3f;
     heatmap_color.r = sin(interpolant);
