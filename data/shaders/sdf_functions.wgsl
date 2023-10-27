@@ -370,6 +370,11 @@ fn opOnion( s1 : Surface, t : f32 ) -> Surface
     return s;
 }
 
+fn map_thickness( t : f32, v_max : f32 ) -> f32
+{
+    return t * v_max * 0.5;
+}
+
 fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit ) -> Surface
 {
     var pSurface : Surface;
@@ -387,30 +392,33 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit ) -> Surfa
 
     switch (edit.primitive) {
         case SD_SPHERE: {
+            onion_thickness = map_thickness( onion_thickness, radius );
+            radius -= onion_thickness;
             if(cap_value > -1.0) { // -1..1 no cap..fully capped
                 pSurface = sdCutSphere(norm_pos, offset_pos, edit.rotation, radius, radius * cap_value * 0.999, edit.color);
             } else {
                 pSurface = sdSphere(norm_pos, offset_pos, radius, edit.color);
             }
-            onion_thickness *= radius; // max thickness is the radius
             break;
         }
         case SD_BOX: {
+            onion_thickness = map_thickness( onion_thickness, size.x );
+            size -= onion_thickness;
             pSurface = sdBox(norm_pos, offset_pos, edit.rotation, size - size_param, size_param, edit.color);
-            onion_thickness *= size.x; // max thickness is the side length
             break;
         }
         case SD_CAPSULE: {
+            onion_thickness = map_thickness( onion_thickness, size_param );
+            size_param -= onion_thickness;
             pSurface = sdCapsule(norm_pos, offset_pos, offset_pos - vec3f(0.0, 0.0, radius), edit.rotation, size_param, edit.color);
-            onion_thickness *= size_param;
             break;
         }
         case SD_CONE: {
+            onion_thickness *= 0.01;
             cap_value = cap_value * 0.5 + 0.5;
             radius = max(radius * (1.0 - cap_value), 0.0025);
             var dims = vec2f(size_param, size_param * cap_value);
             pSurface = sdCone(norm_pos, offset_pos,  offset_pos - vec3f(0.0, 0.0, radius), edit.rotation, dims, edit.color);
-            onion_thickness *= 0.01;
             break;
         }
         // case SD_PYRAMID: {
@@ -418,11 +426,14 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit ) -> Surfa
         //     break;
         // }
         case SD_CYLINDER: {
+            onion_thickness = map_thickness( onion_thickness, size_param );
+            size_param -= onion_thickness;
             pSurface = sdCylinder(norm_pos, offset_pos,  offset_pos - vec3f(0.0, 0.0, radius), edit.rotation, size_param, 0.0, edit.color);
-            onion_thickness *= size_param;
             break;
         }
         case SD_TORUS: {
+            onion_thickness = map_thickness( onion_thickness, size_param );
+            size_param -= onion_thickness;
             size_param = clamp( size_param, 0.001, radius );
             if(cap_value > -1.0) { // // -1..1 no cap..fully capped
                 cap_value = cap_value * 0.5 + 0.5;
@@ -432,7 +443,6 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit ) -> Surfa
             } else {
                 pSurface = sdTorus(norm_pos, offset_pos, vec2f(radius, size_param), edit.rotation, edit.color);
             }
-            onion_thickness *= size_param;
             break;
         }
         default: {
@@ -444,7 +454,7 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit ) -> Surfa
     if( onion_thickness > 0.0 && (edit.operation == OP_UNION || edit.operation == OP_SMOOTH_UNION) )
     {
         // pSurface = opOnion(pSurface, max(onion_thickness * 0.05, 0.0025) );
-        pSurface = opOnion(pSurface, max(onion_thickness, 0.0025) );
+        pSurface = opOnion(pSurface, max(onion_thickness, 0.003) );
     }
 
     switch (edit.operation) {
