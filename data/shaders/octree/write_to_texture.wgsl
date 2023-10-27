@@ -1,5 +1,13 @@
 #include ../sdf_functions.wgsl
 
+struct OctreeNode {
+    tile_pointer : u32
+}
+
+struct Octree {
+    data : array<OctreeNode>
+};
+
 struct MergeData {
     edits_aabb_start      : vec3<u32>,
     edits_to_process      : u32,
@@ -10,8 +18,10 @@ struct MergeData {
 
 @group(0) @binding(0) var<uniform> edits : Edits;
 @group(0) @binding(1) var<uniform> merge_data : MergeData;
+@group(0) @binding(2) var<storage, read_write> octree : Octree;
 @group(0) @binding(3) var write_sdf: texture_storage_3d<rgba32float, write>;
 @group(0) @binding(4) var<storage, read_write> current_level : atomic<u32>;
+@group(0) @binding(7) var<storage, read_write> edit_culling_lists: array<u32>;
 
 @group(1) @binding(0) var<storage, read> octant_usage_read : array<u32>;
 @group(1) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
@@ -24,11 +34,15 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
     let id : u32 = group_id.x;
 
-    let octant_id : u32 = octant_usage_read[id];
-
     let level : u32 = atomicLoad(&current_level);
+    
+    let parent_level : u32 = level - 1;
 
-    // let octree_index : u32 = octant_id + u32((pow(8.0, f32(level)) - 1) / 7);
+    let octant_id : u32 = octant_usage_read[id];
+    let parent_octant_id : u32 = octant_id & (0x0003FFFFu >> (3u * (merge_data.max_octree_depth - parent_level)));
+
+    let octree_index : u32 = octant_id + u32((pow(8.0, f32(level)) - 1) / 7);
+    let parent_octree_index : u32 = parent_octant_id + u32((pow(8.0, f32(parent_level)) - 1) / 7);
 
     var octant_center : vec3f = vec3f(0.0);
 
@@ -53,11 +67,28 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
     var current_edit_surface : Surface;
 
-    for (var i : u32 = 0; i < merge_data.edits_to_process; i++) {
-        sSurface = evalEdit(octant_corner + pixel_offset, sSurface, edits.data[i], &current_edit_surface);
+    let packed_list_size : u32 = (256 / 4);
+
+    for (var i : u32 = 0; i < octree.data[parent_octree_index].tile_pointer; i++) {
+
+        let current_packed_edit_idx : u32 = edit_culling_lists[i / 4 + parent_octree_index * packed_list_size];
+
+        let packed_index : u32 = 3 - i % 4;
+
+        let current_unpacked_edit_idx : u32 = (current_packed_edit_idx & (0xFFu << (packed_index * 8u))) >> (packed_index * 8u);
+
+        sSurface = evalEdit(octant_corner + pixel_offset, sSurface, edits.data[current_unpacked_edit_idx], &current_edit_surface);
     }
 
+    let interpolant : f32 = (f32(octree.data[parent_octree_index].tile_pointer) /f32(50)) * (3.14159265 / 2.0);
+
+    var heatmap_color : vec3f;
+    heatmap_color.r = sin(interpolant);
+    heatmap_color.g = sin(interpolant * 2.0);
+    heatmap_color.b = cos(interpolant);
+
     textureStore(write_sdf, start_writing_pos + local_id - 1, vec4f(sSurface.color, sSurface.distance));
+    //textureStore(write_sdf, start_writing_pos + local_id - 1, vec4f(heatmap_color, sSurface.distance));
 
     octant_usage_write[0] = 0;
 }

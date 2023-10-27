@@ -65,8 +65,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     var edit_counter : u32 = 0;
     let packed_list_size : u32 = (256 / 4);
 
-    var num_indices : u32 = 0;
-
     var new_packed_edit_idx : u32 = 0;
 
     for (var i : u32 = 0; i < octree.data[parent_octree_index].tile_pointer; i++) {
@@ -79,15 +77,20 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
         sSurface = evalEdit(octant_center, sSurface, edits.data[current_unpacked_edit_idx], &current_edit_surface);
 
-        if (abs(current_edit_surface.distance) < (level_half_size * SQRT_3)) {
-            new_packed_edit_idx = new_packed_edit_idx | (current_unpacked_edit_idx << ((3 - edit_counter % 4) * 8)); 
-            edit_culling_lists[edit_counter / 4 + octree_index * packed_list_size] = new_packed_edit_idx;
+        if (abs(current_edit_surface.distance) < (level_half_size * SQRT_3) * 1.25) {
+            new_packed_edit_idx = new_packed_edit_idx | (current_unpacked_edit_idx << ((3 - edit_counter % 4) * 8));
 
             edit_counter++;
 
             if (edit_counter % 4 == 0) {
+                edit_culling_lists[(edit_counter - 1) / 4 + octree_index * packed_list_size] = new_packed_edit_idx;
                 new_packed_edit_idx = 0;
+                continue;
             }
+        } 
+        
+        if (i == octree.data[parent_octree_index].tile_pointer - 1) {
+            edit_culling_lists[(edit_counter) / 4 + octree_index * packed_list_size] = new_packed_edit_idx;
         }
     }
 

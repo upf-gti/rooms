@@ -23,45 +23,45 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
 
     edits = new Edit[EDITS_MAX];
 
-    edits[compute_merge_data.edits_to_process++] = {
-        .position = { 0.0, 0.0, 0.0 },
-        .primitive = SD_SPHERE,
-        .color = { 1.0, 0.0, 0.0 },
-        .operation = OP_SMOOTH_UNION,
-        .dimensions = { 0.01f, 0.01f, 0.01f, 0.01f },
-        .rotation = { 0.f, 0.f, 0.f, 1.f },
-        .parameters = { 0.0, -1.0, 0.0, 0.0 },
-    };
+    //edits[compute_merge_data.edits_to_process++] = {
+    //    .position = { 0.0, 0.0, 0.0 },
+    //    .primitive = SD_SPHERE,
+    //    .color = { 1.0, 0.0, 0.0 },
+    //    .operation = OP_SMOOTH_UNION,
+    //    .dimensions = { 0.16f, 0.16f, 0.16f, 0.16f },
+    //    .rotation = { 0.f, 0.f, 0.f, 1.f },
+    //    .parameters = { 0.0, -1.0, 0.0, 0.0 },
+    //};
 
-    edits[compute_merge_data.edits_to_process++] = {
-        .position = { 0.1, 0.0, 0.0 },
-        .primitive = SD_SPHERE,
-        .color = { 0.0, 1.0, 0.0 },
-        .operation = OP_SMOOTH_UNION,
-        .dimensions = { 0.01f, 0.01f, 0.01f, 0.01f },
-        .rotation = { 0.f, 0.f, 0.f, 1.f },
-        .parameters = { 0.0, -1.0, 0.0, 0.0 },
-    };
+    //edits[compute_merge_data.edits_to_process++] = {
+    //    .position = { 0.2, 0.0, 0.0 },
+    //    .primitive = SD_SPHERE,
+    //    .color = { 0.0, 1.0, 0.0 },
+    //    .operation = OP_SMOOTH_UNION,
+    //    .dimensions = { 0.16f, 0.16f, 0.16f, 0.16f },
+    //    .rotation = { 0.f, 0.f, 0.f, 1.f },
+    //    .parameters = { 0.0, -1.0, 0.0, 0.0 },
+    //};
 
-    edits[compute_merge_data.edits_to_process++] = {
-        .position = { 0.0, 0.1, 0.0 },
-        .primitive = SD_SPHERE,
-        .color = { 0.0, 0.0, 1.0 },
-        .operation = OP_SMOOTH_UNION,
-        .dimensions = { 0.01f, 0.01f, 0.01f, 0.01f },
-        .rotation = { 0.f, 0.f, 0.f, 1.f },
-        .parameters = { 0.0, -1.0, 0.0, 0.0 },
-    };
+    //edits[compute_merge_data.edits_to_process++] = {
+    //    .position = { 0.0, 0.2, 0.0 },
+    //    .primitive = SD_SPHERE,
+    //    .color = { 0.0, 0.0, 1.0 },
+    //    .operation = OP_SMOOTH_UNION,
+    //    .dimensions = { 0.16f, 0.16f, 0.16f, 0.16f },
+    //    .rotation = { 0.f, 0.f, 0.f, 1.f },
+    //    .parameters = { 0.0, -1.0, 0.0, 0.0 },
+    //};
 
-    edits[compute_merge_data.edits_to_process++] = {
-        .position = { 0.0, 0.1, 0.1 },
-        .primitive = SD_SPHERE,
-        .color = { 1.0, 1.0, 1.0 },
-        .operation = OP_SMOOTH_UNION,
-        .dimensions = { 0.01f, 0.01f, 0.01f, 0.01f },
-        .rotation = { 0.f, 0.f, 0.f, 1.f },
-        .parameters = { 0.0, -1.0, 0.0, 0.0 },
-    };
+    //edits[compute_merge_data.edits_to_process++] = {
+    //    .position = { 0.2, 0.2, 0.2 },
+    //    .primitive = SD_SPHERE,
+    //    .color = { 1.0, 1.0, 1.0 },
+    //    .operation = OP_SMOOTH_UNION,
+    //    .dimensions = { 0.16f, 0.16f, 0.16f, 0.16f },
+    //    .rotation = { 0.f, 0.f, 0.f, 1.f },
+    //    .parameters = { 0.0, -1.0, 0.0, 0.0 },
+    //};
 #endif
 
     return 0;
@@ -144,10 +144,19 @@ void RaymarchingRenderer::compute_octree()
     webgpu_context->update_buffer(std::get<WGPUBuffer>(octant_usage_uniform[0].data), 0, &default_val, sizeof(uint32_t));
     webgpu_context->update_buffer(std::get<WGPUBuffer>(octant_usage_uniform[2].data), 0, &default_val, sizeof(uint32_t));
 
-    std::vector<uint8_t> edit_indices(static_cast<uint8_t>(compute_merge_data.edits_to_process));
-    std::iota(std::begin(edit_indices), std::end(edit_indices), 0); // Fill with 0, 1, ..., MAX_EDITS_PER_EVALUATION
+    uint16_t rounded_size = compute_merge_data.edits_to_process + (4 - compute_merge_data.edits_to_process % 4);
+    uint8_t* edit_indices = new uint8_t[rounded_size];
 
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_edit_culling_lists.data), 0, edit_indices.data(), compute_merge_data.edits_to_process * sizeof(uint8_t));
+    for (int i = 0; i < rounded_size; i += 4) {
+        edit_indices[i + 0] = i + 3;
+        edit_indices[i + 1] = i + 2;
+        edit_indices[i + 2] = i + 1;
+        edit_indices[i + 3] = i + 0;
+    }
+
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_edit_culling_lists.data), 0, edit_indices, rounded_size * sizeof(uint8_t));
+
+    delete[] edit_indices;
 
     webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_uniform.data), 0, &compute_merge_data.edits_to_process, sizeof(uint32_t));
 
@@ -393,7 +402,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
     }
 
     {
-        std::vector<Uniform*> uniforms = { &sdf_texture_uniform, &compute_edits_array_uniform, &compute_merge_data_uniform, &octree_current_level };
+        std::vector<Uniform*> uniforms = { &sdf_texture_uniform, &compute_edits_array_uniform, &octree_uniform, &compute_merge_data_uniform, &octree_current_level, &octree_edit_culling_lists };
         compute_octree_write_to_texture_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_write_to_texture_shader, 0);
     }
 

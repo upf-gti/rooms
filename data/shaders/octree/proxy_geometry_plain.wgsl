@@ -73,7 +73,7 @@ struct FragmentOutput {
 const VOXEL_SIZE = vec3f(8.0 * (1.0 / SDF_RESOLUTION));
 const MAX_DIST = sqrt(3.0) * 8.0 * (1.0 / SDF_RESOLUTION);
 const MIN_HIT_DIST = 0.00005;
-const DERIVATIVE_STEP = 1.0 / SDF_RESOLUTION;
+const DERIVATIVE_STEP = 0.5 / SDF_RESOLUTION;
 
 const specularCoeff = 1.0;
 const specularExponent = 4.0;
@@ -159,6 +159,8 @@ fn blinn_phong(toEye : vec3f, position : vec3f, lightPosition : vec3f, ambient :
     let specularFactor : vec3f = vec3f(0.3) * pow(max(0.0, dot(toEye, reflection)), specularExponent);
 
     return ambientFactor + diffuseFactor + specularFactor;
+    //return normal;
+    //return diffuse;
 }
 
 fn raymarch(ray_origin : vec3f, ray_dir : vec3f, max_distance : f32, view_proj : mat4x4f) -> vec4f
