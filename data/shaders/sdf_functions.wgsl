@@ -461,14 +461,14 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit, current_e
         }
     }
 
-    *current_edit_surface = pSurface;
-
     // Shape edition ...
     if( onion_thickness > 0.0 && (edit.operation == OP_UNION || edit.operation == OP_SMOOTH_UNION) )
     {
         // pSurface = opOnion(pSurface, max(onion_thickness * 0.05, 0.0025) );
         pSurface = opOnion(pSurface, max(onion_thickness, 0.003) );
     }
+
+    *current_edit_surface = pSurface;
 
     switch (edit.operation) {
         case OP_UNION: {
