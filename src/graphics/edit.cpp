@@ -67,7 +67,7 @@ glm::vec3 Edit::world_half_size() const {
     case SD_SPHERE:
         return size;
     case SD_BOX:
-        return size + glm::vec3(radius);
+        return size;
     case SD_CAPSULE:
         return glm::abs(position - size) + radius;
     case SD_CONE:

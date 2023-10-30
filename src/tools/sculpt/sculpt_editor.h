@@ -59,7 +59,7 @@ class SculptEditor {
     // Shape Editor
 
     bool onion_enabled      = false;
-    float onion_thickness   = 0.1f;
+    float onion_thickness   = 0.0f;
 
     bool capped_enabled = false;
     float capped_value  = -1.0f; // -1..1 no cap..fully capped
