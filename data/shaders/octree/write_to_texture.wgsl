@@ -16,11 +16,17 @@ struct MergeData {
     sculpt_rotation       : vec4f
 };
 
+struct ProxyInstanceData {
+    position : vec3f,
+    atlas_tile_index : u32
+};
+
 @group(0) @binding(0) var<uniform> edits : Edits;
 @group(0) @binding(1) var<uniform> merge_data : MergeData;
 @group(0) @binding(2) var<storage, read_write> octree : Octree;
 @group(0) @binding(3) var write_sdf: texture_storage_3d<rgba32float, write>;
 @group(0) @binding(4) var<storage, read_write> current_level : atomic<u32>;
+@group(0) @binding(6) var<storage, read_write> proxy_box_position_buffer: array<ProxyInstanceData>;
 @group(0) @binding(7) var<storage, read_write> edit_culling_lists: array<u32>;
 
 @group(1) @binding(0) var<storage, read> octant_usage_read : array<u32>;
@@ -28,11 +34,18 @@ struct MergeData {
 
 const SQRT_3 = 1.73205080757;
 
+const BRICK_COUNT = u32(512.0 / 10.0);
+
 @compute @workgroup_size(10,10,10)
 fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation_id) local_id: vec3<u32>)
 {
-
     let id : u32 = group_id.x;
+
+    let atlas_tile_index : u32 = proxy_box_position_buffer[id].atlas_tile_index;
+
+    let atlas_tile_coordinate : vec3u = 10 * vec3u(atlas_tile_index % BRICK_COUNT,
+                                                  (atlas_tile_index / BRICK_COUNT) % BRICK_COUNT,
+                                                   atlas_tile_index / (BRICK_COUNT * BRICK_COUNT));
 
     let level : u32 = atomicLoad(&current_level);
     
@@ -80,14 +93,14 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
         sSurface = evalEdit(octant_corner + pixel_offset, sSurface, edits.data[current_unpacked_edit_idx], &current_edit_surface);
     }
 
-    let interpolant : f32 = (f32(octree.data[parent_octree_index].tile_pointer) /f32(5)) * (3.14159265 / 2.0);
+    let interpolant : f32 = (f32(octree.data[parent_octree_index].tile_pointer) / f32(5)) * (3.14159265 / 2.0);
 
     var heatmap_color : vec3f;
     heatmap_color.r = sin(interpolant);
     heatmap_color.g = sin(interpolant * 2.0);
     heatmap_color.b = cos(interpolant);
 
-    textureStore(write_sdf, start_writing_pos + local_id - 1, vec4f(sSurface.color, sSurface.distance));
+    textureStore(write_sdf, atlas_tile_coordinate + local_id, vec4f(sSurface.color, sSurface.distance));
     //textureStore(write_sdf, start_writing_pos + local_id - 1, vec4f(heatmap_color, sSurface.distance));
 
     octant_usage_write[0] = 0;

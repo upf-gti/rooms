@@ -46,6 +46,7 @@ class RaymarchingRenderer {
     Uniform         octree_proxy_indirect_buffer;
     Uniform         octree_edit_culling_lists;
     Uniform         proxy_geometry_eye_position;
+    //Uniform         atlas_atomic_counter;
     WGPUBindGroup   render_camera_bind_group = nullptr;
 
     Uniform         sculpt_data_uniform;
@@ -93,6 +94,11 @@ class RaymarchingRenderer {
         uint32_t preview_edits_count = 0u;
         Edit preview_edits[PREVIEW_EDITS_MAX];
     } preview_edit_data;
+
+    struct ProxyInstanceData {
+        glm::vec3 position;
+        uint32_t atlas_index;
+    };
 
     // Timestepping counters
     float updated_time = 0.0f;

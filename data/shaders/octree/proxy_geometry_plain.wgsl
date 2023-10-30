@@ -15,7 +15,8 @@ struct VertexOutput {
     @location(2) color: vec3f,
     @location(3) world_pos : vec3f,
     @location(4) voxel_pos : vec3f,
-    @location(5) voxel_center : vec3f
+    @location(5) @interpolate(flat) voxel_center : vec3f,
+    @location(6) @interpolate(flat) atlas_tile_coordinate : vec3f
 };
 
 struct SculptData {
@@ -29,21 +30,28 @@ struct CameraData {
     view_projection : mat4x4f,
 };
 
+struct ProxyInstanceData {
+    position : vec3f,
+    atlas_tile_index : u32
+};
+
 @group(0) @binding(2) var texture_sampler : sampler;
 @group(0) @binding(3) var read_sdf: texture_3d<f32>;
-@group(0) @binding(6) var<storage, read> proxy_box_position_buffer: array<vec3f>;
+@group(0) @binding(6) var<storage, read> proxy_box_position_buffer: array<ProxyInstanceData>;
 
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
 
 // 1 / SDF_SIZE * 8 (texels that compose a brick) / 2 (the cube is centered, so its the halfsize) = 0.0078125
 const BOX_SIZE : f32 = ((1.0 / SDF_RESOLUTION) * 8.0) / 2.0;
 
+const BRICK_COUNT = u32(512.0 / 10.0);
+
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
 
-    let instance_pos : vec3f = proxy_box_position_buffer[in.instance_id];
+    let instance_data : ProxyInstanceData = proxy_box_position_buffer[in.instance_id];
 
-    var voxel_pos : vec3f = in.position * BOX_SIZE + instance_pos;
+    var voxel_pos : vec3f = in.position * BOX_SIZE + instance_data.position;
     var world_pos : vec3f = rotate_point_quat(voxel_pos, sculpt_data.sculpt_rotation);
     world_pos += sculpt_data.sculpt_start_position;
 
@@ -57,7 +65,11 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     out.normal = in.normal;
     out.world_pos = world_pos.xyz;
     out.voxel_pos = voxel_pos;
-    out.voxel_center = instance_pos;
+    out.voxel_center = instance_data.position;
+
+    out.atlas_tile_coordinate = vec3f(10 * vec3u(instance_data.atlas_tile_index % BRICK_COUNT,
+                                                  (instance_data.atlas_tile_index / BRICK_COUNT) % BRICK_COUNT,
+                                                   instance_data.atlas_tile_index / (BRICK_COUNT * BRICK_COUNT))) / 512.0;
 
     return out;
 }
@@ -210,7 +222,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     let raymarch_distance : f32 = ray_AABB_intersection_distance(in.voxel_pos, ray_dir_voxel_space, in.voxel_center, VOXEL_SIZE);
 
-    let ray_result = raymarch(in.world_pos.xyz, ray_dir, raymarch_distance, camera_data.view_projection);
+    let ray_result = raymarch(in.atlas_tile_coordinate + in.voxel_pos, ray_dir_voxel_space, raymarch_distance, camera_data.view_projection);
 
     out.color = vec4f(pow(ray_result.rgb, vec3f(2.2, 2.2, 2.2)), 1.0); // Color
     out.depth = ray_result.a;

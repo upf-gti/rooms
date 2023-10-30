@@ -16,13 +16,19 @@ struct MergeData {
     sculpt_rotation       : vec4f
 };
 
+struct ProxyInstanceData {
+    position : vec3f,
+    atlas_tile_index : u32
+};
+
 @group(0) @binding(0) var<uniform> edits : Edits;
 @group(0) @binding(1) var<uniform> merge_data : MergeData;
 @group(0) @binding(2) var<storage, read_write> octree : Octree;
 @group(0) @binding(4) var<storage, read_write> current_level : atomic<u32>;
 @group(0) @binding(5) var<storage, read_write> atomic_counter : atomic<u32>;
-@group(0) @binding(6) var<storage, read_write> proxy_box_position_buffer: array<vec3f>;
+@group(0) @binding(6) var<storage, read_write> proxy_box_position_buffer: array<ProxyInstanceData>;
 @group(0) @binding(7) var<storage, read_write> edit_culling_lists: array<u32>;
+// @group(0) @binding(8) var<storage, read_write> atlas_tile_counter : atomic<u32>;
 
 @group(1) @binding(0) var<storage, read> octant_usage_read : array<u32>;
 @group(1) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
@@ -152,7 +158,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             // For the N pass, just send the leaves, to the writing to texture pass
             let prev_counter : u32 = atomicAdd(&atomic_counter, 1);
             octant_usage_write[prev_counter] = octant_id;
-            proxy_box_position_buffer[prev_counter] = octant_center;
+            proxy_box_position_buffer[prev_counter].position = octant_center;
+            proxy_box_position_buffer[prev_counter].atlas_tile_index = prev_counter;
         }
 
         // Not really wat this is for, but it stores the count... for now
