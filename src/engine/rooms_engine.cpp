@@ -59,7 +59,7 @@ void RoomsEngine::update(float delta_time)
 
     sculpt_editor.update(delta_time);
 
-    if (Input::was_key_pressed(GLFW_KEY_SPACE))
+    if (Input::was_key_pressed(GLFW_KEY_E))
     {
         export_scene();
     }

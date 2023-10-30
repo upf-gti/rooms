@@ -9,6 +9,8 @@
 #include "raymarching_renderer.h"
 #include "mesh_renderer.h"
 
+#include "framework/camera/flyover_camera.h"
+
 #ifdef __EMSCRIPTEN__
 #define DISABLE_RAYMARCHER
 #endif
@@ -16,6 +18,8 @@
 class RoomsRenderer : public Renderer {
 
     RaymarchingRenderer raymarching_renderer;
+
+    FlyoverCamera camera;
 
     Mesh  quad_mesh;
     Uniform         camera_uniform;
