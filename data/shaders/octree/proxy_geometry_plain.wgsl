@@ -16,7 +16,8 @@ struct VertexOutput {
     @location(3) world_pos : vec3f,
     @location(4) voxel_pos : vec3f,
     @location(5) @interpolate(flat) voxel_center : vec3f,
-    @location(6) @interpolate(flat) atlas_tile_coordinate : vec3f
+    @location(6) @interpolate(flat) atlas_tile_coordinate : vec3f,
+    @location(7) in_atlas_pos : vec3f
 };
 
 struct SculptData {
@@ -63,13 +64,16 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     out.uv = in.uv; // forward to the fragment shader
     out.color = in.color;
     out.normal = in.normal;
-    out.world_pos = world_pos.xyz;
+    
     out.voxel_pos = voxel_pos;
     out.voxel_center = instance_data.position;
-
+    // This is in an attribute for debugging
     out.atlas_tile_coordinate = vec3f(10 * vec3u(instance_data.atlas_tile_index % BRICK_COUNT,
                                                   (instance_data.atlas_tile_index / BRICK_COUNT) % BRICK_COUNT,
                                                    instance_data.atlas_tile_index / (BRICK_COUNT * BRICK_COUNT))) / 512.0;
+    out.world_pos = world_pos.xyz; 
+    // From mesh space -1 to 1, -> 0 to 8/512 (plus a voxel for padding)
+    out.in_atlas_pos = (in.position * 0.5 + 0.5) * 8.0/512.0 + 1.0/512.0 + out.atlas_tile_coordinate;
 
     return out;
 }
@@ -139,7 +143,7 @@ fn sample_sdf(position : vec3f) -> Surface
 
     var data : vec4f;
 
-    data = textureSampleLevel(read_sdf, texture_sampler, rot_p, 0.0);
+    data = textureSampleLevel(read_sdf, texture_sampler, position, 0.0);
 
     var surface : Surface = Surface(data.xyz, data.w);
 
@@ -190,7 +194,7 @@ fn raymarch(ray_origin : vec3f, ray_dir : vec3f, max_distance : f32, view_proj :
     var exit : u32 = 0u;
 
 	for (i = 0; depth < max_distance && i < 40; i++)
-	{
+    {
 		pos = ray_origin + ray_dir * depth;
 
         surface = sample_sdf(pos);
@@ -206,6 +210,7 @@ fn raymarch(ray_origin : vec3f, ray_dir : vec3f, max_distance : f32, view_proj :
         let epsilon : f32 = 0.000001; // avoids flashing when camera inside sdf
         let proj_pos : vec4f = view_proj * vec4f(pos + ray_dir * epsilon, 1.0);
         depth = proj_pos.z / proj_pos.w;
+        //return vec4f(surface.color, depth);
 		return vec4f(blinn_phong(-ray_dir, pos, lightPos + lightOffset, ambientColor, surface.color), depth);
 	}
 
@@ -222,7 +227,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     let raymarch_distance : f32 = ray_AABB_intersection_distance(in.voxel_pos, ray_dir_voxel_space, in.voxel_center, VOXEL_SIZE);
 
-    let ray_result = raymarch(in.atlas_tile_coordinate + in.voxel_pos, ray_dir_voxel_space, raymarch_distance, camera_data.view_projection);
+    let ray_result = raymarch(in.in_atlas_pos.xyz, ray_dir, raymarch_distance, camera_data.view_projection);
 
     out.color = vec4f(pow(ray_result.rgb, vec3f(2.2, 2.2, 2.2)), 1.0); // Color
     out.depth = ray_result.a;
