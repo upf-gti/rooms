@@ -47,28 +47,48 @@ struct FragmentOutput {
     @location(0) color: vec4f
 }
 
+// https://bgolus.medium.com/the-best-darn-grid-shader-yet-727f9278b9d8#5ef5
+fn pristine_grid(uv : vec2f, lineWidth : vec2f) -> f32
+{
+    let ddx : vec2f = dpdx(uv);
+    let ddy : vec2f = dpdy(uv);
+    let uvDeriv : vec2f = vec2f(length(vec2f(ddx.x, ddy.x)), length(vec2(ddx.y, ddy.y)));
+    let invertLine : vec2<bool> = vec2<bool>(lineWidth.x > 0.5, lineWidth.y > 0.5);
+    let targetWidth : vec2f = vec2f(
+      select(lineWidth.x, 1.0 - lineWidth.x, invertLine.x),
+      select(lineWidth.y, 1.0 - lineWidth.y, invertLine.y));
+
+    let drawWidth : vec2f = clamp(targetWidth, uvDeriv, vec2f(0.5));
+    let lineAA : vec2f = uvDeriv * 1.5;
+    var gridUV : vec2f = abs(fract(uv) * 2.0 - 1.0);
+    gridUV.x = select(1.0 - gridUV.x, gridUV.x, invertLine.x);
+    gridUV.y = select(1.0 - gridUV.y, gridUV.y, invertLine.y);
+    var grid2 : vec2f = smoothstep(drawWidth + lineAA, drawWidth - lineAA, gridUV);
+
+    grid2 *= clamp(targetWidth / drawWidth, vec2f(0.0), vec2f(1.0));
+    grid2 = mix(grid2, targetWidth, clamp(uvDeriv * 2.0 - 1.0, vec2f(0.0), vec2f(1.0)));
+    grid2.x = select(grid2.x, 1.0 - grid2.x, invertLine.x);
+    grid2.y = select(grid2.y, 1.0 - grid2.y, invertLine.y);
+
+    return mix(grid2.x, 1.0, grid2.y);
+}
+
 const GRID_AREA_SIZE : f32 = 3.0;
-const GRID_QUAD_SIZE :f32 = 0.25;
-const LINE_WIDTH : f32 = 0.05;
+const GRID_QUAD_SIZE :f32 = 0.5;
+const LINE_WIDTH : f32 = 0.04;
 
 @fragment
 fn fs_main(in: VertexOutput) -> FragmentOutput {
 
-    let wrapped_uvs : vec2f = fract(in.uv * GRID_AREA_SIZE / GRID_QUAD_SIZE);
+    let wrapped_uvs : vec2f = (in.uv * GRID_AREA_SIZE / GRID_QUAD_SIZE);
     let line_width_proportion : f32 = GRID_QUAD_SIZE * LINE_WIDTH;
     let one_minus_line_width : f32 = 1.0 - line_width_proportion;
     let zero_plus_line_width : f32 = 0.0 + line_width_proportion;
 
     var out: FragmentOutput;
 
-    if (wrapped_uvs.x > one_minus_line_width || wrapped_uvs.x < zero_plus_line_width) || (wrapped_uvs.y > one_minus_line_width || wrapped_uvs.y < zero_plus_line_width)
-    {
-        out.color = vec4f(0.57, 0.57, 0.57, 1.0);
-    } else {
-        discard;
-    }
-
-    //out.color = vec4f(wrapped_uvs.x, wrapped_uvs.y, 0.0, 1.0); // Color
+    out.color = vec4f(0.57, 0.57, 0.57, 1.0) *
+                pristine_grid(wrapped_uvs, vec2f(LINE_WIDTH));
 
     return out;
 }

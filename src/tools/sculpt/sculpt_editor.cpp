@@ -28,6 +28,7 @@ void SculptEditor::initialize()
     floor_grid_mesh = new EntityMesh();
     floor_grid_mesh->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_grid.wgsl"));
     floor_grid_mesh->set_mesh(RendererStorage::get_mesh("quad"));
+    floor_grid_mesh->set_material_flag(MATERIAL_TRANSPARENT);
     floor_grid_mesh->set_translation(glm::vec3(0.0f));
     floor_grid_mesh->rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
     floor_grid_mesh->scale(glm::vec3(3.f));
