@@ -49,7 +49,7 @@ const SQRT_3 = 1.73205080757;
         - There are two strucutres:
             - The Culling Lists: where the actual lists are stored as a single buffer, accessed as a 2D array:
                     edit_culling_lists[in_list_word_index + octree_index * word_list_size] <- word_list_size is 64 here
-            - Culling count: a buffer with the same strucutre as the octree, that stores the number of edits in each element
+            - Culling count: a buffer with the same strucutre as the octree, that stores the number of edits in each node
 */
 
 @compute @workgroup_size(1, 1, 1)

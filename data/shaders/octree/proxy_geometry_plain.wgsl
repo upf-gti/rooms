@@ -173,20 +173,28 @@ fn raymarch(ray_origin : vec3f, ray_dir : vec3f, max_distance : f32, view_proj :
 	var depth : f32 = 0.0;
     var surface : Surface;
 
-	for (var i : i32 = 0; depth < max_distance && i < 80; i++)
+    var pos : vec3f;
+    var i : i32 = 0;
+    var exit : u32 = 0u;
+
+	for (i = 0; depth < max_distance && i < 40; i++)
 	{
-		let pos = ray_origin + ray_dir * depth;
+		pos = ray_origin + ray_dir * depth;
 
         surface = sample_sdf(pos);
 
-		if ((surface.distance) < MIN_HIT_DIST) {
-            let epsilon : f32 = 0.000001; // avoids flashing when camera inside sdf
-            let proj_pos : vec4f = view_proj * vec4f(pos + ray_dir * epsilon, 1.0);
-            depth = proj_pos.z / proj_pos.w;
-			return vec4f(blinn_phong(-ray_dir, pos, lightPos + lightOffset, ambientColor, surface.color), depth);
-		}
+		if (surface.distance < MIN_HIT_DIST) {
+            exit = 1u;
+            break;
+		} 
+        depth += (surface.distance);    
+	}
 
-        depth += (surface.distance);
+    if (exit == 1u) {
+        let epsilon : f32 = 0.000001; // avoids flashing when camera inside sdf
+        let proj_pos : vec4f = view_proj * vec4f(pos + ray_dir * epsilon, 1.0);
+        depth = proj_pos.z / proj_pos.w;
+		return vec4f(blinn_phong(-ray_dir, pos, lightPos + lightOffset, ambientColor, surface.color), depth);
 	}
 
     // Use a two band spherical harmonic as a skymap
