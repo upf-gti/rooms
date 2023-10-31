@@ -45,7 +45,7 @@ struct ProxyInstanceData {
 // 1 / SDF_SIZE * 8 (texels that compose a brick) / 2 (the cube is centered, so its the halfsize) = 0.0078125
 const BOX_SIZE : f32 = ((1.0 / SDF_RESOLUTION) * 8.0) / 2.0;
 
-const BRICK_COUNT = u32(512.0 / 10.0);
+const BRICK_COUNT = u32(SDF_RESOLUTION / 10.0);
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
@@ -133,17 +133,15 @@ fn ray_AABB_intersection_distance(ray_origin : vec3f,
 
 fn sample_sdf(position : vec3f) -> Surface
 {
-    let rot_p = rotate_point_quat(position - sculpt_data.sculpt_start_position, sculpt_data.sculpt_inv_rotation) + vec3f(0.5);
+    let rot_p = rotate_point_quat(position - sculpt_data.sculpt_start_position, sculpt_data.sculpt_inv_rotation);
 
-    if (rot_p.x < 0.0 || rot_p.x > 1.0 ||
-        rot_p.y < 0.0 || rot_p.y > 1.0 ||
-        rot_p.z < 0.0 || rot_p.z > 1.0) {
-        return Surface(vec3(0.0, 0.0, 0.0), 0.01);
-    }
+    // if (rot_p.x < 0.0 || rot_p.x > 1.0 ||
+    //     rot_p.y < 0.0 || rot_p.y > 1.0 ||
+    //     rot_p.z < 0.0 || rot_p.z > 1.0) {
+    //     return Surface(vec3(0.0, 0.0, 0.0), 0.01);
+    // }
 
-    var data : vec4f;
-
-    data = textureSampleLevel(read_sdf, texture_sampler, position, 0.0);
+    let data : vec4f = textureSampleLevel(read_sdf, texture_sampler, position, 0.0);
 
     var surface : Surface = Surface(data.xyz, data.w);
 
@@ -163,10 +161,10 @@ fn estimate_normal( p : vec3f) -> vec3f
 }
 
 // TODO: if diffuse variable is not used, performance is increased by 20% (????)
-fn blinn_phong(toEye : vec3f, position : vec3f, lightPosition : vec3f, ambient : vec3f, diffuse : vec3f) -> vec3f
+fn blinn_phong(toEye : vec3f, position : vec3f, position_world : vec3f, lightPosition : vec3f, ambient : vec3f, diffuse : vec3f) -> vec3f
 {
     let normal : vec3f = estimate_normal(position);
-    let toLight : vec3f = normalize(lightPosition - position);
+    let toLight : vec3f = normalize(lightPosition - position_world);
     let reflection : vec3f = normalize(reflect(-toLight, normal));
     let halfwayDir : vec3f = normalize(toLight + toEye);
 
@@ -179,7 +177,7 @@ fn blinn_phong(toEye : vec3f, position : vec3f, lightPosition : vec3f, ambient :
     //return diffuse;
 }
 
-fn raymarch(ray_origin : vec3f, ray_dir : vec3f, max_distance : f32, view_proj : mat4x4f) -> vec4f
+fn raymarch(ray_origin : vec3f, ray_origin_world : vec3f, ray_dir : vec3f, max_distance : f32, view_proj : mat4x4f) -> vec4f
 {
     let ambientColor = vec3f(0.4);
 	let hitColor = vec3f(1.0, 1.0, 1.0);
@@ -190,12 +188,14 @@ fn raymarch(ray_origin : vec3f, ray_dir : vec3f, max_distance : f32, view_proj :
     var surface : Surface;
 
     var pos : vec3f;
+    var pos_world : vec3f;
     var i : i32 = 0;
     var exit : u32 = 0u;
 
 	for (i = 0; depth < max_distance && i < 40; i++)
     {
 		pos = ray_origin + ray_dir * depth;
+		pos_world = ray_origin_world + ray_dir * depth;
 
         surface = sample_sdf(pos);
 
@@ -208,10 +208,10 @@ fn raymarch(ray_origin : vec3f, ray_dir : vec3f, max_distance : f32, view_proj :
 
     if (exit == 1u) {
         let epsilon : f32 = 0.000001; // avoids flashing when camera inside sdf
-        let proj_pos : vec4f = view_proj * vec4f(pos + ray_dir * epsilon, 1.0);
+        let proj_pos : vec4f = view_proj * vec4f(pos_world + ray_dir * epsilon, 1.0);
         depth = proj_pos.z / proj_pos.w;
         //return vec4f(surface.color, depth);
-		return vec4f(blinn_phong(-ray_dir, pos, lightPos + lightOffset, ambientColor, surface.color), depth);
+		return vec4f(blinn_phong(-ray_dir, pos, pos_world, lightPos + lightOffset, ambientColor, surface.color), depth);
 	}
 
     // Use a two band spherical harmonic as a skymap
@@ -227,7 +227,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     let raymarch_distance : f32 = ray_AABB_intersection_distance(in.voxel_pos, ray_dir_voxel_space, in.voxel_center, VOXEL_SIZE);
 
-    let ray_result = raymarch(in.in_atlas_pos.xyz, ray_dir, raymarch_distance, camera_data.view_projection);
+    let ray_result = raymarch(in.in_atlas_pos.xyz, in.world_pos.xyz, ray_dir, raymarch_distance, camera_data.view_projection);
 
     out.color = vec4f(pow(ray_result.rgb, vec3f(2.2, 2.2, 2.2)), 1.0); // Color
     out.depth = ray_result.a;
