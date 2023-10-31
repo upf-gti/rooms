@@ -1,21 +1,4 @@
-#include ../sdf_functions.wgsl
-
-struct OctreeNode {
-    tile_pointer : u32
-}
-
-struct Octree {
-    data : array<OctreeNode>
-};
-
-
-struct MergeData {
-    edits_aabb_start      : vec3<u32>,
-    edits_to_process      : u32,
-    sculpt_start_position : vec3f,
-    max_octree_depth      : u32,
-    sculpt_rotation       : vec4f
-};
+#include octree_includes.wgsl
 
 @group(0) @binding(0) var<storage, read_write> indirect_buffer : vec3u;
 @group(0) @binding(1) var<uniform> merge_data : MergeData;

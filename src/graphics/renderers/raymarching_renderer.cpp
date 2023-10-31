@@ -313,7 +313,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
     sdf_texture_uniform.binding = 3;
 
     // 2^3 give 8x8x8 pixel cells, and we need one iteration less, so substract 3
-    octree_depth = static_cast<uint8_t>(log2(SDF_RESOLUTION) - 3);
+    octree_depth = static_cast<uint8_t>(log2(SDF_RESOLUTION) - (3 - (SCULPT_MAX_SIZE - 1)));
 
     // Size of penultimate level
     uint32_t octants_max_size = pow(pow(2, octree_depth), 3);

@@ -1,25 +1,5 @@
 #include ../sdf_functions.wgsl
-
-struct OctreeNode {
-    tile_pointer : u32
-}
-
-struct Octree {
-    data : array<OctreeNode>
-};
-
-struct MergeData {
-    edits_aabb_start      : vec3<u32>,
-    edits_to_process      : u32,
-    sculpt_start_position : vec3f,
-    max_octree_depth      : u32,
-    sculpt_rotation       : vec4f
-};
-
-struct ProxyInstanceData {
-    position : vec3f,
-    atlas_tile_index : u32
-};
+#include octree_includes.wgsl
 
 @group(0) @binding(0) var<uniform> edits : Edits;
 @group(0) @binding(1) var<uniform> merge_data : MergeData;
@@ -31,10 +11,6 @@ struct ProxyInstanceData {
 
 @group(1) @binding(0) var<storage, read> octant_usage_read : array<u32>;
 @group(1) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
-
-const SQRT_3 = 1.73205080757;
-
-const BRICK_COUNT = u32(512.0 / 10.0);
 
 @compute @workgroup_size(10,10,10)
 fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation_id) local_id: vec3<u32>)
@@ -52,27 +28,24 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     let parent_level : u32 = level - 1;
 
     let octant_id : u32 = octant_usage_read[id];
-    let parent_octant_id : u32 = octant_id & (0x0003FFFFu >> (3u * (merge_data.max_octree_depth - parent_level)));
+    let parent_mask : u32 = u32(pow(2, f32(merge_data.max_octree_depth * 3))) - 1;
+    let parent_octant_id : u32 = octant_id &  (parent_mask >> (3u * (merge_data.max_octree_depth - parent_level)));
 
     let octree_index : u32 = octant_id + u32((pow(8.0, f32(level)) - 1) / 7);
     let parent_octree_index : u32 = parent_octant_id + u32((pow(8.0, f32(parent_level)) - 1) / 7);
 
     var octant_center : vec3f = vec3f(0.0);
 
-    var level_half_size : f32 = 0.5;
+    var level_half_size : f32 = 0.5 * SCULPT_MAX_SIZE;
 
     for (var i : u32 = 1; i <= level; i++) {
-        level_half_size = 1.0 / pow(2.0, f32(i + 1));
+        level_half_size = SCULPT_MAX_SIZE / pow(2.0, f32(i + 1));
 
         octant_center += level_half_size * OFFSET_LUT[(octant_id >> (3 * (i - 1))) & 0x7];
     }
 
     // To start writing at the top corner
     let octant_corner : vec3f = octant_center - vec3f(level_half_size);
-
-    let world_pos_texture_space : vec3f = octant_corner + vec3f(0.5);
-
-    let start_writing_pos : vec3u = vec3u(world_pos_texture_space * SDF_RESOLUTION);
 
     var sSurface : Surface = Surface(vec3f(0.0, 0.0, 0.0), 10000.0);
 

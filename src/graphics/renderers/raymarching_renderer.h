@@ -10,6 +10,7 @@
 #define EDITS_MAX 512
 #define SDF_RESOLUTION 512
 #define MAX_EDITS_PER_EVALUATION 256
+#define SCULPT_MAX_SIZE 2 // meters
 
 class EntityMesh;
 

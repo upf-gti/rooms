@@ -1,25 +1,5 @@
 #include ../sdf_functions.wgsl
-
-struct OctreeNode {
-    tile_pointer : u32
-}
-
-struct Octree {
-    data : array<OctreeNode>
-};
-
-struct MergeData {
-    edits_aabb_start      : vec3<u32>,
-    edits_to_process      : u32,
-    sculpt_start_position : vec3f,
-    max_octree_depth      : u32,
-    sculpt_rotation       : vec4f
-};
-
-struct ProxyInstanceData {
-    position : vec3f,
-    atlas_tile_index : u32
-};
+#include octree_includes.wgsl
 
 @group(0) @binding(0) var<uniform> edits : Edits;
 @group(0) @binding(1) var<uniform> merge_data : MergeData;
@@ -32,8 +12,6 @@ struct ProxyInstanceData {
 
 @group(1) @binding(0) var<storage, read> octant_usage_read : array<u32>;
 @group(1) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
-
-const SQRT_3 = 1.73205080757;
 
 /*
     Octree Octant indexing
@@ -75,8 +53,9 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     }
 
     let octant_id : u32 = octant_usage_read[id];
+    let parent_mask : u32 = u32(pow(2, f32(merge_data.max_octree_depth * 3))) - 1;
     // The parent is indicated in the index, so according to the level, we remove the 3 lower bits, associated to the current octant
-    let parent_octant_id : u32 = octant_id & (0x0003FFFFu >> (3u * (merge_data.max_octree_depth - parent_level)));
+    let parent_octant_id : u32 = octant_id & (parent_mask >> (3u * (merge_data.max_octree_depth - parent_level)));
 
     // In array indexing: in_level_position_of_octant (the octant id) + layer_start_in_array
     // Given a level, we can compute the size of a level with (8^(level-1))/7
@@ -84,11 +63,11 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     let parent_octree_index : u32 = parent_octant_id + u32((pow(8.0, f32(parent_level)) - 1) / 7);
 
     var octant_center : vec3f = vec3f(0.0);
-    var level_half_size : f32 = 0.5;
+    var level_half_size : f32 = 0.5 * SCULPT_MAX_SIZE;
 
     // Compute the center and the half size of the current octree, in the current level, via iterating the octree index
     for (var i : u32 = 1; i <= level; i++) {
-        level_half_size = 1.0 / pow(2.0, f32(i + 1));
+        level_half_size = SCULPT_MAX_SIZE / pow(2.0, f32(i + 1));
 
         // For each level, select the octant position via the 3 corresponding bits and use the OFFSET_LUT that
         // indicates the relative position of an octant in a layer
