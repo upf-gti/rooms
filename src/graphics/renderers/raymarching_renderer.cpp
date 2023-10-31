@@ -304,7 +304,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
 
     sdf_texture.create(
         WGPUTextureDimension_3D,
-        WGPUTextureFormat_RGBA32Float,
+        WGPUTextureFormat_RGBA16Float,
         { SDF_RESOLUTION, SDF_RESOLUTION, SDF_RESOLUTION },
         static_cast<WGPUTextureUsage>(WGPUTextureUsage_TextureBinding | WGPUTextureUsage_StorageBinding | WGPUTextureUsage_CopySrc),
         1, nullptr);
@@ -326,11 +326,11 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         // total size considering leaves and intermediate levels
         octree_total_size = (pow(8, octree_depth + 1) - 1) / 7;
 
-        compute_edits_array_uniform.data = webgpu_context->create_buffer(sizeof(Edit) * EDITS_MAX, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr);
+        compute_edits_array_uniform.data = webgpu_context->create_buffer(sizeof(Edit) * EDITS_MAX, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "edits_buffer");
         compute_edits_array_uniform.binding = 0;
         compute_edits_array_uniform.buffer_size = sizeof(Edit) * EDITS_MAX;
 
-        compute_merge_data_uniform.data = webgpu_context->create_buffer(sizeof(sMergeData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr);
+        compute_merge_data_uniform.data = webgpu_context->create_buffer(sizeof(sMergeData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "merge_data");
         compute_merge_data_uniform.binding = 1;
         compute_merge_data_uniform.buffer_size = sizeof(sMergeData);
 

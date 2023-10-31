@@ -1,10 +1,10 @@
-#include ../sdf_functions.wgsl
+#include sdf_functions.wgsl
 #include octree_includes.wgsl
 
 @group(0) @binding(0) var<uniform> edits : Edits;
 @group(0) @binding(1) var<uniform> merge_data : MergeData;
 @group(0) @binding(2) var<storage, read_write> octree : Octree;
-@group(0) @binding(3) var write_sdf: texture_storage_3d<rgba32float, write>;
+@group(0) @binding(3) var write_sdf: texture_storage_3d<rgba16float, write>;
 @group(0) @binding(4) var<storage, read_write> current_level : atomic<u32>;
 @group(0) @binding(6) var<storage, read_write> proxy_box_position_buffer: array<ProxyInstanceData>;
 @group(0) @binding(7) var<storage, read_write> edit_culling_lists: array<u32>;

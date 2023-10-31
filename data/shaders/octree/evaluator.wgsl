@@ -1,4 +1,4 @@
-#include ../sdf_functions.wgsl
+#include sdf_functions.wgsl
 #include octree_includes.wgsl
 
 @group(0) @binding(0) var<uniform> edits : Edits;
@@ -30,7 +30,7 @@
         - For each node of the octree, there is a array of 64 u32 indices, that references the 256 edits.
         - Each item in the list is used in intervals of 8 bits, so in one u32 word we store 4 indices.
         - With bit operations we can circunvent the lack of u8 of current webgpu, withou having to use the full u32 for indexing.
-        - There are two strucutres:
+        - There are two structures:
             - The Culling Lists: where the actual lists are stored as a single buffer, accessed as a 2D array:
                     edit_culling_lists[in_list_word_index + octree_index * word_list_size] <- word_list_size is 64 here
             - Culling count: a buffer with the same strucutre as the octree, that stores the number of edits in each node

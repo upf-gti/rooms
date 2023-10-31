@@ -1,4 +1,5 @@
-#include ../sdf_functions.wgsl
+#include sdf_functions.wgsl
+#include octree_includes.wgsl
 
 struct VertexInput {
     @builtin(instance_index) instance_id : u32,
@@ -31,11 +32,6 @@ struct CameraData {
     view_projection : mat4x4f,
 };
 
-struct ProxyInstanceData {
-    position : vec3f,
-    atlas_tile_index : u32
-};
-
 @group(0) @binding(2) var texture_sampler : sampler;
 @group(0) @binding(3) var read_sdf: texture_3d<f32>;
 @group(0) @binding(6) var<storage, read> proxy_box_position_buffer: array<ProxyInstanceData>;
@@ -44,8 +40,6 @@ struct ProxyInstanceData {
 
 // 1 / SDF_SIZE * 8 (texels that compose a brick) / 2 (the cube is centered, so its the halfsize) = 0.0078125
 const BOX_SIZE : f32 = ((1.0 / SDF_RESOLUTION) * 8.0) / 2.0;
-
-const BRICK_COUNT = u32(SDF_RESOLUTION / 10.0);
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
