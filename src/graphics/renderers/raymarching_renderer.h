@@ -47,7 +47,7 @@ class RaymarchingRenderer {
     Uniform         octree_proxy_indirect_buffer;
     Uniform         octree_edit_culling_lists;
     Uniform         proxy_geometry_eye_position;
-    //Uniform         atlas_atomic_counter;
+    Uniform         atlas_atomic_counter;
     WGPUBindGroup   render_camera_bind_group = nullptr;
 
     Uniform         sculpt_data_uniform;
@@ -61,8 +61,6 @@ class RaymarchingRenderer {
     Uniform         compute_edits_array_uniform;
 
     EntityMesh*     cube_mesh = nullptr;
-
-    uint32_t        last_edits_to_process = 0;
 
     struct sSculptData {
         glm::vec3 sculpt_start_position = {0.f, 0.f, 0.f};

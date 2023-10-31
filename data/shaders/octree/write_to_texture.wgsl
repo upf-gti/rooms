@@ -6,8 +6,10 @@
 @group(0) @binding(2) var<storage, read_write> octree : Octree;
 @group(0) @binding(3) var write_sdf: texture_storage_3d<rgba16float, write>;
 @group(0) @binding(4) var<storage, read_write> current_level : atomic<u32>;
+@group(0) @binding(5) var<storage, read_write> atomic_counter : atomic<u32>;
 @group(0) @binding(6) var<storage, read_write> proxy_box_position_buffer: array<ProxyInstanceData>;
 @group(0) @binding(7) var<storage, read_write> edit_culling_lists: array<u32>;
+@group(0) @binding(8) var<storage, read_write> atlas_tile_counter : atomic<u32>;
 
 @group(1) @binding(0) var<storage, read> octant_usage_read : array<u32>;
 @group(1) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
@@ -17,7 +19,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 {
     let id : u32 = group_id.x;
 
-    let atlas_tile_index : u32 = proxy_box_position_buffer[id].atlas_tile_index;
+    let atlas_tile_index : u32 = proxy_box_position_buffer[atomicLoad(&atlas_tile_counter) - atomicLoad(&atomic_counter) + id].atlas_tile_index;
 
     let atlas_tile_coordinate : vec3u = 10 * vec3u(atlas_tile_index % BRICK_COUNT,
                                                   (atlas_tile_index / BRICK_COUNT) % BRICK_COUNT,
