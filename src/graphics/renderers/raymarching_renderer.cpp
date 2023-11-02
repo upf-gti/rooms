@@ -23,15 +23,19 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
 
     edits = new Edit[EDITS_MAX];
 
-    //edits[compute_merge_data.edits_to_process++] = {
-    //    .position = { 0.0, 0.0, 0.0 },
-    //    .primitive = SD_SPHERE,
-    //    .color = { 1.0, 0.0, 0.0 },
-    //    .operation = OP_SMOOTH_UNION,
-    //    .dimensions = { 0.02f, 0.02f, 0.02f, 0.02f },
-    //    .rotation = { 0.f, 0.f, 0.f, 1.f },
-    //    .parameters = { 0.0, -1.0, 0.0, 0.0 },
-    //};
+    /*for (uint32_t i = 0; i < 120; i++) {
+        edits[compute_merge_data.edits_to_process++] = {
+                .position = glm::vec3(glm::vec3(0.5f * (random_f() * 2 - 1), 0.5f * (random_f() * 2 - 1), 0.5f * (random_f() * 2 - 1))),
+                .primitive = SD_SPHERE,
+                .color = { 1.0, 0.0, 0.0 },
+                .operation = OP_SMOOTH_UNION,
+                .dimensions = { 0.02f, 0.02f, 0.02f, 0.02f },
+                .rotation = { 0.f, 0.f, 0.f, 1.f },
+                .parameters = { 0.0, -1.0, 0.0, 0.0 },
+            };
+    }*/
+
+    //edits[compute_merge_data.edits_to_process++] = 
 
     //edits[compute_merge_data.edits_to_process++] = {
     //    .position = { 0.2, 0.0, 0.0 },
@@ -358,8 +362,12 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         atlas_atomic_counter.binding = 8;
         atlas_atomic_counter.buffer_size = sizeof(uint32_t);
 
+        octree_edit_culling_count.data = webgpu_context->create_buffer(octree_total_size * sizeof(uint32_t), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "edit_culling_lists");
+        octree_edit_culling_count.binding = 9;
+        octree_edit_culling_count.buffer_size = octree_total_size * sizeof(uint32_t);
+
         std::vector<Uniform*> uniforms = { &octree_uniform, &compute_edits_array_uniform, &compute_merge_data_uniform, &octree_atomic_counter,
-                                           &octree_current_level, &octree_proxy_instance_buffer, &octree_edit_culling_lists, &atlas_atomic_counter };
+                                           &octree_current_level, &octree_proxy_instance_buffer, &octree_edit_culling_lists, &atlas_atomic_counter, &octree_edit_culling_count };
 
         compute_octree_evaluate_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_evaluate_shader, 0);
     }

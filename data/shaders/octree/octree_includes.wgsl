@@ -24,3 +24,13 @@ struct ProxyInstanceData {
     position : vec3f,
     atlas_tile_index : u32
 };
+
+struct OctreeProxyGeometryData {
+    atlas_tile_counter           : atomic<u32>,
+    proxy_box_position_buffer    : array<ProxyInstanceData>
+};
+
+struct OctreeEditCulling {
+    edit_culling_count : array<u32>
+    edit_culling_lists : array<u32>
+};

@@ -46,6 +46,7 @@ class RaymarchingRenderer {
     Uniform         octree_proxy_instance_buffer;
     Uniform         octree_proxy_indirect_buffer;
     Uniform         octree_edit_culling_lists;
+    Uniform         octree_edit_culling_count;
     Uniform         proxy_geometry_eye_position;
     Uniform         atlas_atomic_counter;
     WGPUBindGroup   render_camera_bind_group = nullptr;

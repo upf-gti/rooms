@@ -9,6 +9,7 @@
 @group(0) @binding(6) var<storage, read_write> proxy_box_position_buffer: array<ProxyInstanceData>;
 @group(0) @binding(7) var<storage, read_write> edit_culling_lists: array<u32>;
 @group(0) @binding(8) var<storage, read_write> atlas_tile_counter : atomic<u32>;
+@group(0) @binding(9) var<storage, read_write> edit_culling_count : array<u32>;
 
 @group(1) @binding(0) var<storage, read> octant_usage_read : array<u32>;
 @group(1) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
@@ -83,7 +84,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     var new_packed_edit_idx : u32 = 0;
 
     // Check the edits in the parent, and fill its own list with the edits that affect this child
-    for (var i : u32 = 0; i < octree.data[parent_octree_index].tile_pointer; i++) {
+    for (var i : u32 = 0; i < edit_culling_count[parent_octree_index]; i++) {
         // Accessing a packed indexed edit in the culling list:
 
         // Get the word index and the word: word_idx = idx / 4
@@ -114,7 +115,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         } 
         
         // If we are in the last iteration and we have not saved the current packed word, we store it
-        if (i == (octree.data[parent_octree_index].tile_pointer - 1)) {
+        if (i == (edit_culling_count[parent_octree_index] - 1)) {
             edit_culling_lists[(edit_counter) / 4 + octree_index * packed_list_size] = new_packed_edit_idx;
         }
     }
@@ -144,6 +145,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         }
 
         // Not really wat this is for, but it stores the count... for now
+        edit_culling_count[octree_index] = edit_counter;
         octree.data[octree_index].tile_pointer = edit_counter;
     } else {
         octree.data[octree_index].tile_pointer = 0;

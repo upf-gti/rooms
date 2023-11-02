@@ -10,6 +10,7 @@
 @group(0) @binding(6) var<storage, read_write> proxy_box_position_buffer: array<ProxyInstanceData>;
 @group(0) @binding(7) var<storage, read_write> edit_culling_lists: array<u32>;
 @group(0) @binding(8) var<storage, read_write> atlas_tile_counter : atomic<u32>;
+@group(0) @binding(9) var<storage, read_write> edit_culling_count : array<u32>;
 
 @group(1) @binding(0) var<storage, read> octant_usage_read : array<u32>;
 @group(1) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
@@ -57,7 +58,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
     let packed_list_size : u32 = (256 / 4);
 
-    for (var i : u32 = 0; i < octree.data[parent_octree_index].tile_pointer; i++) {
+    for (var i : u32 = 0; i < edit_culling_count[parent_octree_index]; i++) {
 
         let current_packed_edit_idx : u32 = edit_culling_lists[i / 4 + parent_octree_index * packed_list_size];
 
@@ -68,7 +69,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
         sSurface = evalEdit(octant_corner + pixel_offset, sSurface, edits.data[current_unpacked_edit_idx], &current_edit_surface);
     }
 
-    let interpolant : f32 = (f32(octree.data[parent_octree_index].tile_pointer) / f32(5)) * (3.14159265 / 2.0);
+    let interpolant : f32 = (f32(edit_culling_count[parent_octree_index]) / f32(5)) * (3.14159265 / 2.0);
 
     var heatmap_color : vec3f;
     heatmap_color.r = sin(interpolant);
