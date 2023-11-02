@@ -3,6 +3,7 @@ const SDF_RESOLUTION = 512.0;
 const SQRT_3 = 1.73205080757;
 const SCULPT_MAX_SIZE = 2.0; // meters
 const BRICK_COUNT = u32(SDF_RESOLUTION / 10.0);
+const PACKED_LIST_SIZE : u32 = (256 / 4);
 
 struct OctreeNode {
     tile_pointer : u32
