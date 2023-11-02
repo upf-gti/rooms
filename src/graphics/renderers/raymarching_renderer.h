@@ -7,9 +7,9 @@
 #include "graphics/texture.h"
 
 #define PREVIEW_EDITS_MAX 128
-#define EDITS_MAX 512
+#define EDITS_MAX 64
 #define SDF_RESOLUTION 512
-#define MAX_EDITS_PER_EVALUATION 256
+#define MAX_EDITS_PER_EVALUATION 64
 #define SCULPT_MAX_SIZE 2 // meters
 
 class EntityMesh;

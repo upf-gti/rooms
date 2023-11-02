@@ -61,11 +61,9 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
     var current_edit_surface : Surface;
 
-    let packed_list_size : u32 = (256 / 4);
+    for (var i : u32 = 0; i < edit_culling_count[parent_octree_index]; i++) {
 
-    for (var i : u32 = 0; i <  edit_culling_count[parent_octree_index] ; i++) {
-
-        let current_packed_edit_idx : u32 = edit_culling_lists[i / 4 + parent_octree_index * packed_list_size];
+        let current_packed_edit_idx : u32 = edit_culling_lists[i / 4 + parent_octree_index * PACKED_LIST_SIZE];
 
         let packed_index : u32 = 3 - (i % 4);
 

@@ -319,8 +319,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
     octree_depth = static_cast<uint8_t>(log2(SDF_RESOLUTION) - (3 - (SCULPT_MAX_SIZE - 1)));
 
     // Size of penultimate level
-    uint32_t octants_max_size = pow(pow(2, octree_depth), 3);
-    uint32_t octants_max_index_buffer_size = octants_max_size * sizeof(uint32_t);
+    uint32_t octants_max_size = pow(pow(2, octree_depth - 1), 3);
 
     // Texture uniforms
     {

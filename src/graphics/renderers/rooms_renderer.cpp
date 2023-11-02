@@ -99,8 +99,10 @@ void RoomsRenderer::render_screen()
 
     //render_eye_quad(swapchain_view, eye_depth_texture_view[EYE_LEFT], eye_render_bind_group[EYE_LEFT]);
 
+#ifndef DISABLE_RAYMARCHER
     raymarching_renderer.set_camera_eye(camera.get_eye());
     raymarching_renderer.render_raymarching_proxy(swapchain_view, eye_depth_texture_view[EYE_LEFT]);
+#endif
 
     mesh_renderer.render(swapchain_view, eye_depth_texture_view[EYE_LEFT]);
     

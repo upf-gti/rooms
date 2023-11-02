@@ -51,7 +51,7 @@ int main() {
     required_limits.limits.minStorageBufferOffsetAlignment = 256;
 #ifndef DISABLE_RAYMARCHER
     required_limits.limits.maxBufferSize = SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION * sizeof(float) * 4;
-    required_limits.limits.maxStorageBufferBindingSize = SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION * sizeof(float) * 4;
+    required_limits.limits.maxStorageBufferBindingSize = SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION * sizeof(float) * 4 - 4;
     required_limits.limits.maxComputeInvocationsPerWorkgroup = 1024;
     required_limits.limits.maxStorageBuffersPerShaderStage = 8; // GTX 1080 friendly :(
 #endif

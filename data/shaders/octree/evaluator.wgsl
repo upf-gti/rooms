@@ -77,7 +77,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     var sSurface : Surface = Surface(vec3f(0.0, 0.0, 0.0), 10000.0);
     var current_edit_surface : Surface;
     var edit_counter : u32 = 0;
-    let packed_list_size : u32 = (256 / 4);
 
     var new_packed_edit_idx : u32 = 0;
 
@@ -86,7 +85,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         // Accessing a packed indexed edit in the culling list:
 
         // Get the word index and the word: word_idx = idx / 4
-        let current_packed_edit_idx : u32 = edit_culling_lists[i / 4 + parent_octree_index * packed_list_size];
+        let current_packed_edit_idx : u32 = edit_culling_lists[i / 4 + parent_octree_index * PACKED_LIST_SIZE];
         //Get the in-word index
         let packed_index : u32 = 3 - (i % 4);
 
@@ -106,7 +105,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
             // If the current word is full, we store it, and set it up a new word in new_packed_edit_idx
             if (edit_counter % 4 == 0) {
-                edit_culling_lists[(edit_counter - 1) / 4 + octree_index * packed_list_size] = new_packed_edit_idx;
+                edit_culling_lists[(edit_counter - 1) / 4 + octree_index * PACKED_LIST_SIZE] = new_packed_edit_idx;
                 new_packed_edit_idx = 0;
                 continue;
             }
@@ -114,7 +113,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         
         // If we are in the last iteration and we have not saved the current packed word, we store it
         if (i == (edit_culling_count[parent_octree_index] - 1)) {
-            edit_culling_lists[(edit_counter) / 4 + octree_index * packed_list_size] = new_packed_edit_idx;
+            edit_culling_lists[(edit_counter) / 4 + octree_index * PACKED_LIST_SIZE] = new_packed_edit_idx;
         }
     }
 
