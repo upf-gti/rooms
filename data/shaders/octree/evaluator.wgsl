@@ -4,12 +4,10 @@
 @group(0) @binding(0) var<uniform> edits : Edits;
 @group(0) @binding(1) var<uniform> merge_data : MergeData;
 @group(0) @binding(2) var<storage, read_write> octree : Octree;
-@group(0) @binding(4) var<storage, read_write> current_level : atomic<u32>;
-@group(0) @binding(5) var<storage, read_write> atomic_counter : atomic<u32>;
-@group(0) @binding(6) var<storage, read_write> proxy_box_position_buffer: array<ProxyInstanceData>;
-@group(0) @binding(7) var<storage, read_write> edit_culling_lists: array<u32>;
-@group(0) @binding(8) var<storage, read_write> atlas_tile_counter : atomic<u32>;
-@group(0) @binding(9) var<storage, read_write> edit_culling_count : array<u32>;
+@group(0) @binding(4) var<storage, read_write> counters : OctreeCounters;
+@group(0) @binding(5) var<storage, read_write> proxy_box_position_buffer: array<ProxyInstanceData>;
+@group(0) @binding(6) var<storage, read_write> edit_culling_lists: array<u32>;
+@group(0) @binding(7) var<storage, read_write> edit_culling_count : array<u32>;
 
 @group(1) @binding(0) var<storage, read> octant_usage_read : array<u32>;
 @group(1) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
@@ -40,7 +38,7 @@
 @compute @workgroup_size(1, 1, 1)
 fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) workgroup_size : vec3u) 
 {
-    let level : u32 = atomicLoad(&current_level);
+    let level : u32 = atomicLoad(&counters.current_level);
 
     let id : u32 = group_id.x;
 
@@ -83,7 +81,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     var new_packed_edit_idx : u32 = 0;
 
     // Check the edits in the parent, and fill its own list with the edits that affect this child
-    for (var i : u32 = 0; i < edit_culling_count[parent_octree_index]; i++) {
+    for (var i : u32 = 0; i < edit_culling_count[parent_octree_index] ; i++) {
         // Accessing a packed indexed edit in the culling list:
 
         // Get the word index and the word: word_idx = idx / 4
@@ -126,7 +124,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         if (level < merge_data.max_octree_depth) {
             // For the 0<->(n-1) passes
             // Increase the number of children from the current level
-            let prev_counter : u32 = atomicAdd(&atomic_counter, 8);
+            let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 8);
 
             // Add to the index the childres's octant id, and save it for the next pass
             for (var i : u32 = 0; i < 8; i++) {
@@ -135,18 +133,20 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
         } else {
             // For the N pass, just send the leaves, to the writing to texture pass
-            let prev_counter : u32 = atomicAdd(&atomic_counter, 1);
+            let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 1);
             octant_usage_write[prev_counter] = octant_id;
 
-            let tile_counter : u32 = atomicLoad(&atlas_tile_counter);
+            let tile_counter : u32 = atomicLoad(&counters.atlas_tile_counter);
             proxy_box_position_buffer[tile_counter + prev_counter].position = octant_center;
             proxy_box_position_buffer[tile_counter + prev_counter].atlas_tile_index = tile_counter + prev_counter;
         }
 
         // Not really wat this is for, but it stores the count... for now
-        edit_culling_count[octree_index] = edit_counter;
+        //edit_culling_count[octree_index] = edit_counter;
         octree.data[octree_index].tile_pointer = edit_counter;
+        edit_culling_count[octree_index] = edit_counter;
     } else {
         octree.data[octree_index].tile_pointer = 0;
+        edit_culling_count[octree_index] = 0;
     }
 }

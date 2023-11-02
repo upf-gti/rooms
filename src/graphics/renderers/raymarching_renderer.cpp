@@ -141,8 +141,8 @@ void RaymarchingRenderer::compute_octree()
     webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_indirect_buffer.data), 0, &default_vals, 3 * sizeof(uint32_t));
 
     uint32_t default_val = 0;
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_current_level.data), 0, &default_val, sizeof(uint32_t));
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_atomic_counter.data), 0, &default_val, sizeof(uint32_t));
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_counters.data), 0, &default_val, sizeof(uint32_t));
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_counters.data), sizeof(uint32_t), &default_val, sizeof(uint32_t));
 
     // Restore initial octant for level 0
     webgpu_context->update_buffer(std::get<WGPUBuffer>(octant_usage_uniform[0].data), 0, &default_val, sizeof(uint32_t));
@@ -162,7 +162,7 @@ void RaymarchingRenderer::compute_octree()
 
     delete[] edit_indices;
 
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_uniform.data), 0, &compute_merge_data.edits_to_process, sizeof(uint32_t));
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_edit_culling_count.data), 0, &compute_merge_data.edits_to_process, sizeof(uint32_t));
 
     int ping_pong_idx = 0;
 
@@ -319,8 +319,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
     octree_depth = static_cast<uint8_t>(log2(SDF_RESOLUTION) - (3 - (SCULPT_MAX_SIZE - 1)));
 
     // Size of penultimate level
-    uint32_t octants_max_size = pow(pow(2, octree_depth), 3);
-    uint32_t octants_max_index_buffer_size = octants_max_size * sizeof(uint32_t);
+    uint32_t octants_max_size = pow(pow(2, octree_depth - 1), 3);
 
     // Texture uniforms
     {
@@ -341,33 +340,26 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         octree_uniform.binding = 2;
         octree_uniform.buffer_size = octree_total_size * sizeof(sOctreeNode);
 
-        uint32_t default_val = 0;
-        octree_current_level.data = webgpu_context->create_buffer(sizeof(uint32_t), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, &default_val, "current_level");
-        octree_current_level.binding = 4;
-        octree_current_level.buffer_size = sizeof(uint32_t);
+        uint32_t default_vals_zero[3] = { 0, 0, 0 };
+        octree_counters.data = webgpu_context->create_buffer(sizeof(uint32_t) * 3, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, default_vals_zero, "octree_counters");
+        octree_counters.binding = 4;
+        octree_counters.buffer_size = sizeof(uint32_t) * 3;
 
-        octree_atomic_counter.data = webgpu_context->create_buffer(sizeof(uint32_t), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, &default_val, "atomic_counter");
-        octree_atomic_counter.binding = 5;
-        octree_atomic_counter.buffer_size = sizeof(uint32_t);
-
+        uint32_t default_val = 0u;
         octree_proxy_instance_buffer.data = webgpu_context->create_buffer(octants_max_size * sizeof(ProxyInstanceData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "proxy_boxes_position_buffer");
-        octree_proxy_instance_buffer.binding = 6;
+        octree_proxy_instance_buffer.binding = 5;
         octree_proxy_instance_buffer.buffer_size = octants_max_size * sizeof(ProxyInstanceData);
 
         octree_edit_culling_lists.data = webgpu_context->create_buffer(octree_total_size * MAX_EDITS_PER_EVALUATION, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "edit_culling_lists");
-        octree_edit_culling_lists.binding = 7;
+        octree_edit_culling_lists.binding = 6;
         octree_edit_culling_lists.buffer_size = octree_total_size * MAX_EDITS_PER_EVALUATION;
 
-        atlas_atomic_counter.data = webgpu_context->create_buffer(sizeof(uint32_t), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, &default_val, "tile_counter");
-        atlas_atomic_counter.binding = 8;
-        atlas_atomic_counter.buffer_size = sizeof(uint32_t);
+        octree_edit_culling_count.data = webgpu_context->create_buffer(octree_total_size * sizeof(sOctreeNode), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "edit_culling_count");
+        octree_edit_culling_count.binding = 7;
+        octree_edit_culling_count.buffer_size = octree_total_size * sizeof(sOctreeNode);
 
-        octree_edit_culling_count.data = webgpu_context->create_buffer(octree_total_size * sizeof(uint32_t), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "edit_culling_lists");
-        octree_edit_culling_count.binding = 9;
-        octree_edit_culling_count.buffer_size = octree_total_size * sizeof(uint32_t);
-
-        std::vector<Uniform*> uniforms = { &octree_uniform, &compute_edits_array_uniform, &compute_merge_data_uniform, &octree_atomic_counter,
-                                           &octree_current_level, &octree_proxy_instance_buffer, &octree_edit_culling_lists, &atlas_atomic_counter, &octree_edit_culling_count };
+        std::vector<Uniform*> uniforms = { &octree_uniform, &compute_edits_array_uniform, &compute_merge_data_uniform, &octree_edit_culling_count,
+                                           &octree_counters, &octree_proxy_instance_buffer, &octree_edit_culling_lists };
 
         compute_octree_evaluate_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_evaluate_shader, 0);
     }
@@ -385,7 +377,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         octree_proxy_indirect_buffer.binding = 2;
         octree_proxy_indirect_buffer.buffer_size = sizeof(uint32_t) * 4;
 
-        std::vector<Uniform*> uniforms = { &octree_indirect_buffer, &octree_atomic_counter, &octree_current_level, &octree_proxy_indirect_buffer, &compute_merge_data_uniform, &atlas_atomic_counter };
+        std::vector<Uniform*> uniforms = { &octree_indirect_buffer, &octree_counters, &octree_proxy_indirect_buffer, &compute_merge_data_uniform };
 
         compute_octree_increment_level_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_increment_level_shader, 0);
     }
@@ -412,8 +404,8 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
     }
 
     {
-        std::vector<Uniform*> uniforms = { &sdf_texture_uniform, &compute_edits_array_uniform, &octree_uniform, &compute_merge_data_uniform,
-                                           &octree_current_level, &octree_edit_culling_lists, &octree_proxy_instance_buffer, &atlas_atomic_counter, &octree_atomic_counter };
+        std::vector<Uniform*> uniforms = { &sdf_texture_uniform, &compute_edits_array_uniform, &compute_merge_data_uniform, &octree_uniform, &octree_edit_culling_count,
+                                           &octree_counters, &octree_edit_culling_lists , &octree_proxy_instance_buffer };
         compute_octree_write_to_texture_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_write_to_texture_shader, 0);
     }
 

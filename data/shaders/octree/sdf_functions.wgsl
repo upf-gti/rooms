@@ -40,20 +40,6 @@ struct Surface {
     distance : f32
 };
 
-struct Edit {
-    position   : vec3f,
-    primitive  : u32,
-    color      : vec3f,
-    operation  : u32,
-    dimensions : vec4f,
-    rotation   : vec4f,
-    parameters : vec4f
-};
-
-struct Edits {
-    data : array<Edit, 512>
-}
-
 // Primitives
 
 fn rotate_point_quat(position : vec3f, rotation : vec4f) -> vec3f

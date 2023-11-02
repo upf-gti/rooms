@@ -284,8 +284,6 @@ void SculptEditor::render()
     Tool& tool_used = *tools[current_tool];
     Edit& edit_to_add = tool_used.get_edit_to_add();
 
-#ifdef XR_SUPPORT
-
     if (mesh_preview)
     {
         // Render a hollowed edit
@@ -330,7 +328,6 @@ void SculptEditor::render()
     }
 
     floor_grid_mesh->render();
-#endif
 }
 
 void SculptEditor::set_sculpt_started(bool value)
