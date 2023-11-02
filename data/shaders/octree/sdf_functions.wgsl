@@ -1,3 +1,5 @@
+enable chromium_experimental_read_write_storage_texture;
+
 const M_PI = 3.14159265359;
 
 // SD Primitives

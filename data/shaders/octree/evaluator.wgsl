@@ -132,22 +132,38 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 octant_usage_write[prev_counter + i] = octant_id | (i << (3 * level));
             }
 
+            // Mark this node as it has children
+            octree.data[octree_index].tile_pointer = 0x80000000u;
+
         } else {
             // For the N pass, just send the leaves, to the writing to texture pass
             let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 1);
-            octant_usage_write[prev_counter] = octant_id;
 
-            let tile_counter : u32 = atomicLoad(&counters.atlas_tile_counter);
-            proxy_box_position_buffer[tile_counter + prev_counter].position = octant_center;
-            proxy_box_position_buffer[tile_counter + prev_counter].atlas_tile_index = tile_counter + prev_counter;
+            // 0x0x80000000 is the 32st bit
+            // if the 32st bit is set, there is already a tile in the octree
+            if ((0x80000000u & octree.data[octree_index].tile_pointer) == 0x80000000u) {
+                // There is already a tile, mark for update
+                octant_usage_write[prev_counter] = octant_id | 0x80000000u;
+            } else {
+                let tile_counter : u32 = atomicLoad(&counters.atlas_tile_counter);
+                proxy_box_position_buffer[tile_counter + prev_counter].position = octant_center;
+                proxy_box_position_buffer[tile_counter + prev_counter].atlas_tile_index = tile_counter + prev_counter;
+                octree.data[octree_index].tile_pointer = (tile_counter + prev_counter) | 0x80000000u;
+                // A new tile, do not read the texture
+                octant_usage_write[prev_counter] = octant_id;
+            }
+            
         }
 
-        // Not really wat this is for, but it stores the count... for now
-        //edit_culling_count[octree_index] = edit_counter;
-        octree.data[octree_index].tile_pointer = edit_counter;
+        // Not really wat this is for, but it stores the count... for now        
         edit_culling_count[octree_index] = edit_counter;
     } else {
-        octree.data[octree_index].tile_pointer = 0;
+        // If the current MSB is set in the current, non-leaf tile pointer, but now
+        // there is no surface, it has been emptied and we should mark for removal
+        // for their children's bricks
+        if ((0x80000000u & octree.data[octree_index].tile_pointer) == 0x80000000u) {
+            // Remove children's bricks
+        }
         edit_culling_count[octree_index] = 0;
     }
 }
