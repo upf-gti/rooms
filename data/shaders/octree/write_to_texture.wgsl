@@ -5,12 +5,10 @@
 @group(0) @binding(1) var<uniform> merge_data : MergeData;
 @group(0) @binding(2) var<storage, read_write> octree : Octree;
 @group(0) @binding(3) var write_sdf: texture_storage_3d<rgba16float, write>;
-@group(0) @binding(4) var<storage, read_write> current_level : atomic<u32>;
-@group(0) @binding(5) var<storage, read_write> atomic_counter : atomic<u32>;
-@group(0) @binding(6) var<storage, read_write> proxy_box_position_buffer: array<ProxyInstanceData>;
-@group(0) @binding(7) var<storage, read_write> edit_culling_lists: array<u32>;
-@group(0) @binding(8) var<storage, read_write> atlas_tile_counter : atomic<u32>;
-@group(0) @binding(9) var<storage, read_write> edit_culling_count : array<u32>;
+@group(0) @binding(4) var<storage, read_write> counters : OctreeCounters;
+@group(0) @binding(5) var<storage, read_write> proxy_box_position_buffer: array<ProxyInstanceData>;
+@group(0) @binding(6) var<storage, read_write> edit_culling_lists: array<u32>;
+@group(0) @binding(7) var<storage, read_write> edit_culling_count : array<u32>;
 
 @group(1) @binding(0) var<storage, read> octant_usage_read : array<u32>;
 @group(1) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
@@ -18,15 +16,16 @@
 @compute @workgroup_size(10,10,10)
 fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation_id) local_id: vec3<u32>)
 {
+    let tmp : u32 = octree.data[0].tile_pointer; // Remove when octree is getting use here
     let id : u32 = group_id.x;
 
-    let atlas_tile_index : u32 = proxy_box_position_buffer[atomicLoad(&atlas_tile_counter) - atomicLoad(&atomic_counter) + id].atlas_tile_index;
+    let atlas_tile_index : u32 = proxy_box_position_buffer[atomicLoad(&counters.atlas_tile_counter) - atomicLoad(&counters.atomic_counter) + id].atlas_tile_index;
 
     let atlas_tile_coordinate : vec3u = 10 * vec3u(atlas_tile_index % BRICK_COUNT,
                                                   (atlas_tile_index / BRICK_COUNT) % BRICK_COUNT,
                                                    atlas_tile_index / (BRICK_COUNT * BRICK_COUNT));
 
-    let level : u32 = atomicLoad(&current_level);
+    let level : u32 = atomicLoad(&counters.current_level);
     
     let parent_level : u32 = level - 1;
 
@@ -58,7 +57,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
     let packed_list_size : u32 = (256 / 4);
 
-    for (var i : u32 = 0; i < edit_culling_count[parent_octree_index]; i++) {
+    for (var i : u32 = 0; i <  edit_culling_count[parent_octree_index] ; i++) {
 
         let current_packed_edit_idx : u32 = edit_culling_lists[i / 4 + parent_octree_index * packed_list_size];
 
@@ -69,7 +68,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
         sSurface = evalEdit(octant_corner + pixel_offset, sSurface, edits.data[current_unpacked_edit_idx], &current_edit_surface);
     }
 
-    let interpolant : f32 = (f32(edit_culling_count[parent_octree_index]) / f32(5)) * (3.14159265 / 2.0);
+    let interpolant : f32 = (f32( edit_culling_count[parent_octree_index] ) / f32(5)) * (3.14159265 / 2.0);
 
     var heatmap_color : vec3f;
     heatmap_color.r = sin(interpolant);

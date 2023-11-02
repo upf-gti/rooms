@@ -41,14 +41,12 @@ class RaymarchingRenderer {
     uint8_t         octree_depth = 0;
     uint32_t        octree_total_size = 0;
     Uniform         octree_indirect_buffer;
-    Uniform         octree_atomic_counter;
-    Uniform         octree_current_level;
+    Uniform         octree_counters;
     Uniform         octree_proxy_instance_buffer;
     Uniform         octree_proxy_indirect_buffer;
     Uniform         octree_edit_culling_lists;
     Uniform         octree_edit_culling_count;
     Uniform         proxy_geometry_eye_position;
-    Uniform         atlas_atomic_counter;
     WGPUBindGroup   render_camera_bind_group = nullptr;
 
     Uniform         sculpt_data_uniform;

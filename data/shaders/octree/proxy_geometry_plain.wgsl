@@ -34,7 +34,7 @@ struct CameraData {
 
 @group(0) @binding(2) var texture_sampler : sampler;
 @group(0) @binding(3) var read_sdf: texture_3d<f32>;
-@group(0) @binding(6) var<storage, read> proxy_box_position_buffer: array<ProxyInstanceData>;
+@group(0) @binding(5) var<storage, read> proxy_box_position_buffer: array<ProxyInstanceData>;
 
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
 
