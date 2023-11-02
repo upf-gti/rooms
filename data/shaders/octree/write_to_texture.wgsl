@@ -4,6 +4,7 @@
 @group(0) @binding(0) var<uniform> edits : Edits;
 @group(0) @binding(1) var<uniform> merge_data : MergeData;
 @group(0) @binding(2) var<storage, read_write> octree : Octree;
+//@group(0) @binding(3) var write_sdf: texture_storage_3d<rgba16float, read_write>;
 @group(0) @binding(3) var write_sdf: texture_storage_3d<rgba16float, write>;
 @group(0) @binding(4) var<storage, read_write> counters : OctreeCounters;
 @group(0) @binding(5) var<storage, read_write> proxy_box_position_buffer: array<ProxyInstanceData>;
@@ -50,6 +51,12 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     let octant_corner : vec3f = octant_center - vec3f(level_half_size);
 
     var sSurface : Surface = Surface(vec3f(0.0, 0.0, 0.0), 10000.0);
+
+    /*if ((0x80000000u & octant_id) == 0x80000000u) {
+        let sample : vec4f = textureLoad(write_sdf, atlas_tile_coordinate + local_id);
+        sSurface.distance = sample.a;
+        sSurface.color = sample.rgb;
+    }*/
 
     let pixel_offset : vec3f = (vec3f(local_id) - 1.0) / SDF_RESOLUTION;
 
