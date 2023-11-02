@@ -64,10 +64,10 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     // This is in an attribute for debugging
     out.atlas_tile_coordinate = vec3f(10 * vec3u(instance_data.atlas_tile_index % BRICK_COUNT,
                                                   (instance_data.atlas_tile_index / BRICK_COUNT) % BRICK_COUNT,
-                                                   instance_data.atlas_tile_index / (BRICK_COUNT * BRICK_COUNT))) / 512.0;
+                                                   instance_data.atlas_tile_index / (BRICK_COUNT * BRICK_COUNT))) / SDF_RESOLUTION;
     out.world_pos = world_pos.xyz; 
-    // From mesh space -1 to 1, -> 0 to 8/512 (plus a voxel for padding)
-    out.in_atlas_pos = (in.position * 0.5 + 0.5) * 8.0/512.0 + 1.0/512.0 + out.atlas_tile_coordinate;
+    // From mesh space -1 to 1, -> 0 to 8 / SDF_RESOLUTION (plus a voxel for padding)
+    out.in_atlas_pos = (in.position * 0.5 + 0.5) * 8.0/SDF_RESOLUTION + 1.0/SDF_RESOLUTION + out.atlas_tile_coordinate;
 
     return out;
 }

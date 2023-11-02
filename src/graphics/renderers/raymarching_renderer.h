@@ -8,7 +8,7 @@
 
 #define PREVIEW_EDITS_MAX 128
 #define EDITS_MAX 64
-#define SDF_RESOLUTION 512
+#define SDF_RESOLUTION 256
 #define MAX_EDITS_PER_EVALUATION 64
 #define SCULPT_MAX_SIZE 2 // meters
 
