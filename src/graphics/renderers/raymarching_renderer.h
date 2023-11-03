@@ -8,7 +8,7 @@
 
 #define PREVIEW_EDITS_MAX 128
 #define EDITS_MAX 64
-#define SDF_RESOLUTION 256
+#define SDF_RESOLUTION 512
 #define MAX_EDITS_PER_EVALUATION 64
 #define SCULPT_MAX_SIZE 2 // meters
 
@@ -96,6 +96,8 @@ class RaymarchingRenderer {
     struct ProxyInstanceData {
         glm::vec3 position;
         uint32_t atlas_index;
+        uint32_t octree_parent_index;
+        uint32_t padding[3];
     };
 
     // Timestepping counters

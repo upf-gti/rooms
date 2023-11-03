@@ -307,7 +307,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
 
     sdf_texture.create(
         WGPUTextureDimension_3D,
-        WGPUTextureFormat_RGBA16Float,
+        WGPUTextureFormat_R32Float,
         { SDF_RESOLUTION, SDF_RESOLUTION, SDF_RESOLUTION },
         static_cast<WGPUTextureUsage>(WGPUTextureUsage_TextureBinding | WGPUTextureUsage_StorageBinding | WGPUTextureUsage_CopySrc),
         1, nullptr);
@@ -404,7 +404,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
     }
 
     {
-        std::vector<Uniform*> uniforms = { &sdf_texture_uniform, &compute_edits_array_uniform, &compute_merge_data_uniform, &octree_uniform, &octree_edit_culling_count,
+        std::vector<Uniform*> uniforms = { &sdf_texture_uniform, &compute_edits_array_uniform, &octree_uniform, &octree_edit_culling_count,
                                            &octree_counters, &octree_edit_culling_lists , &octree_proxy_instance_buffer };
         compute_octree_write_to_texture_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_write_to_texture_shader, 0);
     }
