@@ -78,7 +78,7 @@ void RoomsEngine::render()
 
 bool RoomsEngine::export_scene()
 {
-    std::cout << "Exporting scene...";
+    spdlog::info("Exporting scene...");
 
     std::ofstream file("data/exports/myscene.txt");
 
@@ -101,7 +101,7 @@ bool RoomsEngine::export_scene()
 
     file.close();
 
-    std::cout << "[OK]" << std::endl;
+    //std::cout << "[OK]" << std::endl;
 
     return true;
 }

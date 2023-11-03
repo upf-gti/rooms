@@ -24,18 +24,23 @@ static EM_BOOL on_web_display_size_changed(int event_type,
 
 #endif
 
-void closeWindow(GLFWwindow* window) {
+void closeWindow(GLFWwindow* window)
+{
 #if !defined(XR_SUPPORT) || (defined(XR_SUPPORT) && defined(USE_MIRROR_WINDOW))
     glfwDestroyWindow(window);
     glfwTerminate();
 #endif
 }
 
-bool shouldClose(bool use_glfw, GLFWwindow* window) {
+bool shouldClose(bool use_glfw, GLFWwindow* window)
+{
     return glfwWindowShouldClose(window);
 }
 
-int main() {
+int main()
+{
+    spdlog::set_pattern("[%^%l%$] %v");
+    spdlog::set_level(spdlog::level::trace);
 
     RoomsEngine* engine = new RoomsEngine();
     RoomsRenderer* renderer = new RoomsRenderer();
@@ -95,12 +100,12 @@ int main() {
     }
 
     if (engine->initialize(renderer, window, use_glfw, use_mirror_screen)) {
-        std::cout << "Could not initialize engine" << std::endl;
+        spdlog::error("Could not initialize engine");
         closeWindow(window);
         return 1;
     }
 
-    std::cout << "Engine initialized" << std::endl;
+    spdlog::info("Engine initialized");
 
 #ifdef __EMSCRIPTEN__
     emscripten_set_main_loop_arg(
