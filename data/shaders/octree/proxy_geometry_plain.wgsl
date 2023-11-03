@@ -84,6 +84,7 @@ const VOXEL_SIZE = vec3f(8.0 * (1.0 / SDF_RESOLUTION));
 const MAX_DIST = sqrt(3.0) * 8.0 * (1.0 / SDF_RESOLUTION);
 const MIN_HIT_DIST = 0.00005;
 const DERIVATIVE_STEP = 0.5 / SDF_RESOLUTION;
+const MAX_ITERATIONS = 60;
 
 const specularCoeff = 1.0;
 const specularExponent = 4.0;
@@ -137,7 +138,7 @@ fn sample_sdf(position : vec3f) -> Surface
 
     let data : vec4f = textureSampleLevel(read_sdf, texture_sampler, position, 0.0);
 
-    var surface : Surface = Surface(data.xyz, data.w);
+    var surface : Surface = Surface(vec3f(1.0, 0.0, 0.0), data.r);
 
     //surface = add_preview_edits((p  + compute_data.sculpt_start_position) * SDF_RESOLUTION, surface);
 
@@ -166,8 +167,8 @@ fn blinn_phong(toEye : vec3f, position : vec3f, position_world : vec3f, lightPos
     let diffuseFactor : vec3f = 0.4 * diffuse * max(0.0, dot(normal, toLight));
     let specularFactor : vec3f = vec3f(0.3) * pow(max(0.0, dot(toEye, reflection)), specularExponent);
 
-    return ambientFactor + diffuseFactor + specularFactor;
-    //return normal;
+    //return ambientFactor + diffuseFactor + specularFactor;
+    return normal;
     //return diffuse;
 }
 
@@ -186,7 +187,7 @@ fn raymarch(ray_origin : vec3f, ray_origin_world : vec3f, ray_dir : vec3f, max_d
     var i : i32 = 0;
     var exit : u32 = 0u;
 
-	for (i = 0; depth < max_distance && i < 40; i++)
+	for (i = 0; depth < max_distance && i < MAX_ITERATIONS; i++)
     {
 		pos = ray_origin + ray_dir * depth;
 		pos_world = ray_origin_world + ray_dir * depth;

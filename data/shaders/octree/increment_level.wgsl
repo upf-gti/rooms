@@ -15,9 +15,8 @@ fn compute(@builtin(global_invocation_id) id: vec3<u32>)
     let prev_level : u32 = atomicAdd(&counters.current_level, 1);
 
     if (merge_data.max_octree_depth == prev_level) {
-        atomicAdd(&counters.atlas_tile_counter, num_dispatches);
+        //atomicAdd(&counters.atlas_tile_counter, num_dispatches);
         proxy_box_indirect[1] = atomicLoad(&counters.atlas_tile_counter);
-    } else {
-        atomicStore(&counters.atomic_counter, 0);
     }
+    atomicStore(&counters.atomic_counter, 0);
 }

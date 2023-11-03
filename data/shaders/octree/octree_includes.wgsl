@@ -1,5 +1,5 @@
 
-const SDF_RESOLUTION = 256.0;
+const SDF_RESOLUTION = 512.0;
 const SQRT_3 = 1.73205080757;
 const SCULPT_MAX_SIZE = 2.0; // meters
 const BRICK_COUNT = u32(SDF_RESOLUTION / 10.0);
@@ -37,7 +37,9 @@ struct MergeData {
 
 struct ProxyInstanceData {
     position : vec3f,
-    atlas_tile_index : u32
+    atlas_tile_index : u32,
+    octree_parent_id : u32, // a hack I dont like it
+    padding : vec3u
 };
 
 struct OctreeCounters {
