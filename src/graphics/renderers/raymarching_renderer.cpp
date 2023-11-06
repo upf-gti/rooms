@@ -37,15 +37,15 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
 
     //edits[compute_merge_data.edits_to_process++] = 
 
-    //edits[compute_merge_data.edits_to_process++] = {
-    //    .position = { 0.0, 0.0, 0.0 },
-    //    .primitive = SD_SPHERE,
-    //    .color = { 0.0, 1.0, 0.0 },
-    //    .operation = OP_SMOOTH_UNION,
-    //    .dimensions = { 0.16f, 0.16f, 0.16f, 0.16f },
-    //    .rotation = { 0.f, 0.f, 0.f, 1.f },
-    //    .parameters = { 0.0, -1.0, 0.0, 0.0 },
-    //};
+    edits[compute_merge_data.edits_to_process++] = {
+        .position = { 0.0, 0.0, 0.0 },
+        .primitive = SD_SPHERE,
+        .color = { 0.0, 1.0, 0.0 },
+        .operation = OP_SMOOTH_UNION,
+        .dimensions = { 0.06f, 0.06f, 0.06f, 0.06f },
+        .rotation = { 0.f, 0.f, 0.f, 1.f },
+        .parameters = { 0.0, -1.0, 0.0, 0.0 },
+    };
 
     //edits[compute_merge_data.edits_to_process++] = {
     //    .position = { 0.0, 0.2, 0.0 },
