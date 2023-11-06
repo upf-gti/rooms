@@ -54,11 +54,9 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
         sSurface.distance = sample.r;
         sSurface.color = sample.rgb;
         //debug_surf = vec3f(1.0);
-    } else {
-        octree.data[octree_leaf_id].tile_pointer = brick_index | 0x80000000u;
-    }  
+    }
 
-    let pixel_offset : vec3f = (vec3f(local_id) - 1.0) / SDF_RESOLUTION;
+    let pixel_offset : vec3f = (vec3f(local_id) - 1.0) * PIXEL_WORLD_SIZE;
 
     var current_edit_surface : Surface;
 
@@ -84,4 +82,10 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
     //textureStore(write_sdf, texture_coordinates, vec4f(debug_surf.x, debug_surf.y, debug_surf.z, sSurface.distance));
     octant_usage_write[0] = 0;
+
+    workgroupBarrier();
+
+    if (local_id.x == 0 && local_id.y == 0 && local_id.z == 0) {
+        octree.data[octree_leaf_id].tile_pointer = brick_index | 0x80000000u;
+    }
 }

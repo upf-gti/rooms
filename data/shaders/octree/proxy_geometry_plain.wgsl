@@ -39,14 +39,13 @@ struct CameraData {
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
 
 // 1 / SDF_SIZE * 8 (texels that compose a brick) / 2 (the cube is centered, so its the halfsize) = 0.0078125
-const BOX_SIZE : f32 = ((1.0 / SDF_RESOLUTION) * 8.0) / 2.0;
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
 
     let instance_data : ProxyInstanceData = proxy_box_position_buffer[in.instance_id];
 
-    var voxel_pos : vec3f = in.position * BOX_SIZE + instance_data.position;
+    var voxel_pos : vec3f = in.position * BRICK_WORLD_SIZE * 0.5 + instance_data.position;
     var world_pos : vec3f = rotate_point_quat(voxel_pos, sculpt_data.sculpt_rotation);
     world_pos += sculpt_data.sculpt_start_position;
 
@@ -66,7 +65,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
                                                   (instance_data.atlas_tile_index / BRICK_COUNT) % BRICK_COUNT,
                                                    instance_data.atlas_tile_index / (BRICK_COUNT * BRICK_COUNT))) / SDF_RESOLUTION;
     out.world_pos = world_pos.xyz; 
-    // From mesh space -1 to 1, -> 0 to 8 / SDF_RESOLUTION (plus a voxel for padding)
+    // From mesh space -1 to 1, -> 0 to BRICK_WORLD_SIZE (plus a voxel for padding)
     out.in_atlas_pos = (in.position * 0.5 + 0.5) * 8.0/SDF_RESOLUTION + 1.0/SDF_RESOLUTION + out.atlas_tile_coordinate;
 
     return out;
@@ -80,8 +79,7 @@ struct FragmentOutput {
 @group(0) @binding(1) var<uniform> eye_position : vec3f;
 @group(2) @binding(0) var<uniform> sculpt_data : SculptData;
 
-const VOXEL_SIZE = vec3f(8.0 * (1.0 / SDF_RESOLUTION));
-const MAX_DIST = sqrt(3.0) * 8.0 * (1.0 / SDF_RESOLUTION);
+const MAX_DIST = sqrt(3.0) * BRICK_WORLD_SIZE;
 const MIN_HIT_DIST = 0.00005;
 const DERIVATIVE_STEP = 0.5 / SDF_RESOLUTION;
 const MAX_ITERATIONS = 60;
@@ -220,7 +218,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     let ray_dir : vec3f = normalize(in.world_pos.xyz - eye_position);
     let ray_dir_voxel_space : vec3f = normalize(in.voxel_pos - rotate_point_quat(eye_position - sculpt_data.sculpt_start_position, sculpt_data.sculpt_inv_rotation));
 
-    let raymarch_distance : f32 = ray_AABB_intersection_distance(in.voxel_pos, ray_dir_voxel_space, in.voxel_center, VOXEL_SIZE);
+    let raymarch_distance : f32 = ray_AABB_intersection_distance(in.voxel_pos, ray_dir_voxel_space, in.voxel_center, vec3f(BRICK_WORLD_SIZE));
 
     let ray_result = raymarch(in.in_atlas_pos.xyz, in.world_pos.xyz, ray_dir, raymarch_distance, camera_data.view_projection);
 

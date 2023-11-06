@@ -37,15 +37,15 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
 
     //edits[compute_merge_data.edits_to_process++] = 
 
-    //edits[compute_merge_data.edits_to_process++] = {
-    //    .position = { 0.2, 0.0, 0.0 },
-    //    .primitive = SD_SPHERE,
-    //    .color = { 0.0, 1.0, 0.0 },
-    //    .operation = OP_SMOOTH_UNION,
-    //    .dimensions = { 0.16f, 0.16f, 0.16f, 0.16f },
-    //    .rotation = { 0.f, 0.f, 0.f, 1.f },
-    //    .parameters = { 0.0, -1.0, 0.0, 0.0 },
-    //};
+    edits[compute_merge_data.edits_to_process++] = {
+        .position = { 0.0, 0.0, 0.0 },
+        .primitive = SD_SPHERE,
+        .color = { 0.0, 1.0, 0.0 },
+        .operation = OP_SMOOTH_UNION,
+        .dimensions = { 0.01f, 0.01f, 0.01f, 0.01f },
+        .rotation = { 0.f, 0.f, 0.f, 1.f },
+        .parameters = { 0.0, -1.0, 0.0, 0.0 },
+    };
 
     //edits[compute_merge_data.edits_to_process++] = {
     //    .position = { 0.0, 0.2, 0.0 },
@@ -316,7 +316,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
     sdf_texture_uniform.binding = 3;
 
     // 2^3 give 8x8x8 pixel cells, and we need one iteration less, so substract 3
-    octree_depth = static_cast<uint8_t>(log2(SDF_RESOLUTION) - (3 - (SCULPT_MAX_SIZE - 1)));
+    octree_depth = static_cast<uint8_t>(6);
 
     // Size of penultimate level
     uint32_t octants_max_size = pow(pow(2, octree_depth - 1), 3);
@@ -336,7 +336,8 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         compute_merge_data_uniform.binding = 1;
         compute_merge_data_uniform.buffer_size = sizeof(sMergeData);
 
-        octree_uniform.data = webgpu_context->create_buffer(octree_total_size * sizeof(sOctreeNode), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "octree");
+        std::vector<sOctreeNode> octree_default(octree_total_size);
+        octree_uniform.data = webgpu_context->create_buffer(octree_total_size * sizeof(sOctreeNode), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, octree_default.data(), "octree");
         octree_uniform.binding = 2;
         octree_uniform.buffer_size = octree_total_size * sizeof(sOctreeNode);
 

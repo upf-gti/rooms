@@ -40,7 +40,7 @@ bool shouldClose(bool use_glfw, GLFWwindow* window)
 int main()
 {
     spdlog::set_pattern("[%^%l%$] %v");
-    spdlog::set_level(spdlog::level::trace);
+    spdlog::set_level(spdlog::level::info);
 
     RoomsEngine* engine = new RoomsEngine();
     RoomsRenderer* renderer = new RoomsRenderer();
