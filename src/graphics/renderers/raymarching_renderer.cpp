@@ -42,7 +42,7 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
         .primitive = SD_SPHERE,
         .color = { 0.0, 1.0, 0.0 },
         .operation = OP_SMOOTH_UNION,
-        .dimensions = { 0.01f, 0.01f, 0.01f, 0.01f },
+        .dimensions = { 0.06f, 0.06f, 0.06f, 0.06f },
         .rotation = { 0.f, 0.f, 0.f, 1.f },
         .parameters = { 0.0, -1.0, 0.0, 0.0 },
     };

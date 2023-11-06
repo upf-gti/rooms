@@ -31,15 +31,10 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
     let level : u32 = atomicLoad(&counters.current_level);
     
-    let parent_level : u32 = level - 1;
-
     let parent_octree_index : u32 =  proxy_data.octree_parent_id;
     let octant_center : vec3f = proxy_data.position;
 
     let level_half_size : f32 = SCULPT_MAX_SIZE / pow(2.0, f32(level + 1));
-
-    // To start writing at the top corner
-    let octant_corner : vec3f = octant_center - vec3f(level_half_size);
 
     var sSurface : Surface = Surface(vec3f(0.0, 0.0, 0.0), 10000.0);
     var debug_surf : vec3f = vec3f(0.0);
@@ -55,7 +50,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
         //debug_surf = vec3f(1.0);
     }
 
-    let pixel_offset : vec3f = (vec3f(local_id) - 3.0) * PIXEL_WORLD_SIZE;
+    // Offset for a 10 pixel wide brick
+    let pixel_offset : vec3f = (vec3f(local_id) - 4.5) * PIXEL_WORLD_SIZE;
 
     var current_edit_surface : Surface;
 
@@ -66,7 +62,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
         let packed_index : u32 = 3 - (i % 4);
         let current_unpacked_edit_idx : u32 = (current_packed_edit_idx & (0xFFu << (packed_index * 8u))) >> (packed_index * 8u);
 
-        sSurface = evalEdit(octant_corner + pixel_offset, sSurface, edits.data[current_unpacked_edit_idx], &current_edit_surface);
+        sSurface = evalEdit(octant_center + pixel_offset, sSurface, edits.data[current_unpacked_edit_idx], &current_edit_surface);
     }
 
     // Heatmap Edit debugging

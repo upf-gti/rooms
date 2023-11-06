@@ -38,8 +38,6 @@ struct CameraData {
 
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
 
-// 1 / SDF_SIZE * 8 (texels that compose a brick) / 2 (the cube is centered, so its the halfsize) = 0.0078125
-
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
 
@@ -65,7 +63,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
                                                   (instance_data.atlas_tile_index / BRICK_COUNT) % BRICK_COUNT,
                                                    instance_data.atlas_tile_index / (BRICK_COUNT * BRICK_COUNT))) / SDF_RESOLUTION;
     out.world_pos = world_pos.xyz; 
-    // From mesh space -1 to 1, -> 0 to BRICK_WORLD_SIZE (plus a voxel for padding)
+    // From mesh space -1 to 1, -> 0 to 8.0/SDF_RESOLUTION (plus a voxel for padding)
     out.in_atlas_pos = (in.position * 0.5 + 0.5) * 8.0/SDF_RESOLUTION + 1.0/SDF_RESOLUTION + out.atlas_tile_coordinate;
 
     return out;
@@ -79,17 +77,13 @@ struct FragmentOutput {
 @group(0) @binding(1) var<uniform> eye_position : vec3f;
 @group(2) @binding(0) var<uniform> sculpt_data : SculptData;
 
-const MAX_DIST = sqrt(3.0) * BRICK_WORLD_SIZE;
-const MIN_HIT_DIST = 0.0005;
+const MIN_HIT_DIST = 0.00005;
 const DERIVATIVE_STEP = 0.5 / SDF_RESOLUTION;
 const MAX_ITERATIONS = 60;
 
 const specularCoeff = 1.0;
 const specularExponent = 4.0;
 const lightPos = vec3f(0.0, 2.0, 1.0);
-
-const fov = 45.0;
-const up = vec3f(0.0, 1.0, 0.0);
 
 // SKYMAP FUNCTION
 fn irradiance_spherical_harmonics(n : vec3f) -> vec3f {
@@ -165,8 +159,8 @@ fn blinn_phong(toEye : vec3f, position : vec3f, position_world : vec3f, lightPos
     let diffuseFactor : vec3f = 0.4 * diffuse * max(0.0, dot(normal, toLight));
     let specularFactor : vec3f = vec3f(0.3) * pow(max(0.0, dot(toEye, reflection)), specularExponent);
 
-    //return ambientFactor + diffuseFactor + specularFactor;
-    return normal;
+    return ambientFactor + diffuseFactor + specularFactor;
+    //return normal;
     //return diffuse;
 }
 
@@ -181,14 +175,12 @@ fn raymarch(ray_origin : vec3f, ray_origin_world : vec3f, ray_dir : vec3f, max_d
     var surface : Surface;
 
     var pos : vec3f;
-    var pos_world : vec3f;
     var i : i32 = 0;
     var exit : u32 = 0u;
 
 	for (i = 0; depth < max_distance && i < MAX_ITERATIONS; i++)
     {
 		pos = ray_origin + ray_dir * depth;
-		pos_world = ray_origin_world + ray_dir * depth;
 
         surface = sample_sdf(pos);
 
@@ -200,6 +192,7 @@ fn raymarch(ray_origin : vec3f, ray_origin_world : vec3f, ray_dir : vec3f, max_d
 	}
 
     if (exit == 1u) {
+        let pos_world : vec3f = ray_origin_world + ray_dir * depth;
         let epsilon : f32 = 0.000001; // avoids flashing when camera inside sdf
         let proj_pos : vec4f = view_proj * vec4f(pos_world + ray_dir * epsilon, 1.0);
         depth = proj_pos.z / proj_pos.w;
@@ -225,11 +218,10 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     out.color = vec4f(pow(ray_result.rgb, vec3f(2.2, 2.2, 2.2)), 1.0); // Color
     out.depth = ray_result.a;
 
-
-    if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
-        out.color = vec4f(0.0, 0.0, 0.0, 1.0);
-        out.depth = 0.05;
-    }
+    // if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
+    //     out.color = vec4f(0.0, 0.0, 0.0, 1.0);
+    //     out.depth = in.position.z;
+    // }
 
     // out.color = vec4f(1.0, 0.0, 0.0, 1.0); // Color
     // out.depth = 0.0;
