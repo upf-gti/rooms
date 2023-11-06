@@ -118,7 +118,12 @@ int main()
     );
 
 #else
+    double prev_time = glfwGetTime();
     while (!shouldClose(use_glfw, window)) {
+        double curr_time = glfwGetTime();
+        std::string fps = "FPS: " + std::to_string(1.0 / (curr_time - prev_time));
+        glfwSetWindowTitle(window, fps.c_str());
+        prev_time = curr_time;
         engine->on_frame();
     }
 #endif
