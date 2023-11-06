@@ -55,7 +55,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
         //debug_surf = vec3f(1.0);
     }
 
-    let pixel_offset : vec3f = (vec3f(local_id) - 1.0) * PIXEL_WORLD_SIZE;
+    let pixel_offset : vec3f = (vec3f(local_id) - 3.0) * PIXEL_WORLD_SIZE;
 
     var current_edit_surface : Surface;
 

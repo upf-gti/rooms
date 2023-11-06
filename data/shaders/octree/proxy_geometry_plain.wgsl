@@ -80,7 +80,7 @@ struct FragmentOutput {
 @group(2) @binding(0) var<uniform> sculpt_data : SculptData;
 
 const MAX_DIST = sqrt(3.0) * BRICK_WORLD_SIZE;
-const MIN_HIT_DIST = 0.00005;
+const MIN_HIT_DIST = 0.0005;
 const DERIVATIVE_STEP = 0.5 / SDF_RESOLUTION;
 const MAX_ITERATIONS = 60;
 
@@ -224,6 +224,12 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     out.color = vec4f(pow(ray_result.rgb, vec3f(2.2, 2.2, 2.2)), 1.0); // Color
     out.depth = ray_result.a;
+
+
+    if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
+        out.color = vec4f(0.0, 0.0, 0.0, 1.0);
+        out.depth = 0.05;
+    }
 
     // out.color = vec4f(1.0, 0.0, 0.0, 1.0); // Color
     // out.depth = 0.0;

@@ -68,10 +68,10 @@ void RoomsEngine::update(float delta_time)
 void RoomsEngine::render()
 {
 	for (auto entity : entities) {
-		entity->render();
+		//entity->render();
 	}
 
-    sculpt_editor.render();
+    //sculpt_editor.render();
 
 	Engine::render();
 }

@@ -421,7 +421,7 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
     bool is_openxr_available = RoomsRenderer::instance->get_openxr_available();
 
-    cube_mesh = parse_scene("data/meshes/cube/cube.obj");
+    cube_mesh = parse_scene("data/meshes/cube.obj");
 
     render_proxy_shader = RendererStorage::get_shader("data/shaders/octree/proxy_geometry_plain.wgsl");
 
