@@ -86,7 +86,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
         // Get the word index and the word: word_idx = idx / 4
         let current_packed_edit_idx : u32 = edit_culling_lists[i / 4 + parent_octree_index * PACKED_LIST_SIZE];
-        //Get the in-word index
+        //Get the in-word index (inverted for endianess coherency)
         let packed_index : u32 = 3 - (i % 4);
 
         // Bit-sift for getting the 8 bits that indicate the in-word index:
@@ -145,7 +145,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 proxy_box_position_buffer[tile_counter].position = octant_center;
                 proxy_box_position_buffer[tile_counter].atlas_tile_index = tile_counter;
                 proxy_box_position_buffer[tile_counter].octree_parent_id = octree_index;
-                octree.data[octree_index].tile_pointer = (tile_counter);
+                octree.data[octree_index].tile_pointer = tile_counter;
             }
 
             octant_usage_write[prev_counter] = octree_index;

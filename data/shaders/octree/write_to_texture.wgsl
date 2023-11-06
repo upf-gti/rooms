@@ -18,26 +18,25 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     let id : u32 = group_id.x;
     let octree_leaf_id : u32 = octant_usage_read[id];
 
-    let brick_index : u32 = octree.data[octree_leaf_id].tile_pointer;
+    let brick_pointer : u32 = octree.data[octree_leaf_id].tile_pointer;
+    // Get the brick index, without the MSb that signals if it has an already initialized brick
+    let brick_index : u32 = brick_pointer & 0x7fffffffu;
 
-    let atlas_tile_index : u32 = proxy_box_position_buffer[brick_index & 0x7fffffffu].atlas_tile_index;
+    let proxy_data : ProxyInstanceData = proxy_box_position_buffer[brick_index];
 
-    let atlas_tile_coordinate : vec3u = 10 * vec3u(atlas_tile_index % BRICK_COUNT,
-                                                  (atlas_tile_index / BRICK_COUNT) % BRICK_COUNT,
-                                                   atlas_tile_index / (BRICK_COUNT * BRICK_COUNT));
+    // Get the 3D atlas coords of the brick, with a stride of 10 (the size of the brick)
+    let atlas_tile_coordinate : vec3u = 10 * vec3u(proxy_data.atlas_tile_index % BRICK_COUNT,
+                                                  (proxy_data.atlas_tile_index / BRICK_COUNT) % BRICK_COUNT,
+                                                   proxy_data.atlas_tile_index / (BRICK_COUNT * BRICK_COUNT));
 
     let level : u32 = atomicLoad(&counters.current_level);
     
     let parent_level : u32 = level - 1;
 
-    let parent_octree_index : u32 =  proxy_box_position_buffer[brick_index & 0x7fffffffu].octree_parent_id;
-    let octant_center : vec3f = proxy_box_position_buffer[brick_index & 0x7fffffffu].position;
+    let parent_octree_index : u32 =  proxy_data.octree_parent_id;
+    let octant_center : vec3f = proxy_data.position;
 
-    var level_half_size : f32 = 0.5 * SCULPT_MAX_SIZE;
-
-    for (var i : u32 = 1; i <= level; i++) {
-        level_half_size = SCULPT_MAX_SIZE / pow(2.0, f32(i + 1));
-    }
+    let level_half_size : f32 = SCULPT_MAX_SIZE / pow(2.0, f32(level + 1));
 
     // To start writing at the top corner
     let octant_corner : vec3f = octant_center - vec3f(level_half_size);
@@ -49,7 +48,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
     // If the MSb is setted we load the previous data of brick
     // if not, we set it for the next iteration
-    if ((0x80000000u & brick_index) == 0x80000000u) {
+    if ((0x80000000u & brick_pointer) == 0x80000000u) {
         let sample : vec4f = textureLoad(write_sdf, texture_coordinates);
         sSurface.distance = sample.r;
         sSurface.color = sample.rgb;
@@ -62,19 +61,18 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
     var current_edit_surface : Surface;
 
+    // Traverse the according edits and evaluate them in the brick
     for (var i : u32 = 0; i < edit_culling_count[parent_octree_index]; i++) {
-
+        // Get the packed indices
         let current_packed_edit_idx : u32 = edit_culling_lists[i / 4 + parent_octree_index * PACKED_LIST_SIZE];
-
         let packed_index : u32 = 3 - (i % 4);
-
         let current_unpacked_edit_idx : u32 = (current_packed_edit_idx & (0xFFu << (packed_index * 8u))) >> (packed_index * 8u);
 
         sSurface = evalEdit(octant_corner + pixel_offset, sSurface, edits.data[current_unpacked_edit_idx], &current_edit_surface);
     }
 
+    // Heatmap Edit debugging
     let interpolant : f32 = (f32( edit_culling_count[parent_octree_index] ) / f32(5)) * (3.14159265 / 2.0);
-
     var heatmap_color : vec3f;
     heatmap_color.r = sin(interpolant);
     heatmap_color.g = sin(interpolant * 2.0);
@@ -83,5 +81,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     textureStore(write_sdf, texture_coordinates, vec4f(sSurface.distance));
 
     //textureStore(write_sdf, texture_coordinates, vec4f(debug_surf.x, debug_surf.y, debug_surf.z, sSurface.distance));
+    // Hack, for buffer usage
     octant_usage_write[0] = 0;
 }
