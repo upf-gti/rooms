@@ -70,6 +70,8 @@ void RoomsRenderer::update(float delta_time)
 
 void RoomsRenderer::render()
 {
+    prepare_instancing();
+
     if (!is_openxr_available) {
         render_screen();
     }
@@ -117,8 +119,6 @@ void RoomsRenderer::render_screen()
 
 void RoomsRenderer::render_xr()
 {
-    prepare_instancing();
-
     xr_context.init_frame();
 
     //raymarching_renderer.set_left_eye(xr_context.per_view_data[EYE_LEFT].position, xr_context.per_view_data[EYE_LEFT].view_projection_matrix);
