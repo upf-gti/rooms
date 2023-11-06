@@ -99,6 +99,7 @@ void MeshRenderer::init_render_mesh_pipelines()
     bool is_openxr_available = RoomsRenderer::instance->get_openxr_available();
 
     render_mesh_shader = RendererStorage::get_shader("data/shaders/mesh_color.wgsl");
+    Shader* render_mesh_wireframe_shader = RendererStorage::get_shader("data/shaders/mesh_wireframe.wgsl");
     Shader* render_mesh_texture_shader = RendererStorage::get_shader("data/shaders/mesh_texture.wgsl");
     Shader* render_mesh_ui_shader = RendererStorage::get_shader("data/shaders/ui/ui_group.wgsl");
     Shader* render_mesh_ui_texture_shader = RendererStorage::get_shader("data/shaders/ui/ui_button.wgsl");
@@ -137,6 +138,7 @@ void MeshRenderer::init_render_mesh_pipelines()
     color_target.writeMask = WGPUColorWriteMask_All;
 
     Pipeline::register_render_pipeline(render_mesh_shader, color_target, true);
+    Pipeline::register_render_pipeline(render_mesh_wireframe_shader, color_target, true, WGPUPrimitiveTopology_LineStrip);
     Pipeline::register_render_pipeline(render_mesh_texture_shader, color_target, true);
     Pipeline::register_render_pipeline(render_mesh_ui_shader, color_target, true);
     Pipeline::register_render_pipeline(render_mesh_ui_texture_shader, color_target, true);

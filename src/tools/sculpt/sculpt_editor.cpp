@@ -11,13 +11,6 @@ void SculptEditor::initialize()
 {
     renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
 
-    sphere_mesh = parse_scene("data/meshes/wired_sphere.obj");
-    sphere_mesh->set_material_color(colors::WHITE);
-    cube_mesh = parse_scene("data/meshes/hollow_cube.obj");
-    cube_mesh->set_material_color(colors::WHITE);
-
-    mesh_preview = sphere_mesh;
-
     mirror_mesh = new EntityMesh();
     mirror_mesh->set_material_diffuse(RendererStorage::get_texture("data/textures/mirror_quad_texture.png"));
     mirror_mesh->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_texture.wgsl"));
@@ -57,8 +50,8 @@ void SculptEditor::initialize()
         gui.bind("sculpt", [&](const std::string& signal, void* button) { enable_tool(SCULPT); });
         gui.bind("paint", [&](const std::string& signal, void* button) { enable_tool(PAINT); });
 
-        gui.bind("sphere", [&](const std::string& signal, void* button) {  set_primitive(SD_SPHERE, sphere_mesh); });
-        gui.bind("cube", [&](const std::string& signal, void* button) { set_primitive(SD_BOX, cube_mesh); });
+        gui.bind("sphere", [&](const std::string& signal, void* button) {  set_primitive(SD_SPHERE); });
+        gui.bind("cube", [&](const std::string& signal, void* button) { set_primitive(SD_BOX); });
         gui.bind("cone", [&](const std::string& signal, void* button) { set_primitive(SD_CONE); });
         gui.bind("capsule", [&](const std::string& signal, void* button) { set_primitive(SD_CAPSULE); });
         gui.bind("cylinder", [&](const std::string& signal, void* button) { set_primitive(SD_CYLINDER); });
@@ -119,7 +112,19 @@ void SculptEditor::initialize()
         helper_gui.get_workspace().root_pose = POSE_GRIP;
     }
 
+    mesh_preview = new EntityMesh();
+    mesh_preview->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_wireframe.wgsl"));
+    mesh_preview->set_material_flag(MATERIAL_TRANSPARENT);
+
+    Mesh* p_mesh = new Mesh();
+    p_mesh->create_torus();
+    mesh_preview->set_mesh(p_mesh);
+
     enable_tool(SCULPT);
+    set_primitive(SD_TORUS);
+
+    Tool& tool_used = *tools[current_tool];
+    Edit& edit_to_add = tool_used.get_edit_to_add();
 }
 
 void SculptEditor::clean()
@@ -277,11 +282,49 @@ void SculptEditor::render()
 
 #ifdef XR_SUPPORT
 
+    // Render a hollowed edit
     if (mesh_preview)
     {
-        // Render a hollowed edit
         mesh_preview->set_model(Input::get_controller_pose(gui.get_workspace().select_hand));
-        mesh_preview->scale(edit_to_add.dimensions + glm::vec4(0.001f));
+
+        // Expand a little bit the edges
+        glm::vec4 sizes = edit_to_add.dimensions * 1.05f;
+        float margin = 0.f;
+
+        // Recreate or scale mesh depending on primitive parameters
+        switch (current_primitive)
+        {
+        case SD_SPHERE:
+            mesh_preview->get_mesh()->create_sphere(sizes.x);
+            break;
+        case SD_BOX:
+            sizes = edit_to_add.dimensions + glm::vec4(0.001f);  // TODO: Don't add, use a mult factor instead...
+            mesh_preview->get_mesh()->create_rounded_box(sizes.x, sizes.y, sizes.z, (edit_to_add.dimensions.w / 0.1f) * sizes.x);
+            break;
+        case SD_CONE:
+            mesh_preview->get_mesh()->create_cone(sizes.w, sizes.x);
+            mesh_preview->rotate(glm::radians(-90.f), { 1.f, 0.f, 0.f });
+            break;
+        case SD_CYLINDER:
+            mesh_preview->get_mesh()->create_cylinder(sizes.w, sizes.x);
+            mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
+            mesh_preview->translate({ 0.f, -edit_to_add.dimensions.x * 0.5f, 0.f });
+            break;
+        case SD_CAPSULE:
+            mesh_preview->get_mesh()->create_capsule(sizes.w, sizes.x);
+            mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
+            mesh_preview->translate({ 0.f, -edit_to_add.dimensions.x * 0.5f, 0.f });
+            break;
+        case SD_TORUS:
+            margin = 0.0015f; // TODO: Don't add, use a mult factor instead...
+            mesh_preview->get_mesh()->create_torus(edit_to_add.dimensions.x + margin, std::clamp(edit_to_add.dimensions.w, 0.0001f, edit_to_add.dimensions.x) + margin * 2.f);
+            mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
+            mesh_preview->translate({ margin * 0.5f, 0.f, 0.f });
+            break;
+        default:
+            break;
+        }
+
         mesh_preview->render();
     }
 
@@ -329,10 +372,9 @@ void SculptEditor::set_sculpt_started(bool value)
     sculpt_started = true;
 }
 
-void SculptEditor::set_primitive(sdPrimitive primitive, EntityMesh* preview)
+void SculptEditor::set_primitive(sdPrimitive primitive)
 {
     current_primitive = primitive;
-    mesh_preview = preview;
 }
 
 void SculptEditor::set_primitive_modifier(bool& modifier)

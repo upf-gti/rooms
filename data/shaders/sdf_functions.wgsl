@@ -372,7 +372,7 @@ fn opOnion( s1 : Surface, t : f32 ) -> Surface
 
 fn map_thickness( t : f32, v_max : f32 ) -> f32
 {
-    return max(t * v_max * 0.375, 0.003);
+    return select( 0.0, max(t * v_max * 0.375, 0.003), t > 0.0);
 }
 
 fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit ) -> Surface
@@ -387,8 +387,10 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit ) -> Surfa
     var size : vec3f = edit.dimensions.xyz;
     var radius : f32 = edit.dimensions.x;
     var size_param : f32 = edit.dimensions.w;
-    var onion_thickness : f32 = edit.parameters.x;
     var cap_value : f32 = edit.parameters.y;
+
+    var onion_thickness : f32 = edit.parameters.x;
+    let do_onion = onion_thickness > 0.0;
 
     switch (edit.primitive) {
         case SD_SPHERE: {
@@ -416,7 +418,8 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit ) -> Surfa
         case SD_CAPSULE: {
             onion_thickness = map_thickness( onion_thickness, size_param );
             size_param -= onion_thickness; // Compensate onion size
-            pSurface = sdCapsule(norm_pos, offset_pos, offset_pos - vec3f(0.0, 0.0, radius), edit.rotation, size_param, edit.color);
+            var height = radius; // ...
+            pSurface = sdCapsule(norm_pos, offset_pos, offset_pos - vec3f(0.0, 0.0, height), edit.rotation, size_param, edit.color);
             break;
         }
         case SD_CONE: {
@@ -457,7 +460,7 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit ) -> Surfa
     }
 
     // Shape edition ...
-    if( onion_thickness > 0.0 && (edit.operation == OP_UNION || edit.operation == OP_SMOOTH_UNION) )
+    if( do_onion && (edit.operation == OP_UNION || edit.operation == OP_SMOOTH_UNION) )
     {
         pSurface = opOnion(pSurface, onion_thickness);
     }
