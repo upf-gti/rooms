@@ -91,11 +91,11 @@ void RoomsRenderer::render()
 
 void RoomsRenderer::render_screen()
 {
-    const glm::mat4x4& view_projection = camera.get_view_projection();
+    camera_data.eye = camera.get_eye();
+    camera_data.mvp = camera.get_view_projection();
+    camera_data.dummy = 0.f;
 
-    wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(camera_uniform.data), 0, &(view_projection), sizeof(view_projection));
-
-    //raymarching_renderer.compute_raymarching();
+    wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(camera_uniform.data), 0, &(camera_data), sizeof(sCameraData));
 
     WGPUTextureView swapchain_view = wgpuSwapChainGetCurrentTextureView(webgpu_context.screen_swapchain);
 
@@ -136,7 +136,10 @@ void RoomsRenderer::render_xr()
         render_eye_quad(swapchainData.images[swapchainData.image_index].textureView, eye_depth_texture_view[i], eye_render_bind_group[i]);
 
         WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
-        wgpuQueueWriteBuffer(webgpu_context->device_queue, std::get<WGPUBuffer>(camera_uniform.data), 0, &(xr_context.per_view_data[i].view_projection_matrix), sizeof(xr_context.per_view_data[i].view_projection_matrix));
+        camera_data.eye = xr_context.per_view_data[i].position;
+        camera_data.mvp = xr_context.per_view_data[i].view_projection_matrix;
+        camera_data.dummy = 0.f;
+        wgpuQueueWriteBuffer(webgpu_context->device_queue, std::get<WGPUBuffer>(camera_uniform.data), 0, &(xr_context.per_view_data[i].view_projection_matrix), sizeof(sCameraData));
 
         raymarching_renderer.set_camera_eye(xr_context.per_view_data[i].position);
         raymarching_renderer.render_raymarching_proxy(swapchainData.images[swapchainData.image_index].textureView, eye_depth_texture_view[i]);
@@ -399,9 +402,9 @@ void RoomsRenderer::init_mirror_pipeline()
 
 void RoomsRenderer::init_camera_bindgroup()
 {
-    camera_uniform.data = webgpu_context.create_buffer(sizeof(glm::mat4x4), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "camera_buffer");
+    camera_uniform.data = webgpu_context.create_buffer(sizeof(sCameraData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "camera_buffer");
     camera_uniform.binding = 0;
-    camera_uniform.buffer_size = sizeof(glm::mat4x4);
+    camera_uniform.buffer_size = sizeof(sCameraData);
 }
 
 void RoomsRenderer::resize_window(int width, int height)

@@ -30,8 +30,6 @@ public:
     int initialize();
     void clean();
 
-    void set_view_projection(const glm::mat4x4& view_projection);
-
     void update(float delta_time);
     void render(WGPUTextureView swapchain_view, WGPUTextureView swapchain_depth);
 

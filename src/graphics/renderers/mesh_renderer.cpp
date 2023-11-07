@@ -19,11 +19,6 @@ void MeshRenderer::clean()
 
 }
 
-void MeshRenderer::set_view_projection(const glm::mat4x4& view_projection)
-{
-    
-}
-
 void MeshRenderer::update(float delta_time)
 {
 
@@ -98,13 +93,6 @@ void MeshRenderer::init_render_mesh_pipelines()
     bool is_openxr_available = RoomsRenderer::instance->get_openxr_available();
 
     render_mesh_shader = RendererStorage::get_shader("data/shaders/mesh_color.wgsl");
-    Shader* render_mesh_texture_shader = RendererStorage::get_shader("data/shaders/mesh_texture.wgsl");
-    Shader* render_mesh_ui_shader = RendererStorage::get_shader("data/shaders/ui/ui_group.wgsl");
-    Shader* render_mesh_ui_texture_shader = RendererStorage::get_shader("data/shaders/ui/ui_button.wgsl");
-    Shader* render_mesh_ui_slider_shader = RendererStorage::get_shader("data/shaders/ui/ui_slider.wgsl");
-    Shader* render_mesh_color_picker_shader = RendererStorage::get_shader("data/shaders/ui/ui_color_picker.wgsl");
-    Shader* render_fonts_shader = RendererStorage::get_shader("data/shaders/sdf_fonts.wgsl");
-    Shader* render_mesh_grid_shader = RendererStorage::get_shader("data/shaders/mesh_grid.wgsl");
 
     // Camera
     std::vector<Uniform*> uniforms = { dynamic_cast<RoomsRenderer*>(RoomsRenderer::instance)->get_current_camera_uniform() };
@@ -131,11 +119,13 @@ void MeshRenderer::init_render_mesh_pipelines()
     color_target.writeMask = WGPUColorWriteMask_All;
 
     Pipeline::register_render_pipeline(render_mesh_shader, color_target, true);
-    Pipeline::register_render_pipeline(render_mesh_texture_shader, color_target, true);
-    Pipeline::register_render_pipeline(render_mesh_ui_shader, color_target, true);
-    Pipeline::register_render_pipeline(render_mesh_ui_texture_shader, color_target, true);
-    Pipeline::register_render_pipeline(render_mesh_ui_slider_shader, color_target, true);
-    Pipeline::register_render_pipeline(render_mesh_color_picker_shader, color_target, true);
-    Pipeline::register_render_pipeline(render_fonts_shader, color_target, true);
-    Pipeline::register_render_pipeline(render_mesh_grid_shader, color_target, true);
+    Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/mesh_texture.wgsl"), color_target, true);
+    Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/mesh_transparent.wgsl"), color_target, true, WGPUCullMode_Back);
+    Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/mesh_outline.wgsl"), color_target, true, WGPUCullMode_Front);
+    Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/mesh_grid.wgsl"), color_target, true);
+    Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/ui/ui_group.wgsl"), color_target, true);
+    Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/ui/ui_button.wgsl"), color_target, true);
+    Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/ui/ui_slider.wgsl"), color_target, true);
+    Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/ui/ui_color_picker.wgsl"), color_target, true);
+    Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/sdf_fonts.wgsl"), color_target, true);
 }

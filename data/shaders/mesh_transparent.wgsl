@@ -1,10 +1,8 @@
-#include ../mesh_includes.wgsl
+#include mesh_includes.wgsl
 
 @group(0) @binding(0) var<storage, read> mesh_data : InstanceData;
 
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
-
-@group(2) @binding(0) var<uniform> ui_data : UIData;
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
@@ -28,23 +26,8 @@ struct FragmentOutput {
 @fragment
 fn fs_main(in: VertexOutput) -> FragmentOutput {
 
-    var dummy = camera_data.eye;
-
     var out: FragmentOutput;
-
-    var uvs = in.uv;
-    var button_size = 32.0;
-    var tx = max(button_size, 32.0 * ui_data.num_group_items);
-    var divisions = tx / button_size;
-    uvs.x *= divisions;
-    var p = vec2f(clamp(uvs.x, 0.5, divisions - 0.5), 0.5);
-    var d = 1.0 - step(0.5, distance(uvs, p));
-
-    if (d < 0.01) {
-        discard;
-    }
-
-    out.color = vec4f(pow(in.color * d, vec3f(2.2)), d);
-    
+    var dummy = camera_data.eye;
+    out.color = vec4f(pow(in.color, vec3f(2.2)), 0.03); // Color
     return out;
 }

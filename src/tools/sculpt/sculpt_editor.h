@@ -35,12 +35,14 @@ class SculptEditor {
     sdPrimitive current_primitive = SD_SPHERE;
 
     EntityMesh* mesh_preview = nullptr;
-    EntityMesh* sphere_mesh = nullptr;
-    EntityMesh* cube_mesh = nullptr;
+    EntityMesh* mesh_preview_outline = nullptr;
 
-    void set_primitive( sdPrimitive primitive, EntityMesh* mesh_preview = nullptr);
-    void set_primitive_modifier(bool& modifier);
 
+    void set_primitive( sdPrimitive primitive );
+    void set_primitive_modifier( bool& modifier );
+    void update_edit_preview( const glm::vec4& dims );
+
+    bool        dimensions_dirty = true;
     bool        stamp_enabled = false;
     bool		rotation_started = false;
 
@@ -59,7 +61,7 @@ class SculptEditor {
     // Shape Editor
 
     bool onion_enabled      = false;
-    float onion_thickness   = 0.1f;
+    float onion_thickness   = 0.0f;
 
     bool capped_enabled = false;
     float capped_value  = -1.0f; // -1..1 no cap..fully capped

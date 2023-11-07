@@ -1,30 +1,4 @@
-struct VertexInput {
-    @builtin(instance_index) instance_id : u32,
-    @location(0) position: vec3f,
-    @location(1) uv: vec2f,
-    @location(2) normal: vec3f,
-    @location(3) color: vec3f,
-};
-
-struct VertexOutput {
-    @builtin(position) position: vec4f,
-    @location(0) uv: vec2f,
-    @location(1) normal: vec3f,
-    @location(2) color: vec3f,
-};
-
-struct RenderMeshData {
-    model  : mat4x4f,
-    color  : vec4f,
-};
-
-struct InstanceData {
-    data : array<RenderMeshData>
-}
-
-struct CameraData {
-    view_projection : mat4x4f,
-};
+#include mesh_includes.wgsl
 
 @group(0) @binding(0) var<storage, read> mesh_data : InstanceData;
 
@@ -36,7 +10,9 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     let instance_data : RenderMeshData = mesh_data.data[in.instance_id];
 
     var out: VertexOutput;
-    out.position = camera_data.view_projection * instance_data.model * vec4f(in.position, 1.0);
+    var world_position = instance_data.model * vec4f(in.position, 1.0);
+    out.world_position = world_position.xyz;
+    out.position = camera_data.view_projection * world_position;
     out.uv = in.uv; // forward to the fragment shader
     out.color = in.color * instance_data.color.rgb;
     out.normal = in.normal;
@@ -79,6 +55,8 @@ const LINE_WIDTH : f32 = 0.04;
 
 @fragment
 fn fs_main(in: VertexOutput) -> FragmentOutput {
+
+    var dummy = camera_data.eye;
 
     let wrapped_uvs : vec2f = (in.uv * GRID_AREA_SIZE / GRID_QUAD_SIZE);
     let line_width_proportion : f32 = GRID_QUAD_SIZE * LINE_WIDTH;

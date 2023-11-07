@@ -367,7 +367,7 @@ fn opOnion( s1 : Surface, t : f32 ) -> Surface
 
 fn map_thickness( t : f32, v_max : f32 ) -> f32
 {
-    return t * v_max * 0.5;
+    return select( 0.0, max(t * v_max * 0.375, 0.003), t > 0.0);
 }
 
 fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit, current_edit_surface : ptr<function, Surface> ) -> Surface
@@ -382,14 +382,17 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit, current_e
     var size : vec3f = edit.dimensions.xyz;
     var radius : f32 = edit.dimensions.x;
     var size_param : f32 = edit.dimensions.w;
-    var onion_thickness : f32 = edit.parameters.x;
     var cap_value : f32 = edit.parameters.y;
+
+    var onion_thickness : f32 = edit.parameters.x;
+    let do_onion = onion_thickness > 0.0;
 
     switch (edit.primitive) {
         case SD_SPHERE: {
             onion_thickness = map_thickness( onion_thickness, radius );
-            radius -= onion_thickness;
-            if(cap_value > -1.0) { // -1..1 no cap..fully capped
+            radius -= onion_thickness; // Compensate onion size
+            // -1..1 no cap..fully capped
+            if(cap_value > -1.0) { 
                 pSurface = sdCutSphere(norm_pos, offset_pos, edit.rotation, radius, radius * cap_value * 0.999, edit.color);
             } else {
                 pSurface = sdSphere(norm_pos, offset_pos, radius, edit.color);
@@ -398,18 +401,24 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit, current_e
         }
         case SD_BOX: {
             onion_thickness = map_thickness( onion_thickness, size.x );
+            size_param = (size_param / 0.1) * size.x; // Make Rounding depend on the side length
+
+            // Compensate onion size (Substract from box radius bc onion will add it later...)
             size -= onion_thickness;
+            size_param -= onion_thickness; 
+
             pSurface = sdBox(norm_pos, offset_pos, edit.rotation, size - size_param, size_param, edit.color);
             break;
         }
         case SD_CAPSULE: {
             onion_thickness = map_thickness( onion_thickness, size_param );
-            size_param -= onion_thickness;
-            pSurface = sdCapsule(norm_pos, offset_pos, offset_pos - vec3f(0.0, 0.0, radius), edit.rotation, size_param, edit.color);
+            size_param -= onion_thickness; // Compensate onion size
+            var height = radius; // ...
+            pSurface = sdCapsule(norm_pos, offset_pos, offset_pos - vec3f(0.0, 0.0, height), edit.rotation, size_param, edit.color);
             break;
         }
         case SD_CONE: {
-            onion_thickness *= 0.01;
+            onion_thickness = map_thickness( onion_thickness, 0.01 );
             cap_value = cap_value * 0.5 + 0.5;
             radius = max(radius * (1.0 - cap_value), 0.0025);
             var dims = vec2f(size_param, size_param * cap_value);
@@ -422,14 +431,14 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit, current_e
         // }
         case SD_CYLINDER: {
             onion_thickness = map_thickness( onion_thickness, size_param );
-            size_param -= onion_thickness;
+            size_param -= onion_thickness; // Compensate onion size
             pSurface = sdCylinder(norm_pos, offset_pos,  offset_pos - vec3f(0.0, 0.0, radius), edit.rotation, size_param, 0.0, edit.color);
             break;
         }
         case SD_TORUS: {
             onion_thickness = map_thickness( onion_thickness, size_param );
-            size_param -= onion_thickness;
-            size_param = clamp( size_param, 0.001, radius );
+            size_param -= onion_thickness; // Compensate onion size
+            size_param = clamp( size_param, 0.0001, radius );
             if(cap_value > -1.0) { // // -1..1 no cap..fully capped
                 cap_value = cap_value * 0.5 + 0.5;
                 var an = M_PI * (1.0 - cap_value);
@@ -446,10 +455,9 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit, current_e
     }
 
     // Shape edition ...
-    if( onion_thickness > 0.0 && (edit.operation == OP_UNION || edit.operation == OP_SMOOTH_UNION) )
+    if( do_onion && (edit.operation == OP_UNION || edit.operation == OP_SMOOTH_UNION) )
     {
-        // pSurface = opOnion(pSurface, max(onion_thickness * 0.05, 0.0025) );
-        pSurface = opOnion(pSurface, max(onion_thickness, 0.003) );
+        pSurface = opOnion(pSurface, onion_thickness);
     }
 
     *current_edit_surface = pSurface;

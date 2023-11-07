@@ -24,6 +24,12 @@ class RoomsRenderer : public Renderer {
     Mesh  quad_mesh;
     Uniform         camera_uniform;
 
+    struct sCameraData {
+        glm::mat4x4 mvp;
+        glm::vec3 eye;
+        float dummy;
+    } camera_data;
+
     // Render to screen
     Pipeline        render_quad_pipeline = {};
     Shader*         render_quad_shader = nullptr;
