@@ -164,6 +164,7 @@ fn blinn_phong(toEye : vec3f, position : vec3f, position_world : vec3f, lightPos
     //return diffuse;
 }
 
+
 fn raymarch(ray_origin : vec3f, ray_origin_world : vec3f, ray_dir : vec3f, max_distance : f32, view_proj : mat4x4f) -> vec4f
 {
     let ambientColor = vec3f(0.4);
@@ -192,7 +193,7 @@ fn raymarch(ray_origin : vec3f, ray_origin_world : vec3f, ray_dir : vec3f, max_d
 	}
 
     if (exit == 1u) {
-        let pos_world : vec3f = ray_origin_world + ray_dir * depth;
+        let pos_world : vec3f = ray_origin_world + ray_dir * (depth / SCALE_CONVERSION_FACTOR);
         let epsilon : f32 = 0.000001; // avoids flashing when camera inside sdf
         let proj_pos : vec4f = view_proj * vec4f(pos_world + ray_dir * epsilon, 1.0);
         depth = proj_pos.z / proj_pos.w;
@@ -211,9 +212,9 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     let ray_dir : vec3f = normalize(in.world_pos.xyz - eye_position);
     let ray_dir_voxel_space : vec3f = normalize(in.voxel_pos - rotate_point_quat(eye_position - sculpt_data.sculpt_start_position, sculpt_data.sculpt_inv_rotation));
 
-    let raymarch_distance : f32 = ray_AABB_intersection_distance(in.voxel_pos, ray_dir_voxel_space, in.voxel_center, vec3f(BRICK_WORLD_SIZE));
+    let raymarch_distance : f32 = ray_AABB_intersection_distance(in.voxel_pos, ray_dir, in.voxel_center, vec3f(BRICK_WORLD_SIZE));
 
-    let ray_result = raymarch(in.in_atlas_pos.xyz, in.world_pos.xyz, ray_dir, raymarch_distance, camera_data.view_projection);
+    let ray_result = raymarch(in.in_atlas_pos.xyz, in.world_pos.xyz, ray_dir, raymarch_distance * SCALE_CONVERSION_FACTOR, camera_data.view_projection);
 
     out.color = vec4f(pow(ray_result.rgb, vec3f(2.2, 2.2, 2.2)), 1.0); // Color
     out.depth = ray_result.a;
