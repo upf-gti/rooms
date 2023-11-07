@@ -141,8 +141,10 @@ void RoomsRenderer::render_xr()
         camera_data.dummy = 0.f;
         wgpuQueueWriteBuffer(webgpu_context->device_queue, std::get<WGPUBuffer>(camera_uniform.data), 0, &(xr_context.per_view_data[i].view_projection_matrix), sizeof(sCameraData));
 
+#ifndef DISABLE_RAYMARCHER
         raymarching_renderer.set_camera_eye(xr_context.per_view_data[i].position);
         raymarching_renderer.render_raymarching_proxy(swapchainData.images[swapchainData.image_index].textureView, eye_depth_texture_view[i]);
+#endif
 
         mesh_renderer.render(swapchainData.images[swapchainData.image_index].textureView, eye_depth_texture_view[i]);
 

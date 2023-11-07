@@ -101,17 +101,23 @@ public:
     };
 
     void push_edit_list(std::vector<Edit> &edits) {
+#ifndef DISABLE_RAYMARCHER
         raymarching_renderer.push_edit_list(edits);
+#endif
     };
 
     void add_preview_edit(const Edit& edit) {
+#ifndef DISABLE_RAYMARCHER
         raymarching_renderer.add_preview_edit(edit);
+#endif
     }
 
     void push_preview_edit_list(std::vector<Edit>& edits) {
+#ifndef DISABLE_RAYMARCHER
         for (uint32_t i = 0u; i < edits.size(); i++) {
             raymarching_renderer.add_preview_edit(edits[i]);
         }
+#endif
     }
 
     void set_sculpt_rotation(const glm::quat& rotation) {
