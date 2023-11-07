@@ -37,9 +37,12 @@ class SculptEditor {
     EntityMesh* mesh_preview = nullptr;
     EntityMesh* mesh_preview_outline = nullptr;
 
-    void set_primitive( sdPrimitive primitive );
-    void set_primitive_modifier(bool& modifier);
 
+    void set_primitive( sdPrimitive primitive );
+    void set_primitive_modifier( bool& modifier );
+    void update_edit_preview( const glm::vec4& dims );
+
+    bool        dimensions_dirty = true;
     bool        stamp_enabled = false;
     bool		rotation_started = false;
 

@@ -13,7 +13,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     out.color = in.color * instance_data.color.rgb;
     out.normal = (instance_data.model * vec4f(in.normal, 0.0)).xyz;
 
-    var grow_pos = in.position + normalize(in.normal) * 0.001;
+    var grow_pos = in.position + normalize(in.normal) * 0.0015;
     var world_position = instance_data.model * vec4f(grow_pos, 1.0);
     out.world_position = world_position.xyz;
     out.position = camera_data.view_projection * world_position;

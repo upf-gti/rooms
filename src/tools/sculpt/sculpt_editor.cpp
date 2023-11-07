@@ -222,12 +222,14 @@ void SculptEditor::update(float delta_time)
     // Update edit dimensions
     {
         float size_multiplier = Input::get_thumbstick_value(HAND_RIGHT).y * delta_time * 0.1f;
+        dimensions_dirty |= (fabsf(size_multiplier) > 0.f);
         glm::vec3 new_dimensions = glm::clamp(size_multiplier + glm::vec3(edit_to_add.dimensions), 0.001f, 0.1f);
         edit_to_add.dimensions = glm::vec4(new_dimensions, edit_to_add.dimensions.w);
 
         // Update primitive specific size
         size_multiplier = Input::get_thumbstick_value(HAND_LEFT).y * delta_time * 0.1f;
         edit_to_add.dimensions.w = glm::clamp(size_multiplier + edit_to_add.dimensions.w, 0.001f, 0.1f);
+        dimensions_dirty |= (fabsf(size_multiplier) > 0.f);
     }
 
     // Update current edit properties...
@@ -283,44 +285,8 @@ void SculptEditor::render()
 #ifdef XR_SUPPORT
 
     // Render a hollowed edit
-    if (mesh_preview)
     {
-        mesh_preview->set_model(Input::get_controller_pose(gui.get_workspace().select_hand));
-
-        // Expand a little bit the edges
-        glm::vec4 sizes = edit_to_add.dimensions * 1.02f;
-        float margin = 0.f;
-
-        // Recreate or scale mesh depending on primitive parameters
-        switch (current_primitive)
-        {
-        case SD_SPHERE:
-            mesh_preview->get_mesh()->create_sphere(sizes.x);
-            break;
-        case SD_BOX:
-            mesh_preview->get_mesh()->create_rounded_box(sizes.x, sizes.y, sizes.z, (edit_to_add.dimensions.w / 0.1f) * sizes.x);
-            break;
-        case SD_CONE:
-            mesh_preview->get_mesh()->create_cone(sizes.w, sizes.x);
-            mesh_preview->rotate(glm::radians(-90.f), { 1.f, 0.f, 0.f });
-            break;
-        case SD_CYLINDER:
-            mesh_preview->get_mesh()->create_cylinder(sizes.w, sizes.x);
-            mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
-            mesh_preview->translate({ 0.f, -edit_to_add.dimensions.x * 0.5f, 0.f });
-            break;
-        case SD_CAPSULE:
-            mesh_preview->get_mesh()->create_capsule(sizes.w, sizes.x);
-            mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
-            mesh_preview->translate({ 0.f, -edit_to_add.dimensions.x * 0.5f, 0.f });
-            break;
-        case SD_TORUS:
-            mesh_preview->get_mesh()->create_torus(sizes.x, std::clamp(sizes.w, 0.0001f, sizes.x));
-            mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
-            break;
-        default:
-            break;
-        }
+        update_edit_preview(edit_to_add.dimensions);
 
         // Render something to be able to cull faces later...
         if( edit_to_add.operation == OP_SUBSTRACTION || edit_to_add.operation == OP_SMOOTH_SUBSTRACTION || edit_to_add.operation == PAINT)
@@ -357,7 +323,6 @@ void SculptEditor::render()
 
         mirror_mesh->render();
     }
-
     else if (use_mirror) {
         mirror_gizmo.render();
         mirror_mesh->set_translation(mirror_origin);
@@ -369,6 +334,74 @@ void SculptEditor::render()
 #endif
 }
 
+void SculptEditor::update_edit_preview(const glm::vec4& dims)
+{
+    // Recreate mesh depending on primitive parameters
+
+    if (dimensions_dirty)
+    {
+        // Expand a little bit the edges
+        glm::vec4 grow_dims = dims * 1.01f;
+
+        switch (current_primitive)
+        {
+        case SD_SPHERE:
+            mesh_preview->get_mesh()->create_sphere(grow_dims.x);
+            break;
+        case SD_BOX:
+            mesh_preview->get_mesh()->create_rounded_box(grow_dims.x, grow_dims.y, grow_dims.z, (dims.w / 0.1f) * grow_dims.x);
+            break;
+        case SD_CONE:
+            mesh_preview->get_mesh()->create_cone(grow_dims.w, grow_dims.x);
+            mesh_preview->rotate(glm::radians(-90.f), { 1.f, 0.f, 0.f });
+            break;
+        case SD_CYLINDER:
+            mesh_preview->get_mesh()->create_cylinder(grow_dims.w, grow_dims.x);
+            mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
+            mesh_preview->translate({ 0.f, -dims.x * 0.5f, 0.f });
+            break;
+        case SD_CAPSULE:
+            mesh_preview->get_mesh()->create_capsule(grow_dims.w, grow_dims.x);
+            mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
+            mesh_preview->translate({ 0.f, -dims.x * 0.5f, 0.f });
+            break;
+        case SD_TORUS:
+            mesh_preview->get_mesh()->create_torus(grow_dims.x, std::clamp(grow_dims.w, 0.0001f, grow_dims.x));
+            mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
+            break;
+        default:
+            break;
+        }
+
+        spdlog::trace("Edit mesh preview generated!");
+
+        dimensions_dirty = false;
+    }
+
+    mesh_preview->set_model(Input::get_controller_pose(gui.get_workspace().select_hand));
+
+    // Update model depending on the primitive
+    switch (current_primitive)
+    {
+    case SD_CONE:
+        mesh_preview->rotate(glm::radians(-90.f), { 1.f, 0.f, 0.f });
+        break;
+    case SD_CYLINDER:
+        mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
+        mesh_preview->translate({ 0.f, -dims.x * 0.5f, 0.f });
+        break;
+    case SD_CAPSULE:
+        mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
+        mesh_preview->translate({ 0.f, -dims.x * 0.5f, 0.f });
+        break;
+    case SD_TORUS:
+        mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
+        break;
+    default:
+        break;
+    }
+}
+
 void SculptEditor::set_sculpt_started(bool value)
 {
     sculpt_started = true;
@@ -377,6 +410,7 @@ void SculptEditor::set_sculpt_started(bool value)
 void SculptEditor::set_primitive(sdPrimitive primitive)
 {
     current_primitive = primitive;
+    dimensions_dirty = true;
 }
 
 void SculptEditor::set_primitive_modifier(bool& modifier)

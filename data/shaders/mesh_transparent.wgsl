@@ -28,6 +28,6 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     var out: FragmentOutput;
     var dummy = camera_data.eye;
-    out.color = vec4f(pow(in.color, vec3f(2.2)), 0.1); // Color
+    out.color = vec4f(pow(in.color, vec3f(2.2)), 0.03); // Color
     return out;
 }
