@@ -63,6 +63,8 @@ void RoomsRenderer::update(float delta_time)
 
 void RoomsRenderer::render()
 {
+    prepare_instancing();
+
     if (!is_openxr_available) {
         render_screen();
     }
@@ -90,7 +92,7 @@ void RoomsRenderer::render_screen()
     glm::mat4x4 view_projection = projection * view;
 
     raymarching_renderer.set_left_eye(eye, view_projection);
-    mesh_renderer.set_view_projection(view_projection);
+    mesh_renderer.update_camera(eye, view_projection);
 
     raymarching_renderer.compute_raymarching();
 
@@ -127,7 +129,7 @@ void RoomsRenderer::render_xr()
 
         render_eye_quad(swapchainData.images[swapchainData.image_index].textureView, eye_depth_texture_view[i], eye_render_bind_group[i]);
 
-        mesh_renderer.set_view_projection(xr_context.per_view_data[i].view_projection_matrix);
+        mesh_renderer.update_camera(xr_context.per_view_data[i].position, xr_context.per_view_data[i].view_projection_matrix);
 
         mesh_renderer.render(swapchainData.images[swapchainData.image_index].textureView, eye_depth_texture_view[i]);
 
