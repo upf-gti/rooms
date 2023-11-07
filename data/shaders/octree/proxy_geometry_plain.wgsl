@@ -213,9 +213,9 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     let ray_dir : vec3f = normalize(in.world_pos.xyz - eye_position);
     let ray_dir_voxel_space : vec3f = normalize(in.voxel_pos - rotate_point_quat(eye_position - sculpt_data.sculpt_start_position, sculpt_data.sculpt_inv_rotation));
 
-    let raymarch_distance : f32 = ray_AABB_intersection_distance(in.voxel_pos, ray_dir, in.voxel_center, vec3f(BRICK_WORLD_SIZE));
+    let raymarch_distance : f32 = ray_AABB_intersection_distance(in.voxel_pos, ray_dir_voxel_space, in.voxel_center, vec3f(BRICK_WORLD_SIZE));
 
-    let ray_result = raymarch(in.in_atlas_pos.xyz, in.world_pos.xyz, ray_dir, raymarch_distance * SCALE_CONVERSION_FACTOR, camera_data.view_projection);
+    let ray_result = raymarch(in.in_atlas_pos.xyz, in.world_pos.xyz, ray_dir_voxel_space, raymarch_distance * SCALE_CONVERSION_FACTOR, camera_data.view_projection);
 
     out.color = vec4f(pow(ray_result.rgb, vec3f(2.2, 2.2, 2.2)), 1.0); // Color
     out.depth = ray_result.a;
