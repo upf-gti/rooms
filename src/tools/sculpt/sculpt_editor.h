@@ -33,7 +33,9 @@ class SculptEditor {
 
     Color current_color = colors::RED;
     sdPrimitive current_primitive = SD_SPHERE;
+
     EntityMesh* mesh_preview = nullptr;
+    EntityMesh* mesh_preview_outline = nullptr;
 
     void set_primitive( sdPrimitive primitive );
     void set_primitive_modifier(bool& modifier);

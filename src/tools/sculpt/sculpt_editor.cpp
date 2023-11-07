@@ -113,18 +113,18 @@ void SculptEditor::initialize()
     }
 
     mesh_preview = new EntityMesh();
-    mesh_preview->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_wireframe.wgsl"));
-    mesh_preview->set_material_flag(MATERIAL_TRANSPARENT);
+    mesh_preview->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_transparent.wgsl"));
+    mesh_preview->set_material_priority(1);
+
+    mesh_preview_outline = new EntityMesh();
+    mesh_preview_outline->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_outline.wgsl"));
 
     Mesh* p_mesh = new Mesh();
-    p_mesh->create_torus();
+    p_mesh->create_sphere();
     mesh_preview->set_mesh(p_mesh);
+    mesh_preview_outline->set_mesh(mesh_preview->get_mesh());
 
     enable_tool(SCULPT);
-    set_primitive(SD_TORUS);
-
-    Tool& tool_used = *tools[current_tool];
-    Edit& edit_to_add = tool_used.get_edit_to_add();
 }
 
 void SculptEditor::clean()
@@ -288,7 +288,7 @@ void SculptEditor::render()
         mesh_preview->set_model(Input::get_controller_pose(gui.get_workspace().select_hand));
 
         // Expand a little bit the edges
-        glm::vec4 sizes = edit_to_add.dimensions * 1.05f;
+        glm::vec4 sizes = edit_to_add.dimensions * 1.02f;
         float margin = 0.f;
 
         // Recreate or scale mesh depending on primitive parameters
@@ -298,7 +298,6 @@ void SculptEditor::render()
             mesh_preview->get_mesh()->create_sphere(sizes.x);
             break;
         case SD_BOX:
-            sizes = edit_to_add.dimensions + glm::vec4(0.001f);  // TODO: Don't add, use a mult factor instead...
             mesh_preview->get_mesh()->create_rounded_box(sizes.x, sizes.y, sizes.z, (edit_to_add.dimensions.w / 0.1f) * sizes.x);
             break;
         case SD_CONE:
@@ -316,16 +315,19 @@ void SculptEditor::render()
             mesh_preview->translate({ 0.f, -edit_to_add.dimensions.x * 0.5f, 0.f });
             break;
         case SD_TORUS:
-            margin = 0.0015f; // TODO: Don't add, use a mult factor instead...
-            mesh_preview->get_mesh()->create_torus(edit_to_add.dimensions.x + margin, std::clamp(edit_to_add.dimensions.w, 0.0001f, edit_to_add.dimensions.x) + margin * 2.f);
+            mesh_preview->get_mesh()->create_torus(sizes.x, std::clamp(sizes.w, 0.0001f, sizes.x));
             mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
-            mesh_preview->translate({ margin * 0.5f, 0.f, 0.f });
             break;
         default:
             break;
         }
 
-        mesh_preview->render();
+        // Render something to be able to cull faces later...
+        if( edit_to_add.operation == OP_SUBSTRACTION || edit_to_add.operation == OP_SMOOTH_SUBSTRACTION || edit_to_add.operation == PAINT)
+            mesh_preview->render();
+
+        mesh_preview_outline->set_model(mesh_preview->get_model());
+        mesh_preview_outline->render();
     }
 
     if (current_tool != NONE) {
