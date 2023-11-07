@@ -189,7 +189,8 @@ fn raymarch(ray_origin : vec3f, ray_origin_world : vec3f, ray_dir : vec3f, max_d
             exit = 1u;
             break;
 		} 
-        depth += (surface.distance);    
+
+        depth += (surface.distance) * SCALE_CONVERSION_FACTOR;
 	}
 
     if (exit == 1u) {
