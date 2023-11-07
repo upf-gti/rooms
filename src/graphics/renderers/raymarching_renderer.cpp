@@ -37,15 +37,15 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
 
     //edits[compute_merge_data.edits_to_process++] = 
 
-    edits[compute_merge_data.edits_to_process++] = {
-        .position = { 0.0, 0.0, 0.0 },
-        .primitive = SD_SPHERE,
-        .color = { 0.0, 1.0, 0.0 },
-        .operation = OP_SMOOTH_UNION,
-        .dimensions = { 0.2f, 0.2f, 0.2f, 0.2f },
-        .rotation = { 0.f, 0.f, 0.f, 1.f },
-        .parameters = { 0.0, -1.0, 0.0, 0.0 },
-    };
+    //edits[compute_merge_data.edits_to_process++] = {
+    //    .position = { 0.0, 0.0, 0.0 },
+    //    .primitive = SD_SPHERE,
+    //    .color = { 0.0, 1.0, 0.0 },
+    //    .operation = OP_SMOOTH_UNION,
+    //    .dimensions = { 0.2f, 0.2f, 0.2f, 0.2f },
+    //    .rotation = { 0.f, 0.f, 0.f, 1.f },
+    //    .parameters = { 0.0, -1.0, 0.0, 0.0 },
+    //};
 
     //edits[compute_merge_data.edits_to_process++] = {
     //    .position = { 0.0, 0.2, 0.0 },
@@ -319,7 +319,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
     octree_depth = static_cast<uint8_t>(6);
 
     // Size of penultimate level
-    uint32_t octants_max_size = pow(pow(2, octree_depth - 1), 3);
+    uint32_t octants_max_size = pow(floorf(SDF_RESOLUTION / 10.0f), 3.0f);
 
     // Texture uniforms
     {
@@ -389,14 +389,14 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
 
     // Ping pong buffers
     for (int i = 0; i < 2; ++i) {
-        octant_usage_buffers[i] = webgpu_context->create_buffer(octants_max_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "octant_usage");
+        octant_usage_buffers[i] = webgpu_context->create_buffer(octants_max_size * sizeof(uint32_t), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "octant_usage");
         webgpu_context->update_buffer(octant_usage_buffers[i], 0, &default_val, sizeof(uint32_t));
     }
 
     for (int i = 0; i < 4; ++i) {
         octant_usage_uniform[i].data = octant_usage_buffers[i / 2];
         octant_usage_uniform[i].binding = i % 2;
-        octant_usage_uniform[i].buffer_size = octants_max_size;
+        octant_usage_uniform[i].buffer_size = octants_max_size * sizeof(uint32_t);
     }
 
     for (int i = 0; i < 2; ++i) {
