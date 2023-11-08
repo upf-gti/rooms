@@ -5,7 +5,7 @@
 @group(0) @binding(1) var<uniform> merge_data : MergeData;
 @group(0) @binding(2) var<storage, read_write> octree : Octree;
 @group(0) @binding(4) var<storage, read_write> counters : OctreeCounters;
-@group(0) @binding(5) var<storage, read_write> proxy_box_position_buffer: array<ProxyInstanceData>;
+@group(0) @binding(5) var<storage, read_write> octree_proxy_data: OctreeProxyInstances;
 @group(0) @binding(6) var<storage, read_write> edit_culling_lists: array<u32>;
 @group(0) @binding(7) var<storage, read_write> edit_culling_count : array<u32>;
 
@@ -141,11 +141,12 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             // 0x0x80000000 is the 32st bit
             // if the 32st bit is set, there is already a tile in the octree, if not, we allocate one
             if ((0x80000000u & octree.data[octree_index].tile_pointer) != 0x80000000u) {
-                let tile_counter : u32 = atomicAdd(&counters.atlas_tile_counter, 1u);
-                proxy_box_position_buffer[tile_counter].position = octant_center;
-                proxy_box_position_buffer[tile_counter].atlas_tile_index = tile_counter;
-                proxy_box_position_buffer[tile_counter].octree_parent_id = octree_index;
-                octree.data[octree_index].tile_pointer = tile_counter;
+                let brick_spot_id = atomicSub(&octree_proxy_data.atlas_empty_bricks_counter, 1u);
+                let proxy_id : u32 = atomicAdd(&counters.proxy_instance_counter, 1u);
+                octree_proxy_data.instance_data[proxy_id].position = octant_center;
+                octree_proxy_data.instance_data[proxy_id].atlas_tile_index = octree_proxy_data.atlas_empty_bricks_buffer[brick_spot_id];
+                octree_proxy_data.instance_data[proxy_id].octree_parent_id = octree_index;
+                octree.data[octree_index].tile_pointer = proxy_id;
             }
 
             octant_usage_write[prev_counter] = octree_index;

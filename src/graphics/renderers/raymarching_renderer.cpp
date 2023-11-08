@@ -321,40 +321,58 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
     // Size of penultimate level
     uint32_t octants_max_size = pow(floorf(SDF_RESOLUTION / 10.0f), 3.0f);
 
-    // Texture uniforms
+    // Uniforms & buffers for octree generation
     {
         compute_merge_data.max_octree_depth = octree_depth;
 
         // total size considering leaves and intermediate levels
         octree_total_size = (pow(8, octree_depth + 1) - 1) / 7;
 
+        // Edits uniform
         compute_edits_array_uniform.data = webgpu_context->create_buffer(sizeof(Edit) * EDITS_MAX, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "edits_buffer");
         compute_edits_array_uniform.binding = 0;
         compute_edits_array_uniform.buffer_size = sizeof(Edit) * EDITS_MAX;
 
+        // Edit count & other merger data
         compute_merge_data_uniform.data = webgpu_context->create_buffer(sizeof(sMergeData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "merge_data");
         compute_merge_data_uniform.binding = 1;
         compute_merge_data_uniform.buffer_size = sizeof(sMergeData);
 
+        // Octree buffer
         std::vector<sOctreeNode> octree_default(octree_total_size);
         octree_uniform.data = webgpu_context->create_buffer(octree_total_size * sizeof(sOctreeNode), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, octree_default.data(), "octree");
         octree_uniform.binding = 2;
         octree_uniform.buffer_size = octree_total_size * sizeof(sOctreeNode);
 
+        // Counters for octree merge
         uint32_t default_vals_zero[3] = { 0, 0, 0 };
         octree_counters.data = webgpu_context->create_buffer(sizeof(uint32_t) * 3, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, default_vals_zero, "octree_counters");
         octree_counters.binding = 4;
         octree_counters.buffer_size = sizeof(uint32_t) * 3;
 
+        // Proxy geometry instance data
+        // An struct that contines: a empty brick counter in the atlas, the empty brick buffer, and the data off all the instances
         uint32_t default_val = 0u;
-        octree_proxy_instance_buffer.data = webgpu_context->create_buffer(octants_max_size * sizeof(ProxyInstanceData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "proxy_boxes_position_buffer");
+        uint32_t struct_size = sizeof(uint32_t) + sizeof(uint32_t) * octants_max_size + octants_max_size * sizeof(ProxyInstanceData);
+        octree_proxy_instance_buffer.data = webgpu_context->create_buffer(struct_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "proxy_boxes_position_buffer");
         octree_proxy_instance_buffer.binding = 5;
-        octree_proxy_instance_buffer.buffer_size = octants_max_size * sizeof(ProxyInstanceData);
+        octree_proxy_instance_buffer.buffer_size = struct_size;
 
+        // Empty atlas malloc data
+        uint32_t* atlas_indices = new uint32_t[octants_max_size + 1u];
+        atlas_indices[0] = octants_max_size;
+        for (uint32_t i = 0u; i < octants_max_size; i++) {
+            atlas_indices[i+1u] = octants_max_size - i;
+        }
+        webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_proxy_instance_buffer.data), 0, atlas_indices, sizeof(uint32_t) * (octants_max_size + 1));
+        delete atlas_indices;
+
+        // Edit culling lists per octree node buffer
         octree_edit_culling_lists.data = webgpu_context->create_buffer(octree_total_size * MAX_EDITS_PER_EVALUATION, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "edit_culling_lists");
         octree_edit_culling_lists.binding = 6;
         octree_edit_culling_lists.buffer_size = octree_total_size * MAX_EDITS_PER_EVALUATION;
 
+        // Culling count per octree node layer
         octree_edit_culling_count.data = webgpu_context->create_buffer(octree_total_size * sizeof(sOctreeNode), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "edit_culling_count");
         octree_edit_culling_count.binding = 7;
         octree_edit_culling_count.buffer_size = octree_total_size * sizeof(sOctreeNode);
@@ -366,6 +384,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
     }
 
     {
+        // Indirect buffer for octree generation compute
         uint32_t default_vals[3] = { 1, 1, 1 };
         octree_indirect_buffer.data = webgpu_context->create_buffer(sizeof(uint32_t) * 3, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage | WGPUBufferUsage_Indirect, default_vals, "indirect_buffer");
         octree_indirect_buffer.binding = 0;
@@ -373,6 +392,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
 
         EntityMesh* cube = parse_scene("data/meshes/cube/cube.obj");
 
+        // Indirect rendering of proxy geometry config buffer
         uint32_t default_indirect_buffer[4] = { cube->get_mesh()->get_vertex_count(), 0, 0 ,0};
         octree_proxy_indirect_buffer.data = webgpu_context->create_buffer(sizeof(uint32_t) * 4, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage | WGPUBufferUsage_Indirect, default_indirect_buffer, "proxy_boxes_indirect_buffer");
         octree_proxy_indirect_buffer.binding = 2;
@@ -387,7 +407,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
 
     uint32_t default_val = 0;
 
-    // Ping pong buffers
+    // Ping pong buffers for read & write octants for the octree compute
     for (int i = 0; i < 2; ++i) {
         octant_usage_buffers[i] = webgpu_context->create_buffer(octants_max_size * sizeof(uint32_t), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "octant_usage");
         webgpu_context->update_buffer(octant_usage_buffers[i], 0, &default_val, sizeof(uint32_t));
