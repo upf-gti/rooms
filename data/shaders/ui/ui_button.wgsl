@@ -42,7 +42,10 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     }
     
     let hover_color = vec3f(0.95, 0.76, 0.17);
-    var _color = color.rgb;
+    var _color = 1.0 - color.rgb;
+    _color = step(vec3f(0.5), _color);
+    _color *= hover_color;
+    _color = max(vec3f(0.2), _color);
 
     if( ui_data.is_color_button > 0.0 )  {
         _color *= in.color;
@@ -54,9 +57,10 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     if( ui_data.is_selected > 0.0 ) {
 
-        var icon_mask = smoothstep(1 - color.r, 0.5, 1.0);
-        _color = mix(vec3f(1 - icon_mask) * (1 - mask), selected_color, icon_mask);
-        _color = max(_color, vec3f(0.12));
+        _color = color.rgb;
+        _color = step(vec3f(0.6), _color);
+        _color *= hover_color - pow(mask, 2.0);
+        _color = max(vec3f(0.2), _color);
     } 
 
     var masked_color : vec3f;
@@ -66,8 +70,17 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
         var border_color = mix(widget_color, vec3f(0.2,0.2,0.2), ui_data.is_selected);
         masked_color = mix(in.color, mix(border_color, hover_color, ui_data.is_hovered), mask);
     } else {
-        mask = step(0.45 + (1.0 - ui_data.is_hovered), mask);
-        masked_color = mix(widget_color, _color, 1.0 - mask);
+
+        if(ui_data.keep_rgb > 0.0) {
+            _color = 1.0 - color.rgb;
+            _color = step(vec3f(0.01), _color).xxx;
+            _color = max(vec3f(0.2), _color);
+            _color *= color.rgb;
+            masked_color = _color;
+        } else {
+            mask = step(0.45 + (1.0 - ui_data.is_hovered), mask);
+            masked_color = mix(widget_color, _color, 1.0 - mask);
+        }
     }
    
     out.color = vec4f(pow(masked_color, vec3f(2.2)), color.a);

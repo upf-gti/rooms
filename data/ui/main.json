@@ -133,37 +133,44 @@
                 {
                     "name": "color_template_palette_1",
                     "type": "button",
-                    "texture": "data/textures/colors_template_1.png"
+                    "texture": "data/textures/colors_template_1.png",
+                    "keep_rgb": true
                 },
                 {
                     "name": "color_template_palette_2",
                     "type": "button",
-                    "texture": "data/textures/colors_template_2.png"
+                    "texture": "data/textures/colors_template_2.png",
+                    "keep_rgb": true
                 },
                 {
                     "name": "color_template_palette_3",
                     "type": "button",
-                    "texture": "data/textures/colors_template_3.png"
+                    "texture": "data/textures/colors_template_3.png",
+                    "keep_rgb": true
                 },
                 {
                     "name": "color_template_palette_4",
                     "type": "button",
-                    "texture": "data/textures/colors_template_4.png"
+                    "texture": "data/textures/colors_template_4.png",
+                    "keep_rgb": true
                 },
                 {
                     "name": "color_template_palette_5",
                     "type": "button",
-                    "texture": "data/textures/colors_template_5.png"
+                    "texture": "data/textures/colors_template_5.png",
+                    "keep_rgb": true
                 },
                 {
                     "name": "color_template_palette_6",
                     "type": "button",
-                    "texture": "data/textures/colors_template_6.png"
+                    "texture": "data/textures/colors_template_6.png",
+                    "keep_rgb": true
                 },
                 {
                     "name": "recent_colors",
                     "type": "button",
-                    "texture": "data/textures/recent_colors.png"
+                    "texture": "data/textures/recent_colors.png",
+                    "keep_rgb": true
                 }
             ]
         },
