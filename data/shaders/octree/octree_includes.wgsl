@@ -46,6 +46,18 @@ struct ProxyInstanceData {
     padding : vec3u
 };
 
+struct IndirectBrickRemoval {
+    brick_removal_counter : atomic<u32>,
+    indirect_padding : vec3<u32>,
+    brick_removal_buffer : array<u32, TOTAL_BRICK_COUNT>
+};
+
+struct IndirectBrickRemoval_ReadOnly {
+    brick_removal_counter : u32,
+    indirect_padding : vec3<u32>,
+    brick_removal_buffer : array<u32, TOTAL_BRICK_COUNT>
+};
+
 struct OctreeProxyInstances {
     atlas_empty_bricks_counter : atomic<u32>,
     atlas_empty_bricks_buffer : array<u32, TOTAL_BRICK_COUNT>,

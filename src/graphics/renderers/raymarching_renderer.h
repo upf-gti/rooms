@@ -29,9 +29,11 @@ class RaymarchingRenderer {
     Pipeline        compute_octree_evaluate_pipeline;
     Pipeline        compute_octree_increment_level_pipeline;
     Pipeline        compute_octree_write_to_texture_pipeline;
+    Pipeline        compute_octree_brick_removal_pipeline;
     Shader*         compute_octree_evaluate_shader = nullptr;
     Shader*         compute_octree_increment_level_shader = nullptr;
     Shader*         compute_octree_write_to_texture_shader = nullptr;
+    Shader*         compute_octree_brick_removal_shader = nullptr;
     WGPUBindGroup   compute_octree_evaluate_bind_group = nullptr;
     WGPUBindGroup   compute_octree_increment_level_bind_group = nullptr;
     WGPUBindGroup   compute_octree_write_to_texture_bind_group = nullptr;
@@ -46,6 +48,7 @@ class RaymarchingRenderer {
     Uniform         octree_proxy_indirect_buffer;
     Uniform         octree_edit_culling_lists;
     Uniform         octree_edit_culling_count;
+    Uniform         octree_indirect_brick_buffer;
     Uniform         proxy_geometry_eye_position;
     WGPUBindGroup   render_camera_bind_group = nullptr;
 
