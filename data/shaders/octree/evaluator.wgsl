@@ -119,47 +119,74 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
     // Check if the total of distances of all the edits are inside the current voxel, and if so,
     // create children
-    if (abs(sSurface.distance) < (level_half_size * SQRT_3)) {
+    // if (abs(sSurface.distance) < (level_half_size * SQRT_3)) {
 
         if (level < merge_data.max_octree_depth) {
-            // For the 0<->(n-1) passes
-            // Increase the number of children from the current level
-            let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 8);
 
-            // Add to the index the childres's octant id, and save it for the next pass
-            for (var i : u32 = 0; i < 8; i++) {
-                octant_usage_write[prev_counter + i] = octant_id | (i << (3 * level));
+            if (abs(sSurface.distance) < (level_half_size * SQRT_3)) {
+                // For the 0<->(n-1) passes
+                // Increase the number of children from the current level
+                let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 8);
+
+                // Add to the index the childres's octant id, and save it for the next pass
+                for (var i : u32 = 0; i < 8; i++) {
+                    octant_usage_write[prev_counter + i] = octant_id | (i << (3 * level));
+                }
+
+                // Mark this node as it has children
+                octree.data[octree_index].tile_pointer = 0x80000000u;
+            } else {
+                // Add to the index the childres's octant id, and save it for the next pass
+                for (var i : u32 = 0; i < 8; i++) {
+                    let child_octant_id : u32 = octant_id | (i << (3 * level));
+                    let child_octree_index : u32 = child_octant_id + u32((pow(8.0, f32(level + 1)) - 1) / 7);
+                    if ((octree.data[child_octree_index].tile_pointer & 0x80000000u) == 0x80000000u) {
+                        let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 1);
+                        octant_usage_write[prev_counter + i] = child_octant_id;
+                    }
+                }
+
+                octree.data[octree_index].tile_pointer = 0u;
             }
-
-            // Mark this node as it has children
-            octree.data[octree_index].tile_pointer = 0x80000000u;
-
         } else {
-            // For the N pass, just send the leaves, to the writing to texture pass
-            let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 1);
 
-            // 0x0x80000000 is the 32st bit
-            // if the 32st bit is set, there is already a tile in the octree, if not, we allocate one
-            if ((0x80000000u & octree.data[octree_index].tile_pointer) != 0x80000000u) {
-                let brick_spot_id = atomicSub(&octree_proxy_data.atlas_empty_bricks_counter, 1u);
-                let proxy_id : u32 = atomicAdd(&counters.proxy_instance_counter, 1u);
-                octree_proxy_data.instance_data[proxy_id].position = octant_center;
-                octree_proxy_data.instance_data[proxy_id].atlas_tile_index = octree_proxy_data.atlas_empty_bricks_buffer[brick_spot_id];
-                octree_proxy_data.instance_data[proxy_id].octree_parent_id = octree_index;
-                octree.data[octree_index].tile_pointer = proxy_id;
+            if (abs(sSurface.distance) < (level_half_size * SQRT_3)) {
+                // For the N pass, just send the leaves, to the writing to texture pass
+                let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 1);
+
+                // 0x0x80000000 is the 32st bit
+                // if the 32st bit is set, there is already a tile in the octree, if not, we allocate one
+                if ((0x80000000u & octree.data[octree_index].tile_pointer) != 0x80000000u) {
+                    let brick_spot_id = atomicSub(&octree_proxy_data.atlas_empty_bricks_counter, 1u) - 1u;
+                    let brick_index : u32 = atomicAdd(&counters.proxy_instance_counter, 1u);
+                    octree_proxy_data.instance_data[brick_index].position = octant_center;
+                    octree_proxy_data.instance_data[brick_index].atlas_tile_index = octree_proxy_data.atlas_empty_bricks_buffer[brick_spot_id];
+                    octree_proxy_data.instance_data[brick_index].octree_parent_id = octree_index;
+
+                    octree.data[octree_index].tile_pointer = brick_index;
+                }
+
+                octant_usage_write[prev_counter] = octree_index;
+            } else {
+                // if ((0x80000000u & octree.data[octree_index].tile_pointer) == 0x80000000u) {
+                //     let brick_spot_id = atomicAdd(&octree_proxy_data.atlas_empty_bricks_counter, 1u);
+                //     atomicSub(&counters.proxy_instance_counter, 1u);
+
+                //     let brick_index : u32 = octree.data[octree_index].tile_pointer & 0x7fffffffu;
+                //     octree_proxy_data.atlas_empty_bricks_buffer[brick_spot_id] = octree_proxy_data.instance_data[brick_index].atlas_tile_index;
+                // }
             }
-
-            octant_usage_write[prev_counter] = octree_index;
         }
 
         edit_culling_count[octree_index] = edit_counter;
-    } else {
-        // If the current MSB is set in the current, non-leaf tile pointer, but now
-        // there is no surface, it has been emptied and we should mark for removal
-        // for their children's bricks
-        if ((0x80000000u & octree.data[octree_index].tile_pointer) == 0x80000000u) {
-            // Remove children's bricks
-        }
-        edit_culling_count[octree_index] = 0;
-    }
+    //}
+    // else {
+    //     // If the current MSB is set in the current, non-leaf tile pointer, but now
+    //     // there is no surface, it has been emptied and we should mark for removal
+    //     // for their children's bricks
+    //     if ((0x80000000u & octree.data[octree_index].tile_pointer) == 0x80000000u) {
+    //         // Remove children's bricks
+    //     }
+    //     edit_culling_count[octree_index] = 0;
+    // }
 }

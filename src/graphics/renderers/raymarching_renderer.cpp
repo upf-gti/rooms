@@ -37,25 +37,25 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
 
     //edits[compute_merge_data.edits_to_process++] = 
 
-    //edits[compute_merge_data.edits_to_process++] = {
-    //    .position = { 0.0, 0.0, 0.0 },
-    //    .primitive = SD_SPHERE,
-    //    .color = { 0.0, 1.0, 0.0 },
-    //    .operation = OP_SMOOTH_UNION,
-    //    .dimensions = { 0.2f, 0.2f, 0.2f, 0.2f },
-    //    .rotation = { 0.f, 0.f, 0.f, 1.f },
-    //    .parameters = { 0.0, -1.0, 0.0, 0.0 },
-    //};
+    edits[compute_merge_data.edits_to_process++] = {
+        .position = { 0.05, 0.0, 0.0 },
+        .primitive = SD_SPHERE,
+        .color = { 0.0, 1.0, 0.0 },
+        .operation = OP_SMOOTH_UNION,
+        .dimensions = { 0.1f, 0.1f, 0.1f, 0.1f },
+        .rotation = { 0.f, 0.f, 0.f, 1.f },
+        .parameters = { 0.0, -1.0, 0.0, 0.0 },
+    };
 
-    //edits[compute_merge_data.edits_to_process++] = {
-    //    .position = { 0.0, 0.2, 0.0 },
-    //    .primitive = SD_SPHERE,
-    //    .color = { 0.0, 0.0, 1.0 },
-    //    .operation = OP_SMOOTH_UNION,
-    //    .dimensions = { 0.16f, 0.16f, 0.16f, 0.16f },
-    //    .rotation = { 0.f, 0.f, 0.f, 1.f },
-    //    .parameters = { 0.0, -1.0, 0.0, 0.0 },
-    //};
+ /*   edits[compute_merge_data.edits_to_process++] = {
+        .position = { -0.1, 0.0, 0.0 },
+        .primitive = SD_SPHERE,
+        .color = { 0.0, 1.0, 0.0 },
+        .operation = OP_SMOOTH_UNION,
+        .dimensions = { 0.2f, 0.2f, 0.2f, 0.2f },
+        .rotation = { 0.f, 0.f, 0.f, 1.f },
+        .parameters = { 0.0, -1.0, 0.0, 0.0 },
+    };*/
 
     //edits[compute_merge_data.edits_to_process++] = {
     //    .position = { 0.2, 0.2, 0.2 },
@@ -365,7 +365,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
             atlas_indices[i+1u] = octants_max_size - i;
         }
         webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_proxy_instance_buffer.data), 0, atlas_indices, sizeof(uint32_t) * (octants_max_size + 1));
-        delete atlas_indices;
+        delete[] atlas_indices;
 
         // Edit culling lists per octree node buffer
         octree_edit_culling_lists.data = webgpu_context->create_buffer(octree_total_size * MAX_EDITS_PER_EVALUATION, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "edit_culling_lists");
