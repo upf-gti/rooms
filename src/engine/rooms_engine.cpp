@@ -14,17 +14,17 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 
     sculpt_editor.initialize();
 
-    //EntityMesh* torus = parse_scene("data/meshes/torus/torus.obj");
+    //EntityMesh* torus = parse_mesh("data/meshes/torus/torus.obj");
     //torus->scale(glm::vec3(0.25));
     //torus->translate(glm::vec3(-1.0f, 0.0, 0.0));
     //entities.push_back(torus);
 
-    //EntityMesh* cube = parse_scene("data/meshes/cube/cube.obj");
+    //EntityMesh* cube = parse_mesh("data/meshes/cube/cube.obj");
     //cube->scale(glm::vec3(0.25));
     //cube->translate(glm::vec3(1.0f, 0.0, 0.0));
     //entities.push_back(cube);
 
-    //EntityMesh* cube2 = parse_scene("data/meshes/cube/cube.obj");
+    //EntityMesh* cube2 = parse_mesh("data/meshes/cube/cube.obj");
     //cube2->scale(glm::vec3(0.25));
     //cube2->translate(glm::vec3(4.0f, 0.0, 0.0));
     //entities.push_back(cube2);
@@ -35,9 +35,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     //text->translate(glm::vec3(0.0f, 0.0, -5.0));
     //entities.push_back(text);
 
-    //EntityMesh* gate = parse_scene("data/meshes/gate/gate.obj");
-    //gate->rotate(glm::pi<float>() * 0.5f, glm::vec3(1.0f, 0.0, 0.0));
-    //entities.push_back(gate);
+    //parse_scene("data/gltf_tests/Sponza/Sponza.gltf", entities);
 
     //import_scene();
 

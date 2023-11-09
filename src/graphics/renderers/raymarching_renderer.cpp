@@ -371,7 +371,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         octree_indirect_buffer.binding = 0;
         octree_indirect_buffer.buffer_size = sizeof(uint32_t) * 3;
 
-        EntityMesh* cube = parse_scene("data/meshes/cube/cube.obj");
+        EntityMesh* cube = parse_mesh("data/meshes/cube/cube.obj");
 
         uint32_t default_indirect_buffer[4] = { cube->get_mesh()->get_vertex_count(), 0, 0 ,0};
         octree_proxy_indirect_buffer.data = webgpu_context->create_buffer(sizeof(uint32_t) * 4, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage | WGPUBufferUsage_Indirect, default_indirect_buffer, "proxy_boxes_indirect_buffer");
@@ -421,7 +421,7 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
     bool is_openxr_available = RoomsRenderer::instance->get_openxr_available();
 
-    cube_mesh = parse_scene("data/meshes/cube.obj");
+    cube_mesh = parse_mesh("data/meshes/cube.obj");
 
     render_proxy_shader = RendererStorage::get_shader("data/shaders/octree/proxy_geometry_plain.wgsl");
 
