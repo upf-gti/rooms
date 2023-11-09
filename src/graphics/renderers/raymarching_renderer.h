@@ -8,7 +8,7 @@
 
 #define PREVIEW_EDITS_MAX 128
 #define EDITS_MAX 64
-#define SDF_RESOLUTION 256
+#define SDF_RESOLUTION 400
 #define MAX_EDITS_PER_EVALUATION 64
 #define SCULPT_MAX_SIZE 1 // meters
 
@@ -37,6 +37,7 @@ class RaymarchingRenderer {
     WGPUBindGroup   compute_octree_evaluate_bind_group = nullptr;
     WGPUBindGroup   compute_octree_increment_level_bind_group = nullptr;
     WGPUBindGroup   compute_octree_write_to_texture_bind_group = nullptr;
+    WGPUBindGroup   compute_octree_indirect_brick_removal_bind_group = nullptr;
     WGPUBindGroup   compute_octant_usage_bind_groups[2] = {};
     Uniform         octree_uniform;
     Uniform         octant_usage_uniform[4];
@@ -48,7 +49,7 @@ class RaymarchingRenderer {
     Uniform         octree_proxy_indirect_buffer;
     Uniform         octree_edit_culling_lists;
     Uniform         octree_edit_culling_count;
-    Uniform         octree_indirect_brick_buffer;
+    Uniform         octree_indirect_brick_removal_buffer;
     Uniform         proxy_geometry_eye_position;
     WGPUBindGroup   render_camera_bind_group = nullptr;
 
