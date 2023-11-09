@@ -296,7 +296,7 @@ void SculptEditor::render()
         update_edit_preview(edit_to_add.dimensions);
 
         // Render something to be able to cull faces later...
-        if( edit_to_add.operation == OP_SUBSTRACTION || edit_to_add.operation == OP_SMOOTH_SUBSTRACTION || edit_to_add.operation == PAINT)
+        if( edit_to_add.operation == OP_SUBSTRACTION || edit_to_add.operation == OP_SMOOTH_SUBSTRACTION || edit_to_add.operation == OP_PAINT || edit_to_add.operation == OP_SMOOTH_PAINT)
             mesh_preview->render();
 
         mesh_preview_outline->set_model(mesh_preview->get_model());
