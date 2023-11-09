@@ -1,5 +1,5 @@
 const SCULPT_MAX_SIZE = 1.0; // meters
-const SDF_RESOLUTION = 256.0;
+const SDF_RESOLUTION = 400.0;
 const WORLD_SPACE_SCALE = 512.0; // A texel brick is 1/512 m
 const SCALE_CONVERSION_FACTOR = WORLD_SPACE_SCALE / SDF_RESOLUTION;
 const PIXEL_WORLD_SIZE = SCULPT_MAX_SIZE / WORLD_SPACE_SCALE;
@@ -44,6 +44,18 @@ struct ProxyInstanceData {
     atlas_tile_index : u32,
     octree_parent_id : u32, // a hack I dont like it
     padding : vec3u
+};
+
+struct IndirectBrickRemoval {
+    brick_removal_counter : atomic<u32>,
+    indirect_padding : vec3<u32>,
+    brick_removal_buffer : array<u32>
+};
+
+struct IndirectBrickRemoval_ReadOnly {
+    brick_removal_counter : u32,
+    indirect_padding : vec3<u32>,
+    brick_removal_buffer : array<u32>
 };
 
 struct OctreeProxyInstances {

@@ -11,9 +11,9 @@
 
 #include "framework/camera/flyover_camera.h"
 
-//#ifdef __EMSCRIPTEN__
-//#define DISABLE_RAYMARCHER
-//#endif
+#ifdef __EMSCRIPTEN__
+#define DISABLE_RAYMARCHER
+#endif
 
 class RoomsRenderer : public Renderer {
 

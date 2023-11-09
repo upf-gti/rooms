@@ -8,6 +8,7 @@
 @group(0) @binding(5) var<storage, read_write> octree_proxy_data: OctreeProxyInstances;
 @group(0) @binding(6) var<storage, read_write> edit_culling_lists: array<u32>;
 @group(0) @binding(7) var<storage, read_write> edit_culling_count : array<u32>;
+@group(0) @binding(8) var<storage, read_write> indirect_brick_removal : IndirectBrickRemoval;
 
 @group(1) @binding(0) var<storage, read> octant_usage_read : array<u32>;
 @group(1) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
@@ -168,13 +169,13 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
                 octant_usage_write[prev_counter] = octree_index;
             } else {
-                // if ((0x80000000u & octree.data[octree_index].tile_pointer) == 0x80000000u) {
-                //     let brick_spot_id = atomicAdd(&octree_proxy_data.atlas_empty_bricks_counter, 1u);
-                //     atomicSub(&counters.proxy_instance_counter, 1u);
+                if ((0x80000000u & octree.data[octree_index].tile_pointer) == 0x80000000u) {
+                    let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
 
-                //     let brick_index : u32 = octree.data[octree_index].tile_pointer & 0x7fffffffu;
-                //     octree_proxy_data.atlas_empty_bricks_buffer[brick_spot_id] = octree_proxy_data.instance_data[brick_index].atlas_tile_index;
-                // }
+                    let brick_index : u32 = octree.data[octree_index].tile_pointer & 0x7fffffffu;
+                    indirect_brick_removal.brick_removal_buffer[brick_to_delete_idx] = brick_index;
+                    octree.data[octree_index].tile_pointer = 0u;
+                }
             }
         }
 
