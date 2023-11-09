@@ -7,6 +7,7 @@ const BRICK_WORLD_SIZE = 8.0 * PIXEL_WORLD_SIZE;
 const SQRT_3 = 1.73205080757;
 const BRICK_COUNT = u32(SDF_RESOLUTION / 10.0);
 const PACKED_LIST_SIZE : u32 = (64 / 4);
+const TOTAL_BRICK_COUNT = BRICK_COUNT * BRICK_COUNT * BRICK_COUNT;
 
 struct Edit {
     position   : vec3f,
@@ -45,8 +46,20 @@ struct ProxyInstanceData {
     padding : vec3u
 };
 
+struct OctreeProxyInstances {
+    atlas_empty_bricks_counter : atomic<u32>,
+    atlas_empty_bricks_buffer : array<u32, TOTAL_BRICK_COUNT>,
+    instance_data: array<ProxyInstanceData>
+};
+
+struct OctreeProxyInstancesNonAtomic {
+    atlas_empty_bricks_counter : u32,
+    atlas_empty_bricks_buffer : array<u32, TOTAL_BRICK_COUNT>,
+    instance_data: array<ProxyInstanceData>
+};
+
 struct OctreeCounters {
     current_level : atomic<u32>,
     atomic_counter : atomic<u32>,
-    atlas_tile_counter : atomic<u32>
+    proxy_instance_counter : atomic<u32>
 };

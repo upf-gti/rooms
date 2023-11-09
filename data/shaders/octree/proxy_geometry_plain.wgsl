@@ -34,14 +34,14 @@ struct CameraData {
 
 @group(0) @binding(2) var texture_sampler : sampler;
 @group(0) @binding(3) var read_sdf: texture_3d<f32>;
-@group(0) @binding(5) var<storage, read> proxy_box_position_buffer: array<ProxyInstanceData>;
+@group(0) @binding(5) var<storage, read> octree_proxy_data: OctreeProxyInstancesNonAtomic;
 
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
 
-    let instance_data : ProxyInstanceData = proxy_box_position_buffer[in.instance_id];
+    let instance_data : ProxyInstanceData = octree_proxy_data.instance_data[in.instance_id];
 
     var voxel_pos : vec3f = in.position * BRICK_WORLD_SIZE * 0.5 + instance_data.position;
     var world_pos : vec3f = rotate_point_quat(voxel_pos, sculpt_data.sculpt_rotation);

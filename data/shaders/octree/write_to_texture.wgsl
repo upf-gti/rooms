@@ -5,7 +5,7 @@
 @group(0) @binding(2) var<storage, read_write> octree : Octree;
 @group(0) @binding(3) var write_sdf: texture_storage_3d<r32float, read_write>;
 @group(0) @binding(4) var<storage, read_write> counters : OctreeCounters;
-@group(0) @binding(5) var<storage, read_write> proxy_box_position_buffer: array<ProxyInstanceData>;
+@group(0) @binding(5) var<storage, read_write> octree_proxy_data: OctreeProxyInstances;
 @group(0) @binding(6) var<storage, read_write> edit_culling_lists: array<u32>;
 @group(0) @binding(7) var<storage, read_write> edit_culling_count : array<u32>;
 
@@ -22,7 +22,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     // Get the brick index, without the MSb that signals if it has an already initialized brick
     let brick_index : u32 = brick_pointer & 0x7fffffffu;
 
-    let proxy_data : ProxyInstanceData = proxy_box_position_buffer[brick_index];
+    let proxy_data : ProxyInstanceData = octree_proxy_data.instance_data[brick_index];
 
     // Get the 3D atlas coords of the brick, with a stride of 10 (the size of the brick)
     let atlas_tile_coordinate : vec3u = 10 * vec3u(proxy_data.atlas_tile_index % BRICK_COUNT,
