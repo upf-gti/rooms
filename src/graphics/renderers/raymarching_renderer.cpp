@@ -38,7 +38,7 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
     //edits[compute_merge_data.edits_to_process++] = 
 
     edits[compute_merge_data.edits_to_process++] = {
-        .position = { 0.05, 0.0, 0.0 },
+        .position = { -0.075f, 0.0f, 0.0f },
         .primitive = SD_SPHERE,
         .color = { 0.0, 1.0, 0.0 },
         .operation = OP_SMOOTH_UNION,
@@ -165,8 +165,8 @@ void RaymarchingRenderer::compute_octree()
     webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_edit_culling_count.data), 0, &compute_merge_data.edits_to_process, sizeof(uint32_t));
 
     // Upload the default data
-    uint32_t devault_vals_zero[3] = { 0u, 0u, 0u };
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_indirect_brick_removal_buffer.data), 0, devault_vals_zero, sizeof(uint32_t) * 3);
+    uint32_t devault_vals_compute[3] = { 0u, 1u, 1u };
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_indirect_brick_removal_buffer.data), 0, devault_vals_compute, sizeof(uint32_t) * 3);
 
     int ping_pong_idx = 0;
 
@@ -193,7 +193,7 @@ void RaymarchingRenderer::compute_octree()
 
     wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_indirect_brick_removal_bind_group, 0, nullptr);
 
-    wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(octree_indirect_brick_removal_buffer.data), sizeof(uint32_t));
+    wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(octree_indirect_brick_removal_buffer.data), 0u);
 
     // Write to texture dispatch
     compute_octree_write_to_texture_pipeline.set(compute_pass);
@@ -397,7 +397,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         octree_indirect_brick_removal_buffer.binding = 8;
         octree_indirect_brick_removal_buffer.buffer_size = buffer_removal_buffer_size;
 
-        uint32_t default_removal_indirect[4] = {0, 0, 0, 0};
+        uint32_t default_removal_indirect[4] = {0, 1, 1, 0};
         webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_indirect_brick_removal_buffer.data), 0, default_removal_indirect, sizeof(uint32_t) * 4u);
 
 
