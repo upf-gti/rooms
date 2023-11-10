@@ -9,5 +9,5 @@ fn compute(@builtin(workgroup_id) group_id: vec3u)
     let empty_index : u32 = indirect_brick_removal.brick_removal_buffer[group_id.x];
 
     let index : u32 = atomicAdd(&octree_proxy_data.atlas_empty_bricks_counter, 1u);
-    octree_proxy_data.atlas_empty_bricks_buffer[index] = empty_index;
+    octree_proxy_data.atlas_empty_bricks_buffer[index] = octree_proxy_data.instance_data[empty_index].atlas_tile_index;
 }
