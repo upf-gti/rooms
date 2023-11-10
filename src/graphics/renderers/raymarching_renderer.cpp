@@ -37,15 +37,15 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
 
     //edits[compute_merge_data.edits_to_process++] = 
 
-    edits[compute_merge_data.edits_to_process++] = {
-        .position = { -0.075f, 0.0f, 0.0f },
-        .primitive = SD_SPHERE,
-        .color = { 0.0, 1.0, 0.0 },
-        .operation = OP_SMOOTH_UNION,
-        .dimensions = { 0.01f, 0.01f, 0.01f, 0.01f },
-        .rotation = { 0.f, 0.f, 0.f, 1.f },
-        .parameters = { 0.0, -1.0, 0.0, 0.0 },
-    };
+    //edits[compute_merge_data.edits_to_process++] = {
+    //    .position = { 0.0f, 0.0f, 0.0f },
+    //    .primitive = SD_SPHERE,
+    //    .color = { 0.0, 1.0, 0.0 },
+    //    .operation = OP_SMOOTH_UNION,
+    //    .dimensions = { 0.01f, 0.01f, 0.01f, 0.01f },
+    //    .rotation = { 0.f, 0.f, 0.f, 1.f },
+    //    .parameters = { 0.0, -1.0, 0.0, 0.0 },
+    //};
 
  /*   edits[compute_merge_data.edits_to_process++] = {
         .position = { -0.1, 0.0, 0.0 },
@@ -371,18 +371,20 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         // An struct that contines: a empty brick counter in the atlas, the empty brick buffer, and the data off all the instances
         // TODO clean this section
         uint32_t default_val = 0u;
-        uint32_t struct_size = sizeof(uint32_t) * 4 + sizeof(uint32_t) * octants_max_size + octants_max_size * sizeof(ProxyInstanceData);
+        uint32_t struct_size = sizeof(uint32_t) + sizeof(uint32_t) * octants_max_size + octants_max_size * sizeof(ProxyInstanceData);
         octree_proxy_instance_buffer.data = webgpu_context->create_buffer(struct_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "proxy_boxes_position_buffer");
         octree_proxy_instance_buffer.binding = 5;
         octree_proxy_instance_buffer.buffer_size = struct_size;
 
         // Empty atlas malloc data
-        uint32_t* atlas_indices = new uint32_t[octants_max_size + 4u];
+        uint32_t* atlas_indices = new uint32_t[octants_max_size + 1u];
         atlas_indices[0] = octants_max_size;
+
         for (uint32_t i = 0u; i < octants_max_size; i++) {
-            atlas_indices[i+4u] = octants_max_size - i - 1u;
+            atlas_indices[i+1u] = octants_max_size - i - 1u;
         }
-        webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_proxy_instance_buffer.data), 0, atlas_indices, sizeof(uint32_t) * (octants_max_size + 4));
+
+        webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_proxy_instance_buffer.data), 0, atlas_indices, sizeof(uint32_t) * (octants_max_size + 1));
         delete[] atlas_indices;
 
         // Edit culling lists per octree node buffer
@@ -397,7 +399,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
 
         // Buffer for brick removal & indirect buffers
         // 3 uints for the indirect buffer data + 1 padding +  and then the brick size
-        uint32_t buffer_removal_buffer_size = sizeof(uint32_t) * 4u + octants_max_size * sizeof(uint32_t);
+        uint32_t buffer_removal_buffer_size = sizeof(uint32_t) + octants_max_size * sizeof(uint32_t);
         octree_indirect_brick_removal_buffer.data = webgpu_context->create_buffer(buffer_removal_buffer_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Indirect | WGPUBufferUsage_Storage, nullptr, "indirect_brick_removal");
         octree_indirect_brick_removal_buffer.binding = 8;
         octree_indirect_brick_removal_buffer.buffer_size = buffer_removal_buffer_size;

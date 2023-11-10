@@ -60,14 +60,12 @@ struct IndirectBrickRemoval_ReadOnly {
 
 struct OctreeProxyInstances {
     atlas_empty_bricks_counter : atomic<u32>,
-    padding : vec3<u32>,
     atlas_empty_bricks_buffer : array<u32, TOTAL_BRICK_COUNT>,
     instance_data: array<ProxyInstanceData>
 };
 
 struct OctreeProxyInstancesNonAtomic {
     atlas_empty_bricks_counter : u32,
-    padding : vec3<u32>,
     atlas_empty_bricks_buffer : array<u32, TOTAL_BRICK_COUNT>,
     instance_data: array<ProxyInstanceData>
 };
