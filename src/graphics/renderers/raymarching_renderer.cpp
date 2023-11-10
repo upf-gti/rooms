@@ -42,7 +42,7 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
         .primitive = SD_SPHERE,
         .color = { 0.0, 1.0, 0.0 },
         .operation = OP_SMOOTH_UNION,
-        .dimensions = { 0.1f, 0.1f, 0.1f, 0.1f },
+        .dimensions = { 0.01f, 0.01f, 0.01f, 0.01f },
         .rotation = { 0.f, 0.f, 0.f, 1.f },
         .parameters = { 0.0, -1.0, 0.0, 0.0 },
     };
@@ -124,6 +124,8 @@ void RaymarchingRenderer::compute_octree()
         return;
     }
 
+    RenderdocCapture::start_capture_frame();
+
     // Initialize a command encoder
     WGPUCommandEncoderDescriptor encoder_desc = {};
     WGPUCommandEncoder command_encoder = wgpuDeviceCreateCommandEncoder(webgpu_context->device, &encoder_desc);
@@ -189,11 +191,11 @@ void RaymarchingRenderer::compute_octree()
     }
 
     // Clean the texture atlas bricks dispatch
-    compute_octree_brick_removal_pipeline.set(compute_pass);
+    //compute_octree_brick_removal_pipeline.set(compute_pass);
 
-    wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_indirect_brick_removal_bind_group, 0, nullptr);
+    //wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_indirect_brick_removal_bind_group, 0, nullptr);
 
-    wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(octree_indirect_brick_removal_buffer.data), 0u);
+    //wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(octree_indirect_brick_removal_buffer.data), 0u);
 
     // Write to texture dispatch
     compute_octree_write_to_texture_pipeline.set(compute_pass);
@@ -219,6 +221,8 @@ void RaymarchingRenderer::compute_octree()
     wgpuCommandEncoderRelease(command_encoder);
 
     compute_merge_data.edits_to_process = 0;
+
+    RenderdocCapture::end_capture_frame();
 }
 
 void RaymarchingRenderer::render_raymarching_proxy(WGPUTextureView swapchain_view, WGPUTextureView swapchain_depth)
@@ -365,19 +369,20 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
 
         // Proxy geometry instance data
         // An struct that contines: a empty brick counter in the atlas, the empty brick buffer, and the data off all the instances
+        // TODO clean this section
         uint32_t default_val = 0u;
-        uint32_t struct_size = sizeof(uint32_t) + sizeof(uint32_t) * octants_max_size + octants_max_size * sizeof(ProxyInstanceData);
+        uint32_t struct_size = sizeof(uint32_t) * 4 + sizeof(uint32_t) * octants_max_size + octants_max_size * sizeof(ProxyInstanceData);
         octree_proxy_instance_buffer.data = webgpu_context->create_buffer(struct_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "proxy_boxes_position_buffer");
         octree_proxy_instance_buffer.binding = 5;
         octree_proxy_instance_buffer.buffer_size = struct_size;
 
         // Empty atlas malloc data
-        uint32_t* atlas_indices = new uint32_t[octants_max_size + 1u];
+        uint32_t* atlas_indices = new uint32_t[octants_max_size + 4u];
         atlas_indices[0] = octants_max_size;
         for (uint32_t i = 0u; i < octants_max_size; i++) {
-            atlas_indices[i+1u] = octants_max_size - i;
+            atlas_indices[i+4u] = octants_max_size - i - 1u;
         }
-        webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_proxy_instance_buffer.data), 0, atlas_indices, sizeof(uint32_t) * (octants_max_size + 1));
+        webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_proxy_instance_buffer.data), 0, atlas_indices, sizeof(uint32_t) * (octants_max_size + 4));
         delete[] atlas_indices;
 
         // Edit culling lists per octree node buffer

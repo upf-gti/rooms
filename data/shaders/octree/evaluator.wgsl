@@ -159,12 +159,12 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 // if the 32st bit is set, there is already a tile in the octree, if not, we allocate one
                 if ((0x80000000u & octree.data[octree_index].tile_pointer) != 0x80000000u) {
                     let brick_spot_id = atomicSub(&octree_proxy_data.atlas_empty_bricks_counter, 1u) - 1u;
-                    let brick_index : u32 = atomicAdd(&counters.proxy_instance_counter, 1u);
-                    octree_proxy_data.instance_data[brick_index].position = octant_center;
-                    octree_proxy_data.instance_data[brick_index].atlas_tile_index = octree_proxy_data.atlas_empty_bricks_buffer[brick_spot_id];
-                    octree_proxy_data.instance_data[brick_index].octree_parent_id = octree_index;
+                    let instance_index : u32 = atomicAdd(&counters.proxy_instance_counter, 1u);
+                    octree_proxy_data.instance_data[instance_index].position = octant_center;
+                    octree_proxy_data.instance_data[instance_index].atlas_tile_index = octree_proxy_data.atlas_empty_bricks_buffer[brick_spot_id];
+                    octree_proxy_data.instance_data[instance_index].octree_parent_id = octree_index;
 
-                    octree.data[octree_index].tile_pointer = brick_index;
+                    octree.data[octree_index].tile_pointer = instance_index;
                 }
 
                 octant_usage_write[prev_counter] = octree_index;
@@ -172,22 +172,12 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 if ((0x80000000u & octree.data[octree_index].tile_pointer) == 0x80000000u) {
                     let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
 
-                    let brick_index : u32 = octree.data[octree_index].tile_pointer & 0x7fffffffu;
-                    indirect_brick_removal.brick_removal_buffer[brick_to_delete_idx] = brick_index;
+                    let instance_index : u32 = octree.data[octree_index].tile_pointer & 0x7fffffffu;
+                    indirect_brick_removal.brick_removal_buffer[brick_to_delete_idx] = instance_index;
                     octree.data[octree_index].tile_pointer = 0u;
                 }
             }
         }
 
         edit_culling_count[octree_index] = edit_counter;
-    //}
-    // else {
-    //     // If the current MSB is set in the current, non-leaf tile pointer, but now
-    //     // there is no surface, it has been emptied and we should mark for removal
-    //     // for their children's bricks
-    //     if ((0x80000000u & octree.data[octree_index].tile_pointer) == 0x80000000u) {
-    //         // Remove children's bricks
-    //     }
-    //     edit_culling_count[octree_index] = 0;
-    // }
 }
