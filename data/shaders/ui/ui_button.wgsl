@@ -51,7 +51,8 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     // Assign basic color
     var lum = color.r  * 0.3 + color.g * 0.59 + color.b * 0.11;
-    var _color = vec3f( 1.0 - smoothstep(0.1, 0.8, lum) ) * hover_color;
+    var _color = vec3f( 1.0 - smoothstep(0.2, 0.8, lum) ) * hover_color;
+    _color = max(_color, back_color);
 
     var keep_colors = (ui_data.keep_rgb + ui_data.is_color_button) > 0.0;
 
