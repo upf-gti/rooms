@@ -12,7 +12,7 @@
             "type": "button",
             "texture": "data/textures/cube.png",
             "unique_selection": true,
-            "selected":   true
+            "selected": true
         },
         {
             "name": "paint",
@@ -171,6 +171,42 @@
                     "type": "button",
                     "texture": "data/textures/recent_colors.png",
                     "keep_rgb": true
+                }
+            ]
+        },
+        {
+            "name": "lock_axis",
+            "type": "submenu",
+            "children": [
+                {
+                    "name": "lock_axis_toggle",
+                    "type": "button",
+                    "texture": "data/textures/lock_axis.png",
+                    "allow_toggle": true
+                },
+                {
+                    "name": "g_lock_axis",
+                    "type": "group",
+                    "nitems": 3
+                },
+                {
+                    "name": "lock_axis_x",
+                    "type": "button",
+                    "texture": "data/textures/x.png",
+                    "unique_selection": true
+                },
+                {
+                    "name": "lock_axis_y",
+                    "type": "button",
+                    "texture": "data/textures/y.png",
+                    "unique_selection": true
+                },
+                {
+                    "name": "lock_axis_z",
+                    "type": "button",
+                    "texture": "data/textures/z.png",
+                    "unique_selection": true,
+                    "selected": true
                 }
             ]
         },
