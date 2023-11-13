@@ -143,7 +143,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                     let child_octree_index : u32 = child_octant_id + u32((pow(8.0, f32(level + 1)) - 1) / 7);
                     if ((octree.data[child_octree_index].tile_pointer & 0x80000000u) == 0x80000000u) {
                         let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 1);
-                        octant_usage_write[prev_counter + i] = child_octant_id;
+                        octant_usage_write[prev_counter] = child_octant_id;
                     }
                 }
 
