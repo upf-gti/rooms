@@ -100,7 +100,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         sSurface = evalEdit(octant_center, sSurface, edits.data[current_unpacked_edit_idx], &current_edit_surface);
 
         // Check if the edit affects the current voxel, if so adds it to the packed list 
-        if (abs(sSurface.distance) < cull_distance) {
+        if (sSurface.distance < cull_distance) {
             // Using the edit counter, sift the edit id to the position in the current word, and adds it
             new_packed_edit_idx = new_packed_edit_idx | (current_unpacked_edit_idx << ((3 - edit_counter % 4) * 8));
 
