@@ -124,7 +124,7 @@ void RaymarchingRenderer::compute_octree()
         return;
     }
 
-    RenderdocCapture::start_capture_frame();
+    //RenderdocCapture::start_capture_frame();
 
     // Initialize a command encoder
     WGPUCommandEncoderDescriptor encoder_desc = {};
@@ -191,11 +191,11 @@ void RaymarchingRenderer::compute_octree()
     }
 
     // Clean the texture atlas bricks dispatch
-    //compute_octree_brick_removal_pipeline.set(compute_pass);
+    compute_octree_brick_removal_pipeline.set(compute_pass);
 
-    //wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_indirect_brick_removal_bind_group, 0, nullptr);
+    wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_indirect_brick_removal_bind_group, 0, nullptr);
 
-    //wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(octree_indirect_brick_removal_buffer.data), 0u);
+    wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(octree_indirect_brick_removal_buffer.data), 0u);
 
     // Write to texture dispatch
     compute_octree_write_to_texture_pipeline.set(compute_pass);
@@ -222,7 +222,7 @@ void RaymarchingRenderer::compute_octree()
 
     compute_merge_data.edits_to_process = 0;
 
-    RenderdocCapture::end_capture_frame();
+    //RenderdocCapture::end_capture_frame();
 }
 
 void RaymarchingRenderer::render_raymarching_proxy(WGPUTextureView swapchain_view, WGPUTextureView swapchain_depth)

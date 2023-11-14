@@ -24,7 +24,8 @@ struct Edits {
 }
 
 struct OctreeNode {
-    tile_pointer : u32
+    tile_pointer : u32,
+    octant_center_distance : f32
 }
 
 struct Octree {

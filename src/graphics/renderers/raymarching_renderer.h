@@ -83,6 +83,7 @@ class RaymarchingRenderer {
 
     struct sOctreeNode {
         uint32_t tile_pointer = 0;
+        float octant_center_distance = 10000.0f;
     };
 
     std::vector<Edit> scene_edits;
