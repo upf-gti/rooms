@@ -100,7 +100,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         sSurface = evalEdit(octant_center, sSurface, edits.data[current_unpacked_edit_idx], &current_edit_surface);
 
         // Check if the edit affects the current voxel, if so adds it to the packed list 
-        if (sSurface.distance < cull_distance) {
+        if (abs(sSurface.distance) < cull_distance) {
             // Using the edit counter, sift the edit id to the position in the current word, and adds it
             new_packed_edit_idx = new_packed_edit_idx | (current_unpacked_edit_idx << ((3 - edit_counter % 4) * 8));
 
@@ -128,7 +128,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
         // Check if the total of distances of all the edits are inside the current voxel, and if so,
         // create children
-        if (sSurface.distance >= 0.0 && sSurface.distance < cull_distance) {
+        if (abs(sSurface.distance) < cull_distance) {
             // For the 0<->(n-1) passes
             // Increase the number of children from the current level
             let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 8);
@@ -155,7 +155,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         }
     } else {
 
-        if (sSurface.distance >= 0.0 && sSurface.distance < cull_distance) {
+        if (abs(sSurface.distance) < cull_distance) {
             // For the N pass, just send the leaves, to the writing to texture pass
             let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 1);
 
