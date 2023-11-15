@@ -44,7 +44,8 @@ struct ProxyInstanceData {
     position : vec3f,
     atlas_tile_index : u32,
     octree_parent_id : u32, // a hack I dont like it
-    padding : vec3u
+    in_use : u32,
+    padding : vec2u
 };
 
 struct IndirectBrickRemoval {

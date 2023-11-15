@@ -163,10 +163,11 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             // if the 32st bit is set, there is already a tile in the octree, if not, we allocate one
             if ((0x80000000u & octree.data[octree_index].tile_pointer) != 0x80000000u) {
                 let brick_spot_id = atomicSub(&octree_proxy_data.atlas_empty_bricks_counter, 1u) - 1u;
-                let instance_index : u32 = atomicAdd(&counters.proxy_instance_counter, 1u);
+                let instance_index : u32 = octree_proxy_data.atlas_empty_bricks_buffer[brick_spot_id];
                 octree_proxy_data.instance_data[instance_index].position = octant_center;
-                octree_proxy_data.instance_data[instance_index].atlas_tile_index = octree_proxy_data.atlas_empty_bricks_buffer[brick_spot_id];
+                octree_proxy_data.instance_data[instance_index].atlas_tile_index = instance_index;
                 octree_proxy_data.instance_data[instance_index].octree_parent_id = octree_index;
+                octree_proxy_data.instance_data[instance_index].in_use = 1;
 
                 octree.data[octree_index].tile_pointer = instance_index;
             }

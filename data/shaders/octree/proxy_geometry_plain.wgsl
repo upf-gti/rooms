@@ -32,6 +32,7 @@ struct CameraData {
     view_projection : mat4x4f,
 };
 
+@group(0) @binding(0) var<storage, read> brick_copy_buffer : array<u32>;
 @group(0) @binding(2) var texture_sampler : sampler;
 @group(0) @binding(3) var read_sdf: texture_3d<f32>;
 @group(0) @binding(5) var<storage, read> octree_proxy_data: OctreeProxyInstancesNonAtomic;
@@ -41,7 +42,8 @@ struct CameraData {
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
 
-    let instance_data : ProxyInstanceData = octree_proxy_data.instance_data[in.instance_id];
+    let instance_index : u32 = brick_copy_buffer[in.instance_id];
+    let instance_data : ProxyInstanceData = octree_proxy_data.instance_data[instance_index];
 
     var voxel_pos : vec3f = in.position * BRICK_WORLD_SIZE * 0.5 + instance_data.position;
     var world_pos : vec3f = rotate_point_quat(voxel_pos, sculpt_data.sculpt_rotation);
@@ -159,8 +161,8 @@ fn blinn_phong(toEye : vec3f, position : vec3f, position_world : vec3f, lightPos
     let diffuseFactor : vec3f = 0.4 * diffuse * max(0.0, dot(normal, toLight));
     let specularFactor : vec3f = vec3f(0.3) * pow(max(0.0, dot(toEye, reflection)), specularExponent);
 
-    return ambientFactor + diffuseFactor + specularFactor;
-    //return normal;
+    //return ambientFactor + diffuseFactor + specularFactor;
+    return normal;
     //return diffuse;
 }
 

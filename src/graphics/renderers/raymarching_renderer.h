@@ -30,18 +30,22 @@ class RaymarchingRenderer {
     Pipeline        compute_octree_increment_level_pipeline;
     Pipeline        compute_octree_write_to_texture_pipeline;
     Pipeline        compute_octree_brick_removal_pipeline;
+    Pipeline        compute_octree_brick_copy_pipeline;
     Shader*         compute_octree_evaluate_shader = nullptr;
     Shader*         compute_octree_increment_level_shader = nullptr;
     Shader*         compute_octree_write_to_texture_shader = nullptr;
     Shader*         compute_octree_brick_removal_shader = nullptr;
+    Shader*         compute_octree_brick_copy_shader = nullptr;
     WGPUBindGroup   compute_octree_evaluate_bind_group = nullptr;
     WGPUBindGroup   compute_octree_increment_level_bind_group = nullptr;
     WGPUBindGroup   compute_octree_write_to_texture_bind_group = nullptr;
     WGPUBindGroup   compute_octree_indirect_brick_removal_bind_group = nullptr;
+    WGPUBindGroup   compute_octree_brick_copy_bind_group = nullptr;
     WGPUBindGroup   compute_octant_usage_bind_groups[2] = {};
     Uniform         octree_uniform;
     Uniform         octant_usage_uniform[4];
     uint8_t         octree_depth = 0;
+    uint32_t        octants_max_size = 0;
     uint32_t        octree_total_size = 0;
     Uniform         octree_indirect_buffer;
     Uniform         octree_counters;
@@ -50,6 +54,7 @@ class RaymarchingRenderer {
     Uniform         octree_edit_culling_lists;
     Uniform         octree_edit_culling_count;
     Uniform         octree_indirect_brick_removal_buffer;
+    Uniform         octree_brick_copy_buffer;
     Uniform         proxy_geometry_eye_position;
     WGPUBindGroup   render_camera_bind_group = nullptr;
 
