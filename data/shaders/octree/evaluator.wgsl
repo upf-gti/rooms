@@ -97,10 +97,11 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         //   then apply the mask, and swift the result so the 8 bits are at the start of the word -> unpacked index & profit
         let current_unpacked_edit_idx : u32 = (current_packed_edit_idx & (0xFFu << (packed_index * 8u))) >> (packed_index * 8u);
 
-        sSurface = evalEdit(octant_center, sSurface, edits.data[current_unpacked_edit_idx], &current_edit_surface);
+        let current_edit : Edit = edits.data[current_unpacked_edit_idx];
+        sSurface = evalEdit(octant_center, sSurface, current_edit, &current_edit_surface);
 
         // Check if the edit affects the current voxel, if so adds it to the packed list 
-        if (sSurface.distance < cull_distance) {
+        if (sSurface.distance < cull_distance || current_edit.operation == OP_SUBSTRACTION || current_edit.operation == OP_SMOOTH_SUBSTRACTION) {
             // Using the edit counter, sift the edit id to the position in the current word, and adds it
             new_packed_edit_idx = new_packed_edit_idx | (current_unpacked_edit_idx << ((3 - edit_counter % 4) * 8));
 
@@ -169,7 +170,11 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 octree_proxy_data.instance_data[instance_index].octree_parent_id = octree_index;
                 octree_proxy_data.instance_data[instance_index].in_use = 1;
 
-                octree.data[octree_index].tile_pointer = instance_index;
+                if ((octree.data[octree_index].tile_pointer & 0x40000000u) == 0x40000000u) {
+                    octree.data[octree_index].tile_pointer = instance_index | 0x40000000u;
+                } else {
+                    octree.data[octree_index].tile_pointer = instance_index;
+                }
             }
 
             octant_usage_write[prev_counter] = octree_index;
@@ -177,9 +182,14 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             if ((0x80000000u & octree.data[octree_index].tile_pointer) == 0x80000000u) {
                 let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
 
-                let instance_index : u32 = octree.data[octree_index].tile_pointer & 0x7fffffffu;
+                let instance_index : u32 = octree.data[octree_index].tile_pointer & 0x3FFFFFFFu;
                 indirect_brick_removal.brick_removal_buffer[brick_to_delete_idx] = instance_index;
                 octree.data[octree_index].tile_pointer = 0u;
+            }
+
+            if (sSurface.distance < 0.0) {
+                // Mark brick as interior (inside a surface)
+                octree.data[octree_index].tile_pointer = 0x40000000u;
             }
         }
     }

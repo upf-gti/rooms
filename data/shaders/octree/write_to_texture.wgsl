@@ -21,7 +21,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     let brick_pointer : u32 = octree.data[octree_leaf_id].tile_pointer;
 
     // Get the brick index, without the MSb that signals if it has an already initialized brick
-    let brick_index : u32 = brick_pointer & 0x7fffffffu;
+    let brick_index : u32 = brick_pointer & 0x3FFFFFFFu;
 
     let proxy_data : ProxyInstanceData = octree_proxy_data.instance_data[brick_index];
 
@@ -49,6 +49,9 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
         sSurface.distance = sample.r;
         sSurface.color = sample.rgb;
         //debug_surf = vec3f(1.0);
+    } else
+    if ((0x40000000u & brick_pointer) == 0x40000000u) {
+        sSurface.distance = -100.0;
     }
 
     // Offset for a 10 pixel wide brick
@@ -82,6 +85,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     workgroupBarrier();
 
     if (local_id.x == 0 && local_id.y == 0 && local_id.z == 0) {
-        octree.data[octree_leaf_id].tile_pointer = brick_index | 0x80000000u;
+        octree.data[octree_leaf_id].tile_pointer = (brick_index | 0x80000000u) | (brick_index & 0xBFFFFFFFu);
     }
 }
