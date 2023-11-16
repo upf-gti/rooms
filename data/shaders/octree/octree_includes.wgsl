@@ -9,6 +9,9 @@ const BRICK_COUNT = u32(SDF_RESOLUTION / 10.0);
 const PACKED_LIST_SIZE : u32 = (64 / 4);
 const TOTAL_BRICK_COUNT = BRICK_COUNT * BRICK_COUNT * BRICK_COUNT;
 
+const FILLED_BRICK_FLAG = 0x80000000u;
+const INTERIOR_BRICK_FLAG = 0x40000000u;
+
 struct Edit {
     position   : vec3f,
     primitive  : u32,

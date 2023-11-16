@@ -44,13 +44,13 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
     // If the MSb is setted we load the previous data of brick
     // if not, we set it for the next iteration
-    if ((0x80000000u & brick_pointer) == 0x80000000u) {
+    if ((FILLED_BRICK_FLAG & brick_pointer) == FILLED_BRICK_FLAG) {
         let sample : vec4f = textureLoad(write_sdf, texture_coordinates);
         sSurface.distance = sample.r;
         sSurface.color = sample.rgb;
         //debug_surf = vec3f(1.0);
     } else
-    if ((0x40000000u & brick_pointer) == 0x40000000u) {
+    if ((INTERIOR_BRICK_FLAG & brick_pointer) == INTERIOR_BRICK_FLAG) {
         sSurface.distance = -100.0;
     }
 
@@ -85,6 +85,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     workgroupBarrier();
 
     if (local_id.x == 0 && local_id.y == 0 && local_id.z == 0) {
-        octree.data[octree_leaf_id].tile_pointer = (brick_index | 0x80000000u) | (brick_index & 0xBFFFFFFFu);
+        octree.data[octree_leaf_id].tile_pointer = (brick_index | FILLED_BRICK_FLAG) | (brick_index & 0xBFFFFFFFu);
     }
 }

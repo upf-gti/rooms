@@ -140,13 +140,13 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             }
 
             // Mark this node as it has children
-            octree.data[octree_index].tile_pointer = 0x80000000u;
+            octree.data[octree_index].tile_pointer = FILLED_BRICK_FLAG;
         } else {
             // Add to the index the childres's octant id, and save it for the next pass
             for (var i : u32 = 0; i < 8; i++) {
                 let child_octant_id : u32 = octant_id | (i << (3 * level));
                 let child_octree_index : u32 = child_octant_id + u32((pow(8.0, f32(level + 1)) - 1) / 7);
-                if ((octree.data[child_octree_index].tile_pointer & 0x80000000u) == 0x80000000u) {
+                if ((octree.data[child_octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG) {
                     let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 1);
                     octant_usage_write[prev_counter] = child_octant_id;
                 }
@@ -160,9 +160,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             // For the N pass, just send the leaves, to the writing to texture pass
             let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 1);
 
-            // 0x0x80000000 is the 32st bit
-            // if the 32st bit is set, there is already a tile in the octree, if not, we allocate one
-            if ((0x80000000u & octree.data[octree_index].tile_pointer) != 0x80000000u) {
+            // if FILLED_BRICK_FLAG is set, there is already a tile in the octree, if not, we allocate one
+            if ((FILLED_BRICK_FLAG & octree.data[octree_index].tile_pointer) != FILLED_BRICK_FLAG) {
                 let brick_spot_id = atomicSub(&octree_proxy_data.atlas_empty_bricks_counter, 1u) - 1u;
                 let instance_index : u32 = octree_proxy_data.atlas_empty_bricks_buffer[brick_spot_id];
                 octree_proxy_data.instance_data[instance_index].position = octant_center;
@@ -170,8 +169,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 octree_proxy_data.instance_data[instance_index].octree_parent_id = octree_index;
                 octree_proxy_data.instance_data[instance_index].in_use = 1;
 
-                if ((octree.data[octree_index].tile_pointer & 0x40000000u) == 0x40000000u) {
-                    octree.data[octree_index].tile_pointer = instance_index | 0x40000000u;
+                if ((octree.data[octree_index].tile_pointer & INTERIOR_BRICK_FLAG) == INTERIOR_BRICK_FLAG) {
+                    octree.data[octree_index].tile_pointer = instance_index | INTERIOR_BRICK_FLAG;
                 } else {
                     octree.data[octree_index].tile_pointer = instance_index;
                 }
@@ -179,7 +178,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
             octant_usage_write[prev_counter] = octree_index;
         } else {
-            if ((0x80000000u & octree.data[octree_index].tile_pointer) == 0x80000000u) {
+            if ((FILLED_BRICK_FLAG & octree.data[octree_index].tile_pointer) == FILLED_BRICK_FLAG) {
                 let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
 
                 let instance_index : u32 = octree.data[octree_index].tile_pointer & 0x3FFFFFFFu;
@@ -189,7 +188,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
             if (sSurface.distance < 0.0) {
                 // Mark brick as interior (inside a surface)
-                octree.data[octree_index].tile_pointer = 0x40000000u;
+                octree.data[octree_index].tile_pointer = INTERIOR_BRICK_FLAG;
             }
         }
     }
