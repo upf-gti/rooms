@@ -27,8 +27,9 @@ struct Edits {
 }
 
 struct OctreeNode {
+    octant_center_distance : vec2f,
+    dummy : f32,
     tile_pointer : u32,
-    octant_center_distance : f32
 }
 
 struct Octree {

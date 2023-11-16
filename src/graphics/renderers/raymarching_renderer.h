@@ -87,8 +87,9 @@ class RaymarchingRenderer {
     } compute_merge_data;
 
     struct sOctreeNode {
+        glm::vec2 octant_center_distance = glm::vec2(10000.0f, 10000.0f);
+        float dummy = 0.0f;
         uint32_t tile_pointer = 0;
-        float octant_center_distance = 10000.0f;
     };
 
     std::vector<Edit> scene_edits;
