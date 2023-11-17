@@ -212,6 +212,15 @@ fn icontains(a : vec2f, v : f32) -> bool
 	return ((v >= a.x) && (v < a.y));
 }
 
+fn iinverse(a : vec2f) -> vec2f
+{
+    if (a.x < a.y) {
+	    return vec2f(-a.y, -a.x);
+    } else {
+        return -a;
+    }
+}
+
 // Interval sdfs
 
 fn sminN_interval( a : vec2f, b : vec2f, k : f32, n : f32 ) -> vec2f
@@ -227,7 +236,7 @@ fn opUnionInterval( s1 : vec2f, s2 : vec2f ) -> vec2f
 { 
     return imin( s1, s2 );
 }
-
+ 
 fn opSmoothUnionInterval( s1 : vec2f, s2 : vec2f, k : f32 ) -> vec2f
 {
     return sminN_interval(s2, s1, k, 10.0);
@@ -235,7 +244,7 @@ fn opSmoothUnionInterval( s1 : vec2f, s2 : vec2f, k : f32 ) -> vec2f
 
 fn opSubtractionInterval( s1 : vec2f, s2 : vec2f ) -> vec2f
 {
-    return imax( s1, -s2 );
+    return imax( s1, iinverse(s2) );
 }
 
 fn sphere_interval(p : mat3x3f, offset : vec3f, r : f32) -> vec2f
