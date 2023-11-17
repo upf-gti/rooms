@@ -166,6 +166,21 @@ fn ipow2_vec(a : vec2f) -> vec2f
 	// return select(select(vec2f(0.0,max(a.x*a.x,a.y*a.y)), vec2f((a*a).yx), (a.y<0.0)), vec2f(a*a), (a.x>=0.0));
 }
 
+// only valid for even numbers
+fn ipow_vec(a : vec2f, n : f32) -> vec2f
+{
+    if (a.x >= 0.0) {
+        return pow(a, vec2f(n));
+    } else
+    if (a.y < 0.0) {
+        return pow(a, vec2f(n)).yx;
+    } else {
+        return vec2f(0.0, max(pow(a.x, n), pow(a.y, n)));
+    }
+
+	// return select(select(vec2f(0.0,max(a.x*a.x,a.y*a.y)), vec2f((a*a).yx), (a.y<0.0)), vec2f(a*a), (a.x>=0.0));
+}
+
 fn ipow2_mat(v : mat3x3f) -> mat3x3f
 {
 	return iavec3_vecs(
@@ -199,9 +214,28 @@ fn icontains(a : vec2f, v : f32) -> bool
 
 // Interval sdfs
 
+fn sminN_interval( a : vec2f, b : vec2f, k : f32, n : f32 ) -> vec2f
+{
+    let h : vec2f = imax(k - abs(a - b), vec2f(0.0)) / k;
+    let m : vec2f = ipow_vec(h, n) * 0.5;
+    let s : vec2f = m * k / n;
+
+    return vec2f( select(b.x - s.x , a.x - s.x, a.x < b.x), select(b.y - s.y, a.y - s.y, a.y < b.y));
+}
+
 fn opUnionInterval( s1 : vec2f, s2 : vec2f ) -> vec2f
 { 
     return imin( s1, s2 );
+}
+
+fn opSmoothUnionInterval( s1 : vec2f, s2 : vec2f, k : f32 ) -> vec2f
+{
+    return sminN_interval(s2, s1, k, 10.0);
+}
+
+fn opSubtractionInterval( s1 : vec2f, s2 : vec2f ) -> vec2f
+{
+    return imax( s1, -s2 );
 }
 
 fn sphere_interval(p : mat3x3f, offset : vec3f, r : f32) -> vec2f
@@ -306,7 +340,7 @@ fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f, current_interval :
             break;
         }
         case OP_SUBSTRACTION:{
-            // pSurface = opSubtraction(current_interval, pSurface);
+            pSurface = opSubtractionInterval(current_interval, pSurface);
             break;
         }
         case OP_INTERSECTION: {
@@ -318,7 +352,7 @@ fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f, current_interval :
             break;
         }
         case OP_SMOOTH_UNION: {
-            // pSurface = opSmoothUnion(current_interval, pSurface, smooth_factor);
+            pSurface = opSmoothUnionInterval(current_interval, pSurface, smooth_factor);
             break;
         }
         case OP_SMOOTH_SUBSTRACTION: {

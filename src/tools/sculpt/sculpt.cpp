@@ -58,7 +58,7 @@ bool SculptTool::update(float delta_time)
 			edit_to_add.dimensions = glm::vec4(0.2f, 0.2f, 0.2f, 0.2f);
 			edit_to_add.rotation = glm::inverse(glm::quat(euler_angles));
             edit_to_add.color = glm::vec3(random_f(), random_f(), random_f());
-            edit_to_add.operation = OP_SMOOTH_UNION;
+            edit_to_add.operation = random_f() > 0.5f ? OP_UNION : OP_SUBSTRACTION;
 		}
 
         return use_tool();
