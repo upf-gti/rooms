@@ -1,5 +1,6 @@
 #include sdf_functions.wgsl
 #include octree_includes.wgsl
+#include sdf_interval_functions.wgsl
 
 @group(0) @binding(0) var<uniform> edits : Edits;
 @group(0) @binding(1) var<uniform> merge_data : MergeData;
@@ -75,8 +76,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         octant_center += level_half_size * OFFSET_LUT[(octant_id >> (3 * (i - 1))) & 0x7];
     }
 
-    var sSurface : SurfaceInterval = SurfaceInterval(octree.data[octree_index].octant_center_distance);
-    var current_edit_surface : SurfaceInterval;
+    var surface_interval : vec2f = (octree.data[octree_index].octant_center_distance);
+    var current_edit_surface : vec2f;
     var edit_counter : u32 = 0;
 
     var new_packed_edit_idx : u32 = 0;
@@ -97,12 +98,12 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         //   then apply the mask, and swift the result so the 8 bits are at the start of the word -> unpacked index & profit
         let current_unpacked_edit_idx : u32 = (current_packed_edit_idx & (0xFFu << (packed_index * 8u))) >> (packed_index * 8u);
 
-        let x_range : vec2f = vec2f(octant_center.x - level_half_size * 0.5, octant_center.x + level_half_size * 0.5);
-        let y_range : vec2f = vec2f(octant_center.y - level_half_size * 0.5, octant_center.y + level_half_size * 0.5);
-        let z_range : vec2f = vec2f(octant_center.z - level_half_size * 0.5, octant_center.z + level_half_size * 0.5);
+        let x_range : vec2f = vec2f(octant_center.x - level_half_size, octant_center.x + level_half_size);
+        let y_range : vec2f = vec2f(octant_center.y - level_half_size, octant_center.y + level_half_size);
+        let z_range : vec2f = vec2f(octant_center.z - level_half_size, octant_center.z + level_half_size);
 
         let current_edit : Edit = edits.data[current_unpacked_edit_idx];
-        sSurface = evalEditInterval(x_range, y_range, z_range, sSurface, current_edit, &current_edit_surface);
+        surface_interval = eval_edit_interval(x_range, y_range, z_range, surface_interval, current_edit, &current_edit_surface);
 
         // Check if the edit affects the current voxel, if so adds it to the packed list 
         if (true) {
@@ -125,14 +126,14 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         }
     }
 
-    octree.data[octree_index].octant_center_distance = sSurface.distance;
+    octree.data[octree_index].octant_center_distance = surface_interval;
 
     edit_culling_count[octree_index] = edit_counter;
 
     if (level < merge_data.max_octree_depth) {
 
         // Inside or outside the surface
-        if (sSurface.distance.y < 0 || sSurface.distance.x > 0) {
+        if (surface_interval.y < 0 || surface_interval.x > 0) {
             // Add to the index the childres's octant id, and save it for the next pass
             for (var i : u32 = 0; i < 8; i++) {
                 let child_octant_id : u32 = octant_id | (i << (3 * level));
@@ -162,7 +163,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     } else {
 
         // Inside or outside the surface
-        if (sSurface.distance.y < 0 || sSurface.distance.x > 0) {
+        if (surface_interval.y < 0 || surface_interval.x > 0) {
             if ((FILLED_BRICK_FLAG & octree.data[octree_index].tile_pointer) == FILLED_BRICK_FLAG) {
                 let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
 
@@ -171,7 +172,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 octree.data[octree_index].tile_pointer = 0u;
             }
 
-            if (sSurface.distance.y < 0.0) {
+            if (surface_interval.y < 0.0) {
                 // Mark brick as interior (inside a surface)
                 octree.data[octree_index].tile_pointer = INTERIOR_BRICK_FLAG;
             }
