@@ -161,8 +161,8 @@ fn blinn_phong(toEye : vec3f, position : vec3f, position_world : vec3f, lightPos
     let diffuseFactor : vec3f = 0.4 * diffuse * max(0.0, dot(normal, toLight));
     let specularFactor : vec3f = vec3f(0.3) * pow(max(0.0, dot(toEye, reflection)), specularExponent);
 
-    //return ambientFactor + diffuseFactor + specularFactor;
-    return normal;
+    return ambientFactor + diffuseFactor + specularFactor;
+    //return normal;
     //return diffuse;
 }
 
@@ -222,10 +222,10 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     out.color = vec4f(pow(ray_result.rgb, vec3f(2.2, 2.2, 2.2)), 1.0); // Color
     out.depth = ray_result.a;
 
-    // if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
-    //     out.color = vec4f(0.0, 0.0, 0.0, 1.0);
-    //     out.depth = in.position.z;
-    // }
+    if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
+        out.color = vec4f(0.0, 0.0, 0.0, 1.0);
+        out.depth = in.position.z;
+    }
 
     // out.color = vec4f(1.0, 0.0, 0.0, 1.0); // Color
     // out.depth = 0.0;

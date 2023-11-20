@@ -212,24 +212,74 @@ fn icontains(a : vec2f, v : f32) -> bool
 	return ((v >= a.x) && (v < a.y));
 }
 
-fn iinverse(a : vec2f) -> vec2f
+fn ineg(a : vec2f) -> vec2f
 {
-    if (a.x < a.y) {
-	    return vec2f(-a.y, -a.x);
-    } else {
-        return -a;
+	return vec2f(-a.y, -a.x);
+}
+
+fn iabs(a : vec2f) -> vec2f
+{ 
+    if (a.x >= 0.0) {
+        return a;
     }
+    
+    if (a.y <= 0.0) {
+        return vec2f(-a.y, -a.x);
+    }
+    
+    return vec2f(0.0, max(-a.x, a.y));
+}
+
+
+fn ilessthan(a : vec2f, b : vec2f) -> vec2<bool> 
+{    
+    if (a.y < b.x) {
+        return vec2<bool>(true, true);
+    }
+    
+    if (a.x >= b.y) {
+        return vec2<bool>(false, false);
+    }
+    
+    return vec2<bool>(false, true);
+}
+
+fn iselect(a : vec2f, b : vec2f, cond : vec2<bool>) -> vec2f
+{    
+    if (cond.x) {
+        return b;
+    }
+    
+    if (!cond.y) {
+        return a;
+    }
+    
+    return vec2f(min(a.x, b.x), max(a.y, b.y));
 }
 
 // Interval sdfs
 
 fn sminN_interval( a : vec2f, b : vec2f, k : f32, n : f32 ) -> vec2f
 {
-    let h : vec2f = imax(k - abs(a - b), vec2f(0.0)) / k;
-    let m : vec2f = ipow_vec(h, n) * 0.5;
-    let s : vec2f = m * k / n;
+    let h : vec2f = imul_float_vec(1.0 / k, imax(k + ineg(iabs(isub_vecs(a, b))), vec2f(0.0)));
+    let m : vec2f = imul_float_vec(0.5, ipow_vec(h, n));
+    let s : vec2f = imul_float_vec(k / n, m);
 
-    return vec2f( select(b.x - s.x , a.x - s.x, a.x < b.x), select(b.y - s.y, a.y - s.y, a.y < b.y));
+    return vec2f( iselect( isub_vecs(b, s), isub_vecs(a, s), ilessthan(a, b)));
+}
+
+fn isoft_min(a : vec2f, b : vec2f, r : f32) -> vec2f 
+{ 
+    let e : vec2f = imax(r + ineg(iabs(isub_vecs(a, b))), vec2f(0.0)); 
+    return isub_vecs(imin(a, b), imul_float_vec(0.25 / r, imul_vec2_vec2(e, e))); 
+}
+
+fn isoft_min_poly(a : vec2f, b : vec2f, k : f32) -> vec2f {
+    let h : vec2f = imul_float_vec(1.0 / k, imax(k + ineg(iabs(isub_vecs(a, b))), vec2f(0.0)));
+    let m : vec2f = ipow2_vec(h);
+    let s : vec2f = imul_float_vec(k * 0.25, m);
+
+    return vec2f( iselect( isub_vecs(b, s), isub_vecs(a, s), ilessthan(a, b)));
 }
 
 fn opUnionInterval( s1 : vec2f, s2 : vec2f ) -> vec2f
@@ -239,25 +289,28 @@ fn opUnionInterval( s1 : vec2f, s2 : vec2f ) -> vec2f
  
 fn opSmoothUnionInterval( s1 : vec2f, s2 : vec2f, k : f32 ) -> vec2f
 {
-    return sminN_interval(s2, s1, k, 10.0);
+    return isoft_min_poly(s2, s1, k);
+}
+
+fn opSmoothSubtractionInterval( s1 : vec2f, s2 : vec2f, k : f32 ) -> vec2f
+{
+    return ineg(isoft_min_poly(s2, ineg(s1), k));
 }
 
 fn opSubtractionInterval( s1 : vec2f, s2 : vec2f ) -> vec2f
 {
-    return imax( s1, iinverse(s2) );
+    return imax( s1, ineg(s2) );
 }
 
 fn sphere_interval(p : mat3x3f, offset : vec3f, r : f32) -> vec2f
 {
 	// x^2 + y^2 + z^2 - r^2
-	return isub_vecs(ilensq(isub_mat_vec(p, offset)),vec2f(r*r));
+	return isub_vecs(ilensq(isub_mat_vec(p, offset)), vec2f(r*r));
 }
 
 fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f, current_interval : vec2f, edit : Edit, current_edit_interval : ptr<function, vec2f>) -> vec2f
 {
     var pSurface : vec2f;
-
-    const smooth_factor = 0.01;
 
     // Center in texture (position 0,0,0 is just in the middle)
     var size : vec3f = edit.dimensions.xyz;
@@ -361,19 +414,19 @@ fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f, current_interval :
             break;
         }
         case OP_SMOOTH_UNION: {
-            pSurface = opSmoothUnionInterval(current_interval, pSurface, smooth_factor);
+            pSurface = opSmoothUnionInterval(current_interval, pSurface, SMOOTH_FACTOR);
             break;
         }
         case OP_SMOOTH_SUBSTRACTION: {
-            // pSurface = opSmoothSubtraction(current_interval, pSurface, smooth_factor);
+            pSurface = opSmoothSubtractionInterval(current_interval, pSurface, SMOOTH_FACTOR);
             break;
         }
         case OP_SMOOTH_INTERSECTION: {
-            // pSurface = opSmoothIntersection(current_interval, pSurface, smooth_factor);
+            // pSurface = opSmoothIntersection(current_interval, pSurface, SMOOTH_FACTOR);
             break;
         }
         case OP_SMOOTH_PAINT: {
-            // pSurface = opSmoothPaint(current_interval, pSurface, edit.color, smooth_factor);
+            // pSurface = opSmoothPaint(current_interval, pSurface, edit.color, SMOOTH_FACTOR);
             break;
         }
         default: {

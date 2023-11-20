@@ -260,6 +260,12 @@ fn sminN( a : f32, b : f32, k : f32, n : f32 ) -> vec2f
     }
 }
 
+fn soft_min(a : f32, b : f32, r : f32) -> f32 
+{ 
+    let e : f32 = max(r - abs(a - b), 0); 
+    return min(a, b) - e*e*0.25/r; 
+}
+
 // From iqulzes and Dreams
 fn sminPoly(a : f32, b : f32, k : f32) -> vec2f {
     let h : f32 = max(k - abs(a - b), 0.0) / k;
@@ -275,11 +281,11 @@ fn sminPoly(a : f32, b : f32, k : f32) -> vec2f {
 
 fn opSmoothUnion( s1 : Surface, s2 : Surface, k : f32 ) -> Surface
 {
-    let smin : vec2f = sminN(s2.distance, s1.distance, k, 10.0);
+    let smin : f32 = sminPoly(s2.distance, s1.distance, k).x;
     //let smin : vec2f = sminPoly(s2.distance, s1.distance, k);
     var sf : Surface;
-    sf.distance = smin.x;
-    sf.color = mix(s2.color, s1.color, smin.y);
+    sf.distance = smin;
+    // sf.color = mix(s2.color, s1.color, smin.y);
     return sf;
 }
 
@@ -331,10 +337,10 @@ fn opPaint( s1 : Surface, s2 : Surface, paintColor : vec3f ) -> Surface
 
 fn opSmoothSubtraction( s1 : Surface, s2 : Surface, k : f32 ) -> Surface
 {
-    let smin : vec2f = sminN(s2.distance, -s1.distance, k, 2.0);
+    let smin : f32 = sminPoly(s2.distance, -s1.distance, k).x;
     var s : Surface;
-    s.distance = -smin.x;
-    s.color = s1.color;
+    s.distance = -smin;
+    // s.color = s1.color;
     return s;
 }
 
@@ -373,8 +379,6 @@ fn map_thickness( t : f32, v_max : f32 ) -> f32
 fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit, current_edit_surface : ptr<function, Surface> ) -> Surface
 {
     var pSurface : Surface;
-
-    const smooth_factor = 0.01;
 
     // Center in texture (position 0,0,0 is just in the middle)
     var size : vec3f = edit.dimensions.xyz;
@@ -478,19 +482,19 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit, current_e
             break;
         }
         case OP_SMOOTH_UNION: {
-            pSurface = opSmoothUnion(current_surface, pSurface, smooth_factor);
+            pSurface = opSmoothUnion(current_surface, pSurface, SMOOTH_FACTOR);
             break;
         }
         case OP_SMOOTH_SUBSTRACTION: {
-            pSurface = opSmoothSubtraction(current_surface, pSurface, smooth_factor);
+            pSurface = opSmoothSubtraction(current_surface, pSurface, SMOOTH_FACTOR);
             break;
         }
         case OP_SMOOTH_INTERSECTION: {
-            pSurface = opSmoothIntersection(current_surface, pSurface, smooth_factor);
+            pSurface = opSmoothIntersection(current_surface, pSurface, SMOOTH_FACTOR);
             break;
         }
         case OP_SMOOTH_PAINT: {
-            pSurface = opSmoothPaint(current_surface, pSurface, edit.color, smooth_factor);
+            pSurface = opSmoothPaint(current_surface, pSurface, edit.color, SMOOTH_FACTOR);
             break;
         }
         default: {

@@ -512,7 +512,7 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
 
         Uniform* camera_uniform = static_cast<RoomsRenderer*>(RoomsRenderer::instance)->get_current_camera_uniform();
 
-        linear_sampler_uniform.data = webgpu_context->create_sampler(); // Using all default params
+        linear_sampler_uniform.data = webgpu_context->create_sampler(WGPUAddressMode_ClampToEdge, WGPUFilterMode_Linear, WGPUFilterMode_Linear);
         linear_sampler_uniform.binding = 2;
 
         std::vector<Uniform*> uniforms = { &linear_sampler_uniform, &sdf_texture_uniform, &octree_proxy_instance_buffer, &proxy_geometry_eye_position, &octree_brick_copy_buffer };

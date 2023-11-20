@@ -12,6 +12,8 @@ const TOTAL_BRICK_COUNT = BRICK_COUNT * BRICK_COUNT * BRICK_COUNT;
 const FILLED_BRICK_FLAG = 0x80000000u;
 const INTERIOR_BRICK_FLAG = 0x40000000u;
 
+const SMOOTH_FACTOR = 0.1;
+
 struct Edit {
     position   : vec3f,
     primitive  : u32,

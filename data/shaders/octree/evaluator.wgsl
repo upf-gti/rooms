@@ -80,6 +80,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     var current_edit_surface : vec2f;
     var edit_counter : u32 = 0;
 
+    // surface_interval += vec2f(-SMOOTH_FACTOR * 2.0, SMOOTH_FACTOR * 2.0);
+
     var new_packed_edit_idx : u32 = 0;
 
     // let cull_distance : f32 = level_half_size * SQRT_3 * 1.5;
@@ -103,7 +105,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         let z_range : vec2f = vec2f(octant_center.z - level_half_size, octant_center.z + level_half_size);
 
         let current_edit : Edit = edits.data[current_unpacked_edit_idx];
-        surface_interval = eval_edit_interval(x_range, y_range, z_range, surface_interval, current_edit, &current_edit_surface);
+        surface_interval = eval_edit_interval(x_range, y_range, z_range, surface_interval + vec2f(-SMOOTH_FACTOR, SMOOTH_FACTOR), current_edit, &current_edit_surface);
 
         // Check if the edit affects the current voxel, if so adds it to the packed list 
         if (true) {
@@ -128,12 +130,14 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
     octree.data[octree_index].octant_center_distance = surface_interval;
 
+    // surface_interval += vec2f(-SMOOTH_FACTOR, SMOOTH_FACTOR);
+
     edit_culling_count[octree_index] = edit_counter;
 
     if (level < merge_data.max_octree_depth) {
 
         // Inside or outside the surface
-        if (surface_interval.x > 0) {
+        if (surface_interval.x > 0.0) {
             // Add to the index the childres's octant id, and save it for the next pass
             for (var i : u32 = 0; i < 8; i++) {
                 let child_octant_id : u32 = octant_id | (i << (3 * level));
@@ -164,7 +168,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     } else {
 
         // Inside or outside the surface
-        if (surface_interval.x > 0) {
+        if (surface_interval.y < 0.0 || surface_interval.x > 0.0) {
             if ((FILLED_BRICK_FLAG & octree.data[octree_index].tile_pointer) == FILLED_BRICK_FLAG) {
                 let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
 
