@@ -181,22 +181,6 @@ void RaymarchingRenderer::compute_octree()
 
         wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(octree_indirect_buffer.data), 0);
 
-        if (i == octree_depth) {
-            // Clean the texture atlas bricks dispatch
-            compute_octree_brick_removal_pipeline.set(compute_pass);
-
-            wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_indirect_brick_removal_bind_group, 0, nullptr);
-
-            wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(octree_indirect_brick_removal_buffer.data), 0u);
-
-
-            compute_octree_brick_copy_pipeline.set(compute_pass);
-
-            wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_brick_copy_bind_group, 0, nullptr);
-
-            wgpuComputePassEncoderDispatchWorkgroups(compute_pass, octants_max_size, 1, 1);
-        }
-
         compute_octree_increment_level_pipeline.set(compute_pass);
 
         wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_increment_level_bind_group, 0, nullptr);
@@ -213,6 +197,20 @@ void RaymarchingRenderer::compute_octree()
     wgpuComputePassEncoderSetBindGroup(compute_pass, 1, compute_octant_usage_bind_groups[ping_pong_idx], 0, nullptr);
 
     wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(octree_indirect_buffer.data), 0);
+
+    // Clean the texture atlas bricks dispatch
+    compute_octree_brick_removal_pipeline.set(compute_pass);
+
+    wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_indirect_brick_removal_bind_group, 0, nullptr);
+
+    wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(octree_indirect_brick_removal_buffer.data), 0u);
+
+
+    compute_octree_brick_copy_pipeline.set(compute_pass);
+
+    wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_brick_copy_bind_group, 0, nullptr);
+
+    wgpuComputePassEncoderDispatchWorkgroups(compute_pass, octants_max_size, 1, 1);
 
     // Finalize compute_raymarching pass
     wgpuComputePassEncoderEnd(compute_pass);
@@ -445,7 +443,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         octree_proxy_indirect_buffer.binding = 2;
         octree_proxy_indirect_buffer.buffer_size = sizeof(uint32_t) * 4;
 
-        std::vector<Uniform*> uniforms = { &octree_indirect_buffer, &octree_counters, &octree_proxy_indirect_buffer, &compute_merge_data_uniform };
+        std::vector<Uniform*> uniforms = { &octree_indirect_buffer, &octree_counters };
 
         compute_octree_increment_level_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_increment_level_shader, 0);
     }
@@ -456,7 +454,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         octree_brick_copy_buffer.binding = 0;
         octree_brick_copy_buffer.buffer_size = sizeof(uint32_t) * octants_max_size;
 
-        std::vector<Uniform*> uniforms = { &octree_brick_copy_buffer, &octree_proxy_instance_buffer, &octree_counters };
+        std::vector<Uniform*> uniforms = { &octree_brick_copy_buffer, &octree_proxy_instance_buffer, &octree_proxy_indirect_buffer };
 
         compute_octree_brick_copy_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_brick_copy_shader, 0);
     }

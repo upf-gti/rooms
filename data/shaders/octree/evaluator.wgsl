@@ -80,8 +80,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     var current_edit_surface : vec2f;
     var edit_counter : u32 = 0;
 
-    // surface_interval += vec2f(-SMOOTH_FACTOR * 2.0, SMOOTH_FACTOR * 2.0);
-
     var new_packed_edit_idx : u32 = 0;
 
     // let cull_distance : f32 = level_half_size * SQRT_3 * 1.5;
@@ -105,7 +103,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         let z_range : vec2f = vec2f(octant_center.z - level_half_size, octant_center.z + level_half_size);
 
         let current_edit : Edit = edits.data[current_unpacked_edit_idx];
-        surface_interval = eval_edit_interval(x_range, y_range, z_range, surface_interval + vec2f(-SMOOTH_FACTOR, SMOOTH_FACTOR), current_edit, &current_edit_surface);
+        surface_interval = eval_edit_interval(x_range, y_range, z_range, surface_interval, current_edit, &current_edit_surface);
 
         // Check if the edit affects the current voxel, if so adds it to the packed list 
         if (true) {
@@ -130,13 +128,13 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
     octree.data[octree_index].octant_center_distance = surface_interval;
 
-    // surface_interval += vec2f(-SMOOTH_FACTOR, SMOOTH_FACTOR);
+    surface_interval += vec2f(-SMOOTH_FACTOR, SMOOTH_FACTOR);
 
     edit_culling_count[octree_index] = edit_counter;
 
     if (level < merge_data.max_octree_depth) {
 
-        // Inside or outside the surface
+        // Outside the surface, check if children have bricks
         if (surface_interval.x > 0.0) {
             // Add to the index the childres's octant id, and save it for the next pass
             for (var i : u32 = 0; i < 8; i++) {
@@ -151,7 +149,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             octree.data[octree_index].tile_pointer = 0u;
             octree.data[octree_index].octant_center_distance = vec2f(10000.0, 10000.0);
         }
-        // ambiguous, subdivide 
+        // inside or ambiguous, subdivide 
         else {
             // For the 0<->(n-1) passes
             // Increase the number of children from the current level
@@ -194,7 +192,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 octree_proxy_data.instance_data[instance_index].position = octant_center;
                 octree_proxy_data.instance_data[instance_index].atlas_tile_index = instance_index;
                 octree_proxy_data.instance_data[instance_index].octree_parent_id = octree_index;
-                octree_proxy_data.instance_data[instance_index].in_use = 1;
 
                 if ((octree.data[octree_index].tile_pointer & INTERIOR_BRICK_FLAG) == INTERIOR_BRICK_FLAG) {
                     octree.data[octree_index].tile_pointer = instance_index | INTERIOR_BRICK_FLAG;

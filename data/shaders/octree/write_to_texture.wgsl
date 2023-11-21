@@ -12,6 +12,8 @@
 @group(1) @binding(0) var<storage, read> octant_usage_read : array<u32>;
 @group(1) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
 
+var<workgroup> used_pixels : atomic<u32>;
+
 @compute @workgroup_size(10,10,10)
 fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation_id) local_id: vec3<u32>)
 {
@@ -69,6 +71,10 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
         sSurface = evalEdit(octant_center + pixel_offset, sSurface, edits.data[current_unpacked_edit_idx], &current_edit_surface);
     }
 
+    if (sSurface.distance < MIN_HIT_DIST) {
+        atomicAdd(&used_pixels, 1);
+    }
+
     // Heatmap Edit debugging
     let interpolant : f32 = (f32( edit_culling_count[parent_octree_index] ) / f32(5)) * (3.14159265 / 2.0);
     var heatmap_color : vec3f;
@@ -85,6 +91,11 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     workgroupBarrier();
 
     if (local_id.x == 0 && local_id.y == 0 && local_id.z == 0) {
+
+        if (atomicLoad(&used_pixels) > 0) {
+            octree_proxy_data.instance_data[brick_index].in_use = 1;
+        }
+
         octree.data[octree_leaf_id].tile_pointer = (brick_index | FILLED_BRICK_FLAG) | (brick_index & 0xBFFFFFFFu);
     }
 }

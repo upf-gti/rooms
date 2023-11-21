@@ -9,10 +9,12 @@ const BRICK_COUNT = u32(SDF_RESOLUTION / 10.0);
 const PACKED_LIST_SIZE : u32 = (64 / 4);
 const TOTAL_BRICK_COUNT = BRICK_COUNT * BRICK_COUNT * BRICK_COUNT;
 
+const MIN_HIT_DIST = 0.00005;
+
 const FILLED_BRICK_FLAG = 0x80000000u;
 const INTERIOR_BRICK_FLAG = 0x40000000u;
 
-const SMOOTH_FACTOR = 0.1;
+const SMOOTH_FACTOR = 0.01;
 
 struct Edit {
     position   : vec3f,
@@ -76,6 +78,13 @@ struct OctreeProxyInstancesNonAtomic {
     atlas_empty_bricks_counter : u32,
     atlas_empty_bricks_buffer : array<u32, TOTAL_BRICK_COUNT>,
     instance_data: array<ProxyInstanceData>
+};
+
+struct OctreeProxyIndirect {
+    vertex_count : u32,
+    instance_count : atomic<u32>,
+    first_vertex : u32,
+    firt_instance: u32
 };
 
 struct OctreeCounters {

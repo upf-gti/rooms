@@ -79,7 +79,6 @@ struct FragmentOutput {
 @group(0) @binding(1) var<uniform> eye_position : vec3f;
 @group(2) @binding(0) var<uniform> sculpt_data : SculptData;
 
-const MIN_HIT_DIST = 0.00005;
 const DERIVATIVE_STEP = 0.5 / SDF_RESOLUTION;
 const MAX_ITERATIONS = 60;
 
