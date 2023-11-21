@@ -128,14 +128,14 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
     octree.data[octree_index].octant_center_distance = surface_interval;
 
-    surface_interval += vec2f(-SMOOTH_FACTOR, SMOOTH_FACTOR);
+    let surface_interval_smooth : vec2f = surface_interval + vec2f(-SMOOTH_FACTOR, SMOOTH_FACTOR);
 
     edit_culling_count[octree_index] = edit_counter;
 
     if (level < merge_data.max_octree_depth) {
 
         // Outside the surface, check if children have bricks
-        if (surface_interval.x > 0.0) {
+        if (surface_interval_smooth.x > 0.0 ) {
             // Add to the index the childres's octant id, and save it for the next pass
             for (var i : u32 = 0; i < 8; i++) {
                 let child_octant_id : u32 = octant_id | (i << (3 * level));
@@ -166,7 +166,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     } else {
 
         // Inside or outside the surface
-        if (surface_interval.y < 0.0 || surface_interval.x > 0.0) {
+        if (surface_interval.y < 0.0 || surface_interval_smooth.x > 0.0) {
             if ((FILLED_BRICK_FLAG & octree.data[octree_index].tile_pointer) == FILLED_BRICK_FLAG) {
                 let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
 
