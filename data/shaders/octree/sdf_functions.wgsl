@@ -10,6 +10,7 @@ const SD_PYRAMID        = 4;
 const SD_CYLINDER       = 5;
 const SD_CAPSULE        = 6;
 const SD_TORUS          = 7;
+const SD_BEZIER         = 8;
 
 // SD Operations
 
@@ -239,6 +240,37 @@ fn sdCappedTorus( p : vec3f, c : vec3f, t : vec2f, rotation : vec4f, sc : vec2f,
     return sf;
 }
 
+// IQ adaptation to 3d of http://research.microsoft.com/en-us/um/people/hoppe/ravg.pdf
+// { dist, t, y (above the plane of the curve, x (away from curve in the plane of the curve))
+fn sdQuadraticBezier(p : vec3f, start : vec3f, cp : vec3f, end : vec3f, thickness : f32, rotation : vec4f, color : vec3f) -> Surface
+{
+    var b0 : vec3f = start - p;
+    var b1 : vec3f = cp - p;
+    var b2 : vec3f = end - p;
+    
+    var b01 : vec3f = cross(b0, b1);
+    var b12 : vec3f = cross(b1, b2);
+    var b20 : vec3f = cross(b2, b0);
+    
+    var n : vec3f =  b01 + b12 + b20;
+    
+    var a : f32 = -dot(b20, n);
+    var b : f32 = -dot(b01, n);
+    var d : f32 = -dot(b12, n);
+
+    var m : f32 = -dot(n,n);
+    
+    var g : vec3f =  (d-b)*b1 + (b+a*0.5)*b2 + (-d-a*0.5)*b0;
+    var f : f32 = a*a*0.25-b*d;
+    var k : vec3f = b0-2.0*b1+b2;
+    var t : f32 = clamp((a*0.5+b-0.5*f*dot(g,k)/dot(g,g))/m, 0.0, 1.0 );
+    
+    var sf : Surface;
+    sf.distance = length(mix(mix(b0,b1,t), mix(b1,b2,t),t)) - thickness;
+    sf.color = color;
+    return sf;
+}
+
 // Primitive combinations
 
 fn colorMix( a : vec3f, b : vec3f, n : f32 ) -> vec3f
@@ -447,6 +479,11 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit, current_e
             } else {
                 pSurface = sdTorus(norm_pos, offset_pos, vec2f(radius, size_param), edit.rotation, edit.color);
             }
+            break;
+        }
+        case SD_BEZIER: {
+            var curve_thickness : f32 = 0.01;
+            pSurface = sdQuadraticBezier(norm_pos, offset_pos, offset_pos + vec3f(0.0, 0.1, 0.0), offset_pos + vec3f(0.2, 0.1, 0.0), curve_thickness, edit.rotation, edit.color);
             break;
         }
         default: {
