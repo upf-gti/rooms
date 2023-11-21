@@ -128,7 +128,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
     octree.data[octree_index].octant_center_distance = surface_interval;
 
-    let surface_interval_smooth : vec2f = surface_interval + vec2f(-SMOOTH_FACTOR, SMOOTH_FACTOR * 0.15);
+    let surface_interval_smooth : vec2f = surface_interval + vec2f(-SMOOTH_FACTOR, 1.0/512.0);
 
     edit_culling_count[octree_index] = edit_counter;
 
