@@ -95,7 +95,10 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
         let filled_pixel_count : u32 = atomicLoad(&used_pixels);
         if (filled_pixel_count > 0u && filled_pixel_count < 1000u) {
             octree_proxy_data.instance_data[brick_index].in_use = 1;
-        }
+        } 
+        // else {
+        //     octree_proxy_data.instance_data[brick_index].in_use = 0;
+        // }
 
         // Add "filled" flag and remove "interior" flag
         octree.data[octree_leaf_id].tile_pointer = brick_index | FILLED_BRICK_FLAG;

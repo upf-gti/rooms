@@ -84,6 +84,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
     // let cull_distance : f32 = level_half_size * SQRT_3 * 1.5;
 
+    var is_smooth_union : bool = false;
+
     // Check the edits in the parent, and fill its own list with the edits that affect this child
     for (var i : u32 = 0; i < edit_culling_count[parent_octree_index] ; i++) {
         // Accessing a packed indexed edit in the culling list:
@@ -103,9 +105,12 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         let z_range : vec2f = vec2f(octant_center.z - level_half_size, octant_center.z + level_half_size);
 
         let current_edit : Edit = edits.data[current_unpacked_edit_idx];
+
+        is_smooth_union |= current_edit.operation == OP_SMOOTH_UNION;
+        
         surface_interval = eval_edit_interval(x_range, y_range, z_range, surface_interval, current_edit, &current_edit_surface);
 
-        // Check if the edit affects the current voxel, if so adds it to the packed list 
+        // Check if the edit affects the current voxel, if so adds it to the packed list
         if (true) {
             // Using the edit counter, sift the edit id to the position in the current word, and adds it
             new_packed_edit_idx = new_packed_edit_idx | (current_unpacked_edit_idx << ((3 - edit_counter % 4) * 8));
@@ -126,9 +131,17 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         }
     }
 
-    octree.data[octree_index].octant_center_distance = surface_interval;
+    
+    var surface_interval_smooth : vec2f = surface_interval;
 
-    let surface_interval_smooth : vec2f = surface_interval + vec2f(-SMOOTH_FACTOR * 0.5, 10.0 / 512.0);
+    if (is_smooth_union) {
+        surface_interval_smooth += vec2f(-SMOOTH_FACTOR * 0.25, 10.0 / 512.0);
+    } 
+    // else {
+    //     surface_interval_smooth += vec2f(SMOOTH_FACTOR * 0.5, SMOOTH_FACTOR * 0.5);
+    // }
+
+    octree.data[octree_index].octant_center_distance = surface_interval_smooth;
 
     edit_culling_count[octree_index] = edit_counter;
 
@@ -192,7 +205,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 octree_proxy_data.instance_data[instance_index].position = octant_center;
                 octree_proxy_data.instance_data[instance_index].atlas_tile_index = instance_index;
                 octree_proxy_data.instance_data[instance_index].octree_parent_id = octree_index;
-                 octree_proxy_data.instance_data[instance_index].in_use = 0u;
+                octree_proxy_data.instance_data[instance_index].in_use = 0u;
 
                 if ((octree.data[octree_index].tile_pointer & INTERIOR_BRICK_FLAG) == INTERIOR_BRICK_FLAG) {
                     octree.data[octree_index].tile_pointer = instance_index | INTERIOR_BRICK_FLAG;
