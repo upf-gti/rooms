@@ -73,6 +73,10 @@ void SculptEditor::initialize()
         gui.bind("color_picker", [&](const std::string& signal, Color color) { current_color = color; });
         gui.bind("color_picker@released", [&](const std::string& signal, Color color) { add_recent_color(color); });
 
+        // Controller buttons
+
+        gui.bind(XR_BUTTON_B, [&]() { stamp_enabled = !stamp_enabled; });
+
         // Bind recent color buttons...
 
         ui::UIEntity* recent_group = gui.get_widget_from_name("g_recent_colors");
@@ -151,10 +155,11 @@ void SculptEditor::update(float delta_time)
     preview_tmp_edits.clear();
     new_edits.clear();
 
-    Tool& tool_used = *tools[current_tool];
+    // Update ui/vr controller actions
+    gui.update(delta_time);
+    helper_gui.update(delta_time);
 
-    if (Input::was_button_pressed(XR_BUTTON_B))
-        stamp_enabled = !stamp_enabled;
+    Tool& tool_used = *tools[current_tool];
 
     // Update tool properties...
     tool_used.stamp = stamp_enabled;
@@ -280,9 +285,6 @@ void SculptEditor::update(float delta_time)
             new_edits.push_back(inverted_edit);
         }
     }
-
-    gui.update(delta_time);
-    helper_gui.update(delta_time);
 
     // Push to the renderer the edits and the previews
     renderer->push_preview_edit_list(preview_tmp_edits);

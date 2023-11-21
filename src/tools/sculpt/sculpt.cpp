@@ -1,9 +1,6 @@
 #include "sculpt.h"
 #include "utils.h"
 #include "framework/input.h"
-#include "framework/entities/entity_mesh.h"
-#include "graphics/mesh.h"
-#include "graphics/shader.h"
 #include "sculpt_editor.h"
 
 #include "graphics/renderer.h"
