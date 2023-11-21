@@ -128,7 +128,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
     octree.data[octree_index].octant_center_distance = surface_interval;
 
-    let surface_interval_smooth : vec2f = surface_interval + vec2f(-SMOOTH_FACTOR, SMOOTH_FACTOR);
+    let surface_interval_smooth : vec2f = surface_interval + vec2f(-SMOOTH_FACTOR, SMOOTH_FACTOR * 0.15);
 
     edit_culling_count[octree_index] = edit_counter;
 
@@ -166,7 +166,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     } else {
 
         // Inside or outside the surface
-        if (surface_interval.y < 0.0 || surface_interval_smooth.x > 0.0) {
+        if (surface_interval_smooth.y < 0.0 || surface_interval_smooth.x > 0.0) {
             if ((FILLED_BRICK_FLAG & octree.data[octree_index].tile_pointer) == FILLED_BRICK_FLAG) {
                 let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
 
@@ -175,7 +175,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 octree.data[octree_index].tile_pointer = 0u;
             }
 
-            if (surface_interval.y < 0.0) {
+            if (surface_interval_smooth.y < 0.0) {
                 // Mark brick as interior (inside a surface)
                 octree.data[octree_index].tile_pointer = INTERIOR_BRICK_FLAG;
             }
