@@ -170,6 +170,9 @@ void RaymarchingRenderer::compute_octree()
     uint32_t devault_vals_compute[3] = { 0u, 1u, 1u };
     webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_indirect_brick_removal_buffer.data), 0, devault_vals_compute, sizeof(uint32_t) * 3);
 
+    uint32_t default_value = 0u;
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_proxy_indirect_buffer.data), sizeof(uint32_t), &default_value, sizeof(uint32_t));
+
     int ping_pong_idx = 0;
 
     for (int i = 0; i <= octree_depth; ++i) {

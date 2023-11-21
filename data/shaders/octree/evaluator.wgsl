@@ -192,6 +192,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 octree_proxy_data.instance_data[instance_index].position = octant_center;
                 octree_proxy_data.instance_data[instance_index].atlas_tile_index = instance_index;
                 octree_proxy_data.instance_data[instance_index].octree_parent_id = octree_index;
+                 octree_proxy_data.instance_data[instance_index].in_use = 0u;
 
                 if ((octree.data[octree_index].tile_pointer & INTERIOR_BRICK_FLAG) == INTERIOR_BRICK_FLAG) {
                     octree.data[octree_index].tile_pointer = instance_index | INTERIOR_BRICK_FLAG;
