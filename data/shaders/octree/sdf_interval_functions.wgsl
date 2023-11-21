@@ -289,12 +289,12 @@ fn opUnionInterval( s1 : vec2f, s2 : vec2f ) -> vec2f
  
 fn opSmoothUnionInterval( s1 : vec2f, s2 : vec2f, k : f32 ) -> vec2f
 {
-    return isoft_min_poly(s2, s1, k);
+    return isoft_min(s2, s1, k);
 }
 
 fn opSmoothSubtractionInterval( s1 : vec2f, s2 : vec2f, k : f32 ) -> vec2f
 {
-    return ineg(isoft_min_poly(s2, ineg(s1), k));
+    return ineg(isoft_min(s2, ineg(s1), k));
 }
 
 fn opSubtractionInterval( s1 : vec2f, s2 : vec2f ) -> vec2f

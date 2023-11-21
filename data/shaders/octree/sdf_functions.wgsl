@@ -281,7 +281,7 @@ fn sminPoly(a : f32, b : f32, k : f32) -> vec2f {
 
 fn opSmoothUnion( s1 : Surface, s2 : Surface, k : f32 ) -> Surface
 {
-    let smin : f32 = sminPoly(s2.distance, s1.distance, k).x;
+    let smin : f32 = soft_min(s2.distance, s1.distance, k);
     //let smin : vec2f = sminPoly(s2.distance, s1.distance, k);
     var sf : Surface;
     sf.distance = smin;
@@ -337,7 +337,7 @@ fn opPaint( s1 : Surface, s2 : Surface, paintColor : vec3f ) -> Surface
 
 fn opSmoothSubtraction( s1 : Surface, s2 : Surface, k : f32 ) -> Surface
 {
-    let smin : f32 = sminPoly(s2.distance, -s1.distance, k).x;
+    let smin : f32 = soft_min(s2.distance, -s1.distance, k);
     var s : Surface;
     s.distance = -smin;
     // s.color = s1.color;
