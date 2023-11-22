@@ -37,7 +37,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 
     //parse_scene("data/gltf_tests/Sponza/Sponza.gltf", entities);
 
-    //import_scene();
+    // import_scene();
 
 	return error;
 }
@@ -76,8 +76,6 @@ void RoomsEngine::render()
 
 bool RoomsEngine::export_scene()
 {
-    spdlog::info("Exporting scene...");
-
     std::ofstream file("data/exports/myscene.txt");
 
     if (!file.is_open())
@@ -99,15 +97,13 @@ bool RoomsEngine::export_scene()
 
     file.close();
 
-    //std::cout << "[OK]" << std::endl;
+    spdlog::info("Scene exported! ({} edits)", edits.size());
 
     return true;
 }
 
 bool RoomsEngine::import_scene()
 {
-    std::cout << "Importing scene...";
-
     std::ifstream file("data/exports/myscene.txt");
 
     if (!file.is_open())
@@ -124,8 +120,6 @@ bool RoomsEngine::import_scene()
         // ...
     } scene_header;
 
-    int edit_count = 0;
-
     // Num edits
     std::getline(file, line);
     scene_header.num_edits = std::stoi(line.substr(1));
@@ -136,24 +130,46 @@ bool RoomsEngine::import_scene()
     rmr->set_sculpt_start_position(position);
     sculpt_editor.set_sculpt_started(true);
 
+    std::vector<Edit> edits;
+    edits.resize(scene_header.num_edits);
+    int edit_count = 0;
+
     // Parse edits
     while (std::getline(file, line))
     {
         Edit edit;
         edit.parse_string(line);
-        rmr->push_edit(edit);
-        edit_count++;
+        edits[edit_count++] = edit;
     }
 
     file.close();
 
     if (edit_count != scene_header.num_edits)
     {
-        std::cerr << "[ERROR] Some edits couldn't be imported!" << std::endl;
+        spdlog::error("[import_scene] Some edits couldn't be imported!");
         return false;
     }
 
-    std::cout << "[OK] " << scene_header.num_edits << " edits imported!" << std::endl;
+    // Merge them into the scene in chunks of 64
+
+    int chunk_size = 64;
+    int chunks = ceil((float)edit_count / chunk_size);
+
+    for (int i = 0; i < chunks; ++i)
+    {
+        int start_index = i * chunk_size;
+        int end_index = std::min(start_index + chunk_size, scene_header.num_edits);
+
+        for (int j = start_index; j < end_index; ++j)
+        {
+            rmr->push_edit( edits[j] );
+            edit_count--;
+        }
+
+        rmr->compute_octree();
+    }
+
+    spdlog::info("Scene imported! ({} edits, {} left)", scene_header.num_edits, edit_count);
 
     return true;
 }
