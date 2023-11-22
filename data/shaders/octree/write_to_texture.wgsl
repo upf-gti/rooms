@@ -1,5 +1,6 @@
 #include sdf_functions.wgsl
 #include octree_includes.wgsl
+#include material_packing.wgsl
 
 @group(0) @binding(0) var<uniform> edits : Edits;
 @group(0) @binding(2) var<storage, read_write> octree : Octree;
@@ -8,6 +9,7 @@
 @group(0) @binding(5) var<storage, read_write> octree_proxy_data: OctreeProxyInstances;
 @group(0) @binding(6) var<storage, read_write> edit_culling_lists: array<u32>;
 @group(0) @binding(7) var<storage, read_write> edit_culling_count : array<u32>;
+@group(0) @binding(8) var write_material_sdf: texture_storage_3d<r32uint, read_write>;
 
 @group(1) @binding(0) var<storage, read> octant_usage_read : array<u32>;
 @group(1) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
@@ -49,7 +51,10 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     if ((FILLED_BRICK_FLAG & brick_pointer) == FILLED_BRICK_FLAG) {
         let sample : vec4f = textureLoad(write_sdf, texture_coordinates);
         sSurface.distance = sample.r;
-        sSurface.color = sample.rgb;
+        let raw_color : vec4<u32> = textureLoad(write_material_sdf, texture_coordinates);
+
+        let material : Material = unpack_material(u32(raw_color.r));
+        sSurface.color = material.albedo;
         //debug_surf = vec3f(1.0);
     } else
     if ((INTERIOR_BRICK_FLAG & brick_pointer) == INTERIOR_BRICK_FLAG) {
@@ -83,6 +88,10 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     heatmap_color.b = cos(interpolant);
 
     textureStore(write_sdf, texture_coordinates, vec4f(sSurface.distance));
+
+    var material : Material;
+    material.albedo = sSurface.color;
+    textureStore(write_material_sdf, texture_coordinates, vec4<u32>((pack_material(material))));
 
     //textureStore(write_sdf, texture_coordinates, vec4f(debug_surf.x, debug_surf.y, debug_surf.z, sSurface.distance));
     // Hack, for buffer usage

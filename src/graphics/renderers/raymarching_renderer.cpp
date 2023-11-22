@@ -343,6 +343,16 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
     sdf_texture_uniform.data = sdf_texture.get_view();
     sdf_texture_uniform.binding = 3;
 
+    sdf_material_texture.create(
+        WGPUTextureDimension_3D,
+        WGPUTextureFormat_R32Uint,
+        { SDF_RESOLUTION, SDF_RESOLUTION, SDF_RESOLUTION },
+        static_cast<WGPUTextureUsage>(WGPUTextureUsage_TextureBinding | WGPUTextureUsage_StorageBinding | WGPUTextureUsage_CopySrc),
+        1, nullptr);
+
+    sdf_material_texture_uniform.data = sdf_material_texture.get_view();
+    sdf_material_texture_uniform.binding = 8; // TODO: set as 4
+
     // 2^3 give 8x8x8 pixel cells, and we need one iteration less, so substract 3
     octree_depth = static_cast<uint8_t>(6);
 
@@ -485,7 +495,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
 
     {
         std::vector<Uniform*> uniforms = { &sdf_texture_uniform, &compute_edits_array_uniform, &octree_uniform, &octree_edit_culling_count,
-                                           &octree_counters, &octree_edit_culling_lists , &octree_proxy_instance_buffer };
+                                           &octree_counters, &octree_edit_culling_lists , &octree_proxy_instance_buffer, &sdf_material_texture_uniform };
         compute_octree_write_to_texture_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_write_to_texture_shader, 0);
     }
 
@@ -516,7 +526,7 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
         linear_sampler_uniform.data = webgpu_context->create_sampler(WGPUAddressMode_ClampToEdge, WGPUFilterMode_Linear, WGPUFilterMode_Linear);
         linear_sampler_uniform.binding = 2;
 
-        std::vector<Uniform*> uniforms = { &linear_sampler_uniform, &sdf_texture_uniform, &octree_proxy_instance_buffer, &proxy_geometry_eye_position, &octree_brick_copy_buffer };
+        std::vector<Uniform*> uniforms = { &linear_sampler_uniform, &sdf_texture_uniform, &octree_proxy_instance_buffer, &proxy_geometry_eye_position, &octree_brick_copy_buffer, &sdf_material_texture_uniform };
 
         render_proxy_geometry_bind_group = webgpu_context->create_bind_group(uniforms, render_proxy_shader, 0);
         uniforms = { camera_uniform };
