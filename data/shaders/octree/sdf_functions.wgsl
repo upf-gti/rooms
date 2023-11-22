@@ -485,7 +485,7 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit, current_e
         }
         case SD_BEZIER: {
             var curve_thickness : f32 = 0.01;
-            pSurface = sdQuadraticBezier(norm_pos, offset_pos, offset_pos + vec3f(0.0, 0.1, 0.0), offset_pos + vec3f(0.2, 0.1, 0.0), curve_thickness, edit.rotation, edit.color);
+            pSurface = sdQuadraticBezier(position, edit.position, edit.position + vec3f(0.0, 0.1, 0.0), edit.position + vec3f(0.2, 0.1, 0.0), curve_thickness, edit.rotation, edit.color);
             break;
         }
         default: {

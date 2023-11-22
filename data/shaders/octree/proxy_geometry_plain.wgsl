@@ -1,5 +1,6 @@
 #include sdf_functions.wgsl
 #include octree_includes.wgsl
+#include material_packing.wgsl
 
 struct VertexInput {
     @builtin(instance_index) instance_id : u32,
@@ -36,6 +37,7 @@ struct CameraData {
 @group(0) @binding(2) var texture_sampler : sampler;
 @group(0) @binding(3) var read_sdf: texture_3d<f32>;
 @group(0) @binding(5) var<storage, read> octree_proxy_data: OctreeProxyInstancesNonAtomic;
+@group(0) @binding(8) var read_material_sdf: texture_3d<u32>;
 
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
 
@@ -199,8 +201,11 @@ fn raymarch(ray_origin : vec3f, ray_origin_world : vec3f, ray_dir : vec3f, max_d
         let epsilon : f32 = 0.000001; // avoids flashing when camera inside sdf
         let proj_pos : vec4f = view_proj * vec4f(pos_world + ray_dir * epsilon, 1.0);
         depth = proj_pos.z / proj_pos.w;
+        let raw_color : vec4<u32> = textureLoad(read_material_sdf, vec3<u32>(pos * SDF_RESOLUTION), 0);
+
+        let material : Material = unpack_material(u32(raw_color.r));
         //return vec4f(surface.color, depth);
-		return vec4f(blinn_phong(-ray_dir, pos, pos_world, lightPos + lightOffset, ambientColor, surface.color), depth);
+		return vec4f(blinn_phong(-ray_dir, pos, pos_world, lightPos + lightOffset, ambientColor, material.albedo), depth);
 	}
 
     // Use a two band spherical harmonic as a skymap
@@ -230,6 +235,8 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     // out.depth = 0.0;
 
     if (out.depth == 0.999) {
+        //let tmp : vec4f =  textureSampleLevel(read_material_sdf, texture_sampler, in.position.xyz, 0.0);
+        //let sample : vec4<u32> = textureLoad(read_material_sdf, vec3<u32>(in.position.xyz));
         discard;
     }
 

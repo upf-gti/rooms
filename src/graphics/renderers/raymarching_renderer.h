@@ -25,6 +25,9 @@ class RaymarchingRenderer {
     Texture         sdf_texture;
     Uniform         sdf_texture_uniform;
 
+    Texture         sdf_material_texture;
+    Uniform         sdf_material_texture_uniform;
+
     // Octree creation
     Pipeline        compute_octree_evaluate_pipeline;
     Pipeline        compute_octree_increment_level_pipeline;
