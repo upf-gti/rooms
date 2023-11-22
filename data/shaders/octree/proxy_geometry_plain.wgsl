@@ -151,7 +151,9 @@ fn estimate_normal( p : vec3f) -> vec3f
 // TODO: if diffuse variable is not used, performance is increased by 20% (????)
 fn blinn_phong(toEye : vec3f, position : vec3f, position_world : vec3f, lightPosition : vec3f, ambient : vec3f, diffuse : vec3f) -> vec3f
 {
-    let normal : vec3f = estimate_normal(position);
+    var normal : vec3f = estimate_normal(position);
+    normal = normalize(rotate_point_quat(normal, sculpt_data.sculpt_rotation));
+
     let toLight : vec3f = normalize(lightPosition - position_world);
     let reflection : vec3f = normalize(reflect(-toLight, normal));
     let halfwayDir : vec3f = normalize(toLight + toEye);
