@@ -1,5 +1,6 @@
 #include sdf_functions.wgsl
 #include octree_includes.wgsl
+#include sdf_interval_functions.wgsl
 
 @group(0) @binding(0) var<uniform> edits : Edits;
 @group(0) @binding(1) var<uniform> merge_data : MergeData;
@@ -75,13 +76,15 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         octant_center += level_half_size * OFFSET_LUT[(octant_id >> (3 * (i - 1))) & 0x7];
     }
 
-    var sSurface : Surface = Surface(vec3f(0.0, 0.0, 0.0), octree.data[octree_index].octant_center_distance);
-    var current_edit_surface : Surface;
+    var surface_interval : vec2f = (octree.data[octree_index].octant_center_distance);
+    var current_edit_surface : vec2f;
     var edit_counter : u32 = 0;
 
     var new_packed_edit_idx : u32 = 0;
 
-    let cull_distance : f32 = level_half_size * SQRT_3 * 1.5;
+    // let cull_distance : f32 = level_half_size * SQRT_3 * 1.5;
+
+    var is_smooth_union : bool = false;
 
     // Check the edits in the parent, and fill its own list with the edits that affect this child
     for (var i : u32 = 0; i < edit_culling_count[parent_octree_index] ; i++) {
@@ -97,11 +100,18 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         //   then apply the mask, and swift the result so the 8 bits are at the start of the word -> unpacked index & profit
         let current_unpacked_edit_idx : u32 = (current_packed_edit_idx & (0xFFu << (packed_index * 8u))) >> (packed_index * 8u);
 
-        let current_edit : Edit = edits.data[current_unpacked_edit_idx];
-        sSurface = evalEdit(octant_center, sSurface, current_edit, &current_edit_surface);
+        let x_range : vec2f = vec2f(octant_center.x - level_half_size, octant_center.x + level_half_size);
+        let y_range : vec2f = vec2f(octant_center.y - level_half_size, octant_center.y + level_half_size);
+        let z_range : vec2f = vec2f(octant_center.z - level_half_size, octant_center.z + level_half_size);
 
-        // Check if the edit affects the current voxel, if so adds it to the packed list 
-        if (sSurface.distance < cull_distance || current_edit.operation == OP_SUBSTRACTION || current_edit.operation == OP_SMOOTH_SUBSTRACTION) {
+        let current_edit : Edit = edits.data[current_unpacked_edit_idx];
+
+        is_smooth_union |= current_edit.operation == OP_SMOOTH_UNION;
+        
+        surface_interval = eval_edit_interval(x_range, y_range, z_range, surface_interval, current_edit, &current_edit_surface);
+
+        // Check if the edit affects the current voxel, if so adds it to the packed list
+        if (true) {
             // Using the edit counter, sift the edit id to the position in the current word, and adds it
             new_packed_edit_idx = new_packed_edit_idx | (current_unpacked_edit_idx << ((3 - edit_counter % 4) * 8));
 
@@ -121,27 +131,24 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         }
     }
 
-    octree.data[octree_index].octant_center_distance = sSurface.distance;
+    
+    var surface_interval_smooth : vec2f = surface_interval;
+
+    if (is_smooth_union) {
+        surface_interval_smooth += vec2f(-SMOOTH_FACTOR * 0.25, 10.0 / 512.0);
+    } 
+    // else {
+    //     surface_interval_smooth += vec2f(SMOOTH_FACTOR * 0.5, SMOOTH_FACTOR * 0.5);
+    // }
+
+    octree.data[octree_index].octant_center_distance = surface_interval_smooth;
 
     edit_culling_count[octree_index] = edit_counter;
 
     if (level < merge_data.max_octree_depth) {
 
-        // Check if the total of distances of all the edits are inside the current voxel, and if so,
-        // create children
-        if (abs(sSurface.distance) < cull_distance) {
-            // For the 0<->(n-1) passes
-            // Increase the number of children from the current level
-            let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 8);
-
-            // Add to the index the childres's octant id, and save it for the next pass
-            for (var i : u32 = 0; i < 8; i++) {
-                octant_usage_write[prev_counter + i] = octant_id | (i << (3 * level));
-            }
-
-            // Mark this node as it has children
-            octree.data[octree_index].tile_pointer = FILLED_BRICK_FLAG;
-        } else {
+        // Outside the surface, check if children have bricks
+        if (surface_interval_smooth.x > 0.0 ) {
             // Add to the index the childres's octant id, and save it for the next pass
             for (var i : u32 = 0; i < 8; i++) {
                 let child_octant_id : u32 = octant_id | (i << (3 * level));
@@ -153,10 +160,41 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             }
 
             octree.data[octree_index].tile_pointer = 0u;
+            octree.data[octree_index].octant_center_distance = vec2f(10000.0, 10000.0);
+        }
+        // inside or ambiguous, subdivide 
+        else {
+            // For the 0<->(n-1) passes
+            // Increase the number of children from the current level
+            let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 8);
+
+            // Add to the index the childres's octant id, and save it for the next pass
+            for (var i : u32 = 0; i < 8; i++) {
+                octant_usage_write[prev_counter + i] = octant_id | (i << (3 * level));
+            }
+
+            // Mark this node as it has children
+            octree.data[octree_index].tile_pointer = FILLED_BRICK_FLAG;
         }
     } else {
 
-        if (abs(sSurface.distance) < cull_distance) {
+        // Inside or outside the surface
+        if (surface_interval_smooth.y < 0.0 || surface_interval_smooth.x > 0.0) {
+            if ((FILLED_BRICK_FLAG & octree.data[octree_index].tile_pointer) == FILLED_BRICK_FLAG) {
+                let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
+
+                let instance_index : u32 = octree.data[octree_index].tile_pointer & 0x3FFFFFFFu;
+                indirect_brick_removal.brick_removal_buffer[brick_to_delete_idx] = instance_index;
+                octree.data[octree_index].tile_pointer = 0u;
+            }
+
+            if (surface_interval_smooth.y < 0.0) {
+                // Mark brick as interior (inside a surface)
+                octree.data[octree_index].tile_pointer = INTERIOR_BRICK_FLAG;
+            }
+        }
+        // ambiguous, subdivide 
+        else {
             // For the N pass, just send the leaves, to the writing to texture pass
             let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 1);
 
@@ -167,7 +205,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 octree_proxy_data.instance_data[instance_index].position = octant_center;
                 octree_proxy_data.instance_data[instance_index].atlas_tile_index = instance_index;
                 octree_proxy_data.instance_data[instance_index].octree_parent_id = octree_index;
-                octree_proxy_data.instance_data[instance_index].in_use = 1;
+                octree_proxy_data.instance_data[instance_index].in_use = 0u;
 
                 if ((octree.data[octree_index].tile_pointer & INTERIOR_BRICK_FLAG) == INTERIOR_BRICK_FLAG) {
                     octree.data[octree_index].tile_pointer = instance_index | INTERIOR_BRICK_FLAG;
@@ -177,19 +215,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             }
 
             octant_usage_write[prev_counter] = octree_index;
-        } else {
-            if ((FILLED_BRICK_FLAG & octree.data[octree_index].tile_pointer) == FILLED_BRICK_FLAG) {
-                let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
-
-                let instance_index : u32 = octree.data[octree_index].tile_pointer & 0x3FFFFFFFu;
-                indirect_brick_removal.brick_removal_buffer[brick_to_delete_idx] = instance_index;
-                octree.data[octree_index].tile_pointer = 0u;
-            }
-
-            if (sSurface.distance < 0.0) {
-                // Mark brick as interior (inside a surface)
-                octree.data[octree_index].tile_pointer = INTERIOR_BRICK_FLAG;
-            }
         }
     }
 }

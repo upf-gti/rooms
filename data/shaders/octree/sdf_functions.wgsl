@@ -292,6 +292,12 @@ fn sminN( a : f32, b : f32, k : f32, n : f32 ) -> vec2f
     }
 }
 
+fn soft_min(a : f32, b : f32, r : f32) -> f32 
+{ 
+    let e : f32 = max(r - abs(a - b), 0); 
+    return min(a, b) - e*e*0.25/r; 
+}
+
 // From iqulzes and Dreams
 fn sminPoly(a : f32, b : f32, k : f32) -> vec2f {
     let h : f32 = max(k - abs(a - b), 0.0) / k;
@@ -307,11 +313,11 @@ fn sminPoly(a : f32, b : f32, k : f32) -> vec2f {
 
 fn opSmoothUnion( s1 : Surface, s2 : Surface, k : f32 ) -> Surface
 {
-    let smin : vec2f = sminN(s2.distance, s1.distance, k, 10.0);
+    let smin : f32 = soft_min(s2.distance, s1.distance, k);
     //let smin : vec2f = sminPoly(s2.distance, s1.distance, k);
     var sf : Surface;
-    sf.distance = smin.x;
-    sf.color = mix(s2.color, s1.color, smin.y);
+    sf.distance = smin;
+    // sf.color = mix(s2.color, s1.color, smin.y);
     return sf;
 }
 
@@ -363,10 +369,10 @@ fn opPaint( s1 : Surface, s2 : Surface, paintColor : vec3f ) -> Surface
 
 fn opSmoothSubtraction( s1 : Surface, s2 : Surface, k : f32 ) -> Surface
 {
-    let smin : vec2f = sminN(s2.distance, -s1.distance, k, 2.0);
+    let smin : f32 = soft_min(s2.distance, -s1.distance, k);
     var s : Surface;
-    s.distance = -smin.x;
-    s.color = s1.color;
+    s.distance = -smin;
+    // s.color = s1.color;
     return s;
 }
 
@@ -406,11 +412,7 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit, current_e
 {
     var pSurface : Surface;
 
-    const smooth_factor = 0.01;
-
     // Center in texture (position 0,0,0 is just in the middle)
-    let offset_pos : vec3f = edit.position;
-    let norm_pos : vec3f = vec3f(position);
     var size : vec3f = edit.dimensions.xyz;
     var radius : f32 = edit.dimensions.x;
     var size_param : f32 = edit.dimensions.w;
@@ -425,9 +427,9 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit, current_e
             radius -= onion_thickness; // Compensate onion size
             // -1..1 no cap..fully capped
             if(cap_value > -1.0) { 
-                pSurface = sdCutSphere(norm_pos, offset_pos, edit.rotation, radius, radius * cap_value * 0.999, edit.color);
+                pSurface = sdCutSphere(position, edit.position, edit.rotation, radius, radius * cap_value * 0.999, edit.color);
             } else {
-                pSurface = sdSphere(norm_pos, offset_pos, radius, edit.color);
+                pSurface = sdSphere(position, edit.position, radius, edit.color);
             }
             break;
         }
@@ -439,14 +441,14 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit, current_e
             size -= onion_thickness;
             size_param -= onion_thickness; 
 
-            pSurface = sdBox(norm_pos, offset_pos, edit.rotation, size - size_param, size_param, edit.color);
+            pSurface = sdBox(position, edit.position, edit.rotation, size - size_param, size_param, edit.color);
             break;
         }
         case SD_CAPSULE: {
             onion_thickness = map_thickness( onion_thickness, size_param );
             size_param -= onion_thickness; // Compensate onion size
             var height = radius; // ...
-            pSurface = sdCapsule(norm_pos, offset_pos, offset_pos - vec3f(0.0, 0.0, height), edit.rotation, size_param, edit.color);
+            pSurface = sdCapsule(position, edit.position, edit.position - vec3f(0.0, 0.0, height), edit.rotation, size_param, edit.color);
             break;
         }
         case SD_CONE: {
@@ -454,17 +456,17 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit, current_e
             cap_value = cap_value * 0.5 + 0.5;
             radius = max(radius * (1.0 - cap_value), 0.0025);
             var dims = vec2f(size_param, size_param * cap_value);
-            pSurface = sdCone(norm_pos, offset_pos,  offset_pos - vec3f(0.0, 0.0, radius), edit.rotation, dims, edit.color);
+            pSurface = sdCone(position, edit.position,  edit.position - vec3f(0.0, 0.0, radius), edit.rotation, dims, edit.color);
             break;
         }
         // case SD_PYRAMID: {
-        //     pSurface = sdPyramid(norm_pos, offset_pos, edit.rotation, radius, size_param, edit.color);
+        //     pSurface = sdPyramid(position, edit.position, edit.rotation, radius, size_param, edit.color);
         //     break;
         // }
         case SD_CYLINDER: {
             onion_thickness = map_thickness( onion_thickness, size_param );
             size_param -= onion_thickness; // Compensate onion size
-            pSurface = sdCylinder(norm_pos, offset_pos,  offset_pos - vec3f(0.0, 0.0, radius), edit.rotation, size_param, 0.0, edit.color);
+            pSurface = sdCylinder(position, edit.position,  edit.position - vec3f(0.0, 0.0, radius), edit.rotation, size_param, 0.0, edit.color);
             break;
         }
         case SD_TORUS: {
@@ -475,9 +477,9 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit, current_e
                 cap_value = cap_value * 0.5 + 0.5;
                 var an = M_PI * (1.0 - cap_value);
                 var angles = vec2f(sin(an), cos(an));
-                pSurface = sdCappedTorus(norm_pos, offset_pos, vec2f(radius, size_param), edit.rotation, angles, edit.color);
+                pSurface = sdCappedTorus(position, edit.position, vec2f(radius, size_param), edit.rotation, angles, edit.color);
             } else {
-                pSurface = sdTorus(norm_pos, offset_pos, vec2f(radius, size_param), edit.rotation, edit.color);
+                pSurface = sdTorus(position, edit.position, vec2f(radius, size_param), edit.rotation, edit.color);
             }
             break;
         }
@@ -517,19 +519,19 @@ fn evalEdit( position : vec3f, current_surface : Surface, edit : Edit, current_e
             break;
         }
         case OP_SMOOTH_UNION: {
-            pSurface = opSmoothUnion(current_surface, pSurface, smooth_factor);
+            pSurface = opSmoothUnion(current_surface, pSurface, SMOOTH_FACTOR);
             break;
         }
         case OP_SMOOTH_SUBSTRACTION: {
-            pSurface = opSmoothSubtraction(current_surface, pSurface, smooth_factor);
+            pSurface = opSmoothSubtraction(current_surface, pSurface, SMOOTH_FACTOR);
             break;
         }
         case OP_SMOOTH_INTERSECTION: {
-            pSurface = opSmoothIntersection(current_surface, pSurface, smooth_factor);
+            pSurface = opSmoothIntersection(current_surface, pSurface, SMOOTH_FACTOR);
             break;
         }
         case OP_SMOOTH_PAINT: {
-            pSurface = opSmoothPaint(current_surface, pSurface, edit.color, smooth_factor);
+            pSurface = opSmoothPaint(current_surface, pSurface, edit.color, SMOOTH_FACTOR);
             break;
         }
         default: {
