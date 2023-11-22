@@ -76,7 +76,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         octant_center += level_half_size * OFFSET_LUT[(octant_id >> (3 * (i - 1))) & 0x7];
     }
 
-    var surface_interval : vec2f = (octree.data[octree_index].octant_center_distance);
+    var new_edits_surface_interval : vec2f = vec2f(1000.0, 1000.0);//(octree.data[octree_index].octant_center_distance);
+    var surface_interval = (octree.data[octree_index].octant_center_distance);
     var current_edit_surface : vec2f;
     var edit_counter : u32 = 0;
 
@@ -109,6 +110,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         is_smooth_union |= current_edit.operation == OP_SMOOTH_UNION;
         
         surface_interval = eval_edit_interval(x_range, y_range, z_range, surface_interval, current_edit, &current_edit_surface);
+        new_edits_surface_interval = eval_edit_interval(x_range, y_range, z_range, new_edits_surface_interval, current_edit, &current_edit_surface);
 
         // Check if the edit affects the current voxel, if so adds it to the packed list
         if (true) {
@@ -132,39 +134,37 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     }
 
     
-    var surface_interval_smooth : vec2f = surface_interval;
+    //var surface_interval_smooth : vec2f = surface_interval;
 
     if (is_smooth_union) {
-        surface_interval_smooth += vec2f(-SMOOTH_FACTOR * 0.25, 10.0 / 512.0);
+        //surface_interval_smooth += vec2f(-SMOOTH_FACTOR * 0.25, 10.0 / 512.0);
     } 
     // else {
     //     surface_interval_smooth += vec2f(SMOOTH_FACTOR * 0.5, SMOOTH_FACTOR * 0.5);
     // }
 
-    octree.data[octree_index].octant_center_distance = surface_interval_smooth;
+    octree.data[octree_index].octant_center_distance = surface_interval;
 
     edit_culling_count[octree_index] = edit_counter;
 
+    let is_current_brick_filled : bool = (octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG;
+
     if (level < merge_data.max_octree_depth) {
 
-        // Outside the surface, check if children have bricks
-        if (surface_interval_smooth.x > 0.0 ) {
+        if ((surface_interval.x > 0.0 || surface_interval.y < 0.0) && is_current_brick_filled) {
+            // Delete children
             // Add to the index the childres's octant id, and save it for the next pass
             for (var i : u32 = 0; i < 8; i++) {
                 let child_octant_id : u32 = octant_id | (i << (3 * level));
                 let child_octree_index : u32 = child_octant_id + u32((pow(8.0, f32(level + 1)) - 1) / 7);
-                if ((octree.data[child_octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG) {
-                    let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 1);
-                    octant_usage_write[prev_counter] = child_octant_id;
-                }
+                let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 1);
+                octant_usage_write[prev_counter] = child_octant_id;
             }
 
             octree.data[octree_index].tile_pointer = 0u;
             octree.data[octree_index].octant_center_distance = vec2f(10000.0, 10000.0);
-        }
-        // inside or ambiguous, subdivide 
-        else {
-            // For the 0<->(n-1) passes
+        } else if (new_edits_surface_interval.x < 0.0 && new_edits_surface_interval.y > 0.0) {
+            // Subdivide
             // Increase the number of children from the current level
             let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 8);
 
@@ -177,35 +177,32 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             octree.data[octree_index].tile_pointer = FILLED_BRICK_FLAG;
         }
     } else {
-
-        // Inside or outside the surface
-        if (surface_interval_smooth.y < 0.0 || surface_interval_smooth.x > 0.0) {
-            if ((FILLED_BRICK_FLAG & octree.data[octree_index].tile_pointer) == FILLED_BRICK_FLAG) {
+        if (surface_interval.x > 0.0 || surface_interval.y < 0.0) {
+            // Delete brick
+            if (is_current_brick_filled) {
                 let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
-
                 let instance_index : u32 = octree.data[octree_index].tile_pointer & 0x3FFFFFFFu;
                 indirect_brick_removal.brick_removal_buffer[brick_to_delete_idx] = instance_index;
+                octree_proxy_data.instance_data[instance_index].in_use = 0u;
                 octree.data[octree_index].tile_pointer = 0u;
             }
 
-            if (surface_interval_smooth.y < 0.0) {
+            if (surface_interval.y < 0.0) {
                 // Mark brick as interior (inside a surface)
                 octree.data[octree_index].tile_pointer = INTERIOR_BRICK_FLAG;
             }
-        }
-        // ambiguous, subdivide 
-        else {
-            // For the N pass, just send the leaves, to the writing to texture pass
+        } else if ((surface_interval.x < 0.0 && surface_interval.y > 0.0) && (new_edits_surface_interval.x < 0.0 && new_edits_surface_interval.y > 0.0)) {
+            //
             let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 1);
 
-            // if FILLED_BRICK_FLAG is set, there is already a tile in the octree, if not, we allocate one
             if ((FILLED_BRICK_FLAG & octree.data[octree_index].tile_pointer) != FILLED_BRICK_FLAG) {
+                // Create a brick
                 let brick_spot_id = atomicSub(&octree_proxy_data.atlas_empty_bricks_counter, 1u) - 1u;
                 let instance_index : u32 = octree_proxy_data.atlas_empty_bricks_buffer[brick_spot_id];
                 octree_proxy_data.instance_data[instance_index].position = octant_center;
                 octree_proxy_data.instance_data[instance_index].atlas_tile_index = instance_index;
                 octree_proxy_data.instance_data[instance_index].octree_parent_id = octree_index;
-                octree_proxy_data.instance_data[instance_index].in_use = 0u;
+                octree_proxy_data.instance_data[instance_index].in_use = 1u;
 
                 if ((octree.data[octree_index].tile_pointer & INTERIOR_BRICK_FLAG) == INTERIOR_BRICK_FLAG) {
                     octree.data[octree_index].tile_pointer = instance_index | INTERIOR_BRICK_FLAG;
@@ -213,7 +210,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                     octree.data[octree_index].tile_pointer = instance_index;
                 }
             }
-
+            
             octant_usage_write[prev_counter] = octree_index;
         }
     }

@@ -162,8 +162,8 @@ fn blinn_phong(toEye : vec3f, position : vec3f, position_world : vec3f, lightPos
     let diffuseFactor : vec3f = 0.4 * diffuse * max(0.0, dot(normal, toLight));
     let specularFactor : vec3f = vec3f(0.3) * pow(max(0.0, dot(toEye, reflection)), specularExponent);
 
-    return ambientFactor + diffuseFactor + specularFactor;
-    //return normal;
+    //return ambientFactor + diffuseFactor + specularFactor;
+    return normal;
     //return diffuse;
 }
 
