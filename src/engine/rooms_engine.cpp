@@ -4,6 +4,7 @@
 #include "framework/input.h"
 #include "framework/scene/parse_scene.h"
 #include "graphics/renderers/rooms_renderer.h"
+#include "graphics/hdre.h"
 
 #include <iostream>
 #include <fstream>
@@ -39,6 +40,46 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 
     // import_scene();
 
+    // Create instance of HDRE
+    HDRE* hdre = HDRE::Get("data/textures/environments/clouds.hdre");
+
+    if (!hdre) {
+        spdlog::error("Can't load HDRE!");
+        error = 1;
+    }
+    else
+    {
+        // Set texture info from HDRE 
+        WGPUTextureFormat format = WGPUTextureFormat_RGBA32Float;
+        uint32_t width = hdre->width;
+        uint32_t height = hdre->height;
+
+        sHDRELevel mip0 = hdre->getLevel(0);
+        float** data = mip0.faces;
+
+        // Create texture to store environment info
+        // This only stores the first mip (Specular reflection)
+        Texture* cube_texture = new Texture();
+        cube_texture->load_from_data(hdre->name, width, height, data, format, 6);
+
+        EntityMesh* cube = parse_mesh("data/meshes/cube.obj");
+        cube->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_texture_cube.wgsl"));
+        cube->set_material_diffuse(cube_texture);
+        entities.push_back(cube);
+
+        /*
+            The same for the rest of filtered levels.
+            They can be saved in mipmap storage
+        */
+
+       /* for (int i = 1; i < 6; i++)
+        {
+            sHDRELevel mip = hdre->getLevel(i);
+            Texture* mip_texture = new Texture();
+            mip_texture->load_from_data(hdre->name + "@" + std::to_string(i), mip.width, mip.height, mip.faces, format, 6);
+        }*/
+    }
+
 	return error;
 }
 
@@ -51,7 +92,8 @@ void RoomsEngine::clean()
 
 void RoomsEngine::update(float delta_time)
 {
-    //entities[0]->rotate(0.8f * delta_time, glm::vec3(0.0f, 0.0f, 1.0f));
+    RoomsRenderer* renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
+    entities[0]->set_translation(renderer->get_camera()->get_eye());
 
 	Engine::update(delta_time);
 

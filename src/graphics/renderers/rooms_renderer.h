@@ -21,6 +21,8 @@ class RoomsRenderer : public Renderer {
 
     FlyoverCamera camera;
 
+    EntityMesh* skybox = nullptr;
+
     Mesh  quad_mesh;
     Uniform         camera_uniform;
 
@@ -80,6 +82,7 @@ public:
 
     void resize_window(int width, int height) override;
 
+    inline Camera* get_camera() { return &camera; }
     inline Uniform* get_current_camera_uniform() {
         return &camera_uniform;
     }
