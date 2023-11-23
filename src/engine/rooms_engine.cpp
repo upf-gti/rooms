@@ -4,7 +4,6 @@
 #include "framework/input.h"
 #include "framework/scene/parse_scene.h"
 #include "graphics/renderers/rooms_renderer.h"
-#include "graphics/hdre.h"
 
 #include <iostream>
 #include <fstream>
@@ -41,7 +40,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     // import_scene();
 
     // Create instance of HDRE
-    HDRE* hdre = HDRE::Get("data/textures/environments/clouds.hdre");
+    HDRE* hdre = HDRE::Get("data/textures/environments/grass.hdre");
 
     if (!hdre) {
         spdlog::error("Can't load HDRE!");
@@ -49,18 +48,8 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     }
     else
     {
-        // Set texture info from HDRE 
-        WGPUTextureFormat format = WGPUTextureFormat_RGBA32Float;
-        uint32_t width = hdre->width;
-        uint32_t height = hdre->height;
-
-        sHDRELevel mip0 = hdre->getLevel(0);
-        float** data = mip0.faces;
-
-        // Create texture to store environment info
-        // This only stores the first mip (Specular reflection)
         Texture* cube_texture = new Texture();
-        cube_texture->load_from_data(hdre->name, width, height, data, format, 6);
+        cube_texture->load_from_hdre(hdre);
 
         EntityMesh* cube = parse_mesh("data/meshes/cube.obj");
         cube->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_texture_cube.wgsl"));
@@ -72,7 +61,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
             They can be saved in mipmap storage
         */
 
-       /* for (int i = 1; i < 6; i++)
+        /*for (int i = 1; i < N_FACES; i++)
         {
             sHDRELevel mip = hdre->getLevel(i);
             Texture* mip_texture = new Texture();

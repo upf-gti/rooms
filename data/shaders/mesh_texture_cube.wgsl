@@ -53,7 +53,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var view = normalize( in.world_position - camera_data.eye );
 
     var out: FragmentOutput;
-    var color : vec3f = textureSample(albedo_texture, texture_sampler, view).rgb;
+    var color : vec3f = textureSampleLevel(albedo_texture, texture_sampler, view, 0).rgb;
 
     color = pow(color, vec3f(1.0/2.2));
 
