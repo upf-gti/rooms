@@ -76,7 +76,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         octant_center += level_half_size * OFFSET_LUT[(octant_id >> (3 * (i - 1))) & 0x7];
     }
 
-    var new_edits_surface_interval : vec2f = vec2f(10000.0, 10000.0);//(octree.data[octree_index].octant_center_distance);
+    var new_edits_surface_interval : vec2f = vec2f(10000.0, 10000.0);
     var surface_interval = (octree.data[octree_index].octant_center_distance);
     var current_edit_surface : vec2f;
     var edit_counter : u32 = 0;
@@ -105,7 +105,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         let y_range : vec2f = vec2f(octant_center.y - level_half_size, octant_center.y + level_half_size);
         let z_range : vec2f = vec2f(octant_center.z - level_half_size, octant_center.z + level_half_size);
 
-        let current_edit : Edit = edits.data[current_unpacked_edit_idx];
+        var current_edit : Edit = edits.data[current_unpacked_edit_idx];
 
         is_smooth_union |= current_edit.operation == OP_SMOOTH_UNION;
         
@@ -169,7 +169,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             
         } else
         // If there is surface of the new edits in the block 
-        if (new_edits_surface_interval.x < 0.0 && new_edits_surface_interval.y > 0.0) {
+        if ((surface_interval.x < 0.0 && surface_interval.y > 0.0) && (new_edits_surface_interval.x < 0.0 && new_edits_surface_interval.y > 0.0)) {
             // Subdivide
             // Increase the number of children from the current level
             let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 8);

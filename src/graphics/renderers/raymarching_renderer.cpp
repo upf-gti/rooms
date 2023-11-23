@@ -37,15 +37,15 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
 
     //edits[compute_merge_data.edits_to_process++] = 
 
-    //edits[compute_merge_data.edits_to_process++] = {
-    //    .position = { 0.0f, 0.0f, 0.0f },
-    //    .primitive = SD_SPHERE,
-    //    .color = { 0.0, 1.0, 0.0 },
-    //    .operation = OP_UNION,
-    //    .dimensions = { 0.01f, 0.01f, 0.01f, 0.01f },
-    //    .rotation = { 0.f, 0.f, 0.f, 1.f },
-    //    .parameters = { 0.0, -1.0, 0.0, 0.0 },
-    //};
+   /* edits[compute_merge_data.edits_to_process++] = {
+        .position = { 0.0f, 0.0f, 0.0f },
+        .primitive = SD_SPHERE,
+        .color = { 0.0, 1.0, 0.0 },
+        .operation = OP_UNION,
+        .dimensions = { 0.05f, 0.05f, 0.05f, 0.05f },
+        .rotation = { 0.f, 0.f, 0.f, 1.f },
+        .parameters = { 0.0, -1.0, 0.0, 0.0 },
+    };*/
 
     //edits[compute_merge_data.edits_to_process++] = {
     //    .position = { -0.1, 0.0, 0.0 },
@@ -125,6 +125,8 @@ void RaymarchingRenderer::compute_octree()
     }
 
     RenderdocCapture::start_capture_frame();
+
+    std::cout << edits[0] << std::endl;
 
     // Initialize a command encoder
     WGPUCommandEncoderDescriptor encoder_desc = {};

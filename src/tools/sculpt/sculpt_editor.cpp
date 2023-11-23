@@ -229,18 +229,18 @@ void SculptEditor::update(float delta_time)
         translation_diff = {};
     }
 
-    // Update edit dimensions
-    {
-        float size_multiplier = Input::get_thumbstick_value(HAND_RIGHT).y * delta_time * 0.1f;
-        dimensions_dirty |= (fabsf(size_multiplier) > 0.f);
-        glm::vec3 new_dimensions = glm::clamp(size_multiplier + glm::vec3(edit_to_add.dimensions), 0.001f, 0.1f);
-        edit_to_add.dimensions = glm::vec4(new_dimensions, edit_to_add.dimensions.w);
+    //// Update edit dimensions
+    //{
+    //    float size_multiplier = Input::get_thumbstick_value(HAND_RIGHT).y * delta_time * 0.1f;
+    //    dimensions_dirty |= (fabsf(size_multiplier) > 0.f);
+    //    glm::vec3 new_dimensions = glm::clamp(size_multiplier + glm::vec3(edit_to_add.dimensions), 0.001f, 0.1f);
+    //    edit_to_add.dimensions = glm::vec4(new_dimensions, edit_to_add.dimensions.w);
 
-        // Update primitive specific size
-        size_multiplier = Input::get_thumbstick_value(HAND_LEFT).y * delta_time * 0.1f;
-        edit_to_add.dimensions.w = glm::clamp(size_multiplier + edit_to_add.dimensions.w, 0.001f, 0.1f);
-        dimensions_dirty |= (fabsf(size_multiplier) > 0.f);
-    }
+    //    // Update primitive specific size
+    //    size_multiplier = Input::get_thumbstick_value(HAND_LEFT).y * delta_time * 0.1f;
+    //    edit_to_add.dimensions.w = glm::clamp(size_multiplier + edit_to_add.dimensions.w, 0.001f, 0.1f);
+    //    dimensions_dirty |= (fabsf(size_multiplier) > 0.f);
+    //}
 
     // Update current edit properties...
 
