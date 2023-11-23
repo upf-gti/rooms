@@ -316,7 +316,7 @@ fn opSmoothSubtractionInterval( s1 : vec2f, s2 : vec2f, k : f32 ) -> vec2f
 
 fn opSubtractionInterval( s1 : vec2f, s2 : vec2f ) -> vec2f
 {
-    return imax( s1, iinv(s2) );
+   return imax(s1, ineg(s2));
 }
 
 fn sphere_interval(p : mat3x3f, offset : vec3f, r : f32) -> vec2f

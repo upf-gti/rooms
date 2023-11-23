@@ -110,6 +110,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         is_smooth_union |= current_edit.operation == OP_SMOOTH_UNION;
         
         surface_interval = eval_edit_interval(x_range, y_range, z_range, surface_interval, current_edit, &current_edit_surface);
+        current_edit.operation = 0;
         new_edits_surface_interval = eval_edit_interval(x_range, y_range, z_range, new_edits_surface_interval, current_edit, &current_edit_surface);
 
         // Check if the edit affects the current voxel, if so adds it to the packed list
@@ -152,9 +153,13 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     if (level < merge_data.max_octree_depth) {
 
         // If there is no global surface at the current block
-        if ((surface_interval.x > 0.0 || surface_interval.y < 0.0)) {
+        if (false) {
             // Mark the block as empty
             octree.data[octree_index].tile_pointer = 0u;
+
+            if (surface_interval.y < 0.0) {
+                octree.data[octree_index].tile_pointer = INTERIOR_BRICK_FLAG;
+            }
 
             // If the current block is filled, clean his children
             if (is_current_brick_filled) {
@@ -169,7 +174,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             
         } else
         // If there is surface of the new edits in the block 
-        if ((surface_interval.x < 0.0 && surface_interval.y > 0.0) && (new_edits_surface_interval.x < 0.0 && new_edits_surface_interval.y > 0.0)) {
+        if  (new_edits_surface_interval.x < 0.0) {
             // Subdivide
             // Increase the number of children from the current level
             let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 8);
