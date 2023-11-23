@@ -120,6 +120,7 @@ void MeshRenderer::init_render_mesh_pipelines()
 
     Pipeline::register_render_pipeline(render_mesh_shader, color_target, true);
     Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/mesh_texture.wgsl"), color_target, true);
+    Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/mesh_texture_cube.wgsl"), color_target, true);
     Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/mesh_transparent.wgsl"), color_target, true, WGPUCullMode_Back);
     Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/mesh_outline.wgsl"), color_target, true, WGPUCullMode_Front);
     Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/mesh_grid.wgsl"), color_target, true);
