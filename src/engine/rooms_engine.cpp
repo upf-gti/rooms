@@ -54,19 +54,8 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
         EntityMesh* cube = parse_mesh("data/meshes/cube.obj");
         cube->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_texture_cube.wgsl"));
         cube->set_material_diffuse(cube_texture);
+        cube->set_material_priority(2);
         entities.push_back(cube);
-
-        /*
-            The same for the rest of filtered levels.
-            They can be saved in mipmap storage
-        */
-
-        /*for (int i = 1; i < N_FACES; i++)
-        {
-            sHDRELevel mip = hdre->getLevel(i);
-            Texture* mip_texture = new Texture();
-            mip_texture->load_from_data(hdre->name + "@" + std::to_string(i), mip.width, mip.height, mip.faces, format, 6);
-        }*/
     }
 
 	return error;

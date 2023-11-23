@@ -310,7 +310,7 @@ void RoomsRenderer::init_render_quad_pipeline()
     color_target.blend = &blend_state;
     color_target.writeMask = WGPUColorWriteMask_All;
 
-    render_quad_pipeline.create_render(render_quad_shader, color_target, true);
+    render_quad_pipeline.create_render(render_quad_shader, color_target);
 }
 
 void RoomsRenderer::init_render_quad_bind_groups()
