@@ -14,11 +14,6 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 
     sculpt_editor.initialize();
 
-    //EntityMesh* torus = parse_mesh("data/meshes/torus/torus.obj");
-    //torus->scale(glm::vec3(0.25));
-    //torus->translate(glm::vec3(-1.0f, 0.0, 0.0));
-    //entities.push_back(torus);
-
     //EntityMesh* cube = parse_mesh("data/meshes/cube/cube.obj");
     //cube->scale(glm::vec3(0.25));
     //cube->translate(glm::vec3(1.0f, 0.0, 0.0));
@@ -56,6 +51,13 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
         cube->set_material_diffuse(cube_texture);
         cube->set_material_priority(2);
         entities.push_back(cube);
+
+        // test pbr
+        EntityMesh* test = parse_mesh("data/meshes/cube/cube.obj");
+        test->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_pbr.wgsl"));
+        test->set_material_diffuse(cube_texture); // by now use albedo slot as the irradiance texture
+        test->scale(glm::vec3(0.15));
+        entities.push_back(test);
     }
 
 	return error;
@@ -72,6 +74,9 @@ void RoomsEngine::update(float delta_time)
 {
     RoomsRenderer* renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     entities[0]->set_translation(renderer->get_camera()->get_eye());
+
+    // test
+    // entities[1]->rotate(0.8f * delta_time, glm::vec3(0.0f, 0.0f, 1.0f));
 
 	Engine::update(delta_time);
 
