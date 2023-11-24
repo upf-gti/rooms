@@ -152,27 +152,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
     if (level < merge_data.max_octree_depth) {
 
-        // If there is no global surface at the current block
-        if (false) {
-            // Mark the block as empty
-            octree.data[octree_index].tile_pointer = 0u;
-
-            if (surface_interval.y < 0.0) {
-                octree.data[octree_index].tile_pointer = INTERIOR_BRICK_FLAG;
-            }
-
-            // If the current block is filled, clean his children
-            if (is_current_brick_filled) {
-                // Add to the index the childres's octant id, and save it for the next pass
-                for (var i : u32 = 0; i < 8; i++) {
-                    let child_octant_id : u32 = octant_id | (i << (3 * level));
-                    let child_octree_index : u32 = child_octant_id + u32((pow(8.0, f32(level + 1)) - 1) / 7);
-                    let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 1);
-                    octant_usage_write[prev_counter] = child_octant_id;
-                }
-            }
-            
-        } else
         // If there is surface of the new edits in the block 
         if  (new_edits_surface_interval.x < 0.0) {
             // Subdivide
@@ -188,41 +167,78 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             octree.data[octree_index].tile_pointer = FILLED_BRICK_FLAG;
         }
     } else {
-        if (surface_interval.x > 0.0 || surface_interval.y < 0.0) {
-            // Delete brick
-            if (is_current_brick_filled) {
-                let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
-                let instance_index : u32 = octree.data[octree_index].tile_pointer & 0x3FFFFFFFu;
-                indirect_brick_removal.brick_removal_buffer[brick_to_delete_idx] = instance_index;
-                octree_proxy_data.instance_data[instance_index].in_use = 0u;
-                octree.data[octree_index].tile_pointer = 0u;
-            }
-
-            if (surface_interval.y < 0.0) {
-                // Mark brick as interior (inside a surface)
-                octree.data[octree_index].tile_pointer = INTERIOR_BRICK_FLAG;
-            }
-        } else if ((surface_interval.x < 0.0 && surface_interval.y > 0.0) && (new_edits_surface_interval.x < 0.0 && new_edits_surface_interval.y > 0.0)) {
-            //
-            let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 1);
-
-            if ((FILLED_BRICK_FLAG & octree.data[octree_index].tile_pointer) != FILLED_BRICK_FLAG) {
-                // Create a brick
-                let brick_spot_id = atomicSub(&octree_proxy_data.atlas_empty_bricks_counter, 1u) - 1u;
-                let instance_index : u32 = octree_proxy_data.atlas_empty_bricks_buffer[brick_spot_id];
-                octree_proxy_data.instance_data[instance_index].position = octant_center;
-                octree_proxy_data.instance_data[instance_index].atlas_tile_index = instance_index;
-                octree_proxy_data.instance_data[instance_index].octree_parent_id = octree_index;
-                octree_proxy_data.instance_data[instance_index].in_use = 1u;
-
-                if ((octree.data[octree_index].tile_pointer & INTERIOR_BRICK_FLAG) == INTERIOR_BRICK_FLAG) {
-                    octree.data[octree_index].tile_pointer = instance_index | INTERIOR_BRICK_FLAG;
-                } else {
-                    octree.data[octree_index].tile_pointer = instance_index;
+        if (edits.data[0].operation == 0) {
+            if (surface_interval.x > 0.0 || surface_interval.y < 0.0) {
+                // Delete brick
+                if (is_current_brick_filled) {
+                    let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
+                    let instance_index : u32 = octree.data[octree_index].tile_pointer & 0x3FFFFFFFu;
+                    indirect_brick_removal.brick_removal_buffer[brick_to_delete_idx] = instance_index;
+                    octree_proxy_data.instance_data[instance_index].in_use = 0u;
+                    octree.data[octree_index].tile_pointer = 0u;
+                    octree.data[octree_index].octant_center_distance = vec2f(10000.0, 10000.0);
                 }
+
+                if (surface_interval.y < 0.0) {
+                    // Mark brick as interior (inside a surface)
+                    octree.data[octree_index].tile_pointer = INTERIOR_BRICK_FLAG;
+                    octree.data[octree_index].octant_center_distance = vec2f(-10000.0, -10000.0);
+                }
+            } else if ((surface_interval.x < 0.0 && surface_interval.y > 0.0) && (new_edits_surface_interval.x < 0.0)) {
+                //
+                let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 1);
+
+                if ((FILLED_BRICK_FLAG & octree.data[octree_index].tile_pointer) != FILLED_BRICK_FLAG) {
+                    // Create a brick
+                    let brick_spot_id = atomicSub(&octree_proxy_data.atlas_empty_bricks_counter, 1u) - 1u;
+                    let instance_index : u32 = octree_proxy_data.atlas_empty_bricks_buffer[brick_spot_id];
+                    octree_proxy_data.instance_data[instance_index].position = octant_center;
+                    octree_proxy_data.instance_data[instance_index].atlas_tile_index = instance_index;
+                    octree_proxy_data.instance_data[instance_index].octree_parent_id = octree_index;
+                    octree_proxy_data.instance_data[instance_index].in_use = 1u;
+
+                    if ((octree.data[octree_index].tile_pointer & INTERIOR_BRICK_FLAG) == INTERIOR_BRICK_FLAG) {
+                        octree.data[octree_index].tile_pointer = instance_index | INTERIOR_BRICK_FLAG;
+                        octree.data[octree_index].octant_center_distance = vec2f(-10000.0, -10000.0);
+                    } else {
+                        octree.data[octree_index].tile_pointer = instance_index;
+                    }
+                }
+                
+                octant_usage_write[prev_counter] = octree_index;
             }
-            
-            octant_usage_write[prev_counter] = octree_index;
+        } else {
+            if ((new_edits_surface_interval.x < 0.0) && new_edits_surface_interval.y > 0.0) {
+                //
+                 if ((FILLED_BRICK_FLAG & octree.data[octree_index].tile_pointer) == FILLED_BRICK_FLAG) {
+                    let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 1);
+                    octant_usage_write[prev_counter] = octree_index;
+                } else if ((octree.data[octree_index].tile_pointer & INTERIOR_BRICK_FLAG) == INTERIOR_BRICK_FLAG) {
+                     // Create a brick
+                    let brick_spot_id = atomicSub(&octree_proxy_data.atlas_empty_bricks_counter, 1u) - 1u;
+                    let instance_index : u32 = octree_proxy_data.atlas_empty_bricks_buffer[brick_spot_id];
+                    octree_proxy_data.instance_data[instance_index].position = octant_center;
+                    octree_proxy_data.instance_data[instance_index].atlas_tile_index = instance_index;
+                    octree_proxy_data.instance_data[instance_index].octree_parent_id = octree_index;
+                    octree_proxy_data.instance_data[instance_index].in_use = 1u;
+                    octree.data[octree_index].tile_pointer = instance_index | INTERIOR_BRICK_FLAG;
+                    let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 1);
+                    octant_usage_write[prev_counter] = octree_index;
+                }
+            } else if (new_edits_surface_interval.y < 0.0) {
+                if ((FILLED_BRICK_FLAG & octree.data[octree_index].tile_pointer) == FILLED_BRICK_FLAG) {
+                    let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
+                    let instance_index : u32 = octree.data[octree_index].tile_pointer & 0x3FFFFFFFu;
+                    indirect_brick_removal.brick_removal_buffer[brick_to_delete_idx] = instance_index;
+                    octree_proxy_data.instance_data[instance_index].in_use = 0u;
+                    octree.data[octree_index].tile_pointer = 0u;
+                    //octree.data[octree_index].octant_center_distance = vec2f(10000.0, 10000.0);
+                } else if ((octree.data[octree_index].tile_pointer & INTERIOR_BRICK_FLAG) == INTERIOR_BRICK_FLAG) {
+                    octree.data[octree_index].tile_pointer = 0u;
+                }
+                
+            }
         }
+        
     }
 }
