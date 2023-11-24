@@ -86,6 +86,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     // let cull_distance : f32 = level_half_size * SQRT_3 * 1.5;
 
     var is_smooth_union : bool = false;
+    var is_smooth_substract : bool = false;
 
     // Check the edits in the parent, and fill its own list with the edits that affect this child
     for (var i : u32 = 0; i < edit_culling_count[parent_octree_index] ; i++) {
@@ -108,7 +109,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         var current_edit : Edit = edits.data[current_unpacked_edit_idx];
 
         is_smooth_union |= current_edit.operation == OP_SMOOTH_UNION;
-        
+        is_smooth_substract |= current_edit.operation == OP_SMOOTH_SUBSTRACTION;
+
         surface_interval = eval_edit_interval(x_range, y_range, z_range, surface_interval, current_edit, &current_edit_surface);
         current_edit.operation = 0;
         new_edits_surface_interval = eval_edit_interval(x_range, y_range, z_range, new_edits_surface_interval, current_edit, &current_edit_surface);
@@ -135,16 +137,20 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     }
 
     
-    //var surface_interval_smooth : vec2f = surface_interval;
+    var surface_interval_smooth : vec2f = surface_interval;
 
     if (is_smooth_union) {
-        //surface_interval_smooth += vec2f(-SMOOTH_FACTOR * 0.25, 10.0 / 512.0);
-    } 
-    // else {
-    //     surface_interval_smooth += vec2f(SMOOTH_FACTOR * 0.5, SMOOTH_FACTOR * 0.5);
-    // }
 
-    octree.data[octree_index].octant_center_distance = surface_interval;
+        surface_interval_smooth += vec2f(-SMOOTH_FACTOR * 0.25, 10.0 / 512.0);
+        new_edits_surface_interval += vec2f(-SMOOTH_FACTOR * 0.25, 10.0 / 512.0);
+    } 
+    else 
+    if (is_smooth_substract) {
+        // surface_interval_smooth += vec2f(-SMOOTH_FACTOR * 0.25, 10.0 / 512.0);
+        // new_edits_surface_interval += vec2f(-SMOOTH_FACTOR * 0.25, 10.0 / 512.0);
+    }
+
+    octree.data[octree_index].octant_center_distance = surface_interval_smooth;
 
     edit_culling_count[octree_index] = edit_counter;
 
@@ -167,8 +173,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             octree.data[octree_index].tile_pointer = FILLED_BRICK_FLAG;
         }
     } else {
-        if (edits.data[0].operation == 0) {
-            if (surface_interval.x > 0.0 || surface_interval.y < 0.0) {
+        if (edits.data[0].operation == 0 || edits.data[0].operation == 4) {
+            if (surface_interval_smooth.x > 0.0 || surface_interval_smooth.y < 0.0) {
                 // Delete brick
                 if (is_current_brick_filled) {
                     let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
@@ -179,12 +185,12 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                     octree.data[octree_index].octant_center_distance = vec2f(10000.0, 10000.0);
                 }
 
-                if (surface_interval.y < 0.0) {
+                if (surface_interval_smooth.y < 0.0) {
                     // Mark brick as interior (inside a surface)
                     octree.data[octree_index].tile_pointer = INTERIOR_BRICK_FLAG;
                     octree.data[octree_index].octant_center_distance = vec2f(-10000.0, -10000.0);
                 }
-            } else if ((surface_interval.x < 0.0 && surface_interval.y > 0.0) && (new_edits_surface_interval.x < 0.0)) {
+            } else if ((surface_interval_smooth.x < 0.0 && surface_interval_smooth.y > 0.0) && (new_edits_surface_interval.x < 0.0)) {
                 //
                 let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 1);
 
