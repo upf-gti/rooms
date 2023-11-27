@@ -91,6 +91,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
     var material : Material;
     material.albedo = sSurface.color;
+    material.roughness = 0.5;
+    material.metalness = 0.5;
     textureStore(write_material_sdf, texture_coordinates, vec4<u32>((pack_material(material))));
 
     //textureStore(write_sdf, texture_coordinates, vec4f(debug_surf.x, debug_surf.y, debug_surf.z, sSurface.distance));

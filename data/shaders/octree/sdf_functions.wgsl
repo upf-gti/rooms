@@ -349,7 +349,7 @@ fn opSubtraction( s1 : Surface, s2 : Surface ) -> Surface
     var s2neg : Surface = s2;
     s2neg.distance = -s2neg.distance;
     var s : Surface = maxSurface( s1, s2neg );
-    s.color = s1.color;
+    //s.color = s1.color;
     return s;
 }
 
