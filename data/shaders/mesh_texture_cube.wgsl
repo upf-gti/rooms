@@ -1,4 +1,5 @@
 #include mesh_includes.wgsl
+#include pbr_functions.wgsl
 
 @group(0) @binding(0) var<storage, read> mesh_data : InstanceData;
 
@@ -26,27 +27,6 @@ struct FragmentOutput {
     @location(0) color: vec4f
 }
 
-// Uncharted 2 tone map
-// see: http://filmicworlds.com/blog/filmic-tonemapping-operators/
-fn tonemap_uncharted2_imp( color : vec3f ) -> vec3f
-{
-    let A = 0.15;
-    let B = 0.50;
-    let C = 0.10;
-    let D = 0.20;
-    let E = 0.02;
-    let F = 0.30;
-    return ((color*(A*color+C*B)+D*E)/(color*(A*color+B)+D*F))-E/F;
-}
-
-fn tonemap_uncharted( c : vec3f ) -> vec3f
-{
-    let W = 11.2;
-    let color = tonemap_uncharted2_imp(c * 2.0);
-    let whiteScale = 1.0 / tonemap_uncharted2_imp( vec3f(W) );
-    return color * whiteScale;//LINEARtoSRGB(color * whiteScale);
-}
-
 @fragment
 fn fs_main(in: VertexOutput) -> FragmentOutput {
     
@@ -55,13 +35,10 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var out: FragmentOutput;
     var color : vec3f = textureSampleLevel(albedo_texture, texture_sampler, view, 0).rgb;
 
-    color = pow(color, vec3f(1.0/2.2));
-
     // simple reinhard
     // color = color / (color + vec3f(1.0));
     color = tonemap_uncharted(color);
 
     out.color = vec4f(color, 1.0);
-
     return out;
 }

@@ -5,8 +5,10 @@
 
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
 
-@group(2) @binding(0) var albedo_texture: texture_cube<f32>;
-@group(2) @binding(1) var texture_sampler : sampler;
+@group(2) @binding(0) var brdf_lut_texture: texture_2d<f32>;
+@group(2) @binding(1) var brdf_lut_sampler : sampler;
+@group(2) @binding(2) var irradiance_texture: texture_cube<f32>;
+@group(2) @binding(3) var irradiance_sampler: sampler;
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
@@ -27,7 +29,7 @@ struct FragmentOutput {
     @location(0) color: vec4f
 }
 
-fn get_indirect_light( m : LitMaterial ) -> vec4f
+fn get_indirect_light( m : LitMaterial ) -> vec3f
 {
     var cos_theta : f32 = max(dot(m.normal, m.view_dir), 0.0);
 
@@ -40,25 +42,23 @@ fn get_indirect_light( m : LitMaterial ) -> vec4f
     var k_s : vec3f = F;
 
     var mip_index : f32 = m.roughness * 6.0;
-    var prefiltered_color : vec3f = textureSampleLevel(albedo_texture, texture_sampler, m.reflected_dir, mip_index).rgb;
-    prefiltered_color = pow(prefiltered_color, vec3f(1.0/2.2));
+    var prefiltered_color : vec3f = textureSampleLevel(irradiance_texture, irradiance_sampler, m.reflected_dir, mip_index).rgb;
+    //prefiltered_color = pow(prefiltered_color, vec3f(2.2));
 
-    let brdf_coords : vec2f = vec2f(cos_theta, 1.0 - m.roughness);
-    let brdf_lut : vec2f = vec2f(0.0);//txBrdf_lUT.Sample(clampLinear, vec2f(cos_theta, 1.0 - m.roughness)).xy;
+    let brdf_coords : vec2f = vec2f(cos_theta, m.roughness);
+    let brdf_lut : vec2f = textureSample(brdf_lut_texture, brdf_lut_sampler, brdf_coords).rg;
 
     var specular : vec3f = prefiltered_color * (F * brdf_lut.x + brdf_lut.y);
 
     // Diffuse sample: get last prefiltered mipmap
-    var irradiance : vec3f = textureSampleLevel(albedo_texture, texture_sampler, m.reflected_dir, 6).rgb;
+    var irradiance : vec3f = textureSampleLevel(irradiance_texture, irradiance_sampler, m.reflected_dir, 6).rgb;
 
     // Diffuse color
     var k_d : vec3f = 1.0 - k_s;
     var diffuse : vec3f = k_d * m.diffuse_color * irradiance;
 
     // Combine factors and add AO
-    var ibl : vec3f = (diffuse + specular) * m.ao;
-
-    return vec4f(ibl, 1.0);
+    return (diffuse + specular) * m.ao;
 }
 
 @fragment
@@ -74,7 +74,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     m.albedo = in.color;
     m.emissive = vec3f(0.0);
     m.metallic = 0.7;
-    m.roughness = 0.4;
+    m.roughness = 0.8;
     m.diffuse_color = m.albedo * ( 1.0 - m.metallic );
     m.specular_color = mix(vec3f(0.04), m.albedo, m.metallic);
     m.ao = 1.0;
@@ -83,11 +83,13 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     // var distance : f32 = length(light_position - m.pos);
     // var attenuation : f32 = pow(1.0 - saturate(distance/light_max_radius), 1.5);
-    var final_color : vec4f = get_direct_light( m, vec3f(1.0), 1.0 );
+    var final_color : vec3f = vec3f(0.0); 
+    //final_color += get_direct_light( m, vec3f(1.0), 1.0 );
     final_color += get_indirect_light(m);
 
-    // out.color = vec4f(pow(final_color.rgb, vec3f(2.2)), 1.0);
-    out.color = vec4f(pow(final_color.rgb, vec3f(2.2)), 1.0);
+    final_color = tonemap_uncharted(pow(final_color, vec3f(2.2)));
+
+    out.color = vec4f(final_color, 1.0);
 
     return out;
 }

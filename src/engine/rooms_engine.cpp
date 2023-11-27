@@ -53,9 +53,11 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
         entities.push_back(cube);
 
         // test pbr
-        EntityMesh* test = parse_mesh("data/meshes/cube/cube.obj");
+        EntityMesh* test = parse_mesh("data/meshes/helmet.obj");
         test->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_pbr.wgsl"));
-        test->set_material_diffuse(cube_texture); // by now use albedo slot as the irradiance texture
+        test->set_material_diffuse(RendererStorage::get_texture("data/textures/ibl_brdf_lut.png"));
+        test->set_material_irradiance(cube_texture);
+        test->translate({ 0.f, 1.f, -0.5f });
         test->scale(glm::vec3(0.15));
         entities.push_back(test);
     }
