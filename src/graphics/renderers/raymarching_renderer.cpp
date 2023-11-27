@@ -215,7 +215,7 @@ void RaymarchingRenderer::compute_octree()
 
     wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_brick_copy_bind_group, 0, nullptr);
 
-    wgpuComputePassEncoderDispatchWorkgroups(compute_pass, octants_max_size, 1, 1);
+    wgpuComputePassEncoderDispatchWorkgroups(compute_pass, octants_max_size / (8u*8u*8u), 1, 1);
 
     // Finalize compute_raymarching pass
     wgpuComputePassEncoderEnd(compute_pass);
