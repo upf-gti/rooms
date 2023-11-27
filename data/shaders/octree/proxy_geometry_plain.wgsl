@@ -121,6 +121,40 @@ fn ray_AABB_intersection_distance(ray_origin : vec3f,
 	return min(min(tmax.x, tmax.y), tmax.z);
 }
 
+fn sample_color(pos : vec3u) -> Material {
+    let sample : u32 = textureLoad(read_material_sdf, pos, 0).r;
+
+    return unpack_material(sample);
+}
+
+// From: http://paulbourke.net/miscellaneous/interpolation/
+fn interpolate_material(pos : vec3f) -> Material {
+    var result : Material;
+
+    let pos_f_part : vec3f = abs(fract(pos));
+    let pos_i_part : vec3u = vec3u(floor(pos)) - vec3u(1);
+
+    let index000 : vec3u = pos_i_part;
+    let index010 : vec3u = vec3u(pos_i_part.x + 0, pos_i_part.y + 1, pos_i_part.z + 0)  ;
+    let index100 : vec3u = vec3u(pos_i_part.x + 1, pos_i_part.y + 0, pos_i_part.z + 0)  ;
+    let index001 : vec3u = vec3u(pos_i_part.x + 0, pos_i_part.y + 0, pos_i_part.z + 1)  ;
+    let index101 : vec3u = vec3u(pos_i_part.x + 1, pos_i_part.y + 0, pos_i_part.z + 1)  ;
+    let index011 : vec3u = vec3u(pos_i_part.x + 0, pos_i_part.y + 1, pos_i_part.z + 1)  ;
+    let index110 : vec3u = vec3u(pos_i_part.x + 1, pos_i_part.y + 1, pos_i_part.z + 0)  ;
+    let index111 : vec3u = vec3u(pos_i_part.x + 1, pos_i_part.y + 1, pos_i_part.z + 1)  ;
+
+    result = Material_mult_by(sample_color(index000), (1.0 - pos_f_part.x) * (1.0 - pos_f_part.y) * (1.0 - pos_f_part.z));
+    result = Material_sum_Material(result, Material_mult_by(sample_color(index100), (pos_f_part.x) * (1.0 - pos_f_part.y) * (1.0 - pos_f_part.z)));
+    result = Material_sum_Material(result, Material_mult_by(sample_color(index010), (1.0 - pos_f_part.x) * (pos_f_part.y) * (1.0 - pos_f_part.z)));
+    result = Material_sum_Material(result, Material_mult_by(sample_color(index001), (1.0 - pos_f_part.x) * (1.0 - pos_f_part.y) * (pos_f_part.z)));
+    result = Material_sum_Material(result, Material_mult_by(sample_color(index101), (pos_f_part.x) * (1.0 - pos_f_part.y) * (pos_f_part.z)));
+    result = Material_sum_Material(result, Material_mult_by(sample_color(index011), (1.0 - pos_f_part.x) * (pos_f_part.y) * (pos_f_part.z)));
+    result = Material_sum_Material(result, Material_mult_by(sample_color(index110), (pos_f_part.x) * (pos_f_part.y) * (1.0 - pos_f_part.z)));
+    result = Material_sum_Material(result, Material_mult_by(sample_color(index111), (pos_f_part.x) * (pos_f_part.y) * (pos_f_part.z)));
+
+    return result;
+}
+
 fn sample_sdf(position : vec3f) -> Surface
 {
     let rot_p = rotate_point_quat(position - sculpt_data.sculpt_start_position, sculpt_data.sculpt_inv_rotation);
@@ -203,9 +237,11 @@ fn raymarch(ray_origin : vec3f, ray_origin_world : vec3f, ray_dir : vec3f, max_d
         let epsilon : f32 = 0.000001; // avoids flashing when camera inside sdf
         let proj_pos : vec4f = view_proj * vec4f(pos_world + ray_dir * epsilon, 1.0);
         depth = proj_pos.z / proj_pos.w;
-        let raw_color : vec4<u32> = textureLoad(read_material_sdf, vec3<u32>(pos * SDF_RESOLUTION), 0);
 
-        let material : Material = unpack_material(u32(raw_color.r));
+        let normal : vec3f = estimate_normal(pos);
+
+        let material : Material = interpolate_material(pos * SDF_RESOLUTION);
+        //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
         //return vec4f(surface.color, depth);
 		return vec4f(blinn_phong(-ray_dir, pos, pos_world, lightPos + lightOffset, ambientColor, material.albedo), depth);
 	}
