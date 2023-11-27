@@ -35,6 +35,42 @@
             - The Culling Lists: where the actual lists are stored as a single buffer, accessed as a 2D array:
                     edit_culling_lists[in_list_word_index + octree_index * word_list_size] <- word_list_size is 64 here
             - Culling count: a buffer with the same strucutre as the octree, that stores the number of edits in each node
+
+    Inside bricks:
+        - For a correct representation, we would need to keep bricks inside the scuplture, in order for the substraction to work.
+        - However, this seemed like a wastefull memory usage.
+        - In order to prevent this, we found that marking in the octree the leaves that are inside the SDF as INTERIOR_BRICKS, and
+          when substracting and needing to fill the inside bricks, we just set the default distance of 1000.0 of the default SDF to
+          -1000.0 according to the flag.
+        - This proved sufficient for this usecase. 
+
+    Interval Arithmetic
+        - In order to subdivide the octree and cull the edits in an accurate manner, we use a different version of the SDF function,
+          that are built using interval arithmetic. You input a range in the function and they return the lowest and the biggest values
+          that the function (in this case, the distance) can have in that interval.
+        - We can use this in order to determine if there is surface in a particular area of our evaluation area: If the lowest value is less
+          than 0, we know that in this area the distance is negative, and that means that there is AT LEAST a bit of surface in that block; 
+          and we can subdivide in that area.
+        
+    SDF Exactness & boundness:
+        - However when evaluating we found issues with SDF exactness. Some SDF are exact, and some operations also returns an exact SDF.
+        - But, for example, Substraction results in a bound SDF, which means in practice that the propagation of the change in the distance
+          is not correct; being only correct near where the operation or de SDF was placed.
+        - This is fine for rendering, since the distances are "more correct" the closer you are, but in subdivision, this leads to incorrect
+          culling. This is because due the nature of interval arithmetic, having an "incorrectly propagated" distance does not really change
+          the minum and maximun interval in an area; unless it is a really big operation, slightly less bigger than the evaluationg surface.
+        - In order to counter-meassure this, we subdivide using the incomming edits as exact Union operations, whose distances propagate 
+          correctly (called new_edits).
+        - Subdivision happens only on the area that is inside or along the surface of the incoming edits.
+        - On the last layer, where we decide which brick do we write, delete or re-write, we decide based on the type of edit:
+            - If its an union, we delete all bricks iside the resulting SDF, end write/re-evaluate the bricks on the surface of the resulting SDF.
+            - If its a substraction, we delete all bricks inside the new_edits, and only create/re-evaluate bricks on the intersection of the 
+              new_edits and the resulting SDF.
+
+
+    TODO:
+     - Redo edit culling with interval arithmetic.
+     - Union operation interior brick check
 */
 
 @compute @workgroup_size(1, 1, 1)
@@ -76,7 +112,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         octant_center += level_half_size * OFFSET_LUT[(octant_id >> (3 * (i - 1))) & 0x7];
     }
 
-    var surface_interval : vec2f = (octree.data[octree_index].octant_center_distance);
+    var new_edits_surface_interval : vec2f = vec2f(10000.0, 10000.0);
+    var surface_interval = (octree.data[octree_index].octant_center_distance);
     var current_edit_surface : vec2f;
     var edit_counter : u32 = 0;
 
@@ -85,6 +122,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     // let cull_distance : f32 = level_half_size * SQRT_3 * 1.5;
 
     var is_smooth_union : bool = false;
+    var is_smooth_substract : bool = false;
 
     // Check the edits in the parent, and fill its own list with the edits that affect this child
     for (var i : u32 = 0; i < edit_culling_count[parent_octree_index] ; i++) {
@@ -104,11 +142,14 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         let y_range : vec2f = vec2f(octant_center.y - level_half_size, octant_center.y + level_half_size);
         let z_range : vec2f = vec2f(octant_center.z - level_half_size, octant_center.z + level_half_size);
 
-        let current_edit : Edit = edits.data[current_unpacked_edit_idx];
+        var current_edit : Edit = edits.data[current_unpacked_edit_idx];
 
         is_smooth_union |= current_edit.operation == OP_SMOOTH_UNION;
-        
+        is_smooth_substract |= current_edit.operation == OP_SMOOTH_SUBSTRACTION;
+
         surface_interval = eval_edit_interval(x_range, y_range, z_range, surface_interval, current_edit, &current_edit_surface);
+        current_edit.operation = 0;
+        new_edits_surface_interval = eval_edit_interval(x_range, y_range, z_range, new_edits_surface_interval, current_edit, &current_edit_surface);
 
         // Check if the edit affects the current voxel, if so adds it to the packed list
         if (true) {
@@ -135,11 +176,26 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     var surface_interval_smooth : vec2f = surface_interval;
 
     if (is_smooth_union) {
+
         surface_interval_smooth += vec2f(-SMOOTH_FACTOR * 0.25, 10.0 / 512.0);
+        new_edits_surface_interval += vec2f(-SMOOTH_FACTOR * 0.25, 10.0 / 512.0);
     } 
-    // else {
-    //     surface_interval_smooth += vec2f(SMOOTH_FACTOR * 0.5, SMOOTH_FACTOR * 0.5);
-    // }
+    else 
+    if (is_smooth_substract) {
+        // surface_interval_smooth += vec2f(-SMOOTH_FACTOR * 0.25, 10.0 / 512.0);
+        // new_edits_surface_interval += vec2f(-SMOOTH_FACTOR * 0.25, 10.0 / 512.0);
+    }
+
+    let global_surface_inside : bool = surface_interval_smooth.y < 0.0;
+    let global_surface_outside : bool = surface_interval_smooth.x > 0.0;
+    let global_surface_intersection : bool = surface_interval_smooth.x < 0.0 && surface_interval_smooth.y > 0.0;
+
+    let local_surface_inside : bool = new_edits_surface_interval.y < 0.0;
+    let local_surface_outside : bool = new_edits_surface_interval.x > 0.0;
+    let local_surface_intersection : bool = new_edits_surface_interval.x < 0.0 && new_edits_surface_interval.y > 0.0;
+ 
+    let is_current_brick_filled : bool = (octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG;
+    let is_interior_brick : bool = (octree.data[octree_index].tile_pointer & INTERIOR_BRICK_FLAG) == INTERIOR_BRICK_FLAG;
 
     octree.data[octree_index].octant_center_distance = surface_interval_smooth;
 
@@ -147,24 +203,9 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
     if (level < merge_data.max_octree_depth) {
 
-        // Outside the surface, check if children have bricks
-        if (surface_interval_smooth.x > 0.0 ) {
-            // Add to the index the childres's octant id, and save it for the next pass
-            for (var i : u32 = 0; i < 8; i++) {
-                let child_octant_id : u32 = octant_id | (i << (3 * level));
-                let child_octree_index : u32 = child_octant_id + u32((pow(8.0, f32(level + 1)) - 1) / 7);
-                if ((octree.data[child_octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG) {
-                    let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 1);
-                    octant_usage_write[prev_counter] = child_octant_id;
-                }
-            }
-
-            octree.data[octree_index].tile_pointer = 0u;
-            octree.data[octree_index].octant_center_distance = vec2f(10000.0, 10000.0);
-        }
-        // inside or ambiguous, subdivide 
-        else {
-            // For the 0<->(n-1) passes
+        // If there is surface of the new edits in the block 
+        if  (new_edits_surface_interval.x < 0.0) {
+            // Subdivide
             // Increase the number of children from the current level
             let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 8);
 
@@ -177,44 +218,85 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             octree.data[octree_index].tile_pointer = FILLED_BRICK_FLAG;
         }
     } else {
-
-        // Inside or outside the surface
-        if (surface_interval_smooth.y < 0.0 || surface_interval_smooth.x > 0.0) {
-            if ((FILLED_BRICK_FLAG & octree.data[octree_index].tile_pointer) == FILLED_BRICK_FLAG) {
-                let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
-
-                let instance_index : u32 = octree.data[octree_index].tile_pointer & 0x3FFFFFFFu;
-                indirect_brick_removal.brick_removal_buffer[brick_to_delete_idx] = instance_index;
-                octree.data[octree_index].tile_pointer = 0u;
-            }
-
-            if (surface_interval_smooth.y < 0.0) {
-                // Mark brick as interior (inside a surface)
-                octree.data[octree_index].tile_pointer = INTERIOR_BRICK_FLAG;
-            }
-        }
-        // ambiguous, subdivide 
-        else {
-            // For the N pass, just send the leaves, to the writing to texture pass
-            let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 1);
-
-            // if FILLED_BRICK_FLAG is set, there is already a tile in the octree, if not, we allocate one
-            if ((FILLED_BRICK_FLAG & octree.data[octree_index].tile_pointer) != FILLED_BRICK_FLAG) {
-                let brick_spot_id = atomicSub(&octree_proxy_data.atlas_empty_bricks_counter, 1u) - 1u;
-                let instance_index : u32 = octree_proxy_data.atlas_empty_bricks_buffer[brick_spot_id];
-                octree_proxy_data.instance_data[instance_index].position = octant_center;
-                octree_proxy_data.instance_data[instance_index].atlas_tile_index = instance_index;
-                octree_proxy_data.instance_data[instance_index].octree_parent_id = octree_index;
-                octree_proxy_data.instance_data[instance_index].in_use = 0u;
-
-                if ((octree.data[octree_index].tile_pointer & INTERIOR_BRICK_FLAG) == INTERIOR_BRICK_FLAG) {
-                    octree.data[octree_index].tile_pointer = instance_index | INTERIOR_BRICK_FLAG;
-                } else {
-                    octree.data[octree_index].tile_pointer = instance_index;
+        // In the case that the incomming edits's operation is either Add or Smooth Add
+        if (edits.data[0].operation == OP_UNION || edits.data[0].operation == OP_SMOOTH_UNION) {
+            // IF ITS A UNION OPERATION ================
+            if (global_surface_outside || global_surface_inside) {
+                // if is inside or outside the resulting SDF, we delete the brick
+                if (is_current_brick_filled) {
+                    let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
+                    let instance_index : u32 = octree.data[octree_index].tile_pointer & 0x3FFFFFFFu;
+                    indirect_brick_removal.brick_removal_buffer[brick_to_delete_idx] = instance_index;
+                    octree_proxy_data.instance_data[instance_index].in_use = 0u;
+                    octree.data[octree_index].tile_pointer = 0u;
+                    octree.data[octree_index].octant_center_distance = vec2f(10000.0, 10000.0);
                 }
-            }
 
-            octant_usage_write[prev_counter] = octree_index;
+                // In the case is inside, we mark it as an inside block
+                if (surface_interval_smooth.y < 0.0) {
+                    octree.data[octree_index].tile_pointer = INTERIOR_BRICK_FLAG;
+                    octree.data[octree_index].octant_center_distance = vec2f(-10000.0, -10000.0);
+                }
+            } else if (global_surface_intersection && (new_edits_surface_interval.x < 0.0)) {
+                // If its in theintersection of the surface of the resulting SDF and the inside of new_edits,
+                // This means to only select the newly updated bricks.
+                let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 1);
+
+                // In the case this is not filled, we create a new brick
+                if (!is_current_brick_filled) {
+                    let brick_spot_id = atomicSub(&octree_proxy_data.atlas_empty_bricks_counter, 1u) - 1u;
+                    let instance_index : u32 = octree_proxy_data.atlas_empty_bricks_buffer[brick_spot_id];
+                    octree_proxy_data.instance_data[instance_index].position = octant_center;
+                    octree_proxy_data.instance_data[instance_index].atlas_tile_index = instance_index;
+                    octree_proxy_data.instance_data[instance_index].octree_parent_id = octree_index;
+                    octree_proxy_data.instance_data[instance_index].in_use = 1u;
+
+                    // If it was interior, we mark it as such
+                    // TODO: This cannot happen now right??
+                    if (is_interior_brick) {
+                        octree.data[octree_index].tile_pointer = instance_index | INTERIOR_BRICK_FLAG;
+                        octree.data[octree_index].octant_center_distance = vec2f(-10000.0, -10000.0);
+                    } else {
+                        octree.data[octree_index].tile_pointer = instance_index;
+                    }
+                }
+                
+                octant_usage_write[prev_counter] = octree_index;
+            }
+        } else {
+            // IF ITS A SUBSTRACTION OPERATION ==============
+            if (local_surface_intersection) {
+                 if (is_current_brick_filled) {
+                    // If the block is int he surface of new_edits and is filled, update the brick
+                    let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 1);
+                    octant_usage_write[prev_counter] = octree_index;
+                } else if (is_interior_brick) {
+                    // If the block is int he surface of new_edits and an interior brick, create a new brick, since it is surface now
+                    let brick_spot_id = atomicSub(&octree_proxy_data.atlas_empty_bricks_counter, 1u) - 1u;
+                    let instance_index : u32 = octree_proxy_data.atlas_empty_bricks_buffer[brick_spot_id];
+                    octree_proxy_data.instance_data[instance_index].position = octant_center;
+                    octree_proxy_data.instance_data[instance_index].atlas_tile_index = instance_index;
+                    octree_proxy_data.instance_data[instance_index].octree_parent_id = octree_index;
+                    octree_proxy_data.instance_data[instance_index].in_use = 1u;
+                    octree.data[octree_index].tile_pointer = instance_index | INTERIOR_BRICK_FLAG;
+                    let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 1);
+                    octant_usage_write[prev_counter] = octree_index;
+                }
+            } else if (local_surface_inside) {
+                if (is_current_brick_filled) {
+                    // If its inside the new_edits, and the brick is filled, we delete it
+                    let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
+                    let instance_index : u32 = octree.data[octree_index].tile_pointer & 0x3FFFFFFFu;
+                    indirect_brick_removal.brick_removal_buffer[brick_to_delete_idx] = instance_index;
+                    octree_proxy_data.instance_data[instance_index].in_use = 0u;
+                    octree.data[octree_index].tile_pointer = 0u;
+                } else if (is_interior_brick) {
+                    // If its interior, we just remove the id, it is outside of teh surface
+                    octree.data[octree_index].tile_pointer = 0u;
+                }
+                
+            }
         }
+        
     }
 }

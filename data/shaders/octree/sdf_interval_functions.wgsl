@@ -166,6 +166,23 @@ fn ipow2_vec(a : vec2f) -> vec2f
 	// return select(select(vec2f(0.0,max(a.x*a.x,a.y*a.y)), vec2f((a*a).yx), (a.y<0.0)), vec2f(a*a), (a.x>=0.0));
 }
 
+fn iinv(a : vec2f) -> vec2f {
+    var inverted : vec2f;
+    if (a.x > 0.0 || a.y < 0.0) {
+        inverted = vec2f(1.0 / a.y, 1.0 / a.x);
+    } else if (a.x < 0.0 && a.y > 0.0) {
+        inverted =  vec2f(-10000.0, 10000.0);
+    } else if (a.y == 0.0) {
+        inverted =  vec2f(-10000.0, 1.0 / a.x);
+    } else {
+        inverted = vec2f(1.0 / a.y, 10000.0);
+    }
+
+
+    // Will never reach this
+    return inverted;
+}
+
 // only valid for even numbers
 fn ipow_vec(a : vec2f, n : f32) -> vec2f
 {
@@ -299,7 +316,7 @@ fn opSmoothSubtractionInterval( s1 : vec2f, s2 : vec2f, k : f32 ) -> vec2f
 
 fn opSubtractionInterval( s1 : vec2f, s2 : vec2f ) -> vec2f
 {
-    return imax( s1, ineg(s2) );
+   return imax(s1, ineg(s2));
 }
 
 fn sphere_interval(p : mat3x3f, offset : vec3f, r : f32) -> vec2f
