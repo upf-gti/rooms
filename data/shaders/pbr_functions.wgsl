@@ -96,7 +96,7 @@ struct LitMaterial
   reflected_dir : vec3f
 };
 
-fn get_direct_light( m : LitMaterial, shadow_factor : vec3f, attenuation : f32) -> vec4f
+fn get_direct_light( m : LitMaterial, shadow_factor : vec3f, attenuation : f32) -> vec3f
 {
     var N : vec3f = normalize(m.normal);
     var V : vec3f = normalize(m.view_dir);
@@ -129,7 +129,7 @@ fn get_direct_light( m : LitMaterial, shadow_factor : vec3f, attenuation : f32) 
 
     var final_color : vec3f = ((k_d * Diffuse(m.diffuse_color)) + specular) * radiance * NdotL;
 
-    return vec4f(final_color, 1.0);
+    return final_color;
 }
 
 // TOnemapping

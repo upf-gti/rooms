@@ -41,11 +41,11 @@ fn get_indirect_light( m : LitMaterial ) -> vec3f
     var F : vec3f = FresnelSchlickRoughness(cos_theta, m.specular_color, m.roughness);
     var k_s : vec3f = F;
 
-    var mip_index : f32 = m.roughness * 6.0;
+    var mip_index : f32 = m.roughness * 5.0;
     var prefiltered_color : vec3f = textureSampleLevel(irradiance_texture, irradiance_sampler, m.reflected_dir, mip_index).rgb;
     //prefiltered_color = pow(prefiltered_color, vec3f(2.2));
 
-    let brdf_coords : vec2f = vec2f(cos_theta, m.roughness);
+    let brdf_coords : vec2f = vec2f(cos_theta, 1.0 - m.roughness);
     let brdf_lut : vec2f = textureSample(brdf_lut_texture, brdf_lut_sampler, brdf_coords).rg;
 
     var specular : vec3f = prefiltered_color * (F * brdf_lut.x + brdf_lut.y);
@@ -55,7 +55,7 @@ fn get_indirect_light( m : LitMaterial ) -> vec3f
 
     // Diffuse color
     var k_d : vec3f = 1.0 - k_s;
-    var diffuse : vec3f = k_d * m.diffuse_color * irradiance;
+    var diffuse : vec3f = k_d * Diffuse(m.diffuse_color) * irradiance;
 
     // Combine factors and add AO
     return (diffuse + specular) * m.ao;
@@ -73,8 +73,8 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     m.normal = normalize(in.normal);
     m.albedo = in.color;
     m.emissive = vec3f(0.0);
-    m.metallic = 0.7;
-    m.roughness = 0.8;
+    m.metallic = 0.5;
+    m.roughness = 0.5;
     m.diffuse_color = m.albedo * ( 1.0 - m.metallic );
     m.specular_color = mix(vec3f(0.04), m.albedo, m.metallic);
     m.ao = 1.0;
@@ -84,7 +84,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     // var distance : f32 = length(light_position - m.pos);
     // var attenuation : f32 = pow(1.0 - saturate(distance/light_max_radius), 1.5);
     var final_color : vec3f = vec3f(0.0); 
-    //final_color += get_direct_light( m, vec3f(1.0), 1.0 );
+    final_color += get_direct_light(m, vec3f(1.0), 1.0);
     final_color += get_indirect_light(m);
 
     final_color = tonemap_uncharted(pow(final_color, vec3f(2.2)));

@@ -14,21 +14,13 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 
     sculpt_editor.initialize();
 
-    //EntityMesh* cube = parse_mesh("data/meshes/cube/cube.obj");
-    //cube->scale(glm::vec3(0.25));
-    //cube->translate(glm::vec3(1.0f, 0.0, 0.0));
-    //entities.push_back(cube);
+    std::string environment = "data/textures/environments/grass.hdre";
 
-    //EntityMesh* cube2 = parse_mesh("data/meshes/cube/cube.obj");
-    //cube2->scale(glm::vec3(0.25));
-    //cube2->translate(glm::vec3(4.0f, 0.0, 0.0));
-    //entities.push_back(cube2);
-
-    //TextEntity* text = new TextEntity("oppenheimer vs barbie");
-    //text->set_material_color(colors::GREEN);
-    //text->set_scale(0.25f)->generate_mesh();
-    //text->translate(glm::vec3(0.0f, 0.0, -5.0));
-    //entities.push_back(text);
+    skybox = parse_mesh("data/meshes/cube.obj");
+    skybox->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_texture_cube.wgsl"));
+    skybox->set_material_diffuse(RendererStorage::get_texture(environment));
+    skybox->scale(glm::vec3(100.f));
+    skybox->set_material_priority(2);
 
     //parse_scene("data/gltf_tests/Sponza/Sponza.gltf", entities);
 
@@ -38,8 +30,8 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     EntityMesh* test = parse_mesh("data/meshes/helmet.obj");
     test->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_pbr.wgsl"));
     test->set_material_diffuse(RendererStorage::get_texture("data/textures/ibl_brdf_lut.png"));
-    test->set_material_irradiance(RendererStorage::get_texture("data/textures/environments/grass.hdre"));
-    test->translate({ 0.f, 1.f, -0.5f });
+    test->set_material_irradiance(RendererStorage::get_texture(environment));
+    //test->translate({ 0.f, 1.f, -0.5f });
     test->scale(glm::vec3(0.15));
     entities.push_back(test);
 
@@ -55,6 +47,9 @@ void RoomsEngine::clean()
 
 void RoomsEngine::update(float delta_time)
 {
+    RoomsRenderer* renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
+    skybox->set_translation(renderer->get_camera()->get_eye());
+
 	Engine::update(delta_time);
 
     sculpt_editor.update(delta_time);
@@ -67,6 +62,8 @@ void RoomsEngine::update(float delta_time)
 
 void RoomsEngine::render()
 {
+    skybox->render();
+
 	for (auto entity : entities) {
 		entity->render();
 	}

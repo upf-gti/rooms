@@ -19,12 +19,10 @@ class RoomsRenderer : public Renderer {
 
     RaymarchingRenderer raymarching_renderer;
 
-    FlyoverCamera camera;
+    FlyoverCamera       camera;
 
-    EntityMesh* skybox = nullptr;
-
-    Mesh  quad_mesh;
-    Uniform         camera_uniform;
+    Mesh                quad_mesh;
+    Uniform             camera_uniform;
 
     struct sCameraData {
         glm::mat4x4 mvp;

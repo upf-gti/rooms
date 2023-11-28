@@ -7,6 +7,8 @@ class RoomsEngine : public Engine {
 
     std::vector<Entity*> entities;
 
+    EntityMesh* skybox = nullptr;
+
     SculptEditor sculpt_editor;
 
     bool export_scene();
