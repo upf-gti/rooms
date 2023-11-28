@@ -34,33 +34,14 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 
     // import_scene();
 
-    // Create instance of HDRE
-    HDRE* hdre = HDRE::Get("data/textures/environments/grass.hdre");
-
-    if (!hdre) {
-        spdlog::error("Can't load HDRE!");
-        error = 1;
-    }
-    else
-    {
-        Texture* cube_texture = new Texture();
-        cube_texture->load_from_hdre(hdre);
-
-        EntityMesh* cube = parse_mesh("data/meshes/cube.obj");
-        cube->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_texture_cube.wgsl"));
-        cube->set_material_diffuse(cube_texture);
-        cube->set_material_priority(2);
-        entities.push_back(cube);
-
-        // test pbr
-        EntityMesh* test = parse_mesh("data/meshes/helmet.obj");
-        test->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_pbr.wgsl"));
-        test->set_material_diffuse(RendererStorage::get_texture("data/textures/ibl_brdf_lut.png"));
-        test->set_material_irradiance(cube_texture);
-        test->translate({ 0.f, 1.f, -0.5f });
-        test->scale(glm::vec3(0.15));
-        entities.push_back(test);
-    }
+    // test pbr
+    EntityMesh* test = parse_mesh("data/meshes/helmet.obj");
+    test->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_pbr.wgsl"));
+    test->set_material_diffuse(RendererStorage::get_texture("data/textures/ibl_brdf_lut.png"));
+    test->set_material_irradiance(RendererStorage::get_texture("data/textures/environments/grass.hdre"));
+    test->translate({ 0.f, 1.f, -0.5f });
+    test->scale(glm::vec3(0.15));
+    entities.push_back(test);
 
 	return error;
 }
@@ -74,12 +55,6 @@ void RoomsEngine::clean()
 
 void RoomsEngine::update(float delta_time)
 {
-    RoomsRenderer* renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
-    entities[0]->set_translation(renderer->get_camera()->get_eye());
-
-    // test
-    // entities[1]->rotate(0.8f * delta_time, glm::vec3(0.0f, 0.0f, 1.0f));
-
 	Engine::update(delta_time);
 
     sculpt_editor.update(delta_time);

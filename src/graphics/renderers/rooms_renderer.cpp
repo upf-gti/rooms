@@ -1,4 +1,5 @@
 #include "rooms_renderer.h"
+#include "framework/scene/parse_scene.h"
 
 #ifdef XR_SUPPORT
 #include "dawnxr/dawnxr_internal.h"
@@ -30,6 +31,11 @@ int RoomsRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
     camera.set_perspective(glm::radians(45.0f), webgpu_context.render_width / static_cast<float>(webgpu_context.render_height), z_near, z_far);
     camera.look_at(glm::vec3(0.0f, 0.6f, 0.6f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     camera.set_mouse_sensitivity(0.004f);
+
+    skybox = parse_mesh("data/meshes/cube.obj");
+    skybox->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_texture_cube.wgsl"));
+    skybox->set_material_diffuse(RendererStorage::get_texture("data/textures/environments/grass.hdre"));
+    skybox->set_material_priority(2);
 
     return 0;
 }
@@ -70,6 +76,8 @@ void RoomsRenderer::update(float delta_time)
 
 void RoomsRenderer::render()
 {
+    skybox->render();
+
     prepare_instancing();
 
     if (!is_openxr_available) {
@@ -139,6 +147,9 @@ void RoomsRenderer::render_xr()
         camera_data.eye = xr_context.per_view_data[i].position;
         camera_data.mvp = xr_context.per_view_data[i].view_projection_matrix;
         camera_data.dummy = 0.f;
+
+        skybox->set_translation(camera_data.eye);
+
         wgpuQueueWriteBuffer(webgpu_context->device_queue, std::get<WGPUBuffer>(camera_uniform.data), 0, &(xr_context.per_view_data[i].view_projection_matrix), sizeof(sCameraData));
 
 #ifndef DISABLE_RAYMARCHER
@@ -397,7 +408,7 @@ void RoomsRenderer::init_mirror_pipeline()
         swapchain_bind_groups.push_back(webgpu_context.create_bind_group(uniforms, mirror_shader, 0));
     }
 
-    mirror_pipeline.create_render(mirror_shader, color_target);
+    mirror_pipeline.create_render(mirror_shader, color_target, { .uses_depth_buffer = false });
 }
 
 #endif
