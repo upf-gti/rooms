@@ -1,5 +1,7 @@
 #include ../mesh_includes.wgsl
 
+#define GAMMA_CORRECTION
+
 @group(0) @binding(0) var<storage, read> mesh_data : InstanceData;
 
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
@@ -40,6 +42,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var out: FragmentOutput;
 
     var color : vec4f = textureSample(albedo_texture, texture_sampler, in.uv);
+    color = pow(color, vec4f(2.2));
 
     if (color.a < 0.01) {
         discard;
@@ -72,6 +75,10 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     final_color = select( final_color, hover_color, d < 1.0 && ui_data.is_hovered > 0.0 );
 
-    out.color = vec4f(pow(final_color, vec3f(2.2)), color.a);
+    if (GAMMA_CORRECTION == 1) {
+        final_color = pow(final_color, vec3f(1.0 / 2.2));
+    }
+
+    out.color = vec4f(final_color, color.a);
     return out;
 }

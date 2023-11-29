@@ -30,23 +30,12 @@ class RoomsRenderer : public Renderer {
         float dummy;
     } camera_data;
 
-    // Render to screen
-    Pipeline        render_quad_pipeline = {};
-    Shader*         render_quad_shader = nullptr;
-
-    Texture         eye_textures[EYE_COUNT] = {};
     Texture         eye_depth_textures[EYE_COUNT] = {};
-
-    Uniform         eye_render_texture_uniform[EYE_COUNT] = {};
-
-    WGPUBindGroup   eye_render_bind_group[EYE_COUNT] = {};
     WGPUTextureView eye_depth_texture_view[EYE_COUNT] = {};
 
-    void render_eye_quad(WGPUTextureView swapchain_view, WGPUTextureView swapchain_depth, WGPUBindGroup bind_group);
     void render_screen();
 
-    void init_render_quad_pipeline();
-    void init_render_quad_bind_groups();
+    void init_depth_buffers();
     void init_camera_bindgroup();
 #if defined(XR_SUPPORT)
 
@@ -88,8 +77,6 @@ public:
     void set_sculpt_start_position(const glm::vec3& position) {
         raymarching_renderer.set_sculpt_start_position(position);
     }
-
-    Texture* get_eye_texture(eEYE eye);
 
     RaymarchingRenderer* get_raymarching_renderer() { return &raymarching_renderer; }
 

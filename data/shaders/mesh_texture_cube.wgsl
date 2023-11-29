@@ -1,6 +1,8 @@
 #include mesh_includes.wgsl
 #include pbr_functions.wgsl
 
+#define GAMMA_CORRECTION
+
 @group(0) @binding(0) var<storage, read> mesh_data : InstanceData;
 
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
@@ -33,12 +35,17 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var view = normalize( in.world_position - camera_data.eye );
 
     var out: FragmentOutput;
-    var color : vec3f = textureSampleLevel(albedo_texture, texture_sampler, view, 0).rgb;
+    var final_color : vec3f = textureSampleLevel(albedo_texture, texture_sampler, view, 0).rgb;
 
     // simple reinhard
     // color = color / (color + vec3f(1.0));
-    color = tonemap_uncharted(color);
+    final_color = tonemap_uncharted(final_color);
 
-    out.color = vec4f(color, 1.0);
+    if (GAMMA_CORRECTION == 1) {
+        final_color = pow(final_color, vec3(1.0 / 2.2));
+    }
+
+    out.color = vec4f(final_color, 1.0);
+
     return out;
 }

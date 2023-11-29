@@ -1,6 +1,8 @@
 #include mesh_includes.wgsl
 #include pbr_functions.wgsl
 
+#define GAMMA_CORRECTION
+
 @group(0) @binding(0) var<storage, read> mesh_data : InstanceData;
 
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
@@ -109,6 +111,10 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     final_color += tonemap_uncharted(get_indirect_light(m));
 
     final_color += m.emissive;
+
+    if (GAMMA_CORRECTION == 1) {
+        final_color = pow(final_color, vec3(1.0 / 2.2));
+    }
 
     out.color = vec4f(final_color, 1.0);
 
