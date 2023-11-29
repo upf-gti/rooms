@@ -36,7 +36,8 @@ class RoomsRenderer : public Renderer {
     void render_screen();
 
     void init_depth_buffers();
-    void init_camera_bindgroup();
+    void init_camera_bind_group();
+
 #if defined(XR_SUPPORT)
 
     void render_xr();

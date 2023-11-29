@@ -1,6 +1,9 @@
 #include sdf_functions.wgsl
 #include octree_includes.wgsl
 #include material_packing.wgsl
+#include ../tonemappers.wgsl
+
+#define GAMMA_CORRECTION
 
 struct VertexInput {
     @builtin(instance_index) instance_id : u32,
@@ -80,6 +83,12 @@ struct FragmentOutput {
 
 @group(0) @binding(1) var<uniform> eye_position : vec3f;
 @group(2) @binding(0) var<uniform> sculpt_data : SculptData;
+
+@group(3) @binding(0) var irradiance_texture: texture_cube<f32>;
+@group(3) @binding(1) var brdf_lut_texture: texture_2d<f32>;
+@group(3) @binding(2) var sampler_clamp: sampler;
+
+#include ../pbr_functions.wgsl
 
 const DERIVATIVE_STEP = 0.5 / SDF_RESOLUTION;
 const MAX_ITERATIONS = 60;
@@ -185,20 +194,38 @@ fn estimate_normal( p : vec3f) -> vec3f
 }
 
 // TODO: if diffuse variable is not used, performance is increased by 20% (????)
-fn blinn_phong(toEye : vec3f, position : vec3f, position_world : vec3f, lightPosition : vec3f, ambient : vec3f, diffuse : vec3f) -> vec3f
+fn apply_light(toEye : vec3f, position : vec3f, position_world : vec3f, lightPosition : vec3f, material : Material) -> vec3f
 {
     var normal : vec3f = estimate_normal(position);
     normal = normalize(rotate_point_quat(normal, sculpt_data.sculpt_rotation));
 
     let toLight : vec3f = normalize(lightPosition - position_world);
-    let reflection : vec3f = normalize(reflect(-toLight, normal));
-    let halfwayDir : vec3f = normalize(toLight + toEye);
 
-    let ambientFactor : vec3f = ambient * diffuse;
-    let diffuseFactor : vec3f = 0.4 * diffuse * max(0.0, dot(normal, toLight));
-    let specularFactor : vec3f = vec3f(0.3) * pow(max(0.0, dot(toEye, reflection)), specularExponent);
+    var m : LitMaterial;
 
-    return ambientFactor + diffuseFactor + specularFactor;
+    m.pos = position;
+    m.normal = normal;
+    m.view_dir = toEye;
+    m.reflected_dir = reflect( -m.view_dir, m.normal);
+
+    // Material properties
+
+    m.albedo = material.albedo;
+    m.metallic = material.metalness;
+    m.roughness = max(material.roughness, 0.04);
+
+    m.diffuse_color = m.albedo * ( 1.0 - m.metallic );
+    m.specular_color = mix(vec3f(0.04), m.albedo, m.metallic);
+    m.ao = 1.0;
+
+    // var distance : f32 = length(light_position - m.pos);
+    // var attenuation : f32 = pow(1.0 - saturate(distance/light_max_radius), 1.5);
+    var final_color : vec3f = vec3f(0.0); 
+    // final_color += get_direct_light(m, vec3f(1.0), 1.0);
+
+    final_color += tonemap_uncharted(get_indirect_light(m));
+
+    return final_color;
     //return normal;
     //return diffuse;
 }
@@ -243,7 +270,7 @@ fn raymarch(ray_origin : vec3f, ray_origin_world : vec3f, ray_dir : vec3f, max_d
         let material : Material = interpolate_material(pos * SDF_RESOLUTION);
         //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
         //return vec4f(surface.color, depth);
-		return vec4f(blinn_phong(-ray_dir, pos, pos_world, lightPos + lightOffset, ambientColor, material.albedo), depth);
+		return vec4f(apply_light(-ray_dir, pos, pos_world, lightPos + lightOffset, material), depth);
 	}
 
     // Use a two band spherical harmonic as a skymap
@@ -261,7 +288,13 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     let ray_result = raymarch(in.in_atlas_pos.xyz, in.world_pos.xyz, ray_dir_voxel_space, raymarch_distance * SCALE_CONVERSION_FACTOR, camera_data.view_projection);
 
-    out.color = vec4f(pow(ray_result.rgb, vec3f(2.2, 2.2, 2.2)), 1.0); // Color
+    var final_color : vec3f = ray_result.rgb; 
+
+    if (GAMMA_CORRECTION == 1) {
+        final_color = pow(final_color, vec3(1.0 / 2.2));
+    }
+
+    out.color = vec4f(final_color, 1.0); // Color
     out.depth = ray_result.a;
 
     // if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {

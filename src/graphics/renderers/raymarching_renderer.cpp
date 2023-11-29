@@ -248,7 +248,7 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPUTextureView swapchain_vie
     // Prepare the color attachment
     WGPURenderPassColorAttachment render_pass_color_attachment = {};
     render_pass_color_attachment.view = swapchain_view;
-    render_pass_color_attachment.loadOp = WGPULoadOp_Clear;
+    render_pass_color_attachment.loadOp = WGPULoadOp_Load;
     render_pass_color_attachment.storeOp = WGPUStoreOp_Store;
 
     glm::vec4 clear_color = RoomsRenderer::instance->get_clear_color();
@@ -258,7 +258,7 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPUTextureView swapchain_vie
     WGPURenderPassDepthStencilAttachment render_pass_depth_attachment = {};
     render_pass_depth_attachment.view = swapchain_depth;
     render_pass_depth_attachment.depthClearValue = 1.0f;
-    render_pass_depth_attachment.depthLoadOp = WGPULoadOp_Clear;
+    render_pass_depth_attachment.depthLoadOp = WGPULoadOp_Load;
     render_pass_depth_attachment.depthStoreOp = WGPUStoreOp_Store;
     render_pass_depth_attachment.depthReadOnly = false;
     render_pass_depth_attachment.stencilClearValue = 0; // Stencil config necesary, even if unused
@@ -286,6 +286,8 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPUTextureView swapchain_vie
     wgpuRenderPassEncoderSetBindGroup(render_pass, bind_group_index++, render_proxy_geometry_bind_group, 0, nullptr);
     wgpuRenderPassEncoderSetBindGroup(render_pass, bind_group_index++, render_camera_bind_group, 0, nullptr);
     wgpuRenderPassEncoderSetBindGroup(render_pass, bind_group_index++, sculpt_data_bind_group, 0, nullptr);
+    wgpuRenderPassEncoderSetBindGroup(render_pass, bind_group_index++, Renderer::instance->get_ibl_bind_group(), 0, nullptr);
+
     // Set vertex buffer while encoding the render pass
     wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, mesh->get_vertex_buffer(), 0, mesh->get_byte_size());
 

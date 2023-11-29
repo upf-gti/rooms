@@ -132,6 +132,37 @@ fn get_direct_light( m : LitMaterial, shadow_factor : vec3f, attenuation : f32) 
     return final_color;
 }
 
+fn get_indirect_light( m : LitMaterial ) -> vec3f
+{
+    var cos_theta : f32 = max(dot(m.normal, m.view_dir), 0.0);
+
+    // IBL
+    // Specular + Diffuse
+
+    // Specular color
+
+    var F : vec3f = FresnelSchlickRoughness(cos_theta, m.specular_color, m.roughness);
+    var k_s : vec3f = F;
+
+    var mip_index : f32 = m.roughness * 6.0;
+    var prefiltered_color : vec3f = textureSampleLevel(irradiance_texture, sampler_clamp, m.reflected_dir, mip_index).rgb;
+
+    let brdf_coords : vec2f = vec2f(cos_theta, 1.0 - m.roughness);
+    let brdf_lut : vec2f = textureSampleLevel(brdf_lut_texture, sampler_clamp, brdf_coords, 0).rg;
+
+    var specular : vec3f = prefiltered_color * (F * brdf_lut.x + brdf_lut.y);
+
+    // Diffuse sample: get last prefiltered mipmap
+    var irradiance : vec3f = textureSampleLevel(irradiance_texture, sampler_clamp, m.normal, 6).rgb;
+
+    // Diffuse color
+    var k_d : vec3f = 1.0 - k_s;
+    var diffuse : vec3f = k_d * Diffuse(m.diffuse_color) * irradiance;
+
+    // Combine factors and add AO
+    return (diffuse + specular) * m.ao;
+}
+
 //Javi Agenjo Snipet for Bump Mapping
 
 fn cotangent_frame( N : vec3f, p : vec3f, uv : vec2f ) -> mat3x3f
@@ -160,27 +191,4 @@ fn perturb_normal( N : vec3f, V : vec3f, texcoord : vec2f, normal_color : vec3f 
     var normal_pixel = normal_color * (255.0/127.0) - vec3f(128.0/127.0);
     var TBN : mat3x3f = cotangent_frame(N, V, texcoord);
     return normalize(TBN * normal_pixel);
-}
-
-// TOnemapping
-
-// Uncharted 2 tone map
-// see: http://filmicworlds.com/blog/filmic-tonemapping-operators/
-fn tonemap_uncharted2_imp( color : vec3f ) -> vec3f
-{
-    let A = 0.15;
-    let B = 0.50;
-    let C = 0.10;
-    let D = 0.20;
-    let E = 0.02;
-    let F = 0.30;
-    return ((color*(A*color+C*B)+D*E)/(color*(A*color+B)+D*F))-E/F;
-}
-
-fn tonemap_uncharted( c : vec3f ) -> vec3f
-{
-    let W = 11.2;
-    let color = tonemap_uncharted2_imp(c * 2.0);
-    let whiteScale = 1.0 / tonemap_uncharted2_imp( vec3f(W) );
-    return color * whiteScale;//LINEARtoSRGB(color * whiteScale);
 }

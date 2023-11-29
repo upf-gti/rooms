@@ -1,5 +1,6 @@
 #include mesh_includes.wgsl
 #include pbr_functions.wgsl
+#include tonemappers.wgsl
 
 #define GAMMA_CORRECTION
 
@@ -12,9 +13,10 @@
 @group(2) @binding(2) var normal_texture: texture_2d<f32>;
 @group(2) @binding(3) var emissive_texture: texture_2d<f32>;
 @group(2) @binding(4) var sampler_2d : sampler;
-@group(2) @binding(5) var brdf_lut_texture: texture_2d<f32>;
-@group(2) @binding(6) var irradiance_texture: texture_cube<f32>;
-@group(2) @binding(7) var sampler_clamp: sampler;
+
+@group(3) @binding(0) var irradiance_texture: texture_cube<f32>;
+@group(3) @binding(1) var brdf_lut_texture: texture_2d<f32>;
+@group(3) @binding(2) var sampler_clamp: sampler;
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
@@ -33,37 +35,6 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 
 struct FragmentOutput {
     @location(0) color: vec4f
-}
-
-fn get_indirect_light( m : LitMaterial ) -> vec3f
-{
-    var cos_theta : f32 = max(dot(m.normal, m.view_dir), 0.0);
-
-    // IBL
-    // Specular + Diffuse
-
-    // Specular color
-
-    var F : vec3f = FresnelSchlickRoughness(cos_theta, m.specular_color, m.roughness);
-    var k_s : vec3f = F;
-
-    var mip_index : f32 = m.roughness * 6.0;
-    var prefiltered_color : vec3f = textureSampleLevel(irradiance_texture, sampler_clamp, m.reflected_dir, mip_index).rgb;
-
-    let brdf_coords : vec2f = vec2f(cos_theta, 1.0 - m.roughness);
-    let brdf_lut : vec2f = textureSampleLevel(brdf_lut_texture, sampler_clamp, brdf_coords, 0).rg;
-
-    var specular : vec3f = prefiltered_color * (F * brdf_lut.x + brdf_lut.y);
-
-    // Diffuse sample: get last prefiltered mipmap
-    var irradiance : vec3f = textureSampleLevel(irradiance_texture, sampler_clamp, m.normal, 6).rgb;
-
-    // Diffuse color
-    var k_d : vec3f = 1.0 - k_s;
-    var diffuse : vec3f = k_d * Diffuse(m.diffuse_color) * irradiance;
-
-    // Combine factors and add AO
-    return (diffuse + specular) * m.ao;
 }
 
 @fragment

@@ -35,11 +35,7 @@ void MeshRenderer::render(WGPUTextureView swapchain_view, WGPUTextureView swapch
     // Prepare the color attachment
     WGPURenderPassColorAttachment render_pass_color_attachment = {};
     render_pass_color_attachment.view = swapchain_view;
-#ifndef DISABLE_RAYMARCHER
-    render_pass_color_attachment.loadOp = WGPULoadOp_Load;
-#else
     render_pass_color_attachment.loadOp = WGPULoadOp_Clear;
-#endif
     render_pass_color_attachment.storeOp = WGPUStoreOp_Store;
 
     glm::vec4 clear_color = RoomsRenderer::instance->get_clear_color();
@@ -49,11 +45,7 @@ void MeshRenderer::render(WGPUTextureView swapchain_view, WGPUTextureView swapch
     WGPURenderPassDepthStencilAttachment render_pass_depth_attachment = {};
     render_pass_depth_attachment.view = swapchain_depth;
     render_pass_depth_attachment.depthClearValue = 1.0f;
-#ifndef DISABLE_RAYMARCHER
-    render_pass_depth_attachment.depthLoadOp = WGPULoadOp_Load;
-#else
     render_pass_depth_attachment.depthLoadOp = WGPULoadOp_Clear;
-#endif
     render_pass_depth_attachment.depthStoreOp = WGPUStoreOp_Store;
     render_pass_depth_attachment.depthReadOnly = false;
     render_pass_depth_attachment.stencilClearValue = 0; // Stencil config necesary, even if unused

@@ -1,5 +1,5 @@
 #include mesh_includes.wgsl
-#include pbr_functions.wgsl
+#include tonemappers.wgsl
 
 #define GAMMA_CORRECTION
 
@@ -7,8 +7,9 @@
 
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
 
-@group(2) @binding(0) var albedo_texture: texture_cube<f32>;
-@group(2) @binding(1) var texture_sampler : sampler;
+@group(2) @binding(0) var irradiance_texture: texture_cube<f32>;
+@group(2) @binding(1) var sampler_clamp : sampler;
+
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
@@ -35,7 +36,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var view = normalize( in.world_position - camera_data.eye );
 
     var out: FragmentOutput;
-    var final_color : vec3f = textureSampleLevel(albedo_texture, texture_sampler, view, 0).rgb;
+    var final_color : vec3f = textureSampleLevel(irradiance_texture, sampler_clamp, view, 0).rgb;
 
     // simple reinhard
     // color = color / (color + vec3f(1.0));
