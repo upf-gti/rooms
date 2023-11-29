@@ -22,18 +22,9 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     skybox->scale(glm::vec3(100.f));
     skybox->set_material_priority(2);
 
-    //parse_scene("data/gltf_tests/Sponza/Sponza.gltf", entities);
+    // parse_scene("data/gltf_tests/DamagedHelmet.glb", entities);
 
     // import_scene();
-
-    // test pbr
-    EntityMesh* test = parse_mesh("data/meshes/helmet.obj");
-    test->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_pbr.wgsl"));
-    test->set_material_diffuse(RendererStorage::get_texture("data/textures/ibl_brdf_lut.png"));
-    test->set_material_irradiance(RendererStorage::get_texture(environment));
-    //test->translate({ 0.f, 1.f, -0.5f });
-    test->scale(glm::vec3(0.15));
-    entities.push_back(test);
 
 	return error;
 }

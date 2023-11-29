@@ -48,13 +48,13 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
         discard;
     }
 
-    let selected_color = vec3f(0.47, 0.37, 0.94);
-    let hover_color = vec3f(0.95, 0.76, 0.17);
-    var back_color = vec3f(0.1);
+    let selected_color = vec3f(0.15, 0.02, 0.9);
+    let hover_color = vec3f(0.87, 0.6, 0.02);
+    var back_color = vec3f(0.01);
 
     // Assign basic color
     var lum = color.r  * 0.3 + color.g * 0.59 + color.b * 0.11;
-    var _color = vec3f( 1.0 - smoothstep(0.2, 0.8, lum) ) * hover_color;
+    var _color = vec3f( 1.0 - smoothstep(0.15, 0.4, lum) ) * hover_color;
     _color = max(_color, back_color);
 
     var keep_colors = (ui_data.keep_rgb + ui_data.is_color_button) > 0.0;
@@ -65,10 +65,10 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     if( ui_data.is_selected > 0.0 && !keep_colors ) {
         back_color = hover_color - pow(d, 1.75);
-        _color = smoothstep(vec3f(0.5), vec3f(0.9), color.rgb);
+        _color = pow(smoothstep(vec3f(0.3), vec3f(0.7), color.rgb), vec3f(1.2));
     }
 
-    _color = select( back_color, _color, color.a > 0.75 );
+    _color = select( back_color, _color, color.a > 0.3 );
 
     // Process selection
     var outline_color_selected = mix( selected_color, hover_color, uvs.x * uvs.y );

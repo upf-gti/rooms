@@ -46,7 +46,8 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
         discard;
     }
 
-    var final_color : vec3f = in.color * d;
+    let back_color = vec3f(0.08);
+    var final_color : vec3f = back_color * d;
 
     if (GAMMA_CORRECTION == 1) {
         final_color = pow(final_color, vec3f(1.0 / 2.2));
