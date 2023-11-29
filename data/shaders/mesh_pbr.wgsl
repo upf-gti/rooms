@@ -14,7 +14,7 @@
 @group(2) @binding(4) var sampler_2d : sampler;
 @group(2) @binding(5) var brdf_lut_texture: texture_2d<f32>;
 @group(2) @binding(6) var irradiance_texture: texture_cube<f32>;
-@group(2) @binding(7) var sampler_cube: sampler;
+@group(2) @binding(7) var sampler_clamp: sampler;
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
@@ -48,16 +48,15 @@ fn get_indirect_light( m : LitMaterial ) -> vec3f
     var k_s : vec3f = F;
 
     var mip_index : f32 = m.roughness * 6.0;
-    var prefiltered_color : vec3f = textureSampleLevel(irradiance_texture, sampler_cube, m.reflected_dir, mip_index).rgb;
-    //prefiltered_color = pow(prefiltered_color, vec3f(2.2));
+    var prefiltered_color : vec3f = textureSampleLevel(irradiance_texture, sampler_clamp, m.reflected_dir, mip_index).rgb;
 
     let brdf_coords : vec2f = vec2f(cos_theta, 1.0 - m.roughness);
-    let brdf_lut : vec2f = textureSample(brdf_lut_texture, sampler_2d, brdf_coords).rg;
+    let brdf_lut : vec2f = textureSampleLevel(brdf_lut_texture, sampler_clamp, brdf_coords, 0).rg;
 
     var specular : vec3f = prefiltered_color * (F * brdf_lut.x + brdf_lut.y);
 
     // Diffuse sample: get last prefiltered mipmap
-    var irradiance : vec3f = textureSampleLevel(irradiance_texture, sampler_cube, m.reflected_dir, 6).rgb;
+    var irradiance : vec3f = textureSampleLevel(irradiance_texture, sampler_clamp, m.normal, 6).rgb;
 
     // Diffuse color
     var k_d : vec3f = 1.0 - k_s;
@@ -97,7 +96,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     var metal_rough : vec3f = textureSample(metallic_roughness_texture, sampler_2d, in.uv).rgb;
     m.metallic = metal_rough.b;
-    m.roughness = metal_rough.g;
+    m.roughness = max(metal_rough.g, 0.04);
 
     m.diffuse_color = m.albedo * ( 1.0 - m.metallic );
     m.specular_color = mix(vec3f(0.04), m.albedo, m.metallic);
@@ -106,7 +105,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     // var distance : f32 = length(light_position - m.pos);
     // var attenuation : f32 = pow(1.0 - saturate(distance/light_max_radius), 1.5);
     var final_color : vec3f = vec3f(0.0); 
-    final_color += get_direct_light(m, vec3f(1.0), 1.0);
+    // final_color += get_direct_light(m, vec3f(1.0), 1.0);
 
     final_color += tonemap_uncharted(get_indirect_light(m));
 
