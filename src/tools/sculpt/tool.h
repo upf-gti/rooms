@@ -3,17 +3,25 @@
 #include "graphics/edit.h"
 #include "framework/input.h"
 
+struct StrokeParameters {
+    sdPrimitive primitive = SD_SPHERE;
+    sdOperation operation = OP_UNION;
+    glm::vec4   parameters = { 0.f, -1.f, 0.f, 0.f };
+
+    bool was_operation_changed = false;
+};
+
 class Tool {
 
 protected:
 
 	bool enabled = false;
 
+    StrokeParameters stroke_parameters;
+
     Edit edit_to_add = {
         .position = glm::vec3(0.0f, 0.0f, 0.0f),
-        .primitive = SD_SPHERE,
         .color = glm::vec3(1.0f, 0.0f, 0.0f),
-        .operation = OP_SMOOTH_UNION,
         .dimensions = glm::vec4(0.01f, 0.01f, 0.01f, 0.f)
     };
 
@@ -50,5 +58,9 @@ public:
 
     Edit& get_edit_to_add() {
         return edit_to_add;
+    }
+
+    StrokeParameters& get_stroke_parameters() {
+        return stroke_parameters;
     }
 };

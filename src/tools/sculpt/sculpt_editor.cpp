@@ -168,6 +168,7 @@ void SculptEditor::update(float delta_time)
     bool is_tool_used = tool_used.update(delta_time);
 
     Edit& edit_to_add = tool_used.get_edit_to_add();
+    StrokeParameters& stroke_parameters = tool_used.get_stroke_parameters();
 
     if (snap_to_grid) {
         float grid_multiplier = 1.f / snap_grid_size;
@@ -250,10 +251,18 @@ void SculptEditor::update(float delta_time)
 
     edit_to_add.rotation *= (sculpt_rotation * rotation_diff);
 
-    edit_to_add.primitive = current_primitive;
-    //edit_to_add.color = current_color;
-    edit_to_add.parameters.x = onion_enabled ? onion_thickness : 0.f;
-    edit_to_add.parameters.y = capped_enabled ? capped_value : -1.f;
+    edit_to_add.color = current_color;
+    glm::vec4 new_parameters;
+    new_parameters.x = onion_enabled ? onion_thickness : 0.f;
+    new_parameters.y = capped_enabled ? capped_value : -1.f;
+
+    if (current_primitive != stroke_parameters.primitive && new_parameters != stroke_parameters.parameters && stroke_parameters.was_operation_changed) {
+        stroke_parameters.primitive = current_primitive;
+        stroke_parameters.parameters = new_parameters;
+        stroke_parameters.was_operation_changed = false;
+
+        renderer->change_stroke(stroke_parameters.primitive, stroke_parameters.operation, stroke_parameters.parameters);
+    }
 
     if (is_tool_used) {
         new_edits.push_back(edit_to_add);
@@ -295,13 +304,14 @@ void SculptEditor::render()
 {
     Tool& tool_used = *tools[current_tool];
     Edit& edit_to_add = tool_used.get_edit_to_add();
+    StrokeParameters& stroke_parameters = tool_used.get_stroke_parameters();
 
     if (mesh_preview)
     {
         update_edit_preview(edit_to_add.dimensions);
 
         // Render something to be able to cull faces later...
-        if( edit_to_add.operation == OP_SUBSTRACTION || edit_to_add.operation == OP_SMOOTH_SUBSTRACTION || edit_to_add.operation == OP_PAINT || edit_to_add.operation == OP_SMOOTH_PAINT)
+        if(stroke_parameters.operation == OP_SUBSTRACTION || stroke_parameters.operation == OP_SMOOTH_SUBSTRACTION || stroke_parameters.operation == OP_PAINT || stroke_parameters.operation == OP_SMOOTH_PAINT)
             mesh_preview->render();
 
         mesh_preview_outline->set_model(mesh_preview->get_model());

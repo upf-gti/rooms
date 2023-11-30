@@ -66,28 +66,28 @@ void RoomsEngine::render()
 
 bool RoomsEngine::export_scene()
 {
-    std::ofstream file("data/exports/myscene.txt");
+    //std::ofstream file("data/exports/myscene.txt");
 
-    if (!file.is_open())
-        return false;
+    //if (!file.is_open())
+    //    return false;
 
-    // Write scene info
-    RoomsRenderer* renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
-    RaymarchingRenderer* rmr = renderer->get_raymarching_renderer();
+    //// Write scene info
+    //RoomsRenderer* renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
+    //RaymarchingRenderer* rmr = renderer->get_raymarching_renderer();
 
-    auto edits = rmr->get_scene_edits();
+    //auto edits = rmr->get_scene_edits();
 
-    file << "@" << edits.size() << "\n";
+    //file << "@" << edits.size() << "\n";
 
-    glm::vec3 position = rmr->get_sculpt_start_position();
-    file << "@" << std::to_string(position.x) << " " + std::to_string(position.y) + " " + std::to_string(position.z) << "\n";
+    //glm::vec3 position = rmr->get_sculpt_start_position();
+    //file << "@" << std::to_string(position.x) << " " + std::to_string(position.y) + " " + std::to_string(position.z) << "\n";
 
-    for (const Edit& edit : edits)
-        file << edit.to_string() << "\n";
+    //for (const Edit& edit : edits)
+    //    file << edit.to_string() << "\n";
 
-    file.close();
+    //file.close();
 
-    spdlog::info("Scene exported! ({} edits)", edits.size());
+    //spdlog::info("Scene exported! ({} edits)", edits.size());
 
     return true;
 }

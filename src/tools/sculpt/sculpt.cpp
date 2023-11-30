@@ -24,7 +24,7 @@ bool SculptTool::update(float delta_time)
 	// Tool Operation changer
 	if (Input::was_button_pressed(XR_BUTTON_Y))
 	{
-        sdOperation& op = edit_to_add.operation;
+        sdOperation& op = stroke_parameters.operation;
 
 		switch (op)
 		{
@@ -43,6 +43,8 @@ bool SculptTool::update(float delta_time)
 		default:
 			break;
 		}
+
+        stroke_parameters.was_operation_changed = true;
 	}
 
 	// Sculpting (adding edits)
@@ -56,10 +58,11 @@ bool SculptTool::update(float delta_time)
 			edit_to_add.dimensions = glm::vec4(0.1f, 0.1f, 0.1f, 0.1f);
 			edit_to_add.rotation = glm::inverse(glm::quat(euler_angles));
             edit_to_add.color = glm::vec3(random_f(), random_f(), random_f());
-            edit_to_add.operation = (random_f() > 0.5f) ? OP_UNION : OP_SUBSTRACTION;
+            stroke_parameters.operation = (random_f() > 0.5f) ? OP_UNION : OP_SUBSTRACTION;
             //edit_to_add.dimensions = (edit_to_add.operation == OP_SUBSTRACTION) ? 3.0f * glm::vec4(0.2f, 0.2f, 0.2f, 0.2f) : glm::vec4(0.2f, 0.2f, 0.2f, 0.2f);
             //edit_to_add.operation = OP_UNION;
             //edit_to_add.operation = OP_SUBSTRACTION;
+            stroke_parameters.was_operation_changed = true;
 		}
 
         return use_tool();

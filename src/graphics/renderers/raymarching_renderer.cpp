@@ -20,8 +20,7 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
 
     init_compute_octree_pipeline();
     init_raymarching_proxy_pipeline();
-
-    edits = new Edit[EDITS_MAX];
+    initialize_stroke();
 
     /*for (uint32_t i = 0; i < 120; i++) {
         edits[compute_merge_data.edits_to_process++] = {
@@ -88,7 +87,7 @@ void RaymarchingRenderer::clean()
     delete compute_octree_increment_level_shader;
     delete compute_octree_write_to_texture_shader;
 
-    delete[] edits;
+    delete current_stroke;
 #endif
 }
 
@@ -113,6 +112,38 @@ void RaymarchingRenderer::add_preview_edit(const Edit& edit)
     preview_edit_data.preview_edits[preview_edit_data.preview_edits_count++] = edit;
 }
 
+void RaymarchingRenderer::initialize_stroke() {
+    current_stroke = new Stroke();
+    current_stroke->stroke_id = 0u;
+}
+
+void RaymarchingRenderer::change_stroke(const sdPrimitive new_primitive, const sdOperation new_operation, const glm::vec4 new_parameters, const uint32_t index_increment) {
+    Stroke* new_stroke = new Stroke();
+
+    new_stroke->stroke_id = current_stroke->stroke_id + index_increment;
+    new_stroke->primitive = new_primitive;
+    new_stroke->operation = new_operation;
+    new_stroke->parameters = new_parameters;
+    new_stroke->edit_count = 0u;
+
+    // Only store the strokes that actually changes the sculpt
+    if (current_stroke->edit_count > 0u) {
+        stroke_history.push_back(*current_stroke);
+    }
+    delete current_stroke;
+    current_stroke = new_stroke;
+}
+
+void RaymarchingRenderer::push_edit(const Edit edit) {
+
+    if (current_stroke->edit_count == MAX_EDITS_PER_EVALUATION) {
+        // The index increment is 0, since this is a prolongation of the previous stroke
+        change_stroke(current_stroke->primitive, current_stroke->operation, current_stroke->parameters, 0u);
+    }
+
+    current_stroke->edits[current_stroke->edit_count++] = edit;
+}
+
 void RaymarchingRenderer::compute_octree()
 {
     if (!compute_octree_evaluate_shader || !compute_octree_evaluate_shader->is_loaded()) return;
@@ -126,8 +157,6 @@ void RaymarchingRenderer::compute_octree()
 
     RenderdocCapture::start_capture_frame();
 
-    std::cout << edits[0] << std::endl;
-
     // Initialize a command encoder
     WGPUCommandEncoderDescriptor encoder_desc = {};
     WGPUCommandEncoder command_encoder = wgpuDeviceCreateCommandEncoder(webgpu_context->device, &encoder_desc);
@@ -138,7 +167,7 @@ void RaymarchingRenderer::compute_octree()
     WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
 
     // Update uniform buffer
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(compute_edits_array_uniform.data), 0, edits, sizeof(Edit) * compute_merge_data.edits_to_process);
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(compute_edits_array_uniform.data), 0, current_stroke, sizeof(Stroke));
     webgpu_context->update_buffer(std::get<WGPUBuffer>(compute_merge_data_uniform.data), 0, &(compute_merge_data), sizeof(sMergeData));
 
     uint32_t default_vals[3] = { 1, 1, 1 };
@@ -371,9 +400,9 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         octree_total_size = (pow(8, octree_depth + 1) - 1) / 7;
 
         // Edits uniform
-        compute_edits_array_uniform.data = webgpu_context->create_buffer(sizeof(Edit) * EDITS_MAX, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "edits_buffer");
+        compute_edits_array_uniform.data = webgpu_context->create_buffer(sizeof(Stroke), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "edits_buffer");
         compute_edits_array_uniform.binding = 0;
-        compute_edits_array_uniform.buffer_size = sizeof(Edit) * EDITS_MAX;
+        compute_edits_array_uniform.buffer_size = sizeof(Stroke);
 
         // Edit count & other merger data
         compute_merge_data_uniform.data = webgpu_context->create_buffer(sizeof(sMergeData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "merge_data");

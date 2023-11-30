@@ -7,9 +7,7 @@
 #include "graphics/texture.h"
 
 #define PREVIEW_EDITS_MAX 128
-#define EDITS_MAX 64
 #define SDF_RESOLUTION 400
-#define MAX_EDITS_PER_EVALUATION 64
 #define SCULPT_MAX_SIZE 1 // meters
 
 class EntityMesh;
@@ -95,8 +93,9 @@ class RaymarchingRenderer {
         uint32_t tile_pointer = 0;
     };
 
-    std::vector<Edit> scene_edits;
-    Edit* edits = nullptr;
+
+    Stroke* current_stroke = NULL;
+    std::vector<Stroke> stroke_history;
 
     // Preview edits
     struct sPreviewEditsData {
@@ -140,21 +139,18 @@ public:
     /*
     *   Edits
     */
+    void initialize_stroke();
+    void change_stroke(const sdPrimitive primitive, const sdOperation new_operation, const glm::vec4 new_parameters, const uint32_t index_increment = 1u);
 
-    void push_edit(Edit edit) {
-        edits[compute_merge_data.edits_to_process++] = edit;
-        scene_edits.push_back(edit);
-    };
+    void push_edit(const Edit edit);
 
     void push_edit_list(std::vector<Edit> &new_edits) {
         for (Edit &edit : new_edits) {
-            edits[compute_merge_data.edits_to_process++] = edit;
-            scene_edits.push_back(edit);
+            push_edit(edit);
         }
     };
 
     void add_preview_edit(const Edit& edit);
 
-    const std::vector<Edit>& get_scene_edits() { return scene_edits; }
     const glm::vec3& get_sculpt_start_position() { return compute_merge_data.sculpt_start_position; }
 };
