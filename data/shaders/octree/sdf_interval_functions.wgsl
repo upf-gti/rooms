@@ -325,7 +325,7 @@ fn sphere_interval(p : mat3x3f, offset : vec3f, r : f32) -> vec2f
 	return isub_vecs(ilensq(isub_mat_vec(p, offset)), vec2f(r*r));
 }
 
-fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f, current_interval : vec2f, edit : Edit, current_edit_interval : ptr<function, vec2f>) -> vec2f
+fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f,  primitive : u32, operation : u32, edit_parameters : vec4f, current_interval : vec2f, edit : Edit) -> vec2f
 {
     var pSurface : vec2f;
 
@@ -333,12 +333,12 @@ fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f, current_interval :
     var size : vec3f = edit.dimensions.xyz;
     var radius : f32 = edit.dimensions.x;
     var size_param : f32 = edit.dimensions.w;
-    var cap_value : f32 = edit.parameters.y;
+    var cap_value : f32 = edit_parameters.y;
 
-    var onion_thickness : f32 = edit.parameters.x;
+    var onion_thickness : f32 = edit_parameters.x;
     let do_onion = onion_thickness > 0.0;
 
-    switch (edit.primitive) {
+    switch (primitive) {
         case SD_SPHERE: {
             onion_thickness = map_thickness( onion_thickness, radius );
             radius -= onion_thickness; // Compensate onion size
@@ -406,14 +406,12 @@ fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f, current_interval :
     }
 
     // Shape edition ...
-    if( do_onion && (edit.operation == OP_UNION || edit.operation == OP_SMOOTH_UNION) )
+    if( do_onion && (operation == OP_UNION || operation == OP_SMOOTH_UNION) )
     {
         // pSurface = opOnion(pSurface, onion_thickness);
     }
 
-    *current_edit_interval = pSurface;
-
-    switch (edit.operation) {
+    switch (operation) {
         case OP_UNION: {
             pSurface = opUnionInterval(current_interval, pSurface);
             break;

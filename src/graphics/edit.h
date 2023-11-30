@@ -31,12 +31,11 @@ enum sdOperation : uint32_t {
 	ALL_OPERATIONS
 };
 
-struct Edit {
+struct alignas(16) Edit {
     glm::vec3	position;
     glm::vec3	color;
     glm::vec4	dimensions;
     glm::quat   rotation = { 0.f, 0.f, 0.f, 1.f };
-    glm::vec2   padding;
 
     friend std::ostream& operator<<(std::ostream& os, const Edit& edit);
 
@@ -46,7 +45,8 @@ struct Edit {
     float weigth_difference(const Edit& edit);
 };
 
-struct Stroke {
+
+struct alignas(16) Stroke {
     uint32_t    stroke_id;
     uint32_t    edit_count = 0u;
     sdPrimitive primitive;

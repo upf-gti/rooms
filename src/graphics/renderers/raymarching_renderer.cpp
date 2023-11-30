@@ -151,7 +151,7 @@ void RaymarchingRenderer::compute_octree()
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
 
     // Nothing to merge if equals 0
-    if (compute_merge_data.edits_to_process == 0) {
+    if (current_stroke->edit_count == 0) {
         return;
     }
 
@@ -181,7 +181,7 @@ void RaymarchingRenderer::compute_octree()
     webgpu_context->update_buffer(std::get<WGPUBuffer>(octant_usage_uniform[0].data), 0, &default_val, sizeof(uint32_t));
     webgpu_context->update_buffer(std::get<WGPUBuffer>(octant_usage_uniform[2].data), 0, &default_val, sizeof(uint32_t));
 
-    uint16_t rounded_size = compute_merge_data.edits_to_process + (4 - compute_merge_data.edits_to_process % 4);
+    uint16_t rounded_size = current_stroke->edit_count + (4 - current_stroke->edit_count % 4);
     uint8_t* edit_indices = new uint8_t[rounded_size];
 
     for (int i = 0; i < rounded_size; i += 4) {
@@ -195,7 +195,7 @@ void RaymarchingRenderer::compute_octree()
 
     delete[] edit_indices;
 
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_edit_culling_count.data), 0, &compute_merge_data.edits_to_process, sizeof(uint32_t));
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_edit_culling_count.data), 0, &current_stroke->edit_count, sizeof(uint32_t));
 
     // Upload the default data
     uint32_t devault_vals_compute[3] = { 0u, 1u, 1u };
@@ -261,7 +261,8 @@ void RaymarchingRenderer::compute_octree()
     wgpuComputePassEncoderRelease(compute_pass);
     wgpuCommandEncoderRelease(command_encoder);
 
-    compute_merge_data.edits_to_process = 0;
+    // Start a new stroke
+    change_stroke(current_stroke->primitive, current_stroke->operation, current_stroke->parameters);
 
     RenderdocCapture::end_capture_frame();
 }
@@ -398,6 +399,8 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
 
         // total size considering leaves and intermediate levels
         octree_total_size = (pow(8, octree_depth + 1) - 1) / 7;
+
+        uint32_t t = sizeof(Stroke);
 
         // Edits uniform
         compute_edits_array_uniform.data = webgpu_context->create_buffer(sizeof(Stroke), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "edits_buffer");

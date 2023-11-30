@@ -81,7 +81,7 @@ class RaymarchingRenderer {
     // Data needed for sdf merging
     struct sMergeData {
         glm::uvec3 edits_aabb_start = {};
-        uint32_t edits_to_process = 0;
+        uint32_t tmp = 0; // old edits count, can we delete??
         glm::vec3  sculpt_start_position = { 0.f, 0.f, 0.f };
         uint32_t max_octree_depth = 0;
         glm::quat sculpt_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };

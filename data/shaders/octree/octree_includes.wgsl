@@ -18,16 +18,18 @@ const SMOOTH_FACTOR = 0.01;
 
 struct Edit {
     position   : vec3f,
-    primitive  : u32,
     color      : vec3f,
-    operation  : u32,
     dimensions : vec4f,
-    rotation   : vec4f,
-    parameters : vec4f
+    rotation   : vec4f
 };
 
-struct Edits {
-    data : array<Edit, 64>
+struct Stroke {
+    stroke_id   : u32,
+    edit_count  : u32,
+    primitive   : u32,
+    operation   : u32,
+    parameters  : vec4f,
+    edits       : array<Edit, 64>
 }
 
 struct OctreeNode {

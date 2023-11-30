@@ -2,7 +2,7 @@
 #include octree_includes.wgsl
 #include sdf_interval_functions.wgsl
 
-@group(0) @binding(0) var<uniform> edits : Edits;
+@group(0) @binding(0) var<uniform> stroke : Stroke;
 @group(0) @binding(1) var<uniform> merge_data : MergeData;
 @group(0) @binding(2) var<storage, read_write> octree : Octree;
 @group(0) @binding(4) var<storage, read_write> counters : OctreeCounters;
@@ -114,15 +114,14 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
     var new_edits_surface_interval : vec2f = vec2f(10000.0, 10000.0);
     var surface_interval = (octree.data[octree_index].octant_center_distance);
-    var current_edit_surface : vec2f;
     var edit_counter : u32 = 0;
 
     var new_packed_edit_idx : u32 = 0;
 
     // let cull_distance : f32 = level_half_size * SQRT_3 * 1.5;
 
-    var is_smooth_union : bool = false;
-    var is_smooth_substract : bool = false;
+    let is_smooth_union : bool = stroke.operation == OP_SMOOTH_UNION;
+    let is_smooth_substract : bool =  stroke.operation == OP_SMOOTH_SUBSTRACTION;
 
     // Check the edits in the parent, and fill its own list with the edits that affect this child
     for (var i : u32 = 0; i < edit_culling_count[parent_octree_index] ; i++) {
@@ -142,14 +141,10 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         let y_range : vec2f = vec2f(octant_center.y - level_half_size, octant_center.y + level_half_size);
         let z_range : vec2f = vec2f(octant_center.z - level_half_size, octant_center.z + level_half_size);
 
-        var current_edit : Edit = edits.data[current_unpacked_edit_idx];
+        var current_edit : Edit = stroke.edits[current_unpacked_edit_idx];
 
-        is_smooth_union |= current_edit.operation == OP_SMOOTH_UNION;
-        is_smooth_substract |= current_edit.operation == OP_SMOOTH_SUBSTRACTION;
-
-        surface_interval = eval_edit_interval(x_range, y_range, z_range, surface_interval, current_edit, &current_edit_surface);
-        current_edit.operation = 0;
-        new_edits_surface_interval = eval_edit_interval(x_range, y_range, z_range, new_edits_surface_interval, current_edit, &current_edit_surface);
+        surface_interval = eval_edit_interval(x_range, y_range, z_range, stroke.primitive, stroke.operation, stroke.parameters, surface_interval, current_edit);
+        new_edits_surface_interval = eval_edit_interval(x_range, y_range, z_range, stroke.primitive, OP_UNION, stroke.parameters, new_edits_surface_interval, current_edit);
 
         // Check if the edit affects the current voxel, if so adds it to the packed list
         if (true) {
@@ -175,13 +170,12 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     
     var surface_interval_smooth : vec2f = surface_interval;
 
-    if (is_smooth_union) {
 
+    if (is_smooth_union) {
         surface_interval_smooth += vec2f(-SMOOTH_FACTOR * 0.25, 10.0 / 512.0);
         new_edits_surface_interval += vec2f(-SMOOTH_FACTOR * 0.25, 10.0 / 512.0);
     } 
-    else 
-    if (is_smooth_substract) {
+    else if (is_smooth_substract) {
         // surface_interval_smooth += vec2f(-SMOOTH_FACTOR * 0.25, 10.0 / 512.0);
         // new_edits_surface_interval += vec2f(-SMOOTH_FACTOR * 0.25, 10.0 / 512.0);
     }
@@ -219,7 +213,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         }
     } else {
         // In the case that the incomming edits's operation is either Add or Smooth Add
-        if (edits.data[0].operation == OP_UNION || edits.data[0].operation == OP_SMOOTH_UNION) {
+        if (stroke.operation == OP_UNION || stroke.operation == OP_SMOOTH_UNION) {
             // IF ITS A UNION OPERATION ================
             if (global_surface_outside || global_surface_inside) {
                 // if is inside or outside the resulting SDF, we delete the brick
@@ -297,6 +291,5 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 
             }
         }
-        
     }
 }

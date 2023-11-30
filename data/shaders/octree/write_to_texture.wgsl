@@ -2,7 +2,7 @@
 #include octree_includes.wgsl
 #include material_packing.wgsl
 
-@group(0) @binding(0) var<uniform> edits : Edits;
+@group(0) @binding(0) var<uniform> stroke : Stroke;
 @group(0) @binding(2) var<storage, read_write> octree : Octree;
 @group(0) @binding(3) var write_sdf: texture_storage_3d<r32float, read_write>;
 @group(0) @binding(4) var<storage, read_write> counters : OctreeCounters;
@@ -64,8 +64,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     // Offset for a 10 pixel wide brick
     let pixel_offset : vec3f = (vec3f(local_id) - 4.5) * PIXEL_WORLD_SIZE;
 
-    var current_edit_surface : Surface;
-
     // Traverse the according edits and evaluate them in the brick
     for (var i : u32 = 0; i < edit_culling_count[parent_octree_index]; i++) {
         // Get the packed indices
@@ -73,7 +71,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
         let packed_index : u32 = 3 - (i % 4);
         let current_unpacked_edit_idx : u32 = (current_packed_edit_idx & (0xFFu << (packed_index * 8u))) >> (packed_index * 8u);
 
-        sSurface = evalEdit(octant_center + pixel_offset, sSurface, edits.data[current_unpacked_edit_idx], &current_edit_surface);
+        sSurface = evalEdit(octant_center + pixel_offset, stroke.primitive, stroke.operation, stroke.parameters, sSurface, stroke.edits[current_unpacked_edit_idx]);
     }
 
     if (sSurface.distance < MIN_HIT_DIST) {
