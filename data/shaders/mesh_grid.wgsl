@@ -68,5 +68,9 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     out.color = vec4f(0.57, 0.57, 0.57, 1.0) *
                 pristine_grid(wrapped_uvs, vec2f(LINE_WIDTH));
 
+    if (out.color.a < 0.1) {
+        discard;
+    }
+
     return out;
 }

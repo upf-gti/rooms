@@ -205,7 +205,7 @@ fn apply_light(toEye : vec3f, position : vec3f, position_world : vec3f, lightPos
 
     m.pos = position;
     m.normal = normal;
-    m.view_dir = toEye;
+    m.view_dir = normalize(rotate_point_quat(toEye, sculpt_data.sculpt_rotation));
     m.reflected_dir = reflect( -m.view_dir, m.normal);
 
     // Material properties
