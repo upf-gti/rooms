@@ -292,10 +292,11 @@ fn sminN( a : f32, b : f32, k : f32, n : f32 ) -> vec2f
     }
 }
 
-fn soft_min(a : f32, b : f32, r : f32) -> f32 
+fn soft_min(a : f32, b : f32, k : f32) -> vec2f 
 { 
-    let e : f32 = max(r - abs(a - b), 0); 
-    return min(a, b) - e*e*0.25/r; 
+    let h : f32 = max(k - abs(a - b), 0) / k; 
+    let m : f32 = h * h * h * 0.5;
+    return vec2f(min(a, b) - h * h * k * 0.25, select(1.0 - m, m, a < b)); 
 }
 
 // From iqulzes and Dreams
@@ -313,11 +314,11 @@ fn sminPoly(a : f32, b : f32, k : f32) -> vec2f {
 
 fn opSmoothUnion( s1 : Surface, s2 : Surface, k : f32 ) -> Surface
 {
-    let smin : f32 = soft_min(s2.distance, s1.distance, k);
+    let smin : vec2f = soft_min(s2.distance, s1.distance, k);
     //let smin : vec2f = sminPoly(s2.distance, s1.distance, k);
     var sf : Surface;
-    sf.distance = smin;
-    // sf.color = mix(s2.color, s1.color, smin.y);
+    sf.distance = smin.x;
+    sf.color = mix(s2.color, s1.color, smin.y);
     return sf;
 }
 
@@ -369,10 +370,10 @@ fn opPaint( s1 : Surface, s2 : Surface, paintColor : vec3f ) -> Surface
 
 fn opSmoothSubtraction( s1 : Surface, s2 : Surface, k : f32 ) -> Surface
 {
-    let smin : f32 = soft_min(s2.distance, -s1.distance, k);
+    let smin : vec2f = soft_min(s2.distance, -s1.distance, k);
     var s : Surface;
-    s.distance = -smin;
-    // s.color = s1.color;
+    s.distance = -smin.x;
+    s.color = s1.color;
     return s;
 }
 

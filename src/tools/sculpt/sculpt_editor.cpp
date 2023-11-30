@@ -251,7 +251,7 @@ void SculptEditor::update(float delta_time)
     edit_to_add.rotation *= (sculpt_rotation * rotation_diff);
 
     edit_to_add.primitive = current_primitive;
-    //edit_to_add.color = current_color;
+    edit_to_add.color = current_color;
     edit_to_add.parameters.x = onion_enabled ? onion_thickness : 0.f;
     edit_to_add.parameters.y = capped_enabled ? capped_value : -1.f;
 
