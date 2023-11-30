@@ -1,16 +1,6 @@
 #include "edit.h"
 #include <sstream>
 
-std::ostream& operator<<(std::ostream& os, const Edit& edit)
-{
-    os << "Position: " << edit.position.x << ", " << edit.position.y << ", " << edit.position.z << std::endl;
-    os << "Primitive: " << edit.primitive << std::endl;
-    os << "Color: " << edit.color.x << ", " << edit.color.y << ", " << edit.color.z << std::endl;
-    os << "Operation: " << edit.operation << std::endl;
-    os << "Dimensions: " << edit.dimensions.x << ", " << edit.dimensions.y << ", " << edit.dimensions.z << edit.dimensions.w << std::endl;
-    return os;
-}
-
 std::string Edit::to_string() const {
 
     std::string text;

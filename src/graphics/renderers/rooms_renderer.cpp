@@ -4,6 +4,8 @@
 #include "dawnxr/dawnxr_internal.h"
 #endif
 
+#include "spdlog/spdlog.h"
+
 RoomsRenderer::RoomsRenderer() : Renderer()
 {
     

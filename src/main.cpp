@@ -3,6 +3,8 @@
 
 #include <GLFW/glfw3.h>
 
+#include "spdlog/spdlog.h"
+
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #include <emscripten/html5.h>

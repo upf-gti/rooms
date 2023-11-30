@@ -6,6 +6,8 @@
 #include <algorithm>
 #include <numeric>
 
+#include "spdlog/spdlog.h"
+
 RaymarchingRenderer::RaymarchingRenderer()
 {
     
@@ -126,7 +128,7 @@ void RaymarchingRenderer::compute_octree()
 
     RenderdocCapture::start_capture_frame();
 
-    std::cout << edits[0] << std::endl;
+    spdlog::debug(edits[0].to_string());
 
     // Initialize a command encoder
     WGPUCommandEncoderDescriptor encoder_desc = {};

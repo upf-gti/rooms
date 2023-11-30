@@ -7,6 +7,8 @@
 
 #include "graphics/renderer_storage.h"
 
+#include "spdlog/spdlog.h"
+
 void SculptEditor::initialize()
 {
     renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
@@ -82,7 +84,7 @@ void SculptEditor::initialize()
         ui::UIEntity* recent_group = gui.get_widget_from_name("g_recent_colors");
         if (!recent_group){
             assert(0);
-            std::cerr << "Cannot find recent_colors button group!" << std::endl;
+            spdlog::error("Cannot find recent_colors button group!");
             return;
         }
 
