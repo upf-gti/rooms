@@ -5,8 +5,9 @@
 #include "framework/scene/parse_scene.h"
 #include "graphics/renderers/rooms_renderer.h"
 
-#include <iostream>
 #include <fstream>
+
+#include "spdlog/spdlog.h"
 
 int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen)
 {
@@ -22,7 +23,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     skybox->scale(glm::vec3(100.f));
     skybox->set_material_priority(2);
 
-    // parse_scene("data/gltf_tests/DamagedHelmet.glb", entities);
+    //parse_scene("data/gltf_tests/DamagedHelmetGLB/DamagedHelmet.glb", entities);
 
     // import_scene();
 

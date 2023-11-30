@@ -2,7 +2,6 @@
 
 #include "includes.h"
 #include "utils.h"
-#include <iostream>
 
 #define MAX_EDITS_PER_EVALUATION 64
 
@@ -36,8 +35,6 @@ struct alignas(16) Edit {
     glm::vec3	color;
     glm::vec4	dimensions;
     glm::quat   rotation = { 0.f, 0.f, 0.f, 1.f };
-
-    friend std::ostream& operator<<(std::ostream& os, const Edit& edit);
 
     std::string to_string() const;
     void parse_string(const std::string& str);
