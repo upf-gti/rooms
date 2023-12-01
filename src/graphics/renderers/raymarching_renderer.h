@@ -95,6 +95,7 @@ class RaymarchingRenderer {
 
 
     Stroke* current_stroke = NULL;
+    std::list<Stroke> to_compute_stroke_buffer;
     std::vector<Stroke> stroke_history;
 
     // Preview edits
@@ -118,6 +119,8 @@ class RaymarchingRenderer {
 
     void init_compute_octree_pipeline();
     void init_raymarching_proxy_pipeline();
+
+    void evaluate_stroke(const Stroke& input_stroke);
 
 public:
 

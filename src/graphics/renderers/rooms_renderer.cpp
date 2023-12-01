@@ -149,7 +149,7 @@ void RoomsRenderer::render_mirror()
 {
     // Get the current texture in the swapchain
     WGPUTextureView current_texture_view = wgpuSwapChainGetCurrentTextureView(webgpu_context.screen_swapchain);
-    assert_msg(current_texture_view != NULL, "Error, dont resize the window please!!");
+    assert(current_texture_view != NULL);
 
     // Create the command encoder
     WGPUCommandEncoderDescriptor encoder_desc = {};
