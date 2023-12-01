@@ -117,8 +117,8 @@ void Stroke::get_edit_world_AABB(const uint8_t edit_index, glm::vec3* min, glm::
 
     const glm::vec3 edit_half_size = (rotated_mx_size - rotated_min_size) / 2.0f;
 
-    *min = (sculpt_rotation * (edits[edit_index].position - start_position) - edit_half_size + glm::vec3(0.50f, 0.50f, 0.50f));
-    *max = (sculpt_rotation * (edits[edit_index].position - start_position) + edit_half_size + glm::vec3(0.50f, 0.50f, 0.50f));
+    *min = (sculpt_rotation * (edits[edit_index].position) - edit_half_size);
+    *max = (sculpt_rotation * (edits[edit_index].position) + edit_half_size);
 }
 
 

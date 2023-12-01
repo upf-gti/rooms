@@ -30,24 +30,26 @@ struct Stroke {
     operation   : u32,
     parameters  : vec4f,
     edits       : array<Edit, 64>
-}
+};
 
 struct OctreeNode {
     octant_center_distance : vec2f,
     dummy : f32,
     tile_pointer : u32,
-}
+};
 
 struct Octree {
     data : array<OctreeNode>
 };
 
 struct MergeData {
-    edits_aabb_start      : vec3<u32>,
-    edits_to_process      : u32,
     sculpt_start_position : vec3f,
     max_octree_depth      : u32,
-    sculpt_rotation       : vec4f
+    sculpt_rotation       : vec4f,
+    reevaluation_AABB_min : vec3f,
+    reevaluate            : u32,
+    reevaluation_AABB_max : vec3f,
+    padding               : u32
 };
 
 struct ProxyInstanceData {

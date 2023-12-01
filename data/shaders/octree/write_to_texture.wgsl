@@ -16,6 +16,10 @@
 
 var<workgroup> used_pixels : atomic<u32>;
 
+fn intersection_AABB_AABB(b1_min : vec3f, b1_max : vec3f, b2_min : vec3f, b2_max : vec3f) -> bool {
+    return (b1_min.x <= b2_max.x && b1_min.y <= b2_max.y && b1_min.z <= b2_max.z) && (b1_max.x >= b2_min.x && b1_max.y >= b2_min.y && b1_max.z >= b2_min.z);
+}
+
 @compute @workgroup_size(10,10,10)
 fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation_id) local_id: vec3<u32>)
 {
@@ -28,6 +32,10 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     let brick_index : u32 = brick_pointer & 0x3FFFFFFFu;
 
     let proxy_data : ProxyInstanceData = octree_proxy_data.instance_data[brick_index];
+
+    let voxel_world_coords : vec3f = proxy_data.position + (10.0 / vec3f(local_id) - 5.0) * PIXEL_WORLD_SIZE;
+    let voxel_AABB_min : vec3f = voxel_world_coords - vec3f(PIXEL_WORLD_SIZE / 2.0);
+    let voxel_AABB_max : vec3f = voxel_world_coords + vec3f(PIXEL_WORLD_SIZE / 2.0);
 
     // Get the 3D atlas coords of the brick, with a stride of 10 (the size of the brick)
     let atlas_tile_coordinate : vec3u = 10 * vec3u(proxy_data.atlas_tile_index % BRICK_COUNT,
@@ -55,10 +63,9 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
         let material : Material = unpack_material(u32(raw_color.r));
         sSurface.color = material.albedo;
-        //debug_surf = vec3f(1.0);
     } else
     if ((INTERIOR_BRICK_FLAG & brick_pointer) == INTERIOR_BRICK_FLAG) {
-        sSurface.distance = -100.0;
+        //sSurface.distance = -100.0;
     }
 
     // Offset for a 10 pixel wide brick
@@ -85,13 +92,14 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     heatmap_color.g = sin(interpolant * 2.0);
     heatmap_color.b = cos(interpolant);
 
-    textureStore(write_sdf, texture_coordinates, vec4f(sSurface.distance));
-
     var material : Material;
     material.albedo = sSurface.color;
     material.roughness = 0.7;
     material.metalness = 0.2;
+    // Duplicate the texture Store, becuase then we have a branch depeding on an uniform!
+    textureStore(write_sdf, texture_coordinates, vec4f(sSurface.distance));
     textureStore(write_material_sdf, texture_coordinates, vec4<u32>((pack_material(material))));
+    
 
     //textureStore(write_sdf, texture_coordinates, vec4f(debug_surf.x, debug_surf.y, debug_surf.z, sSurface.distance));
     // Hack, for buffer usage

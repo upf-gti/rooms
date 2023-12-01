@@ -172,6 +172,10 @@ void SculptEditor::update(float delta_time)
     Edit& edit_to_add = tool_used.get_edit_to_add();
     StrokeParameters& stroke_parameters = tool_used.get_stroke_parameters();
 
+    if (Input::was_key_pressed(GLFW_KEY_U)) {
+        renderer->undo();
+    }
+
     if (snap_to_grid) {
         float grid_multiplier = 1.f / snap_grid_size;
         // Uncomment for grid size of half of the edit radius

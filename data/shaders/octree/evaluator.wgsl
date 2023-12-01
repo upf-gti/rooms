@@ -73,6 +73,10 @@
      - Union operation interior brick check
 */
 
+fn intersection_AABB_AABB(b1_min : vec3f, b1_max : vec3f, b2_min : vec3f, b2_max : vec3f) -> bool {
+    return (b1_min.x <= b2_max.x && b1_min.y <= b2_max.y && b1_min.z <= b2_max.z) && (b1_max.x >= b2_min.x && b1_max.y >= b2_min.y && b1_max.z >= b2_min.z);
+}
+
 @compute @workgroup_size(1, 1, 1)
 fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) workgroup_size : vec3u) 
 {
@@ -112,16 +116,35 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         octant_center += level_half_size * OFFSET_LUT[(octant_id >> (3 * (i - 1))) & 0x7];
     }
 
+    // let cull_distance : f32 = level_half_size * SQRT_3 * 1.5;
+
+    let is_smooth_union : bool = stroke.operation == OP_SMOOTH_UNION;
+    let is_smooth_substract : bool =  stroke.operation == OP_SMOOTH_SUBSTRACTION;
+
+    let octant_min : vec3f = octant_center - vec3f(level_half_size);
+    let octant_max : vec3f = octant_center + vec3f(level_half_size);
+
+    let is_in_reevaluation_zone : bool = intersection_AABB_AABB(merge_data.reevaluation_AABB_min, merge_data.reevaluation_AABB_max, octant_min, octant_max);
+ 
+     if (merge_data.reevaluate == 1u && level >= merge_data.max_octree_depth) {
+        if (is_in_reevaluation_zone) {
+            if ((octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG) {
+                let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
+                let instance_index : u32 = octree.data[octree_index].tile_pointer & 0x3FFFFFFFu;
+                indirect_brick_removal.brick_removal_buffer[brick_to_delete_idx] = instance_index;
+                octree_proxy_data.instance_data[instance_index].in_use = 0u;
+               // octree.data[octree_index].tile_pointer = 0u;
+            }
+            octree.data[octree_index].octant_center_distance = vec2f(10000.0, 10000.0);
+            octree.data[octree_index].tile_pointer = 0u;
+        }
+    }
+
     var new_edits_surface_interval : vec2f = vec2f(10000.0, 10000.0);
     var surface_interval = (octree.data[octree_index].octant_center_distance);
     var edit_counter : u32 = 0;
 
     var new_packed_edit_idx : u32 = 0;
-
-    // let cull_distance : f32 = level_half_size * SQRT_3 * 1.5;
-
-    let is_smooth_union : bool = stroke.operation == OP_SMOOTH_UNION;
-    let is_smooth_substract : bool =  stroke.operation == OP_SMOOTH_SUBSTRACTION;
 
     // Check the edits in the parent, and fill its own list with the edits that affect this child
     for (var i : u32 = 0; i < edit_culling_count[parent_octree_index] ; i++) {
@@ -187,7 +210,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     let local_surface_inside : bool = new_edits_surface_interval.y < 0.0;
     let local_surface_outside : bool = new_edits_surface_interval.x > 0.0;
     let local_surface_intersection : bool = new_edits_surface_interval.x < 0.0 && new_edits_surface_interval.y > 0.0;
- 
+
     let is_current_brick_filled : bool = (octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG;
     let is_interior_brick : bool = (octree.data[octree_index].tile_pointer & INTERIOR_BRICK_FLAG) == INTERIOR_BRICK_FLAG;
 
@@ -195,10 +218,22 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
     edit_culling_count[octree_index] = edit_counter;
 
-    if (level < merge_data.max_octree_depth) {
+     if (level < merge_data.max_octree_depth) {
 
+        if (merge_data.reevaluate > 0u) {
+            if (is_in_reevaluation_zone) {
+                // Subdivide
+                // Increase the number of children from the current level
+                let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 8);
+
+                // Add to the index the childres's octant id, and save it for the next pass
+                for (var i : u32 = 0; i < 8; i++) {
+                    octant_usage_write[prev_counter + i] = octant_id | (i << (3 * level));
+                }
+            }
+        }  
         // If there is surface of the new edits in the block 
-        if  (new_edits_surface_interval.x < 0.0) {
+        else if  (new_edits_surface_interval.x < 0.0) {
             // Subdivide
             // Increase the number of children from the current level
             let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 8);
@@ -260,7 +295,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         } else {
             // IF ITS A SUBSTRACTION OPERATION ==============
             if (local_surface_intersection) {
-                 if (is_current_brick_filled) {
+                if (is_current_brick_filled) {
                     // If the block is int he surface of new_edits and is filled, update the brick
                     let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 1);
                     octant_usage_write[prev_counter] = octree_index;

@@ -2,6 +2,7 @@
 
 #include "rooms_renderer.h"
 #include "framework/scene/parse_scene.h"
+#include "framework/intersections.h"
 
 #include <algorithm>
 #include <numeric>
@@ -138,7 +139,7 @@ void RaymarchingRenderer::push_edit(const Edit edit) {
     current_stroke->edits[current_stroke->edit_count++] = edit;
 }
 
-void RaymarchingRenderer::evaluate_stroke(const Stroke& new_stroke) {
+void RaymarchingRenderer::evaluate_stroke(const Stroke& new_stroke, const bool store_to_history) {
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
 
     // Initialize a command encoder
@@ -244,6 +245,53 @@ void RaymarchingRenderer::evaluate_stroke(const Stroke& new_stroke) {
     wgpuCommandBufferRelease(commands);
     wgpuComputePassEncoderRelease(compute_pass);
     wgpuCommandEncoderRelease(command_encoder);
+
+    if (!store_to_history) {
+        return;
+    }
+    // Store the stroke in the history, and also store the AABB
+    stroke_history.push_back(new_stroke);
+    AABB new_aabb;
+    new_stroke.get_world_AABB(&new_aabb.min, &new_aabb.max, compute_merge_data.sculpt_start_position, compute_merge_data.sculpt_rotation);
+    stroke_history_AABB.push_back(new_aabb);
+}
+
+void RaymarchingRenderer::undo() {
+    AABB last_edit_AABB = stroke_history_AABB.back();
+    stroke_history_AABB.pop_back();
+    stroke_history_AABB.pop_back();
+
+    stroke_history.pop_back();
+    stroke_history.pop_back();
+
+    std::vector<Stroke> strokes_to_recompute;
+
+    // Get the strokes that are on the region of the undo
+    for (uint32_t i = 0u; i < stroke_history_AABB.size(); i++) {
+        AABB& past_stroke = stroke_history_AABB[i];
+        if (intersection::AABB_AABB_min_max(last_edit_AABB.min,
+                                            last_edit_AABB.max,
+                                            past_stroke.min,
+                                            past_stroke.max)){
+            strokes_to_recompute.push_back(stroke_history[i]);
+        }
+    }
+    compute_merge_data.reevaluate = 1;
+
+    compute_merge_data.reevaluation_AABB_min = last_edit_AABB.min;
+    compute_merge_data.reevaluation_AABB_max = last_edit_AABB.max;
+
+    RenderdocCapture::start_capture_frame();
+
+    for (uint32_t i = 0u; i < strokes_to_recompute.size(); i++) {
+        evaluate_stroke(strokes_to_recompute[i], false);
+        if (i == 0) {
+            compute_merge_data.reevaluate = 2;
+        }
+    }
+    RenderdocCapture::end_capture_frame();
+
+    compute_merge_data.reevaluate = 0;
 }
 
 void RaymarchingRenderer::compute_octree()
@@ -259,19 +307,15 @@ void RaymarchingRenderer::compute_octree()
 
     spdlog::debug(current_stroke->edits[0].to_string());
 
+    to_compute_stroke_buffer.push_back(*current_stroke);
+
     while (!to_compute_stroke_buffer.empty()) {
         Stroke to_compute = to_compute_stroke_buffer.front();
         to_compute_stroke_buffer.pop_front();
         evaluate_stroke(to_compute);
-        stroke_history.push_back(to_compute);
     }
 
-    if (current_stroke->edit_count != 0) {
-        evaluate_stroke(*current_stroke);
-        stroke_history.push_back(*current_stroke);
-    }
-
-    // Start a new stroke
+    // Start a new stroke, store previous
     change_stroke(current_stroke->primitive, current_stroke->operation, current_stroke->parameters);
 
     RenderdocCapture::end_capture_frame();

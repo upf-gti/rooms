@@ -117,4 +117,8 @@ public:
         raymarching_renderer.set_sculpt_rotation(rotation);
     }
 
+    void undo() {
+        raymarching_renderer.undo();
+    }
+
 };

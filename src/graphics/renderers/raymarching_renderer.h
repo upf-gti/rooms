@@ -6,6 +6,8 @@
 #include "graphics/edit.h"
 #include "graphics/texture.h"
 
+#include <stack>
+
 #define PREVIEW_EDITS_MAX 128
 #define SDF_RESOLUTION 400
 #define SCULPT_MAX_SIZE 1 // meters
@@ -80,11 +82,13 @@ class RaymarchingRenderer {
 
     // Data needed for sdf merging
     struct sMergeData {
-        glm::uvec3 edits_aabb_start = {};
-        uint32_t tmp = 0; // old edits count, can we delete??
         glm::vec3  sculpt_start_position = { 0.f, 0.f, 0.f };
-        uint32_t max_octree_depth = 0;
-        glm::quat sculpt_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
+        uint32_t   max_octree_depth = 0;
+        glm::quat  sculpt_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
+        glm::vec3  reevaluation_AABB_min;
+        uint32_t   reevaluate = 0u;
+        glm::vec3  reevaluation_AABB_max;
+        uint32_t   padding;
     } compute_merge_data;
 
     struct sOctreeNode {
@@ -94,9 +98,15 @@ class RaymarchingRenderer {
     };
 
 
+    struct AABB {
+        glm::vec3 min;
+        glm::vec3 max;
+    };
+
     Stroke* current_stroke = NULL;
     std::list<Stroke> to_compute_stroke_buffer;
     std::vector<Stroke> stroke_history;
+    std::vector<AABB> stroke_history_AABB;
 
     // Preview edits
     struct sPreviewEditsData {
@@ -120,7 +130,7 @@ class RaymarchingRenderer {
     void init_compute_octree_pipeline();
     void init_raymarching_proxy_pipeline();
 
-    void evaluate_stroke(const Stroke& input_stroke);
+    void evaluate_stroke(const Stroke& input_stroke, const bool store_to_history = true);
 
 public:
 
@@ -134,6 +144,8 @@ public:
 
     void compute_octree();
     void render_raymarching_proxy(WGPUTextureView swapchain_view, WGPUTextureView swapchain_depth);
+
+    void undo();
 
     void set_sculpt_start_position(const glm::vec3& position);
     void set_sculpt_rotation(const glm::quat& rotation);
