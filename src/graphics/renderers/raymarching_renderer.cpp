@@ -109,10 +109,10 @@ void RaymarchingRenderer::render()
 
 void RaymarchingRenderer::add_preview_edit(const Edit& edit)
 {
-    if (preview_edit_data.preview_edits_count >= PREVIEW_EDITS_MAX) {
-        return;
-    }
-    preview_edit_data.preview_edits[preview_edit_data.preview_edits_count++] = edit;
+    //if (preview_edit_data.preview_edits_count >= PREVIEW_EDITS_MAX) {
+    //    return;
+    //}
+    //preview_edit_data.preview_edits[preview_edit_data.preview_edits_count++] = edit;
 }
 
 void RaymarchingRenderer::initialize_stroke() {
@@ -147,7 +147,13 @@ void RaymarchingRenderer::push_edit(const Edit edit) {
     current_stroke->edits[current_stroke->edit_count++] = edit;
 }
 
-void RaymarchingRenderer::evaluate_stroke(const Stroke& new_stroke, const bool store_to_history) {
+void RaymarchingRenderer::evaluate_strokes(const std::vector<Stroke> strokes, const bool store_to_history)
+{
+    if (strokes.size() > 10) {
+        // TODO
+        assert(0);
+    }
+
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
 
     // Initialize a command encoder
@@ -159,45 +165,62 @@ void RaymarchingRenderer::evaluate_stroke(const Stroke& new_stroke, const bool s
     compute_pass_desc.timestampWrites = nullptr;
     WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
 
-    // Update uniform buffer
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(compute_stroke_buffer_uniform.data), 0, &new_stroke, sizeof(Stroke));
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(compute_merge_data_uniform.data), 0, &(compute_merge_data), sizeof(sMergeData));
+    // Can be done once
+    {
+        webgpu_context->update_buffer(std::get<WGPUBuffer>(compute_stroke_buffer_uniform.data), 0, strokes.data(), sizeof(Stroke) * strokes.size());
 
-    uint32_t default_vals[3] = { 1, 1, 1 };
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_indirect_buffer.data), 0, &default_vals, 3 * sizeof(uint32_t));
+        // Update uniform buffer
+        webgpu_context->update_buffer(std::get<WGPUBuffer>(compute_merge_data_uniform.data), 0, &(compute_merge_data), sizeof(sMergeData));
 
-    glm::uvec3 default_counter_val = glm::uvec3(0);
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_counters.data), 0, &default_counter_val, sizeof(glm::uvec3));
-
-    uint32_t default_val = 0;
-    // Restore initial octant for level 0
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(octant_usage_uniform[0].data), 0, &default_val, sizeof(uint32_t));
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(octant_usage_uniform[2].data), 0, &default_val, sizeof(uint32_t));
-
-    uint16_t rounded_size = new_stroke.edit_count + (4 - new_stroke.edit_count % 4);
-    uint8_t* edit_indices = new uint8_t[rounded_size];
-
-    for (int i = 0; i < rounded_size; i += 4) {
-        edit_indices[i + 0] = i + 3;
-        edit_indices[i + 1] = i + 2;
-        edit_indices[i + 2] = i + 1;
-        edit_indices[i + 3] = i + 0;
+        uint32_t default_value = 0u;
+        webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_proxy_indirect_buffer.data), sizeof(uint32_t), &default_value, sizeof(uint32_t));
     }
 
-    // update edit_culling_list
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_edit_culling_data.data), 0, edit_indices, rounded_size * sizeof(uint8_t));
 
-    delete[] edit_indices;
+    // Must be updated per stroke
 
-    // update edit_culling_count
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_edit_culling_data.data), octree_total_size * MAX_EDITS_PER_EVALUATION, &new_stroke.edit_count, sizeof(uint32_t));
+    {
+        compute_octree_initialization_pipeline.set(compute_pass);
 
-    // Upload the default data
-    uint32_t devault_vals_compute[3] = { 0u, 1u, 1u };
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_indirect_brick_removal_buffer.data), 0, devault_vals_compute, sizeof(uint32_t) * 3);
+        wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_initialization_bind_group, 0, nullptr);
+        wgpuComputePassEncoderSetBindGroup(compute_pass, 1, compute_stroke_buffer_bind_group, 0, nullptr);
 
-    uint32_t default_value = 0u;
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_proxy_indirect_buffer.data), sizeof(uint32_t), &default_value, sizeof(uint32_t));
+        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
+    }
+
+    //uint32_t default_vals[3] = { 1, 1, 1 };
+    //webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_indirect_buffer.data), 0, &default_vals, 3 * sizeof(uint32_t));
+
+    //glm::uvec3 default_counter_val = glm::uvec3(0);
+    //webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_counters.data), 0, &default_counter_val, sizeof(glm::uvec3));
+
+    //uint32_t default_val = 0;
+    //// Restore initial octant for level 0
+    //webgpu_context->update_buffer(std::get<WGPUBuffer>(octant_usage_uniform[0].data), 0, &default_val, sizeof(uint32_t));
+    //webgpu_context->update_buffer(std::get<WGPUBuffer>(octant_usage_uniform[2].data), 0, &default_val, sizeof(uint32_t));
+
+    //uint16_t rounded_size = new_stroke.edit_count + (4 - new_stroke.edit_count % 4);
+    //uint8_t* edit_indices = new uint8_t[rounded_size];
+
+    //for (int i = 0; i < rounded_size; i += 4) {
+    //    edit_indices[i + 0] = i + 3;
+    //    edit_indices[i + 1] = i + 2;
+    //    edit_indices[i + 2] = i + 1;
+    //    edit_indices[i + 3] = i + 0;
+    //}
+
+    //// update edit_culling_list
+    //webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_edit_culling_data.data), 0, edit_indices, rounded_size * sizeof(uint8_t));
+
+    //delete[] edit_indices;
+
+    //// update edit_culling_count
+    //webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_edit_culling_data.data), octree_total_size * MAX_EDITS_PER_EVALUATION, &new_stroke.edit_count, sizeof(uint32_t));
+
+    //// Upload the default data
+    //uint32_t devault_vals_compute[3] = { 0u, 1u, 1u };
+    //webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_indirect_brick_removal_buffer.data), 0, devault_vals_compute, sizeof(uint32_t) * 3);
+
 
     int ping_pong_idx = 0;
 
@@ -206,8 +229,8 @@ void RaymarchingRenderer::evaluate_stroke(const Stroke& new_stroke, const bool s
         compute_octree_evaluate_pipeline.set(compute_pass);
 
         wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_evaluate_bind_group, 0, nullptr);
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 1, compute_octant_usage_bind_groups[ping_pong_idx], 0, nullptr);
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 2, compute_stroke_buffer_bind_group, 0, nullptr);
+        wgpuComputePassEncoderSetBindGroup(compute_pass, 1, compute_stroke_buffer_bind_group, 0, nullptr);
+        wgpuComputePassEncoderSetBindGroup(compute_pass, 2, compute_octant_usage_bind_groups[ping_pong_idx], 0, nullptr);
 
         wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(octree_indirect_buffer.data), 0);
 
@@ -224,8 +247,8 @@ void RaymarchingRenderer::evaluate_stroke(const Stroke& new_stroke, const bool s
     compute_octree_write_to_texture_pipeline.set(compute_pass);
 
     wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_write_to_texture_bind_group, 0, nullptr);
-    wgpuComputePassEncoderSetBindGroup(compute_pass, 1, compute_octant_usage_bind_groups[ping_pong_idx], 0, nullptr);
-    wgpuComputePassEncoderSetBindGroup(compute_pass, 2, compute_stroke_buffer_bind_group, 0, nullptr);
+    wgpuComputePassEncoderSetBindGroup(compute_pass, 1, compute_stroke_buffer_bind_group, 0, nullptr);
+    wgpuComputePassEncoderSetBindGroup(compute_pass, 2, compute_octant_usage_bind_groups[ping_pong_idx], 0, nullptr);
 
     wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(octree_indirect_buffer.data), 0);
 
@@ -235,6 +258,7 @@ void RaymarchingRenderer::evaluate_stroke(const Stroke& new_stroke, const bool s
     wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_indirect_brick_removal_bind_group, 0, nullptr);
 
     wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(octree_indirect_brick_removal_buffer.data), 0u);
+
 
 
     compute_octree_brick_copy_pipeline.set(compute_pass);
@@ -263,10 +287,10 @@ void RaymarchingRenderer::evaluate_stroke(const Stroke& new_stroke, const bool s
     }
 
     // Store the stroke in the history, and also store the AABB
-    stroke_history.push_back(new_stroke);
-    AABB new_aabb;
-    new_stroke.get_world_AABB(&new_aabb.min, &new_aabb.max, compute_merge_data.sculpt_start_position, compute_merge_data.sculpt_rotation);
-    stroke_history_AABB.push_back(new_aabb);
+    //stroke_history.push_back(new_stroke);
+    //AABB new_aabb;
+    //new_stroke.get_world_AABB(&new_aabb.min, &new_aabb.max, compute_merge_data.sculpt_start_position, compute_merge_data.sculpt_rotation);
+    //stroke_history_AABB.push_back(new_aabb);
 }
 
 void RaymarchingRenderer::undo() {
@@ -299,12 +323,12 @@ void RaymarchingRenderer::undo() {
 
     RenderdocCapture::start_capture_frame();
 
-    for (uint32_t i = 0u; i < strokes_to_recompute.size(); i++) {
-        evaluate_stroke(strokes_to_recompute[i], false);
-        if (i == 0) {
-            compute_merge_data.reevaluate = 0;
-        }
-    }
+    //for (uint32_t i = 0u; i < strokes_to_recompute.size(); i++) {
+        evaluate_strokes(strokes_to_recompute, false);
+    //    if (i == 0) {
+    //        compute_merge_data.reevaluate = 0;
+    //    }
+    //}
     RenderdocCapture::end_capture_frame();
 
     compute_merge_data.reevaluate = 0;
@@ -329,7 +353,7 @@ void RaymarchingRenderer::compute_octree()
     while (!to_compute_stroke_buffer.empty()) {
         Stroke to_compute = to_compute_stroke_buffer.front();
         to_compute_stroke_buffer.pop_front();
-        evaluate_stroke(to_compute);
+        evaluate_strokes({ to_compute });
     }
 
     RenderdocCapture::end_capture_frame();
@@ -432,6 +456,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
     compute_octree_write_to_texture_shader = RendererStorage::get_shader("data/shaders/octree/write_to_texture.wgsl");
     compute_octree_brick_removal_shader = RendererStorage::get_shader("data/shaders/octree/brick_removal.wgsl");
     compute_octree_brick_copy_shader = RendererStorage::get_shader("data/shaders/octree/brick_copy.wgsl");
+    compute_octree_initialization_shader = RendererStorage::get_shader("data/shaders/octree/initialization.wgsl");
 
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
 
@@ -577,7 +602,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
 
     for (int i = 0; i < 2; ++i) {
         std::vector<Uniform*> uniforms = { &octant_usage_uniform[i], &octant_usage_uniform[3 - i] }; // im sorry
-        compute_octant_usage_bind_groups[i] = webgpu_context->create_bind_group(uniforms, compute_octree_evaluate_shader, 1);
+        compute_octant_usage_bind_groups[i] = webgpu_context->create_bind_group(uniforms, compute_octree_evaluate_shader, 2);
     }
 
     {
@@ -587,14 +612,30 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
     }
 
     {
-        // Edits uniform
+        // Stroke buffer uniform
         compute_stroke_buffer_uniform.data = webgpu_context->create_buffer(sizeof(Stroke) * 10, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "stroke_buffer");
         compute_stroke_buffer_uniform.binding = 0;
         compute_stroke_buffer_uniform.buffer_size = sizeof(Stroke) * 10;
 
         std::vector<Uniform*> uniforms = { &compute_stroke_buffer_uniform };
 
-        compute_stroke_buffer_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_evaluate_shader, 2);
+        compute_stroke_buffer_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_evaluate_shader, 1);
+    }
+
+    {
+        octant_usage_initialization_uniform[0].data = octant_usage_uniform[0].data;
+        octant_usage_initialization_uniform[0].binding = 1;
+        octant_usage_initialization_uniform[0].buffer_size = octant_usage_uniform[0].buffer_size;
+
+        octant_usage_initialization_uniform[1].data = octant_usage_uniform[2].data;
+        octant_usage_initialization_uniform[1].binding = 2;
+        octant_usage_initialization_uniform[1].buffer_size = octant_usage_uniform[1].buffer_size;
+
+
+        std::vector<Uniform*> uniforms = { &octree_indirect_buffer, &octree_counters, &octant_usage_initialization_uniform[0], &octant_usage_initialization_uniform[1],
+                                           &octree_edit_culling_data, &octree_indirect_brick_removal_buffer };
+
+        compute_octree_initialization_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_initialization_shader, 0);
     }
 
     compute_octree_evaluate_pipeline.create_compute(compute_octree_evaluate_shader);
@@ -602,6 +643,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
     compute_octree_write_to_texture_pipeline.create_compute(compute_octree_write_to_texture_shader);
     compute_octree_brick_removal_pipeline.create_compute(compute_octree_brick_removal_shader);
     compute_octree_brick_copy_pipeline.create_compute(compute_octree_brick_copy_shader);
+    compute_octree_initialization_pipeline.create_compute(compute_octree_initialization_shader);
 }
 
 
@@ -619,7 +661,9 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
         proxy_geometry_eye_position.binding = 1;
         proxy_geometry_eye_position.buffer_size = sizeof(glm::vec3);
 
-        Uniform* camera_uniform = static_cast<RoomsRenderer*>(RoomsRenderer::instance)->get_current_camera_uniform();
+        RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
+
+        Uniform* camera_uniform = rooms_renderer->get_current_camera_uniform();
 
         linear_sampler_uniform.data = webgpu_context->create_sampler(WGPUAddressMode_ClampToEdge, WGPUAddressMode_ClampToEdge, WGPUAddressMode_ClampToEdge, WGPUFilterMode_Linear, WGPUFilterMode_Linear);
         linear_sampler_uniform.binding = 2;

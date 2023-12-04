@@ -126,7 +126,7 @@ void RoomsRenderer::render_xr()
 
         const sSwapchainData& swapchainData = xr_context.swapchains[i];
 
-        WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
+        WebGPUContext* webgpu_context = get_webgpu_context();
         camera_data.eye = xr_context.per_view_data[i].position;
         camera_data.mvp = xr_context.per_view_data[i].view_projection_matrix;
         camera_data.dummy = 0.f;

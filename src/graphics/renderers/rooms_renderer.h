@@ -71,9 +71,7 @@ public:
     void resize_window(int width, int height) override;
 
     inline Camera* get_camera() { return &camera; }
-    inline Uniform* get_current_camera_uniform() {
-        return &camera_uniform;
-    }
+    inline Uniform* get_current_camera_uniform() { return &camera_uniform; }
 
     void set_sculpt_start_position(const glm::vec3& position) {
         raymarching_renderer.set_sculpt_start_position(position);

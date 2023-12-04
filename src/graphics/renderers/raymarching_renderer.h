@@ -34,11 +34,13 @@ class RaymarchingRenderer {
     Pipeline        compute_octree_write_to_texture_pipeline;
     Pipeline        compute_octree_brick_removal_pipeline;
     Pipeline        compute_octree_brick_copy_pipeline;
+    Pipeline        compute_octree_initialization_pipeline;
     Shader*         compute_octree_evaluate_shader = nullptr;
     Shader*         compute_octree_increment_level_shader = nullptr;
     Shader*         compute_octree_write_to_texture_shader = nullptr;
     Shader*         compute_octree_brick_removal_shader = nullptr;
     Shader*         compute_octree_brick_copy_shader = nullptr;
+    Shader*         compute_octree_initialization_shader = nullptr;
     WGPUBindGroup   compute_octree_evaluate_bind_group = nullptr;
     WGPUBindGroup   compute_octree_increment_level_bind_group = nullptr;
     WGPUBindGroup   compute_octree_write_to_texture_bind_group = nullptr;
@@ -46,9 +48,11 @@ class RaymarchingRenderer {
     WGPUBindGroup   compute_octree_brick_copy_bind_group = nullptr;
     WGPUBindGroup   compute_octant_usage_bind_groups[2] = {};
     WGPUBindGroup   compute_stroke_buffer_bind_group = nullptr;
+    WGPUBindGroup   compute_octree_initialization_bind_group = nullptr;
 
     Uniform         octree_uniform;
     Uniform         octant_usage_uniform[4];
+    Uniform         octant_usage_initialization_uniform[2];
     uint8_t         octree_depth = 0;
     uint32_t        octants_max_size = 0;
     uint32_t        octree_total_size = 0;
@@ -110,13 +114,13 @@ class RaymarchingRenderer {
     std::vector<AABB> stroke_history_AABB;
 
     // Preview edits
-    struct sPreviewEditsData {
-        glm::vec3 aabb_center;
-        float padding = 0.0f;
-        glm::vec3 aabb_size;
-        uint32_t preview_edits_count = 0u;
-        Edit preview_edits[PREVIEW_EDITS_MAX];
-    } preview_edit_data;
+    //struct sPreviewEditsData {
+    //    glm::vec3 aabb_center;
+    //    float padding = 0.0f;
+    //    glm::vec3 aabb_size;
+    //    uint32_t preview_edits_count = 0u;
+    //    Edit preview_edits[PREVIEW_EDITS_MAX];
+    //} preview_edit_data;
 
     struct ProxyInstanceData {
         glm::vec3 position;
@@ -131,7 +135,7 @@ class RaymarchingRenderer {
     void init_compute_octree_pipeline();
     void init_raymarching_proxy_pipeline();
 
-    void evaluate_stroke(const Stroke& input_stroke, const bool store_to_history = true);
+    void evaluate_strokes(const std::vector<Stroke> strokes, const bool store_to_history = true);
 
 public:
 
