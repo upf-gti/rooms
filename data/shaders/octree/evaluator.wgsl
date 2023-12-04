@@ -2,7 +2,6 @@
 #include octree_includes.wgsl
 #include sdf_interval_functions.wgsl
 
-@group(0) @binding(0) var<uniform> stroke : Stroke;
 @group(0) @binding(1) var<uniform> merge_data : MergeData;
 @group(0) @binding(2) var<storage, read_write> octree : Octree;
 @group(0) @binding(4) var<storage, read_write> counters : OctreeCounters;
@@ -12,6 +11,8 @@
 
 @group(1) @binding(0) var<storage, read> octant_usage_read : array<u32>;
 @group(1) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
+
+@group(2) @binding(0) var<uniform> stroke : Stroke;
 
 /*
     Octree Octant indexing
@@ -125,7 +126,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
     let is_in_reevaluation_zone : bool = intersection_AABB_AABB(merge_data.reevaluation_AABB_min, merge_data.reevaluation_AABB_max, octant_min, octant_max);
  
-     if (merge_data.reevaluate == 1u && level >= merge_data.max_octree_depth) {
+    if (merge_data.reevaluate == 1u && level >= merge_data.max_octree_depth) {
         if (is_in_reevaluation_zone) {
             if ((octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG) {
                 let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);

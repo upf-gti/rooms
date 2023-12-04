@@ -45,6 +45,8 @@ class RaymarchingRenderer {
     WGPUBindGroup   compute_octree_indirect_brick_removal_bind_group = nullptr;
     WGPUBindGroup   compute_octree_brick_copy_bind_group = nullptr;
     WGPUBindGroup   compute_octant_usage_bind_groups[2] = {};
+    WGPUBindGroup   compute_stroke_buffer_bind_group = nullptr;
+
     Uniform         octree_uniform;
     Uniform         octant_usage_uniform[4];
     uint8_t         octree_depth = 0;
@@ -68,7 +70,7 @@ class RaymarchingRenderer {
     Uniform         compute_preview_edit_uniform;
 
     Uniform         compute_merge_data_uniform;
-    Uniform         compute_edits_array_uniform;
+    Uniform         compute_stroke_buffer_uniform;
 
     EntityMesh*     cube_mesh = nullptr;
 

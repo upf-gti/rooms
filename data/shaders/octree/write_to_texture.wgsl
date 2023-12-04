@@ -2,7 +2,6 @@
 #include octree_includes.wgsl
 #include material_packing.wgsl
 
-@group(0) @binding(0) var<uniform> stroke : Stroke;
 @group(0) @binding(2) var<storage, read_write> octree : Octree;
 @group(0) @binding(3) var write_sdf: texture_storage_3d<r32float, read_write>;
 @group(0) @binding(4) var<storage, read_write> counters : OctreeCounters;
@@ -12,6 +11,8 @@
 
 @group(1) @binding(0) var<storage, read> octant_usage_read : array<u32>;
 @group(1) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
+
+@group(2) @binding(0) var<uniform> stroke : Stroke;
 
 var<workgroup> used_pixels : atomic<u32>;
 
