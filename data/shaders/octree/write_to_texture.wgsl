@@ -7,8 +7,7 @@
 @group(0) @binding(3) var write_sdf: texture_storage_3d<r32float, read_write>;
 @group(0) @binding(4) var<storage, read_write> counters : OctreeCounters;
 @group(0) @binding(5) var<storage, read_write> octree_proxy_data: OctreeProxyInstances;
-@group(0) @binding(6) var<storage, read_write> edit_culling_lists: array<u32>;
-@group(0) @binding(7) var<storage, read_write> edit_culling_count : array<u32>;
+@group(0) @binding(6) var<storage, read_write> edit_culling_data: EditCullingData;
 @group(0) @binding(8) var write_material_sdf: texture_storage_3d<r32uint, read_write>;
 
 @group(1) @binding(0) var<storage, read> octant_usage_read : array<u32>;
@@ -65,9 +64,9 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     let pixel_offset : vec3f = (vec3f(local_id) - 4.5) * PIXEL_WORLD_SIZE;
 
     // Traverse the according edits and evaluate them in the brick
-    for (var i : u32 = 0; i < edit_culling_count[parent_octree_index]; i++) {
+    for (var i : u32 = 0; i < edit_culling_data.edit_culling_count[parent_octree_index]; i++) {
         // Get the packed indices
-        let current_packed_edit_idx : u32 = edit_culling_lists[i / 4 + parent_octree_index * PACKED_LIST_SIZE];
+        let current_packed_edit_idx : u32 = edit_culling_data.edit_culling_lists[i / 4 + parent_octree_index * PACKED_LIST_SIZE];
         let packed_index : u32 = 3 - (i % 4);
         let current_unpacked_edit_idx : u32 = (current_packed_edit_idx & (0xFFu << (packed_index * 8u))) >> (packed_index * 8u);
 
@@ -79,7 +78,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     }
 
     // Heatmap Edit debugging
-    let interpolant : f32 = (f32( edit_culling_count[parent_octree_index] ) / f32(5)) * (3.14159265 / 2.0);
+    let interpolant : f32 = (f32( edit_culling_data.edit_culling_count[parent_octree_index] ) / f32(5)) * (3.14159265 / 2.0);
     var heatmap_color : vec3f;
     heatmap_color.r = sin(interpolant);
     heatmap_color.g = sin(interpolant * 2.0);

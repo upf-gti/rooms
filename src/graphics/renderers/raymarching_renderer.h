@@ -52,8 +52,7 @@ class RaymarchingRenderer {
     Uniform         octree_counters;
     Uniform         octree_proxy_instance_buffer;
     Uniform         octree_proxy_indirect_buffer;
-    Uniform         octree_edit_culling_lists;
-    Uniform         octree_edit_culling_count;
+    Uniform         octree_edit_culling_data;
     Uniform         octree_indirect_brick_removal_buffer;
     Uniform         octree_brick_copy_buffer;
     Uniform         proxy_geometry_eye_position;

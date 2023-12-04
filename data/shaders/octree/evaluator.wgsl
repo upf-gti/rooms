@@ -7,8 +7,7 @@
 @group(0) @binding(2) var<storage, read_write> octree : Octree;
 @group(0) @binding(4) var<storage, read_write> counters : OctreeCounters;
 @group(0) @binding(5) var<storage, read_write> octree_proxy_data: OctreeProxyInstances;
-@group(0) @binding(6) var<storage, read_write> edit_culling_lists: array<u32>;
-@group(0) @binding(7) var<storage, read_write> edit_culling_count : array<u32>;
+@group(0) @binding(6) var<storage, read_write> edit_culling_data: EditCullingData;
 @group(0) @binding(8) var<storage, read_write> indirect_brick_removal : IndirectBrickRemoval;
 
 @group(1) @binding(0) var<storage, read> octant_usage_read : array<u32>;
@@ -124,11 +123,11 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     let is_smooth_substract : bool =  stroke.operation == OP_SMOOTH_SUBSTRACTION;
 
     // Check the edits in the parent, and fill its own list with the edits that affect this child
-    for (var i : u32 = 0; i < edit_culling_count[parent_octree_index] ; i++) {
+    for (var i : u32 = 0; i < edit_culling_data.edit_culling_count[parent_octree_index] ; i++) {
         // Accessing a packed indexed edit in the culling list:
 
         // Get the word index and the word: word_idx = idx / 4
-        let current_packed_edit_idx : u32 = edit_culling_lists[i / 4 + parent_octree_index * PACKED_LIST_SIZE];
+        let current_packed_edit_idx : u32 = edit_culling_data.edit_culling_lists[i / 4 + parent_octree_index * PACKED_LIST_SIZE];
         //Get the in-word index (inverted for endianess coherency)
         let packed_index : u32 = 3 - (i % 4);
 
@@ -155,15 +154,15 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
             // If the current word is full, we store it, and set it up a new word in new_packed_edit_idx
             if (edit_counter % 4 == 0) {
-                edit_culling_lists[(edit_counter - 1) / 4 + octree_index * PACKED_LIST_SIZE] = new_packed_edit_idx;
+                edit_culling_data.edit_culling_lists[(edit_counter - 1) / 4 + octree_index * PACKED_LIST_SIZE] = new_packed_edit_idx;
                 new_packed_edit_idx = 0;
                 continue;
             }
         } 
         
         // If we are in the last iteration and we have not saved the current packed word, we store it
-        if (i == (edit_culling_count[parent_octree_index] - 1)) {
-            edit_culling_lists[(edit_counter) / 4 + octree_index * PACKED_LIST_SIZE] = new_packed_edit_idx;
+        if (i == (edit_culling_data.edit_culling_count[parent_octree_index] - 1)) {
+            edit_culling_data.edit_culling_lists[(edit_counter) / 4 + octree_index * PACKED_LIST_SIZE] = new_packed_edit_idx;
         }
     }
 
@@ -193,7 +192,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
     octree.data[octree_index].octant_center_distance = surface_interval_smooth;
 
-    edit_culling_count[octree_index] = edit_counter;
+    edit_culling_data.edit_culling_count[octree_index] = edit_counter;
 
     if (level < merge_data.max_octree_depth) {
 
