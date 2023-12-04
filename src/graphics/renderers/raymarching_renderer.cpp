@@ -257,11 +257,13 @@ void RaymarchingRenderer::evaluate_stroke(const Stroke& new_stroke, const bool s
 }
 
 void RaymarchingRenderer::undo() {
+    if (stroke_history_AABB.size() == 0) {
+        return;
+    }
+
     AABB last_edit_AABB = stroke_history_AABB.back();
     stroke_history_AABB.pop_back();
-    stroke_history_AABB.pop_back();
 
-    stroke_history.pop_back();
     stroke_history.pop_back();
 
     std::vector<Stroke> strokes_to_recompute;
@@ -276,6 +278,7 @@ void RaymarchingRenderer::undo() {
             strokes_to_recompute.push_back(stroke_history[i]);
         }
     }
+    // Mark as the start of the re-evaulation, in order to clean the bricks
     compute_merge_data.reevaluate = 1;
 
     compute_merge_data.reevaluation_AABB_min = last_edit_AABB.min;
@@ -307,16 +310,14 @@ void RaymarchingRenderer::compute_octree()
 
     spdlog::debug(current_stroke->edits[0].to_string());
 
-    to_compute_stroke_buffer.push_back(*current_stroke);
+    // Start a new stroke, store previous
+    change_stroke(current_stroke->primitive, current_stroke->operation, current_stroke->parameters);
 
     while (!to_compute_stroke_buffer.empty()) {
         Stroke to_compute = to_compute_stroke_buffer.front();
         to_compute_stroke_buffer.pop_front();
         evaluate_stroke(to_compute);
     }
-
-    // Start a new stroke, store previous
-    change_stroke(current_stroke->primitive, current_stroke->operation, current_stroke->parameters);
 
     RenderdocCapture::end_capture_frame();
 }
