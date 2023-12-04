@@ -15,6 +15,10 @@ int RoomsRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
 {
     Renderer::initialize(window, use_mirror_screen);
 
+    Shader::set_custom_define("SDF_RESOLUTION", SDF_RESOLUTION);
+    Shader::set_custom_define("SCULPT_MAX_SIZE", SCULPT_MAX_SIZE);
+    Shader::set_custom_define("MAX_EDITS_PER_EVALUATION", MAX_EDITS_PER_EVALUATION);
+
     clear_color = glm::vec4(0.22f, 0.22f, 0.22f, 1.0);
 
     init_depth_buffers();

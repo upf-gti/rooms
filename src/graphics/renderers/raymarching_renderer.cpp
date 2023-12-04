@@ -19,6 +19,14 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
     bool is_openxr_available = RoomsRenderer::instance->get_openxr_available();
 
+    octree_depth = static_cast<uint8_t>(6);
+
+    // total size considering leaves and intermediate levels
+    octree_total_size = (pow(8, octree_depth + 1) - 1) / 7;
+
+    Shader::set_custom_define("OCTREE_DEPTH", octree_depth);
+    Shader::set_custom_define("OCTREE_TOTAL_SIZE", octree_total_size);
+
 #ifndef DISABLE_RAYMARCHER
 
     init_compute_octree_pipeline();
@@ -176,11 +184,13 @@ void RaymarchingRenderer::evaluate_stroke(const Stroke& new_stroke, const bool s
         edit_indices[i + 3] = i + 0;
     }
 
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_edit_culling_lists.data), 0, edit_indices, rounded_size * sizeof(uint8_t));
+    // update edit_culling_list
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_edit_culling_data.data), 0, edit_indices, rounded_size * sizeof(uint8_t));
 
     delete[] edit_indices;
 
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_edit_culling_count.data), 0, &new_stroke.edit_count, sizeof(uint32_t));
+    // update edit_culling_count
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_edit_culling_data.data), octree_total_size * MAX_EDITS_PER_EVALUATION, &new_stroke.edit_count, sizeof(uint32_t));
 
     // Upload the default data
     uint32_t devault_vals_compute[3] = { 0u, 1u, 1u };
@@ -442,18 +452,12 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
     sdf_material_texture_uniform.data = sdf_material_texture.get_view();
     sdf_material_texture_uniform.binding = 8; // TODO: set as 4
 
-    // 2^3 give 8x8x8 pixel cells, and we need one iteration less, so substract 3
-    octree_depth = static_cast<uint8_t>(6);
-
     // Size of penultimate level
     octants_max_size = pow(floorf(SDF_RESOLUTION / 10.0f), 3.0f);
 
     // Uniforms & buffers for octree generation
     {
         compute_merge_data.max_octree_depth = octree_depth;
-
-        // total size considering leaves and intermediate levels
-        octree_total_size = (pow(8, octree_depth + 1) - 1) / 7;
 
         uint32_t t = sizeof(Stroke);
 
@@ -500,15 +504,11 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_proxy_instance_buffer.data), 0, atlas_indices, sizeof(uint32_t) * (octants_max_size + 1));
         delete[] atlas_indices;
 
-        // Edit culling lists per octree node buffer
-        octree_edit_culling_lists.data = webgpu_context->create_buffer(octree_total_size * MAX_EDITS_PER_EVALUATION, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "edit_culling_lists");
-        octree_edit_culling_lists.binding = 6;
-        octree_edit_culling_lists.buffer_size = octree_total_size * MAX_EDITS_PER_EVALUATION;
-
-        // Culling count per octree node layer
-        octree_edit_culling_count.data = webgpu_context->create_buffer(octree_total_size * sizeof(sOctreeNode), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "edit_culling_count");
-        octree_edit_culling_count.binding = 7;
-        octree_edit_culling_count.buffer_size = octree_total_size * sizeof(sOctreeNode);
+        // Edit culling lists per octree node buffer and culling count per octree node layer
+        uint32_t edit_culling_data_size = octree_total_size * MAX_EDITS_PER_EVALUATION * sizeof(uint32_t) / 4 + octree_total_size * sizeof(uint32_t);
+        octree_edit_culling_data.data = webgpu_context->create_buffer(edit_culling_data_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "edit_culling_data");
+        octree_edit_culling_data.binding = 6;
+        octree_edit_culling_data.buffer_size = edit_culling_data_size;
 
         // Buffer for brick removal & indirect buffers
         // 3 uints for the indirect buffer data + 1 padding +  and then the brick size
@@ -521,8 +521,8 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_indirect_brick_removal_buffer.data), 0, default_removal_indirect, sizeof(uint32_t) * 4u);
 
 
-        std::vector<Uniform*> uniforms = { &octree_uniform, &compute_edits_array_uniform, &compute_merge_data_uniform, &octree_edit_culling_count,
-                                           &octree_counters, &octree_proxy_instance_buffer, &octree_edit_culling_lists, &octree_indirect_brick_removal_buffer };
+        std::vector<Uniform*> uniforms = { &octree_uniform, &compute_edits_array_uniform, &compute_merge_data_uniform,
+                                           &octree_counters, &octree_proxy_instance_buffer, &octree_edit_culling_data, &octree_indirect_brick_removal_buffer };
 
         compute_octree_evaluate_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_evaluate_shader, 0);
     }
@@ -585,8 +585,8 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
     }
 
     {
-        std::vector<Uniform*> uniforms = { &sdf_texture_uniform, &compute_edits_array_uniform, &octree_uniform, &octree_edit_culling_count,
-                                           &octree_counters, &octree_edit_culling_lists , &octree_proxy_instance_buffer, &sdf_material_texture_uniform };
+        std::vector<Uniform*> uniforms = { &sdf_texture_uniform, &compute_edits_array_uniform, &octree_uniform,
+                                           &octree_counters, &octree_edit_culling_data, &octree_proxy_instance_buffer, &sdf_material_texture_uniform };
         compute_octree_write_to_texture_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_write_to_texture_shader, 0);
     }
 
