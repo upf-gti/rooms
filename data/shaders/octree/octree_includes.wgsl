@@ -100,6 +100,6 @@ struct OctreeCounters {
 };
 
 struct EditCullingData {
-    edit_culling_lists: array<u32, OCTREE_TOTAL_SIZE * MAX_EDITS_PER_EVALUATION>,
+    edit_culling_lists: array<u32, OCTREE_TOTAL_SIZE * MAX_EDITS_PER_EVALUATION / 4>,
     edit_culling_count : array<u32>
 };

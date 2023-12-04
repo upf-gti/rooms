@@ -454,7 +454,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         delete[] atlas_indices;
 
         // Edit culling lists per octree node buffer and culling count per octree node layer
-        uint32_t edit_culling_data_size = octree_total_size * MAX_EDITS_PER_EVALUATION + octree_total_size * sizeof(sOctreeNode);
+        uint32_t edit_culling_data_size = octree_total_size * MAX_EDITS_PER_EVALUATION * sizeof(uint32_t) / 4 + octree_total_size * sizeof(uint32_t);
         octree_edit_culling_data.data = webgpu_context->create_buffer(edit_culling_data_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "edit_culling_data");
         octree_edit_culling_data.binding = 6;
         octree_edit_culling_data.buffer_size = edit_culling_data_size;
