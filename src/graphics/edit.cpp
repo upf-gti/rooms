@@ -65,7 +65,7 @@ glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const {
 
     switch (primitive) {
     case SD_SPHERE:
-        return size;
+        return glm::vec3(size.x);
     case SD_BOX:
         return size;
     case SD_CAPSULE:

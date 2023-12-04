@@ -220,7 +220,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
      if (level < merge_data.max_octree_depth) {
 
-        if (merge_data.reevaluate > 0u) {
+        if (merge_data.reevaluate == 1u) {
             if (is_in_reevaluation_zone) {
                 // Subdivide
                 // Increase the number of children from the current level
