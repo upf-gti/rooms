@@ -194,21 +194,15 @@ void RaymarchingRenderer::evaluate_strokes(const std::vector<Stroke> strokes, bo
         }
     }
 
-    // Must be updated per stroke
+    // New element, not undo nor redo...
+    if (!(is_undo || is_redo)) {
+        // Clean the redo history if something new is being evaluated
+        stroke_redo_history.clear();
+    }
 
+    // Must be updated per stroke
     for (uint16_t i = 0; i < strokes.size(); ++i)
     {
-        // New element, not undo nor redo...
-        if (!(is_undo || is_redo)) {
-            // Store the stroke in the history, and also store the AABB
-            stroke_history.push_back(strokes[i]);
-            AABB new_aabb;
-            strokes[i].get_world_AABB(&new_aabb.min, &new_aabb.max, compute_merge_data.sculpt_start_position, compute_merge_data.sculpt_rotation);
-            stroke_history_AABB.push_back(new_aabb);
-            // Clean the redo history if something new is being evaluated
-            stroke_redo_history.clear();
-        }
-
         compute_octree_initialization_pipeline.set(compute_pass);
 
         wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_initialization_bind_group, 0, nullptr);
@@ -352,6 +346,8 @@ void RaymarchingRenderer::compute_octree()
     to_compute_stroke_buffer.push_back(in_frame_stroke);
 
     evaluate_strokes(to_compute_stroke_buffer);
+
+    in_frame_stroke.edit_count = 0;
 
     to_compute_stroke_buffer.clear();
 
