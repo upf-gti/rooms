@@ -33,12 +33,14 @@ class RaymarchingRenderer {
     Pipeline        compute_octree_brick_removal_pipeline;
     Pipeline        compute_octree_brick_copy_pipeline;
     Pipeline        compute_octree_initialization_pipeline;
+    Pipeline        compute_octree_cleaning_pipeline;
     Shader*         compute_octree_evaluate_shader = nullptr;
     Shader*         compute_octree_increment_level_shader = nullptr;
     Shader*         compute_octree_write_to_texture_shader = nullptr;
     Shader*         compute_octree_brick_removal_shader = nullptr;
     Shader*         compute_octree_brick_copy_shader = nullptr;
     Shader*         compute_octree_initialization_shader = nullptr;
+    Shader*         compute_octree_cleaning_shader = nullptr;
     WGPUBindGroup   compute_octree_evaluate_bind_group = nullptr;
     WGPUBindGroup   compute_octree_increment_level_bind_group = nullptr;
     WGPUBindGroup   compute_octree_write_to_texture_bind_group = nullptr;
@@ -47,6 +49,7 @@ class RaymarchingRenderer {
     WGPUBindGroup   compute_octant_usage_bind_groups[2] = {};
     WGPUBindGroup   compute_stroke_buffer_bind_group = nullptr;
     WGPUBindGroup   compute_octree_initialization_bind_group = nullptr;
+    WGPUBindGroup   compute_octree_clean_octree_bind_group = nullptr;
 
     Uniform         octree_uniform;
     Uniform         octant_usage_uniform[4];

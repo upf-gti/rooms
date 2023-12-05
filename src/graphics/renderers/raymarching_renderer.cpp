@@ -275,6 +275,52 @@ void RaymarchingRenderer::undo() {
     if (stroke_history_AABB.size() == 0) {
         return;
     }
+    else if (stroke_history_AABB.size() == 1) {
+        WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
+
+        stroke_history_AABB.clear();
+        stroke_history.clear();
+
+        RenderdocCapture::start_capture_frame();
+        // Initialize a command encoder
+        WGPUCommandEncoderDescriptor encoder_desc = {};
+        WGPUCommandEncoder command_encoder = wgpuDeviceCreateCommandEncoder(webgpu_context->device, &encoder_desc);
+
+        // Create compute_raymarching pass
+        WGPUComputePassDescriptor compute_pass_desc = {};
+        compute_pass_desc.timestampWrites = nullptr;
+        WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
+
+        compute_octree_cleaning_pipeline.set(compute_pass);
+        wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_clean_octree_bind_group, 0, nullptr);
+        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, octants_max_size / (8u * 8u * 8u), 1,1);
+
+        // Clean the texture atlas bricks dispatch
+        compute_octree_brick_removal_pipeline.set(compute_pass);
+        wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_indirect_brick_removal_bind_group, 0, nullptr);
+        wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(octree_indirect_brick_removal_buffer.data), 0u);
+
+        compute_octree_brick_copy_pipeline.set(compute_pass);
+        wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_brick_copy_bind_group, 0, nullptr);
+        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, octants_max_size / (8u * 8u * 8u), 1, 1);
+
+        // Finalize compute_raymarching pass
+        wgpuComputePassEncoderEnd(compute_pass);
+
+        WGPUCommandBufferDescriptor cmd_buff_descriptor = {};
+        cmd_buff_descriptor.nextInChain = NULL;
+        cmd_buff_descriptor.label = "Undo empty Octree Command Buffer";
+
+        // Encode and submit the GPU commands
+        WGPUCommandBuffer commands = wgpuCommandEncoderFinish(command_encoder, &cmd_buff_descriptor);
+        wgpuQueueSubmit(webgpu_context->device_queue, 1, &commands);
+
+        wgpuCommandBufferRelease(commands);
+        wgpuComputePassEncoderRelease(compute_pass);
+        wgpuCommandEncoderRelease(command_encoder);
+        RenderdocCapture::end_capture_frame();
+        return;
+    }
 
     AABB last_edit_AABB = stroke_history_AABB.back();
     stroke_history_AABB.pop_back();
@@ -328,6 +374,7 @@ void RaymarchingRenderer::compute_octree()
         return;
     }
 
+
     RenderdocCapture::start_capture_frame();
 
     spdlog::debug(in_frame_stroke.edits[0].to_string());
@@ -335,6 +382,8 @@ void RaymarchingRenderer::compute_octree()
     to_compute_stroke_buffer.push_back(in_frame_stroke);
 
     evaluate_strokes(to_compute_stroke_buffer);
+
+    in_frame_stroke.edit_count = 0u;
 
     to_compute_stroke_buffer.clear();
 
@@ -439,6 +488,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
     compute_octree_brick_removal_shader = RendererStorage::get_shader("data/shaders/octree/brick_removal.wgsl");
     compute_octree_brick_copy_shader = RendererStorage::get_shader("data/shaders/octree/brick_copy.wgsl");
     compute_octree_initialization_shader = RendererStorage::get_shader("data/shaders/octree/initialization.wgsl");
+    compute_octree_cleaning_shader = RendererStorage::get_shader("data/shaders/octree/clean_octree.wgsl");
 
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
 
@@ -620,12 +670,21 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         compute_octree_initialization_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_initialization_shader, 0);
     }
 
+    {
+        Uniform proxy_indirect = octree_proxy_indirect_buffer;
+        proxy_indirect.binding = 6;
+
+        std::vector<Uniform*> uniforms = { &octree_uniform, &octree_proxy_instance_buffer, &octree_indirect_brick_removal_buffer, &compute_merge_data_uniform, &proxy_indirect };
+        compute_octree_clean_octree_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_cleaning_shader, 0);
+    }
+
     compute_octree_evaluate_pipeline.create_compute(compute_octree_evaluate_shader);
     compute_octree_increment_level_pipeline.create_compute(compute_octree_increment_level_shader);
     compute_octree_write_to_texture_pipeline.create_compute(compute_octree_write_to_texture_shader);
     compute_octree_brick_removal_pipeline.create_compute(compute_octree_brick_removal_shader);
     compute_octree_brick_copy_pipeline.create_compute(compute_octree_brick_copy_shader);
     compute_octree_initialization_pipeline.create_compute(compute_octree_initialization_shader);
+    compute_octree_cleaning_pipeline.create_compute(compute_octree_cleaning_shader);
 }
 
 
