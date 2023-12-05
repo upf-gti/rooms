@@ -1,5 +1,6 @@
 #include "edit.h"
 #include <sstream>
+#include "spdlog/spdlog.h"
 
 std::ostream& operator<<(std::ostream& os, const Edit& edit)
 {
@@ -87,23 +88,28 @@ glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const {
 void Stroke::get_edit_world_AABB(const uint8_t edit_index, glm::vec3* min, glm::vec3* max, const glm::vec3& start_position, const glm::quat& sculpt_rotation) const {
     glm::vec3 pure_edit_half_size = get_edit_world_half_size(edit_index);
 
-    // TODO: Add smoth margin
+    // TODO: Add smooth margin
 
     glm::vec3 rotated_mx_size = glm::vec3(-1000.0f, -1000.0f, -1000.0f);
     glm::vec3 rotated_min_size = glm::vec3(1000.0f, 1000.0f, 1000.0f);
 
-    glm::quat edit_rotation = edits[edit_index].rotation;
-    glm::quat quat_rot = glm::quat{ edit_rotation.w, edit_rotation.x, edit_rotation.y, edit_rotation.z };
+    glm::quat edit_rotation = { 0.0, 0.0, 0.0, 1.0 };
+
+    const Edit& edit = edits[edit_index];
+
+    if (primitive != SD_SPHERE) {
+        edit_rotation = edits[edit_index].rotation;
+    }
 
     // Rotate the AABB (turning it into an OBB) and compute the AABB
-    const glm::vec3 axis[8] = { quat_rot * glm::vec3(pure_edit_half_size.x,  pure_edit_half_size.y,  pure_edit_half_size.z),
-                                quat_rot * glm::vec3(pure_edit_half_size.x,  pure_edit_half_size.y, -pure_edit_half_size.z),
-                                quat_rot * glm::vec3(pure_edit_half_size.x, -pure_edit_half_size.y,  pure_edit_half_size.z),
-                                quat_rot * glm::vec3(pure_edit_half_size.x, -pure_edit_half_size.y, -pure_edit_half_size.z),
-                                quat_rot * glm::vec3(-pure_edit_half_size.x,  pure_edit_half_size.y,  pure_edit_half_size.z),
-                                quat_rot * glm::vec3(-pure_edit_half_size.x,  pure_edit_half_size.y, -pure_edit_half_size.z),
-                                quat_rot * glm::vec3(-pure_edit_half_size.x, -pure_edit_half_size.y,  pure_edit_half_size.z),
-                                quat_rot * glm::vec3(-pure_edit_half_size.x, -pure_edit_half_size.y, -pure_edit_half_size.z) };
+    const glm::vec3 axis[8] = { edit_rotation * glm::vec3(pure_edit_half_size.x,  pure_edit_half_size.y,  pure_edit_half_size.z),
+                                edit_rotation * glm::vec3(pure_edit_half_size.x,  pure_edit_half_size.y, -pure_edit_half_size.z),
+                                edit_rotation * glm::vec3(pure_edit_half_size.x, -pure_edit_half_size.y,  pure_edit_half_size.z),
+                                edit_rotation * glm::vec3(pure_edit_half_size.x, -pure_edit_half_size.y, -pure_edit_half_size.z),
+                                edit_rotation * glm::vec3(-pure_edit_half_size.x,  pure_edit_half_size.y,  pure_edit_half_size.z),
+                                edit_rotation * glm::vec3(-pure_edit_half_size.x,  pure_edit_half_size.y, -pure_edit_half_size.z),
+                                edit_rotation * glm::vec3(-pure_edit_half_size.x, -pure_edit_half_size.y,  pure_edit_half_size.z),
+                                edit_rotation * glm::vec3(-pure_edit_half_size.x, -pure_edit_half_size.y, -pure_edit_half_size.z) };
 
     for (uint8_t i = 0; i < 8; i++) {
         rotated_mx_size.x = glm::max(rotated_mx_size.x, axis[i].x);
@@ -119,19 +125,27 @@ void Stroke::get_edit_world_AABB(const uint8_t edit_index, glm::vec3* min, glm::
 
     *min = (sculpt_rotation * (edits[edit_index].position) - edit_half_size);
     *max = (sculpt_rotation * (edits[edit_index].position) + edit_half_size);
+
+    spdlog::debug(glm::length(*max - *min));
+
 }
 
 
 void Stroke::get_world_AABB(glm::vec3* min, glm::vec3* max, const glm::vec3& start_position, const glm::quat& sculpt_rotation) const {
-    glm::vec3 it_min = glm::vec3(FLT_MAX), it_max = glm::vec3(FLT_MIN);
+    glm::vec3 it_min = glm::vec3(FLT_MAX), it_max = glm::vec3(-FLT_MAX);
     glm::vec3 edit_min, edit_max;
     for (uint8_t i = 0u; i < edit_count; i++) {
         get_edit_world_AABB(i, &edit_min, &edit_max, start_position, sculpt_rotation);
 
         it_min = glm::min(edit_min, it_min);
         it_max = glm::max(edit_max, it_max);
+
+        assert(i < 1);
     }
 
     *min = it_min;
     *max = it_max;
+
+    spdlog::debug(glm::length(*max - *min));
+
 }

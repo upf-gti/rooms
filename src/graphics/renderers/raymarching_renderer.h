@@ -55,7 +55,7 @@ class RaymarchingRenderer {
     uint32_t        octants_max_size = 0;
     uint32_t        octree_total_size = 0;
     Uniform         octree_indirect_buffer;
-    Uniform         octree_counters;
+    Uniform         octree_state;
     Uniform         octree_proxy_instance_buffer;
     Uniform         octree_proxy_indirect_buffer;
     Uniform         octree_edit_culling_data;
@@ -133,7 +133,7 @@ class RaymarchingRenderer {
     void init_compute_octree_pipeline();
     void init_raymarching_proxy_pipeline();
 
-    void evaluate_strokes(const std::vector<Stroke> strokes, const bool store_to_history = true);
+    void evaluate_strokes(const std::vector<Stroke> strokes, const bool is_undo = false);
 
 public:
 

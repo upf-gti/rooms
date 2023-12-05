@@ -4,12 +4,12 @@
 
 @group(0) @binding(1) var<uniform> merge_data : MergeData;
 @group(0) @binding(2) var<storage, read_write> octree : Octree;
-@group(0) @binding(4) var<storage, read_write> counters : OctreeCounters;
+@group(0) @binding(4) var<storage, read_write> state : OctreeState;
 @group(0) @binding(5) var<storage, read_write> octree_proxy_data: OctreeProxyInstances;
 @group(0) @binding(6) var<storage, read_write> edit_culling_data: EditCullingData;
 @group(0) @binding(8) var<storage, read_write> indirect_brick_removal : IndirectBrickRemoval;
 
-#dynamic @group(1) @binding(0) var<uniform> stroke : Stroke;
+#dynamic @group(1) @binding(0) var<storage, read> stroke : Stroke;
 
 @group(2) @binding(0) var<storage, read> octant_usage_read : array<u32>;
 @group(2) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
@@ -80,7 +80,7 @@ fn intersection_AABB_AABB(b1_min : vec3f, b1_max : vec3f, b2_min : vec3f, b2_max
 @compute @workgroup_size(1, 1, 1)
 fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) workgroup_size : vec3u) 
 {
-    let level : u32 = atomicLoad(&counters.current_level);
+    let level : u32 = atomicLoad(&state.current_level);
 
     let id : u32 = group_id.x;
 
@@ -126,7 +126,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
     let is_in_reevaluation_zone : bool = intersection_AABB_AABB(merge_data.reevaluation_AABB_min, merge_data.reevaluation_AABB_max, octant_min, octant_max);
  
-    if (merge_data.reevaluate == 1u && level >= merge_data.max_octree_depth) {
+    if (state.reevaluate_aabb == 1u && level == merge_data.max_octree_depth) {
         if (is_in_reevaluation_zone) {
             if ((octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG) {
                 let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
@@ -220,11 +220,11 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
      if (level < merge_data.max_octree_depth) {
 
-        if (merge_data.reevaluate == 1u) {
+        if (state.reevaluate_aabb == 1u) {
             if (is_in_reevaluation_zone) {
                 // Subdivide
                 // Increase the number of children from the current level
-                let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 8);
+                let prev_counter : u32 = atomicAdd(&state.atomic_counter, 8);
 
                 // Add to the index the childres's octant id, and save it for the next pass
                 for (var i : u32 = 0; i < 8; i++) {
@@ -236,7 +236,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         else if  (new_edits_surface_interval.x < 0.0) {
             // Subdivide
             // Increase the number of children from the current level
-            let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 8);
+            let prev_counter : u32 = atomicAdd(&state.atomic_counter, 8);
 
             // Add to the index the childres's octant id, and save it for the next pass
             for (var i : u32 = 0; i < 8; i++) {
@@ -269,7 +269,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             } else if (global_surface_intersection && (new_edits_surface_interval.x < 0.0)) {
                 // If its in theintersection of the surface of the resulting SDF and the inside of new_edits,
                 // This means to only select the newly updated bricks.
-                let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 1);
+                let prev_counter : u32 = atomicAdd(&state.atomic_counter, 1);
 
                 // In the case this is not filled, we create a new brick
                 if (!is_current_brick_filled) {
@@ -297,7 +297,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             if (local_surface_intersection) {
                 if (is_current_brick_filled) {
                     // If the block is int he surface of new_edits and is filled, update the brick
-                    let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 1);
+                    let prev_counter : u32 = atomicAdd(&state.atomic_counter, 1);
                     octant_usage_write[prev_counter] = octree_index;
                 } else if (is_interior_brick) {
                     // If the block is int he surface of new_edits and an interior brick, create a new brick, since it is surface now
@@ -308,7 +308,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                     octree_proxy_data.instance_data[instance_index].octree_parent_id = octree_index;
                     octree_proxy_data.instance_data[instance_index].in_use = 1u;
                     octree.data[octree_index].tile_pointer = instance_index | INTERIOR_BRICK_FLAG;
-                    let prev_counter : u32 = atomicAdd(&counters.atomic_counter, 1);
+                    let prev_counter : u32 = atomicAdd(&state.atomic_counter, 1);
                     octant_usage_write[prev_counter] = octree_index;
                 }
             } else if (local_surface_inside) {

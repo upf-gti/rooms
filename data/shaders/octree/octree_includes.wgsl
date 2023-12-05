@@ -95,10 +95,11 @@ struct OctreeProxyIndirect {
     firt_instance: u32
 };
 
-struct OctreeCounters {
+struct OctreeState {
     current_level : atomic<u32>,
     atomic_counter : atomic<u32>,
-    proxy_instance_counter : atomic<u32>
+    proxy_instance_counter : atomic<u32>,
+    reevaluate_aabb : u32
 };
 
 struct EditCullingData {
