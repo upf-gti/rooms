@@ -7,7 +7,7 @@
 @group(0) @binding(6) var<storage, read_write> edit_culling_data: EditCullingData;
 @group(0) @binding(8) var<storage, read_write> indirect_brick_removal : IndirectBrickRemoval;
 
-@group(1) @binding(0) var<uniform> stroke : Stroke;
+#dynamic @group(1) @binding(0) var<uniform> stroke : Stroke;
 
 @compute @workgroup_size(1, 1, 1)
 fn compute(@builtin(workgroup_id) group_id: vec3u) 

@@ -9,7 +9,7 @@
 @group(0) @binding(6) var<storage, read_write> edit_culling_data: EditCullingData;
 @group(0) @binding(8) var<storage, read_write> indirect_brick_removal : IndirectBrickRemoval;
 
-@group(1) @binding(0) var<uniform> stroke : Stroke;
+#dynamic @group(1) @binding(0) var<uniform> stroke : Stroke;
 
 @group(2) @binding(0) var<storage, read> octant_usage_read : array<u32>;
 @group(2) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;

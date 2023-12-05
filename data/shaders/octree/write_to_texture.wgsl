@@ -9,7 +9,7 @@
 @group(0) @binding(6) var<storage, read_write> edit_culling_data: EditCullingData;
 @group(0) @binding(8) var write_material_sdf: texture_storage_3d<r32uint, read_write>;
 
-@group(1) @binding(0) var<uniform> stroke : Stroke;
+#dynamic @group(1) @binding(0) var<uniform> stroke : Stroke;
 
 @group(2) @binding(0) var<storage, read> octant_usage_read : array<u32>;
 @group(2) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;

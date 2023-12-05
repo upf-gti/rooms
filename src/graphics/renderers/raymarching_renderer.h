@@ -6,8 +6,6 @@
 #include "graphics/edit.h"
 #include "graphics/texture.h"
 
-#include <stack>
-
 #define PREVIEW_EDITS_MAX 128
 #define SDF_RESOLUTION 400
 #define SCULPT_MAX_SIZE 1 // meters
@@ -109,7 +107,7 @@ class RaymarchingRenderer {
     };
 
     Stroke* current_stroke = NULL;
-    std::list<Stroke> to_compute_stroke_buffer;
+    std::vector<Stroke> to_compute_stroke_buffer;
     std::vector<Stroke> stroke_history;
     std::vector<AABB> stroke_history_AABB;
 

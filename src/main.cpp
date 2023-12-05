@@ -42,7 +42,7 @@ bool shouldClose(bool use_glfw, GLFWwindow* window)
 int main()
 {
     spdlog::set_pattern("[%^%l%$] %v");
-    spdlog::set_level(spdlog::level::info);
+    spdlog::set_level(spdlog::level::debug);
 
     RoomsEngine* engine = new RoomsEngine();
     RoomsRenderer* renderer = new RoomsRenderer();
@@ -54,7 +54,7 @@ int main()
     required_limits.limits.maxBindGroups = 2;
     required_limits.limits.maxUniformBuffersPerShaderStage = 1;
     required_limits.limits.maxUniformBufferBindingSize = 65536;
-    required_limits.limits.minUniformBufferOffsetAlignment = 256;
+    required_limits.limits.minUniformBufferOffsetAlignment = 64;
     required_limits.limits.minStorageBufferOffsetAlignment = 256;
 #ifndef DISABLE_RAYMARCHER
     required_limits.limits.maxBufferSize = SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION * sizeof(float) * 4;
@@ -63,6 +63,7 @@ int main()
     required_limits.limits.maxStorageBuffersPerShaderStage = 8; // GTX 1080 friendly :(
 #endif
     required_limits.limits.maxSamplersPerShaderStage = 1;
+    required_limits.limits.maxDynamicUniformBuffersPerPipelineLayout = 1;
 
     renderer->set_required_limits(required_limits);
 

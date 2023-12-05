@@ -43,7 +43,7 @@ struct alignas(16) Edit {
 };
 
 
-struct alignas(16) Stroke {
+struct alignas(64) Stroke {
     uint32_t    stroke_id;
     uint32_t    edit_count = 0u;
     sdPrimitive primitive;
