@@ -139,8 +139,6 @@ void Stroke::get_world_AABB(glm::vec3* min, glm::vec3* max, const glm::vec3& sta
 
         it_min = glm::min(edit_min, it_min);
         it_max = glm::max(edit_max, it_max);
-
-        assert(i < 1);
     }
 
     *min = it_min;

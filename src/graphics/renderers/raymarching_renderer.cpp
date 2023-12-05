@@ -95,8 +95,6 @@ void RaymarchingRenderer::clean()
     delete compute_octree_evaluate_shader;
     delete compute_octree_increment_level_shader;
     delete compute_octree_write_to_texture_shader;
-
-    delete current_stroke;
 #endif
 }
 
@@ -122,36 +120,49 @@ void RaymarchingRenderer::add_preview_edit(const Edit& edit)
 }
 
 void RaymarchingRenderer::initialize_stroke() {
-    current_stroke = new Stroke();
-    current_stroke->stroke_id = 0u;
+    in_frame_stroke.stroke_id = 0u;
 }
 
 void RaymarchingRenderer::change_stroke(const sdPrimitive new_primitive, const sdOperation new_operation, const glm::vec4 new_parameters, const uint32_t index_increment) {
-    Stroke* new_stroke = new Stroke();
+    Stroke new_stroke = {};
 
-    new_stroke->stroke_id = current_stroke->stroke_id + index_increment;
-    new_stroke->primitive = new_primitive;
-    new_stroke->operation = new_operation;
-    new_stroke->parameters = new_parameters;
-    new_stroke->edit_count = 0u;
+    new_stroke.stroke_id = in_frame_stroke.stroke_id + index_increment;
+    new_stroke.primitive = new_primitive;
+    new_stroke.operation = new_operation;
+    new_stroke.parameters = new_parameters;
+    new_stroke.edit_count = 0u;
 
     // Only store the strokes that actually changes the sculpt
-    if (current_stroke->edit_count > 0u) {
-        to_compute_stroke_buffer.push_back(*current_stroke);
+    if (in_frame_stroke.edit_count > 0u) {
+        // Add it to the history
+        stroke_history.push_back(in_frame_stroke);
+        AABB new_aabb;
+        in_frame_stroke.get_world_AABB(&new_aabb.min, &new_aabb.max, compute_merge_data.sculpt_start_position, compute_merge_data.sculpt_rotation);
+        stroke_history_AABB.push_back(new_aabb);
+        current_stroke = new_stroke;
     }
 
-    delete current_stroke;
-    current_stroke = new_stroke;
+    in_frame_stroke = new_stroke;
 }
 
 void RaymarchingRenderer::push_edit(const Edit edit) {
 
-    if (current_stroke->edit_count == MAX_EDITS_PER_EVALUATION) {
+    if (in_frame_stroke.edit_count == MAX_EDITS_PER_EVALUATION) {
         // The index increment is 0, since this is a prolongation of the previous stroke
-        change_stroke(current_stroke->primitive, current_stroke->operation, current_stroke->parameters, 0u);
+        change_stroke(in_frame_stroke.primitive, in_frame_stroke.operation, in_frame_stroke.parameters, 0u);
     }
 
-    current_stroke->edits[current_stroke->edit_count++] = edit;
+    in_frame_stroke.edits[in_frame_stroke.edit_count++] = edit;
+
+    if (current_stroke.edit_count == MAX_EDITS_PER_EVALUATION) {
+        // Add it to the history
+        stroke_history.push_back(current_stroke);
+        AABB new_aabb;
+        current_stroke.get_world_AABB(&new_aabb.min, &new_aabb.max, compute_merge_data.sculpt_start_position, compute_merge_data.sculpt_rotation);
+        stroke_history_AABB.push_back(new_aabb);
+        current_stroke.edit_count = 0;
+    }
+    current_stroke.edits[current_stroke.edit_count++] = edit;
 }
 
 void RaymarchingRenderer::evaluate_strokes(const std::vector<Stroke> strokes, const bool is_undo)
@@ -187,13 +198,6 @@ void RaymarchingRenderer::evaluate_strokes(const std::vector<Stroke> strokes, co
 
     for (uint16_t i = 0; i < strokes.size(); ++i)
     {
-        if (!is_undo) {
-            // Store the stroke in the history, and also store the AABB
-            stroke_history.push_back(strokes[i]);
-            AABB new_aabb;
-            strokes[i].get_world_AABB(&new_aabb.min, &new_aabb.max, compute_merge_data.sculpt_start_position, compute_merge_data.sculpt_rotation);
-            stroke_history_AABB.push_back(new_aabb);
-        }
 
         compute_octree_initialization_pipeline.set(compute_pass);
 
@@ -320,16 +324,15 @@ void RaymarchingRenderer::compute_octree()
     if (!compute_octree_evaluate_shader || !compute_octree_evaluate_shader->is_loaded()) return;
 
     // Nothing to merge if equals 0
-    if (current_stroke->edit_count == 0 && to_compute_stroke_buffer.size() == 0) {
+    if (in_frame_stroke.edit_count == 0 && to_compute_stroke_buffer.size() == 0) {
         return;
     }
 
     RenderdocCapture::start_capture_frame();
 
-    spdlog::debug(current_stroke->edits[0].to_string());
+    spdlog::debug(in_frame_stroke.edits[0].to_string());
 
-    // Start a new stroke, store previous
-    change_stroke(current_stroke->primitive, current_stroke->operation, current_stroke->parameters);
+    to_compute_stroke_buffer.push_back(in_frame_stroke);
 
     evaluate_strokes(to_compute_stroke_buffer);
 
