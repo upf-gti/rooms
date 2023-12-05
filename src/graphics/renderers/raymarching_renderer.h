@@ -106,7 +106,8 @@ class RaymarchingRenderer {
         glm::vec3 max;
     };
 
-    Stroke* current_stroke = NULL;
+    Stroke current_stroke = {};
+    Stroke in_frame_stroke = {};
     std::vector<Stroke> to_compute_stroke_buffer;
     std::vector<Stroke> stroke_history;
     std::vector<AABB> stroke_history_AABB;
