@@ -162,6 +162,7 @@ void RaymarchingRenderer::push_edit(const Edit edit) {
         stroke_history_AABB.push_back(new_aabb);
         current_stroke.edit_count = 0;
     }
+
     current_stroke.edits[current_stroke.edit_count++] = edit;
 }
 
@@ -283,6 +284,12 @@ void RaymarchingRenderer::redo()
 
     Stroke front = stroke_redo_history.front();
     stroke_redo_history.pop_front();
+
+    // Add to undo history...
+    stroke_history.push_back(front);
+    AABB new_aabb;
+    front.get_world_AABB(&new_aabb.min, &new_aabb.max, compute_merge_data.sculpt_start_position, compute_merge_data.sculpt_rotation);
+    stroke_history_AABB.push_back(new_aabb);
 
     RenderdocCapture::start_capture_frame();
 
