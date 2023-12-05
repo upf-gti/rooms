@@ -176,6 +176,10 @@ void SculptEditor::update(float delta_time)
         renderer->undo();
     }
 
+    if (Input::was_key_pressed(GLFW_KEY_R)) {
+        renderer->redo();
+    }
+
     if (snap_to_grid) {
         float grid_multiplier = 1.f / snap_grid_size;
         // Uncomment for grid size of half of the edit radius

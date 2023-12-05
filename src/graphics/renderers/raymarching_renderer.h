@@ -114,6 +114,7 @@ class RaymarchingRenderer {
     std::vector<Stroke> to_compute_stroke_buffer;
     std::vector<Stroke> stroke_history;
     std::vector<AABB> stroke_history_AABB;
+    std::list<Stroke> stroke_redo_history;
 
     // Preview edits
     //struct sPreviewEditsData {
@@ -137,7 +138,7 @@ class RaymarchingRenderer {
     void init_compute_octree_pipeline();
     void init_raymarching_proxy_pipeline();
 
-    void evaluate_strokes(const std::vector<Stroke> strokes, const bool is_undo = false);
+    void evaluate_strokes(const std::vector<Stroke> strokes, bool is_undo = false, bool is_redo = false);
 
 public:
 
@@ -152,6 +153,7 @@ public:
     void compute_octree();
     void render_raymarching_proxy(WGPUTextureView swapchain_view, WGPUTextureView swapchain_depth);
 
+    void redo();
     void undo();
 
     void set_sculpt_start_position(const glm::vec3& position);

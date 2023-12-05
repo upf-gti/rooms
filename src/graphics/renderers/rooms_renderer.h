@@ -119,4 +119,7 @@ public:
         raymarching_renderer.undo();
     }
 
+    void redo() {
+        raymarching_renderer.redo();
+    }
 };
