@@ -34,6 +34,10 @@
 @group(2) @binding(4) var sampler_2d : sampler;
 #endif
 
+#ifdef ALPHA_MASK
+@group(2) @binding(5) var<uniform> alpha_cutoff: f32;
+#endif
+
 @group(3) @binding(0) var irradiance_texture: texture_cube<f32>;
 @group(3) @binding(1) var brdf_lut_texture: texture_2d<f32>;
 @group(3) @binding(2) var sampler_clamp: sampler;
@@ -65,27 +69,24 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     var m : LitMaterial;
 
-    m.pos = in.world_position;
-
-    // Vectors
-
-    m.normal = normalize(in.normal);
-    m.view_dir = normalize(camera_data.eye - m.pos);
-
-#ifdef NORMAL_TEXTURE
-    var normal_color = textureSample(normal_texture, sampler_2d, in.uv).rgb;
-    m.normal = perturb_normal(m.normal, m.view_dir, in.uv, normal_color);
-#endif
-
-    m.reflected_dir = reflect( -m.view_dir, m.normal);
-
     // Material properties
 
+    var alpha : f32 = 1.0;
+
 #ifdef ALBEDO_TEXTURE
-    m.albedo = textureSample(albedo_texture, sampler_2d, in.uv).rgb * in.color;
+    let albedo_texture : vec4f = textureSample(albedo_texture, sampler_2d, in.uv);
+    m.albedo = albedo_texture.rgb * in.color;
     m.albedo = pow(m.albedo, vec3f(2.2));
+    alpha = albedo_texture.a;
 #else
     m.albedo = albedo.rgb;
+    alpha = albedo.a;
+#endif
+
+#ifdef ALPHA_MASK
+    if (alpha < alpha_cutoff) {
+        discard;
+    }
 #endif
 
 #ifdef EMISSIVE_TEXTURE
@@ -108,6 +109,20 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     m.specular_color = mix(vec3f(0.04), m.albedo, m.metallic);
     m.ao = 1.0;
 
+    // Vectors
+
+    m.pos = in.world_position;
+
+    m.normal = normalize(in.normal);
+    m.view_dir = normalize(camera_data.eye - m.pos);
+
+#ifdef NORMAL_TEXTURE
+    var normal_color = textureSample(normal_texture, sampler_2d, in.uv).rgb;
+    m.normal = perturb_normal(m.normal, m.view_dir, in.uv, normal_color);
+#endif
+
+    m.reflected_dir = reflect( -m.view_dir, m.normal);
+
     // var distance : f32 = length(light_position - m.pos);
     // var attenuation : f32 = pow(1.0 - saturate(distance/light_max_radius), 1.5);
     var final_color : vec3f = vec3f(0.0); 
@@ -121,7 +136,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
         final_color = pow(final_color, vec3(1.0 / 2.2));
     }
 
-    out.color = vec4f(final_color, 1.0);
+    out.color = vec4f(final_color, alpha);
 
     return out;
 }

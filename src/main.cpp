@@ -75,18 +75,19 @@ int main()
         EMSCRIPTEN_EVENT_TARGET_WINDOW,
         (void*)engine, 0, on_web_display_size_changed
     );
-
-#elif defined(XR_SUPPORT)
-    // Keep XR aspect ratio
-    int screen_width = 992;
-    int screen_height = 1000;
 #else
-    int screen_width = 1280;
-    int screen_height = 720;
+    int screen_width = 1600;
+    int screen_height = 900;
 #endif
 
     const bool use_xr = renderer->get_openxr_available();
     const bool use_mirror_screen = engine->get_use_mirror_window();
+
+    if (use_xr) {
+        // Keep XR aspect ratio
+        screen_width = 992;
+        screen_height = 1000;
+    }
 
     // Only init glfw if no xr or using mirror
     const bool use_glfw = !use_xr || (use_xr && use_mirror_screen);
