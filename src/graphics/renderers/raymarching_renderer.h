@@ -33,12 +33,14 @@ class RaymarchingRenderer {
     Pipeline        compute_octree_brick_removal_pipeline;
     Pipeline        compute_octree_brick_copy_pipeline;
     Pipeline        compute_octree_initialization_pipeline;
+    Pipeline        compute_octree_cleaning_pipeline;
     Shader*         compute_octree_evaluate_shader = nullptr;
     Shader*         compute_octree_increment_level_shader = nullptr;
     Shader*         compute_octree_write_to_texture_shader = nullptr;
     Shader*         compute_octree_brick_removal_shader = nullptr;
     Shader*         compute_octree_brick_copy_shader = nullptr;
     Shader*         compute_octree_initialization_shader = nullptr;
+    Shader*         compute_octree_cleaning_shader = nullptr;
     WGPUBindGroup   compute_octree_evaluate_bind_group = nullptr;
     WGPUBindGroup   compute_octree_increment_level_bind_group = nullptr;
     WGPUBindGroup   compute_octree_write_to_texture_bind_group = nullptr;
@@ -47,6 +49,7 @@ class RaymarchingRenderer {
     WGPUBindGroup   compute_octant_usage_bind_groups[2] = {};
     WGPUBindGroup   compute_stroke_buffer_bind_group = nullptr;
     WGPUBindGroup   compute_octree_initialization_bind_group = nullptr;
+    WGPUBindGroup   compute_octree_clean_octree_bind_group = nullptr;
 
     Uniform         octree_uniform;
     Uniform         octant_usage_uniform[4];
@@ -106,10 +109,12 @@ class RaymarchingRenderer {
         glm::vec3 max;
     };
 
-    Stroke* current_stroke = NULL;
+    Stroke current_stroke = {};
+    Stroke in_frame_stroke = {};
     std::vector<Stroke> to_compute_stroke_buffer;
     std::vector<Stroke> stroke_history;
     std::vector<AABB> stroke_history_AABB;
+    std::list<Stroke> stroke_redo_history;
 
     // Preview edits
     //struct sPreviewEditsData {
@@ -133,7 +138,7 @@ class RaymarchingRenderer {
     void init_compute_octree_pipeline();
     void init_raymarching_proxy_pipeline();
 
-    void evaluate_strokes(const std::vector<Stroke> strokes, const bool is_undo = false);
+    void evaluate_strokes(const std::vector<Stroke> strokes, bool is_undo = false, bool is_redo = false);
 
 public:
 
@@ -148,6 +153,7 @@ public:
     void compute_octree();
     void render_raymarching_proxy(WGPUTextureView swapchain_view, WGPUTextureView swapchain_depth);
 
+    void redo();
     void undo();
 
     void set_sculpt_start_position(const glm::vec3& position);

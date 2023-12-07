@@ -95,8 +95,6 @@ void RaymarchingRenderer::clean()
     delete compute_octree_evaluate_shader;
     delete compute_octree_increment_level_shader;
     delete compute_octree_write_to_texture_shader;
-
-    delete current_stroke;
 #endif
 }
 
@@ -122,39 +120,53 @@ void RaymarchingRenderer::add_preview_edit(const Edit& edit)
 }
 
 void RaymarchingRenderer::initialize_stroke() {
-    current_stroke = new Stroke();
-    current_stroke->stroke_id = 0u;
+    in_frame_stroke.stroke_id = 0u;
 }
 
 void RaymarchingRenderer::change_stroke(const sdPrimitive new_primitive, const sdOperation new_operation, const glm::vec4 new_parameters, const uint32_t index_increment) {
-    Stroke* new_stroke = new Stroke();
+    Stroke new_stroke = {};
 
-    new_stroke->stroke_id = current_stroke->stroke_id + index_increment;
-    new_stroke->primitive = new_primitive;
-    new_stroke->operation = new_operation;
-    new_stroke->parameters = new_parameters;
-    new_stroke->edit_count = 0u;
+    new_stroke.stroke_id = in_frame_stroke.stroke_id + index_increment;
+    new_stroke.primitive = new_primitive;
+    new_stroke.operation = new_operation;
+    new_stroke.parameters = new_parameters;
+    new_stroke.edit_count = 0u;
 
     // Only store the strokes that actually changes the sculpt
-    if (current_stroke->edit_count > 0u) {
-        to_compute_stroke_buffer.push_back(*current_stroke);
+    if (in_frame_stroke.edit_count > 0u) {
+        // Add it to the history
+        stroke_history.push_back(in_frame_stroke);
+        AABB new_aabb;
+        in_frame_stroke.get_world_AABB(&new_aabb.min, &new_aabb.max, compute_merge_data.sculpt_start_position, compute_merge_data.sculpt_rotation);
+        stroke_history_AABB.push_back(new_aabb);
+        current_stroke = new_stroke;
     }
 
-    delete current_stroke;
-    current_stroke = new_stroke;
+    in_frame_stroke = new_stroke;
 }
 
 void RaymarchingRenderer::push_edit(const Edit edit) {
 
-    if (current_stroke->edit_count == MAX_EDITS_PER_EVALUATION) {
+    if (in_frame_stroke.edit_count == MAX_EDITS_PER_EVALUATION) {
         // The index increment is 0, since this is a prolongation of the previous stroke
-        change_stroke(current_stroke->primitive, current_stroke->operation, current_stroke->parameters, 0u);
+        change_stroke(in_frame_stroke.primitive, in_frame_stroke.operation, in_frame_stroke.parameters, 0u);
     }
 
-    current_stroke->edits[current_stroke->edit_count++] = edit;
+    in_frame_stroke.edits[in_frame_stroke.edit_count++] = edit;
+
+    if (current_stroke.edit_count == MAX_EDITS_PER_EVALUATION) {
+        // Add it to the history
+        stroke_history.push_back(current_stroke);
+        AABB new_aabb;
+        current_stroke.get_world_AABB(&new_aabb.min, &new_aabb.max, compute_merge_data.sculpt_start_position, compute_merge_data.sculpt_rotation);
+        stroke_history_AABB.push_back(new_aabb);
+        current_stroke.edit_count = 0;
+    }
+
+    current_stroke.edits[current_stroke.edit_count++] = edit;
 }
 
-void RaymarchingRenderer::evaluate_strokes(const std::vector<Stroke> strokes, const bool is_undo)
+void RaymarchingRenderer::evaluate_strokes(const std::vector<Stroke> strokes, bool is_undo, bool is_redo)
 {
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
 
@@ -183,18 +195,15 @@ void RaymarchingRenderer::evaluate_strokes(const std::vector<Stroke> strokes, co
         }
     }
 
-    // Must be updated per stroke
+    // New element, not undo nor redo...
+    if (!(is_undo || is_redo)) {
+        // Clean the redo history if something new is being evaluated
+        stroke_redo_history.clear();
+    }
 
+    // Must be updated per stroke
     for (uint16_t i = 0; i < strokes.size(); ++i)
     {
-        if (!is_undo) {
-            // Store the stroke in the history, and also store the AABB
-            stroke_history.push_back(strokes[i]);
-            AABB new_aabb;
-            strokes[i].get_world_AABB(&new_aabb.min, &new_aabb.max, compute_merge_data.sculpt_start_position, compute_merge_data.sculpt_rotation);
-            stroke_history_AABB.push_back(new_aabb);
-        }
-
         compute_octree_initialization_pipeline.set(compute_pass);
 
         wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_initialization_bind_group, 0, nullptr);
@@ -267,52 +276,111 @@ void RaymarchingRenderer::evaluate_strokes(const std::vector<Stroke> strokes, co
 
 }
 
-void RaymarchingRenderer::undo() {
+void RaymarchingRenderer::redo()
+{
+    if (stroke_redo_history.size() == 0) {
+        return;
+    }
+
+    Stroke front = stroke_redo_history.front();
+    stroke_redo_history.pop_front();
+
+    // Add to undo history...
+    stroke_history.push_back(front);
+    AABB new_aabb;
+    front.get_world_AABB(&new_aabb.min, &new_aabb.max, compute_merge_data.sculpt_start_position, compute_merge_data.sculpt_rotation);
+    stroke_history_AABB.push_back(new_aabb);
+
+    RenderdocCapture::start_capture_frame();
+
+    evaluate_strokes({ front }, false, true);
+
+    RenderdocCapture::end_capture_frame();
+}
+
+void RaymarchingRenderer::undo()
+{
     if (stroke_history_AABB.size() == 0) {
+        return;
+    }
+    else if (stroke_history_AABB.size() == 1) {
+        WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
+
+        stroke_history_AABB.clear();
+        stroke_history.clear();
+
+        RenderdocCapture::start_capture_frame();
+        // Initialize a command encoder
+        WGPUCommandEncoderDescriptor encoder_desc = {};
+        WGPUCommandEncoder command_encoder = wgpuDeviceCreateCommandEncoder(webgpu_context->device, &encoder_desc);
+
+        // Create compute_raymarching pass
+        WGPUComputePassDescriptor compute_pass_desc = {};
+        compute_pass_desc.timestampWrites = nullptr;
+        WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
+
+        compute_octree_cleaning_pipeline.set(compute_pass);
+        wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_clean_octree_bind_group, 0, nullptr);
+        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, octants_max_size / (8u * 8u * 8u), 1,1);
+
+        // Clean the texture atlas bricks dispatch
+        compute_octree_brick_removal_pipeline.set(compute_pass);
+        wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_indirect_brick_removal_bind_group, 0, nullptr);
+        wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(octree_indirect_brick_removal_buffer.data), 0u);
+
+        compute_octree_brick_copy_pipeline.set(compute_pass);
+        wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_brick_copy_bind_group, 0, nullptr);
+        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, octants_max_size / (8u * 8u * 8u), 1, 1);
+
+        // Finalize compute_raymarching pass
+        wgpuComputePassEncoderEnd(compute_pass);
+
+        WGPUCommandBufferDescriptor cmd_buff_descriptor = {};
+        cmd_buff_descriptor.nextInChain = NULL;
+        cmd_buff_descriptor.label = "Undo empty Octree Command Buffer";
+
+        // Encode and submit the GPU commands
+        WGPUCommandBuffer commands = wgpuCommandEncoderFinish(command_encoder, &cmd_buff_descriptor);
+        wgpuQueueSubmit(webgpu_context->device_queue, 1, &commands);
+
+        wgpuCommandBufferRelease(commands);
+        wgpuComputePassEncoderRelease(compute_pass);
+        wgpuCommandEncoderRelease(command_encoder);
+        RenderdocCapture::end_capture_frame();
         return;
     }
 
     AABB last_edit_AABB = stroke_history_AABB.back();
     stroke_history_AABB.pop_back();
 
-    Stroke& deleted_stroke = stroke_history.back();
+    // Pop the last element and add into the redo history
+    Stroke deleted_stroke = stroke_history.back();
+    stroke_redo_history.push_front(deleted_stroke);
     stroke_history.pop_back();
 
     std::vector<Stroke> strokes_to_recompute;
 
     // Get the strokes that are on the region of the undo
     for (uint32_t i = 0u; i < stroke_history_AABB.size(); i++) {
-        AABB& past_stroke = stroke_history_AABB[i];
-        if (intersection::AABB_AABB_min_max(last_edit_AABB.min,
-                                            last_edit_AABB.max,
-                                            past_stroke.min,
-                                            past_stroke.max))
-        {
+        const AABB& past_stroke = stroke_history_AABB[i];
+        if (intersection::AABB_AABB_min_max(last_edit_AABB.min, last_edit_AABB.max, past_stroke.min, past_stroke.max)) {
             strokes_to_recompute.push_back(stroke_history[i]);
         }
     }
-    // Mark as the start of the re-evaulation, in order to clean the bricks
-    compute_merge_data.reevaluate = 1;
 
     compute_merge_data.reevaluation_AABB_min = last_edit_AABB.min;
     compute_merge_data.reevaluation_AABB_max = last_edit_AABB.max;
 
-    spdlog::debug(glm::length(last_edit_AABB.max - last_edit_AABB.min));
+    /*spdlog::debug(glm::length(last_edit_AABB.max - last_edit_AABB.min));
     spdlog::debug((last_edit_AABB.max.x - last_edit_AABB.min.x));
     spdlog::debug((last_edit_AABB.max.y - last_edit_AABB.min.y));
-    spdlog::debug((last_edit_AABB.max.z - last_edit_AABB.min.z));
+    spdlog::debug((last_edit_AABB.max.z - last_edit_AABB.min.z));*/
 
     RenderdocCapture::start_capture_frame();
 
-    //for (uint32_t i = 0u; i < strokes_to_recompute.size(); i++) {
-        evaluate_strokes(strokes_to_recompute, true);
-    //    if (i == 0) {
-    //        compute_merge_data.reevaluate = 0;
-    //    }
-    //}
+    evaluate_strokes(strokes_to_recompute, true);
+    
     RenderdocCapture::end_capture_frame();
-
-    compute_merge_data.reevaluate = 0;
 }
 
 void RaymarchingRenderer::compute_octree()
@@ -320,18 +388,21 @@ void RaymarchingRenderer::compute_octree()
     if (!compute_octree_evaluate_shader || !compute_octree_evaluate_shader->is_loaded()) return;
 
     // Nothing to merge if equals 0
-    if (current_stroke->edit_count == 0 && to_compute_stroke_buffer.size() == 0) {
+    if (in_frame_stroke.edit_count == 0 && to_compute_stroke_buffer.size() == 0) {
         return;
     }
 
+
     RenderdocCapture::start_capture_frame();
 
-    spdlog::debug(current_stroke->edits[0].to_string());
+    spdlog::debug(in_frame_stroke.edits[0].to_string());
 
-    // Start a new stroke, store previous
-    change_stroke(current_stroke->primitive, current_stroke->operation, current_stroke->parameters);
+    to_compute_stroke_buffer.push_back(in_frame_stroke);
 
     evaluate_strokes(to_compute_stroke_buffer);
+
+    in_frame_stroke.edit_count = 0u;
+
 
     to_compute_stroke_buffer.clear();
 
@@ -436,6 +507,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
     compute_octree_brick_removal_shader = RendererStorage::get_shader("data/shaders/octree/brick_removal.wgsl");
     compute_octree_brick_copy_shader = RendererStorage::get_shader("data/shaders/octree/brick_copy.wgsl");
     compute_octree_initialization_shader = RendererStorage::get_shader("data/shaders/octree/initialization.wgsl");
+    compute_octree_cleaning_shader = RendererStorage::get_shader("data/shaders/octree/clean_octree.wgsl");
 
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
 
@@ -617,12 +689,21 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         compute_octree_initialization_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_initialization_shader, 0);
     }
 
+    {
+        Uniform proxy_indirect = octree_proxy_indirect_buffer;
+        proxy_indirect.binding = 6;
+
+        std::vector<Uniform*> uniforms = { &octree_uniform, &octree_proxy_instance_buffer, &octree_indirect_brick_removal_buffer, &compute_merge_data_uniform, &proxy_indirect };
+        compute_octree_clean_octree_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_cleaning_shader, 0);
+    }
+
     compute_octree_evaluate_pipeline.create_compute(compute_octree_evaluate_shader);
     compute_octree_increment_level_pipeline.create_compute(compute_octree_increment_level_shader);
     compute_octree_write_to_texture_pipeline.create_compute(compute_octree_write_to_texture_shader);
     compute_octree_brick_removal_pipeline.create_compute(compute_octree_brick_removal_shader);
     compute_octree_brick_copy_pipeline.create_compute(compute_octree_brick_copy_shader);
     compute_octree_initialization_pipeline.create_compute(compute_octree_initialization_shader);
+    compute_octree_cleaning_pipeline.create_compute(compute_octree_cleaning_shader);
 }
 
 

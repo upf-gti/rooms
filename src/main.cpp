@@ -54,8 +54,8 @@ int main()
     required_limits.limits.maxBindGroups = 2;
     required_limits.limits.maxUniformBuffersPerShaderStage = 1;
     required_limits.limits.maxUniformBufferBindingSize = 65536;
-    required_limits.limits.minUniformBufferOffsetAlignment = 64;
-    required_limits.limits.minStorageBufferOffsetAlignment = 64;
+    required_limits.limits.minUniformBufferOffsetAlignment = 256;
+    required_limits.limits.minStorageBufferOffsetAlignment = 256;
 #ifndef DISABLE_RAYMARCHER
     required_limits.limits.maxBufferSize = SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION * sizeof(float) * 4;
     required_limits.limits.maxStorageBufferBindingSize = SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION * sizeof(float) * 4;
