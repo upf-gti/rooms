@@ -93,13 +93,13 @@ void MeshRenderer::init_render_mesh_pipelines()
 
     WGPUTextureFormat swapchain_format = is_openxr_available ? webgpu_context->xr_swapchain_format : webgpu_context->swapchain_format;
 
-    WGPUBlendState blend_state;
-    blend_state.color = {
+    WGPUBlendState* blend_state = new WGPUBlendState;
+    blend_state->color = {
             .operation = WGPUBlendOperation_Add,
             .srcFactor = WGPUBlendFactor_SrcAlpha,
             .dstFactor = WGPUBlendFactor_OneMinusSrcAlpha,
     };
-    blend_state.alpha = {
+    blend_state->alpha = {
             .operation = WGPUBlendOperation_Add,
             .srcFactor = WGPUBlendFactor_Zero,
             .dstFactor = WGPUBlendFactor_One,
@@ -107,12 +107,11 @@ void MeshRenderer::init_render_mesh_pipelines()
 
     WGPUColorTargetState color_target = {};
     color_target.format = swapchain_format;
-    color_target.blend = &blend_state;
+    color_target.blend = blend_state;
     color_target.writeMask = WGPUColorWriteMask_All;
 
     Pipeline::register_render_pipeline(render_mesh_shader, color_target);
     Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/mesh_texture.wgsl"), color_target);
-    Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/mesh_pbr.wgsl"), color_target);
     Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/mesh_texture_cube.wgsl"), color_target, { .uses_depth_write = false });
     Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/mesh_grid.wgsl"), color_target);
     Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/mesh_transparent.wgsl"), color_target, { .cull_mode = WGPUCullMode_Back });

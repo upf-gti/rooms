@@ -8,7 +8,7 @@
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
 
 @group(2) @binding(0) var irradiance_texture: texture_cube<f32>;
-@group(2) @binding(1) var sampler_clamp : sampler;
+@group(2) @binding(4) var sampler_clamp : sampler;
 
 
 @vertex

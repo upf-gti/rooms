@@ -8,11 +8,31 @@
 
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
 
+#ifdef ALBEDO_TEXTURE
 @group(2) @binding(0) var albedo_texture: texture_2d<f32>;
+#else
+@group(2) @binding(0) var<uniform> albedo: vec4f;
+#endif
+
+#ifdef METALLIC_ROUGHNESS_TEXTURE
 @group(2) @binding(1) var metallic_roughness_texture: texture_2d<f32>;
+#else
+@group(2) @binding(1) var<uniform> metallic_roughness: vec2f;
+#endif
+
+#ifdef NORMAL_TEXTURE
 @group(2) @binding(2) var normal_texture: texture_2d<f32>;
+#endif
+
+#ifdef EMISSIVE_TEXTURE
 @group(2) @binding(3) var emissive_texture: texture_2d<f32>;
+#else
+@group(2) @binding(3) var<uniform> emissive: vec3f;
+#endif
+
+#ifdef USE_SAMPLER
 @group(2) @binding(4) var sampler_2d : sampler;
+#endif
 
 @group(3) @binding(0) var irradiance_texture: texture_cube<f32>;
 @group(3) @binding(1) var brdf_lut_texture: texture_2d<f32>;
@@ -52,22 +72,37 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     m.normal = normalize(in.normal);
     m.view_dir = normalize(camera_data.eye - m.pos);
 
+#ifdef NORMAL_TEXTURE
     var normal_color = textureSample(normal_texture, sampler_2d, in.uv).rgb;
     m.normal = perturb_normal(m.normal, m.view_dir, in.uv, normal_color);
+#endif
 
     m.reflected_dir = reflect( -m.view_dir, m.normal);
 
     // Material properties
 
+#ifdef ALBEDO_TEXTURE
     m.albedo = textureSample(albedo_texture, sampler_2d, in.uv).rgb * in.color;
     m.albedo = pow(m.albedo, vec3f(2.2));
+#else
+    m.albedo = albedo.rgb;
+#endif
 
+#ifdef EMISSIVE_TEXTURE
     m.emissive = textureSample(emissive_texture, sampler_2d, in.uv).rgb;
     m.emissive = pow(m.emissive, vec3f(2.2));
+#else
+    m.emissive = emissive;
+#endif
 
+#ifdef METALLIC_ROUGHNESS_TEXTURE
     var metal_rough : vec3f = textureSample(metallic_roughness_texture, sampler_2d, in.uv).rgb;
     m.metallic = metal_rough.b;
     m.roughness = max(metal_rough.g, 0.04);
+#else
+    m.metallic = metallic_roughness.x;
+    m.roughness = metallic_roughness.y;
+#endif
 
     m.diffuse_color = m.albedo * ( 1.0 - m.metallic );
     m.specular_color = mix(vec3f(0.04), m.albedo, m.metallic);
