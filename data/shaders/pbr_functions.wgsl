@@ -64,6 +64,50 @@ fn GeometrySmith(N : vec3f, V : vec3f, L : vec3f, roughness : f32) -> f32
     return ggx1 * ggx2;
 }
 
+fn GDFG(NoV : f32, NoL : f32, a : f32) -> f32
+{
+    let a2 : f32 = a * a;
+    let GGXL : f32 = NoV * sqrt((-NoL * a2 + NoL) * NoL + a2);
+    let GGXV : f32 = NoL * sqrt((-NoV * a2 + NoV) * NoV + a2);
+    return (2 * NoL) / (GGXV + GGXL);
+}
+
+fn importance_sample_GGX(Xi : vec2f, N : vec3f, roughness : f32) -> vec3f
+{
+    let a : f32 = roughness * roughness;
+	
+    let phi : f32 = 2.0 * PI * Xi.x;
+    let cos_theta : f32 = sqrt((1.0 - Xi.y) / (1.0 + (a*a - 1.0) * Xi.y));
+    let sin_theta : f32 = sqrt(1.0 - cos_theta * cos_theta);
+	
+    // from spherical coordinates to cartesian coordinates
+    let H : vec3f = vec3f(cos(phi) * sin_theta, sin(phi) * sin_theta, cos_theta);
+    
+    // from tangent-space vector to world-space sample vector
+    let up : vec3f        = select(vec3(1.0, 0.0, 0.0), vec3(0.0, 0.0, 1.0), abs(N.z) < 0.999);
+    let tangent : vec3f   = normalize(cross(up, N));
+    let bitangent : vec3f = cross(N, tangent);
+	
+    let sampleVec : vec3f = tangent * H.x + bitangent * H.y + N * H.z;
+    return normalize(sampleVec);
+}
+
+fn RadicalInverse_VdC(bits_in : u32) -> f32
+{
+    var bits : u32 = bits_in;
+    bits = (bits << 16u) | (bits >> 16u);
+    bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+    bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+    bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+    bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+    return f32(bits) * 2.3283064365386963e-10; // / 0x100000000
+}
+
+fn Hammersley(i : u32, N : u32) -> vec2f
+{
+    return vec2f(f32(i)/ f32(N), RadicalInverse_VdC(i));
+}  
+
 fn fresnelSchlick(cos_theta : f32, F0 : vec3f) -> vec3f
 {
     return F0 + (vec3f(1.0) - F0) * pow(clamp(1.0 - cos_theta, 0.0, 1.0), 5.0);
@@ -77,90 +121,6 @@ fn Fresnel_Schlick( specular_color : vec3f, h : vec3f, v : vec3f) -> vec3f
 fn FresnelSchlickRoughness(cos_theta : f32, F0 : vec3f, roughness : f32) -> vec3f
 {
     return F0 + (max(vec3f(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cos_theta, 0.0, 1.0), 5.0);
-}
-
-// Lights
-
-struct LitMaterial
-{
-  pos : vec3f,
-  normal : vec3f,
-  albedo : vec3f,
-  emissive : vec3f,
-  diffuse_color : vec3f,
-  specular_color : vec3f,
-  metallic : f32,
-  roughness : f32,
-  ao : f32,
-  view_dir : vec3f,
-  reflected_dir : vec3f
-};
-
-fn get_direct_light( m : LitMaterial, shadow_factor : vec3f, attenuation : f32) -> vec3f
-{
-    var N : vec3f = normalize(m.normal);
-    var V : vec3f = normalize(m.view_dir);
-
-    var F0 : vec3f = m.specular_color;
-
-    // hardcoded!!
-    let light_position = vec3f(0.2, 0.5, 1.0);
-    let light_color = vec3f(1.0);
-    let light_intensity = 5.0;
-
-    // calculate light radiance
-    var L : vec3f = normalize(light_position - m.pos);
-    var H : vec3f = normalize(V + L);
-    var radiance : vec3f = light_color * light_intensity * attenuation * shadow_factor;
-
-    // Cook-Torrance BRDF
-    var NDF : f32 = DistributionGGX2(N, H, m.roughness);
-    var G : f32 = GeometrySmith(N, V, L, m.roughness);
-    var F : vec3f = fresnelSchlick(max(dot(H, V), 0.0), F0);
-
-    var numerator : vec3f  = NDF * G * F;
-    var denominator : f32 = 4 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001; // + 0.0001 to prevent divide by zero
-    var specular : vec3f = numerator / denominator;
-
-    var k_s : vec3f = F;
-    var k_d : vec3f = vec3f(1.0) - k_s;
-
-    var NdotL : f32 = max(dot(N, L), 0.0);
-
-    var final_color : vec3f = ((k_d * Diffuse(m.diffuse_color)) + specular) * radiance * NdotL;
-
-    return final_color;
-}
-
-fn get_indirect_light( m : LitMaterial ) -> vec3f
-{
-    var cos_theta : f32 = max(dot(m.normal, m.view_dir), 0.0);
-
-    // IBL
-    // Specular + Diffuse
-
-    // Specular color
-
-    var F : vec3f = FresnelSchlickRoughness(cos_theta, m.specular_color, m.roughness);
-    var k_s : vec3f = F;
-
-    var mip_index : f32 = m.roughness * 6.0;
-    var prefiltered_color : vec3f = textureSampleLevel(irradiance_texture, sampler_clamp, m.reflected_dir, mip_index).rgb;
-
-    let brdf_coords : vec2f = vec2f(cos_theta, 1.0 - m.roughness);
-    let brdf_lut : vec2f = textureSampleLevel(brdf_lut_texture, sampler_clamp, brdf_coords, 0).rg;
-
-    var specular : vec3f = prefiltered_color * (F * brdf_lut.x + brdf_lut.y);
-
-    // Diffuse sample: get last prefiltered mipmap
-    var irradiance : vec3f = textureSampleLevel(irradiance_texture, sampler_clamp, m.normal, 6).rgb;
-
-    // Diffuse color
-    var k_d : vec3f = 1.0 - k_s;
-    var diffuse : vec3f = k_d * Diffuse(m.diffuse_color) * irradiance;
-
-    // Combine factors and add AO
-    return (diffuse + specular) * m.ao;
 }
 
 //Javi Agenjo Snipet for Bump Mapping

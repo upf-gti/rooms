@@ -1,5 +1,6 @@
 #include mesh_includes.wgsl
 #include pbr_functions.wgsl
+#include pbr_light.wgsl
 #include tonemappers.wgsl
 
 #define GAMMA_CORRECTION

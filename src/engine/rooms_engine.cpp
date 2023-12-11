@@ -15,7 +15,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 
     sculpt_editor.initialize();
 
-    std::string environment = "data/textures/environments/grass.hdre";
+    std::string environment = "data/textures/environments/sky.hdre";
 
     skybox = parse_mesh("data/meshes/cube.obj");
     skybox->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_texture_cube.wgsl"));

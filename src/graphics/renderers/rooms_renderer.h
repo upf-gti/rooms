@@ -10,6 +10,7 @@
 #include "mesh_renderer.h"
 
 #include "framework/camera/flyover_camera.h"
+#include "framework/camera/orbit_camera.h"
 
 #ifdef __EMSCRIPTEN__
 #define DISABLE_RAYMARCHER
