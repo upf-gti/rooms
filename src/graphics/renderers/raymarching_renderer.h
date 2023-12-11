@@ -6,6 +6,8 @@
 #include "graphics/edit.h"
 #include "graphics/texture.h"
 
+#include <list>
+
 #define PREVIEW_EDITS_MAX 128
 #define SDF_RESOLUTION 400
 #define SCULPT_MAX_SIZE 1 // meters
