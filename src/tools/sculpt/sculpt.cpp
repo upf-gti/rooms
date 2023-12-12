@@ -24,7 +24,7 @@ bool SculptTool::update(float delta_time)
 	// Tool Operation changer
 	if (Input::was_button_pressed(XR_BUTTON_Y))
 	{
-        sdOperation& op = stroke_parameters.operation;
+        sdOperation op = stroke_parameters.operation;
 
 		switch (op)
 		{
@@ -44,7 +44,7 @@ bool SculptTool::update(float delta_time)
 			break;
 		}
 
-        stroke_parameters.was_operation_changed = true;
+        stroke_parameters.set_operation(op);
 	}
 
 	// Sculpting (adding edits)
@@ -52,17 +52,17 @@ bool SculptTool::update(float delta_time)
 
 		// For debugging sculpture without a headset
 		if (!Renderer::instance->get_openxr_available()) {
+
             //edit_to_add.position = glm::vec3(0.0);
             edit_to_add.position = glm::vec3(glm::vec3( 0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1)));
 			glm::vec3 euler_angles(random_f() * 90, random_f() * 90, random_f() * 90);
 			edit_to_add.dimensions = glm::vec4(0.01f, 0.01f, 0.01f, 0.01f);
-			edit_to_add.rotation = glm::inverse(glm::quat(euler_angles));
-            edit_to_add.color = glm::vec3(random_f(), random_f(), random_f());
-            stroke_parameters.operation = (random_f() > 0.5f) ? OP_UNION : OP_SUBSTRACTION;
             //edit_to_add.dimensions = (edit_to_add.operation == OP_SUBSTRACTION) ? 3.0f * glm::vec4(0.2f, 0.2f, 0.2f, 0.2f) : glm::vec4(0.2f, 0.2f, 0.2f, 0.2f);
-            //edit_to_add.operation = OP_UNION;
-            //edit_to_add.operation = OP_SUBSTRACTION;
-            stroke_parameters.was_operation_changed = true;
+			edit_to_add.rotation = glm::inverse(glm::quat(euler_angles));
+            // Stroke
+            stroke_parameters.color = glm::vec4(random_f(), random_f(), random_f(), 1.f);
+            // stroke_parameters.material = glm::vec4(random_f(), random_f(), 0.f, 0.f);
+            stroke_parameters.set_operation( (random_f() > 0.5f) ? OP_UNION : OP_SUBSTRACTION);
 		}
 
         return use_tool();

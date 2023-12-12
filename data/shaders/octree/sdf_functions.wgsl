@@ -409,7 +409,7 @@ fn map_thickness( t : f32, v_max : f32 ) -> f32
     return select( 0.0, max(t * v_max * 0.375, 0.003), t > 0.0);
 }
 
-fn evalEdit( position : vec3f, primitive : u32, operation : u32, edit_parameters : vec4f, current_surface : Surface, edit : Edit) -> Surface
+fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters : vec4f, color : vec4f, current_surface : Surface, edit : Edit) -> Surface
 {
     var pSurface : Surface;
 
@@ -417,10 +417,12 @@ fn evalEdit( position : vec3f, primitive : u32, operation : u32, edit_parameters
     var size : vec3f = edit.dimensions.xyz;
     var radius : f32 = edit.dimensions.x;
     var size_param : f32 = edit.dimensions.w;
-    var cap_value : f32 = edit_parameters.y;
+    var cap_value : f32 = parameters.y;
 
-    var onion_thickness : f32 = edit_parameters.x;
+    var onion_thickness : f32 = parameters.x;
     let do_onion = onion_thickness > 0.0;
+
+    let edit_color = color.rgb;
 
     switch (primitive) {
         case SD_SPHERE: {
@@ -428,9 +430,9 @@ fn evalEdit( position : vec3f, primitive : u32, operation : u32, edit_parameters
             radius -= onion_thickness; // Compensate onion size
             // -1..1 no cap..fully capped
             if(cap_value > -1.0) { 
-                pSurface = sdCutSphere(position, edit.position, edit.rotation, radius, radius * cap_value * 0.999, edit.color);
+                pSurface = sdCutSphere(position, edit.position, edit.rotation, radius, radius * cap_value * 0.999, edit_color);
             } else {
-                pSurface = sdSphere(position, edit.position, radius, edit.color);
+                pSurface = sdSphere(position, edit.position, radius, edit_color);
             }
             break;
         }
@@ -442,14 +444,14 @@ fn evalEdit( position : vec3f, primitive : u32, operation : u32, edit_parameters
             size -= onion_thickness;
             size_param -= onion_thickness; 
 
-            pSurface = sdBox(position, edit.position, edit.rotation, size - size_param, size_param, edit.color);
+            pSurface = sdBox(position, edit.position, edit.rotation, size - size_param, size_param, edit_color);
             break;
         }
         case SD_CAPSULE: {
             onion_thickness = map_thickness( onion_thickness, size_param );
             size_param -= onion_thickness; // Compensate onion size
             var height = radius; // ...
-            pSurface = sdCapsule(position, edit.position, edit.position - vec3f(0.0, 0.0, height), edit.rotation, size_param, edit.color);
+            pSurface = sdCapsule(position, edit.position, edit.position - vec3f(0.0, 0.0, height), edit.rotation, size_param, edit_color);
             break;
         }
         case SD_CONE: {
@@ -457,17 +459,17 @@ fn evalEdit( position : vec3f, primitive : u32, operation : u32, edit_parameters
             cap_value = cap_value * 0.5 + 0.5;
             radius = max(radius * (1.0 - cap_value), 0.0025);
             var dims = vec2f(size_param, size_param * cap_value);
-            pSurface = sdCone(position, edit.position,  edit.position - vec3f(0.0, 0.0, radius), edit.rotation, dims, edit.color);
+            pSurface = sdCone(position, edit.position,  edit.position - vec3f(0.0, 0.0, radius), edit.rotation, dims, edit_color);
             break;
         }
         // case SD_PYRAMID: {
-        //     pSurface = sdPyramid(position, edit.position, edit.rotation, radius, size_param, edit.color);
+        //     pSurface = sdPyramid(position, edit.position, edit.rotation, radius, size_param, edit_color);
         //     break;
         // }
         case SD_CYLINDER: {
             onion_thickness = map_thickness( onion_thickness, size_param );
             size_param -= onion_thickness; // Compensate onion size
-            pSurface = sdCylinder(position, edit.position,  edit.position - vec3f(0.0, 0.0, radius), edit.rotation, size_param, 0.0, edit.color);
+            pSurface = sdCylinder(position, edit.position,  edit.position - vec3f(0.0, 0.0, radius), edit.rotation, size_param, 0.0, edit_color);
             break;
         }
         case SD_TORUS: {
@@ -478,15 +480,15 @@ fn evalEdit( position : vec3f, primitive : u32, operation : u32, edit_parameters
                 cap_value = cap_value * 0.5 + 0.5;
                 var an = M_PI * (1.0 - cap_value);
                 var angles = vec2f(sin(an), cos(an));
-                pSurface = sdCappedTorus(position, edit.position, vec2f(radius, size_param), edit.rotation, angles, edit.color);
+                pSurface = sdCappedTorus(position, edit.position, vec2f(radius, size_param), edit.rotation, angles, edit_color);
             } else {
-                pSurface = sdTorus(position, edit.position, vec2f(radius, size_param), edit.rotation, edit.color);
+                pSurface = sdTorus(position, edit.position, vec2f(radius, size_param), edit.rotation, edit_color);
             }
             break;
         }
         case SD_BEZIER: {
             var curve_thickness : f32 = 0.01;
-            pSurface = sdQuadraticBezier(position, edit.position, edit.position + vec3f(0.0, 0.1, 0.0), edit.position + vec3f(0.2, 0.1, 0.0), curve_thickness, edit.rotation, edit.color);
+            pSurface = sdQuadraticBezier(position, edit.position, edit.position + vec3f(0.0, 0.1, 0.0), edit.position + vec3f(0.2, 0.1, 0.0), curve_thickness, edit.rotation, edit_color);
             break;
         }
         default: {
@@ -514,7 +516,7 @@ fn evalEdit( position : vec3f, primitive : u32, operation : u32, edit_parameters
             break;
         }
         case OP_PAINT: {
-            pSurface = opPaint(current_surface, pSurface, edit.color);
+            pSurface = opPaint(current_surface, pSurface, edit_color);
             break;
         }
         case OP_SMOOTH_UNION: {
@@ -530,7 +532,7 @@ fn evalEdit( position : vec3f, primitive : u32, operation : u32, edit_parameters
             break;
         }
         case OP_SMOOTH_PAINT: {
-            pSurface = opSmoothPaint(current_surface, pSurface, edit.color, SMOOTH_FACTOR);
+            pSurface = opSmoothPaint(current_surface, pSurface, edit_color, SMOOTH_FACTOR);
             break;
         }
         default: {

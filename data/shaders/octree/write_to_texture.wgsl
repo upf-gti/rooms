@@ -63,8 +63,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
         let material : Material = unpack_material(u32(raw_color.r));
         sSurface.color = material.albedo;
-    } else
-    if ((INTERIOR_BRICK_FLAG & brick_pointer) == INTERIOR_BRICK_FLAG) {
+    } 
+    else if ((INTERIOR_BRICK_FLAG & brick_pointer) == INTERIOR_BRICK_FLAG) {
         //sSurface.distance = -100.0;
     }
 
@@ -78,7 +78,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
         let packed_index : u32 = 3 - (i % 4);
         let current_unpacked_edit_idx : u32 = (current_packed_edit_idx & (0xFFu << (packed_index * 8u))) >> (packed_index * 8u);
 
-        sSurface = evalEdit(octant_center + pixel_offset, stroke.primitive, stroke.operation, stroke.parameters, sSurface, stroke.edits[current_unpacked_edit_idx]);
+        sSurface = evaluate_edit(octant_center + pixel_offset, stroke.primitive, stroke.operation, stroke.parameters, stroke.color, sSurface, stroke.edits[current_unpacked_edit_idx]);
     }
 
     if (sSurface.distance < MIN_HIT_DIST) {
@@ -94,13 +94,13 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
     var material : Material;
     material.albedo = sSurface.color;
-    material.roughness = 0.7;
-    material.metalness = 0.2;
+    material.roughness = stroke.material.x;
+    material.metalness = stroke.material.y;
+
     // Duplicate the texture Store, becuase then we have a branch depeding on an uniform!
     textureStore(write_sdf, texture_coordinates, vec4f(sSurface.distance));
     textureStore(write_material_sdf, texture_coordinates, vec4<u32>((pack_material(material))));
     
-
     //textureStore(write_sdf, texture_coordinates, vec4f(debug_surf.x, debug_surf.y, debug_surf.z, sSurface.distance));
     // Hack, for buffer usage
     octant_usage_write[0] = 0;

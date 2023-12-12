@@ -1,6 +1,6 @@
 {
     "width": 512,
-    "height": 144,
+    "height": 196,
     "elements": [
         {
             "name": "g_main_tools",
@@ -26,9 +26,9 @@
             "texture": "data/textures/primitives.png"
         },
         {
-            "name": "colors",
+            "name": "material",
             "type": "button",
-            "texture": "data/textures/colors.png"
+            "texture": "data/textures/material.png"
         },
         {
             "name": "g_guides",
@@ -102,6 +102,34 @@
                     "name": "shape_editor",
                     "type": "button",
                     "texture": "data/textures/shape_editor.png"
+                }
+            ]
+        },
+        {
+            "name": "material",
+            "type": "submenu",
+            "children": [
+                {
+                    "name": "colors",
+                    "type": "button",
+                    "texture": "data/textures/colors.png"
+                },
+                {
+                    "name": "pbr",
+                    "type": "group",
+                    "nitems": 2
+                },
+                {
+                    "name": "pbr_roughness",
+                    "type": "slider",
+                    "mode": "vertical",
+                    "default": 0.7
+                },
+                {
+                    "name": "pbr_metallic",
+                    "type": "slider",
+                    "mode": "vertical",
+                    "default": 0.2
                 }
             ]
         },

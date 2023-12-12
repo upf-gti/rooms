@@ -119,17 +119,21 @@ void RaymarchingRenderer::add_preview_edit(const Edit& edit)
     //preview_edit_data.preview_edits[preview_edit_data.preview_edits_count++] = edit;
 }
 
-void RaymarchingRenderer::initialize_stroke() {
+void RaymarchingRenderer::initialize_stroke()
+{
     in_frame_stroke.stroke_id = 0u;
 }
 
-void RaymarchingRenderer::change_stroke(const sdPrimitive new_primitive, const sdOperation new_operation, const glm::vec4 new_parameters, const uint32_t index_increment) {
+void RaymarchingRenderer::change_stroke(const StrokeParameters& params, const uint32_t index_increment)
+{
     Stroke new_stroke = {};
 
     new_stroke.stroke_id = in_frame_stroke.stroke_id + index_increment;
-    new_stroke.primitive = new_primitive;
-    new_stroke.operation = new_operation;
-    new_stroke.parameters = new_parameters;
+    new_stroke.primitive = params.primitive;
+    new_stroke.operation = params.operation;
+    new_stroke.parameters = params.parameters;
+    new_stroke.color = params.color;
+    new_stroke.material = params.material;
     new_stroke.edit_count = 0u;
 
     // Only store the strokes that actually changes the sculpt
@@ -147,9 +151,9 @@ void RaymarchingRenderer::change_stroke(const sdPrimitive new_primitive, const s
 
 void RaymarchingRenderer::push_edit(const Edit edit) {
 
+    // Check for max edits -> Prolongation of the stroke! (increment is 0)
     if (in_frame_stroke.edit_count == MAX_EDITS_PER_EVALUATION) {
-        // The index increment is 0, since this is a prolongation of the previous stroke
-        change_stroke(in_frame_stroke.primitive, in_frame_stroke.operation, in_frame_stroke.parameters, 0u);
+        change_stroke(in_frame_stroke.as_params(), 0u);
     }
 
     in_frame_stroke.edits[in_frame_stroke.edit_count++] = edit;
@@ -371,11 +375,6 @@ void RaymarchingRenderer::undo()
 
     compute_merge_data.reevaluation_AABB_min = last_edit_AABB.min;
     compute_merge_data.reevaluation_AABB_max = last_edit_AABB.max;
-
-    /*spdlog::debug(glm::length(last_edit_AABB.max - last_edit_AABB.min));
-    spdlog::debug((last_edit_AABB.max.x - last_edit_AABB.min.x));
-    spdlog::debug((last_edit_AABB.max.y - last_edit_AABB.min.y));
-    spdlog::debug((last_edit_AABB.max.z - last_edit_AABB.min.z));*/
 
     RenderdocCapture::start_capture_frame();
 
