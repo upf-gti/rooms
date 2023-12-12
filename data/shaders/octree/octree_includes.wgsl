@@ -22,7 +22,6 @@ const SMOOTH_FACTOR = 0.01;
 
 struct Edit {
     position   : vec3f,
-    color      : vec3f,
     dimensions : vec4f,
     rotation   : vec4f
 };
@@ -33,6 +32,7 @@ struct Stroke {
     primitive   : u32,
     operation   : u32,
     parameters  : vec4f,
+    color       : vec4f,
     edits       : array<Edit, MAX_EDITS_PER_EVALUATION>
 }
 

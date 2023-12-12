@@ -258,10 +258,8 @@ void SculptEditor::update(float delta_time)
     // Push edits in 3d texture space
     edit_to_add.position -= (sculpt_start_position + translation_diff);
     edit_to_add.position = (sculpt_rotation * rotation_diff) * edit_to_add.position;
-
     edit_to_add.rotation *= (sculpt_rotation * rotation_diff);
 
-    edit_to_add.color = current_color;
     glm::vec4 new_parameters;
     new_parameters.x = onion_enabled ? onion_thickness : 0.f;
     new_parameters.y = capped_enabled ? capped_value : -1.f;
@@ -269,9 +267,10 @@ void SculptEditor::update(float delta_time)
     if (current_primitive != stroke_parameters.primitive && new_parameters != stroke_parameters.parameters && stroke_parameters.was_operation_changed) {
         stroke_parameters.primitive = current_primitive;
         stroke_parameters.parameters = new_parameters;
+        stroke_parameters.color = current_color;
         stroke_parameters.was_operation_changed = false;
 
-        renderer->change_stroke(stroke_parameters.primitive, stroke_parameters.operation, stroke_parameters.parameters);
+        renderer->change_stroke(stroke_parameters);
     }
 
     if (is_tool_used) {

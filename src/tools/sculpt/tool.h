@@ -3,14 +3,6 @@
 #include "graphics/edit.h"
 #include "framework/input.h"
 
-struct StrokeParameters {
-    sdPrimitive primitive = SD_SPHERE;
-    sdOperation operation = OP_UNION;
-    glm::vec4   parameters = { 0.f, -1.f, 0.f, 0.f };
-
-    bool was_operation_changed = false;
-};
-
 class Tool {
 
 protected:
@@ -21,7 +13,6 @@ protected:
 
     Edit edit_to_add = {
         .position = glm::vec3(0.0f, 0.0f, 0.0f),
-        .color = glm::vec3(1.0f, 0.0f, 0.0f),
         .dimensions = glm::vec4(0.01f, 0.01f, 0.01f, 0.f)
     };
 

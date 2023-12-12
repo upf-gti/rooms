@@ -84,8 +84,8 @@ public:
     *   Edits
     */
 
-    void change_stroke(const sdPrimitive primitive, sdOperation new_operation, glm::vec4 &new_parameters) {
-        raymarching_renderer.change_stroke(primitive, new_operation, new_parameters);
+    void change_stroke(const StrokeParameters& params) {
+        raymarching_renderer.change_stroke(params);
     }
 
     void push_edit(Edit edit) {
