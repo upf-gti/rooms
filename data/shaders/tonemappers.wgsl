@@ -18,3 +18,11 @@ fn tonemap_uncharted( c : vec3f ) -> vec3f
     let whiteScale = 1.0 / tonemap_uncharted2_imp( vec3f(W) );
     return color * whiteScale;//LINEARtoSRGB(color * whiteScale);
 }
+
+// Filmic Tonemapping Operators http://filmicworlds.com/blog/filmic-tonemapping-operators/
+fn tonemap_filmic(x : vec3f) -> vec3f
+{
+  let X : vec3f = max(vec3f(0.0), x - 0.004);
+  let result : vec3f = (X * (6.2 * X + 0.5)) / (X * (6.2 * X + 1.7) + 0.06);
+  return pow(result, vec3f(2.2));
+}

@@ -8,7 +8,7 @@
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
 
 @group(2) @binding(0) var irradiance_texture: texture_cube<f32>;
-@group(2) @binding(4) var sampler_clamp : sampler;
+@group(2) @binding(7) var sampler_clamp : sampler;
 
 
 @vertex
@@ -37,10 +37,10 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     var out: FragmentOutput;
     var final_color : vec3f = textureSampleLevel(irradiance_texture, sampler_clamp, view, 0).rgb;
-
+    
     // simple reinhard
     // color = color / (color + vec3f(1.0));
-    final_color = tonemap_uncharted(final_color);
+    final_color = tonemap_filmic(final_color);
 
     if (GAMMA_CORRECTION == 1) {
         final_color = pow(final_color, vec3(1.0 / 2.2));

@@ -39,10 +39,10 @@ void RoomsEngine::clean()
 
 void RoomsEngine::update(float delta_time)
 {
+    Engine::update(delta_time);
+
     RoomsRenderer* renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     skybox->set_translation(renderer->get_camera()->get_eye());
-
-	Engine::update(delta_time);
 
     sculpt_editor.update(delta_time);
 

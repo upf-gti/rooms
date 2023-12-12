@@ -11,32 +11,32 @@
 
 #ifdef ALBEDO_TEXTURE
 @group(2) @binding(0) var albedo_texture: texture_2d<f32>;
-#else
-@group(2) @binding(0) var<uniform> albedo: vec4f;
 #endif
+
+@group(2) @binding(1) var<uniform> albedo: vec4f;
 
 #ifdef METALLIC_ROUGHNESS_TEXTURE
-@group(2) @binding(1) var metallic_roughness_texture: texture_2d<f32>;
-#else
-@group(2) @binding(1) var<uniform> metallic_roughness: vec2f;
+@group(2) @binding(2) var metallic_roughness_texture: texture_2d<f32>;
 #endif
 
+@group(2) @binding(3) var<uniform> metallic_roughness: vec2f;
+
 #ifdef NORMAL_TEXTURE
-@group(2) @binding(2) var normal_texture: texture_2d<f32>;
+@group(2) @binding(4) var normal_texture: texture_2d<f32>;
 #endif
 
 #ifdef EMISSIVE_TEXTURE
-@group(2) @binding(3) var emissive_texture: texture_2d<f32>;
-#else
-@group(2) @binding(3) var<uniform> emissive: vec3f;
+@group(2) @binding(5) var emissive_texture: texture_2d<f32>;
 #endif
 
+@group(2) @binding(6) var<uniform> emissive: vec3f;
+
 #ifdef USE_SAMPLER
-@group(2) @binding(4) var sampler_2d : sampler;
+@group(2) @binding(7) var sampler_2d : sampler;
 #endif
 
 #ifdef ALPHA_MASK
-@group(2) @binding(5) var<uniform> alpha_cutoff: f32;
+@group(2) @binding(8) var<uniform> alpha_cutoff: f32;
 #endif
 
 @group(3) @binding(0) var irradiance_texture: texture_cube<f32>;
@@ -77,8 +77,8 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 #ifdef ALBEDO_TEXTURE
     let albedo_texture : vec4f = textureSample(albedo_texture, sampler_2d, in.uv);
     m.albedo = albedo_texture.rgb * in.color;
-    m.albedo = pow(m.albedo, vec3f(2.2));
-    alpha = albedo_texture.a;
+    m.albedo = pow(m.albedo, vec3f(2.2)) * albedo.rgb;
+    alpha = albedo_texture.a * albedo.a;
 #else
     m.albedo = albedo.rgb;
     alpha = albedo.a;
@@ -92,15 +92,15 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
 #ifdef EMISSIVE_TEXTURE
     m.emissive = textureSample(emissive_texture, sampler_2d, in.uv).rgb;
-    m.emissive = pow(m.emissive, vec3f(2.2));
+    m.emissive = pow(m.emissive, vec3f(2.2)) * emissive;
 #else
     m.emissive = emissive;
 #endif
 
 #ifdef METALLIC_ROUGHNESS_TEXTURE
     var metal_rough : vec3f = textureSample(metallic_roughness_texture, sampler_2d, in.uv).rgb;
-    m.metallic = metal_rough.b;
-    m.roughness = max(metal_rough.g, 0.04);
+    m.metallic = metal_rough.b * metallic_roughness.x;
+    m.roughness = max(metal_rough.g, 0.04) * metallic_roughness.y;
 #else
     m.metallic = metallic_roughness.x;
     m.roughness = metallic_roughness.y;
@@ -129,7 +129,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var final_color : vec3f = vec3f(0.0); 
     // final_color += get_direct_light(m, vec3f(1.0), 1.0);
 
-    final_color += tonemap_uncharted(get_indirect_light(m));
+    final_color += tonemap_filmic(get_indirect_light(m));
 
     final_color += m.emissive;
 

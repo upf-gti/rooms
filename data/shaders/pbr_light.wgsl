@@ -77,8 +77,8 @@ fn get_indirect_light( m : LitMaterial ) -> vec3f
 
     // Diffuse color
     var k_d : vec3f = 1.0 - k_s;
-    var diffuse : vec3f = k_d * Diffuse(m.diffuse_color) * irradiance;
+    var diffuse : vec3f = k_d * (m.diffuse_color) * irradiance;
 
     // Combine factors and add AO
-    return (diffuse + specular) * m.ao;
+    return (diffuse) * m.ao;
 }

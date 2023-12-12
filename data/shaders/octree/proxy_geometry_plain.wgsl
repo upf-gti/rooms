@@ -224,7 +224,7 @@ fn apply_light(toEye : vec3f, position : vec3f, position_world : vec3f, lightPos
     var final_color : vec3f = vec3f(0.0); 
     // final_color += get_direct_light(m, vec3f(1.0), 1.0);
 
-    final_color += tonemap_uncharted(get_indirect_light(m));
+    final_color += tonemap_filmic(get_indirect_light(m));
 
     return final_color;
     //return normal;
