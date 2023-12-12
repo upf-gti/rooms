@@ -264,10 +264,14 @@ void SculptEditor::update(float delta_time)
     new_parameters.x = onion_enabled ? onion_thickness : 0.f;
     new_parameters.y = capped_enabled ? capped_value : -1.f;
 
-    if (current_primitive != stroke_parameters.primitive && new_parameters != stroke_parameters.parameters && stroke_parameters.was_operation_changed) {
+    // Operation here is not being used... ALL OPS is to send something
+    if (stroke_parameters.must_change_stroke({ current_primitive, sdOperation::ALL_OPERATIONS, new_parameters, current_color })) {
+
         stroke_parameters.primitive = current_primitive;
         stroke_parameters.parameters = new_parameters;
-        stroke_parameters.color = current_color;
+        // Update color from UI only in XR mode
+        if (Renderer::instance->get_openxr_available())
+            stroke_parameters.color = current_color;
         stroke_parameters.was_operation_changed = false;
 
         renderer->change_stroke(stroke_parameters);

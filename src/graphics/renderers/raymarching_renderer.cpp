@@ -152,7 +152,7 @@ void RaymarchingRenderer::push_edit(const Edit edit) {
 
     // Check for max edits -> Prolongation of the stroke! (increment is 0)
     if (in_frame_stroke.edit_count == MAX_EDITS_PER_EVALUATION) {
-        change_stroke( { in_frame_stroke.primitive, in_frame_stroke.operation, in_frame_stroke.parameters, in_frame_stroke.color }, 0u);
+        change_stroke(in_frame_stroke.as_params(), 0u);
     }
 
     in_frame_stroke.edits[in_frame_stroke.edit_count++] = edit;
