@@ -72,6 +72,9 @@ void SculptEditor::initialize()
         gui.bind("lock_axis_y", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_Y; });
         gui.bind("lock_axis_z", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_Z; });
 
+        gui.bind("pbr_roughness", [&](const std::string& signal, float value) { current_material.x = value; });
+        gui.bind("pbr_metallic", [&](const std::string& signal, float value) { current_material.y = value; });
+
         gui.bind("color_picker", [&](const std::string& signal, Color color) { current_color = color; });
         gui.bind("color_picker@released", [&](const std::string& signal, Color color) { add_recent_color(color); });
 
