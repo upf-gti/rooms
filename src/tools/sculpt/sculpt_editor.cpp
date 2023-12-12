@@ -72,6 +72,9 @@ void SculptEditor::initialize()
         gui.bind("lock_axis_y", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_Y; });
         gui.bind("lock_axis_z", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_Z; });
 
+        gui.bind("pbr_roughness", [&](const std::string& signal, float value) { current_material.x = value; });
+        gui.bind("pbr_metallic", [&](const std::string& signal, float value) { current_material.y = value; });
+
         gui.bind("color_picker", [&](const std::string& signal, Color color) { current_color = color; });
         gui.bind("color_picker@released", [&](const std::string& signal, Color color) { add_recent_color(color); });
 
@@ -258,20 +261,25 @@ void SculptEditor::update(float delta_time)
     // Push edits in 3d texture space
     edit_to_add.position -= (sculpt_start_position + translation_diff);
     edit_to_add.position = (sculpt_rotation * rotation_diff) * edit_to_add.position;
-
     edit_to_add.rotation *= (sculpt_rotation * rotation_diff);
 
-    edit_to_add.color = current_color;
     glm::vec4 new_parameters;
     new_parameters.x = onion_enabled ? onion_thickness : 0.f;
     new_parameters.y = capped_enabled ? capped_value : -1.f;
 
-    if (current_primitive != stroke_parameters.primitive && new_parameters != stroke_parameters.parameters && stroke_parameters.was_operation_changed) {
-        stroke_parameters.primitive = current_primitive;
+    // Operation here is not being used... ALL OPS is to send something
+    if (stroke_parameters.must_change_stroke({ current_primitive, sdOperation::ALL_OPERATIONS, new_parameters, current_color, current_material })) {
+
         stroke_parameters.parameters = new_parameters;
+        // Update some properties from UI only in XR mode
+        if (Renderer::instance->get_openxr_available()) {
+            stroke_parameters.primitive = current_primitive;
+            stroke_parameters.color = current_color;
+            stroke_parameters.material = current_material;
+        }
         stroke_parameters.was_operation_changed = false;
 
-        renderer->change_stroke(stroke_parameters.primitive, stroke_parameters.operation, stroke_parameters.parameters);
+        renderer->change_stroke(stroke_parameters);
     }
 
     if (is_tool_used) {

@@ -36,7 +36,7 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
     //for (uint32_t i = 0; i < 10; i++) {
     //    push_edit({ glm::vec3(glm::vec3(0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1))),
     //                glm::vec3(0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1)),
-    //                glm::vec4(0.1f, 0.1f, 0.1f, 0.1f),
+    //                glm::vec4(0.1f, 0.1f, 0.1f, 0.1f),f
     //                glm::quat(1.0, 0.0, 0.0, 0.0)
     //    });
 
@@ -119,17 +119,21 @@ void RaymarchingRenderer::add_preview_edit(const Edit& edit)
     //preview_edit_data.preview_edits[preview_edit_data.preview_edits_count++] = edit;
 }
 
-void RaymarchingRenderer::initialize_stroke() {
+void RaymarchingRenderer::initialize_stroke()
+{
     in_frame_stroke.stroke_id = 0u;
 }
 
-void RaymarchingRenderer::change_stroke(const sdPrimitive new_primitive, const sdOperation new_operation, const glm::vec4 new_parameters, const uint32_t index_increment) {
+void RaymarchingRenderer::change_stroke(const StrokeParameters& params, const uint32_t index_increment)
+{
     Stroke new_stroke = {};
 
     new_stroke.stroke_id = in_frame_stroke.stroke_id + index_increment;
-    new_stroke.primitive = new_primitive;
-    new_stroke.operation = new_operation;
-    new_stroke.parameters = new_parameters;
+    new_stroke.primitive = params.primitive;
+    new_stroke.operation = params.operation;
+    new_stroke.parameters = params.parameters;
+    new_stroke.color = params.color;
+    new_stroke.material = params.material;
     new_stroke.edit_count = 0u;
 
     // Only store the strokes that actually changes the sculpt
@@ -147,9 +151,9 @@ void RaymarchingRenderer::change_stroke(const sdPrimitive new_primitive, const s
 
 void RaymarchingRenderer::push_edit(const Edit edit) {
 
+    // Check for max edits -> Prolongation of the stroke! (increment is 0)
     if (in_frame_stroke.edit_count == MAX_EDITS_PER_EVALUATION) {
-        // The index increment is 0, since this is a prolongation of the previous stroke
-        change_stroke(in_frame_stroke.primitive, in_frame_stroke.operation, in_frame_stroke.parameters, 0u);
+        change_stroke(in_frame_stroke.as_params(), 0u);
     }
 
     in_frame_stroke.edits[in_frame_stroke.edit_count++] = edit;
@@ -300,10 +304,10 @@ void RaymarchingRenderer::redo()
 
 void RaymarchingRenderer::undo()
 {
-    if (stroke_history_AABB.size() == 0) {
+    if (stroke_history_AABB.size() == 0 && current_stroke.edit_count == 0) {
         return;
     }
-    else if (stroke_history_AABB.size() == 1) {
+    else if (stroke_history_AABB.size() == 1 || (current_stroke.edit_count >= 0 && stroke_history_AABB.size() == 0)) {
         WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
 
         stroke_history_AABB.clear();
@@ -320,8 +324,9 @@ void RaymarchingRenderer::undo()
         WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
 
         compute_octree_cleaning_pipeline.set(compute_pass);
+        uint32_t last_layer_size = pow(2, 3 * octree_depth);
         wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_clean_octree_bind_group, 0, nullptr);
-        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, octants_max_size / (8u * 8u * 8u), 1,1);
+        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, last_layer_size / (8u * 8u * 8u), 1,1);
 
         // Clean the texture atlas bricks dispatch
         compute_octree_brick_removal_pipeline.set(compute_pass);
@@ -371,11 +376,6 @@ void RaymarchingRenderer::undo()
     compute_merge_data.reevaluation_AABB_min = last_edit_AABB.min;
     compute_merge_data.reevaluation_AABB_max = last_edit_AABB.max;
 
-    /*spdlog::debug(glm::length(last_edit_AABB.max - last_edit_AABB.min));
-    spdlog::debug((last_edit_AABB.max.x - last_edit_AABB.min.x));
-    spdlog::debug((last_edit_AABB.max.y - last_edit_AABB.min.y));
-    spdlog::debug((last_edit_AABB.max.z - last_edit_AABB.min.z));*/
-
     RenderdocCapture::start_capture_frame();
 
     evaluate_strokes(strokes_to_recompute, true);
@@ -393,7 +393,7 @@ void RaymarchingRenderer::compute_octree()
     }
 
 
-    RenderdocCapture::start_capture_frame();
+    //RenderdocCapture::start_capture_frame();
 
     spdlog::debug(in_frame_stroke.edits[0].to_string());
 
@@ -406,7 +406,7 @@ void RaymarchingRenderer::compute_octree()
 
     to_compute_stroke_buffer.clear();
 
-    RenderdocCapture::end_capture_frame();
+    //RenderdocCapture::end_capture_frame();
 }
 
 void RaymarchingRenderer::render_raymarching_proxy(WGPUTextureView swapchain_view, WGPUTextureView swapchain_depth)
@@ -689,11 +689,12 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         compute_octree_initialization_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_initialization_shader, 0);
     }
 
+    // Clean Octree bindgroup
     {
         Uniform proxy_indirect = octree_proxy_indirect_buffer;
         proxy_indirect.binding = 6;
 
-        std::vector<Uniform*> uniforms = { &octree_uniform, &octree_proxy_instance_buffer, &octree_indirect_brick_removal_buffer, &compute_merge_data_uniform, &proxy_indirect };
+        std::vector<Uniform*> uniforms = { &octree_uniform, &octree_indirect_brick_removal_buffer, &proxy_indirect };
         compute_octree_clean_octree_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_cleaning_shader, 0);
     }
 

@@ -166,7 +166,7 @@ public:
     *   Edits
     */
     void initialize_stroke();
-    void change_stroke(const sdPrimitive primitive, const sdOperation new_operation, const glm::vec4 new_parameters, const uint32_t index_increment = 1u);
+    void change_stroke(const StrokeParameters& params, const uint32_t index_increment = 1u);
 
     void push_edit(const Edit edit);
 

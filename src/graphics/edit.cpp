@@ -6,7 +6,6 @@ std::ostream& operator<<(std::ostream& os, const Edit& edit)
 {
     os << "Position: " << edit.position.x << ", " << edit.position.y << ", " << edit.position.z << std::endl;
     //os << "Primitive: " << edit.primitive << std::endl;
-    os << "Color: " << edit.color.x << ", " << edit.color.y << ", " << edit.color.z << std::endl;
     //os << "Operation: " << edit.operation << std::endl;
     os << "Dimensions: " << edit.dimensions.x << ", " << edit.dimensions.y << ", " << edit.dimensions.z << edit.dimensions.w << std::endl;
     return os;
@@ -17,7 +16,6 @@ std::string Edit::to_string() const {
     std::string text;
     text += std::to_string(position.x) + " " + std::to_string(position.y) + " " + std::to_string(position.z) + "/";
     //text += std::to_string(primitive) + "/";
-    text += std::to_string(color.x) + " " + std::to_string(color.y) + " " + std::to_string(color.z) + "/";
     //text += std::to_string(operation) + "/";
     text += std::to_string(dimensions.x) + " " + std::to_string(dimensions.y) + " " + std::to_string(dimensions.z) + " " + std::to_string(dimensions.w) + "/";
     text += std::to_string(rotation.x) + " " + std::to_string(rotation.y) + " " + std::to_string(rotation.z) + " " + std::to_string(rotation.w) + "/";
@@ -42,7 +40,6 @@ void Edit::parse_string(const std::string& str) {
     // Set data...
     position    = load_vec3(tokens[0]);
     //primitive   = (sdPrimitive)std::atoi(tokens[1].c_str());
-    color       = load_vec3(tokens[2]);
     //operation   = (sdOperation)std::atoi(tokens[3].c_str());
     dimensions  = load_vec4(tokens[4]);
     rotation    = load_quat(tokens[5]);
@@ -57,6 +54,17 @@ float Edit::weigth_difference(const Edit& edit) {
     float size_diff = glm::length(dimensions - edit.dimensions);
 
     return position_diff + angle_diff + size_diff;
+}
+
+void StrokeParameters::set_operation(sdOperation op)
+{
+    operation = op;
+    was_operation_changed = true;
+}
+
+bool StrokeParameters::must_change_stroke(const StrokeParameters& p)
+{
+    return (primitive != p.primitive) || (parameters != p.parameters) || (color != p.color) || (material != p.material) || was_operation_changed;
 }
 
 glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const {
@@ -125,9 +133,6 @@ void Stroke::get_edit_world_AABB(const uint8_t edit_index, glm::vec3* min, glm::
 
     *min = (sculpt_rotation * (edits[edit_index].position) - edit_half_size);
     *max = (sculpt_rotation * (edits[edit_index].position) + edit_half_size);
-
-    spdlog::debug(glm::length(*max - *min));
-
 }
 
 
@@ -143,7 +148,4 @@ void Stroke::get_world_AABB(glm::vec3* min, glm::vec3* max, const glm::vec3& sta
 
     *min = it_min;
     *max = it_max;
-
-    spdlog::debug(glm::length(*max - *min));
-
 }

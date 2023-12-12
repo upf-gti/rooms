@@ -23,8 +23,7 @@ bool PaintTool::update(float delta_time)
     // Tool Operation changer
     if (Input::was_button_pressed(XR_BUTTON_Y))
     {
-        stroke_parameters.operation = stroke_parameters.operation == OP_PAINT ? OP_SMOOTH_PAINT : OP_PAINT;
-        stroke_parameters.was_operation_changed = true;
+        stroke_parameters.set_operation(stroke_parameters.operation == OP_PAINT ? OP_SMOOTH_PAINT : OP_PAINT);
     }
 
 	if (is_tool_activated())
