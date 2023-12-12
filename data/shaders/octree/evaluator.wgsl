@@ -215,7 +215,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     let is_interior_brick : bool = (octree.data[octree_index].tile_pointer & INTERIOR_BRICK_FLAG) == INTERIOR_BRICK_FLAG;
 
     octree.data[octree_index].octant_center_distance = surface_interval_smooth;
-
+    
     edit_culling_data.edit_culling_count[octree_index] = edit_counter;
 
      if (level < merge_data.max_octree_depth) {
@@ -244,7 +244,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             }
 
             // Mark this node as it has children
-            octree.data[octree_index].tile_pointer = FILLED_BRICK_FLAG;
+            //octree.data[octree_index].tile_pointer = FILLED_BRICK_FLAG;
         }
     } else {
         // In the case that the incomming edits's operation is either Add or Smooth Add

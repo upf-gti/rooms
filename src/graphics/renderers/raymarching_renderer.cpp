@@ -36,7 +36,7 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
     //for (uint32_t i = 0; i < 10; i++) {
     //    push_edit({ glm::vec3(glm::vec3(0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1))),
     //                glm::vec3(0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1)),
-    //                glm::vec4(0.1f, 0.1f, 0.1f, 0.1f),
+    //                glm::vec4(0.1f, 0.1f, 0.1f, 0.1f),f
     //                glm::quat(1.0, 0.0, 0.0, 0.0)
     //    });
 
@@ -300,10 +300,10 @@ void RaymarchingRenderer::redo()
 
 void RaymarchingRenderer::undo()
 {
-    if (stroke_history_AABB.size() == 0) {
+    if (stroke_history_AABB.size() == 0 && current_stroke.edit_count == 0) {
         return;
     }
-    else if (stroke_history_AABB.size() == 1) {
+    else if (stroke_history_AABB.size() == 1 || (current_stroke.edit_count >= 0 && stroke_history_AABB.size() == 0)) {
         WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
 
         stroke_history_AABB.clear();
@@ -320,8 +320,9 @@ void RaymarchingRenderer::undo()
         WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
 
         compute_octree_cleaning_pipeline.set(compute_pass);
+        uint32_t last_layer_size = pow(2, 3 * octree_depth);
         wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_clean_octree_bind_group, 0, nullptr);
-        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, octants_max_size / (8u * 8u * 8u), 1,1);
+        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, last_layer_size / (8u * 8u * 8u), 1,1);
 
         // Clean the texture atlas bricks dispatch
         compute_octree_brick_removal_pipeline.set(compute_pass);
@@ -393,7 +394,7 @@ void RaymarchingRenderer::compute_octree()
     }
 
 
-    RenderdocCapture::start_capture_frame();
+    //RenderdocCapture::start_capture_frame();
 
     spdlog::debug(in_frame_stroke.edits[0].to_string());
 
@@ -406,7 +407,7 @@ void RaymarchingRenderer::compute_octree()
 
     to_compute_stroke_buffer.clear();
 
-    RenderdocCapture::end_capture_frame();
+    //RenderdocCapture::end_capture_frame();
 }
 
 void RaymarchingRenderer::render_raymarching_proxy(WGPUTextureView swapchain_view, WGPUTextureView swapchain_depth)
@@ -689,11 +690,12 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         compute_octree_initialization_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_initialization_shader, 0);
     }
 
+    // Clean Octree bindgroup
     {
         Uniform proxy_indirect = octree_proxy_indirect_buffer;
         proxy_indirect.binding = 6;
 
-        std::vector<Uniform*> uniforms = { &octree_uniform, &octree_proxy_instance_buffer, &octree_indirect_brick_removal_buffer, &compute_merge_data_uniform, &proxy_indirect };
+        std::vector<Uniform*> uniforms = { &octree_uniform, &octree_indirect_brick_removal_buffer, &proxy_indirect };
         compute_octree_clean_octree_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_cleaning_shader, 0);
     }
 
