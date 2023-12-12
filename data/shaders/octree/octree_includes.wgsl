@@ -33,6 +33,7 @@ struct Stroke {
     operation   : u32,
     parameters  : vec4f,
     color       : vec4f,
+    material    : vec4f,
     edits       : array<Edit, MAX_EDITS_PER_EVALUATION>
 }
 

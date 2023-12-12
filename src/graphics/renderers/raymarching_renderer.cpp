@@ -133,6 +133,7 @@ void RaymarchingRenderer::change_stroke(const StrokeParameters& params, const ui
     new_stroke.operation = params.operation;
     new_stroke.parameters = params.parameters;
     new_stroke.color = params.color;
+    new_stroke.material = params.material;
     new_stroke.edit_count = 0u;
 
     // Only store the strokes that actually changes the sculpt

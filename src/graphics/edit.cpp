@@ -56,9 +56,15 @@ float Edit::weigth_difference(const Edit& edit) {
     return position_diff + angle_diff + size_diff;
 }
 
+void StrokeParameters::set_operation(sdOperation op)
+{
+    operation = op;
+    was_operation_changed = true;
+}
+
 bool StrokeParameters::must_change_stroke(const StrokeParameters& p)
 {
-    return (primitive != p.primitive) || (parameters != p.parameters) || (color != p.color) || was_operation_changed;
+    return (primitive != p.primitive) || (parameters != p.parameters) || (color != p.color) || (material != p.material) || was_operation_changed;
 }
 
 glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const {

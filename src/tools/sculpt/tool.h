@@ -43,15 +43,9 @@ public:
     virtual bool use_tool();
 
     virtual bool update(float delta_time);
-
 	virtual void render_scene() {}
 	virtual void render_ui() {}
 
-    Edit& get_edit_to_add() {
-        return edit_to_add;
-    }
-
-    StrokeParameters& get_stroke_parameters() {
-        return stroke_parameters;
-    }
+    Edit& get_edit_to_add() { return edit_to_add; }
+    StrokeParameters& get_stroke_parameters() { return stroke_parameters; }
 };

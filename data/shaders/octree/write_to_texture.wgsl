@@ -94,8 +94,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
     var material : Material;
     material.albedo = sSurface.color;
-    material.roughness = 0.7;
-    material.metalness = 0.2;
+    material.roughness = stroke.material.x;
+    material.metalness = stroke.material.y;
 
     // Duplicate the texture Store, becuase then we have a branch depeding on an uniform!
     textureStore(write_sdf, texture_coordinates, vec4f(sSurface.distance));

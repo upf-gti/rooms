@@ -265,13 +265,15 @@ void SculptEditor::update(float delta_time)
     new_parameters.y = capped_enabled ? capped_value : -1.f;
 
     // Operation here is not being used... ALL OPS is to send something
-    if (stroke_parameters.must_change_stroke({ current_primitive, sdOperation::ALL_OPERATIONS, new_parameters, current_color })) {
+    if (stroke_parameters.must_change_stroke({ current_primitive, sdOperation::ALL_OPERATIONS, new_parameters, current_color, current_material })) {
 
-        stroke_parameters.primitive = current_primitive;
         stroke_parameters.parameters = new_parameters;
-        // Update color from UI only in XR mode
-        if (Renderer::instance->get_openxr_available())
+        // Update some properties from UI only in XR mode
+        if (Renderer::instance->get_openxr_available()) {
+            stroke_parameters.primitive = current_primitive;
             stroke_parameters.color = current_color;
+            stroke_parameters.material = current_material;
+        }
         stroke_parameters.was_operation_changed = false;
 
         renderer->change_stroke(stroke_parameters);
