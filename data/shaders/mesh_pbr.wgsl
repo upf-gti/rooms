@@ -106,8 +106,9 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     m.roughness = metallic_roughness.y;
 #endif
 
-    m.diffuse_color = m.albedo * ( 1.0 - m.metallic );
-    m.specular_color = mix(vec3f(0.04), m.albedo, m.metallic);
+    m.c_diff = mix(m.albedo, vec3f(0.0), m.metallic);
+    m.f0 = mix(vec3f(0.04), m.albedo, m.metallic);
+
     m.ao = 1.0;
 
     // Vectors
@@ -122,14 +123,14 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     m.normal = perturb_normal(m.normal, m.view_dir, in.uv, normal_color);
 #endif
 
-    m.reflected_dir = reflect( -m.view_dir, m.normal);
+    m.reflected_dir = normalize(reflect( -m.view_dir, m.normal));
 
     // var distance : f32 = length(light_position - m.pos);
     // var attenuation : f32 = pow(1.0 - saturate(distance/light_max_radius), 1.5);
     var final_color : vec3f = vec3f(0.0); 
     // final_color += get_direct_light(m, vec3f(1.0), 1.0);
 
-    final_color += tonemap_filmic(get_indirect_light(m));
+    final_color += tonemap_filmic(get_indirect_light(m), 1.0);
 
     final_color += m.emissive;
 

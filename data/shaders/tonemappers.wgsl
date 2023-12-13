@@ -19,10 +19,19 @@ fn tonemap_uncharted( c : vec3f ) -> vec3f
     return color * whiteScale;//LINEARtoSRGB(color * whiteScale);
 }
 
-// Filmic Tonemapping Operators http://filmicworlds.com/blog/filmic-tonemapping-operators/
-fn tonemap_filmic(x : vec3f) -> vec3f
+// https://github.com/godotengine/godot/blob/aa5b6ed13e4644633baf2a8a1384c82e91c533a1/servers/rendering/renderer_rd/shaders/effects/tonemap.glsl#L197
+fn tonemap_filmic(color : vec3f, white : f32) -> vec3f
 {
-  let X : vec3f = max(vec3f(0.0), x - 0.004);
-  let result : vec3f = (X * (6.2 * X + 0.5)) / (X * (6.2 * X + 1.7) + 0.06);
-  return pow(result, vec3f(2.2));
+	const exposure_bias : f32 = 2.0f;
+	const A : f32 = 0.22f * exposure_bias * exposure_bias; // bias baked into constants for performance
+	const B : f32 = 0.30f * exposure_bias;
+	const C : f32 = 0.10f;
+	const D : f32 = 0.20f;
+	const E : f32 = 0.01f;
+	const F : f32 = 0.30f;
+
+	let color_tonemapped : vec3f = ((color * (A * color + C * B) + D * E) / (color * (A * color + B) + D * F)) - E / F;
+	let white_tonemapped : f32 = ((white * (A * white + C * B) + D * E) / (white * (A * white + B) + D * F)) - E / F;
+
+	return color_tonemapped / white_tonemapped;
 }

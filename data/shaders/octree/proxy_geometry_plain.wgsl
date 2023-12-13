@@ -215,8 +215,8 @@ fn apply_light(toEye : vec3f, position : vec3f, position_world : vec3f, lightPos
     m.metallic = material.metalness;
     m.roughness = max(material.roughness, 0.04);
 
-    m.diffuse_color = m.albedo * ( 1.0 - m.metallic );
-    m.specular_color = mix(vec3f(0.04), m.albedo, m.metallic);
+    m.c_diff = mix(m.albedo, vec3f(0.0), m.metallic);
+    m.f0 = mix(vec3f(0.04), m.albedo, m.metallic);
     m.ao = 1.0;
 
     // var distance : f32 = length(light_position - m.pos);
@@ -224,7 +224,7 @@ fn apply_light(toEye : vec3f, position : vec3f, position_world : vec3f, lightPos
     var final_color : vec3f = vec3f(0.0); 
     // final_color += get_direct_light(m, vec3f(1.0), 1.0);
 
-    final_color += tonemap_filmic(get_indirect_light(m));
+    final_color += tonemap_filmic(get_indirect_light(m), 1.0);
 
     return final_color;
     //return normal;

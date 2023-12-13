@@ -45,13 +45,11 @@ fn GeometrySchlickGGX(NdotV : f32, roughness : f32) -> f32
     return nom / denom;
 }
 
-fn V_SmithGGXCorrelated(N : vec3f, V : vec3f, L : vec3f, roughness : f32) -> f32
+fn V_SmithGGXCorrelated(NoV : f32, NoL : f32, roughness : f32) -> f32
 {
-    var NoV : f32 = abs(dot(N, V)) + 1e-5;
-    var NoL : f32 = clamp(dot(N, L), 0.0, 1.0);
-    var a2 : f32 = roughness * roughness;
-    var GGXV : f32 = NoL * sqrt(NoV * NoV * (1.0 - a2) + a2);
-    var GGXL : f32 = NoV * sqrt(NoL * NoL * (1.0 - a2) + a2);
+    let a2 : f32 = pow(roughness, 4.0);
+    let GGXV : f32 = NoL * sqrt(NoV * NoV * (1.0 - a2) + a2);
+    let GGXL : f32 = NoV * sqrt(NoL * NoL * (1.0 - a2) + a2);
     return 0.5 / (GGXV + GGXL);
 }
 
@@ -72,24 +70,60 @@ fn GDFG(NoV : f32, NoL : f32, a : f32) -> f32
     return (2 * NoL) / (GGXV + GGXL);
 }
 
-fn importance_sample_GGX(Xi : vec2f, N : vec3f, roughness : f32) -> vec3f
+fn D_GGX(NdotH : f32, roughness : f32) -> f32
+{
+    let a : f32 = NdotH * roughness;
+    let k : f32 = roughness / (1.0 - NdotH * NdotH + a * a);
+    return k * k * (1.0 / PI);
+}
+
+fn generateTBN(normal : vec3f) -> mat3x3<f32>
+{
+    var bitangent : vec3f = vec3f(0.0, 1.0, 0.0);
+
+    let NdotUp : f32 = dot(normal, vec3f(0.0, 1.0, 0.0));
+    let epsilon : f32 = 0.0000001;
+    if (1.0 - abs(NdotUp) <= epsilon)
+    {
+        // Sampling +Y or -Y, so we need a more robust bitangent.
+        if (NdotUp > 0.0)
+        {
+            bitangent = vec3f(0.0, 0.0, 1.0);
+        }
+        else
+        {
+            bitangent = vec3f(0.0, 0.0, -1.0);
+        }
+    }
+
+    let tangent : vec3f = normalize(cross(bitangent, normal));
+    bitangent = cross(normal, tangent);
+
+    return mat3x3<f32>(tangent, bitangent, normal);
+}
+
+// https://github.com/KhronosGroup/glTF-Sample-Viewer/blob/main/source/shaders/ibl_filtering.frag#L217
+fn importance_sample_GGX(Xi : vec2f, N : vec3f, roughness : f32) -> vec4f
 {
     let a : f32 = roughness * roughness;
 	
-    let phi : f32 = 2.0 * PI * Xi.x;
     let cos_theta : f32 = sqrt((1.0 - Xi.y) / (1.0 + (a*a - 1.0) * Xi.y));
     let sin_theta : f32 = sqrt(1.0 - cos_theta * cos_theta);
+    let phi : f32 = 2.0 * PI * Xi.x;
+
+    let pdf : f32 = D_GGX(cos_theta, a) / 4.0;
+
+    let local_space_direction : vec3f = normalize(vec3(
+        sin_theta * cos(phi), 
+        sin_theta * sin(phi), 
+        cos_theta
+    ));
+
+    let TBN : mat3x3<f32> = generateTBN(N);
+
+    let direction : vec3f = TBN * local_space_direction;
 	
-    // from spherical coordinates to cartesian coordinates
-    let H : vec3f = vec3f(cos(phi) * sin_theta, sin(phi) * sin_theta, cos_theta);
-    
-    // from tangent-space vector to world-space sample vector
-    let up : vec3f        = select(vec3(1.0, 0.0, 0.0), vec3(0.0, 0.0, 1.0), abs(N.z) < 0.999);
-    let tangent : vec3f   = normalize(cross(up, N));
-    let bitangent : vec3f = cross(N, tangent);
-	
-    let sampleVec : vec3f = tangent * H.x + bitangent * H.y + N * H.z;
-    return normalize(sampleVec);
+    return vec4f(direction, pdf);
 }
 
 fn RadicalInverse_VdC(bits_in : u32) -> f32
@@ -108,9 +142,9 @@ fn Hammersley(i : u32, N : u32) -> vec2f
     return vec2f(f32(i)/ f32(N), RadicalInverse_VdC(i));
 }  
 
-fn fresnelSchlick(cos_theta : f32, F0 : vec3f) -> vec3f
+fn fresnelSchlick(n_dot_v : f32, F0 : vec3f) -> vec3f
 {
-    return F0 + (vec3f(1.0) - F0) * pow(clamp(1.0 - cos_theta, 0.0, 1.0), 5.0);
+    return F0 + (vec3f(1.0) - F0) * pow(clamp(1.0 - n_dot_v, 0.0, 1.0), 5.0);
 }
 
 fn Fresnel_Schlick( specular_color : vec3f, h : vec3f, v : vec3f) -> vec3f
@@ -118,9 +152,9 @@ fn Fresnel_Schlick( specular_color : vec3f, h : vec3f, v : vec3f) -> vec3f
     return (specular_color + (1.0 - specular_color) * pow((1.0 - saturate(dot(v, h))), 5.0));
 }
 
-fn FresnelSchlickRoughness(cos_theta : f32, F0 : vec3f, roughness : f32) -> vec3f
+fn FresnelSchlickRoughness(n_dot_v : f32, F0 : vec3f, roughness : f32) -> vec3f
 {
-    return F0 + (max(vec3f(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cos_theta, 0.0, 1.0), 5.0);
+    return F0 + (max(vec3f(1.0 - roughness), F0) - F0) * pow(1.0 - n_dot_v, 5.0);
 }
 
 //Javi Agenjo Snipet for Bump Mapping

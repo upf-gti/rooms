@@ -4,49 +4,49 @@
 
 const SAMPLE_COUNT = 1024u;
 
-fn integrate_BRDF(n_dot_v : f32, roughness : f32) -> vec2f
+const TEXTURE_WIDTH = 512.0;
+const TEXTURE_HEIGHT = 512.0;
+
+// https://github.com/KhronosGroup/glTF-Sample-Viewer/blob/main/source/shaders/ibl_filtering.frag#L364
+fn integrate_BRDF(NdotV : f32, roughness : f32) -> vec2f
 {
     var V : vec3f;
-    V.x = sqrt(1.0 - n_dot_v * n_dot_v);
+    V.x = sqrt(1.0 - NdotV * NdotV);
     V.y = 0.0;
-    V.z = n_dot_v;
+    V.z = NdotV;
 
-    let roughness_clamp : f32 = max(roughness, 0.0001);
+    let N : vec3f = vec3f(0.0, 0.0, 1.0);
 
     var A : f32 = 0.0;
     var B : f32 = 0.0;
 
-    let N : vec3f = vec3f(0.0, 0.0, 1.0);
-
     for(var i : u32 = 0u; i < SAMPLE_COUNT; i = i + 1)
     {
         let Xi : vec2f = Hammersley(i, SAMPLE_COUNT);
-        let H : vec3f = importance_sample_GGX(Xi, N, roughness_clamp);
-        let L : vec3f = 2.0 * dot(V, H) * H - V;
 
-        let NdotL : f32 = max(L.z, 0.0);
-        let NdotH : f32 = max(H.z, 0.0);
-        let VdotH : f32 = max(dot(V, H), 0.0);
+        let importance_sample : vec4f = importance_sample_GGX(Xi, N, roughness);
+        let H : vec3f = importance_sample.xyz;
 
-        if(NdotL > 0.0)
+        let L : vec3f = normalize(reflect(-V, H));
+
+        let NdotL : f32 = clamp(L.z, 0.0, 1.0);
+        let NdotH : f32 = clamp(H.z, 0.0, 1.0);
+        let VdotH : f32 = clamp(dot(V, H), 0.0, 1.0);
+        
+        if (NdotL > 0.0)
         {
-            let G : f32 = GDFG(n_dot_v, NdotL, roughness_clamp);
-            let G_Vis : f32 = (G * VdotH) / (NdotH);
+            let V_pdf : f32 = V_SmithGGXCorrelated(NdotV, NdotL, roughness) * VdotH * NdotL / NdotH;
             let Fc : f32 = pow(1.0 - VdotH, 5.0);
-
-            A += (1.0 - Fc) * G_Vis;
-            B += Fc * G_Vis;
+            A += (1.0 - Fc) * V_pdf;
+            B += Fc * V_pdf;
         }
     }
 
-    A /= f32(SAMPLE_COUNT);
-    B /= f32(SAMPLE_COUNT);
-
-    return vec2f(A, B);
+    return vec2(4.0 * A, 4.0 * B) / f32(SAMPLE_COUNT);
 }
 
 @compute @workgroup_size(32, 32, 1)
 fn compute(@builtin(global_invocation_id) id: vec3<u32>) 
 {
-    textureStore(brdf_lut, id.xy, vec4f(integrate_BRDF(f32(id.x) / 512.0, f32(id.y) / 512.0), 0.0, 0.0));
+    textureStore(brdf_lut, id.xy, vec4f(integrate_BRDF(f32(id.x) / TEXTURE_WIDTH, f32(id.y) / TEXTURE_HEIGHT), 0.0, 0.0));
 }
