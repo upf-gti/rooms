@@ -29,8 +29,8 @@ fn unpack_material(packed_material : u32) -> Material {
     let metalness_val : u32 = packed_material & METALNESS_MASK;
 
     resulting_material.albedo = vec3f(f32(red_val) / 127.0, f32(green_val) / 255.0, f32(blue_val) / 127.0);
-    resulting_material.roughness = f32(roughess_val) / 32.0;
-    resulting_material.metalness = f32(metalness_val) / 32.0;
+    resulting_material.roughness = f32(roughess_val) / 31.0;
+    resulting_material.metalness = f32(metalness_val) / 31.0;
 
     return resulting_material;
 }
@@ -42,8 +42,8 @@ fn pack_material(material : Material) -> u32 {
     let green : u32 = u32(material.albedo.g * 255.0);
     let blue : u32 = u32(material.albedo.b * 127.0);
 
-    let roughness : u32 = u32(material.roughness * 32.0);
-    let metalness : u32 = u32(material.metalness * 32.0);
+    let roughness : u32 = u32(material.roughness * 31.0);
+    let metalness : u32 = u32(material.metalness * 31.0);
 
     packed_material = red << 25u;
     packed_material |= green << 17u;
