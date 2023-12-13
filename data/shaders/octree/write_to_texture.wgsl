@@ -65,7 +65,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
         sSurface.color = material.albedo;
     } 
     else if ((INTERIOR_BRICK_FLAG & brick_pointer) == INTERIOR_BRICK_FLAG) {
-        //sSurface.distance = -100.0;
+        sSurface.distance = -100.0;
     }
 
     // Offset for a 10 pixel wide brick
