@@ -62,7 +62,7 @@ int main()
     required_limits.limits.maxStorageBuffersPerShaderStage = 8; // GTX 1080 friendly :(
     required_limits.limits.maxComputeInvocationsPerWorkgroup = 1024;
 #else
-    required_limits.limits.maxComputeInvocationsPerWorkgroup = 512;
+    required_limits.limits.maxComputeInvocationsPerWorkgroup = 256;
 #endif
     required_limits.limits.maxSamplersPerShaderStage = 1;
     required_limits.limits.maxDynamicUniformBuffersPerPipelineLayout = 1;
