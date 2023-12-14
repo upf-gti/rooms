@@ -32,7 +32,7 @@ class SculptEditor {
     */
 
     Color current_color = colors::RED;
-    glm::vec4 current_material = { 0.0f, 0.0f, 0.0f, 0.0f };
+    glm::vec4 current_material = { 0.7f, 0.2f, 0.0f, 0.0f };
     sdPrimitive current_primitive = SD_SPHERE;
 
     EntityMesh* mesh_preview = nullptr;

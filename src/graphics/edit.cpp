@@ -64,7 +64,15 @@ void StrokeParameters::set_operation(sdOperation op)
 
 bool StrokeParameters::must_change_stroke(const StrokeParameters& p)
 {
-    return (primitive != p.primitive) || (parameters != p.parameters) || (color != p.color) || (material != p.material) || was_operation_changed;
+    bool result = false;
+
+    result |= (primitive != p.primitive);
+    result |= (parameters != p.parameters);
+    result |= (color != p.color);
+    result |= (material != p.material);
+    result |= was_operation_changed;
+
+    return result;
 }
 
 glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const {

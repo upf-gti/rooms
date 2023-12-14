@@ -128,7 +128,7 @@ void RaymarchingRenderer::change_stroke(const StrokeParameters& params, const ui
 {
     Stroke new_stroke = {};
 
-    new_stroke.stroke_id = in_frame_stroke.stroke_id + index_increment;
+    new_stroke.stroke_id = current_stroke.stroke_id + index_increment;
     new_stroke.primitive = params.primitive;
     new_stroke.operation = params.operation;
     new_stroke.parameters = params.parameters;
@@ -137,15 +137,23 @@ void RaymarchingRenderer::change_stroke(const StrokeParameters& params, const ui
     new_stroke.edit_count = 0u;
 
     // Only store the strokes that actually changes the sculpt
-    if (in_frame_stroke.edit_count > 0u) {
+    //if (in_frame_stroke.edit_count > 0u) {
+    //    // Add it to the history
+    //    stroke_history.push_back(in_frame_stroke);
+    //    AABB new_aabb;
+    //    in_frame_stroke.get_world_AABB(&new_aabb.min, &new_aabb.max, compute_merge_data.sculpt_start_position, compute_merge_data.sculpt_rotation);
+    //    stroke_history_AABB.push_back(new_aabb);
+    //}
+
+    if (current_stroke.edit_count > 0u) {
         // Add it to the history
-        stroke_history.push_back(in_frame_stroke);
+        stroke_history.push_back(current_stroke);
         AABB new_aabb;
-        in_frame_stroke.get_world_AABB(&new_aabb.min, &new_aabb.max, compute_merge_data.sculpt_start_position, compute_merge_data.sculpt_rotation);
+        current_stroke.get_world_AABB(&new_aabb.min, &new_aabb.max, compute_merge_data.sculpt_start_position, compute_merge_data.sculpt_rotation);
         stroke_history_AABB.push_back(new_aabb);
-        current_stroke = new_stroke;
     }
 
+    current_stroke = new_stroke;
     in_frame_stroke = new_stroke;
 }
 
@@ -153,7 +161,8 @@ void RaymarchingRenderer::push_edit(const Edit edit) {
 
     // Check for max edits -> Prolongation of the stroke! (increment is 0)
     if (in_frame_stroke.edit_count == MAX_EDITS_PER_EVALUATION) {
-        change_stroke(in_frame_stroke.as_params(), 0u);
+        to_compute_stroke_buffer.push_back(in_frame_stroke);
+        in_frame_stroke.edit_count = 0;
     }
 
     in_frame_stroke.edits[in_frame_stroke.edit_count++] = edit;
@@ -392,7 +401,6 @@ void RaymarchingRenderer::compute_octree()
         return;
     }
 
-
     //RenderdocCapture::start_capture_frame();
 
     spdlog::debug(in_frame_stroke.edits[0].to_string());
@@ -402,7 +410,6 @@ void RaymarchingRenderer::compute_octree()
     evaluate_strokes(to_compute_stroke_buffer);
 
     in_frame_stroke.edit_count = 0u;
-
 
     to_compute_stroke_buffer.clear();
 

@@ -137,6 +137,8 @@ void SculptEditor::initialize()
     mesh_preview->set_mesh(p_mesh);
     mesh_preview_outline->set_mesh(mesh_preview->get_mesh());
 
+
+
     enable_tool(SCULPT);
 }
 
@@ -263,21 +265,30 @@ void SculptEditor::update(float delta_time)
     edit_to_add.position = (sculpt_rotation * rotation_diff) * edit_to_add.position;
     edit_to_add.rotation *= (sculpt_rotation * rotation_diff);
 
-    glm::vec4 new_parameters;
+    glm::vec4 new_parameters = { 0.0f, -1.0f, 0.0f, 0.0f };
     new_parameters.x = onion_enabled ? onion_thickness : 0.f;
     new_parameters.y = capped_enabled ? capped_value : -1.f;
 
     // Operation here is not being used... ALL OPS is to send something
     if (stroke_parameters.must_change_stroke({ current_primitive, sdOperation::ALL_OPERATIONS, new_parameters, current_color, current_material })) {
 
+        spdlog::info("::must_change_stroke");
+
+        stroke_parameters.was_operation_changed = false;
         stroke_parameters.parameters = new_parameters;
-        // Update some properties from UI only in XR mode
+
+        // Properties changed in the UI, so update the stroke...
         if (Renderer::instance->get_openxr_available()) {
             stroke_parameters.primitive = current_primitive;
             stroke_parameters.color = current_color;
             stroke_parameters.material = current_material;
         }
-        stroke_parameters.was_operation_changed = false;
+        else // Properties changed manually, update editor state
+        {
+            current_primitive = stroke_parameters.primitive;
+            current_color = stroke_parameters.color;
+            current_material = stroke_parameters.material;
+        }
 
         renderer->change_stroke(stroke_parameters);
     }

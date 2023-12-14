@@ -2,6 +2,7 @@
 
 #include "includes.h"
 #include "utils.h"
+#include "framework/colors.h"
 
 #define MAX_EDITS_PER_EVALUATION 64
 
@@ -45,7 +46,7 @@ struct StrokeParameters {
     sdPrimitive primitive = SD_SPHERE;
     sdOperation operation = OP_UNION;
     glm::vec4   parameters = { 0.f, -1.f, 0.f, 0.f };
-    glm::vec4   color = { 0.f, 0.f, 0.f, 0.f };
+    Color       color = colors::RED;
     glm::vec4   material = { 0.7f, 0.2f, 0.f, 0.f }; // rough, metallic, emissive, unused
 
     bool was_operation_changed = false;
