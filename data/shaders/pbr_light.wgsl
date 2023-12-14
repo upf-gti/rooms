@@ -52,6 +52,7 @@ struct LitMaterial
 //     return final_color;
 // }
 
+// https://github.com/KhronosGroup/glTF-Sample-Viewer/blob/main/source/Renderer/shaders/ibl.glsl
 fn get_indirect_light( m : LitMaterial ) -> vec3f
 {
     let n_dot_v : f32 = clamp(dot(m.normal, m.view_dir), 0.0, 1.0);

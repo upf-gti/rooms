@@ -34,9 +34,11 @@ int RoomsRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
     }
 #endif
 
-    camera.set_perspective(glm::radians(45.0f), webgpu_context.render_width / static_cast<float>(webgpu_context.render_height), z_near, z_far);
-    camera.look_at(glm::vec3(0.0f, 0.6f, 0.6f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    camera.set_mouse_sensitivity(0.004f);
+    camera = new OrbitCamera();
+
+    camera->set_perspective(glm::radians(45.0f), webgpu_context.render_width / static_cast<float>(webgpu_context.render_height), z_near, z_far);
+    camera->look_at(glm::vec3(0.0f, 0.05f, 0.2f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    camera->set_mouse_sensitivity(0.004f);
 
     return 0;
 }
@@ -59,11 +61,13 @@ void RoomsRenderer::clean()
         }
     }
 #endif
+
+    delete camera;
 }
 
 void RoomsRenderer::update(float delta_time)
 {
-    camera.update(delta_time);
+    camera->update(delta_time);
 
     raymarching_renderer.update(delta_time);
     mesh_renderer.update(delta_time);
@@ -92,8 +96,8 @@ void RoomsRenderer::render()
 
 void RoomsRenderer::render_screen()
 {
-    camera_data.eye = camera.get_eye();
-    camera_data.mvp = camera.get_view_projection();
+    camera_data.eye = camera->get_eye();
+    camera_data.mvp = camera->get_view_projection();
     camera_data.dummy = 0.f;
 
     wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(camera_uniform.data), 0, &(camera_data), sizeof(sCameraData));
@@ -103,7 +107,7 @@ void RoomsRenderer::render_screen()
     mesh_renderer.render(swapchain_view, eye_depth_texture_view[EYE_LEFT]);
 
 #ifndef DISABLE_RAYMARCHER
-    raymarching_renderer.set_camera_eye(camera.get_eye());
+    raymarching_renderer.set_camera_eye(camera->get_eye());
     raymarching_renderer.render_raymarching_proxy(swapchain_view, eye_depth_texture_view[EYE_LEFT]);
 #endif
     

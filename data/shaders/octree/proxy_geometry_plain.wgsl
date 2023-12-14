@@ -167,14 +167,6 @@ fn interpolate_material(pos : vec3f) -> Material {
 
 fn sample_sdf(position : vec3f) -> Surface
 {
-    let rot_p = rotate_point_quat(position - sculpt_data.sculpt_start_position, sculpt_data.sculpt_inv_rotation);
-
-    // if (rot_p.x < 0.0 || rot_p.x > 1.0 ||
-    //     rot_p.y < 0.0 || rot_p.y > 1.0 ||
-    //     rot_p.z < 0.0 || rot_p.z > 1.0) {
-    //     return Surface(vec3(0.0, 0.0, 0.0), 0.01);
-    // }
-
     let data : vec4f = textureSampleLevel(read_sdf, texture_sampler, position, 0.0);
 
     var surface : Surface = Surface(vec3f(1.0, 0.0, 0.0), data.r);
