@@ -19,15 +19,6 @@ void MeshRenderer::clean()
 
 }
 
-void MeshRenderer::update_camera(const glm::vec3& eye, const glm::mat4x4& view_projection)
-{
-    WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
-    camera_data.eye = eye;
-    camera_data.mvp = view_projection;
-    camera_data.dummy = 0.f;
-    wgpuQueueWriteBuffer(webgpu_context->device_queue, std::get<WGPUBuffer>(camera_uniform.data), 0, &camera_data, sizeof(CameraData));
-}
-
 void MeshRenderer::update(float delta_time)
 {
 
@@ -44,11 +35,7 @@ void MeshRenderer::render(WGPUTextureView swapchain_view, WGPUTextureView swapch
     // Prepare the color attachment
     WGPURenderPassColorAttachment render_pass_color_attachment = {};
     render_pass_color_attachment.view = swapchain_view;
-#ifndef DISABLE_RAYMARCHER
-    render_pass_color_attachment.loadOp = WGPULoadOp_Load;
-#else
     render_pass_color_attachment.loadOp = WGPULoadOp_Clear;
-#endif
     render_pass_color_attachment.storeOp = WGPUStoreOp_Store;
 
     glm::vec4 clear_color = RoomsRenderer::instance->get_clear_color();
@@ -58,11 +45,7 @@ void MeshRenderer::render(WGPUTextureView swapchain_view, WGPUTextureView swapch
     WGPURenderPassDepthStencilAttachment render_pass_depth_attachment = {};
     render_pass_depth_attachment.view = swapchain_depth;
     render_pass_depth_attachment.depthClearValue = 1.0f;
-#ifndef DISABLE_RAYMARCHER
-    render_pass_depth_attachment.depthLoadOp = WGPULoadOp_Load;
-#else
     render_pass_depth_attachment.depthLoadOp = WGPULoadOp_Clear;
-#endif
     render_pass_depth_attachment.depthStoreOp = WGPUStoreOp_Store;
     render_pass_depth_attachment.depthReadOnly = false;
     render_pass_depth_attachment.stencilClearValue = 0; // Stencil config necesary, even if unused
@@ -104,24 +87,19 @@ void MeshRenderer::init_render_mesh_pipelines()
     render_mesh_shader = RendererStorage::get_shader("data/shaders/mesh_color.wgsl");
 
     // Camera
-
-    camera_uniform.data = webgpu_context->create_buffer(sizeof(CameraData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "camera_buffer");
-    camera_uniform.binding = 0;
-    camera_uniform.buffer_size = sizeof(CameraData);
-
-    std::vector<Uniform*> uniforms = { &camera_uniform };
+    std::vector<Uniform*> uniforms = { dynamic_cast<RoomsRenderer*>(RoomsRenderer::instance)->get_current_camera_uniform() };
 
     render_bind_group_camera = webgpu_context->create_bind_group(uniforms, render_mesh_shader, 1);
 
     WGPUTextureFormat swapchain_format = is_openxr_available ? webgpu_context->xr_swapchain_format : webgpu_context->swapchain_format;
 
-    WGPUBlendState blend_state;
-    blend_state.color = {
+    WGPUBlendState* blend_state = new WGPUBlendState;
+    blend_state->color = {
             .operation = WGPUBlendOperation_Add,
             .srcFactor = WGPUBlendFactor_SrcAlpha,
             .dstFactor = WGPUBlendFactor_OneMinusSrcAlpha,
     };
-    blend_state.alpha = {
+    blend_state->alpha = {
             .operation = WGPUBlendOperation_Add,
             .srcFactor = WGPUBlendFactor_Zero,
             .dstFactor = WGPUBlendFactor_One,
@@ -129,17 +107,18 @@ void MeshRenderer::init_render_mesh_pipelines()
 
     WGPUColorTargetState color_target = {};
     color_target.format = swapchain_format;
-    color_target.blend = &blend_state;
+    color_target.blend = blend_state;
     color_target.writeMask = WGPUColorWriteMask_All;
 
-    Pipeline::register_render_pipeline(render_mesh_shader, color_target, true);
-    Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/mesh_texture.wgsl"), color_target, true);
-    Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/mesh_transparent.wgsl"), color_target, true, WGPUCullMode_Back);
-    Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/mesh_outline.wgsl"), color_target, true, WGPUCullMode_Front);
-    Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/mesh_grid.wgsl"), color_target, true);
-    Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/ui/ui_group.wgsl"), color_target, true);
-    Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/ui/ui_button.wgsl"), color_target, true);
-    Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/ui/ui_slider.wgsl"), color_target, true);
-    Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/ui/ui_color_picker.wgsl"), color_target, true);
-    Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/sdf_fonts.wgsl"), color_target, true);
+    Pipeline::register_render_pipeline(render_mesh_shader, color_target);
+    Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/mesh_texture.wgsl"), color_target);
+    Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/mesh_texture_cube.wgsl"), color_target, { .uses_depth_write = false });
+    Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/mesh_grid.wgsl"), color_target);
+    Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/mesh_transparent.wgsl"), color_target, { .cull_mode = WGPUCullMode_Back });
+    Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/mesh_outline.wgsl"), color_target, { .cull_mode = WGPUCullMode_Front });
+    Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/ui/ui_group.wgsl"), color_target);
+    Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/ui/ui_button.wgsl"), color_target);
+    Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/ui/ui_slider.wgsl"), color_target);
+    Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/ui/ui_color_picker.wgsl"), color_target);
+    Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/sdf_fonts.wgsl"), color_target);
 }

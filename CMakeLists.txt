@@ -7,6 +7,8 @@ set(ROOMS_DIR_LIBS        "${ROOMS_DIR_ROOT}/libraries")
 
 project(rooms LANGUAGES C CXX)
 
+add_definitions(-D_SILENCE_STDEXT_ARR_ITERS_DEPRECATION_WARNING)
+
 # Macro to map filters to folder structure for MSVC projects
 macro(GroupSources curdir)
     if(MSVC)
@@ -42,7 +44,6 @@ ROOMS_SOURCES_APPEND(${ROOMS_DIR_SOURCES}/graphics/renderers)
 ROOMS_SOURCES_APPEND(${ROOMS_DIR_SOURCES}/tools)
 ROOMS_SOURCES_APPEND(${ROOMS_DIR_SOURCES}/tools/sculpt)
 ROOMS_SOURCES_APPEND(${ROOMS_DIR_SOURCES}/tools/animation)
-ROOMS_SOURCES_APPEND(${ROOMS_DIR_SOURCES}/ui)
 
 add_executable(${PROJECT_NAME} ${ROOMS_SOURCES})
 

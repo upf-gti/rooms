@@ -1,6 +1,6 @@
 {
     "width": 512,
-    "height": 144,
+    "height": 196,
     "elements": [
         {
             "name": "g_main_tools",
@@ -12,7 +12,7 @@
             "type": "button",
             "texture": "data/textures/cube.png",
             "unique_selection": true,
-            "selected":   true
+            "selected": true
         },
         {
             "name": "paint",
@@ -26,9 +26,9 @@
             "texture": "data/textures/primitives.png"
         },
         {
-            "name": "colors",
+            "name": "material",
             "type": "button",
-            "texture": "data/textures/colors.png"
+            "texture": "data/textures/material.png"
         },
         {
             "name": "g_guides",
@@ -106,6 +106,34 @@
             ]
         },
         {
+            "name": "material",
+            "type": "submenu",
+            "children": [
+                {
+                    "name": "colors",
+                    "type": "button",
+                    "texture": "data/textures/colors.png"
+                },
+                {
+                    "name": "pbr",
+                    "type": "group",
+                    "nitems": 2
+                },
+                {
+                    "name": "pbr_roughness",
+                    "type": "slider",
+                    "mode": "vertical",
+                    "default": 0.7
+                },
+                {
+                    "name": "pbr_metallic",
+                    "type": "slider",
+                    "mode": "vertical",
+                    "default": 0.2
+                }
+            ]
+        },
+        {
             "name": "colors",
             "type": "submenu",
             "children": [
@@ -133,37 +161,80 @@
                 {
                     "name": "color_template_palette_1",
                     "type": "button",
-                    "texture": "data/textures/colors_template_1.png"
+                    "texture": "data/textures/colors_template_1.png",
+                    "keep_rgb": true
                 },
                 {
                     "name": "color_template_palette_2",
                     "type": "button",
-                    "texture": "data/textures/colors_template_2.png"
+                    "texture": "data/textures/colors_template_2.png",
+                    "keep_rgb": true
                 },
                 {
                     "name": "color_template_palette_3",
                     "type": "button",
-                    "texture": "data/textures/colors_template_3.png"
+                    "texture": "data/textures/colors_template_3.png",
+                    "keep_rgb": true
                 },
                 {
                     "name": "color_template_palette_4",
                     "type": "button",
-                    "texture": "data/textures/colors_template_4.png"
+                    "texture": "data/textures/colors_template_4.png",
+                    "keep_rgb": true
                 },
                 {
                     "name": "color_template_palette_5",
                     "type": "button",
-                    "texture": "data/textures/colors_template_5.png"
+                    "texture": "data/textures/colors_template_5.png",
+                    "keep_rgb": true
                 },
                 {
                     "name": "color_template_palette_6",
                     "type": "button",
-                    "texture": "data/textures/colors_template_6.png"
+                    "texture": "data/textures/colors_template_6.png",
+                    "keep_rgb": true
                 },
                 {
                     "name": "recent_colors",
                     "type": "button",
-                    "texture": "data/textures/recent_colors.png"
+                    "texture": "data/textures/recent_colors.png",
+                    "keep_rgb": true
+                }
+            ]
+        },
+        {
+            "name": "lock_axis",
+            "type": "submenu",
+            "children": [
+                {
+                    "name": "lock_axis_toggle",
+                    "type": "button",
+                    "texture": "data/textures/lock_axis.png",
+                    "allow_toggle": true
+                },
+                {
+                    "name": "g_lock_axis",
+                    "type": "group",
+                    "nitems": 3
+                },
+                {
+                    "name": "lock_axis_x",
+                    "type": "button",
+                    "texture": "data/textures/x.png",
+                    "unique_selection": true
+                },
+                {
+                    "name": "lock_axis_y",
+                    "type": "button",
+                    "texture": "data/textures/y.png",
+                    "unique_selection": true
+                },
+                {
+                    "name": "lock_axis_z",
+                    "type": "button",
+                    "texture": "data/textures/z.png",
+                    "unique_selection": true,
+                    "selected": true
                 }
             ]
         },

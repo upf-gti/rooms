@@ -5,8 +5,9 @@
 #include "framework/scene/parse_scene.h"
 #include "graphics/renderers/rooms_renderer.h"
 
-#include <iostream>
 #include <fstream>
+
+#include "spdlog/spdlog.h"
 
 int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen)
 {
@@ -14,32 +15,17 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 
     sculpt_editor.initialize();
 
-    //EntityMesh* torus = parse_scene("data/meshes/torus/torus.obj");
-    //torus->scale(glm::vec3(0.25));
-    //torus->translate(glm::vec3(-1.0f, 0.0, 0.0));
-    //entities.push_back(torus);
+    std::string environment = "data/textures/environments/sky.hdre";
 
-    //EntityMesh* cube = parse_scene("data/meshes/cube/cube.obj");
-    //cube->scale(glm::vec3(0.25));
-    //cube->translate(glm::vec3(1.0f, 0.0, 0.0));
-    //entities.push_back(cube);
+    skybox = parse_mesh("data/meshes/cube.obj");
+    skybox->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_texture_cube.wgsl"));
+    skybox->set_material_diffuse(RendererStorage::get_texture(environment));
+    skybox->scale(glm::vec3(100.f));
+    skybox->set_material_priority(2);
 
-    //EntityMesh* cube2 = parse_scene("data/meshes/cube/cube.obj");
-    //cube2->scale(glm::vec3(0.25));
-    //cube2->translate(glm::vec3(4.0f, 0.0, 0.0));
-    //entities.push_back(cube2);
+    //parse_scene("data/gltf_tests/DamagedHelmetGLB/DamagedHelmet.glb", entities);
 
-    //TextEntity* text = new TextEntity("oppenheimer vs barbie");
-    //text->set_material_color(colors::GREEN);
-    //text->set_scale(0.25f)->generate_mesh();
-    //text->translate(glm::vec3(0.0f, 0.0, -5.0));
-    //entities.push_back(text);
-
-    //EntityMesh* gate = parse_scene("data/meshes/gate/gate.obj");
-    //gate->rotate(glm::pi<float>() * 0.5f, glm::vec3(1.0f, 0.0, 0.0));
-    //entities.push_back(gate);
-
-    //import_scene();
+    // import_scene();
 
 	return error;
 }
@@ -53,13 +39,14 @@ void RoomsEngine::clean()
 
 void RoomsEngine::update(float delta_time)
 {
-    //entities[0]->rotate(0.8f * delta_time, glm::vec3(0.0f, 0.0f, 1.0f));
+    Engine::update(delta_time);
 
-	Engine::update(delta_time);
+    RoomsRenderer* renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
+    skybox->set_translation(renderer->get_camera()->get_eye());
 
     sculpt_editor.update(delta_time);
 
-    if (Input::was_key_pressed(GLFW_KEY_SPACE))
+    if (Input::was_key_pressed(GLFW_KEY_E))
     {
         export_scene();
     }
@@ -67,6 +54,8 @@ void RoomsEngine::update(float delta_time)
 
 void RoomsEngine::render()
 {
+    skybox->render();
+
 	for (auto entity : entities) {
 		entity->render();
 	}
@@ -78,38 +67,34 @@ void RoomsEngine::render()
 
 bool RoomsEngine::export_scene()
 {
-    std::cout << "Exporting scene...";
+    //std::ofstream file("data/exports/myscene.txt");
 
-    std::ofstream file("data/exports/myscene.txt");
+    //if (!file.is_open())
+    //    return false;
 
-    if (!file.is_open())
-        return false;
+    //// Write scene info
+    //RoomsRenderer* renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
+    //RaymarchingRenderer* rmr = renderer->get_raymarching_renderer();
 
-    // Write scene info
-    RoomsRenderer* renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
-    RaymarchingRenderer* rmr = renderer->get_raymarching_renderer();
+    //auto edits = rmr->get_scene_edits();
 
-    auto edits = rmr->get_scene_edits();
+    //file << "@" << edits.size() << "\n";
 
-    file << "@" << edits.size() << "\n";
+    //glm::vec3 position = rmr->get_sculpt_start_position();
+    //file << "@" << std::to_string(position.x) << " " + std::to_string(position.y) + " " + std::to_string(position.z) << "\n";
 
-    glm::vec3 position = rmr->get_sculpt_start_position();
-    file << "@" << std::to_string(position.x) << " " + std::to_string(position.y) + " " + std::to_string(position.z) << "\n";
+    //for (const Edit& edit : edits)
+    //    file << edit.to_string() << "\n";
 
-    for (const Edit& edit : edits)
-        file << edit.to_string() << "\n";
+    //file.close();
 
-    file.close();
-
-    std::cout << "[OK]" << std::endl;
+    //spdlog::info("Scene exported! ({} edits)", edits.size());
 
     return true;
 }
 
 bool RoomsEngine::import_scene()
 {
-    std::cout << "Importing scene...";
-
     std::ifstream file("data/exports/myscene.txt");
 
     if (!file.is_open())
@@ -126,8 +111,6 @@ bool RoomsEngine::import_scene()
         // ...
     } scene_header;
 
-    int edit_count = 0;
-
     // Num edits
     std::getline(file, line);
     scene_header.num_edits = std::stoi(line.substr(1));
@@ -138,24 +121,46 @@ bool RoomsEngine::import_scene()
     rmr->set_sculpt_start_position(position);
     sculpt_editor.set_sculpt_started(true);
 
+    std::vector<Edit> edits;
+    edits.resize(scene_header.num_edits);
+    int edit_count = 0;
+
     // Parse edits
     while (std::getline(file, line))
     {
         Edit edit;
         edit.parse_string(line);
-        rmr->push_edit(edit);
-        edit_count++;
+        edits[edit_count++] = edit;
     }
 
     file.close();
 
     if (edit_count != scene_header.num_edits)
     {
-        std::cerr << "[ERROR] Some edits couldn't be imported!" << std::endl;
+        spdlog::error("[import_scene] Some edits couldn't be imported!");
         return false;
     }
 
-    std::cout << "[OK] " << scene_header.num_edits << " edits imported!" << std::endl;
+    // Merge them into the scene in chunks of 64
+
+    int chunk_size = 64;
+    int chunks = ceil((float)edit_count / chunk_size);
+
+    for (int i = 0; i < chunks; ++i)
+    {
+        int start_index = i * chunk_size;
+        int end_index = std::min(start_index + chunk_size, scene_header.num_edits);
+
+        for (int j = start_index; j < end_index; ++j)
+        {
+            rmr->push_edit( edits[j] );
+            edit_count--;
+        }
+
+        rmr->compute_octree();
+    }
+
+    spdlog::info("Scene imported! ({} edits, {} left)", scene_header.num_edits, edit_count);
 
     return true;
 }

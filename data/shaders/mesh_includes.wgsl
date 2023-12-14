@@ -37,7 +37,7 @@ struct UIData {
     is_color_button : f32,
     picker_color: vec4f,
     slider_value : f32,
-    dummy0 : f32,
+    keep_rgb : f32,
     dummy1 : f32,
     dummy2 : f32,
 };

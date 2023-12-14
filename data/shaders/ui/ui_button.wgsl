@@ -1,11 +1,13 @@
 #include ../mesh_includes.wgsl
 
+#define GAMMA_CORRECTION
+
 @group(0) @binding(0) var<storage, read> mesh_data : InstanceData;
 
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
 
 @group(2) @binding(0) var albedo_texture: texture_2d<f32>;
-@group(2) @binding(1) var texture_sampler : sampler;
+@group(2) @binding(7) var texture_sampler : sampler;
 
 @group(3) @binding(0) var<uniform> ui_data : UIData;
 
@@ -36,41 +38,53 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var out: FragmentOutput;
 
     var color : vec4f = textureSample(albedo_texture, texture_sampler, in.uv);
+    color = pow(color, vec4f(2.2));
 
-    if (color.a < 0.01) {
+    // Mask button shape
+    var uvs = in.uv;
+    var d : f32 = distance(uvs, vec2f(0.5));
+    var alpha_mask = 1.0 - step(0.5, d);
+    if( alpha_mask < 0.1 ) {
         discard;
     }
-    
-    let hover_color = vec3f(0.95, 0.76, 0.17);
-    var _color = color.rgb;
 
-    if( ui_data.is_color_button > 0.0 )  {
-        _color *= in.color;
+    let selected_color = vec3f(0.15, 0.02, 0.9);
+    let hover_color = vec3f(0.87, 0.6, 0.02);
+    var back_color = vec3f(0.01);
+
+    // Assign basic color
+    var lum = color.r  * 0.3 + color.g * 0.59 + color.b * 0.11;
+    var _color = vec3f( 1.0 - smoothstep(0.15, 0.4, lum) ) * hover_color;
+    _color = max(_color, back_color);
+
+    var keep_colors = (ui_data.keep_rgb + ui_data.is_color_button) > 0.0;
+
+    if(keep_colors) {
+        _color = color.rgb * in.color;
     }
 
-    let selected_color = vec3f(0.47, 0.37, 0.94);
-    var widget_color = mix(in.color, hover_color, ui_data.is_hovered);
-    var mask = distance(in.uv, vec2f(0.5));
-
-    if( ui_data.is_selected > 0.0 ) {
-
-        var icon_mask = smoothstep(1 - color.r, 0.5, 1.0);
-        _color = mix(vec3f(1 - icon_mask) * (1 - mask), selected_color, icon_mask);
-        _color = max(_color, vec3f(0.12));
-    } 
-
-    var masked_color : vec3f;
-
-    if( ui_data.is_color_button > 0.0 ) {
-        mask = step(0.45, mask);
-        var border_color = mix(widget_color, vec3f(0.2,0.2,0.2), ui_data.is_selected);
-        masked_color = mix(in.color, mix(border_color, hover_color, ui_data.is_hovered), mask);
-    } else {
-        mask = step(0.45 + (1.0 - ui_data.is_hovered), mask);
-        masked_color = mix(widget_color, _color, 1.0 - mask);
+    if( ui_data.is_selected > 0.0 && !keep_colors ) {
+        back_color = hover_color - pow(d, 1.75);
+        _color = pow(smoothstep(vec3f(0.3), vec3f(0.7), color.rgb), vec3f(1.2));
     }
-   
-    out.color = vec4f(pow(masked_color, vec3f(2.2)), color.a);
+
+    _color = select( back_color, _color, color.a > 0.3 );
+
+    // Process selection
+    var outline_color_selected = mix( selected_color, hover_color, uvs.x * uvs.y );
+    _color = mix(outline_color_selected, _color, 1.0 - step(0.46 + (1.0 - ui_data.is_selected), d));
+
+    // Process hover
+    var outline_intensity = 0.8;
+    var outline_mask = step(0.46 + (1.0 - ui_data.is_hovered), d) * outline_intensity;
+    var outline_color = mix( selected_color, hover_color, uvs.y );
+    _color = mix(outline_color, _color, 1 - outline_mask);
+
+    if (GAMMA_CORRECTION == 1) {
+        _color = pow(_color, vec3f(1.0 / 2.2));
+    }
+
+    out.color = vec4f(_color, alpha_mask);
 
     return out;
 }

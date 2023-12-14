@@ -9,11 +9,10 @@ protected:
 
 	bool enabled = false;
 
+    StrokeParameters stroke_parameters;
+
     Edit edit_to_add = {
         .position = glm::vec3(0.0f, 0.0f, 0.0f),
-        .primitive = SD_SPHERE,
-        .color = glm::vec3(1.0f, 0.0f, 0.0f),
-        .operation = OP_SMOOTH_UNION,
         .dimensions = glm::vec4(0.01f, 0.01f, 0.01f, 0.f)
     };
 
@@ -24,10 +23,10 @@ protected:
 
     bool is_tool_activated() {
 #ifdef XR_SUPPORT
-        return Input::is_key_pressed(GLFW_KEY_A) ||
+        return Input::is_key_pressed(GLFW_KEY_SPACE) ||
             (stamp ? Input::was_trigger_pressed(HAND_RIGHT) : Input::get_trigger_value(HAND_RIGHT) > 0.5f);
 #else
-        return Input::is_key_pressed(GLFW_KEY_A);
+        return Input::is_key_pressed(GLFW_KEY_SPACE);
 #endif
     }
 
@@ -44,11 +43,9 @@ public:
     virtual bool use_tool();
 
     virtual bool update(float delta_time);
-
 	virtual void render_scene() {}
 	virtual void render_ui() {}
 
-    Edit& get_edit_to_add() {
-        return edit_to_add;
-    }
+    Edit& get_edit_to_add() { return edit_to_add; }
+    StrokeParameters& get_stroke_parameters() { return stroke_parameters; }
 };

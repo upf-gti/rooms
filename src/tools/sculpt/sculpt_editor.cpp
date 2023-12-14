@@ -7,6 +7,8 @@
 
 #include "graphics/renderer_storage.h"
 
+#include "spdlog/spdlog.h"
+
 void SculptEditor::initialize()
 {
     renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
@@ -21,6 +23,7 @@ void SculptEditor::initialize()
     floor_grid_mesh = new EntityMesh();
     floor_grid_mesh->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_grid.wgsl"));
     floor_grid_mesh->set_mesh(RendererStorage::get_mesh("quad"));
+    floor_grid_mesh->set_material_flag(MATERIAL_TRANSPARENT);
     floor_grid_mesh->set_translation(glm::vec3(0.0f));
     floor_grid_mesh->rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
     floor_grid_mesh->scale(glm::vec3(3.f));
@@ -64,17 +67,27 @@ void SculptEditor::initialize()
 
         gui.bind("mirror", [&](const std::string& signal, void* button) { use_mirror = !use_mirror; });
         gui.bind("snap_to_grid", [&](const std::string& signal, void* button) { /*enable_tool(SWEEP);*/ snap_to_grid = !snap_to_grid; });
-        gui.bind("lock_axis", [&](const std::string& signal, void* button) { axis_lock = !axis_lock; });
+        gui.bind("lock_axis_toggle", [&](const std::string& signal, void* button) { axis_lock = !axis_lock; });
+        gui.bind("lock_axis_x", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_X; });
+        gui.bind("lock_axis_y", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_Y; });
+        gui.bind("lock_axis_z", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_Z; });
+
+        gui.bind("pbr_roughness", [&](const std::string& signal, float value) { current_material.x = value; });
+        gui.bind("pbr_metallic", [&](const std::string& signal, float value) { current_material.y = value; });
 
         gui.bind("color_picker", [&](const std::string& signal, Color color) { current_color = color; });
         gui.bind("color_picker@released", [&](const std::string& signal, Color color) { add_recent_color(color); });
+
+        // Controller buttons
+
+        gui.bind(XR_BUTTON_B, [&]() { stamp_enabled = !stamp_enabled; });
 
         // Bind recent color buttons...
 
         ui::UIEntity* recent_group = gui.get_widget_from_name("g_recent_colors");
         if (!recent_group){
             assert(0);
-            std::cerr << "Cannot find recent_colors button group!" << std::endl;
+            spdlog::error("Cannot find recent_colors button group!");
             return;
         }
 
@@ -147,10 +160,11 @@ void SculptEditor::update(float delta_time)
     preview_tmp_edits.clear();
     new_edits.clear();
 
-    Tool& tool_used = *tools[current_tool];
+    // Update ui/vr controller actions
+    gui.update(delta_time);
+    helper_gui.update(delta_time);
 
-    if (Input::was_button_pressed(XR_BUTTON_B))
-        stamp_enabled = !stamp_enabled;
+    Tool& tool_used = *tools[current_tool];
 
     // Update tool properties...
     tool_used.stamp = stamp_enabled;
@@ -158,11 +172,16 @@ void SculptEditor::update(float delta_time)
 
     bool is_tool_used = tool_used.update(delta_time);
 
-    if (current_tool == SCULPT && is_tool_used) {
-        sculpt_started = true;
+    Edit& edit_to_add = tool_used.get_edit_to_add();
+    StrokeParameters& stroke_parameters = tool_used.get_stroke_parameters();
+
+    if (Input::was_key_pressed(GLFW_KEY_U)) {
+        renderer->undo();
     }
 
-    Edit& edit_to_add = tool_used.get_edit_to_add();
+    if (Input::was_key_pressed(GLFW_KEY_R)) {
+        renderer->redo();
+    }
 
     if (snap_to_grid) {
         float grid_multiplier = 1.f / snap_grid_size;
@@ -196,6 +215,10 @@ void SculptEditor::update(float delta_time)
         edit_to_add.rotation = glm::quat();
     }
 
+    if (current_tool == SCULPT && is_tool_used) {
+        sculpt_started = true;
+    }
+
     // Rotate the scene
     if (is_rotation_being_used()) {
 
@@ -217,6 +240,7 @@ void SculptEditor::update(float delta_time)
         sculpt_start_position = sculpt_start_position + translation_diff;
         rotation_started = false;
         rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
+        translation_diff = {};
     }
 
     // Update edit dimensions
@@ -233,10 +257,30 @@ void SculptEditor::update(float delta_time)
     }
 
     // Update current edit properties...
-    edit_to_add.primitive = current_primitive;
-    edit_to_add.color = current_color;
-    edit_to_add.parameters.x = onion_enabled ? onion_thickness : 0.f;
-    edit_to_add.parameters.y = capped_enabled ? capped_value : -1.f;
+
+    // Push edits in 3d texture space
+    edit_to_add.position -= (sculpt_start_position + translation_diff);
+    edit_to_add.position = (sculpt_rotation * rotation_diff) * edit_to_add.position;
+    edit_to_add.rotation *= (sculpt_rotation * rotation_diff);
+
+    glm::vec4 new_parameters;
+    new_parameters.x = onion_enabled ? onion_thickness : 0.f;
+    new_parameters.y = capped_enabled ? capped_value : -1.f;
+
+    // Operation here is not being used... ALL OPS is to send something
+    if (stroke_parameters.must_change_stroke({ current_primitive, sdOperation::ALL_OPERATIONS, new_parameters, current_color, current_material })) {
+
+        stroke_parameters.parameters = new_parameters;
+        // Update some properties from UI only in XR mode
+        if (Renderer::instance->get_openxr_available()) {
+            stroke_parameters.primitive = current_primitive;
+            stroke_parameters.color = current_color;
+            stroke_parameters.material = current_material;
+        }
+        stroke_parameters.was_operation_changed = false;
+
+        renderer->change_stroke(stroke_parameters);
+    }
 
     if (is_tool_used) {
         new_edits.push_back(edit_to_add);
@@ -250,8 +294,8 @@ void SculptEditor::update(float delta_time)
     if (use_mirror) {
         mirror_origin = mirror_gizmo.update(mirror_origin, delta_time);
 
-        uint32_t preview_edit_count = preview_tmp_edits.size();
-        for (uint32_t i = 0u; i < preview_edit_count; i++) {
+        uint64_t preview_edit_count = preview_tmp_edits.size();
+        for (uint64_t i = 0u; i < preview_edit_count; i++) {
             Edit inverted_preview_edit = preview_tmp_edits[i];
             float dist_to_plane = glm::dot(mirror_normal, inverted_preview_edit.position - mirror_origin);
             inverted_preview_edit.position = inverted_preview_edit.position - mirror_normal * dist_to_plane * 2.0f;
@@ -259,8 +303,8 @@ void SculptEditor::update(float delta_time)
             preview_tmp_edits.push_back(inverted_preview_edit);
         }
 
-        uint32_t edit_count = new_edits.size();
-        for (uint32_t i = 0u; i < edit_count; i++) {
+        uint64_t edit_count = new_edits.size();
+        for (uint64_t i = 0u; i < edit_count; i++) {
             Edit inverted_edit = new_edits[i];
             float dist_to_plane = glm::dot(mirror_normal, inverted_edit.position - mirror_origin);
             inverted_edit.position = inverted_edit.position - mirror_normal * dist_to_plane * 2.0f;
@@ -268,9 +312,6 @@ void SculptEditor::update(float delta_time)
             new_edits.push_back(inverted_edit);
         }
     }
-
-    gui.update(delta_time);
-    helper_gui.update(delta_time);
 
     // Push to the renderer the edits and the previews
     renderer->push_preview_edit_list(preview_tmp_edits);
@@ -281,15 +322,14 @@ void SculptEditor::render()
 {
     Tool& tool_used = *tools[current_tool];
     Edit& edit_to_add = tool_used.get_edit_to_add();
+    StrokeParameters& stroke_parameters = tool_used.get_stroke_parameters();
 
-#ifdef XR_SUPPORT
-
-    // Render a hollowed edit
+    if (mesh_preview)
     {
         update_edit_preview(edit_to_add.dimensions);
 
         // Render something to be able to cull faces later...
-        if( edit_to_add.operation == OP_SUBSTRACTION || edit_to_add.operation == OP_SMOOTH_SUBSTRACTION || edit_to_add.operation == PAINT)
+        if(stroke_parameters.operation == OP_SUBSTRACTION || stroke_parameters.operation == OP_SMOOTH_SUBSTRACTION || stroke_parameters.operation == OP_PAINT || stroke_parameters.operation == OP_SMOOTH_PAINT)
             mesh_preview->render();
 
         mesh_preview_outline->set_model(mesh_preview->get_model());
@@ -331,7 +371,6 @@ void SculptEditor::render()
     }
 
     floor_grid_mesh->render();
-#endif
 }
 
 void SculptEditor::update_edit_preview(const glm::vec4& dims)

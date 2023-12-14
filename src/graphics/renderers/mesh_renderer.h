@@ -6,20 +6,11 @@
 
 #include "tools/sculpt/tool.h"
 
-struct CameraData {
-    glm::mat4x4 mvp;
-    glm::vec3 eye;
-    float dummy;
-};
-
 class MeshRenderer {
 
     // Render meshes with material color
     WGPUBindGroup           render_bind_group_camera = nullptr;
     Shader*                 render_mesh_shader = nullptr;
-
-    CameraData              camera_data;
-    Uniform                 camera_uniform;
 
     // For the XR mirror screen
 #if defined(XR_SUPPORT) && defined(USE_MIRROR_WINDOW)
@@ -38,8 +29,6 @@ public:
 
     int initialize();
     void clean();
-
-    void update_camera(const glm::vec3& eye, const glm::mat4x4& view_projection);
 
     void update(float delta_time);
     void render(WGPUTextureView swapchain_view, WGPUTextureView swapchain_depth);

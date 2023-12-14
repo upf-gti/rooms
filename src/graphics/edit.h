@@ -2,9 +2,10 @@
 
 #include "includes.h"
 #include "utils.h"
-#include <iostream>
 
-enum sdPrimitive {
+#define MAX_EDITS_PER_EVALUATION 64
+
+enum sdPrimitive : uint32_t {
 	SD_SPHERE = 0,
 	SD_BOX,
 	SD_ELLIPSOID,
@@ -13,10 +14,11 @@ enum sdPrimitive {
 	SD_CYLINDER,
 	SD_CAPSULE,
     SD_TORUS,
+    SD_BEZIER,
 	ALL_PRIMITIVES
 };
 
-enum sdOperation {
+enum sdOperation : uint32_t {
 	OP_UNION = 0,
 	OP_SUBSTRACTION,
 	OP_INTERSECTION,
@@ -28,23 +30,43 @@ enum sdOperation {
 	ALL_OPERATIONS
 };
 
-struct Edit {
+struct alignas(16) Edit {
     glm::vec3	position;
-    sdPrimitive primitive;
-    glm::vec3	color;
-    sdOperation operation;
     glm::vec4	dimensions;
     glm::quat   rotation = { 0.f, 0.f, 0.f, 1.f };
-    glm::vec4	parameters = { 0.f, 0.f, 0.f, 0.f };
-
-    friend std::ostream& operator<<(std::ostream& os, const Edit& edit);
 
     std::string to_string() const;
     void parse_string(const std::string& str);
 
     float weigth_difference(const Edit& edit);
+};
 
-    glm::vec3 world_half_size() const;
+struct StrokeParameters {
+    sdPrimitive primitive = SD_SPHERE;
+    sdOperation operation = OP_UNION;
+    glm::vec4   parameters = { 0.f, -1.f, 0.f, 0.f };
+    glm::vec4   color = { 0.f, 0.f, 0.f, 0.f };
+    glm::vec4   material = { 0.7f, 0.2f, 0.f, 0.f }; // rough, metallic, emissive, unused
 
-    void get_world_AABB(glm::vec3* min, glm::vec3* max, const glm::vec3& start_position, const glm::quat& sculpt_rotation, const bool use_padding = false) const;
+    bool was_operation_changed = false;
+
+    void set_operation(sdOperation op);
+    bool must_change_stroke(const StrokeParameters& p);
+};
+
+struct alignas(256) Stroke {
+    uint32_t    stroke_id;
+    uint32_t    edit_count = 0u;
+    sdPrimitive primitive;
+    sdOperation operation;
+    glm::vec4	parameters = { 0.f, -1.f, 0.f, 0.f };
+    glm::vec4	color;
+    glm::vec4   material = { 0.7f, 0.2f, 0.f, 0.f }; // rough, metallic, emissive, unused
+
+    Edit        edits[MAX_EDITS_PER_EVALUATION] = {};
+
+    glm::vec3 get_edit_world_half_size(const uint8_t edit_index) const;
+    void get_edit_world_AABB(const uint8_t edit_index, glm::vec3* min, glm::vec3* max, const glm::vec3& start_position, const glm::quat& sculpt_rotation) const;
+    void get_world_AABB(glm::vec3* min, glm::vec3* max, const glm::vec3& start_position, const glm::quat& sculpt_rotation) const;
+    StrokeParameters as_params() { return { primitive, operation, parameters, color, material }; }
 };

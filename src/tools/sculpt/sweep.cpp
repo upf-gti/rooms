@@ -170,7 +170,7 @@ bool SweepTool::update(float delta_time)
 	// Tool Operation changer
 	if (Input::was_button_pressed(XR_BUTTON_Y))
 	{
-        sdOperation& op = edit_to_add.operation;
+        sdOperation& op = stroke_parameters.operation;
 
 		switch (op)
 		{

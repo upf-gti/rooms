@@ -1,11 +1,13 @@
 #include ../mesh_includes.wgsl
 
+#define GAMMA_CORRECTION
+
 @group(0) @binding(0) var<storage, read> mesh_data : InstanceData;
 
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
 
 @group(2) @binding(0) var albedo_texture: texture_2d<f32>;
-@group(2) @binding(1) var texture_sampler : sampler;
+@group(2) @binding(7) var texture_sampler : sampler;
 
 @group(3) @binding(0) var<uniform> ui_data : UIData;
 
@@ -40,6 +42,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var out: FragmentOutput;
 
     var color : vec4f = textureSample(albedo_texture, texture_sampler, in.uv);
+    color = pow(color, vec4f(2.2));
 
     if (color.a < 0.01) {
         discard;
@@ -57,20 +60,26 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var p = vec2f(clamp(uvs.x, 0.5, divisions - 0.5), 0.5);
     var d = 1.0 - step(0.45, distance(uvs, p));
 
+    let selected_color = vec3f(0.15, 0.02, 0.9);
+    let hover_color = vec3f(0.87, 0.6, 0.02);
+
     // add gradient at the end to simulate the slider thumb
-    var mesh_color = in.color;
+    var mesh_color = mix( selected_color, hover_color, in.uv.y);
 
     var axis = select( in.uv.x, uvs.y, ui_data.num_group_items == 1.0 );
     var grad = smoothstep(value, 1.0, axis / value);
     grad = pow(grad, 12.0);
-    mesh_color += grad * 0.4;
+    mesh_color += grad * 0.2;
 
-    let back_color = vec3f(0.3);
+    let back_color = vec3f(0.02);
     var final_color = select( mesh_color, back_color, axis > value || d < 1.0 );
 
-    let hover_color = vec3f(0.95, 0.76, 0.17);
     final_color = select( final_color, hover_color, d < 1.0 && ui_data.is_hovered > 0.0 );
 
-    out.color = vec4f(pow(final_color, vec3f(2.2)), color.a);
+    if (GAMMA_CORRECTION == 1) {
+        final_color = pow(final_color, vec3f(1.0 / 2.2));
+    }
+
+    out.color = vec4f(final_color, color.a);
     return out;
 }

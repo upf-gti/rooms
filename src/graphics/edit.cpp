@@ -1,12 +1,12 @@
 #include "edit.h"
 #include <sstream>
+#include "spdlog/spdlog.h"
 
 std::ostream& operator<<(std::ostream& os, const Edit& edit)
 {
     os << "Position: " << edit.position.x << ", " << edit.position.y << ", " << edit.position.z << std::endl;
-    os << "Primitive: " << edit.primitive << std::endl;
-    os << "Color: " << edit.color.x << ", " << edit.color.y << ", " << edit.color.z << std::endl;
-    os << "Operation: " << edit.operation << std::endl;
+    //os << "Primitive: " << edit.primitive << std::endl;
+    //os << "Operation: " << edit.operation << std::endl;
     os << "Dimensions: " << edit.dimensions.x << ", " << edit.dimensions.y << ", " << edit.dimensions.z << edit.dimensions.w << std::endl;
     return os;
 }
@@ -15,12 +15,11 @@ std::string Edit::to_string() const {
 
     std::string text;
     text += std::to_string(position.x) + " " + std::to_string(position.y) + " " + std::to_string(position.z) + "/";
-    text += std::to_string(primitive) + "/";
-    text += std::to_string(color.x) + " " + std::to_string(color.y) + " " + std::to_string(color.z) + "/";
-    text += std::to_string(operation) + "/";
+    //text += std::to_string(primitive) + "/";
+    //text += std::to_string(operation) + "/";
     text += std::to_string(dimensions.x) + " " + std::to_string(dimensions.y) + " " + std::to_string(dimensions.z) + " " + std::to_string(dimensions.w) + "/";
     text += std::to_string(rotation.x) + " " + std::to_string(rotation.y) + " " + std::to_string(rotation.z) + " " + std::to_string(rotation.w) + "/";
-    text += std::to_string(parameters.x) + " " + std::to_string(parameters.y) + " " + std::to_string(parameters.z) + " " + std::to_string(parameters.w);
+    //text += std::to_string(parameters.x) + " " + std::to_string(parameters.y) + " " + std::to_string(parameters.z) + " " + std::to_string(parameters.w);
     return text;
 }
 
@@ -40,12 +39,11 @@ void Edit::parse_string(const std::string& str) {
 
     // Set data...
     position    = load_vec3(tokens[0]);
-    primitive   = (sdPrimitive)std::atoi(tokens[1].c_str());
-    color       = load_vec3(tokens[2]);
-    operation   = (sdOperation)std::atoi(tokens[3].c_str());
+    //primitive   = (sdPrimitive)std::atoi(tokens[1].c_str());
+    //operation   = (sdOperation)std::atoi(tokens[3].c_str());
     dimensions  = load_vec4(tokens[4]);
     rotation    = load_quat(tokens[5]);
-    parameters  = load_vec4(tokens[6]);
+    //parameters  = load_vec4(tokens[6]);
 }
 
 float Edit::weigth_difference(const Edit& edit) {
@@ -58,24 +56,35 @@ float Edit::weigth_difference(const Edit& edit) {
     return position_diff + angle_diff + size_diff;
 }
 
-glm::vec3 Edit::world_half_size() const {
+void StrokeParameters::set_operation(sdOperation op)
+{
+    operation = op;
+    was_operation_changed = true;
+}
 
-    glm::vec3 size = glm::vec3(dimensions);
-    float radius = dimensions.w;
+bool StrokeParameters::must_change_stroke(const StrokeParameters& p)
+{
+    return (primitive != p.primitive) || (parameters != p.parameters) || (color != p.color) || (material != p.material) || was_operation_changed;
+}
+
+glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const {
+
+    glm::vec3 size = glm::vec3(edits[edit_index].dimensions);
+    float radius = edits[edit_index].dimensions.w;
 
     switch (primitive) {
     case SD_SPHERE:
-        return size;
+        return glm::vec3(size.x);
     case SD_BOX:
         return size;
     case SD_CAPSULE:
-        return glm::abs(position - size) + radius;
+        return glm::abs(edits[edit_index].position - size) + radius;
     case SD_CONE:
-     	return glm::abs(position - size) + radius * 2.0f;
+     	return glm::abs(edits[edit_index].position - size) + radius * 2.0f;
         //case SD_PYRAMID:
         //	return glm::abs(position - size) + radius * 2.0f;
     case SD_CYLINDER:
-        return glm::abs(position - size) + radius * 2.0f;
+        return glm::abs(edits[edit_index].position - size) + radius * 2.0f;
     case SD_TORUS:
         return glm::abs(size) + radius * 2.0f;
     default:
@@ -84,27 +93,31 @@ glm::vec3 Edit::world_half_size() const {
     }
 }
 
-void Edit::get_world_AABB(glm::vec3* min, glm::vec3* max, const glm::vec3& start_position, const glm::quat& sculpt_rotation, const bool use_padding) const {
-    glm::vec3 pure_edit_half_size = world_half_size();
+void Stroke::get_edit_world_AABB(const uint8_t edit_index, glm::vec3* min, glm::vec3* max, const glm::vec3& start_position, const glm::quat& sculpt_rotation) const {
+    glm::vec3 pure_edit_half_size = get_edit_world_half_size(edit_index);
 
-    if (use_padding) {
-        pure_edit_half_size += 0.04f;
-    }
+    // TODO: Add smooth margin
 
     glm::vec3 rotated_mx_size = glm::vec3(-1000.0f, -1000.0f, -1000.0f);
     glm::vec3 rotated_min_size = glm::vec3(1000.0f, 1000.0f, 1000.0f);
 
-    glm::quat quat_rot = glm::quat{ rotation.w, rotation.x, rotation.y, rotation.z };
+    glm::quat edit_rotation = { 0.0, 0.0, 0.0, 1.0 };
+
+    const Edit& edit = edits[edit_index];
+
+    if (primitive != SD_SPHERE) {
+        edit_rotation = edits[edit_index].rotation;
+    }
 
     // Rotate the AABB (turning it into an OBB) and compute the AABB
-    const glm::vec3 axis[8] = { quat_rot * glm::vec3(pure_edit_half_size.x,  pure_edit_half_size.y,  pure_edit_half_size.z),
-                                quat_rot * glm::vec3(pure_edit_half_size.x,  pure_edit_half_size.y, -pure_edit_half_size.z),
-                                quat_rot * glm::vec3(pure_edit_half_size.x, -pure_edit_half_size.y,  pure_edit_half_size.z),
-                                quat_rot * glm::vec3(pure_edit_half_size.x, -pure_edit_half_size.y, -pure_edit_half_size.z),
-                                quat_rot * glm::vec3(-pure_edit_half_size.x,  pure_edit_half_size.y,  pure_edit_half_size.z),
-                                quat_rot * glm::vec3(-pure_edit_half_size.x,  pure_edit_half_size.y, -pure_edit_half_size.z),
-                                quat_rot * glm::vec3(-pure_edit_half_size.x, -pure_edit_half_size.y,  pure_edit_half_size.z),
-                                quat_rot * glm::vec3(-pure_edit_half_size.x, -pure_edit_half_size.y, -pure_edit_half_size.z) };
+    const glm::vec3 axis[8] = { edit_rotation * glm::vec3(pure_edit_half_size.x,  pure_edit_half_size.y,  pure_edit_half_size.z),
+                                edit_rotation * glm::vec3(pure_edit_half_size.x,  pure_edit_half_size.y, -pure_edit_half_size.z),
+                                edit_rotation * glm::vec3(pure_edit_half_size.x, -pure_edit_half_size.y,  pure_edit_half_size.z),
+                                edit_rotation * glm::vec3(pure_edit_half_size.x, -pure_edit_half_size.y, -pure_edit_half_size.z),
+                                edit_rotation * glm::vec3(-pure_edit_half_size.x,  pure_edit_half_size.y,  pure_edit_half_size.z),
+                                edit_rotation * glm::vec3(-pure_edit_half_size.x,  pure_edit_half_size.y, -pure_edit_half_size.z),
+                                edit_rotation * glm::vec3(-pure_edit_half_size.x, -pure_edit_half_size.y,  pure_edit_half_size.z),
+                                edit_rotation * glm::vec3(-pure_edit_half_size.x, -pure_edit_half_size.y, -pure_edit_half_size.z) };
 
     for (uint8_t i = 0; i < 8; i++) {
         rotated_mx_size.x = glm::max(rotated_mx_size.x, axis[i].x);
@@ -118,6 +131,21 @@ void Edit::get_world_AABB(glm::vec3* min, glm::vec3* max, const glm::vec3& start
 
     const glm::vec3 edit_half_size = (rotated_mx_size - rotated_min_size) / 2.0f;
 
-    *min = (sculpt_rotation * (position - start_position) - edit_half_size + glm::vec3(0.50f, 0.50f, 0.50f));
-    *max = (sculpt_rotation * (position - start_position) + edit_half_size + glm::vec3(0.50f, 0.50f, 0.50f));
+    *min = (sculpt_rotation * (edits[edit_index].position) - edit_half_size);
+    *max = (sculpt_rotation * (edits[edit_index].position) + edit_half_size);
+}
+
+
+void Stroke::get_world_AABB(glm::vec3* min, glm::vec3* max, const glm::vec3& start_position, const glm::quat& sculpt_rotation) const {
+    glm::vec3 it_min = glm::vec3(FLT_MAX), it_max = glm::vec3(-FLT_MAX);
+    glm::vec3 edit_min, edit_max;
+    for (uint8_t i = 0u; i < edit_count; i++) {
+        get_edit_world_AABB(i, &edit_min, &edit_max, start_position, sculpt_rotation);
+
+        it_min = glm::min(edit_min, it_min);
+        it_max = glm::max(edit_max, it_max);
+    }
+
+    *min = it_min;
+    *max = it_max;
 }
