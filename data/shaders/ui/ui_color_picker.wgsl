@@ -57,7 +57,7 @@ fn hsv2rgb_smooth( c : vec3f ) -> vec3f
     var m = modulo_euclidean_vec3(c.x * 6.0 + vec3f(0.0, 4.0, 2.0), 6.0);
     var rgb = clamp( abs(m - 3.0) - 1.0, vec3f(0.0), vec3f(1.0) );
 
-	rgb = rgb*rgb*(3.0-2.0*rgb); // cubic smoothing	
+	rgb = rgb * rgb * (3.0 - 2.0 * rgb); // cubic smoothing
 
 	return mix(vec3(1.0),mix( vec3(1.0), rgb, c.y), c.z);
 }

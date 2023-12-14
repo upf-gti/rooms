@@ -20,7 +20,7 @@ fn integrate_BRDF(NdotV : f32, roughness : f32) -> vec2f
     var A : f32 = 0.0;
     var B : f32 = 0.0;
 
-    for(var i : u32 = 0u; i < SAMPLE_COUNT; i = i + 1)
+    for(var i : u32 = 0u; i < SAMPLE_COUNT; i = i + 1u)
     {
         let Xi : vec2f = Hammersley(i, SAMPLE_COUNT);
 
@@ -45,7 +45,7 @@ fn integrate_BRDF(NdotV : f32, roughness : f32) -> vec2f
     return vec2(4.0 * A, 4.0 * B) / f32(SAMPLE_COUNT);
 }
 
-@compute @workgroup_size(32, 32, 1)
+@compute @workgroup_size(16, 16, 1)
 fn compute(@builtin(global_invocation_id) id: vec3<u32>) 
 {
     textureStore(brdf_lut, id.xy, vec4f(integrate_BRDF(f32(id.x) / TEXTURE_WIDTH, f32(id.y) / TEXTURE_HEIGHT), 0.0, 0.0));

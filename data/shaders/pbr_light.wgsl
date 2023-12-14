@@ -67,7 +67,7 @@ fn get_indirect_light( m : LitMaterial ) -> vec3f
     // Specular color
 
     let brdf_coords : vec2f = clamp(vec2f(n_dot_v, m.roughness), vec2f(0.0, 0.0), vec2f(1.0, 1.0));
-    let brdf_lut : vec2f = textureSampleLevel(brdf_lut_texture, sampler_clamp, brdf_coords, 0).rg;
+    let brdf_lut : vec2f = textureSampleLevel(brdf_lut_texture, sampler_clamp, brdf_coords, 0.0).rg;
     
     let specular_sample : vec3f = textureSampleLevel(irradiance_texture, sampler_clamp, m.reflected_dir, lod).rgb;
 

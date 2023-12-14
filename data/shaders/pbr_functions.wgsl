@@ -67,7 +67,7 @@ fn GDFG(NoV : f32, NoL : f32, a : f32) -> f32
     let a2 : f32 = a * a;
     let GGXL : f32 = NoV * sqrt((-NoL * a2 + NoL) * NoL + a2);
     let GGXV : f32 = NoL * sqrt((-NoV * a2 + NoV) * NoV + a2);
-    return (2 * NoL) / (GGXV + GGXL);
+    return (2.0 * NoL) / (GGXV + GGXL);
 }
 
 fn D_GGX(NdotH : f32, roughness : f32) -> f32

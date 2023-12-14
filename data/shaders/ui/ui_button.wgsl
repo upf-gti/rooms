@@ -72,7 +72,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     // Process selection
     var outline_color_selected = mix( selected_color, hover_color, uvs.x * uvs.y );
-    _color = mix(outline_color_selected, _color, 1 - step(0.46 + (1.0 - ui_data.is_selected), d));  
+    _color = mix(outline_color_selected, _color, 1.0 - step(0.46 + (1.0 - ui_data.is_selected), d));
 
     // Process hover
     var outline_intensity = 0.8;
