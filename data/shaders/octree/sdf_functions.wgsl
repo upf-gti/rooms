@@ -191,26 +191,31 @@ fn sdPyramid( p : vec3f, c : vec3f, rotation : vec4f, r : f32, h : f32, color : 
     return sf;
 }
 
-fn sdCylinder(p : vec3f, a : vec3f, b : vec3f, rotation : vec4f, r : f32, rr : f32, color : vec3f) -> Surface
+fn sdCylinder(p : vec3f, a : vec3f, rotation : vec4f, r : f32, h : f32, rr : f32, color : vec3f) -> Surface
 {
     var sf : Surface;
 
     let posA : vec3f = rotate_point_quat(p - a, rotation);
 
-    let pa : vec3f = posA;
-    let ba : vec3f = b - a;
-    let baba : f32 = dot(ba, ba);
-    let paba : f32 = dot(pa, ba);
-
-    let x  : f32 = length(pa * baba - ba * paba) - r * baba;
-    let y  : f32 = abs(paba - baba * 0.5) - baba * 0.5;
-    let x2 : f32 = x * x;
-    let y2 : f32 = y * y * baba;
-    let d  : f32 = select(select(0.0, x2, x > 0.0) + select(0.0, y2, y > 0.0), -min(x2, y2), max(x, y) < 0.0);
-
-    sf.distance = sign(d) * sqrt(abs(d)) / baba - rr;
+    let d : vec2f = abs(vec2f(length(vec2f(posA.x, posA.z)), posA.y)) - h;
+    sf.distance = min(max(d.x, d.y), 0.0) + length(max(d, vec2f(0.0)));
     sf.color = color;
     return sf;
+
+    // let pa : vec3f = posA;
+    // let ba : vec3f = b - a;
+    // let baba : f32 = dot(ba, ba);
+    // let paba : f32 = dot(pa, ba);
+
+    // let x  : f32 = length(pa * baba - ba * paba) - r * baba;
+    // let y  : f32 = abs(paba - baba * 0.5) - baba * 0.5;
+    // let x2 : f32 = x * x;
+    // let y2 : f32 = y * y * baba;
+    // let d  : f32 = select(select(0.0, x2, x > 0.0) + select(0.0, y2, y > 0.0), -min(x2, y2), max(x, y) < 0.0);
+
+    // sf.distance = sign(d) * sqrt(abs(d)) / baba - rr;
+    // sf.color = color;
+    // return sf;
 }
 
 // t: (circle radius, thickness radius)
@@ -469,7 +474,7 @@ fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters
         case SD_CYLINDER: {
             onion_thickness = map_thickness( onion_thickness, size_param );
             size_param -= onion_thickness; // Compensate onion size
-            pSurface = sdCylinder(position, edit.position,  edit.position - vec3f(0.0, 0.0, radius), edit.rotation, size_param, 0.0, edit_color);
+            pSurface = sdCylinder(position, edit.position, edit.rotation, size_param, radius, 0.0, edit_color);
             break;
         }
         case SD_TORUS: {

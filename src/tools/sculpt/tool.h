@@ -23,7 +23,7 @@ protected:
 
     bool is_tool_activated() {
 #ifdef XR_SUPPORT
-        return Input::is_key_pressed(GLFW_KEY_SPACE) ||
+        return Input::was_key_pressed(GLFW_KEY_SPACE) ||
             (stamp ? Input::was_trigger_pressed(HAND_RIGHT) : Input::get_trigger_value(HAND_RIGHT) > 0.5f);
 #else
         return Input::is_key_pressed(GLFW_KEY_SPACE);

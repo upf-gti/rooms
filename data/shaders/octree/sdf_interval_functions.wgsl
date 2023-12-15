@@ -20,6 +20,14 @@ fn imax(a : vec2f, b : vec2f) -> vec2f
 	return vec2f(max(a.x,b.x),max(a.y,b.y));
 }
 
+fn imax_mats(v : mat3x3f, q : mat3x3f) -> mat3x3f
+{ 
+    return iavec3_vecs(
+		imax(v[0].xy, q[0].xy),
+		imax(v[1].xy, q[1].xy),
+		imax(v[2].xy, q[2].xy));
+}
+
 fn iadd_vecs(a : vec2f, b : vec2f) -> vec2f
 {
 	return a + b;
@@ -39,6 +47,11 @@ fn iadd_vec_mat(a : vec3f, b : mat3x3f) -> mat3x3f
 		a.xx + b[0].xy,
 		a.yy + b[1].xy,
 		a.zz + b[2].xy);
+}
+
+fn isub_vec_float(a : vec2f, b : f32) -> vec2f
+{
+	return a - b;
 }
 
 fn isub_vecs(a : vec2f, b : vec2f) -> vec2f
@@ -264,6 +277,14 @@ fn iabs(a : vec2f) -> vec2f
     return vec2f(0.0, max(-a.x, a.y));
 }
 
+fn iabs_mats(v : mat3x3f) -> mat3x3f
+{ 
+    return iavec3_vecs(
+		iabs(v[0].xy),
+		iabs(v[1].xy),
+		iabs(v[2].xy));
+}
+
 
 fn ilessthan(a : vec2f, b : vec2f) -> vec2<bool> 
 {    
@@ -289,6 +310,12 @@ fn iselect(a : vec2f, b : vec2f, cond : vec2<bool>) -> vec2f
     }
     
     return vec2f(min(a.x, b.x), max(a.y, b.y));
+}
+
+fn irotate_interval_mats(p : mat3x3f, q : vec4f) -> mat3x3f {
+    let v1 : vec3f = rotate_point_quat(vec3f(p[0].x, p[1].x, p[2].x), q);
+    let v2 : vec3f = rotate_point_quat(vec3f(p[0].y, p[1].y, p[2].y), q);
+    return iavec3_vecs(vec2f(v1.x, v2.x), vec2f(v1.y, v2.y), vec2f(v1.z, v2.z));
 }
 
 // Interval sdfs
@@ -405,29 +432,39 @@ fn isign_vec2(v : vec2f) -> vec2f {
 }
 
 // sdCylinder(p : vec3f, a : vec3f, b : vec3f, rotation : vec4f, r : f32, rr : f32, color : vec3f) -> Surface
-fn cylinder_interval(p : mat3x3f, cylinder_start_pos : vec3f, cylinder_end_pos : vec3f, rotation : vec4f, radius : f32) -> vec2f {
-    let cyl_origin : mat3x3f = isub_mat_vec(p, cylinder_start_pos);
-    let cyl_lenght : mat3x3f = iadd_vec_mat(cylinder_end_pos, ineg_mats(cyl_origin));
+fn cylinder_interval(p : mat3x3f, start_pos : vec3f, rotation : vec4f, radius : f32, height : f32) -> vec2f {
+    let cyl_origin : mat3x3f = isub_mat_vec(p, start_pos);
+    
+    let d_x : vec2f = isub_vec_float(iabs(isqrt(ipow2_vec(cyl_origin[0].xy) + ipow2_vec(cyl_origin[2].xy))), height); 
+    let d_y : vec2f = isub_vec_float(iabs(cyl_origin[1].xy), height); 
 
-    let cyl_lenght_square : vec2f = idot_mat(cyl_lenght, cyl_lenght);
-    let cyl_origin_facing_length : vec2f = idot_mat(cyl_origin, cyl_lenght);
+    let max_d_x : vec2f = imax(vec2f(0.0), d_x);
+    let max_d_y : vec2f = imax(vec2f(0.0), d_y);
 
-    var x : vec2f = ilength(isub_mats(imul_vec2_mat(cyl_lenght_square, cyl_origin), imul_vec2_mat(cyl_origin_facing_length, cyl_lenght)));
-    x = isub_vecs(x, imul_vec_float(cyl_lenght_square, radius));
+    return iadd_vecs(imin(imax(d_x, d_y), vec2f(0.0)), isqrt(ipow2_vec(max_d_x.xy) + ipow2_vec(max_d_y.xy)));
 
-    let y : vec2f = isub_vecs(iabs(imul_float_vec(0.5, isub_vecs(cyl_lenght_square, cyl_origin_facing_length))), imul_float_vec(0.5, cyl_lenght_square));
+    
+    // let cyl_lenght : mat3x3f = iadd_vec_mat(cylinder_end_pos, ineg_mats(cyl_origin));
 
-    let xx : vec2f = ipow2_vec(x);
-    let yy : vec2f = imul_vec2_vec2(ipow2_vec(y), cyl_lenght_square);
+    // let cyl_lenght_square : vec2f = idot_mat(cyl_lenght, cyl_lenght);
+    // let cyl_origin_facing_length : vec2f = idot_mat(cyl_origin, cyl_lenght);
 
-    let interval_0 : vec2f = vec2f(0.0);
+    // var x : vec2f = ilength(isub_mats(imul_vec2_mat(cyl_lenght_square, cyl_origin), imul_vec2_mat(cyl_origin_facing_length, cyl_lenght)));
+    // x = isub_vecs(x, imul_vec_float(cyl_lenght_square, radius));
 
-    let d1 : vec2f = iadd_vecs(iselect(interval_0, xx, x > interval_0), iselect(interval_0, yy, y > interval_0));
-    let d2 : vec2f = ineg(imin(xx, yy));
-    let d : vec2f = iselect(d1, d2, imax(x, y) < interval_0);
+    // let y : vec2f = isub_vecs(iabs(imul_float_vec(0.5, isub_vecs(cyl_lenght_square, cyl_origin_facing_length))), imul_float_vec(0.5, cyl_lenght_square));
+
+    // let xx : vec2f = ipow2_vec(x);
+    // let yy : vec2f = imul_vec2_vec2(ipow2_vec(y), cyl_lenght_square);
+
+    // let interval_0 : vec2f = vec2f(0.0);
+
+    // let d1 : vec2f = iadd_vecs(iselect(interval_0, xx, x > interval_0), iselect(interval_0, yy, y > interval_0));
+    // let d2 : vec2f = ineg(imin(xx, yy));
+    // let d : vec2f = iselect(d1, d2, imax(x, y) < interval_0);
 
     // AQUI
-        return idiv_vecs(imul_vec2_vec2(isign_vec2(d), isqrt(iabs(d))), cyl_lenght_square);
+    //return idiv_vecs(imul_vec2_vec2(isign_vec2(d), isqrt(iabs(d))), cyl_lenght_square);
 
     //return idiv_vecs(imul_vec2_vec2(isign_vec2(d), isqrt(iabs(d))), cyl_lenght_square);
 }
@@ -465,7 +502,7 @@ fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f,  primitive : u32, 
             size -= onion_thickness;
             size_param -= onion_thickness; 
 
-            // pSurface = sdBox(position, edit.position, edit.rotation, size - size_param, size_param, edit.color);
+            pSurface = box_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.rotation, size);
             break;
         }
         case SD_CAPSULE: {
@@ -491,6 +528,7 @@ fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f,  primitive : u32, 
             onion_thickness = map_thickness( onion_thickness, size_param );
             size_param -= onion_thickness; // Compensate onion size
             // pSurface = sdCylinder(position, edit.position,  edit.position - vec3f(0.0, 0.0, radius), edit.rotation, size_param, 0.0, edit.color);
+            pSurface = cylinder_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.rotation, size_param, radius);
             break;
         }
         case SD_TORUS: {
