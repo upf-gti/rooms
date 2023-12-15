@@ -109,7 +109,16 @@ fn imul_float_mat(a : f32, b : mat3x3f) -> mat3x3f
 	);
 }
 
-fn imul_vec_mat(a : vec3f, b : mat3x3f) -> mat3x3f
+fn imul_vec2_mat(a : vec2f, b : mat3x3f) -> mat3x3f
+{
+	return iavec3_vecs(
+		imul_vec2_vec2(a, b[0].xy),
+		imul_vec2_vec2(a, b[1].xy),
+		imul_vec2_vec2(a, b[2].xy)
+	);
+}
+
+fn imul_vec3_mat(a : vec3f, b : mat3x3f) -> mat3x3f
 {
 	return iavec3_vecs(
 		imul_vec2_vec2(a.xx, b[0].xy),
@@ -234,6 +243,14 @@ fn ineg(a : vec2f) -> vec2f
 	return vec2f(-a.y, -a.x);
 }
 
+fn ineg_mats(v : mat3x3f) -> mat3x3f
+{ 
+    return iavec3_vecs(
+		ineg(v[0].xy),
+		ineg(v[1].xy),
+		ineg(v[2].xy));
+}
+
 fn iabs(a : vec2f) -> vec2f
 { 
     if (a.x >= 0.0) {
@@ -323,6 +340,96 @@ fn sphere_interval(p : mat3x3f, offset : vec3f, r : f32) -> vec2f
 {
 	// x^2 + y^2 + z^2 - r^2
 	return isub_vecs(ilensq(isub_mat_vec(p, offset)), vec2f(r*r));
+}
+
+fn imat_add_to_upper(p : mat3x3f, v : vec3f) -> mat3x3f {
+    var p_edit : mat3x3f = p;
+    p_edit[0].x += v.x;
+    p_edit[1].x += v.y;
+    p_edit[2].x += v.z;
+
+    return p_edit;
+}
+
+fn imat_add_to_lower(p : mat3x3f, v : vec3f) -> mat3x3f {
+    var p_edit : mat3x3f = p;
+    p_edit[0].y += v.x;
+    p_edit[1].y += v.y;
+    p_edit[2].y += v.z;
+
+    return p_edit;
+}
+
+fn idot_mat(v1 : mat3x3f, v2 : mat3x3f) -> vec2f {
+    return iadd_vecs(iadd_vecs(
+		imul_vec2_vec2(v1[0].xy, v2[0].xy),
+		imul_vec2_vec2(v1[1].xy, v2[1].xy)),
+		imul_vec2_vec2(v1[2].xy, v2[2].xy));
+}
+
+// TODO rotation
+fn box_interval(p : mat3x3f, edit_pos : vec3f, rotation : vec4f, size : vec3f) -> vec2f {
+    let mat_zero_interval : mat3x3f = mat3x3f(vec3f(0.0), vec3f(0.0), vec3f(0.0));
+
+    // Middle point rotation
+    let pos_minus_size : mat3x3f = isub_mat_vec(p, edit_pos);
+
+    let middle_point : vec3f = (vec3f(pos_minus_size[0].y, pos_minus_size[1].y, pos_minus_size[2].y) - vec3f(pos_minus_size[0].x, pos_minus_size[1].x, pos_minus_size[2].x)) / 2.0;
+    let nomr_p : mat3x3f = imat_add_to_upper(imat_add_to_lower(pos_minus_size, -middle_point), -middle_point);
+
+    let rot_norm_interval :  mat3x3f = irotate_interval_mats(nomr_p, rotation);
+
+    let rot_pos_minus_size : mat3x3f = imat_add_to_upper(imat_add_to_lower(rot_norm_interval, middle_point), middle_point);
+
+    let abs_pos_minus_size : mat3x3f = isub_mat_vec(iabs_mats(pos_minus_size), size);
+
+    var i_distance : vec2f = ilength(imax_mats(abs_pos_minus_size, mat_zero_interval));
+    var max_on_all_axis : vec2f = imax(abs_pos_minus_size[0].xy, imax(abs_pos_minus_size[1].xy, abs_pos_minus_size[2].xy));
+    var i_dist2 : vec2f =  imin(max_on_all_axis , vec2f(0.0, 0.0));
+
+    return iadd_vecs(i_distance, i_dist2);
+}
+
+fn isign_vec2(v : vec2f) -> vec2f {
+    var s : vec2f = vec2f(1.0, 1.0);
+
+    if (v.x < 0.0) {
+        s.x = -1.0;
+    }
+    
+    if (v.y < 0.0) {
+        s.y = -1.0;
+    }
+
+    return s ; //vec2f(min(s.x, s.y), max(s.x, s.y));;
+}
+
+// sdCylinder(p : vec3f, a : vec3f, b : vec3f, rotation : vec4f, r : f32, rr : f32, color : vec3f) -> Surface
+fn cylinder_interval(p : mat3x3f, cylinder_start_pos : vec3f, cylinder_end_pos : vec3f, rotation : vec4f, radius : f32) -> vec2f {
+    let cyl_origin : mat3x3f = isub_mat_vec(p, cylinder_start_pos);
+    let cyl_lenght : mat3x3f = iadd_vec_mat(cylinder_end_pos, ineg_mats(cyl_origin));
+
+    let cyl_lenght_square : vec2f = idot_mat(cyl_lenght, cyl_lenght);
+    let cyl_origin_facing_length : vec2f = idot_mat(cyl_origin, cyl_lenght);
+
+    var x : vec2f = ilength(isub_mats(imul_vec2_mat(cyl_lenght_square, cyl_origin), imul_vec2_mat(cyl_origin_facing_length, cyl_lenght)));
+    x = isub_vecs(x, imul_vec_float(cyl_lenght_square, radius));
+
+    let y : vec2f = isub_vecs(iabs(imul_float_vec(0.5, isub_vecs(cyl_lenght_square, cyl_origin_facing_length))), imul_float_vec(0.5, cyl_lenght_square));
+
+    let xx : vec2f = ipow2_vec(x);
+    let yy : vec2f = imul_vec2_vec2(ipow2_vec(y), cyl_lenght_square);
+
+    let interval_0 : vec2f = vec2f(0.0);
+
+    let d1 : vec2f = iadd_vecs(iselect(interval_0, xx, x > interval_0), iselect(interval_0, yy, y > interval_0));
+    let d2 : vec2f = ineg(imin(xx, yy));
+    let d : vec2f = iselect(d1, d2, imax(x, y) < interval_0);
+
+    // AQUI
+        return idiv_vecs(imul_vec2_vec2(isign_vec2(d), isqrt(iabs(d))), cyl_lenght_square);
+
+    //return idiv_vecs(imul_vec2_vec2(isign_vec2(d), isqrt(iabs(d))), cyl_lenght_square);
 }
 
 fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f,  primitive : u32, operation : u32, edit_parameters : vec4f, current_interval : vec2f, edit : Edit) -> vec2f

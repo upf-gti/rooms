@@ -56,13 +56,16 @@ bool SculptTool::update(float delta_time)
             //edit_to_add.position = glm::vec3(0.0);
             edit_to_add.position = glm::vec3(glm::vec3( 0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1)));
 			glm::vec3 euler_angles(random_f() * 90, random_f() * 90, random_f() * 90);
-			edit_to_add.dimensions = glm::vec4(0.01f, 0.01f, 0.01f, 0.01f);
+			edit_to_add.dimensions = glm::vec4(0.01f, 0.01f, 0.01f, 0.01f) * 10.0f;
             //edit_to_add.dimensions = (edit_to_add.operation == OP_SUBSTRACTION) ? 3.0f * glm::vec4(0.2f, 0.2f, 0.2f, 0.2f) : glm::vec4(0.2f, 0.2f, 0.2f, 0.2f);
-			edit_to_add.rotation = glm::inverse(glm::quat(euler_angles));
+            edit_to_add.rotation = glm::quat(0.0, 0.0, 0.0, 1.0);//glm::inverse(glm::quat(euler_angles));
             // Stroke
             stroke_parameters.color = glm::vec4(random_f(), random_f(), random_f(), 1.f);
+            stroke_parameters.primitive = SD_CYLINDER;
+            //stroke_parameters.primitive = (random_f() > 0.5f) ? SD_SPHERE : SD_BOX;
             // stroke_parameters.material = glm::vec4(random_f(), random_f(), 0.f, 0.f);
-            stroke_parameters.set_operation( (random_f() > 0.5f) ? OP_UNION : OP_SUBSTRACTION);
+            //stroke_parameters.set_operation( (random_f() > 0.5f) ? OP_UNION : OP_SUBSTRACTION);
+            stroke_parameters.set_operation(OP_UNION);
 		}
 
         return use_tool();

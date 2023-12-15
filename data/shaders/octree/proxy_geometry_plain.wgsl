@@ -218,8 +218,8 @@ fn apply_light(toEye : vec3f, position : vec3f, position_world : vec3f, lightPos
 
     final_color += tonemap_filmic(get_indirect_light(m), 1.0);
 
-    return final_color;
-    //return normal;
+    //return final_color;
+    return normal;
     //return diffuse;
 }
 
@@ -290,10 +290,10 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     out.color = vec4f(final_color, 1.0); // Color
     out.depth = ray_result.a;
 
-    // if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
-    //     out.color = vec4f(0.0, 0.0, 0.0, 1.0);
-    //     out.depth = in.position.z;
-    // }
+    if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
+        out.color = vec4f(0.0, 0.0, 0.0, 1.0);
+        out.depth = in.position.z;
+    }
 
     // out.color = vec4f(1.0, 0.0, 0.0, 1.0); // Color
     // out.depth = 0.0;
