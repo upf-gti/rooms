@@ -9,7 +9,7 @@ public:
 	void initialize() override;
 	void clean() override;
 
-    bool update(float delta_time) override;
+    bool update(float delta_time, StrokeParameters& stroke_parameters) override;
 	void render_scene() override;
 	void render_ui() override;
 

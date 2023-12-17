@@ -12,7 +12,7 @@ void Tool::clean()
 
 }
 
-bool Tool::update(float delta_time)
+bool Tool::update(float delta_time, StrokeParameters& stroke_parameters)
 {
     edit_update_counter += delta_time;
 

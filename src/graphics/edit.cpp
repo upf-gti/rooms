@@ -56,23 +56,46 @@ float Edit::weigth_difference(const Edit& edit) {
     return position_diff + angle_diff + size_diff;
 }
 
-void StrokeParameters::set_operation(sdOperation op)
+void StrokeParameters::set_primitive(sdPrimitive primitive)
 {
-    operation = op;
-    was_operation_changed = true;
+    this->primitive = primitive;
+    dirty = true;
 }
 
-bool StrokeParameters::must_change_stroke(const StrokeParameters& p)
+void StrokeParameters::set_operation(sdOperation operation)
 {
-    bool result = false;
+    this->operation = operation;
+    dirty = true;
+}
 
-    result |= (primitive != p.primitive);
-    result |= (parameters != p.parameters);
-    result |= (color != p.color);
-    result |= (material != p.material);
-    result |= was_operation_changed;
+void StrokeParameters::set_parameters(const glm::vec4& parameters)
+{
+    this->parameters = parameters;
+    dirty = true;
+}
 
-    return result;
+void StrokeParameters::set_color(const Color& color)
+{
+    this->color = color;
+    dirty = true;
+}
+
+void StrokeParameters::set_material(const glm::vec4& material)
+{
+    this->material = material;
+    dirty = true;
+}
+
+void StrokeParameters::set_material_roughness(float roughness)
+{
+    material.x = roughness;
+    dirty = true;
+}
+
+void StrokeParameters::set_material_metallic(float metallic)
+{
+    material.y = metallic;
+    dirty = true;
 }
 
 glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const {
@@ -101,7 +124,7 @@ glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const {
     }
 }
 
-void Stroke::get_edit_world_AABB(const uint8_t edit_index, glm::vec3* min, glm::vec3* max, const glm::vec3& start_position, const glm::quat& sculpt_rotation) const {
+AABB Stroke::get_edit_world_AABB(const uint8_t edit_index) const {
     glm::vec3 pure_edit_half_size = get_edit_world_half_size(edit_index);
 
     // TODO: Add smooth margin
@@ -139,21 +162,18 @@ void Stroke::get_edit_world_AABB(const uint8_t edit_index, glm::vec3* min, glm::
 
     const glm::vec3 edit_half_size = (rotated_mx_size - rotated_min_size) / 2.0f;
 
-    *min = (sculpt_rotation * (edits[edit_index].position) - edit_half_size);
-    *max = (sculpt_rotation * (edits[edit_index].position) + edit_half_size);
+    return { (edits[edit_index].position), edit_half_size };
 }
 
 
-void Stroke::get_world_AABB(glm::vec3* min, glm::vec3* max, const glm::vec3& start_position, const glm::quat& sculpt_rotation) const {
+AABB Stroke::get_world_AABB() const {
     glm::vec3 it_min = glm::vec3(FLT_MAX), it_max = glm::vec3(-FLT_MAX);
-    glm::vec3 edit_min, edit_max;
-    for (uint8_t i = 0u; i < edit_count; i++) {
-        get_edit_world_AABB(i, &edit_min, &edit_max, start_position, sculpt_rotation);
 
-        it_min = glm::min(edit_min, it_min);
-        it_max = glm::max(edit_max, it_max);
+    AABB world_aabb;
+    for (uint8_t i = 0u; i < edit_count; i++) {
+        AABB aabb = get_edit_world_AABB(i);
+        world_aabb = merge_aabbs(world_aabb, aabb);
     }
 
-    *min = it_min;
-    *max = it_max;
+    return world_aabb;
 }

@@ -60,9 +60,9 @@ void SculptEditor::initialize()
         gui.bind("cylinder", [&](const std::string& signal, void* button) { set_primitive(SD_CYLINDER); });
         gui.bind("torus", [&](const std::string& signal, void* button) { set_primitive(SD_TORUS); });
 
-        gui.bind("onion", [&](const std::string& signal, void* button) { set_primitive_modifier(onion_enabled); });
+        gui.bind("onion", [&](const std::string& signal, void* button) { toggle_onion_modifier(); });
         gui.bind("onion_value", [&](const std::string& signal, float value) { onion_thickness = glm::clamp(value, 0.f, 1.f); });
-        gui.bind("capped", [&](const std::string& signal, void* button) { set_primitive_modifier(capped_enabled); });
+        gui.bind("capped", [&](const std::string& signal, void* button) { toggle_capped_modifier(); });
         gui.bind("cap_value", [&](const std::string& signal, float value) { capped_value = glm::clamp(value * 2.f - 1.f, -1.f, 1.f); }); 
 
         gui.bind("mirror", [&](const std::string& signal, void* button) { use_mirror = !use_mirror; });
@@ -72,10 +72,10 @@ void SculptEditor::initialize()
         gui.bind("lock_axis_y", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_Y; });
         gui.bind("lock_axis_z", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_Z; });
 
-        gui.bind("pbr_roughness", [&](const std::string& signal, float value) { current_material.x = value; });
-        gui.bind("pbr_metallic", [&](const std::string& signal, float value) { current_material.y = value; });
+        gui.bind("pbr_roughness", [&](const std::string& signal, float value) { stroke_parameters.set_material_roughness(value); });
+        gui.bind("pbr_metallic", [&](const std::string& signal, float value) { stroke_parameters.set_material_metallic(value); });
 
-        gui.bind("color_picker", [&](const std::string& signal, Color color) { current_color = color; });
+        gui.bind("color_picker", [&](const std::string& signal, Color color) { stroke_parameters.set_color(color); });
         gui.bind("color_picker@released", [&](const std::string& signal, Color color) { add_recent_color(color); });
 
         // Controller buttons
@@ -85,7 +85,7 @@ void SculptEditor::initialize()
         // Bind recent color buttons...
 
         ui::UIEntity* recent_group = gui.get_widget_from_name("g_recent_colors");
-        if (!recent_group){
+        if (!recent_group) {
             assert(0);
             spdlog::error("Cannot find recent_colors button group!");
             return;
@@ -100,7 +100,7 @@ void SculptEditor::initialize()
             if (child->is_color_button) {
                 gui.bind(child->signal, [&](const std::string& signal, void* button) {
                     const Color& color = (static_cast<ui::ButtonWidget*>(button))->color;
-                    current_color = color;
+                    stroke_parameters.set_color(color);
                     add_recent_color(color);
                 });
             }
@@ -111,7 +111,7 @@ void SculptEditor::initialize()
         {
             ui::ButtonWidget* child = static_cast<ui::ButtonWidget*>(recent_group->get_children()[i]);
             gui.bind(child->signal, [&](const std::string& signal, void* button) {
-                current_color = (static_cast<ui::ButtonWidget*>(button))->color;
+                stroke_parameters.set_color((static_cast<ui::ButtonWidget*>(button))->color);
             });
         }
     }
@@ -137,9 +137,9 @@ void SculptEditor::initialize()
     mesh_preview->set_mesh(p_mesh);
     mesh_preview_outline->set_mesh(mesh_preview->get_mesh());
 
-
-
     enable_tool(SCULPT);
+
+    renderer->change_stroke(stroke_parameters);
 }
 
 void SculptEditor::clean()
@@ -172,16 +172,15 @@ void SculptEditor::update(float delta_time)
     tool_used.stamp = stamp_enabled;
     // ...
 
-    bool is_tool_used = tool_used.update(delta_time);
+    bool is_tool_used = tool_used.update(delta_time, stroke_parameters);
 
     Edit& edit_to_add = tool_used.get_edit_to_add();
-    StrokeParameters& stroke_parameters = tool_used.get_stroke_parameters();
 
-    if (Input::was_key_pressed(GLFW_KEY_U) || Input::was_button_pressed(XR_BUTTON_X)) {
+    if (Input::was_key_pressed(GLFW_KEY_U) || Input::was_grab_pressed(HAND_LEFT) > 0.5f) {
         renderer->undo();
     }
 
-    if (Input::was_key_pressed(GLFW_KEY_R) || Input::was_button_pressed(XR_BUTTON_A)) {
+    if (Input::was_key_pressed(GLFW_KEY_R) || Input::was_grab_pressed(HAND_RIGHT) > 0.5f) {
         renderer->redo();
     }
 
@@ -265,32 +264,11 @@ void SculptEditor::update(float delta_time)
     edit_to_add.position = (sculpt_rotation * rotation_diff) * edit_to_add.position;
     edit_to_add.rotation *= (sculpt_rotation * rotation_diff);
 
-    glm::vec4 new_parameters = { 0.0f, -1.0f, 0.0f, 0.0f };
-    new_parameters.x = onion_enabled ? onion_thickness : 0.f;
-    new_parameters.y = capped_enabled ? capped_value : -1.f;
-
-    // Operation here is not being used... ALL OPS is to send something
-    if (stroke_parameters.must_change_stroke({ current_primitive, sdOperation::ALL_OPERATIONS, new_parameters, current_color, current_material })) {
-
-        spdlog::info("::must_change_stroke");
-
-        stroke_parameters.was_operation_changed = false;
-        stroke_parameters.parameters = new_parameters;
-
-        // Properties changed in the UI, so update the stroke...
-        if (Renderer::instance->get_openxr_available()) {
-            stroke_parameters.primitive = current_primitive;
-            stroke_parameters.color = current_color;
-            stroke_parameters.material = current_material;
-        }
-        else // Properties changed manually, update editor state
-        {
-            current_primitive = stroke_parameters.primitive;
-            current_color = stroke_parameters.color;
-            current_material = stroke_parameters.material;
-        }
-
+    // if any parameter changed or just stopped sculpting
+    if (stroke_parameters.is_dirty() || (was_tool_used && !is_tool_used)) {
+        spdlog::info("change stroke");
         renderer->change_stroke(stroke_parameters);
+        stroke_parameters.set_dirty(false);
     }
 
     if (is_tool_used) {
@@ -327,21 +305,27 @@ void SculptEditor::update(float delta_time)
     // Push to the renderer the edits and the previews
     renderer->push_preview_edit_list(preview_tmp_edits);
     renderer->push_edit_list(new_edits);
+
+    was_tool_used = is_tool_used;
 }
 
 void SculptEditor::render()
 {
     Tool& tool_used = *tools[current_tool];
     Edit& edit_to_add = tool_used.get_edit_to_add();
-    StrokeParameters& stroke_parameters = tool_used.get_stroke_parameters();
 
     if (mesh_preview)
     {
         update_edit_preview(edit_to_add.dimensions);
 
         // Render something to be able to cull faces later...
-        if(stroke_parameters.operation == OP_SUBSTRACTION || stroke_parameters.operation == OP_SMOOTH_SUBSTRACTION || stroke_parameters.operation == OP_PAINT || stroke_parameters.operation == OP_SMOOTH_PAINT)
+        if (stroke_parameters.get_operation() == OP_SUBSTRACTION ||
+            stroke_parameters.get_operation() == OP_SMOOTH_SUBSTRACTION ||
+            stroke_parameters.get_operation() == OP_PAINT ||
+            stroke_parameters.get_operation() == OP_SMOOTH_PAINT)
+        {
             mesh_preview->render();
+        }
 
         mesh_preview_outline->set_model(mesh_preview->get_model());
         mesh_preview_outline->render();
@@ -393,7 +377,7 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
         // Expand a little bit the edges
         glm::vec4 grow_dims = dims * 1.01f;
 
-        switch (current_primitive)
+        switch (stroke_parameters.get_primitive())
         {
         case SD_SPHERE:
             mesh_preview->get_mesh()->create_sphere(grow_dims.x);
@@ -431,7 +415,7 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
     mesh_preview->set_model(Input::get_controller_pose(gui.get_workspace().select_hand));
 
     // Update model depending on the primitive
-    switch (current_primitive)
+    switch (stroke_parameters.get_primitive())
     {
     case SD_CONE:
         mesh_preview->rotate(glm::radians(-90.f), { 1.f, 0.f, 0.f });
@@ -459,20 +443,30 @@ void SculptEditor::set_sculpt_started(bool value)
 
 void SculptEditor::set_primitive(sdPrimitive primitive)
 {
-    current_primitive = primitive;
+    stroke_parameters.set_primitive(primitive);
     dimensions_dirty = true;
 }
 
-void SculptEditor::set_primitive_modifier(bool& modifier)
+void SculptEditor::toggle_onion_modifier()
 {
-    const bool last_value = modifier;
+    capped_enabled = false;
+    onion_enabled = !onion_enabled;
 
-    // Disable all
-    capped_enabled  = false;
-    onion_enabled   = false;
+    glm::vec4 parameters = stroke_parameters.get_parameters();
+    parameters.x = onion_enabled ? onion_thickness : 0.f;
 
-    // Enable specific item
-    modifier = !last_value;
+    stroke_parameters.set_parameters(parameters);
+}
+
+void SculptEditor::toggle_capped_modifier()
+{
+    onion_enabled = false;
+    capped_enabled = !capped_enabled;
+
+    glm::vec4 parameters = stroke_parameters.get_parameters();
+    parameters.y = capped_enabled ? capped_value : -1.f;
+
+    stroke_parameters.set_parameters(parameters);
 }
 
 void SculptEditor::enable_tool(eTool tool)

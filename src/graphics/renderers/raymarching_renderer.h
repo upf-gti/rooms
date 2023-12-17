@@ -6,6 +6,8 @@
 #include "graphics/edit.h"
 #include "graphics/texture.h"
 
+#include "framework/aabb.h"
+
 #include <list>
 
 #define PREVIEW_EDITS_MAX 128
@@ -105,18 +107,11 @@ class RaymarchingRenderer {
         uint32_t tile_pointer = 0;
     };
 
-
-    struct AABB {
-        glm::vec3 min;
-        glm::vec3 max;
-    };
-
     Stroke current_stroke = {};
     Stroke in_frame_stroke = {};
 
     std::vector<Stroke> to_compute_stroke_buffer;
     std::vector<Stroke> stroke_history;
-    std::vector<AABB> stroke_history_AABB;
     std::list<Stroke> stroke_redo_history;
 
     // Preview edits

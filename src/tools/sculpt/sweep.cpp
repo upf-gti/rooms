@@ -161,16 +161,16 @@ void SweepTool::fill_edits_with_stroke() {
     }
 }
 
-bool SweepTool::update(float delta_time)
+bool SweepTool::update(float delta_time, StrokeParameters& stroke_parameters)
 {
-	Tool::update(delta_time);
+	Tool::update(delta_time, stroke_parameters);
 
 	if (!enabled) return false;
 
 	// Tool Operation changer
 	if (Input::was_button_pressed(XR_BUTTON_Y))
 	{
-        sdOperation& op = stroke_parameters.operation;
+        sdOperation op = stroke_parameters.get_operation();
 
 		switch (op)
 		{
@@ -189,6 +189,8 @@ bool SweepTool::update(float delta_time)
 		default:
 			break;
 		}
+
+        stroke_parameters.set_operation(op);
 	}
 
     // Set the inter-edit distance TODO: How and where? For now in here

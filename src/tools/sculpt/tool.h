@@ -9,8 +9,6 @@ protected:
 
 	bool enabled = false;
 
-    StrokeParameters stroke_parameters;
-
     Edit edit_to_add = {
         .position = glm::vec3(0.0f, 0.0f, 0.0f),
         .dimensions = glm::vec4(0.01f, 0.01f, 0.01f, 0.f)
@@ -42,10 +40,10 @@ public:
 
     virtual bool use_tool();
 
-    virtual bool update(float delta_time);
+    virtual bool update(float delta_time, StrokeParameters& stroke_parameters);
 	virtual void render_scene() {}
 	virtual void render_ui() {}
 
     Edit& get_edit_to_add() { return edit_to_add; }
-    StrokeParameters& get_stroke_parameters() { return stroke_parameters; }
+
 };

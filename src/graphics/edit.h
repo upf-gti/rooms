@@ -3,6 +3,7 @@
 #include "includes.h"
 #include "utils.h"
 #include "framework/colors.h"
+#include "framework/aabb.h"
 
 #define MAX_EDITS_PER_EVALUATION 64
 
@@ -42,17 +43,33 @@ struct alignas(16) Edit {
     float weigth_difference(const Edit& edit);
 };
 
-struct StrokeParameters {
+class StrokeParameters {
     sdPrimitive primitive = SD_SPHERE;
     sdOperation operation = OP_UNION;
     glm::vec4   parameters = { 0.f, -1.f, 0.f, 0.f };
     Color       color = colors::RED;
     glm::vec4   material = { 0.7f, 0.2f, 0.f, 0.f }; // rough, metallic, emissive, unused
 
-    bool was_operation_changed = false;
+    bool dirty = false;
 
+public:
+    void set_primitive(sdPrimitive primitive);
     void set_operation(sdOperation op);
-    bool must_change_stroke(const StrokeParameters& p);
+    void set_parameters(const glm::vec4& parameters);
+    void set_color(const Color& color);
+    void set_material(const glm::vec4& material);
+    void set_material_roughness(float roughness);
+    void set_material_metallic(float metallic);
+
+    sdPrimitive get_primitive() const { return primitive; }
+    sdOperation get_operation() const { return operation; }
+    glm::vec4 get_parameters() const { return parameters; }
+    Color get_color() const  { return color; }
+    glm::vec4 get_material() const { return material; }
+
+    bool is_dirty() { return dirty; }
+    void set_dirty(bool dirty) { this->dirty = dirty; }
+
 };
 
 struct alignas(256) Stroke {
@@ -67,7 +84,6 @@ struct alignas(256) Stroke {
     Edit        edits[MAX_EDITS_PER_EVALUATION] = {};
 
     glm::vec3 get_edit_world_half_size(const uint8_t edit_index) const;
-    void get_edit_world_AABB(const uint8_t edit_index, glm::vec3* min, glm::vec3* max, const glm::vec3& start_position, const glm::quat& sculpt_rotation) const;
-    void get_world_AABB(glm::vec3* min, glm::vec3* max, const glm::vec3& start_position, const glm::quat& sculpt_rotation) const;
-    StrokeParameters as_params() { return { primitive, operation, parameters, color, material }; }
+    AABB get_edit_world_AABB(const uint8_t edit_index) const;
+    AABB get_world_AABB() const;
 };

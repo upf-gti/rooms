@@ -19,6 +19,7 @@ class SculptEditor {
 
     RoomsRenderer*          renderer = nullptr;
     bool                    sculpt_started = false;
+    bool                    was_tool_used = false;
     Tool*                   tools[TOOL_COUNT];
     eTool					current_tool = NONE;
 
@@ -27,20 +28,19 @@ class SculptEditor {
     std::vector<Edit>       preview_tmp_edits;
     std::vector<Edit>       new_edits;
 
+    StrokeParameters        stroke_parameters;
+
     /*
     *	Edits
     */
-
-    Color current_color = colors::RED;
-    glm::vec4 current_material = { 0.7f, 0.2f, 0.0f, 0.0f };
-    sdPrimitive current_primitive = SD_SPHERE;
 
     EntityMesh* mesh_preview = nullptr;
     EntityMesh* mesh_preview_outline = nullptr;
 
 
     void set_primitive( sdPrimitive primitive );
-    void set_primitive_modifier( bool& modifier );
+    void toggle_onion_modifier();
+    void toggle_capped_modifier();
     void update_edit_preview( const glm::vec4& dims );
 
     bool        dimensions_dirty = true;
