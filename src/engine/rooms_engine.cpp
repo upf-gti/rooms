@@ -23,7 +23,9 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     skybox->scale(glm::vec3(100.f));
     skybox->set_material_priority(2);
 
-    //parse_scene("data/gltf_tests/DamagedHelmetGLB/DamagedHelmet.glb", entities);
+    //parse_scene("data/meshes/container.glb", entities);
+
+    //Renderer::instance->get_camera()->look_at_entity(entities.back());
 
     // import_scene();
 
@@ -42,14 +44,14 @@ void RoomsEngine::update(float delta_time)
     Engine::update(delta_time);
 
     RoomsRenderer* renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
-    skybox->set_translation(renderer->get_camera()->get_eye());
+    skybox->set_translation(renderer->get_camera_eye());
 
     sculpt_editor.update(delta_time);
 
-    if (Input::was_key_pressed(GLFW_KEY_E))
-    {
-        export_scene();
-    }
+    //if (Input::was_key_pressed(GLFW_KEY_E))
+    //{
+    //    export_scene();
+    //}
 }
 
 void RoomsEngine::render()

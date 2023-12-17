@@ -67,6 +67,10 @@ void RoomsRenderer::clean()
 
 void RoomsRenderer::update(float delta_time)
 {
+    if (is_openxr_available) {
+        xr_context.update();
+    }
+
     camera->update(delta_time);
 
     raymarching_renderer.update(delta_time);
@@ -301,4 +305,14 @@ void RoomsRenderer::resize_window(int width, int height)
     Renderer::resize_window(width, height);
 
     init_depth_buffers();
+}
+
+glm::vec3 RoomsRenderer::get_camera_eye()
+{
+    if (is_openxr_available) {
+        // return left eye
+        return xr_context.per_view_data[0].position;
+    }
+
+    return camera->get_eye();
 }

@@ -120,4 +120,6 @@ public:
     void redo() {
         raymarching_renderer.redo();
     }
+
+    glm::vec3 get_camera_eye();
 };

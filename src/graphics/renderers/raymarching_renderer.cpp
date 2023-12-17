@@ -403,7 +403,7 @@ void RaymarchingRenderer::compute_octree()
 
     //RenderdocCapture::start_capture_frame();
 
-    spdlog::debug(in_frame_stroke.edits[0].to_string());
+    //spdlog::debug(in_frame_stroke.edits[0].to_string());
 
     to_compute_stroke_buffer.push_back(in_frame_stroke);
 

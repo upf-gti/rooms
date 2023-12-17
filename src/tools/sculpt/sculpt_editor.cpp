@@ -177,11 +177,11 @@ void SculptEditor::update(float delta_time)
     Edit& edit_to_add = tool_used.get_edit_to_add();
     StrokeParameters& stroke_parameters = tool_used.get_stroke_parameters();
 
-    if (Input::was_key_pressed(GLFW_KEY_U)) {
+    if (Input::was_key_pressed(GLFW_KEY_U) || Input::was_button_pressed(XR_BUTTON_X)) {
         renderer->undo();
     }
 
-    if (Input::was_key_pressed(GLFW_KEY_R)) {
+    if (Input::was_key_pressed(GLFW_KEY_R) || Input::was_button_pressed(XR_BUTTON_A)) {
         renderer->redo();
     }
 
