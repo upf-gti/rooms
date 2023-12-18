@@ -165,25 +165,20 @@ fn interpolate_material(pos : vec3f) -> Material {
     return result;
 }
 
-fn sample_sdf(position : vec3f) -> Surface
+fn sample_sdf(position : vec3f) -> f32
 {
-    let data : vec4f = textureSampleLevel(read_sdf, texture_sampler, position, 0.0);
-
-    var surface : Surface = Surface(vec3f(1.0, 0.0, 0.0), data.r);
-
-    //surface = add_preview_edits((p  + compute_data.sculpt_start_position) * SDF_RESOLUTION, surface);
-
-    return surface;
+    // TODO: preview edits
+    return textureSampleLevel(read_sdf, texture_sampler, position, 0.0).r;
 }
 
 // https://iquilezles.org/articles/normalsSDF/
 fn estimate_normal( p : vec3f) -> vec3f
 {
     let k : vec2f = vec2f(1.0, -1.0);
-    return normalize( k.xyy * sample_sdf( p + k.xyy * DERIVATIVE_STEP ).distance + 
-                      k.yyx * sample_sdf( p + k.yyx * DERIVATIVE_STEP ).distance + 
-                      k.yxy * sample_sdf( p + k.yxy * DERIVATIVE_STEP ).distance + 
-                      k.xxx * sample_sdf( p + k.xxx * DERIVATIVE_STEP ).distance );
+    return normalize( k.xyy * sample_sdf( p + k.xyy * DERIVATIVE_STEP ) + 
+                      k.yyx * sample_sdf( p + k.yyx * DERIVATIVE_STEP ) + 
+                      k.yxy * sample_sdf( p + k.yxy * DERIVATIVE_STEP ) + 
+                      k.xxx * sample_sdf( p + k.xxx * DERIVATIVE_STEP ) );
 }
 
 // TODO: if diffuse variable is not used, performance is increased by 20% (????)
@@ -232,7 +227,7 @@ fn raymarch(ray_origin : vec3f, ray_origin_world : vec3f, ray_dir : vec3f, max_d
     let lightOffset = vec3f(0.0, 0.0, 0.0);
 
 	var depth : f32 = 0.0;
-    var surface : Surface;
+    var distance : f32;
 
     var pos : vec3f;
     var i : i32 = 0;
@@ -242,14 +237,14 @@ fn raymarch(ray_origin : vec3f, ray_origin_world : vec3f, ray_dir : vec3f, max_d
     {
 		pos = ray_origin + ray_dir * depth;
 
-        surface = sample_sdf(pos);
+        distance = sample_sdf(pos);
 
-		if (surface.distance < MIN_HIT_DIST) {
+		if (distance < MIN_HIT_DIST) {
             exit = 1u;
             break;
 		} 
 
-        depth += (surface.distance) * SCALE_CONVERSION_FACTOR;
+        depth += distance * SCALE_CONVERSION_FACTOR;
 	}
 
     if (exit == 1u) {
@@ -262,7 +257,6 @@ fn raymarch(ray_origin : vec3f, ray_origin_world : vec3f, ray_dir : vec3f, max_d
 
         let material : Material = interpolate_material(pos * SDF_RESOLUTION);
         //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
-        //return vec4f(surface.color, depth);
 		return vec4f(apply_light(-ray_dir, pos, pos_world, lightPos + lightOffset, material), depth);
 	}
 

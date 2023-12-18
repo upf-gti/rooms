@@ -1,10 +1,4 @@
 
-struct Material {
-    albedo : vec3f,
-    roughness : f32,
-    metalness : f32
-};
-
 /*
     RGB: R 7 bits + B 8 bits + G 7 bits = 22 bits
     Metalness: 5 bits
@@ -52,13 +46,4 @@ fn pack_material(material : Material) -> u32 {
     packed_material |= metalness;
 
     return packed_material;
-}
-
-// Material operation functions
-fn Material_mult_by(m : Material, v : f32) -> Material {
-    return Material(m.albedo * v, m.roughness * v, m.metalness * v);
-}
-
-fn Material_sum_Material(m1 : Material, m2 : Material) -> Material {
-    return Material(m1.albedo + m2.albedo, m1.roughness + m2.roughness, m1.metalness + m2.metalness);
 }

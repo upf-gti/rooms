@@ -35,11 +35,29 @@ const OFFSET_LUT : array<vec3f, 8> = array<vec3f, 8>(
 );
 
 // Data containers
+struct Material {
+    albedo      : vec3f,
+    roughness   : f32,
+    metalness   : f32
+};
 
 struct Surface {
-    color    : vec3f,
-    distance : f32
+    material    : Material,
+    distance    : f32
 };
+
+// Material operation functions
+fn Material_mult_by(m : Material, v : f32) -> Material {
+    return Material(m.albedo * v, m.roughness * v, m.metalness * v);
+}
+
+fn Material_sum_Material(m1 : Material, m2 : Material) -> Material {
+    return Material(m1.albedo + m2.albedo, m1.roughness + m2.roughness, m1.metalness + m2.metalness);
+}
+
+fn Material_mix(m1 : Material, m2 : Material, t : f32) -> Material {
+    return Material_sum_Material(Material_mult_by(m1, 1.0 - t), Material_mult_by(m2, t));
+}
 
 // Primitives
 
@@ -67,24 +85,24 @@ fn quat_inverse(q : vec4f) -> vec4f
     return conj / (q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w);
 }
 
-fn sdPlane( p : vec3f, c : vec3f, n : vec3f, h : f32, color : vec3f ) -> Surface
+fn sdPlane( p : vec3f, c : vec3f, n : vec3f, h : f32, material : Material) -> Surface
 {
     // n must be normalized
     var sf : Surface;
     sf.distance = dot(p - c, n) + h;
-    sf.color = color;
+    sf.material = material;
     return sf;
 }
 
-fn sdSphere( p : vec3f, c : vec3f, r : f32, color : vec3f) -> Surface
+fn sdSphere( p : vec3f, c : vec3f, r : f32, material : Material) -> Surface
 {
     var sf : Surface;
     sf.distance = length(p - c) - r;
-    sf.color = color;
+    sf.material = material;
     return sf;
 }
 
-fn sdCutSphere( p : vec3f, c : vec3f, rotation : vec4f, r : f32, h : f32, color : vec3f ) -> Surface
+fn sdCutSphere( p : vec3f, c : vec3f, rotation : vec4f, r : f32, h : f32, material : Material) -> Surface
 {
     var sf : Surface;
     // sampling independent computations (only depend on shape)
@@ -103,11 +121,11 @@ fn sdCutSphere( p : vec3f, c : vec3f, rotation : vec4f, r : f32, h : f32, color 
         sf.distance = length(q-vec2f(w,h));
     }
                     
-    sf.color = color;
+    sf.material = material;
     return sf;
 }
 
-fn sdBox( p : vec3f, c : vec3f, rotation : vec4f, s : vec3f, r : f32, color : vec3f ) -> Surface
+fn sdBox( p : vec3f, c : vec3f, rotation : vec4f, s : vec3f, r : f32, material : Material) -> Surface
 {
     var sf : Surface;
 
@@ -115,11 +133,11 @@ fn sdBox( p : vec3f, c : vec3f, rotation : vec4f, s : vec3f, r : f32, color : ve
 
     let q : vec3f = abs(pos) - s;
     sf.distance = length(max(q, vec3f(0.0))) + min(max(q.x, max(q.y, q.z)), 0.0) - r;
-    sf.color = color;
+    sf.material = material;
     return sf;
 }
 
-fn sdCapsule( p : vec3f, a : vec3f, b : vec3f, rotation : vec4f, r : f32, color : vec3f ) -> Surface
+fn sdCapsule( p : vec3f, a : vec3f, b : vec3f, rotation : vec4f, r : f32, material : Material) -> Surface
 {
     var sf : Surface;
     let posA : vec3f = rotate_point_quat(p - a, rotation);
@@ -128,12 +146,12 @@ fn sdCapsule( p : vec3f, a : vec3f, b : vec3f, rotation : vec4f, r : f32, color 
     let ba : vec3f = b - a;
     let h : f32 = clamp(dot(pa,ba) / dot(ba, ba), 0.0, 1.0);
     sf.distance = length(pa-ba*h) - r;
-    sf.color = color;
+    sf.material = material;
     return sf;
 }
 
 // t: (base radius, top radius)
-fn sdCone( p : vec3f, a : vec3f, b : vec3f, rotation : vec4f, t : vec2f, color : vec3f ) -> Surface
+fn sdCone( p : vec3f, a : vec3f, b : vec3f, rotation : vec4f, t : vec2f, material : Material) -> Surface
 {
     var sf : Surface;
     var ra = t.x;
@@ -161,11 +179,11 @@ fn sdCone( p : vec3f, a : vec3f, b : vec3f, rotation : vec4f, t : vec2f, color :
     
     sf.distance = s*sqrt( min(cax*cax + cay*cay*baba,
                        cbx*cbx + cby*cby*baba) );
-    sf.color = color;
+    sf.material = material;
     return sf;
 }
 
-fn sdPyramid( p : vec3f, c : vec3f, rotation : vec4f, r : f32, h : f32, color : vec3f ) -> Surface
+fn sdPyramid( p : vec3f, c : vec3f, rotation : vec4f, r : f32, h : f32, material : Material) -> Surface
 {
     var sf : Surface;
     let m2 : f32 = h * h + 0.25;
@@ -187,11 +205,11 @@ fn sdPyramid( p : vec3f, c : vec3f, rotation : vec4f, r : f32, h : f32, color : 
     let d2 : f32 = select(min(a, b), 0.0, min(q.y, -q.x * m2 - q.y * 0.5) > 0.0);
 
     sf.distance = sqrt((d2 + q.z * q.z) / m2) * sign(max(q.z, -moved_pos.y)) - r;
-    sf.color = color;
+    sf.material = material;
     return sf;
 }
 
-fn sdCylinder(p : vec3f, a : vec3f, rotation : vec4f, r : f32, h : f32, rr : f32, color : vec3f) -> Surface
+fn sdCylinder(p : vec3f, a : vec3f, rotation : vec4f, r : f32, h : f32, rr : f32, material : Material) -> Surface
 {
     var sf : Surface;
 
@@ -199,7 +217,7 @@ fn sdCylinder(p : vec3f, a : vec3f, rotation : vec4f, r : f32, h : f32, rr : f32
 
     let d : vec2f = abs(vec2f(length(vec2f(posA.x, posA.z)), posA.y)) - h;
     sf.distance = min(max(d.x, d.y), 0.0) + length(max(d, vec2f(0.0))) - rr;
-    sf.color = color;
+    sf.material = material;
     return sf;
 
     // let pa : vec3f = posA;
@@ -219,18 +237,18 @@ fn sdCylinder(p : vec3f, a : vec3f, rotation : vec4f, r : f32, h : f32, rr : f32
 }
 
 // t: (circle radius, thickness radius)
-fn sdTorus( p : vec3f, c : vec3f, t : vec2f, rotation : vec4f, color : vec3f ) -> Surface
+fn sdTorus( p : vec3f, c : vec3f, t : vec2f, rotation : vec4f, material : Material) -> Surface
 {
     var sf : Surface;
     let pos : vec3f = rotate_point_quat(p - c, rotation);
     var q = vec2f(length(pos.xy) - t.x, pos.z);
     sf.distance = length(q) - t.y;
-    sf.color = color;
+    sf.material = material;
     return sf;
 }
 
 // t: (circle radius, thickness radius)
-fn sdCappedTorus( p : vec3f, c : vec3f, t : vec2f, rotation : vec4f, sc : vec2f, color : vec3f ) -> Surface
+fn sdCappedTorus( p : vec3f, c : vec3f, t : vec2f, rotation : vec4f, sc : vec2f, material : Material) -> Surface
 {
     var sf : Surface;
     var pos : vec3f = rotate_point_quat(p - c, rotation);
@@ -241,13 +259,13 @@ fn sdCappedTorus( p : vec3f, c : vec3f, t : vec2f, rotation : vec4f, sc : vec2f,
     var k = select(length(pos.xy), dot(pos.xy,sc), sc.y*pos.x > sc.x*pos.y);
 
     sf.distance = sqrt( dot(pos,pos) + ra*ra - 2.0*ra*k ) - rb;
-    sf.color = color;
+    sf.material = material;
     return sf;
 }
 
 // IQ adaptation to 3d of http://research.microsoft.com/en-us/um/people/hoppe/ravg.pdf
 // { dist, t, y (above the plane of the curve, x (away from curve in the plane of the curve))
-fn sdQuadraticBezier(p : vec3f, start : vec3f, cp : vec3f, end : vec3f, thickness : f32, rotation : vec4f, color : vec3f) -> Surface
+fn sdQuadraticBezier(p : vec3f, start : vec3f, cp : vec3f, end : vec3f, thickness : f32, rotation : vec4f, material : Material) -> Surface
 {
     var b0 : vec3f = start - p;
     var b1 : vec3f = cp - p;
@@ -272,7 +290,7 @@ fn sdQuadraticBezier(p : vec3f, start : vec3f, cp : vec3f, end : vec3f, thicknes
     
     var sf : Surface;
     sf.distance = length(mix(mix(b0,b1,t), mix(b1,b2,t),t)) - thickness;
-    sf.color = color;
+    sf.material = material;
     return sf;
 }
 
@@ -323,7 +341,7 @@ fn opSmoothUnion( s1 : Surface, s2 : Surface, k : f32 ) -> Surface
     //let smin : vec2f = sminPoly(s2.distance, s1.distance, k);
     var sf : Surface;
     sf.distance = smin.x;
-    sf.color = mix(s2.color, s1.color, smin.y);
+    sf.material = Material_mix(s2.material, s1.material, smin.y);
     return sf;
 }
 
@@ -362,14 +380,14 @@ fn opSubtraction( s1 : Surface, s2 : Surface ) -> Surface
 fn opIntersection( s1 : Surface, s2 : Surface ) -> Surface
 { 
     var s : Surface = maxSurface( s1, s2 );
-    s.color = s1.color;
+    s.material = s1.material;
     return s;
 }
 
-fn opPaint( s1 : Surface, s2 : Surface, paintColor : vec3f ) -> Surface
+fn opPaint( s1 : Surface, s2 : Surface, material : Material ) -> Surface
 {
     var sColorInter : Surface = opIntersection(s1, s2);
-    sColorInter.color = paintColor;
+    sColorInter.material = material;
     return opUnion(s1, sColorInter);
 }
 
@@ -378,7 +396,7 @@ fn opSmoothSubtraction( s1 : Surface, s2 : Surface, k : f32 ) -> Surface
     let smin : vec2f = soft_min(s2.distance, -s1.distance, k);
     var s : Surface;
     s.distance = -smin.x;
-    s.color = s1.color;
+    s.material = s1.material;
     return s;
 }
 
@@ -387,14 +405,14 @@ fn opSmoothIntersection( s1 : Surface, s2 : Surface, k : f32 ) -> Surface
     let h : f32 = max(k - abs(s1.distance - s2.distance), 0.0);
     var s : Surface;
     s.distance = max(s1.distance, s2.distance) + h * h * 0.25 / k;
-    s.color = s1.color;
+    //s.color = s1.color;
     return s;
 }
 
-fn opSmoothPaint( s1 : Surface, s2 : Surface, paintColor : vec3f, k : f32 ) -> Surface
+fn opSmoothPaint( s1 : Surface, s2 : Surface, material : Material, k : f32 ) -> Surface
 {
     var sColorInter : Surface = opIntersection(s1, s2);
-    sColorInter.color = paintColor;
+    sColorInter.material = material;
     let u : Surface = opUnion(s1, sColorInter);
     var s : Surface = opSmoothUnion(s1, sColorInter, k);
     s.distance = u.distance;
@@ -405,7 +423,7 @@ fn opOnion( s1 : Surface, t : f32 ) -> Surface
 {
     var s : Surface;
     s.distance = abs(s1.distance) - t;
-    s.color = s1.color;
+    s.material = s1.material;
     return s;
 }
 
@@ -414,7 +432,7 @@ fn map_thickness( t : f32, v_max : f32 ) -> f32
     return select( 0.0, max(t * v_max * 0.375, 0.003), t > 0.0);
 }
 
-fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters : vec4f, color : vec4f, current_surface : Surface, edit : Edit) -> Surface
+fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters : vec4f, current_surface : Surface, stroke_material : Material, edit : Edit) -> Surface
 {
     var pSurface : Surface;
 
@@ -427,17 +445,15 @@ fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters
     var onion_thickness : f32 = parameters.x;
     let do_onion = onion_thickness > 0.0;
 
-    let edit_color = color.rgb;
-
     switch (primitive) {
         case SD_SPHERE: {
             onion_thickness = map_thickness( onion_thickness, radius );
             radius -= onion_thickness; // Compensate onion size
             // -1..1 no cap..fully capped
             if(cap_value > -1.0) { 
-                pSurface = sdCutSphere(position, edit.position, edit.rotation, radius, radius * cap_value * 0.999, edit_color);
+                pSurface = sdCutSphere(position, edit.position, edit.rotation, radius, radius * cap_value * 0.999, stroke_material);
             } else {
-                pSurface = sdSphere(position, edit.position, radius, edit_color);
+                pSurface = sdSphere(position, edit.position, radius, stroke_material);
             }
             break;
         }
@@ -449,14 +465,14 @@ fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters
             size -= onion_thickness;
             size_param -= onion_thickness; 
 
-            pSurface = sdBox(position, edit.position, edit.rotation, size - size_param, size_param, edit_color);
+            pSurface = sdBox(position, edit.position, edit.rotation, size - size_param, size_param, stroke_material);
             break;
         }
         case SD_CAPSULE: {
             onion_thickness = map_thickness( onion_thickness, size_param );
             size_param -= onion_thickness; // Compensate onion size
             var height = radius; // ...
-            pSurface = sdCapsule(position, edit.position, edit.position - vec3f(0.0, 0.0, height), edit.rotation, size_param, edit_color);
+            pSurface = sdCapsule(position, edit.position, edit.position - vec3f(0.0, 0.0, height), edit.rotation, size_param, stroke_material);
             break;
         }
         case SD_CONE: {
@@ -464,7 +480,7 @@ fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters
             cap_value = cap_value * 0.5 + 0.5;
             radius = max(radius * (1.0 - cap_value), 0.0025);
             var dims = vec2f(size_param, size_param * cap_value);
-            pSurface = sdCone(position, edit.position,  edit.position - vec3f(0.0, 0.0, radius), edit.rotation, dims, edit_color);
+            pSurface = sdCone(position, edit.position,  edit.position - vec3f(0.0, 0.0, radius), edit.rotation, dims, stroke_material);
             break;
         }
         // case SD_PYRAMID: {
@@ -474,7 +490,7 @@ fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters
         case SD_CYLINDER: {
             onion_thickness = map_thickness( onion_thickness, size_param );
             size_param -= onion_thickness; // Compensate onion size
-            pSurface = sdCylinder(position, edit.position, edit.rotation, size.y, radius, 0.0, edit_color);
+            pSurface = sdCylinder(position, edit.position, edit.rotation, size.y, radius, 0.0, stroke_material);
             break;
         }
         case SD_TORUS: {
@@ -485,15 +501,15 @@ fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters
                 cap_value = cap_value * 0.5 + 0.5;
                 var an = M_PI * (1.0 - cap_value);
                 var angles = vec2f(sin(an), cos(an));
-                pSurface = sdCappedTorus(position, edit.position, vec2f(radius, size_param), edit.rotation, angles, edit_color);
+                pSurface = sdCappedTorus(position, edit.position, vec2f(radius, size_param), edit.rotation, angles, stroke_material);
             } else {
-                pSurface = sdTorus(position, edit.position, vec2f(radius, size_param), edit.rotation, edit_color);
+                pSurface = sdTorus(position, edit.position, vec2f(radius, size_param), edit.rotation, stroke_material);
             }
             break;
         }
         case SD_BEZIER: {
             var curve_thickness : f32 = 0.01;
-            pSurface = sdQuadraticBezier(position, edit.position, edit.position + vec3f(0.0, 0.1, 0.0), edit.position + vec3f(0.2, 0.1, 0.0), curve_thickness, edit.rotation, edit_color);
+            pSurface = sdQuadraticBezier(position, edit.position, edit.position + vec3f(0.0, 0.1, 0.0), edit.position + vec3f(0.2, 0.1, 0.0), curve_thickness, edit.rotation, stroke_material);
             break;
         }
         default: {
@@ -521,7 +537,7 @@ fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters
             break;
         }
         case OP_PAINT: {
-            pSurface = opPaint(current_surface, pSurface, edit_color);
+            pSurface = opPaint(current_surface, pSurface, stroke_material);
             break;
         }
         case OP_SMOOTH_UNION: {
@@ -537,7 +553,7 @@ fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters
             break;
         }
         case OP_SMOOTH_PAINT: {
-            pSurface = opSmoothPaint(current_surface, pSurface, edit_color, SMOOTH_FACTOR);
+            pSurface = opSmoothPaint(current_surface, pSurface, stroke_material, SMOOTH_FACTOR);
             break;
         }
         default: {

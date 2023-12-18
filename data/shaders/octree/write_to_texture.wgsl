@@ -49,10 +49,16 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
     let level_half_size : f32 = SCULPT_MAX_SIZE / pow(2.0, f32(level + 1));
 
-    var sSurface : Surface = Surface(vec3f(0.0, 0.0, 0.0), 10000.0);
+    var sSurface : Surface;
+    sSurface.distance = 10000.0;
     var debug_surf : vec3f = vec3f(0.0);
 
     let texture_coordinates : vec3u = atlas_tile_coordinate + local_id;
+
+    var material : Material;
+    material.albedo = stroke.color.xyz;
+    material.roughness = stroke.material.x;
+    material.metalness = stroke.material.y;
 
     // If the MSb is setted we load the previous data of brick
     // if not, we set it for the next iteration
@@ -62,7 +68,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
         let raw_color : vec4<u32> = textureLoad(write_material_sdf, texture_coordinates);
 
         let material : Material = unpack_material(u32(raw_color.r));
-        sSurface.color = material.albedo;
+        sSurface.material = material;
     } 
     else if ((INTERIOR_BRICK_FLAG & brick_pointer) == INTERIOR_BRICK_FLAG) {
         sSurface.distance = -100.0;
@@ -78,7 +84,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
         let packed_index : u32 = 3 - (i % 4);
         let current_unpacked_edit_idx : u32 = (current_packed_edit_idx & (0xFFu << (packed_index * 8u))) >> (packed_index * 8u);
 
-        sSurface = evaluate_edit(octant_center + pixel_offset, stroke.primitive, stroke.operation, stroke.parameters, stroke.color, sSurface, stroke.edits[current_unpacked_edit_idx]);
+        sSurface = evaluate_edit(octant_center + pixel_offset, stroke.primitive, stroke.operation, stroke.parameters, sSurface, material, stroke.edits[current_unpacked_edit_idx]);
     }
 
     if (sSurface.distance < MIN_HIT_DIST) {
@@ -92,14 +98,11 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     heatmap_color.g = sin(interpolant * 2.0);
     heatmap_color.b = cos(interpolant);
 
-    var material : Material;
-    material.albedo = sSurface.color;
-    material.roughness = stroke.material.x;
-    material.metalness = stroke.material.y;
+    
 
     // Duplicate the texture Store, becuase then we have a branch depeding on an uniform!
     textureStore(write_sdf, texture_coordinates, vec4f(sSurface.distance));
-    textureStore(write_material_sdf, texture_coordinates, vec4<u32>((pack_material(material))));
+    textureStore(write_material_sdf, texture_coordinates, vec4<u32>((pack_material(sSurface.material))));
     
     //textureStore(write_sdf, texture_coordinates, vec4f(debug_surf.x, debug_surf.y, debug_surf.z, sSurface.distance));
     // Hack, for buffer usage
