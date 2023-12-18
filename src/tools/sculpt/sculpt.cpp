@@ -61,7 +61,7 @@ bool SculptTool::update(float delta_time, StrokeParameters& stroke_parameters)
             edit_to_add.rotation = glm::quat(0.0, 0.0, 0.0, 1.0);//glm::inverse(glm::quat(euler_angles));
             // Stroke
             stroke_parameters.set_color(glm::vec4(random_f(), random_f(), random_f(), 1.f));
-            stroke_parameters.set_primitive(SD_CYLINDER);
+            stroke_parameters.set_primitive((random_f() > 0.25f) ? ((random_f() > 0.5f) ? SD_SPHERE : SD_CYLINDER) : SD_BOX);
             //stroke_parameters.primitive = (random_f() > 0.5f) ? SD_SPHERE : SD_BOX;
             // stroke_parameters.material = glm::vec4(random_f(), random_f(), 0.f, 0.f);
             //stroke_parameters.set_operation( (random_f() > 0.5f) ? OP_UNION : OP_SUBSTRACTION);

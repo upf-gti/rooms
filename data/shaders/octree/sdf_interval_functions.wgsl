@@ -525,10 +525,10 @@ fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f,  primitive : u32, 
         //     break;
         // }
         case SD_CYLINDER: {
-            onion_thickness = map_thickness( onion_thickness, size_param );
-            size_param -= onion_thickness; // Compensate onion size
+            //onion_thickness = map_thickness( onion_thickness, size_param );
+            //size_param -= onion_thickness; // Compensate onion size
             // pSurface = sdCylinder(position, edit.position,  edit.position - vec3f(0.0, 0.0, radius), edit.rotation, size_param, 0.0, edit.color);
-            pSurface = cylinder_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.rotation, size_param, radius);
+            pSurface = cylinder_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.rotation, size.y, radius);
             break;
         }
         case SD_TORUS: {

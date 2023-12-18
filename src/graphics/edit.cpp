@@ -101,7 +101,7 @@ void StrokeParameters::set_material_metallic(float metallic)
 glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const {
 
     glm::vec3 size = glm::vec3(edits[edit_index].dimensions);
-    float radius = edits[edit_index].dimensions.w;
+    float radius = edits[edit_index].dimensions.x;
 
     switch (primitive) {
     case SD_SPHERE:
@@ -115,7 +115,7 @@ glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const {
         //case SD_PYRAMID:
         //	return glm::abs(position - size) + radius * 2.0f;
     case SD_CYLINDER:
-        return glm::abs(edits[edit_index].position - size) + radius * 2.0f;
+        return glm::vec3(radius, size.y, radius);
     case SD_TORUS:
         return glm::abs(size) + radius * 2.0f;
     default:
