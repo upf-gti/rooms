@@ -142,7 +142,7 @@ fn interpolate_material(pos : vec3f) -> Material {
     var result : Material;
 
     let pos_f_part : vec3f = abs(fract(pos));
-    let pos_i_part : vec3u = vec3u(floor(pos)) - vec3u(1);
+    let pos_i_part : vec3u = vec3u(floor(pos));
 
     let index000 : vec3u = pos_i_part;
     let index010 : vec3u = vec3u(pos_i_part.x + 0, pos_i_part.y + 1, pos_i_part.z + 0)  ;
