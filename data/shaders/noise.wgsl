@@ -61,14 +61,14 @@ fn perlin_noise_3d( p : vec3f ) -> f32
 
 	// Trilinear Interpolation
 
-    let g0 : vec3f = hash3_sin( (i) );
-    let g1 : vec3f = hash3_sin( (i + vec3f(1.0, 0.0, 0.0)) );
-    let g2 : vec3f = hash3_sin( (i + vec3f(0.0, 1.0, 0.0)) );
-    let g3 : vec3f = hash3_sin( (i + vec3f(1.0, 1.0, 0.0)) );
-    let g4 : vec3f = hash3_sin( (i + vec3f(0.0, 0.0, 1.0)) );
-    let g5 : vec3f = hash3_sin( (i + vec3f(1.0, 0.0, 1.0)) );
-    let g6 : vec3f = hash3_sin( (i + vec3f(0.0, 1.0, 1.0)) );
-    let g7 : vec3f = hash3_sin( (i + vec3f(1.0, 1.0, 1.0)) );
+    let g0 : vec3f = hash3_sin( i );
+    let g1 : vec3f = hash3_sin( i + vec3f(1.0, 0.0, 0.0) );
+    let g2 : vec3f = hash3_sin( i + vec3f(0.0, 1.0, 0.0) );
+    let g3 : vec3f = hash3_sin( i + vec3f(1.0, 1.0, 0.0) );
+    let g4 : vec3f = hash3_sin( i + vec3f(0.0, 0.0, 1.0) );
+    let g5 : vec3f = hash3_sin( i + vec3f(1.0, 0.0, 1.0) );
+    let g6 : vec3f = hash3_sin( i + vec3f(0.0, 1.0, 1.0) );
+    let g7 : vec3f = hash3_sin( i + vec3f(1.0, 1.0, 1.0) );
 
     let d0 : vec3f = f;
     let d1 : vec3f = f - vec3f(1.0, 0.0, 0.0);
@@ -79,14 +79,14 @@ fn perlin_noise_3d( p : vec3f ) -> f32
     let d6 : vec3f = f - vec3f(0.0, 1.0, 1.0);
     let d7 : vec3f = f - vec3f(1.0, 1.0, 1.0);
 
-	let dot0 : f32 = g0.x * d0.x + g0.y * d0.y + g0.z * d0.z;
-    let dot1 : f32 = g1.x * d1.x + g1.y * d1.y + g1.z * d1.z;
-    let dot2 : f32 = g2.x * d2.x + g2.y * d2.y + g2.z * d2.z;
-    let dot3 : f32 = g3.x * d3.x + g3.y * d3.y + g3.z * d3.z;
-    let dot4 : f32 = g4.x * d4.x + g4.y * d4.y + g4.z * d4.z;
-    let dot5 : f32 = g5.x * d5.x + g5.y * d5.y + g5.z * d5.z;
-    let dot6 : f32 = g6.x * d6.x + g6.y * d6.y + g6.z * d6.z;
-    let dot7 : f32 = g7.x * d7.x + g7.y * d7.y + g7.z * d7.z;
+	let dot0 : f32 = dot(g0, d0);
+    let dot1 : f32 = dot(g1, d1);
+    let dot2 : f32 = dot(g2, d2);
+    let dot3 : f32 = dot(g3, d3);
+    let dot4 : f32 = dot(g4, d4);
+    let dot5 : f32 = dot(g5, d5);
+    let dot6 : f32 = dot(g6, d6);
+    let dot7 : f32 = dot(g7, d7);
 
 	return
         dot0 * (1.0 - u.x) * (1.0 - u.y) * (1.0 - u.z) +
@@ -102,18 +102,16 @@ fn perlin_noise_3d( p : vec3f ) -> f32
 // Fractional Brownian Motion, generates fractal noise
 // https://github.com/PZerua/tfg/blob/master/data/shaders
 
-fn fbm( coords : vec3f, offset : vec3f, f : f32, a : f32, o : u32 ) -> f32
+fn fbm( coords : vec3f, offset : vec3f, frequency : f32, amplitude : f32, num_octaves : u32 ) -> f32
 {
     var n : f32 = 0.0;
-    var uv : vec3f = coords + offset; // Apply offset to generation
-    var amplitude : f32 = a;
+    var a : f32 = amplitude;
+    var uv : vec3f = (coords + offset) * frequency; // Apply offset and frequency
 
-    uv *= f; // Apply frequency
-
-    for (var i : u32 = 0; i < o; i++) {
-        n += amplitude * perlin_noise_3d( uv ); 
-        uv = 2.0 * uv;
-        amplitude /= 2.0;
+    for (var i : u32 = 0; i < num_octaves; i++) {
+        n += a * perlin_noise_3d( uv ); 
+        uv *= 2.0;
+        a /= 2.0;
     }
 
     return n;
