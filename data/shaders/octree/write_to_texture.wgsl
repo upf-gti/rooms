@@ -1,6 +1,7 @@
 #include sdf_functions.wgsl
 #include octree_includes.wgsl
 #include material_packing.wgsl
+#include ../noise.wgsl
 
 @group(0) @binding(2) var<storage, read_write> octree : Octree;
 @group(0) @binding(3) var write_sdf: texture_storage_3d<r32float, read_write>;
@@ -83,8 +84,19 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
         let current_packed_edit_idx : u32 = edit_culling_data.edit_culling_lists[i / 4 + parent_octree_index * PACKED_LIST_SIZE];
         let packed_index : u32 = 3 - (i % 4);
         let current_unpacked_edit_idx : u32 = (current_packed_edit_idx & (0xFFu << (packed_index * 8u))) >> (packed_index * 8u);
+        let edit = stroke.edits[current_unpacked_edit_idx];
+        let pos = octant_center + pixel_offset;
 
-        sSurface = evaluate_edit(octant_center + pixel_offset, stroke.primitive, stroke.operation, stroke.parameters, sSurface, material, stroke.edits[current_unpacked_edit_idx]);
+        // Rust example.. ??
+
+        var noise_value = fbm( pos, vec3f(0.0), 10.0, 1.0, 4 ) * 0.5 + 0.5;
+        noise_value = clamp(smoothstep( 0.5, 1.0, noise_value ) * 1.5, 0.0, 1.0);
+
+        material.albedo = mix(stroke.color.xyz, vec3f(0.72, 0.25, 0.05), noise_value);
+        material.roughness = mix(stroke.material.x, 1.0, noise_value);
+        material.metalness = mix(stroke.material.y, 0.0, noise_value);
+
+        sSurface = evaluate_edit(pos, stroke.primitive, stroke.operation, stroke.parameters, sSurface, material, edit);
     }
 
     if (sSurface.distance < MIN_HIT_DIST) {
@@ -97,8 +109,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     heatmap_color.r = sin(interpolant);
     heatmap_color.g = sin(interpolant * 2.0);
     heatmap_color.b = cos(interpolant);
-
-    
 
     // Duplicate the texture Store, becuase then we have a branch depeding on an uniform!
     textureStore(write_sdf, texture_coordinates, vec4f(sSurface.distance));

@@ -1,80 +1,117 @@
-
-// https://gist.github.com/munrocket/236ed5ba7e409b8bdf1ff6eca5dcdc39
-
-fn permute4(x: vec4f) -> vec4f { return ((x * 34. + 1.) * x) % vec4f(289.); }
-fn fade2(t: vec2f) -> vec2f { return t * t * t * (t * (t * 6. - 15.) + 10.); }
-
-fn perlinNoise2(P: vec2f) -> f32 {
-    var Pi: vec4f = floor(P.xyxy) + vec4f(0., 0., 1., 1.);
-    let Pf = fract(P.xyxy) - vec4f(0., 0., 1., 1.);
-    Pi = Pi % vec4f(289.); // To avoid truncation effects in permutation
-    let ix = Pi.xzxz;
-    let iy = Pi.yyww;
-    let fx = Pf.xzxz;
-    let fy = Pf.yyww;
-    let i = permute4(permute4(ix) + iy);
-    var gx: vec4f = 2. * fract(i * 0.0243902439) - 1.; // 1/41 = 0.024...
-    let gy = abs(gx) - 0.5;
-    let tx = floor(gx + 0.5);
-    gx = gx - tx;
-    var g00: vec2f = vec2f(gx.x, gy.x);
-    var g10: vec2f = vec2f(gx.y, gy.y);
-    var g01: vec2f = vec2f(gx.z, gy.z);
-    var g11: vec2f = vec2f(gx.w, gy.w);
-    let norm = 1.79284291400159 - 0.85373472095314 *
-        vec4f(dot(g00, g00), dot(g01, g01), dot(g10, g10), dot(g11, g11));
-    g00 = g00 * norm.x;
-    g01 = g01 * norm.y;
-    g10 = g10 * norm.z;
-    g11 = g11 * norm.w;
-    let n00 = dot(g00, vec2f(fx.x, fy.x));
-    let n10 = dot(g10, vec2f(fx.y, fy.y));
-    let n01 = dot(g01, vec2f(fx.z, fy.z));
-    let n11 = dot(g11, vec2f(fx.w, fy.w));
-    let fade_xy = fade2(Pf.xy);
-    let n_x = mix(vec2f(n00, n01), vec2f(n10, n11), vec2f(fade_xy.x));
-    let n_xy = mix(n_x.x, n_x.y, fade_xy.y);
-    return 2.3 * n_xy;
+// https://www.shadertoy.com/view/4djSRW
+fn hash33( p3 : vec3f ) -> vec3f
+{
+	var p : vec3f = fract(p3 * vec3f(0.1031, 0.1030, 0.0973));
+    p += dot(p, p.yxz + 33.33);
+    return fract((p.xxy + p.yxx) * p.zyx);
 }
 
-// https://github.com/PZerua/tfg/blob/master/data/shaders
-
-fn hash( x : vec2f ) -> vec2f
+// https://www.shadertoy.com/view/slX3D2
+fn hash33u( p3 : vec3u ) -> vec3f
 {
-    let k : vec2f = vec2f( 0.3183099, 0.3678794 );
-    var xx = x * k + k.yx;
-    return -1.0 + 2.0 * fract( 16.0 * k * fract( xx.x * xx.y * ( xx.x + xx.y ) ) );
+    var x : u32 = p3.x;
+    var y : u32 = p3.y;
+    var z : u32 = p3.z;
+
+    // Pick some enthropy source values.
+    // Try different values.
+    let enthropy0 : u32 = 1200u;
+    let enthropy1 : u32 = 4500u;
+    let enthropy2 : u32 = 6700u;
+    let enthropy3 : u32 = 8900u;
+
+    // Use linear offset method to mix coordinates.
+    var value0 : u32 = z * enthropy3 * enthropy2 + y * enthropy2 + x;
+    var value1 : u32 = y * enthropy3 * enthropy2 + x * enthropy2 + z;
+    var value2 : u32 = x * enthropy3 * enthropy2 + z * enthropy2 + y;
+
+    // Calculate hash.
+	value0 += enthropy1; value0 *= 445593459u; value0 ^= enthropy0;
+    value1 += enthropy1; value1 *= 445593459u; value1 ^= enthropy0;
+    value2 += enthropy1; value2 *= 445593459u; value2 ^= enthropy0;
+
+    // 2.0f / 4294967295.0f = 4.6566128730773926e-10
+
+    return vec3f(
+        f32(value0 * value0 * value0) * 4.6566128730773926e-10 - 1.0,
+        f32(value1 * value1 * value1) * 4.6566128730773926e-10 - 1.0,
+        f32(value2 * value2 * value2) * 4.6566128730773926e-10 - 1.0);
 }
 
-fn perlin_noise( p : vec2f ) -> f32
+// https://www.shadertoy.com/view/Ms2GDc
+fn hash3_sin( p3 : vec3f ) -> vec3f
 {
-	// Position in grid
-	var i : vec2f = floor( p );
-	// Offset in position
-	var f : vec2f = fract( p );
+	var p : vec3f = vec3f( dot(p3, vec3f(127.1, 311.7, 213.6)),
+			  dot(p3, vec3f(327.1, 211.7, 113.6)),
+			  dot(p3, vec3f(269.5, 183.3, 351.1)) );
+	return -1.0 + 2.0 * fract(sin(p) * 43758.5453123);
+}
+
+// https://www.shadertoy.com/view/slX3D2
+fn perlin_noise_3d( p : vec3f ) -> f32
+{
+	// Position in grid (fractal part)
+	var i : vec3f = floor( p );
+
+	// Offset in position (integer part)
+	var f : vec3f = p - i;
 
 	// Quintic interpolation
-	var u : vec2f = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+	var u : vec3f = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
 
-	// Interpolate in x axis
-	var a : f32 = mix(dot(hash(i + vec2f(0.0, 0.0)), f - vec2f(0.0, 0.0)), dot(hash(i + vec2f(1.0, 0.0)), f - vec2f(1.0, 0.0)), u.x);
-	var b : f32 = mix(dot(hash(i + vec2f(0.0, 1.0)), f - vec2f(0.0, 1.0)), dot(hash(i + vec2f(1.0, 1.0)), f - vec2f(1.0, 1.0)), u.x);
+	// Trilinear Interpolation
 
-	// Interpolate in y axis
-	return mix(a, b, u.y);
+    let g0 : vec3f = hash3_sin( (i) );
+    let g1 : vec3f = hash3_sin( (i + vec3f(1.0, 0.0, 0.0)) );
+    let g2 : vec3f = hash3_sin( (i + vec3f(0.0, 1.0, 0.0)) );
+    let g3 : vec3f = hash3_sin( (i + vec3f(1.0, 1.0, 0.0)) );
+    let g4 : vec3f = hash3_sin( (i + vec3f(0.0, 0.0, 1.0)) );
+    let g5 : vec3f = hash3_sin( (i + vec3f(1.0, 0.0, 1.0)) );
+    let g6 : vec3f = hash3_sin( (i + vec3f(0.0, 1.0, 1.0)) );
+    let g7 : vec3f = hash3_sin( (i + vec3f(1.0, 1.0, 1.0)) );
+
+    let d0 : vec3f = f;
+    let d1 : vec3f = f - vec3f(1.0, 0.0, 0.0);
+    let d2 : vec3f = f - vec3f(0.0, 1.0, 0.0);
+    let d3 : vec3f = f - vec3f(1.0, 1.0, 0.0);
+    let d4 : vec3f = f - vec3f(0.0, 0.0, 1.0);
+    let d5 : vec3f = f - vec3f(1.0, 0.0, 1.0);
+    let d6 : vec3f = f - vec3f(0.0, 1.0, 1.0);
+    let d7 : vec3f = f - vec3f(1.0, 1.0, 1.0);
+
+	let dot0 : f32 = g0.x * d0.x + g0.y * d0.y + g0.z * d0.z;
+    let dot1 : f32 = g1.x * d1.x + g1.y * d1.y + g1.z * d1.z;
+    let dot2 : f32 = g2.x * d2.x + g2.y * d2.y + g2.z * d2.z;
+    let dot3 : f32 = g3.x * d3.x + g3.y * d3.y + g3.z * d3.z;
+    let dot4 : f32 = g4.x * d4.x + g4.y * d4.y + g4.z * d4.z;
+    let dot5 : f32 = g5.x * d5.x + g5.y * d5.y + g5.z * d5.z;
+    let dot6 : f32 = g6.x * d6.x + g6.y * d6.y + g6.z * d6.z;
+    let dot7 : f32 = g7.x * d7.x + g7.y * d7.y + g7.z * d7.z;
+
+	return
+        dot0 * (1.0 - u.x) * (1.0 - u.y) * (1.0 - u.z) +
+        dot1 * u.x         * (1.0 - u.y) * (1.0 - u.z) +
+        dot2 * (1.0 - u.x) * u.y         * (1.0 - u.z) +
+        dot3 * u.x         * u.y         * (1.0 - u.z) +
+        dot4 * (1.0 - u.x) * (1.0 - u.y) * u.z +
+        dot5 * u.x         * (1.0 - u.y) * u.z +
+        dot6 * (1.0 - u.x) * u.y         * u.z +
+        dot7 * u.x         * u.y         * u.z;
 }
 
 // Fractional Brownian Motion, generates fractal noise
-fn fbm( coords : vec2f, offset : vec2f, f : f32, a : f32, o : u32 ) -> f32
+// https://github.com/PZerua/tfg/blob/master/data/shaders
+
+fn fbm( coords : vec3f, offset : vec3f, f : f32, a : f32, o : u32 ) -> f32
 {
     var n : f32 = 0.0;
-    var uv : vec2f = coords + offset; // Apply offset to generation
+    var uv : vec3f = coords + offset; // Apply offset to generation
     var amplitude : f32 = a;
 
     uv *= f; // Apply frequency
 
     for (var i : u32 = 0; i < o; i++) {
-        n += amplitude * perlin_noise( uv ); 
+        n += amplitude * perlin_noise_3d( uv ); 
         uv = 2.0 * uv;
         amplitude /= 2.0;
     }
