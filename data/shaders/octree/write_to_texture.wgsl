@@ -92,7 +92,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     }
 
     // Heatmap Edit debugging
-    let interpolant : f32 = (f32( edit_culling_data.edit_culling_count[parent_octree_index] ) / f32(5)) * (3.14159265 / 2.0);
+    let interpolant : f32 = (f32( edit_culling_data.edit_culling_count[parent_octree_index] ) / f32(5)) * (M_PI / 2.0);
     var heatmap_color : vec3f;
     heatmap_color.r = sin(interpolant);
     heatmap_color.g = sin(interpolant * 2.0);
