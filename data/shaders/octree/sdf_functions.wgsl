@@ -445,6 +445,8 @@ fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters
     var onion_thickness : f32 = parameters.x;
     let do_onion = onion_thickness > 0.0;
 
+    let smooth_factor : f32 = parameters.w;
+
     switch (primitive) {
         case SD_SPHERE: {
             onion_thickness = map_thickness( onion_thickness, radius );
@@ -541,19 +543,19 @@ fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters
             break;
         }
         case OP_SMOOTH_UNION: {
-            pSurface = opSmoothUnion(current_surface, pSurface, SMOOTH_FACTOR);
+            pSurface = opSmoothUnion(current_surface, pSurface, smooth_factor);
             break;
         }
         case OP_SMOOTH_SUBSTRACTION: {
-            pSurface = opSmoothSubtraction(current_surface, pSurface, SMOOTH_FACTOR);
+            pSurface = opSmoothSubtraction(current_surface, pSurface, smooth_factor);
             break;
         }
         case OP_SMOOTH_INTERSECTION: {
-            pSurface = opSmoothIntersection(current_surface, pSurface, SMOOTH_FACTOR);
+            pSurface = opSmoothIntersection(current_surface, pSurface, smooth_factor);
             break;
         }
         case OP_SMOOTH_PAINT: {
-            pSurface = opSmoothPaint(current_surface, pSurface, stroke_material, SMOOTH_FACTOR);
+            pSurface = opSmoothPaint(current_surface, pSurface, stroke_material, smooth_factor);
             break;
         }
         default: {
