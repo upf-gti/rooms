@@ -1,3 +1,4 @@
+#include ../math.wgsl
 #include sdf_functions.wgsl
 #include octree_includes.wgsl
 #include material_packing.wgsl
@@ -216,6 +217,8 @@ fn apply_light(toEye : vec3f, position : vec3f, position_world : vec3f, lightPos
     return final_color;
     //return normal;
     //return diffuse;
+    // return vec3f(m.roughness);
+
 }
 
 

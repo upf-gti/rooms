@@ -1,3 +1,4 @@
+#include ../math.wgsl
 #include sdf_functions.wgsl
 #include octree_includes.wgsl
 #include sdf_interval_functions.wgsl
@@ -167,6 +168,11 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         var current_edit : Edit = stroke.edits[current_unpacked_edit_idx];
 
         surface_interval = eval_edit_interval(x_range, y_range, z_range, stroke.primitive, stroke.operation, stroke.parameters, surface_interval, current_edit);
+
+        // if (stroke.operation == OP_SMOOTH_UNION) {
+        //     current_edit.dimensions += vec4f(SMOOTH_FACTOR * 2.0);
+        // }
+
         new_edits_surface_interval = eval_edit_interval(x_range, y_range, z_range, stroke.primitive, OP_UNION, stroke.parameters, new_edits_surface_interval, current_edit);
 
         // Check if the edit affects the current voxel, if so adds it to the packed list
@@ -198,10 +204,10 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         surface_interval_smooth += vec2f(-SMOOTH_FACTOR * 0.25, 10.0 / 512.0);
         new_edits_surface_interval += vec2f(-SMOOTH_FACTOR * 0.25, 10.0 / 512.0);
     } 
-    else if (is_smooth_substract) {
-        // surface_interval_smooth += vec2f(-SMOOTH_FACTOR * 0.25, 10.0 / 512.0);
-        // new_edits_surface_interval += vec2f(-SMOOTH_FACTOR * 0.25, 10.0 / 512.0);
-    }
+    // else if (is_smooth_substract) {
+    //     // surface_interval_smooth += vec2f(-SMOOTH_FACTOR * 0.25, 10.0 / 512.0);
+    //     // new_edits_surface_interval += vec2f(-SMOOTH_FACTOR * 0.25, 10.0 / 512.0);
+    // }
 
     let global_surface_inside : bool = surface_interval_smooth.y < 0.0;
     let global_surface_outside : bool = surface_interval_smooth.x > 0.0;

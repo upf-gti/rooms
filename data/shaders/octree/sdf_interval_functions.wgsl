@@ -1,3 +1,4 @@
+
 // Interval operations
 
 fn iavec3_vecs(x : vec2f, y : vec2f, z : vec2f) -> mat3x3f
@@ -102,6 +103,14 @@ fn imul_float_vec(a : f32, b : vec2f) -> vec2f
 	return vec2f(
 		min(f[0],f[1]),
 		max(f[0],f[1]));
+}
+
+fn ifix_interval(a : vec2f) -> vec2f
+{
+    return vec2f(
+		min(a[0],a[1]),
+		max(a[0],a[1])
+    );
 }
 
 fn imul_mats(a : mat3x3f, b : mat3x3f) -> mat3x3f
@@ -240,6 +249,32 @@ fn ilength(a : mat3x3f) -> vec2f
 	return isqrt(c[0].xy + c[1].xy + c[2].xy);
 }
 
+fn icross_mats(a : mat3x3f, b : mat3x3f) -> mat3x3f
+{
+	return iavec3_vecs(
+        isub_vecs(imul_vec2_vec2(a[1].xy, b[2].xy), imul_vec2_vec2(b[1].xy, a[2].xy)),
+        isub_vecs(imul_vec2_vec2(a[2].xy, b[0].xy), imul_vec2_vec2(b[2].xy, a[0].xy)),
+        isub_vecs(imul_vec2_vec2(a[0].xy, b[1].xy), imul_vec2_vec2(b[0].xy, a[1].xy))
+    );
+}
+
+fn icross_vec_mat(a : vec3f, b : mat3x3f) -> mat3x3f
+{
+	return iavec3_vecs(
+        isub_vecs(imul_float_vec(a.y, b[2].xy), imul_vec_float(b[1].xy, a.z)),
+        isub_vecs(imul_float_vec(a.z, b[0].xy), imul_vec_float(b[2].xy, a.x)),
+        isub_vecs(imul_float_vec(a.x, b[1].xy), imul_vec_float(b[0].xy, a.y))
+    );
+}
+
+fn irotate_point_quat(position : mat3x3f, rotation : vec4f) -> mat3x3f
+{
+    let crosses : mat3x3f = icross_vec_mat(rotation.xyz, iadd_mats(icross_vec_mat(rotation.xyz, position), imul_float_mat(rotation.w, position)));
+    let position_rotated : mat3x3f = iadd_mats(position, imul_float_mat(2.0, crosses));
+
+    return position_rotated;
+}
+
 fn idot(a : mat3x3f, b : mat3x3f) -> vec2f
 {
 	let c : mat3x3f = imul_mats(a,b);
@@ -363,12 +398,6 @@ fn opSubtractionInterval( s1 : vec2f, s2 : vec2f ) -> vec2f
    return imax(s1, ineg(s2));
 }
 
-fn sphere_interval(p : mat3x3f, offset : vec3f, r : f32) -> vec2f
-{
-	// x^2 + y^2 + z^2 - r^2
-	return isub_vecs(ilensq(isub_mat_vec(p, offset)), vec2f(r*r));
-}
-
 fn imat_add_to_upper(p : mat3x3f, v : vec3f) -> mat3x3f {
     var p_edit : mat3x3f = p;
     p_edit[0].x += v.x;
@@ -394,24 +423,24 @@ fn idot_mat(v1 : mat3x3f, v2 : mat3x3f) -> vec2f {
 		imul_vec2_vec2(v1[2].xy, v2[2].xy));
 }
 
+
+fn sphere_interval(p : mat3x3f, offset : vec3f, r : f32) -> vec2f
+{
+	// x^2 + y^2 + z^2 - r^2
+	return isub_vecs(ilensq(isub_mat_vec(p, offset)), vec2f(r*r));
+}
+
 // TODO rotation
 fn box_interval(p : mat3x3f, edit_pos : vec3f, rotation : vec4f, size : vec3f) -> vec2f {
     let mat_zero_interval : mat3x3f = mat3x3f(vec3f(0.0), vec3f(0.0), vec3f(0.0));
 
-    // Middle point rotation
-    let pos_minus_size : mat3x3f = isub_mat_vec(p, edit_pos);
+    // Move edit
+    let interval_translated : mat3x3f = irotate_point_quat(isub_mat_vec(p, edit_pos), rotation);
 
-    let middle_point : vec3f = (vec3f(pos_minus_size[0].y, pos_minus_size[1].y, pos_minus_size[2].y) - vec3f(pos_minus_size[0].x, pos_minus_size[1].x, pos_minus_size[2].x)) / 2.0;
-    let nomr_p : mat3x3f = imat_add_to_upper(imat_add_to_lower(pos_minus_size, -middle_point), -middle_point);
+    let interval_translated_sized : mat3x3f = isub_mat_vec(iabs_mats(interval_translated), size);
 
-    let rot_norm_interval :  mat3x3f = irotate_interval_mats(nomr_p, rotation);
-
-    let rot_pos_minus_size : mat3x3f = imat_add_to_upper(imat_add_to_lower(rot_norm_interval, middle_point), middle_point);
-
-    let abs_pos_minus_size : mat3x3f = isub_mat_vec(iabs_mats(pos_minus_size), size);
-
-    var i_distance : vec2f = ilength(imax_mats(abs_pos_minus_size, mat_zero_interval));
-    var max_on_all_axis : vec2f = imax(abs_pos_minus_size[0].xy, imax(abs_pos_minus_size[1].xy, abs_pos_minus_size[2].xy));
+    var i_distance : vec2f = ilength(imax_mats(interval_translated_sized, mat_zero_interval));
+    var max_on_all_axis : vec2f = imax(interval_translated_sized[0].xy, imax(interval_translated_sized[1].xy, interval_translated_sized[2].xy));
     var i_dist2 : vec2f =  imin(max_on_all_axis , vec2f(0.0, 0.0));
 
     return iadd_vecs(i_distance, i_dist2);

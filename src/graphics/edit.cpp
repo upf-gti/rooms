@@ -129,9 +129,6 @@ AABB Stroke::get_edit_world_AABB(const uint8_t edit_index) const {
 
     // TODO: Add smooth margin
 
-    glm::vec3 rotated_mx_size = glm::vec3(-1000.0f, -1000.0f, -1000.0f);
-    glm::vec3 rotated_min_size = glm::vec3(1000.0f, 1000.0f, 1000.0f);
-
     glm::quat edit_rotation = { 0.0, 0.0, 0.0, 1.0 };
 
     const Edit& edit = edits[edit_index];
@@ -150,25 +147,27 @@ AABB Stroke::get_edit_world_AABB(const uint8_t edit_index) const {
                                 edit_rotation * glm::vec3(-pure_edit_half_size.x, -pure_edit_half_size.y,  pure_edit_half_size.z),
                                 edit_rotation * glm::vec3(-pure_edit_half_size.x, -pure_edit_half_size.y, -pure_edit_half_size.z) };
 
+
+    glm::vec3 rotated_max_size = glm::vec3(-FLT_MAX);
+    glm::vec3 rotated_min_size = glm::vec3(FLT_MAX);
+
     for (uint8_t i = 0; i < 8; i++) {
-        rotated_mx_size.x = glm::max(rotated_mx_size.x, axis[i].x);
-        rotated_mx_size.y = glm::max(rotated_mx_size.y, axis[i].y);
-        rotated_mx_size.z = glm::max(rotated_mx_size.z, axis[i].z);
+        rotated_max_size.x = glm::max(rotated_max_size.x, axis[i].x);
+        rotated_max_size.y = glm::max(rotated_max_size.y, axis[i].y);
+        rotated_max_size.z = glm::max(rotated_max_size.z, axis[i].z);
 
         rotated_min_size.x = glm::min(rotated_min_size.x, axis[i].x);
         rotated_min_size.y = glm::min(rotated_min_size.y, axis[i].y);
         rotated_min_size.z = glm::min(rotated_min_size.z, axis[i].z);
     }
 
-    const glm::vec3 edit_half_size = (rotated_mx_size - rotated_min_size) / 2.0f;
+    const glm::vec3 edit_half_size = (rotated_max_size - rotated_min_size) / 2.0f;
 
     return { (edits[edit_index].position), edit_half_size };
 }
 
 
 AABB Stroke::get_world_AABB() const {
-    glm::vec3 it_min = glm::vec3(FLT_MAX), it_max = glm::vec3(-FLT_MAX);
-
     AABB world_aabb;
     for (uint8_t i = 0u; i < edit_count; i++) {
         AABB aabb = get_edit_world_AABB(i);

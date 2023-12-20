@@ -1,4 +1,3 @@
-const M_PI = 3.14159265359;
 
 // SD Primitives
 
@@ -60,30 +59,6 @@ fn Material_mix(m1 : Material, m2 : Material, t : f32) -> Material {
 }
 
 // Primitives
-
-fn rotate_point_quat(position : vec3f, rotation : vec4f) -> vec3f
-{
-    return position + 2.0 * cross(rotation.xyz, cross(rotation.xyz, position) + rotation.w * position);
-}
-
-fn quat_mult(q1 : vec4f, q2 : vec4f) -> vec4f
-{
-    return vec4f(
-        q2.xyz * q1.w + q1.xyz * q2.w + cross(q1.xyz, q2.xyz),
-        q1.w * q2.w - dot(q1.xyz, q2.xyz)
-    );
-}
-
-fn quat_conj(q : vec4f) -> vec4f
-{
-    return vec4f(-q.x, -q.y, -q.z, q.w);
-}
-
-fn quat_inverse(q : vec4f) -> vec4f
-{
-    let conj : vec4f = quat_conj(q);
-    return conj / (q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w);
-}
 
 fn sdPlane( p : vec3f, c : vec3f, n : vec3f, h : f32, material : Material) -> Surface
 {
@@ -465,7 +440,7 @@ fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters
             size -= onion_thickness;
             size_param -= onion_thickness; 
 
-            pSurface = sdBox(position, edit.position, edit.rotation, size - size_param, size_param, stroke_material);
+            pSurface = sdBox(position, edit.position, edit.rotation, size, 0.0, stroke_material);
             break;
         }
         case SD_CAPSULE: {

@@ -160,14 +160,14 @@ void RaymarchingRenderer::push_edit(const Edit edit) {
     if (in_frame_stroke.edit_count == MAX_EDITS_PER_EVALUATION) {
         to_compute_stroke_buffer.push_back(in_frame_stroke);
         in_frame_stroke.edit_count = 0;
-        spdlog::info("prolongation");
+        //spdlog::info("prolongation");
     }
 
     in_frame_stroke.edits[in_frame_stroke.edit_count++] = edit;
 
     if (current_stroke.edit_count == MAX_EDITS_PER_EVALUATION) {
 
-        spdlog::info("add to history");
+        //spdlog::info("add to history");
 
         // Add it to the history
         stroke_history.push_back(current_stroke);
@@ -430,7 +430,7 @@ void RaymarchingRenderer::compute_octree()
         return;
     }
 
-    //RenderdocCapture::start_capture_frame();
+    RenderdocCapture::start_capture_frame();
 
     //spdlog::debug(in_frame_stroke.edits[0].to_string());
 
@@ -442,7 +442,7 @@ void RaymarchingRenderer::compute_octree()
 
     to_compute_stroke_buffer.clear();
 
-    //RenderdocCapture::end_capture_frame();
+    RenderdocCapture::end_capture_frame();
 }
 
 void RaymarchingRenderer::render_raymarching_proxy(WGPUTextureView swapchain_view, WGPUTextureView swapchain_depth)

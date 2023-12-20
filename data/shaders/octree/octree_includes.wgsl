@@ -18,10 +18,11 @@ const MIN_HIT_DIST = 0.00005;
 const FILLED_BRICK_FLAG = 0x80000000u;
 const INTERIOR_BRICK_FLAG = 0x40000000u;
 
-const SMOOTH_FACTOR = 0.01;
+const SMOOTH_FACTOR = 0.005;
 
 struct Edit {
     position   : vec3f,
+    dummy0     : f32,
     dimensions : vec4f,
     rotation   : vec4f
 };

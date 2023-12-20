@@ -1,3 +1,4 @@
+#include ../math.wgsl
 #include sdf_functions.wgsl
 #include octree_includes.wgsl
 #include material_packing.wgsl
@@ -59,6 +60,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     material.albedo = stroke.color.xyz;
     material.roughness = stroke.material.x;
     material.metalness = stroke.material.y;
+
+    //sSurface.material = material;
 
     // If the MSb is setted we load the previous data of brick
     // if not, we set it for the next iteration
