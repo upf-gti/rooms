@@ -511,6 +511,8 @@ fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f,  primitive : u32, 
     var onion_thickness : f32 = edit_parameters.x;
     let do_onion = onion_thickness > 0.0;
 
+    let smooth_factor : f32 = edit_parameters.w;
+
     switch (primitive) {
         case SD_SPHERE: {
             onion_thickness = map_thickness( onion_thickness, radius );
@@ -603,11 +605,11 @@ fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f,  primitive : u32, 
             break;
         }
         case OP_SMOOTH_UNION: {
-            pSurface = opSmoothUnionInterval(current_interval, pSurface, SMOOTH_FACTOR);
+            pSurface = opSmoothUnionInterval(current_interval, pSurface, smooth_factor);
             break;
         }
         case OP_SMOOTH_SUBSTRACTION: {
-            pSurface = opSmoothSubtractionInterval(current_interval, pSurface, SMOOTH_FACTOR);
+            pSurface = opSmoothSubtractionInterval(current_interval, pSurface, smooth_factor);
             break;
         }
         case OP_SMOOTH_INTERSECTION: {

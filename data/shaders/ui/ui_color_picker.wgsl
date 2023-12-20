@@ -64,7 +64,7 @@ fn hsv2rgb_smooth( c : vec3f ) -> vec3f
 
 fn getColor( uvs : vec2f ) -> vec3f
 {
-    let pi = 3.1415927;
+    let pi = 3.14159265359;
 
     var p = uvs;
     

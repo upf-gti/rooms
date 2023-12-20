@@ -18,8 +18,6 @@ const MIN_HIT_DIST = 0.00005;
 const FILLED_BRICK_FLAG = 0x80000000u;
 const INTERIOR_BRICK_FLAG = 0x40000000u;
 
-const SMOOTH_FACTOR = 0.005;
-
 struct Edit {
     position   : vec3f,
     dummy0     : f32,
@@ -28,14 +26,14 @@ struct Edit {
 };
 
 struct Stroke {
-    stroke_id   : u32,
-    edit_count  : u32,
-    primitive   : u32,
-    operation   : u32,
-    parameters  : vec4f,
-    color       : vec4f,
-    material    : vec4f,
-    edits       : array<Edit, MAX_EDITS_PER_EVALUATION>
+    stroke_id       : u32,
+    edit_count      : u32,
+    primitive       : u32,
+    operation       : u32,
+    parameters      : vec4f,
+    color           : vec4f,
+    material        : vec4f,
+    edits           : array<Edit, MAX_EDITS_PER_EVALUATION>
 }
 
 struct OctreeNode {

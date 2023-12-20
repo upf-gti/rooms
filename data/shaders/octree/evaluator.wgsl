@@ -201,8 +201,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
 
     if (is_smooth_union) {
-        surface_interval_smooth += vec2f(-SMOOTH_FACTOR * 0.25, 10.0 / 512.0);
-        new_edits_surface_interval += vec2f(-SMOOTH_FACTOR * 0.25, 10.0 / 512.0);
+        surface_interval_smooth += vec2f(-stroke.parameters.w * 0.25, 10.0 / 512.0);
+        new_edits_surface_interval += vec2f(-stroke.parameters.w * 0.25, 10.0 / 512.0);
     } 
     // else if (is_smooth_substract) {
     //     // surface_interval_smooth += vec2f(-SMOOTH_FACTOR * 0.25, 10.0 / 512.0);

@@ -47,7 +47,7 @@ struct alignas(16) Edit {
 class StrokeParameters {
     sdPrimitive primitive = SD_SPHERE;
     sdOperation operation = OP_UNION;
-    glm::vec4   parameters = { 0.f, -1.f, 0.f, 0.f };
+    glm::vec4   parameters = { 0.f, -1.f, 0.f, 0.0f };
     Color       color = colors::RED;
     glm::vec4   material = { 0.7f, 0.2f, 0.f, 0.f }; // rough, metallic, emissive, unused
 
@@ -57,6 +57,7 @@ public:
     void set_primitive(sdPrimitive primitive);
     void set_operation(sdOperation op);
     void set_parameters(const glm::vec4& parameters);
+    void set_smooth_factor(const float smooth_factor);
     void set_color(const Color& color);
     void set_material(const glm::vec4& material);
     void set_material_roughness(float roughness);

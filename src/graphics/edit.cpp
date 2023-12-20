@@ -74,6 +74,11 @@ void StrokeParameters::set_parameters(const glm::vec4& parameters)
     dirty = true;
 }
 
+void StrokeParameters::set_smooth_factor(const float smooth_factor) {
+    parameters.w = smooth_factor;
+    dirty = true;
+}
+
 void StrokeParameters::set_color(const Color& color)
 {
     this->color = color;
@@ -103,21 +108,23 @@ glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const {
     glm::vec3 size = glm::vec3(edits[edit_index].dimensions);
     float radius = edits[edit_index].dimensions.x;
 
+    const glm::vec3 smooth_margin = glm::vec3(parameters.w);
+
     switch (primitive) {
     case SD_SPHERE:
-        return glm::vec3(size.x);
+        return glm::vec3(size.x) + smooth_margin;
     case SD_BOX:
-        return size;
+        return size + smooth_margin;
     case SD_CAPSULE:
-        return glm::abs(edits[edit_index].position - size) + radius;
+        return glm::abs(edits[edit_index].position - size) + radius + smooth_margin;
     case SD_CONE:
-     	return glm::abs(edits[edit_index].position - size) + radius * 2.0f;
-        //case SD_PYRAMID:
+     	return glm::abs(edits[edit_index].position - size) + radius * 2.0f + smooth_margin;
+    //case SD_PYRAMID:
         //	return glm::abs(position - size) + radius * 2.0f;
     case SD_CYLINDER:
-        return glm::vec3(radius, size.y, radius);
+        return glm::vec3(radius, size.y, radius) + smooth_margin;
     case SD_TORUS:
-        return glm::abs(size) + radius * 2.0f;
+        return glm::abs(size) + radius * 2.0f + smooth_margin;
     default:
         assert(false);
         return {};
