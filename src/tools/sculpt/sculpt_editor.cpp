@@ -80,7 +80,7 @@ void SculptEditor::initialize()
 
         // Controller buttons
 
-        gui.bind(XR_BUTTON_B, [&]() { stamp_enabled = !stamp_enabled; });
+        helper_gui.bind(XR_BUTTON_B, [&]() { stamp_enabled = !stamp_enabled; });
 
         // Bind recent color buttons...
 
