@@ -25,10 +25,10 @@ bool Tool::update(float delta_time, StrokeParameters& stroke_parameters)
 
 bool Tool::use_tool()
 {
-    if (edit_to_add.weigth_difference(previous_edit) > 0.003f) {
-        previous_edit = edit_to_add;
-        return true;
-    }
+    //if (edit_to_add.weigth_difference(previous_edit) > 0.003f) {
+    //    previous_edit = edit_to_add;
+    //    return true;
+    //}
 
-    return false;
+    return true;
 }
