@@ -446,7 +446,8 @@ fn box_interval(p : mat3x3f, edit_pos : vec3f, rotation : vec4f, size : vec3f) -
     return iadd_vecs(i_distance, i_dist2);
 }
 
-fn isign_vec2(v : vec2f) -> vec2f {
+fn isign_vec2(v : vec2f) -> vec2f
+{
     var s : vec2f = vec2f(1.0, 1.0);
 
     if (v.x < 0.0) {
@@ -461,8 +462,9 @@ fn isign_vec2(v : vec2f) -> vec2f {
 }
 
 // sdCylinder(p : vec3f, a : vec3f, b : vec3f, rotation : vec4f, r : f32, rr : f32, color : vec3f) -> Surface
-fn cylinder_interval(p : mat3x3f, start_pos : vec3f, rotation : vec4f, radius : f32, height : f32) -> vec2f {
-    let cyl_origin : mat3x3f = isub_mat_vec(p, start_pos);
+fn cylinder_interval(p : mat3x3f, start_pos : vec3f, rotation : vec4f, radius : f32, height : f32) -> vec2f
+{
+    let cyl_origin : mat3x3f = irotate_point_quat(isub_mat_vec(p, start_pos), rotation);
     
     let d_x : vec2f = isub_vec_float(iabs(isqrt(ipow2_vec(cyl_origin[0].xy) + ipow2_vec(cyl_origin[2].xy))), height); 
     let d_y : vec2f = isub_vec_float(iabs(cyl_origin[1].xy), height); 
