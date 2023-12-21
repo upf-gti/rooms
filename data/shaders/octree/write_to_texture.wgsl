@@ -92,12 +92,12 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
         // Rust example.. ??
 
-        var noise_value = fbm( pos, vec3f(0.0), 10.0, 1.0, 4 ) * 0.5 + 0.5;
-        noise_value = clamp(smoothstep( 0.5, 1.0, noise_value ) * 1.5, 0.0, 1.0);
+        var noise_value = fbm( pos, vec3f(0.0), 20.0, 1.0, 8 );
+        noise_value = clamp(noise_value, 0.0, 1.0);
 
-        material.albedo = mix(stroke.color.xyz, vec3f(0.72, 0.25, 0.05), noise_value);
-        material.roughness = mix(stroke.material.x, 1.0, noise_value);
-        material.metalness = mix(stroke.material.y, 0.0, noise_value);
+        material.albedo = mix(stroke.color.xyz, stroke.color.xyz * vec3f(0.82, 0.35, 0.15), noise_value);
+        material.roughness = mix(stroke.material.x, 1.0, noise_value * 1.5);
+        material.metalness = mix(stroke.material.y, 0.25, noise_value * 1.5);
 
         sSurface = evaluate_edit(pos, stroke.primitive, stroke.operation, stroke.parameters, sSurface, material, edit);
     }

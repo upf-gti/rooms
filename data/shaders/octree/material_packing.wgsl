@@ -1,6 +1,6 @@
 
 /*
-    RGB: R 7 bits + B 8 bits + G 7 bits = 22 bits
+    RGB: R 7 bits + G 8 bits + B 7 bits = 22 bits
     Metalness: 5 bits
     Roughness: 5 bits
 */
@@ -36,8 +36,8 @@ fn pack_material(material : Material) -> u32 {
     let green : u32 = u32(material.albedo.g * 255.0);
     let blue : u32 = u32(material.albedo.b * 127.0);
 
-    let roughness : u32 = u32(material.roughness * 31.0);
-    let metalness : u32 = u32(material.metalness * 31.0);
+    let roughness : u32 = u32(round(material.roughness * 31.0));
+    let metalness : u32 = u32(round(material.metalness * 31.0));
 
     packed_material = red << 25u;
     packed_material |= green << 17u;
