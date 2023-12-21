@@ -67,9 +67,11 @@ void RoomsRenderer::clean()
 
 void RoomsRenderer::update(float delta_time)
 {
+#if defined(XR_SUPPORT)
     if (is_openxr_available) {
         xr_context.update();
     }
+#endif
 
     camera->update(delta_time);
 
@@ -309,10 +311,11 @@ void RoomsRenderer::resize_window(int width, int height)
 
 glm::vec3 RoomsRenderer::get_camera_eye()
 {
+#if defined(XR_SUPPORT)
     if (is_openxr_available) {
-        // return left eye
-        return xr_context.per_view_data[0].position;
+        return xr_context.per_view_data[0].position; // return left eye
     }
+#endif
 
     return camera->get_eye();
 }
