@@ -4,6 +4,14 @@
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>WebGPU Engine</title>
+    <link rel="stylesheet" href="https://cdn.skypack.dev/lexgui/build/lexgui.css">
+    <script type="importmap">
+      {
+          "imports": {
+            "lexgui": "https://cdn.skypack.dev/lexgui/build/lexgui.module.js"
+          }
+      }
+    </script>
   </head>
   <body>
     <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex=-1 style="position:fixed;height:100%;width:100%;top:0%;left:0%;resize:both;"></canvas>
@@ -43,5 +51,6 @@
         }
       })();
     </script>
+    <script type="module" src="../script.js"></script>
   </body>
 </html>

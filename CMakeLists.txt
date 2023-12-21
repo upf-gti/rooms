@@ -63,12 +63,15 @@ if (EMSCRIPTEN)
         -sUSE_WEBGPU
         -sALLOW_MEMORY_GROWTH
         -sASYNCIFY
+#        -sEXPORTED_RUNTIME_METHODS=ccall,cwrap
+#        -sEXPORTED_FUNCTIONS=_main
 #        -sWASM=0
         -sASSERTIONS
 #        -fsanitize=address
         -Wdeprecated-literal-operator
         -sSTACK_SIZE=5MB
-        #        -O3
+        -lembind # to bind functions from c++ to javascript
+#        -O3
         # only for dev
 #        -sERROR_ON_WASM_CHANGES_AFTER_LINK
 #        -sWASM_BIGINT
