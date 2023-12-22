@@ -147,6 +147,12 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
     var new_packed_edit_idx : u32 = 0;
 
+    var edit_cutoff_distance : f32 = 0.0;
+
+    if (is_smooth_union) {
+        edit_cutoff_distance = stroke.parameters.w;
+    }
+
     // Check the edits in the parent, and fill its own list with the edits that affect this child
     for (var i : u32 = 0; i < edit_culling_data.edit_culling_count[parent_octree_index] ; i++) {
         // Accessing a packed indexed edit in the culling list:
@@ -166,17 +172,18 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         let z_range : vec2f = vec2f(octant_center.z - level_half_size, octant_center.z + level_half_size);
 
         var current_edit : Edit = stroke.edits[current_unpacked_edit_idx];
+        var edit_interval : vec2f;
 
-        surface_interval = eval_edit_interval(x_range, y_range, z_range, stroke.primitive, stroke.operation, stroke.parameters, surface_interval, current_edit);
+        surface_interval = eval_edit_interval(x_range, y_range, z_range, stroke.primitive, stroke.operation, stroke.parameters, surface_interval, current_edit, &edit_interval);
 
         // if (stroke.operation == OP_SMOOTH_UNION) {
         //     current_edit.dimensions += vec4f(SMOOTH_FACTOR * 2.0);
         // }
 
-        new_edits_surface_interval = eval_edit_interval(x_range, y_range, z_range, stroke.primitive, OP_UNION, stroke.parameters, new_edits_surface_interval, current_edit);
+        new_edits_surface_interval = eval_edit_interval(x_range, y_range, z_range, stroke.primitive, OP_UNION, stroke.parameters, new_edits_surface_interval, current_edit, &edit_interval);
 
         // Check if the edit affects the current voxel, if so adds it to the packed list
-        if (true) {
+        if (edit_interval.x < edit_cutoff_distance) {
             // Using the edit counter, sift the edit id to the position in the current word, and adds it
             new_packed_edit_idx = new_packed_edit_idx | (current_unpacked_edit_idx << ((3 - edit_counter % 4) * 8));
 
