@@ -312,8 +312,8 @@ fn sminPoly(a : f32, b : f32, k : f32) -> vec2f {
 
 fn opSmoothUnion( s1 : Surface, s2 : Surface, k : f32 ) -> Surface
 {
-    let smin : vec2f = soft_min(s2.distance, s1.distance, k);
-    //let smin : vec2f = sminPoly(s2.distance, s1.distance, k);
+    //let smin : vec2f = soft_min(s2.distance, s1.distance, k);
+    let smin : vec2f = sminPoly(s2.distance, s1.distance, k);
     var sf : Surface;
     sf.distance = smin.x;
     sf.material = Material_mix(s2.material, s1.material, smin.y);

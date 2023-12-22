@@ -68,7 +68,7 @@ bool SculptTool::update(float delta_time, StrokeParameters& stroke_parameters)
             stroke_parameters.set_operation(OP_SMOOTH_UNION);
             stroke_parameters.set_material_metallic(0.9);
             stroke_parameters.set_material_roughness(0.2);
-            stroke_parameters.set_smooth_factor(0.01);
+            stroke_parameters.set_smooth_factor(0.02);
 		}
 
         return use_tool();
