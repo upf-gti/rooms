@@ -15,6 +15,8 @@
 @group(2) @binding(0) var<storage, read> octant_usage_read : array<u32>;
 @group(2) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
 
+@group(3) @binding(0) var<storage, read_write> preview_proxy_instances : PreviewProxyInstances;
+
 /*
     Octree Octant indexing
         - 3 bits per each layer, describes 8 octants.
@@ -263,8 +265,22 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             //octree.data[octree_index].tile_pointer = FILLED_BRICK_FLAG;
         }
     } else {
+        if ((state.evaluation_mode & EVALUATE_PREVIEW_STROKE_FLAG) == EVALUATE_PREVIEW_STROKE_FLAG) {
+            if (is_current_brick_filled) {
+                // Mark current brick in order to evaluate the stroke
+            } else {
+                // If it is not the surface
+                if (stroke.operation == OP_UNION || stroke.operation == OP_SMOOTH_UNION) {
+                    // Add exterior preview bricks
+                } else { // Substract
+                    else if (is_interior_brick) {
+                        // Add preview bricks inside
+                    }
+                }
+            }
+        }
         // In the case that the incomming edits's operation is either Add or Smooth Add
-        if (stroke.operation == OP_UNION || stroke.operation == OP_SMOOTH_UNION) {
+        else if (stroke.operation == OP_UNION || stroke.operation == OP_SMOOTH_UNION) {
             // IF ITS A UNION OPERATION ================
             if (global_surface_outside || global_surface_inside) {
                 // if is inside or outside the resulting SDF, we delete the brick

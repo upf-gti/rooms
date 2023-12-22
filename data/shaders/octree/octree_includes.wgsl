@@ -3,6 +3,7 @@
 #define MAX_EDITS_PER_EVALUATION
 #define OCTREE_DEPTH
 #define OCTREE_TOTAL_SIZE
+#define PREVIEW_PROXY_BRICKS_COUNT
 
 const WORLD_SPACE_SCALE = 512.0; // A texel brick is 1/512 m
 const SCALE_CONVERSION_FACTOR = WORLD_SPACE_SCALE / SDF_RESOLUTION;
@@ -89,6 +90,26 @@ struct OctreeProxyInstancesNonAtomic {
     atlas_empty_bricks_counter : u32,
     atlas_empty_bricks_buffer : array<u32, TOTAL_BRICK_COUNT>,
     instance_data: array<ProxyInstanceData>
+};
+
+struct PreviewProxyInstances {
+    // Indirect buffer for dispatch
+    vertex_count : u32,
+    instance_count : atomic<u32>,
+    first_vertex : u32,
+    firt_instance: u32,
+    // Instance data storage, for rendering
+    instance_data: array<ProxyInstanceData, PREVIEW_PROXY_BRICKS_COUNT>
+};
+
+struct PreviewProxyInstancesNonAtomic {
+    // Indirect buffer for dispatch
+    vertex_count : u32,
+    instance_count : u32,
+    first_vertex : u32,
+    firt_instance: u32,
+    // Instance data storage, for rendering
+    instance_data: array<ProxyInstanceData, PREVIEW_PROXY_BRICKS_COUNT>
 };
 
 struct OctreeProxyIndirect {
