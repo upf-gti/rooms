@@ -22,6 +22,15 @@ fn intersection_AABB_AABB(b1_min : vec3f, b1_max : vec3f, b2_min : vec3f, b2_max
     return (b1_min.x <= b2_max.x && b1_min.y <= b2_max.y && b1_min.z <= b2_max.z) && (b1_max.x >= b2_min.x && b1_max.y >= b2_min.y && b1_max.z >= b2_min.z);
 }
 
+const delta_pos = array<vec3f, 6>(
+    vec3f(1.0, 0.0, 0.0),
+    vec3f(0.0, 1.0, 0.0),
+    vec3f(0.0, 0.0, 1.0),
+    vec3f(-1.0, 0.0, 0.0),
+    vec3f(0.0, -1.0, 0.0),
+    vec3f(0.0, 0.0, -1.0)
+);
+
 @compute @workgroup_size(10,10,10)
 fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation_id) local_id: vec3<u32>)
 {
@@ -78,6 +87,15 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
         sSurface.distance = -100.0;
     }
 
+    var surface_samplers :  array<Surface, 6> =  array<Surface, 6>(
+        sSurface,
+        sSurface,
+        sSurface,
+        sSurface,
+        sSurface,
+        sSurface
+    );
+
     // Offset for a 10 pixel wide brick
     let pixel_offset : vec3f = (vec3f(local_id) - 4.5) * PIXEL_WORLD_SIZE;
 
@@ -99,8 +117,18 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
         material.roughness = mix(stroke.material.x, 1.0, noise_value * 1.5);
         material.metalness = mix(stroke.material.y, 0.25, noise_value * 1.5);
 
-        sSurface = evaluate_edit(pos, stroke.primitive, stroke.operation, stroke.parameters, sSurface, material, edit);
+        for(var i : u32 = 0u; i < 6u; i++) {
+            surface_samplers[i] = evaluate_edit(pos + delta_pos[i] * BRICK_WORLD_QUARTER_SIZE, stroke.primitive, stroke.operation, stroke.parameters, surface_samplers[i], material, edit);
+        }
     }
+
+    sSurface = surface_samplers[5u];
+    for(var i : u32 = 0u; i < 5u; i++) {
+        sSurface.distance = surface_samplers[i].distance + sSurface.distance;
+        sSurface.material = Material_sum_Material(surface_samplers[i].material, sSurface.material);
+    }
+    sSurface.material = Material_mult_by(sSurface.material, 1.0 / 6.0);
+    sSurface.distance = sSurface.distance / 6.0;
 
     if (sSurface.distance < MIN_HIT_DIST) {
         atomicAdd(&used_pixels, 1);
