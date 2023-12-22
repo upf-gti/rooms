@@ -5,9 +5,9 @@
 
 class RoomsEngine : public Engine {
 
-    std::vector<Entity*> entities;
-
-    EntityMesh* skybox = nullptr;
+    static std::vector<Entity*> entities;
+    static EntityMesh* skybox;
+    static bool rotate_scene;
 
     SculptEditor sculpt_editor;
 
@@ -21,4 +21,10 @@ public:
 
 	void update(float delta_time) override;
 	void render() override;
+
+#ifdef __EMSCRIPTEN__
+    static void set_skybox_texture(const std::string& filename);
+    static void load_glb(const std::string& filename);
+    static void toggle_rotation();
+#endif
 };

@@ -8,14 +8,13 @@
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #include <emscripten/html5.h>
+#include <emscripten/bind.h>
 EM_JS(int, canvas_get_width, (), {
   return canvas.clientWidth;
 });
-
 EM_JS(int, canvas_get_height, (), {
   return canvas.clientHeight;
 });
-
 static EM_BOOL on_web_display_size_changed(int event_type,
     const EmscriptenUiEvent* ui_event, void* user_data)
 {
@@ -23,7 +22,14 @@ static EM_BOOL on_web_display_size_changed(int event_type,
     engine->resize_window(ui_event->windowInnerWidth, ui_event->windowInnerHeight);
     return true;
 }
-
+// Binding code
+EMSCRIPTEN_BINDINGS(_Class_) {
+    emscripten::class_<RoomsEngine>("Engine")
+        .constructor<>()
+        .class_function("setEnvironment", &RoomsEngine::set_skybox_texture)
+        .class_function("loadGLB", &RoomsEngine::load_glb)
+        .class_function("toggleSceneRotation", &RoomsEngine::toggle_rotation);
+}
 #endif
 
 void closeWindow(GLFWwindow* window)
