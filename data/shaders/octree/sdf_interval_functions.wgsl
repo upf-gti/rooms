@@ -500,7 +500,7 @@ fn cylinder_interval(p : mat3x3f, start_pos : vec3f, rotation : vec4f, radius : 
     //return idiv_vecs(imul_vec2_vec2(isign_vec2(d), isqrt(iabs(d))), cyl_lenght_square);
 }
 
-fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f,  primitive : u32, operation : u32, edit_parameters : vec4f, current_interval : vec2f, edit : Edit) -> vec2f
+fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f,  primitive : u32, operation : u32, edit_parameters : vec4f, current_interval : vec2f, edit : Edit, resulting_interval : ptr<function, vec2f>) -> vec2f
 {
     var pSurface : vec2f;
 
@@ -582,6 +582,8 @@ fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f,  primitive : u32, 
             break;
         }
     }
+
+    *resulting_interval = pSurface;
 
     // Shape edition ...
     if( do_onion && (operation == OP_UNION || operation == OP_SMOOTH_UNION) )
