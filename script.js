@@ -4,6 +4,11 @@ const Rooms = window.Rooms = {
 
     dragSupportedExtensions: [ 'hdre', 'glb' ],
 
+    init() {
+
+        this.initUI();
+    },
+
     initUI() {
 
         var area = LX.init();
@@ -28,63 +33,84 @@ const Rooms = window.Rooms = {
         new LX.PocketDialog( "Control Panel", p => {
 
             p.branch( "Digital Location", { closed: true } );
-            p.addText( "Name", "placeholder", null, { signal: "@location_name", disabled: true } );
-            p.addFile( "Load", (e) => { console.log(e) }, { type: 'bin', local: false } );
-            p.addCheckbox( "Rotate", false, null, { signal: "@location_name" } );
+            p.addText( "Name", "", null, { signal: "@location_name", disabled: true } );
+            p.addFile( "Load", (data, file) => this.loadGltf(data, file), { type: 'buffer', local: false } );
+            p.addCheckbox( "Rotate", false, () => Module.toggleSceneRotation() );
         
             p.branch( "Environment", { closed: true } );
-            p.addText( "Name", "placeholder", null, { signal: "@environment_name", disabled: true } );
-            p.addFile( "Load", (e) => this.loadEnvironment(e), { type: 'bin', local: false } );
+            p.addText( "Name", "", null, { signal: "@environment_name", disabled: true } );
+            p.addFile( "Load", (data, file) => this.loadEnvironment(data, file), { type: 'buffer', local: false } );
         
             p.branch( "Camera", { closed: true } );
             p.addDropdown( "Type", [ "Flyover", "Orbit" ], "Orbit" );
         
-        }, { size: ["20%", null], float: "left", draggable: false });
+        }, { size: [300, null], float: "left", draggable: false });
 
     },
 
-    loadEnvironment( data ) {
+    loadEnvironment( data, file ) {
 
         if( data.constructor === File )
         {
             const reader = new FileReader();
-            reader.readAsBinaryString( data );
-            reader.onload = e => this.loadEnvironmentBinary( e.target.result );
+            reader.readAsArrayBuffer( data );
+            reader.onload = e => this._loadEnvironment( data.name, e.target.result );
             return;
         }
         
-        this.loadEnvironmentBinary( data );
+        this._loadEnvironment( file.name, data );
     },
 
-    loadEnvironmentBinary( bin ) {
-
-        console.log( "Loading hdre binary", [ bin ] );
-
-        // TODO
-        // ...
-    },
-
-    loadGltf( data ) {
+    loadGltf( data, file ) {
 
         if( data.constructor === File )
         {
             const reader = new FileReader();
-            reader.readAsBinaryString( data );
-            reader.onload = e => this.loadGltfBinary( e.target.result );
+            reader.readAsArrayBuffer( data );
+            reader.onload = e => this._loadGltf( data.name, e.target.result );
             return;
         }
         
-        this.loadGltfBinary( data );
+        this._loadGltf( file.name, data );
     },
 
-    loadGltfBinary( bin ) {
+    _loadEnvironment( name, buffer ) {
 
-        console.log( "Loading gltf binary", [ bin ] );
+        name = name.substring( name.lastIndexOf( '/' ) );
+        
+        console.log( "Loading hdre", [ name, buffer ] );
 
-        // TODO
-        // ...
+        this._fileStore( name, buffer );
+
+        // This will load the hdre and set texture to the skybox
+        Module.Engine.setEnvironment( name );
+
+        // Update UI
+        LX.emit( '@environment_name', name.replace( '.hdre', '' ) );
+    },
+
+    _loadGltf( name, buffer ) {
+
+        name = name.substring( name.lastIndexOf( '/' ) );
+        
+        console.log( "Loading glb", [ name, buffer ] );
+
+        this._fileStore( name, buffer );
+
+        Module.Engine.loadGLB( name );
+
+        // Update UI
+        LX.emit( '@location_name', name.replace( '.glb', '' ) );
+    },
+
+    _fileStore( filename, buffer ) {
+
+        let data = new Uint8Array( buffer );
+        let stream = FS.open( filename, 'w+' );
+        FS.write( stream, data, 0, data.length, 0 );
+        FS.close( stream );
     }
 
 };
 
-Rooms.initUI();
+Rooms.init();

@@ -3,11 +3,14 @@
 #include "framework/entities/entity_text.h"
 #include "framework/input.h"
 #include "framework/scene/parse_scene.h"
+#include "framework/scene/parse_gltf.h"
 #include "graphics/renderers/rooms_renderer.h"
-
+#include "spdlog/spdlog.h"
 #include <fstream>
 
-#include "spdlog/spdlog.h"
+EntityMesh* RoomsEngine::skybox = nullptr;
+std::vector<Entity*> RoomsEngine::entities;
+bool RoomsEngine::rotate_scene = false;
 
 int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen)
 {
@@ -45,6 +48,11 @@ void RoomsEngine::update(float delta_time)
 
     RoomsRenderer* renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     skybox->set_translation(renderer->get_camera_eye());
+
+#ifdef __EMSCRIPTEN__
+    if (rotate_scene)
+        for (auto e : entities) e->rotate(delta_time, normals::pY);
+#endif
 
     sculpt_editor.update(delta_time);
 
@@ -163,6 +171,26 @@ bool RoomsEngine::import_scene()
     }
 
     spdlog::info("Scene imported! ({} edits, {} left)", scene_header.num_edits, edit_count);
-
+    
     return true;
 }
+
+#ifdef __EMSCRIPTEN__
+void RoomsEngine::set_skybox_texture(const std::string& filename)
+{
+    Texture* tex = RendererStorage::get_texture(filename);
+    skybox->set_material_diffuse(tex);
+}
+
+void RoomsEngine::load_glb(const std::string& filename)
+{
+    // TODO: We should destroy entities...
+    entities.clear();
+    parse_gltf(filename, entities);
+}
+
+void RoomsEngine::toggle_rotation()
+{
+    rotate_scene = !rotate_scene;
+}
+#endif
