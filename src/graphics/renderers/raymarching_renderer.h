@@ -18,6 +18,12 @@ class EntityMesh;
 
 class RaymarchingRenderer {
 
+    enum eEvaluatorOperationFlags : uint32_t {
+        CLEAN_BEFORE_EVAL = 0x0001u,
+        EVALUATE_PREVIEW_STROKE = 0x0002u
+    };
+
+
     Uniform         linear_sampler_uniform;
 
     Pipeline        render_proxy_geometry_pipeline;
@@ -76,7 +82,7 @@ class RaymarchingRenderer {
 
     Uniform         camera_uniform;
 
-    Uniform         compute_preview_edit_uniform;
+    Uniform         preview_stroke_uniform;
 
     Uniform         compute_merge_data_uniform;
     Uniform         compute_stroke_buffer_uniform;
@@ -137,6 +143,8 @@ class RaymarchingRenderer {
     void init_raymarching_proxy_pipeline();
 
     void evaluate_strokes(const std::vector<Stroke> strokes, bool is_undo = false, bool is_redo = false);
+
+    void compute_preview_edit();
 
 public:
 

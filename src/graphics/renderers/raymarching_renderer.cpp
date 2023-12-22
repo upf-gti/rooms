@@ -177,6 +177,12 @@ void RaymarchingRenderer::push_edit(const Edit edit) {
     current_stroke.edits[current_stroke.edit_count++] = edit;
 }
 
+void RaymarchingRenderer::compute_preview_edit() {
+    // Upload the preview stroke
+    // Evaluate (mark & add proxy preview)
+    // Proxy preview render
+};
+
 void RaymarchingRenderer::evaluate_strokes(const std::vector<Stroke> strokes, bool is_undo, bool is_redo)
 {
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
@@ -206,7 +212,7 @@ void RaymarchingRenderer::evaluate_strokes(const std::vector<Stroke> strokes, bo
         uint32_t default_value = 0u;
         webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_proxy_indirect_buffer.data), sizeof(uint32_t), &default_value, sizeof(uint32_t));
 
-        uint32_t reevaluate_aabb = is_undo ? 1 : 0;
+        uint32_t reevaluate_aabb = is_undo ? CLEAN_BEFORE_EVAL : 0;
         webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_state.data), sizeof(uint32_t) * 3, &reevaluate_aabb, sizeof(uint32_t));
     }
 

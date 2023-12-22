@@ -136,6 +136,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
         // Add "filled" flag and remove "interior" flag
         octree.data[octree_leaf_id].tile_pointer = brick_index | FILLED_BRICK_FLAG;
 
-        state.reevaluate_aabb = 0;
+        state.evaluation_mode = 0u;
     }
 }

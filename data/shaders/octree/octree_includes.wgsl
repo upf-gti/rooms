@@ -18,6 +18,9 @@ const MIN_HIT_DIST = 0.00005;
 const FILLED_BRICK_FLAG = 0x80000000u;
 const INTERIOR_BRICK_FLAG = 0x40000000u;
 
+const STROKE_CLEAN_BEFORE_EVAL_FLAG = 0x01u;
+const EVALUATE_PREVIEW_STROKE_FLAG = 0x02u;
+
 struct Edit {
     position   : vec3f,
     dummy0     : f32,
@@ -99,7 +102,7 @@ struct OctreeState {
     current_level : atomic<u32>,
     atomic_counter : atomic<u32>,
     proxy_instance_counter : atomic<u32>,
-    reevaluate_aabb : u32
+    evaluation_mode : u32
 };
 
 struct EditCullingData {

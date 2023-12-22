@@ -60,15 +60,15 @@ bool SculptTool::update(float delta_time, StrokeParameters& stroke_parameters)
             //edit_to_add.dimensions = (edit_to_add.operation == OP_SUBSTRACTION) ? 3.0f * glm::vec4(0.2f, 0.2f, 0.2f, 0.2f) : glm::vec4(0.2f, 0.2f, 0.2f, 0.2f);
             edit_to_add.rotation = glm::inverse(glm::quat(euler_angles));
             // Stroke
-            stroke_parameters.set_color(glm::vec4(0.1f, 0.1f, 0.1f, 1.f));
-            stroke_parameters.set_primitive((random_f() > 0.25f) ? ((random_f() > 0.5f) ? SD_SPHERE : SD_CYLINDER) : SD_BOX);
-            //stroke_parameters.primitive = (random_f() > 0.5f) ? SD_SPHERE : SD_BOX;
-            // stroke_parameters.material = glm::vec4(random_f(), random_f(), 0.f, 0.f);
-            //stroke_parameters.set_operation( (random_f() > 0.5f) ? OP_UNION : OP_SUBSTRACTION);
-            stroke_parameters.set_operation(OP_SMOOTH_UNION);
-            stroke_parameters.set_material_metallic(0.9);
-            stroke_parameters.set_material_roughness(0.2);
-            stroke_parameters.set_smooth_factor(0.01);
+            //stroke_parameters.set_color(glm::vec4(0.1f, 0.1f, 0.1f, 1.f));
+            //stroke_parameters.set_primitive((random_f() > 0.25f) ? ((random_f() > 0.5f) ? SD_SPHERE : SD_CYLINDER) : SD_BOX);
+            ////stroke_parameters.primitive = (random_f() > 0.5f) ? SD_SPHERE : SD_BOX;
+            //// stroke_parameters.material = glm::vec4(random_f(), random_f(), 0.f, 0.f);
+            ////stroke_parameters.set_operation( (random_f() > 0.5f) ? OP_UNION : OP_SUBSTRACTION);
+            //stroke_parameters.set_operation(OP_UNION);
+            //stroke_parameters.set_material_metallic(0.9);
+            //stroke_parameters.set_material_roughness(0.2);
+            //stroke_parameters.set_smooth_factor(0.01);
 		}
 
         return use_tool();

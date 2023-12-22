@@ -121,13 +121,15 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
     let is_smooth_union : bool = stroke.operation == OP_SMOOTH_UNION;
     let is_smooth_substract : bool =  stroke.operation == OP_SMOOTH_SUBSTRACTION;
+    
+    let is_reevaluation : bool = (state.evaluation_mode & STROKE_CLEAN_BEFORE_EVAL_FLAG) == STROKE_CLEAN_BEFORE_EVAL_FLAG;
 
     let octant_min : vec3f = octant_center - vec3f(level_half_size);
     let octant_max : vec3f = octant_center + vec3f(level_half_size);
 
     let is_in_reevaluation_zone : bool = intersection_AABB_AABB(merge_data.reevaluation_AABB_min, merge_data.reevaluation_AABB_max, octant_min, octant_max);
  
-    if (state.reevaluate_aabb == 1u && level == merge_data.max_octree_depth) {
+    if (is_reevaluation && level == merge_data.max_octree_depth) {
         if (is_in_reevaluation_zone) {
             if ((octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG) {
                 let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
@@ -153,6 +155,11 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         edit_cutoff_distance = stroke.parameters.w;
     }
 
+    // Base evaluation range
+    let x_range : vec2f = vec2f(octant_center.x - level_half_size, octant_center.x + level_half_size);
+    let y_range : vec2f = vec2f(octant_center.y - level_half_size, octant_center.y + level_half_size);
+    let z_range : vec2f = vec2f(octant_center.z - level_half_size, octant_center.z + level_half_size);
+
     // Check the edits in the parent, and fill its own list with the edits that affect this child
     for (var i : u32 = 0; i < edit_culling_data.edit_culling_count[parent_octree_index] ; i++) {
         // Accessing a packed indexed edit in the culling list:
@@ -166,10 +173,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         //   First, move a 8 bit mask so it coincides with the 8 bits that we want
         //   then apply the mask, and swift the result so the 8 bits are at the start of the word -> unpacked index & profit
         let current_unpacked_edit_idx : u32 = (current_packed_edit_idx & (0xFFu << (packed_index * 8u))) >> (packed_index * 8u);
-
-        let x_range : vec2f = vec2f(octant_center.x - level_half_size, octant_center.x + level_half_size);
-        let y_range : vec2f = vec2f(octant_center.y - level_half_size, octant_center.y + level_half_size);
-        let z_range : vec2f = vec2f(octant_center.z - level_half_size, octant_center.z + level_half_size);
 
         var current_edit : Edit = stroke.edits[current_unpacked_edit_idx];
         var edit_interval : vec2f;
@@ -233,7 +236,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
      if (level < merge_data.max_octree_depth) {
 
-        if (state.reevaluate_aabb == 1u) {
+        if (is_reevaluation) {
             if (is_in_reevaluation_zone) {
                 // Subdivide
                 // Increase the number of children from the current level
