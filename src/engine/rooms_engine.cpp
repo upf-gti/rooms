@@ -18,11 +18,9 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 
     sculpt_editor.initialize();
 
-    std::string environment = "data/textures/environments/sky.hdre";
-
     skybox = parse_mesh("data/meshes/cube.obj");
     skybox->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_texture_cube.wgsl"));
-    skybox->set_material_diffuse(RendererStorage::get_texture(environment));
+    skybox->set_material_diffuse(Renderer::instance->get_irradiance_texture());
     skybox->scale(glm::vec3(100.f));
     skybox->set_material_priority(2);
 
