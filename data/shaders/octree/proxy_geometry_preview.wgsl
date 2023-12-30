@@ -21,9 +21,7 @@ struct VertexOutput {
     @location(2) color: vec3f,
     @location(3) world_pos : vec3f,
     @location(4) voxel_pos : vec3f,
-    @location(5) @interpolate(flat) voxel_center : vec3f,
-    @location(6) @interpolate(flat) atlas_tile_coordinate : vec3f,
-    @location(7) in_atlas_pos : vec3f
+    @location(5) @interpolate(flat) voxel_center : vec3f
 };
 
 struct SculptData {
@@ -39,11 +37,12 @@ struct CameraData {
 
 @group(0) @binding(0) var<storage, read> brick_copy_buffer : array<u32>;
 @group(0) @binding(2) var texture_sampler : sampler;
-@group(0) @binding(3) var read_sdf: texture_3d<f32>;
 @group(0) @binding(5) var<storage, read> octree_proxy_data: OctreeProxyInstancesNonAtomic;
-@group(0) @binding(8) var read_material_sdf: texture_3d<u32>;
 
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
+
+@group(3) @binding(0) var<storage, read_write> preview_proxy_instances : PreviewProxyInstances;
+
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
@@ -67,13 +66,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     out.voxel_pos = voxel_pos;
     out.voxel_center = instance_data.position;
     // This is in an attribute for debugging
-    out.atlas_tile_coordinate = vec3f(10 * vec3u(instance_data.atlas_tile_index % BRICK_COUNT,
-                                                  (instance_data.atlas_tile_index / BRICK_COUNT) % BRICK_COUNT,
-                                                   instance_data.atlas_tile_index / (BRICK_COUNT * BRICK_COUNT))) / SDF_RESOLUTION;
     out.world_pos = world_pos.xyz; 
-    // From mesh space -1 to 1, -> 0 to 8.0/SDF_RESOLUTION (plus a voxel for padding)
-    out.in_atlas_pos = (in.position * 0.5 + 0.5) * 8.0/SDF_RESOLUTION + 1.0/SDF_RESOLUTION + out.atlas_tile_coordinate;
-
     return out;
 }
 
@@ -85,64 +78,31 @@ struct FragmentOutput {
 @group(0) @binding(1) var<uniform> eye_position : vec3f;
 @group(2) @binding(0) var<uniform> sculpt_data : SculptData;
 
+@group(2) @binding(0) var<storage, read> stroke : Stroke;
+
 @group(3) @binding(0) var irradiance_texture: texture_cube<f32>;
 @group(3) @binding(1) var brdf_lut_texture: texture_2d<f32>;
 @group(3) @binding(2) var sampler_clamp: sampler;
 
-const DERIVATIVE_STEP = 0.5 / SDF_RESOLUTION;
-const MAX_ITERATIONS = 60;
-
-const specularCoeff = 1.0;
-const specularExponent = 4.0;
-const lightPos = vec3f(0.0, 2.0, 1.0);
-
-fn sample_material_raw(pos : vec3u) -> Material {
-    let sample : u32 = textureLoad(read_material_sdf, pos, 0).r;
-
-    return unpack_material(sample);
+fn sample_material(pos : vec3f) -> Material {
+    return stroke.material;
 }
 
 fn sample_sdf(position : vec3f) -> f32
 {
     // TODO: preview edits
-    return textureSampleLevel(read_sdf, texture_sampler, position, 0.0).r;
-}
-
-// From: http://paulbourke.net/miscellaneous/interpolation/
-fn interpolate_material(pos : vec3f) -> Material {
-    var result : Material;
-
-    let pos_f_part : vec3f = abs(fract(pos));
-    let pos_i_part : vec3u = vec3u(floor(pos));
-
-    let index000 : vec3u = pos_i_part;
-    let index010 : vec3u = vec3u(pos_i_part.x + 0, pos_i_part.y + 1, pos_i_part.z + 0)  ;
-    let index100 : vec3u = vec3u(pos_i_part.x + 1, pos_i_part.y + 0, pos_i_part.z + 0)  ;
-    let index001 : vec3u = vec3u(pos_i_part.x + 0, pos_i_part.y + 0, pos_i_part.z + 1)  ;
-    let index101 : vec3u = vec3u(pos_i_part.x + 1, pos_i_part.y + 0, pos_i_part.z + 1)  ;
-    let index011 : vec3u = vec3u(pos_i_part.x + 0, pos_i_part.y + 1, pos_i_part.z + 1)  ;
-    let index110 : vec3u = vec3u(pos_i_part.x + 1, pos_i_part.y + 1, pos_i_part.z + 0)  ;
-    let index111 : vec3u = vec3u(pos_i_part.x + 1, pos_i_part.y + 1, pos_i_part.z + 1)  ;
-
-    result = Material_mult_by(sample_material_raw(index000), (1.0 - pos_f_part.x) * (1.0 - pos_f_part.y) * (1.0 - pos_f_part.z));
-    result = Material_sum_Material(result, Material_mult_by(sample_material_raw(index100), (pos_f_part.x) * (1.0 - pos_f_part.y) * (1.0 - pos_f_part.z)));
-    result = Material_sum_Material(result, Material_mult_by(sample_material_raw(index010), (1.0 - pos_f_part.x) * (pos_f_part.y) * (1.0 - pos_f_part.z)));
-    result = Material_sum_Material(result, Material_mult_by(sample_material_raw(index001), (1.0 - pos_f_part.x) * (1.0 - pos_f_part.y) * (pos_f_part.z)));
-    result = Material_sum_Material(result, Material_mult_by(sample_material_raw(index101), (pos_f_part.x) * (1.0 - pos_f_part.y) * (pos_f_part.z)));
-    result = Material_sum_Material(result, Material_mult_by(sample_material_raw(index011), (1.0 - pos_f_part.x) * (pos_f_part.y) * (pos_f_part.z)));
-    result = Material_sum_Material(result, Material_mult_by(sample_material_raw(index110), (pos_f_part.x) * (pos_f_part.y) * (1.0 - pos_f_part.z)));
-    result = Material_sum_Material(result, Material_mult_by(sample_material_raw(index111), (pos_f_part.x) * (pos_f_part.y) * (pos_f_part.z)));
-
-    return result;
-}
-
-fn sample_material(pos : vec3f) -> Material {
-    return interpolate_material(pos * SDF_RESOLUTION);
+    var surface : Surface;
+    surface.distance = 10000.0;
+    for(var i : u32 = 0u; i < stroke.edit_count; i++) {
+        surface = evaluate_edit(position, stroke.primitive, stroke.operation, stroke.parameters, surface, material, stroke.edits[i]);
+    }
+    return surface.distance;
 }
 
 // Add the generic SDF rendering functions
 #include sdf_render_functions.wgsl
 
+// AQUI terminar las funciones y hacer mas generico el render de SDF
 @fragment
 fn fs_main(in: VertexOutput) -> FragmentOutput {
 

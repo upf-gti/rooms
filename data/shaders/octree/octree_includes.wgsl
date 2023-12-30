@@ -22,6 +22,11 @@ const INTERIOR_BRICK_FLAG = 0x40000000u;
 const STROKE_CLEAN_BEFORE_EVAL_FLAG = 0x01u;
 const EVALUATE_PREVIEW_STROKE_FLAG = 0x02u;
 
+const BRICK_IN_USE_FLAG = 0x001u;
+const BRICK_HAS_PREVIEW_FLAG = 0x002u;
+
+const PREVIEW_BRICK_INSIDE_FLAG = 0x001u;
+
 struct Edit {
     position   : vec3f,
     dummy0     : f32,

@@ -125,10 +125,10 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
     if (local_id.x == 0 && local_id.y == 0 && local_id.z == 0) {
 
-        let filled_pixel_count : u32 = atomicLoad(&used_pixels);
-        if (filled_pixel_count > 0u && filled_pixel_count < 1000u) {
-            octree_proxy_data.instance_data[brick_index].in_use = 1;
-        } 
+        // let filled_pixel_count : u32 = atomicLoad(&used_pixels);
+        // if (filled_pixel_count > 0u && filled_pixel_count < 1000u) {
+        //     octree_proxy_data.instance_data[brick_index].in_use = 1;
+        // } 
         // else {
         //     octree_proxy_data.instance_data[brick_index].in_use = 0;
         // }

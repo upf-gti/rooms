@@ -26,6 +26,7 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
 
     Shader::set_custom_define("OCTREE_DEPTH", octree_depth);
     Shader::set_custom_define("OCTREE_TOTAL_SIZE", octree_total_size);
+    Shader::set_custom_define("PREVIEW_PROXY_BRICKS_COUNT", PREVIEW_PROXY_BRICKS_COUNT);
 
 #ifndef DISABLE_RAYMARCHER
 

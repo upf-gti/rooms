@@ -266,15 +266,30 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         }
     } else {
         if ((state.evaluation_mode & EVALUATE_PREVIEW_STROKE_FLAG) == EVALUATE_PREVIEW_STROKE_FLAG) {
-            if (is_current_brick_filled) {
-                // Mark current brick in order to evaluate the stroke
-            } else {
-                // If it is not the surface
-                if (stroke.operation == OP_UNION || stroke.operation == OP_SMOOTH_UNION) {
-                    // Add exterior preview bricks
-                } else { // Substract
-                    else if (is_interior_brick) {
+            if (local_surface_intersection) {
+                if (is_current_brick_filled) {
+                    // Mark current brick in order to evaluate the stroke
+                    let instance_index : u32 = octree.data[octree_index].tile_pointer & 0x3FFFFFFFu;
+                    octree_proxy_data.instance_data[instance_index].in_use = BRICK_HAS_PREVIEW_FLAG & BRICK_IN_USE_FLAG;
+                } else {
+                    // If it is not the surface
+                    if (stroke.operation == OP_UNION || stroke.operation == OP_SMOOTH_UNION) {
+                        // Add exterior preview bricks
                         // Add preview bricks inside
+                        let preview_brick : u32 = atomicAdd(&preview_proxy_instances.instance_count, 1u);
+    
+                        preview_proxy_instances.instance_data[preview_brick].position = octant_center;
+                        preview_proxy_instances.instance_data[preview_brick].octree_parent_id = octree_index;
+                        preview_proxy_instances.instance_data[preview_brick].in_use = PREVIEW_BRICK_INSIDE_FLAG;
+                    } else { // Substract
+                        if (is_interior_brick) {
+                            // Add preview bricks inside
+                            let preview_brick : u32 = atomicAdd(&preview_proxy_instances.instance_count, 1u);
+    
+                            preview_proxy_instances.instance_data[preview_brick].position = octant_center;
+                            preview_proxy_instances.instance_data[preview_brick].octree_parent_id = octree_index;
+                            preview_proxy_instances.instance_data[preview_brick].in_use = 0;
+                        }
                     }
                 }
             }
@@ -310,7 +325,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                     octree_proxy_data.instance_data[instance_index].position = octant_center;
                     octree_proxy_data.instance_data[instance_index].atlas_tile_index = instance_index;
                     octree_proxy_data.instance_data[instance_index].octree_parent_id = octree_index;
-                    octree_proxy_data.instance_data[instance_index].in_use = 1u;
+                    octree_proxy_data.instance_data[instance_index].in_use = BRICK_IN_USE_FLAG;
 
                     // If it was interior, we mark it as such
                     // TODO: This cannot happen now right??
@@ -338,7 +353,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                     octree_proxy_data.instance_data[instance_index].position = octant_center;
                     octree_proxy_data.instance_data[instance_index].atlas_tile_index = instance_index;
                     octree_proxy_data.instance_data[instance_index].octree_parent_id = octree_index;
-                    octree_proxy_data.instance_data[instance_index].in_use = 1u;
+                    octree_proxy_data.instance_data[instance_index].in_use = BRICK_IN_USE_FLAG;
                     octree.data[octree_index].tile_pointer = instance_index | INTERIOR_BRICK_FLAG;
                     let prev_counter : u32 = atomicAdd(&state.atomic_counter, 1);
                     octant_usage_write[prev_counter] = octree_index;
