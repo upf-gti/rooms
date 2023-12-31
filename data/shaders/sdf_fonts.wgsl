@@ -14,7 +14,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 
     let instance_data : RenderMeshData = mesh_data.data[in.instance_id];
 
-   var out: VertexOutput;
+    var out: VertexOutput;
     var world_position = instance_data.model * vec4f(in.position, 1.0);
     out.world_position = world_position.xyz;
     out.position = camera_data.view_projection * world_position;

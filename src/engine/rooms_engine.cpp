@@ -19,12 +19,12 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     sculpt_editor.initialize();
 
     skybox = parse_mesh("data/meshes/cube.obj");
-    skybox->set_material_shader(RendererStorage::get_shader("data/shaders/mesh_texture_cube.wgsl"));
-    skybox->set_material_diffuse(Renderer::instance->get_irradiance_texture());
+    skybox->set_material_shader(0, RendererStorage::get_shader("data/shaders/mesh_texture_cube.wgsl"));
+    skybox->set_material_diffuse(0, Renderer::instance->get_irradiance_texture());
     skybox->scale(glm::vec3(100.f));
-    skybox->set_material_priority(2);
+    skybox->set_material_priority(0, 2);
 
-    //parse_scene("data/meshes/container.glb", entities);
+    //parse_scene("data/gltf_tests/Sponza/Sponza.gltf", entities);
 
     //Renderer::instance->get_camera()->look_at_entity(entities.back());
 
