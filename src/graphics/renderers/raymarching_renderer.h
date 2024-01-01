@@ -157,7 +157,7 @@ public:
     void render();
 
     void compute_octree();
-    void render_raymarching_proxy(WGPUTextureView swapchain_view, WGPUTextureView swapchain_depth);
+    void render_raymarching_proxy(WGPURenderPassEncoder render_pass);
 
     void redo();
     void undo();

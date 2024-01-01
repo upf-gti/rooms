@@ -338,8 +338,6 @@ void SculptEditor::render()
     if (renderer->get_openxr_available()) {
         gui.render();
         helper_gui.render();
-
-        floor_grid_mesh->render();
     }
 
     if (axis_lock) {
@@ -367,6 +365,8 @@ void SculptEditor::render()
         mirror_mesh->rotate(glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         mirror_mesh->render();
     }
+
+    floor_grid_mesh->render();
 }
 
 void SculptEditor::update_edit_preview(const glm::vec4& dims)

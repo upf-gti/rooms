@@ -31,6 +31,7 @@ public:
     void clean();
 
     void update(float delta_time);
-    void render(WGPUTextureView swapchain_view, WGPUTextureView swapchain_depth);
+    void render_opaque(WGPURenderPassEncoder render_pass);
+    void render_transparent(WGPURenderPassEncoder render_pass);
 
 };

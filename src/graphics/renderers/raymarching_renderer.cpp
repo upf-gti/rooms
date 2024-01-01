@@ -451,40 +451,9 @@ void RaymarchingRenderer::compute_octree()
     RenderdocCapture::end_capture_frame();
 }
 
-void RaymarchingRenderer::render_raymarching_proxy(WGPUTextureView swapchain_view, WGPUTextureView swapchain_depth)
+void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_pass)
 {
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
-
-    // Initialize a command encoder
-    WGPUCommandEncoderDescriptor encoder_desc = {};
-    WGPUCommandEncoder command_encoder = wgpuDeviceCreateCommandEncoder(webgpu_context->device, &encoder_desc);
-
-    // Prepare the color attachment
-    WGPURenderPassColorAttachment render_pass_color_attachment = {};
-    render_pass_color_attachment.view = swapchain_view;
-    render_pass_color_attachment.loadOp = WGPULoadOp_Load;
-    render_pass_color_attachment.storeOp = WGPUStoreOp_Store;
-
-    glm::vec4 clear_color = RoomsRenderer::instance->get_clear_color();
-    render_pass_color_attachment.clearValue = WGPUColor(clear_color.r, clear_color.g, clear_color.b, clear_color.a);
-
-    // Prepate the depth attachment
-    WGPURenderPassDepthStencilAttachment render_pass_depth_attachment = {};
-    render_pass_depth_attachment.view = swapchain_depth;
-    render_pass_depth_attachment.depthClearValue = 1.0f;
-    render_pass_depth_attachment.depthLoadOp = WGPULoadOp_Load;
-    render_pass_depth_attachment.depthStoreOp = WGPUStoreOp_Store;
-    render_pass_depth_attachment.depthReadOnly = false;
-    render_pass_depth_attachment.stencilClearValue = 0; // Stencil config necesary, even if unused
-    render_pass_depth_attachment.stencilLoadOp = WGPULoadOp_Undefined;
-    render_pass_depth_attachment.stencilStoreOp = WGPUStoreOp_Undefined;
-    render_pass_depth_attachment.stencilReadOnly = true;
-
-    WGPURenderPassDescriptor render_pass_descr = {};
-    render_pass_descr.colorAttachmentCount = 1;
-    render_pass_descr.colorAttachments = &render_pass_color_attachment;
-    render_pass_descr.depthStencilAttachment = &render_pass_depth_attachment;
-    WGPURenderPassEncoder render_pass = wgpuCommandEncoderBeginRenderPass(command_encoder, &render_pass_descr);
 
     // Use render_raymarching pass
     render_proxy_geometry_pipeline.set(render_pass);
@@ -507,19 +476,6 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPUTextureView swapchain_vie
 
     // Submit indirect drawcalls
     wgpuRenderPassEncoderDrawIndirect(render_pass, std::get<WGPUBuffer>(octree_proxy_indirect_buffer.data), 0u);
-
-    wgpuRenderPassEncoderEnd(render_pass);
-
-    WGPUCommandBufferDescriptor cmd_buff_descriptor = {};
-    cmd_buff_descriptor.nextInChain = NULL;
-    cmd_buff_descriptor.label = "Proxy geometry command buffer";
-
-    WGPUCommandBuffer commands = wgpuCommandEncoderFinish(command_encoder, &cmd_buff_descriptor);
-    wgpuQueueSubmit(webgpu_context->device_queue, 1, &commands);
-
-    wgpuCommandBufferRelease(commands);
-    wgpuRenderPassEncoderRelease(render_pass);
-    wgpuCommandEncoderRelease(command_encoder);
 }
 
 void RaymarchingRenderer::set_sculpt_start_position(const glm::vec3& position)

@@ -24,59 +24,14 @@ void MeshRenderer::update(float delta_time)
 
 }
 
-void MeshRenderer::render(WGPUTextureView swapchain_view, WGPUTextureView swapchain_depth)
+void MeshRenderer::render_opaque(WGPURenderPassEncoder render_pass)
 {
-    WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
+    RoomsRenderer::instance->render_opaque(render_pass, render_bind_group_camera);
+}
 
-    // Create the command encoder
-    WGPUCommandEncoderDescriptor encoder_desc = {};
-    WGPUCommandEncoder command_encoder = wgpuDeviceCreateCommandEncoder(webgpu_context->device, &encoder_desc);
-
-    // Prepare the color attachment
-    WGPURenderPassColorAttachment render_pass_color_attachment = {};
-    render_pass_color_attachment.view = swapchain_view;
-    render_pass_color_attachment.loadOp = WGPULoadOp_Clear;
-    render_pass_color_attachment.storeOp = WGPUStoreOp_Store;
-
-    glm::vec4 clear_color = RoomsRenderer::instance->get_clear_color();
-    render_pass_color_attachment.clearValue = WGPUColor(clear_color.r, clear_color.g, clear_color.b, clear_color.a);
-
-    // Prepate the depth attachment
-    WGPURenderPassDepthStencilAttachment render_pass_depth_attachment = {};
-    render_pass_depth_attachment.view = swapchain_depth;
-    render_pass_depth_attachment.depthClearValue = 1.0f;
-    render_pass_depth_attachment.depthLoadOp = WGPULoadOp_Clear;
-    render_pass_depth_attachment.depthStoreOp = WGPUStoreOp_Store;
-    render_pass_depth_attachment.depthReadOnly = false;
-    render_pass_depth_attachment.stencilClearValue = 0; // Stencil config necesary, even if unused
-    render_pass_depth_attachment.stencilLoadOp = WGPULoadOp_Undefined;
-    render_pass_depth_attachment.stencilStoreOp = WGPUStoreOp_Undefined;
-    render_pass_depth_attachment.stencilReadOnly = true;
-
-    WGPURenderPassDescriptor render_pass_descr = {};
-    render_pass_descr.colorAttachmentCount = 1;
-    render_pass_descr.colorAttachments = &render_pass_color_attachment;
-    render_pass_descr.depthStencilAttachment = &render_pass_depth_attachment;
-
-    // Create & fill the render pass (encoder)
-    WGPURenderPassEncoder render_pass = wgpuCommandEncoderBeginRenderPass(command_encoder, &render_pass_descr);
-
-    RoomsRenderer::instance->render(render_pass, render_bind_group_camera);
-
-    wgpuRenderPassEncoderEnd(render_pass);
-
-    wgpuRenderPassEncoderRelease(render_pass);
-
-    WGPUCommandBufferDescriptor cmd_buff_descriptor = {};
-    cmd_buff_descriptor.nextInChain = NULL;
-    cmd_buff_descriptor.label = "Command buffer";
-
-    WGPUCommandBuffer commands = wgpuCommandEncoderFinish(command_encoder, &cmd_buff_descriptor);
-
-    wgpuQueueSubmit(webgpu_context->device_queue, 1, &commands);
-
-    wgpuCommandBufferRelease(commands);
-    wgpuCommandEncoderRelease(command_encoder);
+void MeshRenderer::render_transparent(WGPURenderPassEncoder render_pass)
+{
+    RoomsRenderer::instance->render_transparent(render_pass, render_bind_group_camera);
 }
 
 void MeshRenderer::init_render_mesh_pipelines()
