@@ -24,11 +24,9 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     skybox->scale(glm::vec3(100.f));
     skybox->set_material_priority(0, 2);
 
-    //parse_scene("data/gltf_tests/Sponza/Sponza.gltf", entities);
-
-    //Renderer::instance->get_camera()->look_at_entity(entities.back());
-
-    // import_scene();
+    //if (parse_scene("data/gltf_tests/DamagedHelmet/DamagedHelmet.gltf", entities)) {
+    //    Renderer::instance->get_camera()->look_at_entity(entities.back());
+    //}
 
 	return error;
 }

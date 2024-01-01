@@ -100,12 +100,13 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 #ifdef METALLIC_ROUGHNESS_TEXTURE
     var metal_rough : vec3f = textureSample(metallic_roughness_texture, sampler_2d, in.uv).rgb;
     m.metallic = metal_rough.b * metallic_roughness.x;
-    m.roughness = max(metal_rough.g, 0.04) * metallic_roughness.y;
+    m.roughness = metal_rough.g * metallic_roughness.y;
 #else
     m.metallic = metallic_roughness.x;
     m.roughness = metallic_roughness.y;
 #endif
 
+    m.roughness = max(m.roughness, 0.04);
     m.c_diff = mix(m.albedo, vec3f(0.0), m.metallic);
     m.f0 = mix(vec3f(0.04), m.albedo, m.metallic);
 
@@ -119,20 +120,20 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     m.view_dir = normalize(camera_data.eye - m.pos);
 
 #ifdef NORMAL_TEXTURE
-    var normal_color = textureSample(normal_texture, sampler_2d, in.uv).rgb;
+    var normal_color = textureSample(normal_texture, sampler_2d, in.uv).rgb * 2.0 - 1.0;
     m.normal = perturb_normal(m.normal, m.view_dir, in.uv, normal_color);
 #endif
 
-    m.reflected_dir = normalize(reflect( -m.view_dir, m.normal));
+    m.reflected_dir = normalize(reflect(-m.view_dir, m.normal));
 
     // var distance : f32 = length(light_position - m.pos);
     // var attenuation : f32 = pow(1.0 - saturate(distance/light_max_radius), 1.5);
     var final_color : vec3f = vec3f(0.0); 
     // final_color += get_direct_light(m, vec3f(1.0), 1.0);
 
-    final_color += tonemap_filmic(get_indirect_light(m), 1.0);
-
     final_color += m.emissive;
+
+    final_color += tonemap_filmic(get_indirect_light(m), 1.0);
 
     if (GAMMA_CORRECTION == 1) {
         final_color = pow(final_color, vec3(1.0 / 2.2));

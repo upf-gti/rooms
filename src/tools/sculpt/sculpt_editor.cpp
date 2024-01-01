@@ -176,11 +176,11 @@ void SculptEditor::update(float delta_time)
 
     Edit& edit_to_add = tool_used.get_edit_to_add();
 
-    if (Input::was_key_pressed(GLFW_KEY_U) || Input::was_grab_pressed(HAND_LEFT) > 0.5f) {
+    if (Input::was_key_pressed(GLFW_KEY_U) || Input::was_grab_pressed(HAND_LEFT)) {
         renderer->undo();
     }
 
-    if (Input::was_key_pressed(GLFW_KEY_R) || Input::was_grab_pressed(HAND_RIGHT) > 0.5f) {
+    if (Input::was_key_pressed(GLFW_KEY_R) || Input::was_grab_pressed(HAND_RIGHT)) {
         renderer->redo();
     }
 
@@ -313,7 +313,7 @@ void SculptEditor::render()
     Tool& tool_used = *tools[current_tool];
     Edit& edit_to_add = tool_used.get_edit_to_add();
 
-    if (mesh_preview)
+    if (mesh_preview && renderer->get_openxr_available())
     {
         update_edit_preview(edit_to_add.dimensions);
 
@@ -335,8 +335,12 @@ void SculptEditor::render()
         tool_used.render_ui();
     }
 
-    gui.render();
-    helper_gui.render();
+    if (renderer->get_openxr_available()) {
+        gui.render();
+        helper_gui.render();
+
+        floor_grid_mesh->render();
+    }
 
     if (axis_lock) {
         axis_lock_gizmo.render();
@@ -363,8 +367,6 @@ void SculptEditor::render()
         mirror_mesh->rotate(glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         mirror_mesh->render();
     }
-
-    floor_grid_mesh->render();
 }
 
 void SculptEditor::update_edit_preview(const glm::vec4& dims)

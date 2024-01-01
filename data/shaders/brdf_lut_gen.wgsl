@@ -10,10 +10,7 @@ const TEXTURE_HEIGHT = 512.0;
 // https://github.com/KhronosGroup/glTF-Sample-Viewer/blob/main/source/shaders/ibl_filtering.frag#L364
 fn integrate_BRDF(NdotV : f32, roughness : f32) -> vec2f
 {
-    var V : vec3f;
-    V.x = sqrt(1.0 - NdotV * NdotV);
-    V.y = 0.0;
-    V.z = NdotV;
+    let V : vec3f = vec3f(sqrt(1.0 - NdotV * NdotV), 0.0, NdotV);
 
     let N : vec3f = vec3f(0.0, 0.0, 1.0);
 
@@ -42,7 +39,7 @@ fn integrate_BRDF(NdotV : f32, roughness : f32) -> vec2f
         }
     }
 
-    return vec2(4.0 * A, 4.0 * B) / f32(SAMPLE_COUNT);
+    return 4.0 * vec2(A, B) / f32(SAMPLE_COUNT);
 }
 
 @compute @workgroup_size(16, 16, 1)

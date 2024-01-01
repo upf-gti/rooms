@@ -83,7 +83,7 @@ fn generateTBN(normal : vec3f) -> mat3x3<f32>
 
     let NdotUp : f32 = dot(normal, vec3f(0.0, 1.0, 0.0));
     let epsilon : f32 = 0.0000001;
-    if (1.0 - abs(NdotUp) <= epsilon)
+    if ((1.0 - abs(NdotUp)) <= epsilon)
     {
         // Sampling +Y or -Y, so we need a more robust bitangent.
         if (NdotUp > 0.0)
@@ -182,7 +182,6 @@ fn perturb_normal( N : vec3f, V : vec3f, texcoord : vec2f, normal_color : vec3f 
 {
     // assume N, the interpolated vertex normal and
     // V, the view vector (vertex to eye)
-    var normal_pixel = normal_color * (255.0/127.0) - vec3f(128.0/127.0);
     var TBN : mat3x3f = cotangent_frame(N, V, texcoord);
-    return normalize(TBN * normal_pixel);
+    return normalize(TBN * normal_color);
 }
