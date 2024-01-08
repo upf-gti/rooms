@@ -14,6 +14,8 @@ class RoomsEngine : public Engine {
     bool export_scene();
     bool import_scene();
 
+    void render_gui();
+
 public:
 
 	int initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen) override;

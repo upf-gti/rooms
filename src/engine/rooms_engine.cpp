@@ -1,11 +1,19 @@
 #include "rooms_engine.h"
+
 #include "framework/entities/entity_mesh.h"
 #include "framework/entities/entity_text.h"
 #include "framework/input.h"
 #include "framework/scene/parse_scene.h"
 #include "framework/scene/parse_gltf.h"
 #include "graphics/renderers/rooms_renderer.h"
+
 #include "spdlog/spdlog.h"
+
+#include "backends/imgui_impl_glfw.h"
+#include "backends/imgui_impl_wgpu.h"
+
+#include "framework/utils/tinyfiledialogs.h"
+
 #include <fstream>
 
 EntityMesh* RoomsEngine::skybox = nullptr;
@@ -24,8 +32,8 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     skybox->scale(glm::vec3(100.f));
     skybox->set_material_priority(0, 2);
 
-    //if (parse_scene("data/gltf_tests/DamagedHelmet/DamagedHelmet.gltf", entities)) {
-    //    Renderer::instance->get_camera()->look_at_entity(entities.back());
+    //if (parse_scene("data/gltf_tests/Sponza/Sponza.gltf", entities)) {
+    //    //Renderer::instance->get_camera()->look_at_entity(entities.back());
     //}
 
 	return error;
@@ -60,6 +68,8 @@ void RoomsEngine::update(float delta_time)
 
 void RoomsEngine::render()
 {
+    render_gui();
+
     skybox->render();
 
 	for (auto entity : entities) {
@@ -169,6 +179,58 @@ bool RoomsEngine::import_scene()
     spdlog::info("Scene imported! ({} edits, {} left)", scene_header.num_edits, edit_count);
     
     return true;
+}
+
+void RoomsEngine::render_gui()
+{
+    bool active = true;
+
+    ImGui::SetNextWindowSize({ 200, 300 });
+    ImGui::Begin("Debug panel", &active, ImGuiWindowFlags_MenuBar);
+
+    if (ImGui::BeginMenuBar())
+    {
+        if (ImGui::BeginMenu("File"))
+        {
+            if (ImGui::MenuItem("Open scene (.gltf, .glb, .obj)"))
+            {
+                std::vector<const char*> filter_patterns = { "*.gltf", "*.glb", "*.obj" };
+                char const* open_file_name = tinyfd_openFileDialog(
+                    "Scene loader",
+                    "",
+                    filter_patterns.size(),
+                    filter_patterns.data(),
+                    "Scene formats",
+                    0
+                );
+
+                if (open_file_name) {
+                    parse_scene(open_file_name, entities);
+                }
+            }
+            ImGui::EndMenu();
+        }
+        ImGui::EndMenuBar();
+    }
+
+    ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
+    if (ImGui::BeginTabBar("MyTabBar", tab_bar_flags))
+    {
+        if (ImGui::BeginTabItem("Scene"))
+        {
+            ImGui::Text("Scene Tab");
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem("Debugger"))
+        {
+            ImGui::Text("Debugger Tab");
+            ImGui::EndTabItem();
+        }
+        ImGui::EndTabBar();
+}
+    ImGui::Separator();
+
+    ImGui::End();
 }
 
 #ifdef __EMSCRIPTEN__

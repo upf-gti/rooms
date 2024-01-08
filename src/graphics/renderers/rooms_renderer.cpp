@@ -4,6 +4,9 @@
 #include "dawnxr/dawnxr_internal.h"
 #endif
 
+#include "backends/imgui_impl_glfw.h"
+#include "backends/imgui_impl_wgpu.h"
+
 #include "spdlog/spdlog.h"
 
 RoomsRenderer::RoomsRenderer() : Renderer()
@@ -73,7 +76,9 @@ void RoomsRenderer::update(float delta_time)
     }
 #endif
 
-    camera->update(delta_time);
+    if (const auto& io = ImGui::GetIO(); !io.WantCaptureMouse && !io.WantCaptureKeyboard) {
+        camera->update(delta_time);
+    }
 
     raymarching_renderer.update(delta_time);
     mesh_renderer.update(delta_time);
@@ -109,6 +114,8 @@ void RoomsRenderer::render_screen()
     wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(camera_uniform.data), 0, &(camera_data), sizeof(sCameraData));
 
     WGPUTextureView swapchain_view = wgpuSwapChainGetCurrentTextureView(webgpu_context.screen_swapchain);
+
+    ImGui::Render();
 
     {
         // Create the command encoder
@@ -156,6 +163,26 @@ void RoomsRenderer::render_screen()
         wgpuRenderPassEncoderEnd(render_pass);
 
         wgpuRenderPassEncoderRelease(render_pass);
+
+        // render imgui
+        {
+            WGPURenderPassColorAttachment color_attachments = {};
+            color_attachments.loadOp = WGPULoadOp_Load;
+            color_attachments.storeOp = WGPUStoreOp_Store;
+            color_attachments.clearValue = { 0.0, 0.0, 0.0, 0.0 };
+            color_attachments.view = swapchain_view;
+            WGPURenderPassDescriptor render_pass_desc = {};
+            render_pass_desc.colorAttachmentCount = 1;
+            render_pass_desc.colorAttachments = &color_attachments;
+            render_pass_desc.depthStencilAttachment = nullptr;
+
+            WGPURenderPassEncoder pass = wgpuCommandEncoderBeginRenderPass(command_encoder, &render_pass_desc);
+
+            ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), pass);
+
+            wgpuRenderPassEncoderEnd(pass);
+            wgpuRenderPassEncoderRelease(pass);
+        }
 
         WGPUCommandBufferDescriptor cmd_buff_descriptor = {};
         cmd_buff_descriptor.nextInChain = NULL;

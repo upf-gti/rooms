@@ -2,7 +2,7 @@
 
 #include "rooms_renderer.h"
 #include "framework/scene/parse_scene.h"
-#include "framework/intersections.h"
+#include "framework/utils/intersections.h"
 
 #include <algorithm>
 #include <numeric>
