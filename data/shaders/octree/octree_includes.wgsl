@@ -43,7 +43,7 @@ struct Stroke {
     color           : vec4f,
     material        : vec4f,
     edits           : array<Edit, MAX_EDITS_PER_EVALUATION>
-}
+};
 
 struct OctreeNode {
     octant_center_distance : vec2f,
@@ -52,17 +52,42 @@ struct OctreeNode {
 };
 
 struct Octree {
+    current_level : atomic<u32>,
+    atomic_counter : atomic<u32>,
+    proxy_instance_counter : atomic<u32>,
+    evaluation_mode : u32,
     data : array<OctreeNode>
 };
 
+struct PreviewProxyInstances {
+    // Indirect buffer for dispatch
+    vertex_count : u32,
+    instance_count : atomic<u32>,
+    first_vertex : u32,
+    firt_instance: u32,
+    // Instance data storage, for rendering
+    instance_data: array<ProxyInstanceData, PREVIEW_PROXY_BRICKS_COUNT>
+};
+
+struct PreviewProxyInstancesNonAtomic {
+    // Indirect buffer for dispatch
+    vertex_count : u32,
+    instance_count : u32,
+    first_vertex : u32,
+    firt_instance: u32,
+    // Instance data storage, for rendering
+    instance_data: array<ProxyInstanceData, PREVIEW_PROXY_BRICKS_COUNT>
+};
+
 struct MergeData {
-    sculpt_start_position : vec3f,
-    max_octree_depth      : u32,
-    sculpt_rotation       : vec4f,
-    reevaluation_AABB_min : vec3f,
-    reevaluate            : u32,
-    reevaluation_AABB_max : vec3f,
-    padding               : u32
+    sculpt_start_position   : vec3f,
+    max_octree_depth        : u32,
+    sculpt_rotation         : vec4f,
+    reevaluation_AABB_min   : vec3f,
+    reevaluate              : u32,
+    reevaluation_AABB_max   : vec3f,
+    padding                 : u32,
+    preview_proxy_instances : PreviewProxyInstances
 };
 
 struct ProxyInstanceData {
@@ -97,38 +122,11 @@ struct OctreeProxyInstancesNonAtomic {
     instance_data: array<ProxyInstanceData>
 };
 
-struct PreviewProxyInstances {
-    // Indirect buffer for dispatch
-    vertex_count : u32,
-    instance_count : atomic<u32>,
-    first_vertex : u32,
-    firt_instance: u32,
-    // Instance data storage, for rendering
-    instance_data: array<ProxyInstanceData, PREVIEW_PROXY_BRICKS_COUNT>
-};
-
-struct PreviewProxyInstancesNonAtomic {
-    // Indirect buffer for dispatch
-    vertex_count : u32,
-    instance_count : u32,
-    first_vertex : u32,
-    firt_instance: u32,
-    // Instance data storage, for rendering
-    instance_data: array<ProxyInstanceData, PREVIEW_PROXY_BRICKS_COUNT>
-};
-
 struct OctreeProxyIndirect {
     vertex_count : u32,
     instance_count : atomic<u32>,
     first_vertex : u32,
     firt_instance: u32
-};
-
-struct OctreeState {
-    current_level : atomic<u32>,
-    atomic_counter : atomic<u32>,
-    proxy_instance_counter : atomic<u32>,
-    evaluation_mode : u32
 };
 
 struct EditCullingData {

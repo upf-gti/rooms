@@ -89,12 +89,6 @@ struct FragmentOutput {
 @group(3) @binding(1) var brdf_lut_texture: texture_2d<f32>;
 @group(3) @binding(2) var sampler_clamp: sampler;
 
-const DERIVATIVE_STEP = 0.5 / SDF_RESOLUTION;
-const MAX_ITERATIONS = 60;
-
-const specularCoeff = 1.0;
-const specularExponent = 4.0;
-const lightPos = vec3f(0.0, 2.0, 1.0);
 
 fn sample_material_raw(pos : vec3u) -> Material {
     let sample : u32 = textureLoad(read_material_sdf, pos, 0).r;
