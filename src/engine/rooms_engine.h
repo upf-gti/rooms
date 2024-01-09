@@ -15,6 +15,7 @@ class RoomsEngine : public Engine {
     bool import_scene();
 
     void render_gui();
+    bool show_tree_recursive(Entity* entity);
 
 public:
 

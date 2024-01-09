@@ -20,7 +20,7 @@ class RoomsRenderer : public Renderer {
 
     RaymarchingRenderer raymarching_renderer;
 
-    Mesh                quad_mesh;
+    Surface             quad_surface;
     Uniform             camera_uniform;
 
     struct sCameraData {

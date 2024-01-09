@@ -42,6 +42,7 @@ int RoomsRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
     camera->set_perspective(glm::radians(45.0f), webgpu_context.render_width / static_cast<float>(webgpu_context.render_height), z_near, z_far);
     camera->look_at(glm::vec3(0.0f, 0.1f, 0.4f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     camera->set_mouse_sensitivity(0.004f);
+    camera->set_speed(0.75f);
 
     return 0;
 }
@@ -325,7 +326,7 @@ void RoomsRenderer::render_mirror()
             wgpuRenderPassEncoderSetBindGroup(render_pass, 0, swapchain_bind_groups[xr_context.swapchains[0].image_index], 0, nullptr);
 
             // Set vertex buffer while encoding the render pass
-            wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, quad_mesh.get_vertex_buffer(), 0, quad_mesh.get_byte_size());
+            wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, quad_surface.get_vertex_buffer(), 0, quad_surface.get_byte_size());
 
             // Submit drawcall
             wgpuRenderPassEncoderDraw(render_pass, 6, 1, 0, 0);
@@ -379,7 +380,7 @@ void RoomsRenderer::init_mirror_pipeline()
 {
     mirror_shader = RendererStorage::get_shader("data/shaders/quad_mirror.wgsl");
 
-    quad_mesh.create_quad();
+    quad_surface.create_quad();
 
     WGPUTextureFormat swapchain_format = webgpu_context.swapchain_format;
 

@@ -461,7 +461,7 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
     // Update sculpt data
     webgpu_context->update_buffer(std::get<WGPUBuffer>(sculpt_data_uniform.data), 0, &sculpt_data, sizeof(sSculptData));
 
-    Mesh* mesh = cube_mesh->get_surface(0).mesh;
+    const Surface* surface = cube_mesh->get_surface(0);
 
     uint8_t bind_group_index = 0;
 
@@ -472,7 +472,7 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
     wgpuRenderPassEncoderSetBindGroup(render_pass, bind_group_index++, Renderer::instance->get_ibl_bind_group(), 0, nullptr);
 
     // Set vertex buffer while encoding the render pass
-    wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, mesh->get_vertex_buffer(), 0, mesh->get_byte_size());
+    wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, surface->get_vertex_buffer(), 0, surface->get_byte_size());
 
     // Submit indirect drawcalls
     wgpuRenderPassEncoderDrawIndirect(render_pass, std::get<WGPUBuffer>(octree_proxy_indirect_buffer.data), 0u);
@@ -612,7 +612,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         EntityMesh* cube = parse_mesh("data/meshes/cube/cube.obj");
 
         // Indirect rendering of proxy geometry config buffer
-        uint32_t default_indirect_buffer[4] = { cube->get_surface(0).mesh->get_vertex_count(), 0, 0 ,0};
+        uint32_t default_indirect_buffer[4] = { cube->get_surface(0)->get_vertex_count(), 0, 0 ,0};
         octree_proxy_indirect_buffer.data = webgpu_context->create_buffer(sizeof(uint32_t) * 4, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage | WGPUBufferUsage_Indirect, default_indirect_buffer, "proxy_boxes_indirect_buffer");
         octree_proxy_indirect_buffer.binding = 2;
         octree_proxy_indirect_buffer.buffer_size = sizeof(uint32_t) * 4;

@@ -14,19 +14,27 @@ void SculptEditor::initialize()
     renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
 
     mirror_mesh = new EntityMesh();
-    mirror_mesh->add_surface({ RendererStorage::get_mesh("quad"), {}, mirror_mesh });
-    mirror_mesh->set_material_diffuse(0, RendererStorage::get_texture("data/textures/mirror_quad_texture.png"));
-    mirror_mesh->set_material_shader(0, RendererStorage::get_shader("data/shaders/mesh_texture.wgsl"));
-    mirror_mesh->set_material_flag(0, MATERIAL_TRANSPARENT);
+    mirror_mesh->add_surface(RendererStorage::get_surface("quad"));
     mirror_mesh->scale(glm::vec3(0.5f));
 
+    Material mirror_material;
+    mirror_material.shader = RendererStorage::get_shader("data/shaders/mesh_texture.wgsl");
+    mirror_material.diffuse_texture = RendererStorage::get_texture("data/textures/mirror_quad_texture.png");
+    mirror_material.flags |= MATERIAL_DIFFUSE | MATERIAL_TRANSPARENT;
+
+    mirror_mesh->set_surface_material_override(mirror_mesh->get_surface(0), mirror_material);
+
     floor_grid_mesh = new EntityMesh();
-    floor_grid_mesh->add_surface({ RendererStorage::get_mesh("quad"), {}, floor_grid_mesh });
-    floor_grid_mesh->set_material_shader(0, RendererStorage::get_shader("data/shaders/mesh_grid.wgsl"));
-    floor_grid_mesh->set_material_flag(0, MATERIAL_TRANSPARENT);
+    floor_grid_mesh->add_surface(RendererStorage::get_surface("quad"));
     floor_grid_mesh->set_translation(glm::vec3(0.0f));
     floor_grid_mesh->rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
     floor_grid_mesh->scale(glm::vec3(3.f));
+
+    Material grid_material;
+    grid_material.shader = RendererStorage::get_shader("data/shaders/mesh_grid.wgsl");
+    grid_material.flags |= MATERIAL_TRANSPARENT;
+
+    floor_grid_mesh->set_surface_material_override(mirror_mesh->get_surface(0), grid_material);
 
     axis_lock_gizmo.initialize(POSITION_GIZMO, sculpt_start_position);
     mirror_gizmo.initialize(POSITION_GIZMO, sculpt_start_position);
@@ -125,17 +133,25 @@ void SculptEditor::initialize()
         helper_gui.get_workspace().root_pose = POSE_GRIP;
     }
 
-    Mesh* p_mesh = new Mesh();
-    p_mesh->create_sphere();
+    Surface* sphere_surface = new Surface();
+    sphere_surface->create_sphere();
 
     mesh_preview = new EntityMesh();
-    mesh_preview->add_surface({ p_mesh, {}, mesh_preview });
-    mesh_preview->set_material_shader(0, RendererStorage::get_shader("data/shaders/mesh_transparent.wgsl"));
-    mesh_preview->set_material_priority(0, 1);
+    mesh_preview->add_surface(sphere_surface);
 
+    Material preview_material;
+    preview_material.shader = RendererStorage::get_shader("data/shaders/mesh_transparent.wgsl");
+    preview_material.priority = 1;
+
+    mesh_preview->set_surface_material_override(sphere_surface, preview_material);
+    
     mesh_preview_outline = new EntityMesh();
-    mesh_preview_outline->add_surface({ p_mesh, {}, mesh_preview_outline });
-    mesh_preview_outline->set_material_shader(0, RendererStorage::get_shader("data/shaders/mesh_outline.wgsl"));
+    mesh_preview_outline->add_surface(sphere_surface);
+
+    Material outline_material;
+    outline_material.shader = RendererStorage::get_shader("data/shaders/mesh_outline.wgsl");
+
+    mesh_preview->set_surface_material_override(sphere_surface, outline_material);
 
     enable_tool(SCULPT);
 
@@ -381,27 +397,27 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
         switch (stroke_parameters.get_primitive())
         {
         case SD_SPHERE:
-            mesh_preview->get_surface(0).mesh->create_sphere(grow_dims.x);
+            mesh_preview->get_surface(0)->create_sphere(grow_dims.x);
             break;
         case SD_BOX:
-            mesh_preview->get_surface(0).mesh->create_rounded_box(grow_dims.x, grow_dims.y, grow_dims.z, (dims.w / 0.1f) * grow_dims.x);
+            mesh_preview->get_surface(0)->create_rounded_box(grow_dims.x, grow_dims.y, grow_dims.z, (dims.w / 0.1f) * grow_dims.x);
             break;
         case SD_CONE:
-            mesh_preview->get_surface(0).mesh->create_cone(grow_dims.w, grow_dims.x);
+            mesh_preview->get_surface(0)->create_cone(grow_dims.w, grow_dims.x);
             mesh_preview->rotate(glm::radians(-90.f), { 1.f, 0.f, 0.f });
             break;
         case SD_CYLINDER:
-            mesh_preview->get_surface(0).mesh->create_cylinder(grow_dims.w, grow_dims.x);
+            mesh_preview->get_surface(0)->create_cylinder(grow_dims.w, grow_dims.x);
             mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
             mesh_preview->translate({ 0.f, -dims.x * 0.5f, 0.f });
             break;
         case SD_CAPSULE:
-            mesh_preview->get_surface(0).mesh->create_capsule(grow_dims.w, grow_dims.x);
+            mesh_preview->get_surface(0)->create_capsule(grow_dims.w, grow_dims.x);
             mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
             mesh_preview->translate({ 0.f, -dims.x * 0.5f, 0.f });
             break;
         case SD_TORUS:
-            mesh_preview->get_surface(0).mesh->create_torus(grow_dims.x, std::clamp(grow_dims.w, 0.0001f, grow_dims.x));
+            mesh_preview->get_surface(0)->create_torus(grow_dims.x, std::clamp(grow_dims.w, 0.0001f, grow_dims.x));
             mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
             break;
         default:
@@ -514,6 +530,6 @@ void SculptEditor::add_recent_color(const Color& color)
     {
         ui::ButtonWidget* child = static_cast<ui::ButtonWidget*>(recent_group->get_children()[i]);
         child->color = recent_colors[i];
-        child->set_material_color(0, child->color);
+        child->set_surface_material_color(0, child->color);
     }
 }

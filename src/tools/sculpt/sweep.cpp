@@ -4,7 +4,6 @@
 #include "framework/utils/intersections.h"
 #include "framework/entities/entity_mesh.h"
 #include "graphics/renderers/rooms_renderer.h"
-#include "graphics/mesh.h"
 #include "graphics/shader.h"
 #include "sculpt_editor.h"
 

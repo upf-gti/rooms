@@ -27,10 +27,10 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     sculpt_editor.initialize();
 
     skybox = parse_mesh("data/meshes/cube.obj");
-    skybox->set_material_shader(0, RendererStorage::get_shader("data/shaders/mesh_texture_cube.wgsl"));
-    skybox->set_material_diffuse(0, Renderer::instance->get_irradiance_texture());
+    skybox->set_surface_material_shader(0, RendererStorage::get_shader("data/shaders/mesh_texture_cube.wgsl"));
+    skybox->set_surface_material_diffuse(0, Renderer::instance->get_irradiance_texture());
     skybox->scale(glm::vec3(100.f));
-    skybox->set_material_priority(0, 2);
+    skybox->set_surface_material_priority(0, 2);
 
     //if (parse_scene("data/gltf_tests/Sponza/Sponza.gltf", entities)) {
     //    //Renderer::instance->get_camera()->look_at_entity(entities.back());
@@ -185,7 +185,7 @@ void RoomsEngine::render_gui()
 {
     bool active = true;
 
-    ImGui::SetNextWindowSize({ 200, 300 });
+    ImGui::SetNextWindowSize({ 300, 400 });
     ImGui::Begin("Debug panel", &active, ImGuiWindowFlags_MenuBar);
 
     if (ImGui::BeginMenuBar())
@@ -218,7 +218,21 @@ void RoomsEngine::render_gui()
     {
         if (ImGui::BeginTabItem("Scene"))
         {
-            ImGui::Text("Scene Tab");
+            if (ImGui::TreeNodeEx("Root", ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                std::vector<Entity*>::iterator it = entities.begin();
+                while (it != entities.end())
+                {
+                    if (show_tree_recursive(*it)) {
+                        it = entities.erase(it);
+                    }
+                    else {
+                        it++;
+                    }
+                }
+                
+                ImGui::TreePop();
+            }
             ImGui::EndTabItem();
         }
         if (ImGui::BeginTabItem("Debugger"))
@@ -231,6 +245,60 @@ void RoomsEngine::render_gui()
     ImGui::Separator();
 
     ImGui::End();
+}
+
+bool RoomsEngine::show_tree_recursive(Entity* entity)
+{
+    std::vector<Entity*>& children = entity->get_children();
+
+    EntityMesh* entity_mesh = dynamic_cast<EntityMesh*>(entity);
+
+    ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
+
+    if (!entity_mesh && children.empty() || (entity_mesh && children.empty() && entity_mesh->get_surfaces().empty())) {
+        flags |= ImGuiTreeNodeFlags_Leaf;
+    }
+
+    if (ImGui::TreeNodeEx(entity->get_name().c_str(), flags))
+    {
+        if (ImGui::BeginPopupContextItem()) // <-- use last item id as popup id
+        {
+            if (ImGui::Button("Delete")) {
+                ImGui::CloseCurrentPopup();
+                ImGui::EndPopup();
+                ImGui::TreePop();
+                return true;
+            }
+            ImGui::EndPopup();
+        }
+
+        if (entity_mesh) {
+
+            const std::vector<Surface*>& surfaces = entity_mesh->get_surfaces();
+
+            for (int i = 0; i < surfaces.size(); ++i) {
+
+                ImGui::TreeNodeEx(("Surface " + std::to_string(i)).c_str(), ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Leaf);
+                ImGui::TreePop();
+            }
+        }
+
+        std::vector<Entity*>::iterator it = children.begin();
+
+        while (it != children.end())
+        {
+            if (show_tree_recursive(*it)) {
+                it = children.erase(it);
+            }
+            else {
+                it++;
+            }
+        }
+
+        ImGui::TreePop();
+    }
+
+    return false;
 }
 
 #ifdef __EMSCRIPTEN__
