@@ -35,20 +35,15 @@ struct CameraData {
     view_projection : mat4x4f,
 };
 
-@group(0) @binding(0) var<storage, read> brick_copy_buffer : array<u32>;
-@group(0) @binding(2) var texture_sampler : sampler;
-@group(0) @binding(5) var<storage, read> octree_proxy_data: OctreeProxyInstancesNonAtomic;
+@group(0) @binding(0) var<storage, read> preview_data : PreviewDataReadonly;
+@group(0) @binding(1) var<uniform> eye_position : vec3f;
 
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
-
-@group(3) @binding(0) var<storage, read_write> preview_proxy_instances : PreviewProxyInstances;
-
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
 
-    let instance_index : u32 = brick_copy_buffer[in.instance_id];
-    let instance_data : ProxyInstanceData = octree_proxy_data.instance_data[instance_index];
+    let instance_data : ProxyInstanceData = preview_data.instance_data[in.instance_id];
 
     var voxel_pos : vec3f = in.position * BRICK_WORLD_SIZE * 0.5 + instance_data.position;
     var world_pos : vec3f = rotate_point_quat(voxel_pos, sculpt_data.sculpt_rotation);
@@ -75,26 +70,31 @@ struct FragmentOutput {
     @builtin(frag_depth) depth: f32
 }
 
-@group(0) @binding(1) var<uniform> eye_position : vec3f;
-@group(2) @binding(0) var<uniform> sculpt_data : SculptData;
 
-@group(2) @binding(0) var<storage, read> stroke : Stroke;
+@group(2) @binding(0) var<uniform> sculpt_data : SculptData;
 
 @group(3) @binding(0) var irradiance_texture: texture_cube<f32>;
 @group(3) @binding(1) var brdf_lut_texture: texture_2d<f32>;
 @group(3) @binding(2) var sampler_clamp: sampler;
 
+
+
 fn sample_material(pos : vec3f) -> Material {
-    return stroke.material;
+    var material : Material;
+    material.albedo = preview_data.preview_stroke.color.xyz;
+    material.roughness = preview_data.preview_stroke.material.x;
+    material.metalness = preview_data.preview_stroke.material.y;
+    return material;
 }
 
 fn sample_sdf(position : vec3f) -> f32
 {
     // TODO: preview edits
+    var material : Material = sample_material(vec3f(0.0, 0.0, 0.0));
     var surface : Surface;
     surface.distance = 10000.0;
-    for(var i : u32 = 0u; i < stroke.edit_count; i++) {
-        surface = evaluate_edit(position, stroke.primitive, stroke.operation, stroke.parameters, surface, material, stroke.edits[i]);
+    for(var i : u32 = 0u; i < preview_data.preview_stroke.edit_count; i++) {
+        surface = evaluate_edit(position, preview_data.preview_stroke.primitive, preview_data.preview_stroke.operation, preview_data.preview_stroke.parameters, surface, material, preview_data.preview_stroke.edits[i]);
     }
     return surface.distance;
 }
@@ -102,7 +102,6 @@ fn sample_sdf(position : vec3f) -> f32
 // Add the generic SDF rendering functions
 #include sdf_render_functions.wgsl
 
-// AQUI terminar las funciones y hacer mas generico el render de SDF
 @fragment
 fn fs_main(in: VertexOutput) -> FragmentOutput {
 
@@ -112,7 +111,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     let raymarch_distance : f32 = ray_AABB_intersection_distance(in.voxel_pos, ray_dir_voxel_space, in.voxel_center, vec3f(BRICK_WORLD_SIZE));
 
-    let ray_result = raymarch(in.in_atlas_pos.xyz, in.world_pos.xyz, ray_dir_voxel_space, raymarch_distance * SCALE_CONVERSION_FACTOR, camera_data.view_projection);
+    let ray_result = vec4f(0.0); //raymarch(in.in_atlas_pos.xyz, in.world_pos.xyz, ray_dir_voxel_space, raymarch_distance * SCALE_CONVERSION_FACTOR, camera_data.view_projection);
 
     var final_color : vec3f = ray_result.rgb; 
 
@@ -123,10 +122,12 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     out.color = vec4f(final_color, 1.0); // Color
     out.depth = ray_result.a;
 
-    // if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
-    //     out.color = vec4f(0.0, 0.0, 0.0, 1.0);
-    //     out.depth = in.position.z;
-    // }
+    if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
+        out.color = vec4f(0.0, 0.0, 1.0, 1.0);
+        out.depth = in.position.z;
+    } else {
+        discard;
+    }
 
     // out.color = vec4f(1.0, 0.0, 0.0, 1.0); // Color
     // out.depth = 0.0;

@@ -61,8 +61,12 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     // world_pos = vec4f(rotate_point_quat(world_pos.xyz, sculpt_data.sculpt_rotation), 1.0);
     out.position = camera_data.view_projection * vec4f(world_pos, 1.0);
     out.uv = in.uv; // forward to the fragment shader
-    out.color = in.color;
+    out.color = vec3f(0.0, 0.0, 0.0);
     out.normal = in.normal;
+
+    if ((instance_data.in_use & BRICK_HAS_PREVIEW_FLAG) == BRICK_HAS_PREVIEW_FLAG) {
+        out.color = vec3f(0.0, 1.0, 0.0);
+    }
     
     out.voxel_pos = voxel_pos;
     out.voxel_center = instance_data.position;
@@ -83,6 +87,7 @@ struct FragmentOutput {
 }
 
 @group(0) @binding(1) var<uniform> eye_position : vec3f;
+
 @group(2) @binding(0) var<uniform> sculpt_data : SculptData;
 
 @group(3) @binding(0) var irradiance_texture: texture_cube<f32>;
@@ -157,10 +162,10 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     out.color = vec4f(final_color, 1.0); // Color
     out.depth = ray_result.a;
 
-    // if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
-    //     out.color = vec4f(0.0, 0.0, 0.0, 1.0);
-    //     out.depth = in.position.z;
-    // }
+    if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
+        out.color = vec4f(in.color.x, in.color.y, in.color.z, 1.0);
+        out.depth = in.position.z;
+    }
 
     // out.color = vec4f(1.0, 0.0, 0.0, 1.0); // Color
     // out.depth = 0.0;

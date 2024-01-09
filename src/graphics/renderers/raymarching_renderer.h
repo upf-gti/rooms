@@ -31,6 +31,11 @@ class RaymarchingRenderer {
     Shader*         render_proxy_shader = nullptr;
     WGPUBindGroup   render_proxy_geometry_bind_group = nullptr;
 
+    Pipeline        render_preview_proxy_geometry_pipeline;
+    Shader*         render_preview_proxy_shader = nullptr;
+    WGPUBindGroup   render_preview_proxy_geometry_bind_group = nullptr;
+    WGPUBindGroup   render_preview_camera_bind_group = nullptr;
+
     Texture         sdf_texture;
     Uniform         sdf_texture_uniform;
 
@@ -81,9 +86,10 @@ class RaymarchingRenderer {
     Uniform         sculpt_data_uniform;
     WGPUBindGroup   sculpt_data_bind_group = nullptr;
 
-    Uniform         camera_uniform;
+    Uniform         *camera_uniform;
 
     Uniform         preview_stroke_uniform;
+    WGPUBindGroup   preview_stroke_bind_group = nullptr;
 
     Uniform         compute_merge_data_uniform;
     Uniform         compute_stroke_buffer_uniform;
@@ -137,15 +143,35 @@ class RaymarchingRenderer {
         uint32_t padding[3];
     };
 
+    struct PreviewData {
+        uint32_t vertex_count = 0u;
+        uint32_t instance_count = 0u;
+        uint32_t first_vertex = 0u;
+        uint32_t first_instance = 0u;
+
+        Stroke   preview_stroke = {
+            .edit_count = 1u,
+            .primitive = SD_SPHERE,
+            .operation = OP_UNION,
+            .color = {0.0f, 0.0f, 1.0f, 1.0f},
+            .edits = {
+                {
+                    .position = {0.00f, 0.10f, 0.0f},
+                    .dimensions = {0.050f, 0.01f, 0.01f,0.01f}
+                }
+            },
+        };
+    } preview_data;
+
     // Timestepping counters
     float updated_time = 0.0f;
 
     void init_compute_octree_pipeline();
     void init_raymarching_proxy_pipeline();
 
-    void evaluate_strokes(const std::vector<Stroke> strokes, bool is_undo = false, bool is_redo = false);
+    void evaluate_strokes(WGPUComputePassEncoder compute_pass, const std::vector<Stroke> strokes, bool is_undo = false, bool is_redo = false);
 
-    void compute_preview_edit();
+    void compute_preview_edit(WGPUComputePassEncoder compute_pass);
 
 public:
 

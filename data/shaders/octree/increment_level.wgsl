@@ -10,7 +10,12 @@ fn compute(@builtin(global_invocation_id) id: vec3<u32>)
 
     indirect_buffer.x = num_dispatches;
 
-    atomicAdd(&octree.current_level, 1);
+    let level : u32 = atomicAdd(&octree.current_level, 1);
 
-    atomicStore(&octree.atomic_counter, 0);
+    atomicStore(&octree.atomic_counter, 0u);
+
+    if (level >= OCTREE_DEPTH) {
+        // If the prev level was the last one, we toggle the preview stroke evaluation flag
+        octree.evaluation_mode ^= EVALUATE_PREVIEW_STROKE_FLAG;
+    }
 }

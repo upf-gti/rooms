@@ -59,22 +59,26 @@ struct Octree {
     data : array<OctreeNode>
 };
 
-struct PreviewProxyInstances {
+struct PreviewData {
     // Indirect buffer for dispatch
     vertex_count : u32,
     instance_count : atomic<u32>,
     first_vertex : u32,
     firt_instance: u32,
+    // The stroke for the preview
+    preview_stroke : Stroke,
     // Instance data storage, for rendering
     instance_data: array<ProxyInstanceData, PREVIEW_PROXY_BRICKS_COUNT>
 };
 
-struct PreviewProxyInstancesNonAtomic {
+struct PreviewDataReadonly {
     // Indirect buffer for dispatch
     vertex_count : u32,
     instance_count : u32,
     first_vertex : u32,
     firt_instance: u32,
+    // The stroke for the preview
+    preview_stroke : Stroke,
     // Instance data storage, for rendering
     instance_data: array<ProxyInstanceData, PREVIEW_PROXY_BRICKS_COUNT>
 };
@@ -86,8 +90,7 @@ struct MergeData {
     reevaluation_AABB_min   : vec3f,
     reevaluate              : u32,
     reevaluation_AABB_max   : vec3f,
-    padding                 : u32,
-    preview_proxy_instances : PreviewProxyInstances
+    padding                 : u32
 };
 
 struct ProxyInstanceData {
@@ -123,6 +126,7 @@ struct OctreeProxyInstancesNonAtomic {
 };
 
 struct OctreeProxyIndirect {
+    // Sculpt
     vertex_count : u32,
     instance_count : atomic<u32>,
     first_vertex : u32,

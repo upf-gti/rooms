@@ -32,7 +32,7 @@ enum sdOperation : uint32_t {
 	ALL_OPERATIONS
 };
 
-struct alignas(16) Edit {
+struct Edit {
     glm::vec3	position;
     float       dummy0;
     glm::vec4	dimensions;
@@ -74,7 +74,7 @@ public:
 
 };
 
-struct alignas(256) Stroke {
+struct Stroke {
     uint32_t    stroke_id;
     uint32_t    edit_count = 0u;
     sdPrimitive primitive;
