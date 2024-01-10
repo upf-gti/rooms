@@ -26,24 +26,19 @@ struct VertexOutput {
     @location(7) in_atlas_pos : vec3f
 };
 
-struct SculptData {
-    sculpt_start_position   : vec3f,
-    dummy1                  : f32,
-    sculpt_rotation         : vec4f,
-    sculpt_inv_rotation     : vec4f
-};
-
 struct CameraData {
     view_projection : mat4x4f,
 };
 
 @group(0) @binding(0) var<storage, read> brick_copy_buffer : array<u32>;
-@group(0) @binding(2) var texture_sampler : sampler;
 @group(0) @binding(3) var read_sdf: texture_3d<f32>;
+@group(0) @binding(4) var texture_sampler : sampler;
 @group(0) @binding(5) var<storage, read> octree_proxy_data: OctreeProxyInstancesNonAtomic;
 @group(0) @binding(8) var read_material_sdf: texture_3d<u32>;
 
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
+
+@group(2) @binding(0) var<uniform> sculpt_data : SculptData;
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
@@ -83,7 +78,6 @@ struct FragmentOutput {
 }
 
 @group(0) @binding(1) var<uniform> eye_position : vec3f;
-@group(2) @binding(0) var<uniform> sculpt_data : SculptData;
 
 @group(3) @binding(0) var irradiance_texture: texture_cube<f32>;
 @group(3) @binding(1) var brdf_lut_texture: texture_2d<f32>;

@@ -31,6 +31,7 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
 
     init_compute_octree_pipeline();
     init_raymarching_proxy_pipeline();
+    init_octree_ray_intersection_pipeline();
     initialize_stroke();
 
     //for (uint32_t i = 0; i < 10; i++) {
@@ -696,6 +697,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         compute_octree_clean_octree_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_cleaning_shader, 0);
     }
 
+
     compute_octree_evaluate_pipeline.create_compute(compute_octree_evaluate_shader);
     compute_octree_increment_level_pipeline.create_compute(compute_octree_increment_level_shader);
     compute_octree_write_to_texture_pipeline.create_compute(compute_octree_write_to_texture_shader);
@@ -725,7 +727,7 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
         Uniform* camera_uniform = rooms_renderer->get_current_camera_uniform();
 
         linear_sampler_uniform.data = webgpu_context->create_sampler(WGPUAddressMode_ClampToEdge, WGPUAddressMode_ClampToEdge, WGPUAddressMode_ClampToEdge, WGPUFilterMode_Linear, WGPUFilterMode_Linear);
-        linear_sampler_uniform.binding = 2;
+        linear_sampler_uniform.binding = 4;
 
         std::vector<Uniform*> uniforms = { &linear_sampler_uniform, &sdf_texture_uniform, &octree_proxy_instance_buffer, &proxy_geometry_eye_position, &octree_brick_copy_buffer, &sdf_material_texture_uniform };
 
@@ -752,4 +754,23 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
 
     PipelineDescription desc = { .cull_mode = WGPUCullMode_Back };
     render_proxy_geometry_pipeline.create_render(render_proxy_shader, color_target, desc);
+}
+
+void RaymarchingRenderer::init_octree_ray_intersection_pipeline()
+{
+    compute_octree_ray_intersection_shader = RendererStorage::get_shader("data/shaders/octree/octree_ray_intersection.wgsl");
+
+    WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
+
+    // Ray Octree intersection bindgroup
+    {
+        ray_info.data = webgpu_context->create_buffer(sizeof(RayInfo), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "ray info");
+        ray_info.binding = 6;
+        ray_info.buffer_size = sizeof(RayInfo);
+
+        std::vector<Uniform*> uniforms = { &octree_uniform, &sdf_texture_uniform, &linear_sampler_uniform, &octree_proxy_instance_buffer, &ray_info };
+        compute_octree_clean_octree_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_cleaning_shader, 0);
+    }
+
+    compute_octree_ray_intersection_pipeline.create_compute(compute_octree_ray_intersection_shader);
 }

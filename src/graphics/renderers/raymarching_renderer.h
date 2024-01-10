@@ -44,6 +44,8 @@ class RaymarchingRenderer {
     Pipeline        compute_octree_brick_copy_pipeline;
     Pipeline        compute_octree_initialization_pipeline;
     Pipeline        compute_octree_cleaning_pipeline;
+    Pipeline        compute_octree_ray_intersection_pipeline;
+
     Shader*         compute_octree_evaluate_shader = nullptr;
     Shader*         compute_octree_increment_level_shader = nullptr;
     Shader*         compute_octree_write_to_texture_shader = nullptr;
@@ -51,6 +53,8 @@ class RaymarchingRenderer {
     Shader*         compute_octree_brick_copy_shader = nullptr;
     Shader*         compute_octree_initialization_shader = nullptr;
     Shader*         compute_octree_cleaning_shader = nullptr;
+    Shader*         compute_octree_ray_intersection_shader = nullptr;
+
     WGPUBindGroup   compute_octree_evaluate_bind_group = nullptr;
     WGPUBindGroup   compute_octree_increment_level_bind_group = nullptr;
     WGPUBindGroup   compute_octree_write_to_texture_bind_group = nullptr;
@@ -79,6 +83,9 @@ class RaymarchingRenderer {
 
     Uniform         sculpt_data_uniform;
     WGPUBindGroup   sculpt_data_bind_group = nullptr;
+
+    Uniform         ray_info;
+    WGPUBindGroup   octree_ray_intersection_bind_group = nullptr;
 
     Uniform         camera_uniform;
 
@@ -113,6 +120,13 @@ class RaymarchingRenderer {
         uint32_t tile_pointer = 0;
     };
 
+    struct RayInfo {
+        glm::vec3 ray_origin;
+        float dummy0;
+        glm::vec3 ray_dir;
+        float dummy1;
+    };
+
     Stroke current_stroke = {};
     Stroke in_frame_stroke = {};
 
@@ -141,6 +155,7 @@ class RaymarchingRenderer {
 
     void init_compute_octree_pipeline();
     void init_raymarching_proxy_pipeline();
+    void init_octree_ray_intersection_pipeline();
 
     void evaluate_strokes(const std::vector<Stroke> strokes, bool is_undo = false, bool is_redo = false);
 

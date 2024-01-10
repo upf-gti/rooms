@@ -109,3 +109,10 @@ struct EditCullingData {
     edit_culling_lists: array<u32, OCTREE_TOTAL_SIZE * MAX_EDITS_PER_EVALUATION / 4>,
     edit_culling_count : array<u32>
 };
+
+struct SculptData {
+    sculpt_start_position   : vec3f,
+    dummy1                  : f32,
+    sculpt_rotation         : vec4f,
+    sculpt_inv_rotation     : vec4f
+};
