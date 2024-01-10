@@ -44,7 +44,7 @@ fn ray_AABB_intersection_distance(ray_origin : vec3f,
 // TODO: if diffuse variable is not used, performance is increased by 20% (????)
 fn apply_light(toEye : vec3f, position : vec3f, position_world : vec3f, lightPosition : vec3f, material : Material) -> vec3f
 {
-    var normal : vec3f = estimate_normal(position);
+    var normal : vec3f = estimate_normal(position, position_world);
     normal = normalize(rotate_point_quat(normal, sculpt_data.sculpt_rotation));
 
     let toLight : vec3f = normalize(lightPosition - position_world);
@@ -81,13 +81,13 @@ fn apply_light(toEye : vec3f, position : vec3f, position_world : vec3f, lightPos
 }
 
 // https://iquilezles.org/articles/normalsSDF/
-fn estimate_normal( p : vec3f) -> vec3f
+fn estimate_normal( p : vec3f, p_world: vec3f) -> vec3f
 {
     let k : vec2f = vec2f(1.0, -1.0);
-    return normalize( k.xyy * sample_sdf( p + k.xyy * DERIVATIVE_STEP ) + 
-                      k.yyx * sample_sdf( p + k.yyx * DERIVATIVE_STEP ) + 
-                      k.yxy * sample_sdf( p + k.yxy * DERIVATIVE_STEP ) + 
-                      k.xxx * sample_sdf( p + k.xxx * DERIVATIVE_STEP ) );
+    return normalize( k.xyy * sample_sdf( p + k.xyy * DERIVATIVE_STEP, p_world) + 
+                      k.yyx * sample_sdf( p + k.yyx * DERIVATIVE_STEP, p_world ) + 
+                      k.yxy * sample_sdf( p + k.yxy * DERIVATIVE_STEP, p_world) + 
+                      k.xxx * sample_sdf( p + k.xxx * DERIVATIVE_STEP, p_world) );
 }
 
 
@@ -102,14 +102,16 @@ fn raymarch(ray_origin : vec3f, ray_origin_world : vec3f, ray_dir : vec3f, max_d
     var distance : f32;
 
     var pos : vec3f;
+    var pos_world : vec3f;
     var i : i32 = 0;
     var exit : u32 = 0u;
 
 	for (i = 0; depth < max_distance && i < MAX_ITERATIONS; i++)
     {
 		pos = ray_origin + ray_dir * depth;
+        pos_world = ray_origin_world + ray_dir * (depth / SCALE_CONVERSION_FACTOR);
 
-        distance = sample_sdf(pos);
+        distance = sample_sdf(pos, pos_world);
 
 		if (distance < MIN_HIT_DIST) {
             exit = 1u;
@@ -120,16 +122,19 @@ fn raymarch(ray_origin : vec3f, ray_origin_world : vec3f, ray_dir : vec3f, max_d
 	}
 
     if (exit == 1u) {
-        let pos_world : vec3f = ray_origin_world + ray_dir * (depth / SCALE_CONVERSION_FACTOR);
         let epsilon : f32 = 0.000001; // avoids flashing when camera inside sdf
         let proj_pos : vec4f = view_proj * vec4f(pos_world + ray_dir * epsilon, 1.0);
         depth = proj_pos.z / proj_pos.w;
 
-        let normal : vec3f = estimate_normal(pos);
+        let normal : vec3f = estimate_normal(pos, pos_world);
 
-        let material : Material = sample_material(pos);
+        last_found_surface_distance = distance;
+
+        let material : Material = sample_material(pos, pos_world);
         //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
-		return vec4f(apply_light(-ray_dir, pos, pos_world, lightPos + lightOffset, material), depth);
+		//return vec4f(apply_light(-ray_dir, pos, pos_world, lightPos + lightOffset, material), depth);
+        //return vec4f(normal, depth);
+        return vec4f(material.albedo, depth);
 	}
 
     // Use a two band spherical harmonic as a skymap

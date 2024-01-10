@@ -34,7 +34,7 @@ int RoomsRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
     }
 #endif
 
-    camera = new OrbitCamera();
+    camera = new FlyoverCamera();
 
     camera->set_perspective(glm::radians(45.0f), webgpu_context.render_width / static_cast<float>(webgpu_context.render_height), z_near, z_far);
     camera->look_at(glm::vec3(0.0f, 0.05f, 0.2f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));

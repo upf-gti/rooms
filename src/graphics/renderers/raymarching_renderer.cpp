@@ -90,7 +90,8 @@ void RaymarchingRenderer::clean()
     wgpuBindGroupRelease(compute_octant_usage_bind_groups[0]);
     wgpuBindGroupRelease(compute_octant_usage_bind_groups[1]);
     wgpuBindGroupRelease(render_camera_bind_group);
-    wgpuBindGroupRelease(sculpt_data_bind_group);
+    wgpuBindGroupRelease(sculpt_data_bind_preview_group);
+    wgpuBindGroupRelease(sculpt_data_bind_proxy_group);
     wgpuBindGroupRelease(preview_stroke_bind_group);
     wgpuBindGroupRelease(render_preview_proxy_geometry_bind_group);
 
@@ -185,6 +186,7 @@ void RaymarchingRenderer::compute_preview_edit(WGPUComputePassEncoder compute_pa
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
     // Upload the preview stroke
     // // Upload preview data
+
     webgpu_context->update_buffer(std::get<WGPUBuffer>(preview_stroke_uniform.data), 0u, &preview_data, sizeof(preview_data));
 
     // Second pass: evaluate the preview stroke
@@ -545,8 +547,9 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPUTextureView swapchain_vie
         // Set bind groups
         wgpuRenderPassEncoderSetBindGroup(render_pass, bind_group_index++, render_proxy_geometry_bind_group, 0, nullptr);
         wgpuRenderPassEncoderSetBindGroup(render_pass, bind_group_index++, render_camera_bind_group, 0, nullptr);
-        wgpuRenderPassEncoderSetBindGroup(render_pass, bind_group_index++, sculpt_data_bind_group, 0, nullptr);
+        wgpuRenderPassEncoderSetBindGroup(render_pass, bind_group_index++, sculpt_data_bind_proxy_group, 0, nullptr);
         wgpuRenderPassEncoderSetBindGroup(render_pass, bind_group_index++, Renderer::instance->get_ibl_bind_group(), 0, nullptr);
+        //wgpuRenderPassEncoderSetBindGroup(render_pass, bind_group_index++, preview_stroke_bind_group, 0, nullptr);
 
         // Set vertex buffer while encoding the render pass
         wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, mesh->get_vertex_buffer(), 0, mesh->get_byte_size());
@@ -569,7 +572,7 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPUTextureView swapchain_vie
         // Set bind groups
         wgpuRenderPassEncoderSetBindGroup(render_pass, 0, render_preview_proxy_geometry_bind_group, 0, nullptr);
         wgpuRenderPassEncoderSetBindGroup(render_pass, 1, render_preview_camera_bind_group, 0, nullptr);
-        wgpuRenderPassEncoderSetBindGroup(render_pass, 2, sculpt_data_bind_group, 0, nullptr);
+        wgpuRenderPassEncoderSetBindGroup(render_pass, 2, sculpt_data_bind_preview_group, 0, nullptr);
         wgpuRenderPassEncoderSetBindGroup(render_pass, 3, Renderer::instance->get_ibl_bind_group(), 0, nullptr);
 
         // Set vertex buffer while encoding the render pass
@@ -873,8 +876,12 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
         sculpt_data_uniform.binding = 0;
         sculpt_data_uniform.buffer_size = sizeof(sSculptData);
 
-        std::vector<Uniform*> uniforms = { &sculpt_data_uniform };
-        sculpt_data_bind_group = webgpu_context->create_bind_group(uniforms, render_proxy_shader, 2);
+        prev_stroke_uniform_2.data = preview_stroke_uniform.data;
+        prev_stroke_uniform_2.binding = 1u;
+        prev_stroke_uniform_2.buffer_size = preview_stroke_uniform.buffer_size;
+
+        std::vector<Uniform*> uniforms = { &sculpt_data_uniform, &prev_stroke_uniform_2 };
+        sculpt_data_bind_proxy_group = webgpu_context->create_bind_group(uniforms, render_proxy_shader, 2);
     }
 
     WGPUTextureFormat swapchain_format = is_openxr_available ? webgpu_context->xr_swapchain_format : webgpu_context->swapchain_format;
@@ -890,12 +897,15 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
     // Proxy for Preview
     render_preview_proxy_shader = RendererStorage::get_shader("data/shaders/octree/proxy_geometry_preview.wgsl");
     {
-        std::vector<Uniform*> uniforms = { &preview_stroke_uniform , &proxy_geometry_eye_position };
+        std::vector<Uniform*> uniforms = { &proxy_geometry_eye_position };
 
         render_preview_proxy_geometry_bind_group = webgpu_context->create_bind_group(uniforms, render_preview_proxy_shader, 0);
 
         uniforms = { camera_uniform };
         render_preview_camera_bind_group = webgpu_context->create_bind_group(uniforms, render_preview_proxy_shader, 1);
+
+        uniforms = { &sculpt_data_uniform, &prev_stroke_uniform_2 };
+        sculpt_data_bind_preview_group = webgpu_context->create_bind_group(uniforms, render_preview_proxy_shader, 2);
     }
     color_target = {};
     color_target.format = swapchain_format;

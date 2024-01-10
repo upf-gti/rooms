@@ -25,6 +25,21 @@ fn compute(@builtin(workgroup_id) group_id: vec3u)
 
         atomicStore(&octree.current_level, 0);
         atomicStore(&octree.atomic_counter, 0);
+
+        let rounded_size : u32 = preview_data.preview_stroke.edit_count + (4 - preview_data.preview_stroke.edit_count % 4);
+
+        for (var i : u32 = 0; i < rounded_size; i += 4) {
+
+            var packed_value : u32 = 0;
+
+            packed_value |= (i + 3);
+            packed_value |= (i + 2) << 8;
+            packed_value |= (i + 1) << 16;
+            packed_value |= (i + 0) << 24;
+            
+            edit_culling_data.edit_culling_lists[i / 4] = packed_value;
+        }
+        edit_culling_data.edit_culling_count[0] = preview_data.preview_stroke.edit_count; 
     } else {
         indirect_buffer = vec3u(1, 1, 1);
 

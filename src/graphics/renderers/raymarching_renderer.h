@@ -84,7 +84,9 @@ class RaymarchingRenderer {
     WGPUBindGroup   render_camera_bind_group = nullptr;
 
     Uniform         sculpt_data_uniform;
-    WGPUBindGroup   sculpt_data_bind_group = nullptr;
+    Uniform         prev_stroke_uniform_2;
+    WGPUBindGroup   sculpt_data_bind_proxy_group = nullptr;
+    WGPUBindGroup   sculpt_data_bind_preview_group = nullptr;
 
     Uniform         *camera_uniform;
 
@@ -158,6 +160,14 @@ class RaymarchingRenderer {
                 {
                     .position = {0.00f, 0.10f, 0.0f},
                     .dimensions = {0.050f, 0.01f, 0.01f,0.01f}
+                },
+                {
+                    .position = {0.00f, 0.00f, 0.0f},
+                    .dimensions = {0.050f, 0.01f, 0.01f,0.01f}
+                },
+                {
+                    .position = {0.00f, -0.150f, 0.0f},
+                    .dimensions = {0.10f, 0.01f, 0.01f,0.01f}
                 }
             },
         };
@@ -192,6 +202,10 @@ public:
     void set_sculpt_start_position(const glm::vec3& position);
     void set_sculpt_rotation(const glm::quat& rotation);
     void set_camera_eye(const glm::vec3& eye_pos);
+
+    void set_preview_stroke(const Stroke& preview) {
+        preview_data.preview_stroke = preview;
+    }
 
     /*
     *   Edits

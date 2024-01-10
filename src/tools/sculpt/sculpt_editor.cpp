@@ -301,6 +301,24 @@ void SculptEditor::update(float delta_time)
         }
     }
 
+    // TODO tmp preview stroke
+    Stroke preview_stroke = {};
+    preview_stroke.edit_count = 1u,
+    preview_stroke.primitive = SD_SPHERE,
+    preview_stroke.operation = OP_UNION,
+    preview_stroke.color = { 0.0f, 0.0f, 1.0f, 1.0f },
+    preview_stroke.edit_count = 1u;
+
+    preview_stroke.edits[0].position = { 0.0f, 0.10, 0.0 };
+    preview_stroke.edits[0].dimensions = { 0.150f, 0.01f, 0.01f,0.01f };
+    preview_stroke.edits[0].rotation = {0.0, 0.0, 0.0, 1.0};
+
+    preview_stroke.edits[0].position -= (sculpt_start_position + translation_diff);
+    preview_stroke.edits[0].position = (sculpt_rotation * rotation_diff) * preview_stroke.edits[0].position;
+    preview_stroke.edits[0].rotation *= (sculpt_rotation * rotation_diff);
+
+    renderer->set_preview_stroke(preview_stroke);
+
     // Push to the renderer the edits and the previews
     renderer->push_preview_edit_list(preview_tmp_edits);
     renderer->push_edit_list(new_edits);

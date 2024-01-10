@@ -23,7 +23,8 @@ struct VertexOutput {
     @location(4) voxel_pos : vec3f,
     @location(5) @interpolate(flat) voxel_center : vec3f,
     @location(6) @interpolate(flat) atlas_tile_coordinate : vec3f,
-    @location(7) in_atlas_pos : vec3f
+    @location(7) in_atlas_pos : vec3f,
+    @location(8) @interpolate(flat) has_previews : u32
 };
 
 struct SculptData {
@@ -66,6 +67,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 
     if ((instance_data.in_use & BRICK_HAS_PREVIEW_FLAG) == BRICK_HAS_PREVIEW_FLAG) {
         out.color = vec3f(0.0, 1.0, 0.0);
+        has_previews = 1u;
     }
     
     out.voxel_pos = voxel_pos;
@@ -89,6 +91,7 @@ struct FragmentOutput {
 @group(0) @binding(1) var<uniform> eye_position : vec3f;
 
 @group(2) @binding(0) var<uniform> sculpt_data : SculptData;
+@group(2) @binding(1) var<storage, read> preview_data : PreviewDataReadonly;
 
 @group(3) @binding(0) var irradiance_texture: texture_cube<f32>;
 @group(3) @binding(1) var brdf_lut_texture: texture_2d<f32>;
@@ -101,10 +104,22 @@ fn sample_material_raw(pos : vec3u) -> Material {
     return unpack_material(sample);
 }
 
-fn sample_sdf(position : vec3f) -> f32
+fn sample_sdf(position : vec3f, world_pos : vec3f) -> f32
 {
+    var material : Material;// = sample_material(vec3f(0.0, 0.0, 0.0));
+    var surface : Surface;
+    surface.distance = textureSampleLevel(read_sdf, texture_sampler, position, 0.0).r;
+    
+    //if (has_previews == 1u) {
+        for(var i : u32 = 0u; i < preview_data.preview_stroke.edit_count; i++) {
+            var curr_edit = preview_data.preview_stroke.edits[i];
+            curr_edit.position = curr_edit.position;// + sculpt_data.sculpt_start_position;
+            surface = evaluate_edit(world_pos - sculpt_data.sculpt_start_position, preview_data.preview_stroke.primitive, preview_data.preview_stroke.operation, preview_data.preview_stroke.parameters, surface, material, curr_edit);
+        }
+    //}
+    
     // TODO: preview edits
-    return textureSampleLevel(read_sdf, texture_sampler, position, 0.0).r;
+    return surface.distance / SCALE_CONVERSION_FACTOR;
 }
 
 // From: http://paulbourke.net/miscellaneous/interpolation/
@@ -134,13 +149,34 @@ fn interpolate_material(pos : vec3f) -> Material {
 
     return result;
 }
+// MANANA: REPENSAR EL BLENDEING DE MATERIALES
+fn sample_material(pos : vec3f, world_pos : vec3f) -> Material {
+    let material_sdf : Material = interpolate_material(pos * SDF_RESOLUTION);
 
-fn sample_material(pos : vec3f) -> Material {
-    return interpolate_material(pos * SDF_RESOLUTION);
+    var material : Material;
+    material.albedo = preview_data.preview_stroke.color.xyz;
+    material.roughness = preview_data.preview_stroke.material.x;
+    material.metalness = preview_data.preview_stroke.material.y;
+
+    var surface : Surface;
+    surface.distance = last_found_surface_distance; // textureSampleLevel(read_sdf, texture_sampler, pos, 0.0).r;
+    surface.material = material_sdf;
+    
+    for(var i : u32 = 0u; i < preview_data.preview_stroke.edit_count; i++) {
+        var curr_edit = preview_data.preview_stroke.edits[i];
+        curr_edit.position = curr_edit.position;// + sculpt_data.sculpt_start_position;
+        surface = evaluate_edit(world_pos - sculpt_data.sculpt_start_position, preview_data.preview_stroke.primitive, preview_data.preview_stroke.operation, preview_data.preview_stroke.parameters, surface, material, curr_edit);
+    }
+
+    return surface.material;
 }
 
 // Add the generic SDF rendering functions
 #include sdf_render_functions.wgsl
+
+var<private> has_previews : u32 = 0u;
+
+var<private> last_found_surface_distance : f32;
 
 @fragment
 fn fs_main(in: VertexOutput) -> FragmentOutput {
@@ -155,6 +191,8 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     var final_color : vec3f = ray_result.rgb; 
 
+    has_previews = in.has_previews;
+
     if (GAMMA_CORRECTION == 1) {
         final_color = pow(final_color, vec3(1.0 / 2.2));
     }
@@ -162,10 +200,10 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     out.color = vec4f(final_color, 1.0); // Color
     out.depth = ray_result.a;
 
-    if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
-        out.color = vec4f(in.color.x, in.color.y, in.color.z, 1.0);
-        out.depth = in.position.z;
-    }
+    // if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
+    //     out.color = vec4f(in.color.x, in.color.y, in.color.z, 1.0);
+    //     out.depth = in.position.z;
+    // }
 
     // out.color = vec4f(1.0, 0.0, 0.0, 1.0); // Color
     // out.depth = 0.0;
