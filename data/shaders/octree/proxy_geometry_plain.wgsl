@@ -166,6 +166,25 @@ fn sample_sdf_with_preview(position : vec3f, world_pos : vec3f) -> Surface
     return surface;
 }
 
+fn sample_sdf_with_preview_without_material(position : vec3f, world_pos : vec3f) -> f32
+{
+    var material : Material;
+
+    var surface : Surface;
+    surface.distance = textureSampleLevel(read_sdf, texture_sampler, position, 0.0).r;
+    
+    //if (has_previews == 1u) {
+        for(var i : u32 = 0u; i < preview_data.preview_stroke.edit_count; i++) {
+            var curr_edit = preview_data.preview_stroke.edits[i];
+            curr_edit.position = curr_edit.position;// + sculpt_data.sculpt_start_position;
+            surface = evaluate_edit(world_pos - sculpt_data.sculpt_start_position, preview_data.preview_stroke.primitive, preview_data.preview_stroke.operation, preview_data.preview_stroke.parameters, surface, material, curr_edit);
+        }
+    //}
+    
+    // TODO: preview edits
+    return surface.distance;
+}
+
 // Add the generic SDF rendering functions
 #include sdf_render_functions.wgsl
 
@@ -173,10 +192,10 @@ fn sample_sdf_with_preview(position : vec3f, world_pos : vec3f) -> Surface
 fn estimate_normal_with_previews( p : vec3f, p_world: vec3f) -> vec3f
 {
     let k : vec2f = vec2f(1.0, -1.0);
-    return normalize( k.xyy * sample_sdf_with_preview( p + k.xyy * DERIVATIVE_STEP, p_world).distance + 
-                      k.yyx * sample_sdf_with_preview( p + k.yyx * DERIVATIVE_STEP, p_world ).distance + 
-                      k.yxy * sample_sdf_with_preview( p + k.yxy * DERIVATIVE_STEP, p_world).distance + 
-                      k.xxx * sample_sdf_with_preview( p + k.xxx * DERIVATIVE_STEP, p_world).distance );
+    return normalize( k.xyy * sample_sdf_with_preview_without_material( p + k.xyy * DERIVATIVE_STEP, p_world) + 
+                      k.yyx * sample_sdf_with_preview_without_material( p + k.yyx * DERIVATIVE_STEP, p_world) + 
+                      k.yxy * sample_sdf_with_preview_without_material( p + k.yxy * DERIVATIVE_STEP, p_world) + 
+                      k.xxx * sample_sdf_with_preview_without_material( p + k.xxx * DERIVATIVE_STEP, p_world) );
 }
 
 
@@ -220,9 +239,10 @@ fn raymarch_with_previews(ray_origin : vec3f, ray_origin_world : vec3f, ray_dir 
         let normal : vec3f = estimate_normal_with_previews(pos, pos_world);
 
         //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
-		//return vec4f(apply_light(-ray_dir, pos, pos_world, lightPos + lightOffset, surface.material), depth);
+		return vec4f(apply_light(-ray_dir, pos, pos_world, lightPos + lightOffset, surface.material), depth);
         //return vec4f(normal, depth);
-        return vec4f(surface.material.albedo, depth);
+        //return vec4f(surface.material.albedo, depth);
+        //return vec4f(normal, depth);
 	}
 
     // Use a two band spherical harmonic as a skymap
