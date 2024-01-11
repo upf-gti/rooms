@@ -87,6 +87,7 @@ fn sample_material(pos : vec3f, padding : vec3f) -> Material {
     return material;
 }
 
+
 fn sample_sdf(position : vec3f, padding : vec3f) -> f32
 {
     // TODO: preview edits

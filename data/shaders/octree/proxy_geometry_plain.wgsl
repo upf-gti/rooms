@@ -65,9 +65,10 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     out.color = vec3f(0.0, 0.0, 0.0);
     out.normal = in.normal;
 
+    out.has_previews = 0;
     if ((instance_data.in_use & BRICK_HAS_PREVIEW_FLAG) == BRICK_HAS_PREVIEW_FLAG) {
         out.color = vec3f(0.0, 1.0, 0.0);
-        has_previews = 1u;
+        out.has_previews = 1u;
     }
     
     out.voxel_pos = voxel_pos;
@@ -104,23 +105,6 @@ fn sample_material_raw(pos : vec3u) -> Material {
     return unpack_material(sample);
 }
 
-fn sample_sdf(position : vec3f, world_pos : vec3f) -> f32
-{
-    var material : Material;// = sample_material(vec3f(0.0, 0.0, 0.0));
-    var surface : Surface;
-    surface.distance = textureSampleLevel(read_sdf, texture_sampler, position, 0.0).r;
-    
-    //if (has_previews == 1u) {
-        for(var i : u32 = 0u; i < preview_data.preview_stroke.edit_count; i++) {
-            var curr_edit = preview_data.preview_stroke.edits[i];
-            curr_edit.position = curr_edit.position;// + sculpt_data.sculpt_start_position;
-            surface = evaluate_edit(world_pos - sculpt_data.sculpt_start_position, preview_data.preview_stroke.primitive, preview_data.preview_stroke.operation, preview_data.preview_stroke.parameters, surface, material, curr_edit);
-        }
-    //}
-    
-    // TODO: preview edits
-    return surface.distance / SCALE_CONVERSION_FACTOR;
-}
 
 // From: http://paulbourke.net/miscellaneous/interpolation/
 fn interpolate_material(pos : vec3f) -> Material {
@@ -149,34 +133,105 @@ fn interpolate_material(pos : vec3f) -> Material {
 
     return result;
 }
-// MANANA: REPENSAR EL BLENDEING DE MATERIALES
-fn sample_material(pos : vec3f, world_pos : vec3f) -> Material {
-    let material_sdf : Material = interpolate_material(pos * SDF_RESOLUTION);
 
+fn sample_material(pos : vec3f, world_pos : vec3f) -> Material {
+    return interpolate_material(pos * SDF_RESOLUTION);
+}
+
+fn sample_sdf(position : vec3f, world_pos : vec3f) -> f32
+{
+    return textureSampleLevel(read_sdf, texture_sampler, position, 0.0).r;
+}
+
+fn sample_sdf_with_preview(position : vec3f, world_pos : vec3f) -> Surface
+{
     var material : Material;
     material.albedo = preview_data.preview_stroke.color.xyz;
     material.roughness = preview_data.preview_stroke.material.x;
     material.metalness = preview_data.preview_stroke.material.y;
 
     var surface : Surface;
-    surface.distance = last_found_surface_distance; // textureSampleLevel(read_sdf, texture_sampler, pos, 0.0).r;
-    surface.material = material_sdf;
+    surface.distance = textureSampleLevel(read_sdf, texture_sampler, position, 0.0).r;
+    surface.material = interpolate_material(position * SDF_RESOLUTION);
     
-    for(var i : u32 = 0u; i < preview_data.preview_stroke.edit_count; i++) {
-        var curr_edit = preview_data.preview_stroke.edits[i];
-        curr_edit.position = curr_edit.position;// + sculpt_data.sculpt_start_position;
-        surface = evaluate_edit(world_pos - sculpt_data.sculpt_start_position, preview_data.preview_stroke.primitive, preview_data.preview_stroke.operation, preview_data.preview_stroke.parameters, surface, material, curr_edit);
-    }
-
-    return surface.material;
+    //if (has_previews == 1u) {
+        for(var i : u32 = 0u; i < preview_data.preview_stroke.edit_count; i++) {
+            var curr_edit = preview_data.preview_stroke.edits[i];
+            curr_edit.position = curr_edit.position;// + sculpt_data.sculpt_start_position;
+            surface = evaluate_edit(world_pos - sculpt_data.sculpt_start_position, preview_data.preview_stroke.primitive, preview_data.preview_stroke.operation, preview_data.preview_stroke.parameters, surface, material, curr_edit);
+        }
+    //}
+    
+    // TODO: preview edits
+    return surface;
 }
 
 // Add the generic SDF rendering functions
 #include sdf_render_functions.wgsl
 
-var<private> has_previews : u32 = 0u;
+// https://iquilezles.org/articles/normalsSDF/
+fn estimate_normal_with_previews( p : vec3f, p_world: vec3f) -> vec3f
+{
+    let k : vec2f = vec2f(1.0, -1.0);
+    return normalize( k.xyy * sample_sdf_with_preview( p + k.xyy * DERIVATIVE_STEP, p_world).distance + 
+                      k.yyx * sample_sdf_with_preview( p + k.yyx * DERIVATIVE_STEP, p_world ).distance + 
+                      k.yxy * sample_sdf_with_preview( p + k.yxy * DERIVATIVE_STEP, p_world).distance + 
+                      k.xxx * sample_sdf_with_preview( p + k.xxx * DERIVATIVE_STEP, p_world).distance );
+}
+
+
+fn raymarch_with_previews(ray_origin : vec3f, ray_origin_world : vec3f, ray_dir : vec3f, max_distance : f32, view_proj : mat4x4f) -> vec4f
+{
+    let ambientColor = vec3f(0.4);
+	let hitColor = vec3f(1.0, 1.0, 1.0);
+	let missColor = vec3f(0.0, 0.0, 0.0);
+    let lightOffset = vec3f(0.0, 0.0, 0.0);
+
+	var depth : f32 = 0.0;
+    var surface : Surface;
+    var distance : f32;
+
+    var pos : vec3f;
+    var pos_world : vec3f;
+    var i : i32 = 0;
+    var exit : u32 = 0u;
+
+	for (i = 0; depth < max_distance && i < MAX_ITERATIONS; i++)
+    {
+		pos = ray_origin + ray_dir * depth;
+        pos_world = ray_origin_world + ray_dir * (depth / SCALE_CONVERSION_FACTOR);
+
+        surface = sample_sdf_with_preview(pos, pos_world);
+        distance = surface.distance / SCALE_CONVERSION_FACTOR;
+
+		if (distance < MIN_HIT_DIST) {
+            exit = 1u;
+            break;
+		} 
+
+        depth += distance * SCALE_CONVERSION_FACTOR;
+	}
+
+    if (exit == 1u) {
+        let epsilon : f32 = 0.000001; // avoids flashing when camera inside sdf
+        let proj_pos : vec4f = view_proj * vec4f(pos_world + ray_dir * epsilon, 1.0);
+        depth = proj_pos.z / proj_pos.w;
+
+        let normal : vec3f = estimate_normal_with_previews(pos, pos_world);
+
+        //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
+		//return vec4f(apply_light(-ray_dir, pos, pos_world, lightPos + lightOffset, surface.material), depth);
+        //return vec4f(normal, depth);
+        return vec4f(surface.material.albedo, depth);
+	}
+
+    // Use a two band spherical harmonic as a skymap
+    return vec4f(0.0, 0.0, 0.0, 0.999);
+}
 
 var<private> last_found_surface_distance : f32;
+
+var<private> last_sampled_material : Material;
 
 @fragment
 fn fs_main(in: VertexOutput) -> FragmentOutput {
@@ -187,11 +242,13 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     let raymarch_distance : f32 = ray_AABB_intersection_distance(in.voxel_pos, ray_dir_voxel_space, in.voxel_center, vec3f(BRICK_WORLD_SIZE));
 
-    let ray_result = raymarch(in.in_atlas_pos.xyz, in.world_pos.xyz, ray_dir_voxel_space, raymarch_distance * SCALE_CONVERSION_FACTOR, camera_data.view_projection);
-
+    var ray_result : vec4f;
+    if (in.has_previews == 1) {
+        ray_result = raymarch_with_previews(in.in_atlas_pos.xyz, in.world_pos.xyz, ray_dir_voxel_space, raymarch_distance * SCALE_CONVERSION_FACTOR, camera_data.view_projection);
+    } else {
+        ray_result = raymarch(in.in_atlas_pos.xyz, in.world_pos.xyz, ray_dir_voxel_space, raymarch_distance * SCALE_CONVERSION_FACTOR, camera_data.view_projection);
+    }
     var final_color : vec3f = ray_result.rgb; 
-
-    has_previews = in.has_previews;
 
     if (GAMMA_CORRECTION == 1) {
         final_color = pow(final_color, vec3(1.0 / 2.2));
