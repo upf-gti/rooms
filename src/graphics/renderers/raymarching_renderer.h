@@ -16,6 +16,10 @@
 
 class EntityMesh;
 
+struct RayIntersectionInfo {
+    uint32_t intersected = 0;
+};
+
 class RaymarchingRenderer {
 
     enum eEvaluatorOperationFlags : uint32_t {
@@ -82,10 +86,14 @@ class RaymarchingRenderer {
     WGPUBindGroup   render_camera_bind_group = nullptr;
 
     Uniform         sculpt_data_uniform;
-    WGPUBindGroup   sculpt_data_bind_group = nullptr;
+    WGPUBindGroup   sculpt_data_proxy_bind_group = nullptr;
+    WGPUBindGroup   sculpt_data_ray_bind_group = nullptr;
 
-    Uniform         ray_info;
+    Uniform         ray_info_uniform;
+    Uniform         ray_intersection_info_uniform;
     WGPUBindGroup   octree_ray_intersection_bind_group = nullptr;
+    WGPUBindGroup   octree_ray_intersection_info_bind_group = nullptr;
+    WGPUBuffer      ray_intersection_info_read_buffer = nullptr;
 
     Uniform         camera_uniform;
 
@@ -125,7 +133,9 @@ class RaymarchingRenderer {
         float dummy0;
         glm::vec3 ray_dir;
         float dummy1;
-    };
+    } ray_info;
+
+    RayIntersectionInfo ray_intersection_info;
 
     Stroke current_stroke = {};
     Stroke in_frame_stroke = {};
@@ -161,6 +171,8 @@ class RaymarchingRenderer {
 
     void compute_preview_edit();
 
+    void octree_ray_intersect(const glm::vec3& ray_origin, const glm::vec3& ray_dir);
+
 public:
 
     RaymarchingRenderer();
@@ -180,6 +192,8 @@ public:
     void set_sculpt_start_position(const glm::vec3& position);
     void set_sculpt_rotation(const glm::quat& rotation);
     void set_camera_eye(const glm::vec3& eye_pos);
+
+    const RayIntersectionInfo& get_ray_intersection_info() const;
 
     /*
     *   Edits

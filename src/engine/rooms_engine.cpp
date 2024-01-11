@@ -214,7 +214,7 @@ void RoomsEngine::render_gui()
     }
 
     ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
-    if (ImGui::BeginTabBar("MyTabBar", tab_bar_flags))
+    if (ImGui::BeginTabBar("TabBar", tab_bar_flags))
     {
         if (ImGui::BeginTabItem("Scene"))
         {
@@ -237,7 +237,9 @@ void RoomsEngine::render_gui()
         }
         if (ImGui::BeginTabItem("Debugger"))
         {
-            ImGui::Text("Debugger Tab");
+            const RayIntersectionInfo& info = static_cast<RoomsRenderer*>(RoomsRenderer::instance)->get_raymarching_renderer()->get_ray_intersection_info();
+            std::string intersected = info.intersected ? "yes" : "no";
+            ImGui::Text(("Ray Intersection: " + intersected).c_str());
             ImGui::EndTabItem();
         }
         ImGui::EndTabBar();

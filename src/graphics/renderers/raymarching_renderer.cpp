@@ -90,7 +90,7 @@ void RaymarchingRenderer::clean()
     wgpuBindGroupRelease(compute_octant_usage_bind_groups[0]);
     wgpuBindGroupRelease(compute_octant_usage_bind_groups[1]);
     wgpuBindGroupRelease(render_camera_bind_group);
-    wgpuBindGroupRelease(sculpt_data_bind_group);
+    wgpuBindGroupRelease(sculpt_data_proxy_bind_group);
 
     delete render_proxy_shader;
     delete compute_octree_evaluate_shader;
@@ -105,6 +105,24 @@ void RaymarchingRenderer::update(float delta_time)
     //for (;updated_time >= 0.0166f; updated_time -= 0.0166f) {
         compute_octree();
     //}
+
+    if (Input::is_mouse_pressed(GLFW_MOUSE_BUTTON_RIGHT)) {
+        RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
+        WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
+
+        Camera* camera = rooms_renderer->get_camera();
+        const glm::mat4x4& view_projection_inv = glm::inverse(camera->get_view_projection());
+
+        glm::vec2 mouse_pos = Input::get_mouse_position();
+        glm::vec3 mouse_pos_ndc;
+        mouse_pos_ndc.x = (mouse_pos.x / webgpu_context->render_width) * 2.0f - 1.0f;
+        mouse_pos_ndc.y = -((mouse_pos.y / webgpu_context->render_height) * 2.0f - 1.0f);
+        mouse_pos_ndc.z = 1.0f;
+
+        glm::vec4 ray_dir = view_projection_inv * glm::vec4(mouse_pos_ndc, 1.0f);
+
+        octree_ray_intersect(camera->get_eye(), glm::normalize(glm::vec3(ray_dir)));
+    }
 }
 
 void RaymarchingRenderer::render()
@@ -118,6 +136,11 @@ void RaymarchingRenderer::add_preview_edit(const Edit& edit)
     //    return;
     //}
     //preview_edit_data.preview_edits[preview_edit_data.preview_edits_count++] = edit;
+}
+
+const RayIntersectionInfo& RaymarchingRenderer::get_ray_intersection_info() const
+{
+    return ray_intersection_info;
 }
 
 void RaymarchingRenderer::initialize_stroke()
@@ -182,7 +205,81 @@ void RaymarchingRenderer::compute_preview_edit() {
     // Upload the preview stroke
     // Evaluate (mark & add proxy preview)
     // Proxy preview render
-};
+}
+
+void RaymarchingRenderer::octree_ray_intersect(const glm::vec3& ray_origin, const glm::vec3& ray_dir)
+{
+    WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
+
+    // Initialize a command encoder
+    WGPUCommandEncoderDescriptor encoder_desc = {};
+    WGPUCommandEncoder command_encoder = wgpuDeviceCreateCommandEncoder(webgpu_context->device, &encoder_desc);
+
+    // Create compute_raymarching pass
+    WGPUComputePassDescriptor compute_pass_desc = {};
+    compute_pass_desc.timestampWrites = nullptr;
+    WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
+
+    ray_info.ray_origin = ray_origin;
+    ray_info.ray_dir = ray_dir;
+
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(ray_info_uniform.data), 0, &ray_info, sizeof(RayInfo));
+
+    compute_octree_ray_intersection_pipeline.set(compute_pass);
+
+    wgpuComputePassEncoderSetBindGroup(compute_pass, 0, octree_ray_intersection_bind_group, 0, nullptr);
+    wgpuComputePassEncoderSetBindGroup(compute_pass, 1, octree_ray_intersection_info_bind_group, 0, nullptr);
+    wgpuComputePassEncoderSetBindGroup(compute_pass, 2, sculpt_data_ray_bind_group, 0, nullptr);
+
+    wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
+
+    // Finalize compute_raymarching pass
+    wgpuComputePassEncoderEnd(compute_pass);
+
+    wgpuCommandEncoderCopyBufferToBuffer(command_encoder, std::get<WGPUBuffer>(ray_intersection_info_uniform.data), 0, ray_intersection_info_read_buffer, 0, sizeof(RayIntersectionInfo));
+
+    WGPUCommandBufferDescriptor cmd_buff_descriptor = {};
+    cmd_buff_descriptor.nextInChain = NULL;
+    cmd_buff_descriptor.label = "Ray Intersection Command Buffer";
+
+    // Encode and submit the GPU commands
+    WGPUCommandBuffer commands = wgpuCommandEncoderFinish(command_encoder, &cmd_buff_descriptor);
+    wgpuQueueSubmit(webgpu_context->device_queue, 1, &commands);
+
+    wgpuCommandBufferRelease(commands);
+    wgpuComputePassEncoderRelease(compute_pass);
+    wgpuCommandEncoderRelease(command_encoder);
+
+    // Print output
+    struct UserData {
+        WGPUBuffer read_buffer;
+        RayIntersectionInfo* info;
+        bool finished = false;
+    } user_data;
+
+    user_data.read_buffer = ray_intersection_info_read_buffer;
+    user_data.info = &ray_intersection_info;
+
+    //spdlog::info("ray_orig: ({},{}.{}) , ray_dir: ({},{}.{})", ray_origin.x, ray_origin.y, ray_origin.z, ray_dir.x, ray_dir.y, ray_dir.z);
+
+    wgpuBufferMapAsync(ray_intersection_info_read_buffer, WGPUMapMode_Read, 0, sizeof(RayIntersectionInfo), [](WGPUBufferMapAsyncStatus status, void* user_data_ptr) {
+
+        UserData* user_data = static_cast<UserData*>(user_data_ptr);
+
+        if (status == WGPUBufferMapAsyncStatus_Success) {
+            *user_data->info = *(const RayIntersectionInfo*)wgpuBufferGetConstMappedRange(user_data->read_buffer, 0, sizeof(RayIntersectionInfo));
+            wgpuBufferUnmap(user_data->read_buffer);
+        }
+
+        user_data->finished = true;
+
+    }, &user_data);
+
+    while (!user_data.finished) {
+        // Checks for ongoing asynchronous operations and call their callbacks if needed
+        webgpu_context->process_events();
+    }
+}
 
 void RaymarchingRenderer::evaluate_strokes(const std::vector<Stroke> strokes, bool is_undo, bool is_redo)
 {
@@ -469,7 +566,7 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
     // Set bind groups
     wgpuRenderPassEncoderSetBindGroup(render_pass, bind_group_index++, render_proxy_geometry_bind_group, 0, nullptr);
     wgpuRenderPassEncoderSetBindGroup(render_pass, bind_group_index++, render_camera_bind_group, 0, nullptr);
-    wgpuRenderPassEncoderSetBindGroup(render_pass, bind_group_index++, sculpt_data_bind_group, 0, nullptr);
+    wgpuRenderPassEncoderSetBindGroup(render_pass, bind_group_index++, sculpt_data_proxy_bind_group, 0, nullptr);
     wgpuRenderPassEncoderSetBindGroup(render_pass, bind_group_index++, Renderer::instance->get_ibl_bind_group(), 0, nullptr);
 
     // Set vertex buffer while encoding the render pass
@@ -742,7 +839,7 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
         sculpt_data_uniform.buffer_size = sizeof(sSculptData);
 
         std::vector<Uniform*> uniforms = { &sculpt_data_uniform };
-        sculpt_data_bind_group = webgpu_context->create_bind_group(uniforms, render_proxy_shader, 2);
+        sculpt_data_proxy_bind_group = webgpu_context->create_bind_group(uniforms, render_proxy_shader, 2);
     }
 
     WGPUTextureFormat swapchain_format = is_openxr_available ? webgpu_context->xr_swapchain_format : webgpu_context->swapchain_format;
@@ -764,12 +861,29 @@ void RaymarchingRenderer::init_octree_ray_intersection_pipeline()
 
     // Ray Octree intersection bindgroup
     {
-        ray_info.data = webgpu_context->create_buffer(sizeof(RayInfo), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "ray info");
-        ray_info.binding = 6;
-        ray_info.buffer_size = sizeof(RayInfo);
+        std::vector<Uniform*> uniforms = { &octree_uniform, &sdf_texture_uniform, &linear_sampler_uniform, &octree_proxy_instance_buffer };
+        octree_ray_intersection_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_ray_intersection_shader, 0);
+    }
 
-        std::vector<Uniform*> uniforms = { &octree_uniform, &sdf_texture_uniform, &linear_sampler_uniform, &octree_proxy_instance_buffer, &ray_info };
-        compute_octree_clean_octree_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_cleaning_shader, 0);
+    // Ray Octree intersection info bindgroup
+    {
+        ray_info_uniform.data = webgpu_context->create_buffer(sizeof(RayInfo), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "ray info");
+        ray_info_uniform.binding = 0;
+        ray_info_uniform.buffer_size = sizeof(RayInfo);
+
+        ray_intersection_info_uniform.data = webgpu_context->create_buffer(sizeof(RayIntersectionInfo), WGPUBufferUsage_CopySrc | WGPUBufferUsage_Storage, nullptr, "ray intersection info");
+        ray_intersection_info_uniform.binding = 1;
+        ray_intersection_info_uniform.buffer_size = sizeof(RayIntersectionInfo);
+
+        ray_intersection_info_read_buffer = webgpu_context->create_buffer(sizeof(RayIntersectionInfo), WGPUBufferUsage_CopyDst | WGPUBufferUsage_MapRead, nullptr, "ray intersection info read buffer");
+
+        std::vector<Uniform*> uniforms = { &ray_info_uniform, &ray_intersection_info_uniform };
+        octree_ray_intersection_info_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_ray_intersection_shader, 1);
+    }
+
+    {
+        std::vector<Uniform*> uniforms = { &sculpt_data_uniform };
+        sculpt_data_ray_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_ray_intersection_shader, 2);
     }
 
     compute_octree_ray_intersection_pipeline.create_compute(compute_octree_ray_intersection_shader);
