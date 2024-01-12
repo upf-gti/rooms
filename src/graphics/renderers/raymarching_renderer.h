@@ -50,6 +50,7 @@ class RaymarchingRenderer {
     Pipeline        compute_octree_brick_copy_pipeline;
     Pipeline        compute_octree_initialization_pipeline;
     Pipeline        compute_octree_cleaning_pipeline;
+    Pipeline        compute_octree_brick_unmark_pipeline;
     Shader*         compute_octree_evaluate_shader = nullptr;
     Shader*         compute_octree_increment_level_shader = nullptr;
     Shader*         compute_octree_write_to_texture_shader = nullptr;
@@ -57,6 +58,7 @@ class RaymarchingRenderer {
     Shader*         compute_octree_brick_copy_shader = nullptr;
     Shader*         compute_octree_initialization_shader = nullptr;
     Shader*         compute_octree_cleaning_shader = nullptr;
+    Shader*         compute_octree_brick_unmark_shader = nullptr;
     WGPUBindGroup   compute_octree_evaluate_bind_group = nullptr;
     WGPUBindGroup   compute_octree_increment_level_bind_group = nullptr;
     WGPUBindGroup   compute_octree_write_to_texture_bind_group = nullptr;
@@ -66,6 +68,7 @@ class RaymarchingRenderer {
     WGPUBindGroup   compute_stroke_buffer_bind_group = nullptr;
     WGPUBindGroup   compute_octree_initialization_bind_group = nullptr;
     WGPUBindGroup   compute_octree_clean_octree_bind_group = nullptr;
+    WGPUBindGroup   compute_octree_brick_unmark_bind_group = nullptr;
 
     Uniform         octree_uniform;
     Uniform         octant_usage_uniform[4];
@@ -203,8 +206,9 @@ public:
     void set_sculpt_rotation(const glm::quat& rotation);
     void set_camera_eye(const glm::vec3& eye_pos);
 
-    void set_preview_stroke(const Stroke& preview) {
-        preview_data.preview_stroke = preview;
+    void set_preview_edit(const Edit& preview) {
+        preview_data.preview_stroke.edits[0] = preview;
+        preview_data.preview_stroke.edit_count = 1u;
     }
 
     /*
