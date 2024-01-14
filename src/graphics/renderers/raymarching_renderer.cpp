@@ -220,7 +220,7 @@ void RaymarchingRenderer::octree_ray_intersect(const glm::vec3& ray_origin, cons
     compute_pass_desc.timestampWrites = nullptr;
     WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
 
-    ray_info.ray_origin = ray_origin;
+    ray_info.ray_origin = ray_origin - sculpt_data.sculpt_start_position;
     ray_info.ray_dir = ray_dir;
 
     webgpu_context->update_buffer(std::get<WGPUBuffer>(ray_info_uniform.data), 0, &ray_info, sizeof(RayInfo));
@@ -229,7 +229,7 @@ void RaymarchingRenderer::octree_ray_intersect(const glm::vec3& ray_origin, cons
 
     wgpuComputePassEncoderSetBindGroup(compute_pass, 0, octree_ray_intersection_bind_group, 0, nullptr);
     wgpuComputePassEncoderSetBindGroup(compute_pass, 1, octree_ray_intersection_info_bind_group, 0, nullptr);
-    wgpuComputePassEncoderSetBindGroup(compute_pass, 2, sculpt_data_ray_bind_group, 0, nullptr);
+    //wgpuComputePassEncoderSetBindGroup(compute_pass, 2, sculpt_data_ray_bind_group, 0, nullptr);
 
     wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
 
@@ -578,7 +578,6 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
 
 void RaymarchingRenderer::set_sculpt_start_position(const glm::vec3& position)
 {
-    compute_merge_data.sculpt_start_position = position;
     sculpt_data.sculpt_start_position = position;
 }
 
@@ -586,7 +585,6 @@ void RaymarchingRenderer::set_sculpt_rotation(const glm::quat& rotation)
 {
     sculpt_data.sculpt_rotation = glm::inverse(rotation);
     sculpt_data.sculpt_inv_rotation = rotation;
-    compute_merge_data.sculpt_rotation = rotation;
 }
 
 void RaymarchingRenderer::set_camera_eye(const glm::vec3& eye_pos) {
@@ -632,8 +630,6 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
 
     // Uniforms & buffers for octree generation
     {
-        compute_merge_data.max_octree_depth = octree_depth;
-
         // Edit count & other merger data
         compute_merge_data_uniform.data = webgpu_context->create_buffer(sizeof(sMergeData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "merge_data");
         compute_merge_data_uniform.binding = 1;
@@ -881,10 +877,10 @@ void RaymarchingRenderer::init_octree_ray_intersection_pipeline()
         octree_ray_intersection_info_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_ray_intersection_shader, 1);
     }
 
-    {
-        std::vector<Uniform*> uniforms = { &sculpt_data_uniform };
-        sculpt_data_ray_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_ray_intersection_shader, 2);
-    }
+    //{
+    //    std::vector<Uniform*> uniforms = { &sculpt_data_uniform };
+    //    sculpt_data_ray_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_ray_intersection_shader, 2);
+    //}
 
     compute_octree_ray_intersection_pipeline.create_compute(compute_octree_ray_intersection_shader);
 }

@@ -113,9 +113,6 @@ class RaymarchingRenderer {
 
     // Data needed for sdf merging
     struct sMergeData {
-        glm::vec3  sculpt_start_position = { 0.f, 0.f, 0.f };
-        uint32_t   max_octree_depth = 0;
-        glm::quat  sculpt_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
         glm::vec3  reevaluation_AABB_min;
         uint32_t   reevaluate = 0u;
         glm::vec3  reevaluation_AABB_max;
@@ -211,5 +208,5 @@ public:
 
     void add_preview_edit(const Edit& edit);
 
-    const glm::vec3& get_sculpt_start_position() { return compute_merge_data.sculpt_start_position; }
+    const glm::vec3& get_sculpt_start_position() { return sculpt_data.sculpt_start_position; }
 };

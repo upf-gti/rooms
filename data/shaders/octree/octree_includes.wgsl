@@ -21,6 +21,17 @@ const INTERIOR_BRICK_FLAG = 0x40000000u;
 const STROKE_CLEAN_BEFORE_EVAL_FLAG = 0x01u;
 const EVALUATE_PREVIEW_STROKE_FLAG = 0x02u;
 
+const OCTREE_CHILD_OFFSET_LUT : array<vec3f, 8> = array<vec3f, 8>(
+    vec3f(-1.0, -1.0, -1.0),
+    vec3f( 1.0, -1.0, -1.0),
+    vec3f(-1.0,  1.0, -1.0),
+    vec3f( 1.0,  1.0, -1.0),
+    vec3f(-1.0, -1.0,  1.0),
+    vec3f( 1.0, -1.0,  1.0),
+    vec3f(-1.0,  1.0,  1.0),
+    vec3f( 1.0,  1.0,  1.0)
+);
+
 struct Edit {
     position   : vec3f,
     dummy0     : f32,
@@ -50,9 +61,6 @@ struct Octree {
 };
 
 struct MergeData {
-    sculpt_start_position : vec3f,
-    max_octree_depth      : u32,
-    sculpt_rotation       : vec4f,
     reevaluation_AABB_min : vec3f,
     reevaluate            : u32,
     reevaluation_AABB_max : vec3f,

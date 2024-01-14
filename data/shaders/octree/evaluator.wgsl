@@ -95,9 +95,9 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     }
 
     let octant_id : u32 = octant_usage_read[id];
-    let parent_mask : u32 = u32(pow(2, f32(merge_data.max_octree_depth * 3))) - 1;
+    let parent_mask : u32 = u32(pow(2, f32(OCTREE_DEPTH * 3))) - 1;
     // The parent is indicated in the index, so according to the level, we remove the 3 lower bits, associated to the current octant
-    let parent_octant_id : u32 = octant_id & (parent_mask >> (3u * (merge_data.max_octree_depth - parent_level)));
+    let parent_octant_id : u32 = octant_id & (parent_mask >> (3u * (OCTREE_DEPTH - parent_level)));
 
     // In array indexing: in_level_position_of_octant (the octant id) + layer_start_in_array
     // Given a level, we can compute the size of a level with (8^(level-1))/7
@@ -111,10 +111,10 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     for (var i : u32 = 1; i <= level; i++) {
         level_half_size = SCULPT_MAX_SIZE / pow(2.0, f32(i + 1));
 
-        // For each level, select the octant position via the 3 corresponding bits and use the OFFSET_LUT that
+        // For each level, select the octant position via the 3 corresponding bits and use the OCTREE_CHILD_OFFSET_LUT that
         // indicates the relative position of an octant in a layer
         // We offset the octant id depending on the layer that we are, and remove all the trailing bits (if any)
-        octant_center += level_half_size * OFFSET_LUT[(octant_id >> (3 * (i - 1))) & 0x7];
+        octant_center += level_half_size * OCTREE_CHILD_OFFSET_LUT[(octant_id >> (3 * (i - 1))) & 0x7];
     }
 
     // let cull_distance : f32 = level_half_size * SQRT_3 * 1.5;
@@ -129,7 +129,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
     let is_in_reevaluation_zone : bool = intersection_AABB_AABB(merge_data.reevaluation_AABB_min, merge_data.reevaluation_AABB_max, octant_min, octant_max);
  
-    if (is_reevaluation && level == merge_data.max_octree_depth) {
+    if (is_reevaluation && level == OCTREE_DEPTH) {
         if (is_in_reevaluation_zone) {
             if ((octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG) {
                 let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
@@ -234,7 +234,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     
     edit_culling_data.edit_culling_count[octree_index] = edit_counter;
 
-     if (level < merge_data.max_octree_depth) {
+     if (level < OCTREE_DEPTH) {
 
         if (is_reevaluation) {
             if (is_in_reevaluation_zone) {
