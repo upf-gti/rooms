@@ -3,6 +3,7 @@
 #define MAX_EDITS_PER_EVALUATION
 #define OCTREE_DEPTH
 #define OCTREE_TOTAL_SIZE
+#define PREVIEW_PROXY_BRICKS_COUNT
 
 const WORLD_SPACE_SCALE = 512.0; // A texel brick is 1/512 m
 const SCALE_CONVERSION_FACTOR = WORLD_SPACE_SCALE / SDF_RESOLUTION;
@@ -20,6 +21,11 @@ const INTERIOR_BRICK_FLAG = 0x40000000u;
 
 const STROKE_CLEAN_BEFORE_EVAL_FLAG = 0x01u;
 const EVALUATE_PREVIEW_STROKE_FLAG = 0x02u;
+
+const BRICK_IN_USE_FLAG = 0x001u;
+const BRICK_HAS_PREVIEW_FLAG = 0x002u;
+
+const PREVIEW_BRICK_INSIDE_FLAG = 0x001u;
 
 const OCTREE_CHILD_OFFSET_LUT : array<vec3f, 8> = array<vec3f, 8>(
     vec3f(-1.0, -1.0, -1.0),
@@ -48,7 +54,7 @@ struct Stroke {
     color           : vec4f,
     material        : vec4f,
     edits           : array<Edit, MAX_EDITS_PER_EVALUATION>
-}
+};
 
 struct OctreeNode {
     octant_center_distance : vec2f,
@@ -57,7 +63,35 @@ struct OctreeNode {
 };
 
 struct Octree {
+    current_level : atomic<u32>,
+    atomic_counter : atomic<u32>,
+    proxy_instance_counter : atomic<u32>,
+    evaluation_mode : u32,
     data : array<OctreeNode>
+};
+
+struct PreviewData {
+    // Indirect buffer for dispatch
+    vertex_count : u32,
+    instance_count : atomic<u32>,
+    first_vertex : u32,
+    firt_instance: u32,
+    // The stroke for the preview
+    preview_stroke : Stroke,
+    // Instance data storage, for rendering
+    instance_data: array<ProxyInstanceData, PREVIEW_PROXY_BRICKS_COUNT>
+};
+
+struct PreviewDataReadonly {
+    // Indirect buffer for dispatch
+    vertex_count : u32,
+    instance_count : u32,
+    first_vertex : u32,
+    firt_instance: u32,
+    // The stroke for the preview
+    preview_stroke : Stroke,
+    // Instance data storage, for rendering
+    instance_data: array<ProxyInstanceData, PREVIEW_PROXY_BRICKS_COUNT>
 };
 
 struct MergeData {
@@ -100,17 +134,11 @@ struct OctreeProxyInstancesNonAtomic {
 };
 
 struct OctreeProxyIndirect {
+    // Sculpt
     vertex_count : u32,
     instance_count : atomic<u32>,
     first_vertex : u32,
     firt_instance: u32
-};
-
-struct OctreeState {
-    current_level : atomic<u32>,
-    atomic_counter : atomic<u32>,
-    proxy_instance_counter : atomic<u32>,
-    evaluation_mode : u32
 };
 
 struct EditCullingData {

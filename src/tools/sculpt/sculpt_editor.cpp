@@ -317,6 +317,9 @@ void SculptEditor::update(float delta_time)
         }
     }
 
+    // TODO tmp preview stroke
+    renderer->set_preview_edit(edit_to_add);
+
     // Push to the renderer the edits and the previews
     renderer->push_preview_edit_list(preview_tmp_edits);
     renderer->push_edit_list(new_edits);

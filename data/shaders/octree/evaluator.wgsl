@@ -5,7 +5,6 @@
 
 @group(0) @binding(1) var<uniform> merge_data : MergeData;
 @group(0) @binding(2) var<storage, read_write> octree : Octree;
-@group(0) @binding(4) var<storage, read_write> state : OctreeState;
 @group(0) @binding(5) var<storage, read_write> octree_proxy_data: OctreeProxyInstances;
 @group(0) @binding(6) var<storage, read_write> edit_culling_data: EditCullingData;
 @group(0) @binding(8) var<storage, read_write> indirect_brick_removal : IndirectBrickRemoval;
@@ -14,6 +13,8 @@
 
 @group(2) @binding(0) var<storage, read> octant_usage_read : array<u32>;
 @group(2) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
+
+@group(3) @binding(0) var<storage, read_write> preview_data : PreviewData;
 
 /*
     Octree Octant indexing
@@ -81,7 +82,7 @@ fn intersection_AABB_AABB(b1_min : vec3f, b1_max : vec3f, b2_min : vec3f, b2_max
 @compute @workgroup_size(1, 1, 1)
 fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) workgroup_size : vec3u) 
 {
-    let level : u32 = atomicLoad(&state.current_level);
+    let level : u32 = atomicLoad(&octree.current_level);
 
     let id : u32 = group_id.x;
 
@@ -117,18 +118,27 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         octant_center += level_half_size * OCTREE_CHILD_OFFSET_LUT[(octant_id >> (3 * (i - 1))) & 0x7];
     }
 
-    // let cull_distance : f32 = level_half_size * SQRT_3 * 1.5;
-
-    let is_smooth_union : bool = stroke.operation == OP_SMOOTH_UNION;
+    // Note: the preview evaluation only happens at the end of the frame, so it must wait for
+    //       any reevaluation and evaluation
+    let is_reevaluation : bool = (octree.evaluation_mode & STROKE_CLEAN_BEFORE_EVAL_FLAG) == STROKE_CLEAN_BEFORE_EVAL_FLAG;
+    let is_evaluating_preview : bool = !is_reevaluation && ((octree.evaluation_mode & EVALUATE_PREVIEW_STROKE_FLAG) == EVALUATE_PREVIEW_STROKE_FLAG);
+    
+    // Select the input stroke, or the preview stroke, depending on the mode
+    var current_stroke : Stroke;
+    if (is_evaluating_preview) {
+        current_stroke = preview_data.preview_stroke;
+    } else {
+        current_stroke = stroke;
+    }
+    
+    let is_smooth_union : bool = current_stroke.operation == OP_SMOOTH_UNION;
     let is_smooth_substract : bool =  stroke.operation == OP_SMOOTH_SUBSTRACTION;
     
-    let is_reevaluation : bool = (state.evaluation_mode & STROKE_CLEAN_BEFORE_EVAL_FLAG) == STROKE_CLEAN_BEFORE_EVAL_FLAG;
-
     let octant_min : vec3f = octant_center - vec3f(level_half_size);
     let octant_max : vec3f = octant_center + vec3f(level_half_size);
 
     let is_in_reevaluation_zone : bool = intersection_AABB_AABB(merge_data.reevaluation_AABB_min, merge_data.reevaluation_AABB_max, octant_min, octant_max);
- 
+
     if (is_reevaluation && level == OCTREE_DEPTH) {
         if (is_in_reevaluation_zone) {
             if ((octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG) {
@@ -152,7 +162,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     var edit_cutoff_distance : f32 = 0.0;
 
     if (is_smooth_union) {
-        edit_cutoff_distance = stroke.parameters.w;
+        edit_cutoff_distance = current_stroke.parameters.w;
     }
 
     // Base evaluation range
@@ -174,16 +184,16 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         //   then apply the mask, and swift the result so the 8 bits are at the start of the word -> unpacked index & profit
         let current_unpacked_edit_idx : u32 = (current_packed_edit_idx & (0xFFu << (packed_index * 8u))) >> (packed_index * 8u);
 
-        var current_edit : Edit = stroke.edits[current_unpacked_edit_idx];
+        var current_edit : Edit = current_stroke.edits[current_unpacked_edit_idx];
         var edit_interval : vec2f;
 
-        surface_interval = eval_edit_interval(x_range, y_range, z_range, stroke.primitive, stroke.operation, stroke.parameters, surface_interval, current_edit, &edit_interval);
+        surface_interval = eval_edit_interval(x_range, y_range, z_range, current_stroke.primitive, current_stroke.operation, current_stroke.parameters, surface_interval, current_edit, &edit_interval);
 
         // if (stroke.operation == OP_SMOOTH_UNION) {
         //     current_edit.dimensions += vec4f(SMOOTH_FACTOR * 2.0);
         // }
 
-        new_edits_surface_interval = eval_edit_interval(x_range, y_range, z_range, stroke.primitive, OP_UNION, stroke.parameters, new_edits_surface_interval, current_edit, &edit_interval);
+        new_edits_surface_interval = eval_edit_interval(x_range, y_range, z_range, current_stroke.primitive, OP_UNION, current_stroke.parameters, new_edits_surface_interval, current_edit, &edit_interval);
 
         // Check if the edit affects the current voxel, if so adds it to the packed list
         if (edit_interval.x < edit_cutoff_distance) {
@@ -211,8 +221,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
 
     if (is_smooth_union) {
-        surface_interval_smooth += vec2f(-stroke.parameters.w * 0.25, 10.0 / 512.0);
-        new_edits_surface_interval += vec2f(-stroke.parameters.w * 0.25, 10.0 / 512.0);
+        surface_interval_smooth += vec2f(-current_stroke.parameters.w * 0.25, 10.0 / 512.0);
+        new_edits_surface_interval += vec2f(-current_stroke.parameters.w * 0.25, 10.0 / 512.0);
     } 
     // else if (is_smooth_substract) {
     //     // surface_interval_smooth += vec2f(-SMOOTH_FACTOR * 0.25, 10.0 / 512.0);
@@ -230,7 +240,9 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     let is_current_brick_filled : bool = (octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG;
     let is_interior_brick : bool = (octree.data[octree_index].tile_pointer & INTERIOR_BRICK_FLAG) == INTERIOR_BRICK_FLAG;
 
-    octree.data[octree_index].octant_center_distance = surface_interval_smooth;
+    if (!is_evaluating_preview) {
+        octree.data[octree_index].octant_center_distance = surface_interval_smooth;
+    }
     
     edit_culling_data.edit_culling_count[octree_index] = edit_counter;
 
@@ -240,7 +252,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             if (is_in_reevaluation_zone) {
                 // Subdivide
                 // Increase the number of children from the current level
-                let prev_counter : u32 = atomicAdd(&state.atomic_counter, 8);
+                let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 8);
 
                 // Add to the index the childres's octant id, and save it for the next pass
                 for (var i : u32 = 0; i < 8; i++) {
@@ -252,7 +264,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         else if  (new_edits_surface_interval.x < 0.0) {
             // Subdivide
             // Increase the number of children from the current level
-            let prev_counter : u32 = atomicAdd(&state.atomic_counter, 8);
+            let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 8);
 
             // Add to the index the childres's octant id, and save it for the next pass
             for (var i : u32 = 0; i < 8; i++) {
@@ -263,8 +275,38 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             //octree.data[octree_index].tile_pointer = FILLED_BRICK_FLAG;
         }
     } else {
+        if (is_evaluating_preview) {
+            if (local_surface_intersection) {
+                if (is_current_brick_filled) {
+                    // Mark current brick in order to evaluate the stroke
+                    let instance_index : u32 = octree.data[octree_index].tile_pointer & 0x3FFFFFFFu;
+                    octree_proxy_data.instance_data[instance_index].in_use = BRICK_HAS_PREVIEW_FLAG | BRICK_IN_USE_FLAG;
+                } else {
+                    // If it is not the surface
+                    if (current_stroke.operation == OP_UNION || current_stroke.operation == OP_SMOOTH_UNION) {
+                        // Add exterior preview bricks
+                        // Add preview bricks inside
+                        let preview_brick : u32 = atomicAdd(&preview_data.instance_count, 1u);
+    
+                        preview_data.instance_data[preview_brick].position = octant_center;
+                        preview_data.instance_data[preview_brick].octree_parent_id = octree_index;
+                        //preview_data.instance_data[preview_brick].in_use = PREVIEW_BRICK_INSIDE_FLAG;
+                    } else { // Substract
+                        if (is_interior_brick) {
+                            // Add preview bricks inside
+                            let preview_brick : u32 = atomicAdd(&preview_data.instance_count, 1u);
+    
+                            preview_data.instance_data[preview_brick].position = octant_center;
+                            preview_data.instance_data[preview_brick].octree_parent_id = octree_index;
+                            preview_data.instance_data[preview_brick].in_use = 0;
+                        }
+                    }
+                }
+            }
+        }
         // In the case that the incomming edits's operation is either Add or Smooth Add
-        if (stroke.operation == OP_UNION || stroke.operation == OP_SMOOTH_UNION) {
+        else 
+        if (current_stroke.operation == OP_UNION || current_stroke.operation == OP_SMOOTH_UNION) {
             // IF ITS A UNION OPERATION ================
             if (global_surface_outside || global_surface_inside) {
                 // if is inside or outside the resulting SDF, we delete the brick
@@ -285,7 +327,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             } else if (global_surface_intersection && (new_edits_surface_interval.x < 0.0)) {
                 // If its in theintersection of the surface of the resulting SDF and the inside of new_edits,
                 // This means to only select the newly updated bricks.
-                let prev_counter : u32 = atomicAdd(&state.atomic_counter, 1);
+                let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 1);
 
                 // In the case this is not filled, we create a new brick
                 if (!is_current_brick_filled) {
@@ -294,7 +336,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                     octree_proxy_data.instance_data[instance_index].position = octant_center;
                     octree_proxy_data.instance_data[instance_index].atlas_tile_index = instance_index;
                     octree_proxy_data.instance_data[instance_index].octree_parent_id = octree_index;
-                    octree_proxy_data.instance_data[instance_index].in_use = 1u;
+                    octree_proxy_data.instance_data[instance_index].in_use = BRICK_IN_USE_FLAG;
 
                     // If it was interior, we mark it as such
                     // TODO: This cannot happen now right??
@@ -313,7 +355,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             if (local_surface_intersection) {
                 if (is_current_brick_filled) {
                     // If the block is int he surface of new_edits and is filled, update the brick
-                    let prev_counter : u32 = atomicAdd(&state.atomic_counter, 1);
+                    let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 1);
                     octant_usage_write[prev_counter] = octree_index;
                 } else if (is_interior_brick) {
                     // If the block is int he surface of new_edits and an interior brick, create a new brick, since it is surface now
@@ -322,9 +364,9 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                     octree_proxy_data.instance_data[instance_index].position = octant_center;
                     octree_proxy_data.instance_data[instance_index].atlas_tile_index = instance_index;
                     octree_proxy_data.instance_data[instance_index].octree_parent_id = octree_index;
-                    octree_proxy_data.instance_data[instance_index].in_use = 1u;
+                    octree_proxy_data.instance_data[instance_index].in_use = BRICK_IN_USE_FLAG;
                     octree.data[octree_index].tile_pointer = instance_index | INTERIOR_BRICK_FLAG;
-                    let prev_counter : u32 = atomicAdd(&state.atomic_counter, 1);
+                    let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 1);
                     octant_usage_write[prev_counter] = octree_index;
                 }
             } else if (local_surface_inside) {

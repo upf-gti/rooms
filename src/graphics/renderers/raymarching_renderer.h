@@ -13,6 +13,7 @@
 #define PREVIEW_EDITS_MAX 128
 #define SDF_RESOLUTION 400
 #define SCULPT_MAX_SIZE 1 // meters
+#define PREVIEW_PROXY_BRICKS_COUNT 4000u
 
 class EntityMesh;
 
@@ -34,6 +35,11 @@ class RaymarchingRenderer {
     Shader*         render_proxy_shader = nullptr;
     WGPUBindGroup   render_proxy_geometry_bind_group = nullptr;
 
+    Pipeline        render_preview_proxy_geometry_pipeline;
+    Shader*         render_preview_proxy_shader = nullptr;
+    WGPUBindGroup   render_preview_proxy_geometry_bind_group = nullptr;
+    WGPUBindGroup   render_preview_camera_bind_group = nullptr;
+
     Texture         sdf_texture;
     Uniform         sdf_texture_uniform;
 
@@ -49,7 +55,7 @@ class RaymarchingRenderer {
     Pipeline        compute_octree_initialization_pipeline;
     Pipeline        compute_octree_cleaning_pipeline;
     Pipeline        compute_octree_ray_intersection_pipeline;
-
+    Pipeline        compute_octree_brick_unmark_pipeline;
     Shader*         compute_octree_evaluate_shader = nullptr;
     Shader*         compute_octree_increment_level_shader = nullptr;
     Shader*         compute_octree_write_to_texture_shader = nullptr;
@@ -58,7 +64,7 @@ class RaymarchingRenderer {
     Shader*         compute_octree_initialization_shader = nullptr;
     Shader*         compute_octree_cleaning_shader = nullptr;
     Shader*         compute_octree_ray_intersection_shader = nullptr;
-
+    Shader*         compute_octree_brick_unmark_shader = nullptr;
     WGPUBindGroup   compute_octree_evaluate_bind_group = nullptr;
     WGPUBindGroup   compute_octree_increment_level_bind_group = nullptr;
     WGPUBindGroup   compute_octree_write_to_texture_bind_group = nullptr;
@@ -68,6 +74,7 @@ class RaymarchingRenderer {
     WGPUBindGroup   compute_stroke_buffer_bind_group = nullptr;
     WGPUBindGroup   compute_octree_initialization_bind_group = nullptr;
     WGPUBindGroup   compute_octree_clean_octree_bind_group = nullptr;
+    WGPUBindGroup   compute_octree_brick_unmark_bind_group = nullptr;
 
     Uniform         octree_uniform;
     Uniform         octant_usage_uniform[4];
@@ -85,9 +92,6 @@ class RaymarchingRenderer {
     Uniform         proxy_geometry_eye_position;
     WGPUBindGroup   render_camera_bind_group = nullptr;
 
-    Uniform         sculpt_data_uniform;
-    WGPUBindGroup   sculpt_data_proxy_bind_group = nullptr;
-    WGPUBindGroup   sculpt_data_ray_bind_group = nullptr;
 
     Uniform         ray_info_uniform;
     Uniform         ray_intersection_info_uniform;
@@ -95,9 +99,15 @@ class RaymarchingRenderer {
     WGPUBindGroup   octree_ray_intersection_info_bind_group = nullptr;
     WGPUBuffer      ray_intersection_info_read_buffer = nullptr;
 
-    Uniform         camera_uniform;
+    Uniform         sculpt_data_uniform;
+    Uniform         prev_stroke_uniform_2;
+    WGPUBindGroup   sculpt_data_bind_proxy_group = nullptr;
+    WGPUBindGroup   sculpt_data_bind_preview_group = nullptr;
+
+    Uniform         *camera_uniform;
 
     Uniform         preview_stroke_uniform;
+    WGPUBindGroup   preview_stroke_bind_group = nullptr;
 
     Uniform         compute_merge_data_uniform;
     Uniform         compute_stroke_buffer_uniform;
@@ -157,6 +167,34 @@ class RaymarchingRenderer {
         uint32_t padding[3];
     };
 
+    struct PreviewData {
+        uint32_t vertex_count = 0u;
+        uint32_t instance_count = 0u;
+        uint32_t first_vertex = 0u;
+        uint32_t first_instance = 0u;
+
+        Stroke   preview_stroke = {
+            .edit_count = 1u,
+            .primitive = SD_SPHERE,
+            .operation = OP_UNION,
+            .color = {0.0f, 0.0f, 1.0f, 1.0f},
+            .edits = {
+                {
+                    .position = {0.00f, 0.10f, 0.0f},
+                    .dimensions = {0.050f, 0.01f, 0.01f,0.01f}
+                },
+                {
+                    .position = {0.00f, 0.00f, 0.0f},
+                    .dimensions = {0.050f, 0.01f, 0.01f,0.01f}
+                },
+                {
+                    .position = {0.00f, -0.150f, 0.0f},
+                    .dimensions = {0.10f, 0.01f, 0.01f,0.01f}
+                }
+            },
+        };
+    } preview_data;
+
     // Timestepping counters
     float updated_time = 0.0f;
 
@@ -164,9 +202,15 @@ class RaymarchingRenderer {
     void init_raymarching_proxy_pipeline();
     void init_octree_ray_intersection_pipeline();
 
-    void evaluate_strokes(const std::vector<Stroke> strokes, bool is_undo = false, bool is_redo = false);
+    void evaluate_strokes(WGPUComputePassEncoder compute_pass, const std::vector<Stroke> strokes, bool is_undo = false, bool is_redo = false);
 
-    void compute_preview_edit();
+    void compute_preview_edit(WGPUComputePassEncoder compute_pass);
+
+    void compute_redo(WGPUComputePassEncoder compute_pass);
+    void compute_undo(WGPUComputePassEncoder compute_pass);
+
+    bool needs_undo = false;
+    bool needs_redo = false;
 
     void octree_ray_intersect(const glm::vec3& ray_origin, const glm::vec3& ray_dir);
 
@@ -183,14 +227,24 @@ public:
     void compute_octree();
     void render_raymarching_proxy(WGPURenderPassEncoder render_pass);
 
-    void redo();
-    void undo();
+    inline void redo() {
+        needs_redo = true;
+    }
+    inline void undo() {
+        needs_undo = true;
+    }
 
     void set_sculpt_start_position(const glm::vec3& position);
     void set_sculpt_rotation(const glm::quat& rotation);
     void set_camera_eye(const glm::vec3& eye_pos);
 
     const RayIntersectionInfo& get_ray_intersection_info() const;
+
+    void set_preview_edit(const Edit& preview) {
+        preview_data.preview_stroke.edits[0] = preview;
+        preview_data.preview_stroke.edit_count = 1u;
+    }
+
 
     /*
     *   Edits

@@ -11,7 +11,7 @@ fn compute(@builtin(workgroup_id) id: vec3<u32>, @builtin(local_invocation_index
 
     let current_instance : ProxyInstanceData = octree_proxy_data.instance_data[current_instance_index];
 
-    if (current_instance.in_use == 1) {
+    if ((current_instance.in_use & BRICK_IN_USE_FLAG) == BRICK_IN_USE_FLAG) {
         let prev_value : u32 = atomicAdd(&proxy_box_indirect.instance_count, 1u);
         brick_copy_buffer[prev_value] = current_instance_index;
     }

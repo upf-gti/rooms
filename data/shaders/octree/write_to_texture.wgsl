@@ -6,7 +6,6 @@
 
 @group(0) @binding(2) var<storage, read_write> octree : Octree;
 @group(0) @binding(3) var write_sdf: texture_storage_3d<r32float, read_write>;
-@group(0) @binding(4) var<storage, read_write> state : OctreeState;
 @group(0) @binding(5) var<storage, read_write> octree_proxy_data: OctreeProxyInstances;
 @group(0) @binding(6) var<storage, read_write> edit_culling_data: EditCullingData;
 @group(0) @binding(8) var write_material_sdf: texture_storage_3d<r32uint, read_write>;
@@ -44,7 +43,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
                                                   (proxy_data.atlas_tile_index / BRICK_COUNT) % BRICK_COUNT,
                                                    proxy_data.atlas_tile_index / (BRICK_COUNT * BRICK_COUNT));
 
-    let level : u32 = atomicLoad(&state.current_level);
+    let level : u32 = atomicLoad(&octree.current_level);
     
     let parent_octree_index : u32 =  proxy_data.octree_parent_id;
     let octant_center : vec3f = proxy_data.position;
@@ -125,10 +124,10 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
     if (local_id.x == 0 && local_id.y == 0 && local_id.z == 0) {
 
-        let filled_pixel_count : u32 = atomicLoad(&used_pixels);
-        if (filled_pixel_count > 0u && filled_pixel_count < 1000u) {
-            octree_proxy_data.instance_data[brick_index].in_use = 1;
-        } 
+        // let filled_pixel_count : u32 = atomicLoad(&used_pixels);
+        // if (filled_pixel_count > 0u && filled_pixel_count < 1000u) {
+        //     octree_proxy_data.instance_data[brick_index].in_use = 1;
+        // } 
         // else {
         //     octree_proxy_data.instance_data[brick_index].in_use = 0;
         // }
@@ -136,6 +135,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
         // Add "filled" flag and remove "interior" flag
         octree.data[octree_leaf_id].tile_pointer = brick_index | FILLED_BRICK_FLAG;
 
-        state.evaluation_mode = 0u;
+        octree.evaluation_mode |= ~STROKE_CLEAN_BEFORE_EVAL_FLAG;
     }
 }

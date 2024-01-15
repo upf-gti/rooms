@@ -121,5 +121,9 @@ public:
         raymarching_renderer.redo();
     }
 
+    inline void set_preview_edit(const Edit& stroke) {
+        raymarching_renderer.set_preview_edit(stroke);
+    }
+
     glm::vec3 get_camera_eye();
 };
