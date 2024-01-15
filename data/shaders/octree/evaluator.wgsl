@@ -118,9 +118,11 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         octant_center += level_half_size * OFFSET_LUT[(octant_id >> (3 * (i - 1))) & 0x7];
     }
 
+    let is_evaluating_preview : bool = (octree.evaluation_mode & EVALUATE_PREVIEW_STROKE_FLAG) == EVALUATE_PREVIEW_STROKE_FLAG;
+
     // Select the input stroke, or the preview stroke, depending on the mode
     var current_stroke : Stroke;
-    if ((octree.evaluation_mode & EVALUATE_PREVIEW_STROKE_FLAG) == EVALUATE_PREVIEW_STROKE_FLAG) {
+    if (is_evaluating_preview) {
         current_stroke = preview_data.preview_stroke;
     } else {
         current_stroke = stroke;
@@ -237,7 +239,9 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     let is_current_brick_filled : bool = (octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG;
     let is_interior_brick : bool = (octree.data[octree_index].tile_pointer & INTERIOR_BRICK_FLAG) == INTERIOR_BRICK_FLAG;
 
-    octree.data[octree_index].octant_center_distance = surface_interval_smooth;
+    if (!is_evaluating_preview) {
+        octree.data[octree_index].octant_center_distance = surface_interval_smooth;
+    }
     
     edit_culling_data.edit_culling_count[octree_index] = edit_counter;
 
@@ -270,7 +274,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             //octree.data[octree_index].tile_pointer = FILLED_BRICK_FLAG;
         }
     } else {
-        if ((octree.evaluation_mode & EVALUATE_PREVIEW_STROKE_FLAG) == EVALUATE_PREVIEW_STROKE_FLAG) {
+        if (is_evaluating_preview) {
             if (local_surface_intersection) {
                 if (is_current_brick_filled) {
                     // Mark current brick in order to evaluate the stroke
@@ -285,7 +289,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     
                         preview_data.instance_data[preview_brick].position = octant_center;
                         preview_data.instance_data[preview_brick].octree_parent_id = octree_index;
-                        preview_data.instance_data[preview_brick].in_use = PREVIEW_BRICK_INSIDE_FLAG;
+                        //preview_data.instance_data[preview_brick].in_use = PREVIEW_BRICK_INSIDE_FLAG;
                     } else { // Substract
                         if (is_interior_brick) {
                             // Add preview bricks inside
@@ -300,7 +304,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             }
         }
         // In the case that the incomming edits's operation is either Add or Smooth Add
-        else if (current_stroke.operation == OP_UNION || current_stroke.operation == OP_SMOOTH_UNION) {
+        else 
+        if (current_stroke.operation == OP_UNION || current_stroke.operation == OP_SMOOTH_UNION) {
             // IF ITS A UNION OPERATION ================
             if (global_surface_outside || global_surface_inside) {
                 // if is inside or outside the resulting SDF, we delete the brick
