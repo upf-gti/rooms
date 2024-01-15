@@ -37,6 +37,7 @@ struct Edit {
     float       dummy0;
     glm::vec4	dimensions;
     glm::quat   rotation = { 0.f, 0.f, 0.f, 1.f };
+    //glm::vec4   padding;
 
     std::string to_string() const;
     void parse_string(const std::string& str);
@@ -82,6 +83,11 @@ struct Stroke {
     glm::vec4	parameters = { 0.f, -1.f, 0.f, 0.f };
     glm::vec4	color;
     glm::vec4   material = { 0.7f, 0.2f, 0.f, 0.f }; // rough, metallic, emissive, unused
+
+    Edit    padding; // Padding of 48 * 4 bytes
+    Edit    padding1;
+    Edit    padding2;
+    Edit    padding3;
 
     Edit        edits[MAX_EDITS_PER_EVALUATION] = {};
 

@@ -523,7 +523,11 @@ void RaymarchingRenderer::compute_octree()
 
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
 
-    //RenderdocCapture::start_capture_frame();
+    const bool is_going_to_evaluate = needs_undo || needs_redo || (in_frame_stroke.edit_count > 0 || to_compute_stroke_buffer.size() > 0);
+
+    if (is_going_to_evaluate) {
+        RenderdocCapture::start_capture_frame();
+    }
 
     // Initialize a command encoder
     WGPUCommandEncoderDescriptor encoder_desc = {};
@@ -536,26 +540,27 @@ void RaymarchingRenderer::compute_octree()
 
     // First, compute undo - redo
     if (needs_undo) {
+        spdlog::info("Undo");
         compute_undo(compute_pass);
     }
 
     if (needs_redo) {
+        spdlog::info("Redo");
         compute_redo(compute_pass);
     }
-
-    needs_undo = false, needs_redo = false;
 
     // Nothing to merge if equals 0
     if (in_frame_stroke.edit_count > 0 || to_compute_stroke_buffer.size() > 0) {
         to_compute_stroke_buffer.push_back(in_frame_stroke);
 
+        spdlog::info("Evaluate stroke");
         evaluate_strokes(compute_pass, to_compute_stroke_buffer);
 
         in_frame_stroke.edit_count = 0u;
         to_compute_stroke_buffer.clear();
     } else {
         // If there is no need for an evaluation, then set the preview evaluation as default
-        eEvaluatorOperationFlags set_as_preview = EVALUATE_PREVIEW_STROKE;
+        uint32_t set_as_preview = (needs_undo || needs_redo) ? (CLEAN_BEFORE_EVAL | EVALUATE_PREVIEW_STROKE) : EVALUATE_PREVIEW_STROKE;
         webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_uniform.data), sizeof(uint32_t) * 3u, &set_as_preview, sizeof(uint32_t));
     }
 
@@ -576,7 +581,11 @@ void RaymarchingRenderer::compute_octree()
     wgpuComputePassEncoderRelease(compute_pass);
     wgpuCommandEncoderRelease(command_encoder);
 
-    //RenderdocCapture::end_capture_frame();
+    if (is_going_to_evaluate) {
+        RenderdocCapture::end_capture_frame();
+    }
+
+    needs_undo = false, needs_redo = false;
 }
 
 void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_pass)
@@ -818,6 +827,9 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
                                            &octree_edit_culling_data, &octree_proxy_instance_buffer, &sdf_material_texture_uniform };
         compute_octree_write_to_texture_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_write_to_texture_shader, 0);
     }
+
+    uint32_t size = sizeof(Edit);
+    size = sizeof(Stroke);
 
     {
         // Stroke buffer uniform

@@ -42,7 +42,8 @@ struct Edit {
     position   : vec3f,
     dummy0     : f32,
     dimensions : vec4f,
-    rotation   : vec4f
+    rotation   : vec4f,
+    //padding : vec4f
 };
 
 struct Stroke {
@@ -53,6 +54,10 @@ struct Stroke {
     parameters      : vec4f,
     color           : vec4f,
     material        : vec4f,
+    padding          : Edit,
+    padding1         : Edit,
+    padding2         : Edit,
+    padding3         : Edit,
     edits           : array<Edit, MAX_EDITS_PER_EVALUATION>
 };
 
