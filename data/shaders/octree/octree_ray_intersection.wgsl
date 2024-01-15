@@ -104,7 +104,7 @@ fn compute()
 
                 if (ray_AABB_intersection(ray_info.ray_origin, ray_info.ray_dir, octant_center - level_half_size, octant_center + level_half_size, &t_near, &t_far))
                 {
-                    let octant_id : u32 = parent_octant_id | (octant << (3 * level));
+                    let octant_id : u32 = parent_octant_id | (octant << (3 * (level - 1)));
                     let is_last_level : bool = level == OCTREE_DEPTH;
 
                     if (!is_last_level) {
