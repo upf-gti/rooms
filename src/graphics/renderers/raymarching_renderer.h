@@ -19,6 +19,9 @@ class EntityMesh;
 
 struct RayIntersectionInfo {
     uint32_t intersected = 0;
+    uint32_t level = 0;
+    uint32_t octant = 0;
+    uint32_t dummy = 0;
 };
 
 class RaymarchingRenderer {

@@ -125,6 +125,7 @@ void RaymarchingRenderer::update(float delta_time)
         mouse_pos_ndc.z = 1.0f;
 
         glm::vec4 ray_dir = view_projection_inv * glm::vec4(mouse_pos_ndc, 1.0f);
+        ray_dir /= ray_dir.w;
 
         octree_ray_intersect(camera->get_eye(), glm::normalize(glm::vec3(ray_dir)));
     }
@@ -559,7 +560,11 @@ void RaymarchingRenderer::compute_octree()
         //webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_uniform.data), sizeof(uint32_t) * 3u, &set_as_preview, sizeof(uint32_t));
     }
 
-    compute_preview_edit(compute_pass);
+    bool is_openxr_available = RoomsRenderer::instance->get_openxr_available();
+
+    if (is_openxr_available) {
+        compute_preview_edit(compute_pass);
+    }
 
     // Finalize compute_raymarching pass
     wgpuComputePassEncoderEnd(compute_pass);
@@ -969,7 +974,7 @@ void RaymarchingRenderer::init_octree_ray_intersection_pipeline()
 
     // Ray Octree intersection bindgroup
     {
-        std::vector<Uniform*> uniforms = { &octree_uniform, &sdf_texture_uniform, &linear_sampler_uniform, &octree_proxy_instance_buffer };
+        std::vector<Uniform*> uniforms = { &octree_uniform/*, &sdf_texture_uniform, &linear_sampler_uniform, &octree_proxy_instance_buffer*/ };
         octree_ray_intersection_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_ray_intersection_shader, 0);
     }
 

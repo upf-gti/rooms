@@ -10,13 +10,16 @@ struct RayInfo
 
 struct RayIntersectionInfo
 {
-    intersected : u32
+    intersected : u32,
+    level: u32,
+    octant : u32,
+    dummy : u32
 }
 
 @group(0) @binding(2) var<storage, read_write> octree : Octree;
-@group(0) @binding(3) var read_sdf: texture_3d<f32>;
-@group(0) @binding(4) var texture_sampler : sampler;
-@group(0) @binding(5) var<storage, read> octree_proxy_data: OctreeProxyInstancesNonAtomic;
+// @group(0) @binding(3) var read_sdf: texture_3d<f32>;
+// @group(0) @binding(4) var texture_sampler : sampler;
+// @group(0) @binding(5) var<storage, read> octree_proxy_data: OctreeProxyInstancesNonAtomic;
 
 @group(1) @binding(0) var<uniform> ray_info: RayInfo;
 @group(1) @binding(1) var<storage, read_write> ray_intersection_info: RayIntersectionInfo;
@@ -36,6 +39,30 @@ fn ray_AABB_intersection(ray_origin : vec3f, ray_dir : vec3f, box_min : vec3f, b
     return *t_near <= *t_far && *t_far >= 0;
 };
 
+struct IterationData {
+    level : u32,
+    octant : u32,
+    octant_id : u32,
+    octant_center : vec3f
+}
+
+var<workgroup> iteration_data_stack: array<IterationData, 100>;
+
+fn push_iteration_data(stack_pointer : ptr<function, u32>, level : u32, octant : u32, octant_id : u32, octant_center : vec3f)
+{
+    iteration_data_stack[*stack_pointer].level = level;
+    iteration_data_stack[*stack_pointer].octant = octant;
+    iteration_data_stack[*stack_pointer].octant_id = octant_id;
+    iteration_data_stack[*stack_pointer].octant_center = octant_center;
+    *stack_pointer++;
+}
+
+fn pop_iteration_data(stack_pointer : ptr<function, u32>) -> IterationData
+{
+    *stack_pointer--;
+    return iteration_data_stack[*stack_pointer];
+}
+
 @compute @workgroup_size(1, 1, 1)
 fn compute()
 {
@@ -46,44 +73,56 @@ fn compute()
     var t_near : f32;
     var t_far : f32;
 
-    let node : OctreeNode = octree.data[0];
-    let sdf : f32 = textureSampleLevel(read_sdf, texture_sampler, vec3f(0.0, 0.0, 0.0), 0.0).r;
-    let instance_data : ProxyInstanceData = octree_proxy_data.instance_data[0];
-
     var intersected : bool = false;
+
+    var stack_pointer : u32 = 0;
+
+    var last_level : u32 = 0;
+    var last_octant : u32 = 0;
 
     // Check intersection with octree aabb
     if (ray_AABB_intersection(ray_info.ray_origin, ray_info.ray_dir, bounds_min, bounds_max, &t_near, &t_far))
     {
+        var parent_octant_id : u32 = 0;
 
         var level : u32 = 1;
-
-        var current_ray_origin : vec3f = ray_info.ray_origin + ray_info.ray_dir * t_near;
-
-        var octant_id = 0; //octant_id | (i << (3 * level));
+        push_iteration_data(&stack_pointer, level, 0, 0, vec3f(0.0, 0.0, 0.0));
 
         // Compute the center and the half size of the current octree level
-        for (var level : u32 = 1; level <= OCTREE_DEPTH;) {
+        while (level <= OCTREE_DEPTH && stack_pointer > 0) {
 
-            var octant_center : vec3f = vec3f(0.0);
+            let iteration_data : IterationData = pop_iteration_data(&stack_pointer);
+
+            level = iteration_data.level;
+            parent_octant_id = iteration_data.octant_id;
+            let parent_octant_center : vec3f = iteration_data.octant_center;
 
             let level_half_size = SCULPT_MAX_SIZE / pow(2.0, f32(level + 1));
 
-            for (var child : u32 = 0; child < 8; child++) {
-                octant_center += level_half_size * OCTREE_CHILD_OFFSET_LUT[child];
+            for (var octant : u32 = iteration_data.octant; octant < 8; octant++) {
+                let octant_center = parent_octant_center + level_half_size * OCTREE_CHILD_OFFSET_LUT[octant];
 
-                if (ray_AABB_intersection(current_ray_origin, ray_info.ray_dir, octant_center - level_half_size, octant_center + level_half_size, &t_near, &t_far))
+                if (ray_AABB_intersection(ray_info.ray_origin, ray_info.ray_dir, octant_center - level_half_size, octant_center + level_half_size, &t_near, &t_far))
                 {
-                    if (level < OCTREE_DEPTH) {
-                        level++;
-                        break;
-                    } else {
-                        intersected = true;
-                    }
-                }
+                    let octant_id : u32 = parent_octant_id | (octant << (3 * level));
+                    let is_last_level : bool = level == OCTREE_DEPTH;
 
-                if (child == 7) {
-                    // level--;
+                    if (!is_last_level) {
+                        push_iteration_data(&stack_pointer, level, octant + 1, parent_octant_id, parent_octant_center);
+                        push_iteration_data(&stack_pointer, level + 1, 0, octant_id, octant_center);
+                    } else {
+                        last_level = level;
+                        last_octant = octant;
+                        // If the brick is filled
+                        let octree_index : u32 = octant_id + u32((pow(8.0, f32(level)) - 1) / 7);
+                        if ((octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG) {
+                            intersected = true;
+                        } else {
+                            push_iteration_data(&stack_pointer, level, octant + 1, parent_octant_id, parent_octant_center);
+                        }
+                    }
+
+                    break;
                 }
             }
         }
@@ -91,4 +130,6 @@ fn compute()
     }
 
     ray_intersection_info.intersected = select(0u, 1u, intersected);
+    ray_intersection_info.level = last_level;
+    ray_intersection_info.octant = last_octant;
 }
