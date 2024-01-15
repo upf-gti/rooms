@@ -183,6 +183,9 @@ bool RoomsEngine::import_scene()
 
 void RoomsEngine::render_gui()
 {
+    if (RoomsRenderer::instance->get_openxr_available()) {
+        return;
+    }
     bool active = true;
 
     ImGui::SetNextWindowSize({ 300, 400 });
