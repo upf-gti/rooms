@@ -186,6 +186,12 @@ class RaymarchingRenderer {
 
     void compute_preview_edit(WGPUComputePassEncoder compute_pass);
 
+    void compute_redo(WGPUComputePassEncoder compute_pass);
+    void compute_undo(WGPUComputePassEncoder compute_pass);
+
+    bool needs_undo = false;
+    bool needs_redo = false;
+
 public:
 
     RaymarchingRenderer();
@@ -199,8 +205,12 @@ public:
     void compute_octree();
     void render_raymarching_proxy(WGPUTextureView swapchain_view, WGPUTextureView swapchain_depth);
 
-    void redo();
-    void undo();
+    inline void redo() {
+        needs_redo = true;
+    }
+    inline void undo() {
+        needs_undo = true;
+    }
 
     void set_sculpt_start_position(const glm::vec3& position);
     void set_sculpt_rotation(const glm::quat& rotation);

@@ -118,8 +118,11 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         octant_center += level_half_size * OFFSET_LUT[(octant_id >> (3 * (i - 1))) & 0x7];
     }
 
-    let is_evaluating_preview : bool = (octree.evaluation_mode & EVALUATE_PREVIEW_STROKE_FLAG) == EVALUATE_PREVIEW_STROKE_FLAG;
-
+    // Note: the preview evaluation only happens at the end of the frame, so it must wait for
+    //       any reevaluation and evaluation
+    let is_reevaluation : bool = (octree.evaluation_mode & STROKE_CLEAN_BEFORE_EVAL_FLAG) == STROKE_CLEAN_BEFORE_EVAL_FLAG;
+    let is_evaluating_preview : bool = !is_reevaluation && ((octree.evaluation_mode & EVALUATE_PREVIEW_STROKE_FLAG) == EVALUATE_PREVIEW_STROKE_FLAG);
+    
     // Select the input stroke, or the preview stroke, depending on the mode
     var current_stroke : Stroke;
     if (is_evaluating_preview) {
@@ -127,17 +130,15 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     } else {
         current_stroke = stroke;
     }
-
+    
     let is_smooth_union : bool = current_stroke.operation == OP_SMOOTH_UNION;
     let is_smooth_substract : bool =  stroke.operation == OP_SMOOTH_SUBSTRACTION;
     
-    let is_reevaluation : bool = (octree.evaluation_mode & STROKE_CLEAN_BEFORE_EVAL_FLAG) == STROKE_CLEAN_BEFORE_EVAL_FLAG;
-
     let octant_min : vec3f = octant_center - vec3f(level_half_size);
     let octant_max : vec3f = octant_center + vec3f(level_half_size);
 
     let is_in_reevaluation_zone : bool = intersection_AABB_AABB(merge_data.reevaluation_AABB_min, merge_data.reevaluation_AABB_max, octant_min, octant_max);
- 
+
     if (is_reevaluation && level == merge_data.max_octree_depth) {
         if (is_in_reevaluation_zone) {
             if ((octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG) {
