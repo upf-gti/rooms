@@ -231,10 +231,10 @@ fn raymarch_with_previews(ray_origin : vec3f, ray_origin_world : vec3f, ray_dir 
         let normal : vec3f = estimate_normal_with_previews(pos, pos_world);
 
         //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
-		//return vec4f(apply_light(-ray_dir, pos, pos_world, lightPos + lightOffset, surface.material), depth);
+		return vec4f(apply_light(-ray_dir, pos, pos_world, lightPos + lightOffset, surface.material), depth);
         //return vec4f(normal, depth);
         //return vec4f(surface.material.albedo, depth);
-        return vec4f(normal, depth);
+        //return vec4f(normal, depth);
 	}
 
     // Use a two band spherical harmonic as a skymap
