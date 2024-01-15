@@ -191,7 +191,12 @@ void RaymarchingRenderer::compute_preview_edit(WGPUComputePassEncoder compute_pa
 
     webgpu_context->update_buffer(std::get<WGPUBuffer>(preview_stroke_uniform.data), 0u, &preview_data, sizeof(preview_data));
 
-    // Second pass: evaluate the preview stroke
+    // Remove the preview tag from all the bricks
+    compute_octree_brick_unmark_pipeline.set(compute_pass);
+    wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_brick_unmark_bind_group, 0, nullptr);
+    wgpuComputePassEncoderDispatchWorkgroups(compute_pass, octants_max_size / (8u * 8u * 8u), 1, 1);
+
+    // Initializate the evaluator sequence
     compute_octree_initialization_pipeline.set(compute_pass);
 
     uint32_t stroke_dynamic_offset = 0;
@@ -254,10 +259,6 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
         // Clean the redo history if something new is being evaluated
         stroke_redo_history.clear();
     }
-
-    /*compute_octree_brick_unmark_pipeline.set(compute_pass);
-    wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_brick_unmark_bind_group, 0, nullptr);
-    wgpuComputePassEncoderDispatchWorkgroups(compute_pass, octants_max_size / (8u * 8u * 8u), 1, 1);*/
 
     // First pass: evaluate the incomming strokes
     // Must be updated per stroke, also make sure the area is reevaluated on undo
@@ -764,14 +765,9 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
 
     {
         // Brick unmarking bindgroup
-        octree_brick_copy_buffer.data = webgpu_context->create_buffer(sizeof(uint32_t) * octants_max_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "brick_copy_buffer");
-        octree_brick_copy_buffer.binding = 0;
-        octree_brick_copy_buffer.buffer_size = sizeof(uint32_t) * octants_max_size;
-
         std::vector<Uniform*> uniforms = { &octree_proxy_instance_buffer };
 
-        compute_octree_brick_unmark_bind_group
-            = webgpu_context->create_bind_group(uniforms, compute_octree_brick_unmark_shader, 0);
+        compute_octree_brick_unmark_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_brick_unmark_shader, 0);
     }
 
     WGPUBuffer octant_usage_buffers[2];
