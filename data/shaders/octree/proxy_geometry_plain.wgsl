@@ -231,10 +231,10 @@ fn raymarch_with_previews(ray_origin : vec3f, ray_origin_world : vec3f, ray_dir 
         let normal : vec3f = estimate_normal_with_previews(pos, pos_world);
 
         //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
-		return vec4f(apply_light(-ray_dir, pos, pos_world, lightPos + lightOffset, surface.material), depth);
+		//return vec4f(apply_light(-ray_dir, pos, pos_world, lightPos + lightOffset, surface.material), depth);
         //return vec4f(normal, depth);
         //return vec4f(surface.material.albedo, depth);
-        //return vec4f(normal, depth);
+        return vec4f(normal, depth);
 	}
 
     // Use a two band spherical harmonic as a skymap
@@ -269,10 +269,10 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     out.color = vec4f(final_color, 1.0); // Color
     out.depth = ray_result.a;
 
-    if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
-        out.color = vec4f(in.color.x, in.color.y, in.color.z, 1.0);
-        out.depth = in.position.z;
-    }
+    // if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
+    //     out.color = vec4f(in.color.x, in.color.y, in.color.z, 1.0);
+    //     out.depth = in.position.z;
+    // }
 
     // out.color = vec4f(1.0, 0.0, 0.0, 1.0); // Color
     // out.depth = 0.0;

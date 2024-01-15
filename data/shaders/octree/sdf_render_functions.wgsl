@@ -132,8 +132,8 @@ fn raymarch(ray_origin : vec3f, ray_origin_world : vec3f, ray_dir : vec3f, max_d
 
         let material : Material = sample_material(pos, pos_world);
         //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
-		return vec4f(apply_light(-ray_dir, pos, pos_world, lightPos + lightOffset, material), depth);
-        //return vec4f(normal, depth);
+		//return vec4f(apply_light(-ray_dir, pos, pos_world, lightPos + lightOffset, material), depth);
+        return vec4f(normal, depth);
         //return vec4f(material.albedo, depth);
 	}
 

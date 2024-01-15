@@ -538,19 +538,14 @@ void RaymarchingRenderer::compute_octree()
     compute_pass_desc.timestampWrites = nullptr;
     WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
 
-    // First, compute undo - redo
-    if (needs_undo) {
+    // First, compute undo - redo or perform a merge of an stroke, or prepare for just a preview
+    if (needs_undo) { // Undo or redo
         spdlog::info("Undo");
         compute_undo(compute_pass);
-    }
-
-    if (needs_redo) {
+    } else if (needs_redo) {
         spdlog::info("Redo");
         compute_redo(compute_pass);
-    }
-
-    // Nothing to merge if equals 0
-    if (in_frame_stroke.edit_count > 0 || to_compute_stroke_buffer.size() > 0) {
+    } else if (in_frame_stroke.edit_count > 0 || to_compute_stroke_buffer.size() > 0) { // Merge
         to_compute_stroke_buffer.push_back(in_frame_stroke);
 
         spdlog::info("Evaluate stroke");
@@ -558,10 +553,10 @@ void RaymarchingRenderer::compute_octree()
 
         in_frame_stroke.edit_count = 0u;
         to_compute_stroke_buffer.clear();
-    } else {
+    } else { // Prepare for just a preview
         // If there is no need for an evaluation, then set the preview evaluation as default
         uint32_t set_as_preview = (needs_undo || needs_redo) ? (CLEAN_BEFORE_EVAL | EVALUATE_PREVIEW_STROKE) : EVALUATE_PREVIEW_STROKE;
-        webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_uniform.data), sizeof(uint32_t) * 3u, &set_as_preview, sizeof(uint32_t));
+        //webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_uniform.data), sizeof(uint32_t) * 3u, &set_as_preview, sizeof(uint32_t));
     }
 
     compute_preview_edit(compute_pass);
@@ -796,7 +791,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
 
     {
         // Brick unmarking bindgroup
-        std::vector<Uniform*> uniforms = { &octree_proxy_instance_buffer };
+        std::vector<Uniform*> uniforms = { &octree_proxy_instance_buffer, &octree_uniform };
 
         compute_octree_brick_unmark_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_brick_unmark_shader, 0);
     }

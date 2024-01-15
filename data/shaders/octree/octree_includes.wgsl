@@ -54,7 +54,7 @@ struct Stroke {
     parameters      : vec4f,
     color           : vec4f,
     material        : vec4f,
-    padding          : Edit,
+    padding          : Edit, // Padding of 48 * 4 bytes
     padding1         : Edit,
     padding2         : Edit,
     padding3         : Edit,

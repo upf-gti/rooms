@@ -15,11 +15,10 @@ fn compute(@builtin(global_invocation_id) id: vec3<u32>)
     atomicStore(&octree.atomic_counter, 0u);
 
     if (level >= OCTREE_DEPTH) {
-        // If the prev level was the last one, we toggle the preview stroke evaluation flag
-        if ((octree.evaluation_mode & STROKE_CLEAN_BEFORE_EVAL_FLAG) != STROKE_CLEAN_BEFORE_EVAL_FLAG) {
-            octree.evaluation_mode ^= EVALUATE_PREVIEW_STROKE_FLAG;
-        }
-        // If there is any reevaluation done, remove the flag
         octree.evaluation_mode &= ~STROKE_CLEAN_BEFORE_EVAL_FLAG;
+        // If the prev level was the last one, we toggle the preview stroke evaluation flag
+        if ((octree.evaluation_mode & EVALUATE_PREVIEW_STROKE_FLAG) == EVALUATE_PREVIEW_STROKE_FLAG) {
+            octree.evaluation_mode = 0;
+        }
     }
 }
