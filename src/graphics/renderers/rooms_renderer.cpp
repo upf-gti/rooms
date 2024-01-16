@@ -77,7 +77,11 @@ void RoomsRenderer::update(float delta_time)
     }
 #endif
 
-    if (const auto& io = ImGui::GetIO(); !io.WantCaptureMouse && !io.WantCaptureKeyboard) {
+    if (!is_openxr_available) {
+        if (const auto& io = ImGui::GetIO(); !io.WantCaptureMouse && !io.WantCaptureKeyboard) {
+            camera->update(delta_time);
+        }
+    } else {
         camera->update(delta_time);
     }
 
