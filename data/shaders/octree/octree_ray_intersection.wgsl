@@ -46,6 +46,12 @@ struct IterationData {
     octant_center : vec3f
 }
 
+struct VisitedOctantData {
+    octant: u32,
+    distance : f32,
+    octant_center : vec3f
+}
+
 var<workgroup> iteration_data_stack: array<IterationData, 100>;
 
 fn push_iteration_data(stack_pointer : ptr<function, u32>, level : u32, octant : u32, octant_id : u32, octant_center : vec3f)
@@ -99,30 +105,48 @@ fn compute()
 
             let level_half_size = SCULPT_MAX_SIZE / pow(2.0, f32(level + 1));
 
-            for (var octant : u32 = iteration_data.octant; octant < 8; octant++) {
+            var octants_to_visit : array<VisitedOctantData, 8>;
+            var octants_count : u32 = 0;
+
+            for (var octant : u32 = 0; octant < 8; octant++) {
                 let octant_center = parent_octant_center + level_half_size * OCTREE_CHILD_OFFSET_LUT[octant];
 
                 if (ray_AABB_intersection(ray_info.ray_origin, ray_info.ray_dir, octant_center - level_half_size, octant_center + level_half_size, &t_near, &t_far))
                 {
-                    let octant_id : u32 = parent_octant_id | (octant << (3 * (level - 1)));
-                    let is_last_level : bool = level == OCTREE_DEPTH;
+                    octants_to_visit[octants_count].octant = octant;
+                    octants_to_visit[octants_count].distance = t_near;
+                    octants_to_visit[octants_count].octant_center = octant_center;
+                    octants_count++;
+                }
+            }
 
-                    if (!is_last_level) {
-                        push_iteration_data(&stack_pointer, level, octant + 1, parent_octant_id, parent_octant_center);
-                        push_iteration_data(&stack_pointer, level + 1, 0, octant_id, octant_center);
-                    } else {
-                        last_level = level;
-                        last_octant = octant;
-                        // If the brick is filled
-                        let octree_index : u32 = octant_id + u32((pow(8.0, f32(level)) - 1) / 7);
-                        if ((octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG) {
-                            intersected = true;
-                        } else {
-                            push_iteration_data(&stack_pointer, level, octant + 1, parent_octant_id, parent_octant_center);
-                        }
+            // sort by distance
+            for (var i : u32 = 0; i < octants_count; i++) {
+                for(var j = i; j < octants_count; j++) {
+                    if (octants_to_visit[j].distance < octants_to_visit[i].distance)
+                    {
+                        let swap = octants_to_visit[i];
+                        octants_to_visit[i] = octants_to_visit[j];
+                        octants_to_visit[j] = swap;
                     }
+                }
+            }
 
-                    break;
+            for (var i : u32 = 0; i < octants_count; i++) {
+
+                let octant_id : u32 = parent_octant_id | (octants_to_visit[i].octant << (3 * (level - 1)));
+                let is_last_level : bool = level == OCTREE_DEPTH;
+
+                if (!is_last_level) {
+                    push_iteration_data(&stack_pointer, level + 1, 0, octant_id, octants_to_visit[i].octant_center);
+                } else {
+                    last_level = level;
+                    last_octant = octants_to_visit[i].octant;
+                    // If the brick is filled
+                    let octree_index : u32 = octant_id + u32((pow(8.0, f32(level)) - 1) / 7);
+                    if ((octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG) {
+                        intersected = true;
+                    }
                 }
             }
         }
