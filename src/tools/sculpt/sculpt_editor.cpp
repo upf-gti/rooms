@@ -141,6 +141,7 @@ void SculptEditor::initialize()
 
     Material preview_material;
     preview_material.shader = RendererStorage::get_shader("data/shaders/mesh_transparent.wgsl");
+    preview_material.flags |= MATERIAL_TRANSPARENT;
     preview_material.priority = 1;
 
     mesh_preview->set_surface_material_override(sphere_surface, preview_material);
@@ -151,16 +152,9 @@ void SculptEditor::initialize()
     Material outline_material;
     outline_material.shader = RendererStorage::get_shader("data/shaders/mesh_outline.wgsl");
 
-    mesh_preview->set_surface_material_override(sphere_surface, outline_material);
+    mesh_preview_outline->set_surface_material_override(sphere_surface, outline_material);
 
     enable_tool(SCULPT);
-
-    // debug
-    ui::UIEntity* test = gui.get_widget_from_name("recent_color_1");
-    ui::ButtonWidget* child = static_cast<ui::ButtonWidget*>(test);
-    child->color = colors::RED;
-    child->set_surface_material_color(0, child->color);
-    // ...
 
     renderer->change_stroke(stroke_parameters);
 }
@@ -339,21 +333,21 @@ void SculptEditor::render()
     Tool& tool_used = *tools[current_tool];
     Edit& edit_to_add = tool_used.get_edit_to_add();
 
-    if (0 && mesh_preview && renderer->get_openxr_available())
+    if (mesh_preview && renderer->get_openxr_available())
     {
         update_edit_preview(edit_to_add.dimensions);
 
         // Render something to be able to cull faces later...
-        if (stroke_parameters.get_operation() == OP_SUBSTRACTION ||
-            stroke_parameters.get_operation() == OP_SMOOTH_SUBSTRACTION ||
-            stroke_parameters.get_operation() == OP_PAINT ||
-            stroke_parameters.get_operation() == OP_SMOOTH_PAINT)
+        if (stroke_parameters.get_operation() == OP_SUBSTRACTION || stroke_parameters.get_operation() == OP_SMOOTH_SUBSTRACTION || 
+            stroke_parameters.get_operation() == OP_PAINT || stroke_parameters.get_operation() == OP_SMOOTH_PAINT)
         {
-            mesh_preview->render();
+                mesh_preview->render();
         }
-
-        mesh_preview_outline->set_model(mesh_preview->get_model());
-        mesh_preview_outline->render();
+        else
+        {
+            mesh_preview_outline->set_model(mesh_preview->get_model());
+            mesh_preview_outline->render();
+        }
     }
 
     if (current_tool != NONE) {
