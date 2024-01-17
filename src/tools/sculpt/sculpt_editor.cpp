@@ -339,7 +339,7 @@ void SculptEditor::render()
     Tool& tool_used = *tools[current_tool];
     Edit& edit_to_add = tool_used.get_edit_to_add();
 
-    if (mesh_preview && renderer->get_openxr_available())
+    if (0 && mesh_preview && renderer->get_openxr_available())
     {
         update_edit_preview(edit_to_add.dimensions);
 

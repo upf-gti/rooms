@@ -292,7 +292,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                         preview_data.instance_data[preview_brick].octree_parent_id = octree_index;
                         //preview_data.instance_data[preview_brick].in_use = PREVIEW_BRICK_INSIDE_FLAG;
                     } else { // Substract
-                        if (is_interior_brick) {
+                        if (global_surface_intersection) {
                             // Add preview bricks inside
                             let preview_brick : u32 = atomicAdd(&preview_data.instance_count, 1u);
     
@@ -306,7 +306,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 // TODO: this is more correct, but would need to run te copy_brick each frame
                 // This could be done when brick reordering is implemented
                 // octree_proxy_data.instance_data[instance_index].in_use = BRICK_HIDE_FLAG | BRICK_IN_USE_FLAG;
-                if (current_stroke.operation == OP_SUBSTRACTION && current_stroke.operation == OP_SMOOTH_SUBSTRACTION) {
+                if (current_stroke.operation == OP_SUBSTRACTION || current_stroke.operation == OP_SMOOTH_SUBSTRACTION) {
                     octree_proxy_data.instance_data[instance_index].in_use = BRICK_HAS_PREVIEW_FLAG | BRICK_IN_USE_FLAG;
                 }
             }
