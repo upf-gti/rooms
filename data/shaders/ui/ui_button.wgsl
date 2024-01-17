@@ -1,3 +1,4 @@
+#include ui_palette.wgsl
 #include ../mesh_includes.wgsl
 
 #define GAMMA_CORRECTION
@@ -48,13 +49,13 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
         discard;
     }
 
-    let selected_color = vec3f(0.15, 0.02, 0.9);
-    let hover_color = vec3f(0.87, 0.6, 0.02);
+    var selected_color = COLOR_HIGHLIGHT_DARK;
+    var hightlight_color = COLOR_SECONDARY;
     var back_color = vec3f(0.01);
 
     // Assign basic color
-    var lum = color.r  * 0.3 + color.g * 0.59 + color.b * 0.11;
-    var _color = vec3f( 1.0 - smoothstep(0.15, 0.4, lum) ) * hover_color;
+    var lum = color.r * 0.3 + color.g * 0.59 + color.b * 0.11;
+    var _color = vec3f( 1.0 - smoothstep(0.15, 0.4, lum) );
     _color = max(_color, back_color);
 
     var keep_colors = (ui_data.keep_rgb + ui_data.is_color_button) > 0.0;
@@ -63,21 +64,27 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
         _color = color.rgb * in.color;
     }
 
-    if( ui_data.is_selected > 0.0 && !keep_colors ) {
-        back_color = hover_color - pow(d, 1.75);
-        _color = pow(smoothstep(vec3f(0.3), vec3f(0.7), color.rgb), vec3f(1.2));
+    if( ui_data.is_selected > 0.0 ) {
+        if( !keep_colors ) {
+            back_color = select( COLOR_SECONDARY, COLOR_PRIMARY, ui_data.is_hovered > 0.0 );;
+            _color = smoothstep(vec3f(0.2), vec3f(0.55), color.rgb);
+        }
+    } 
+    // not selected but hovered
+    else if( ui_data.is_hovered > 0.0 ) {
+        hightlight_color = mix( COLOR_TERCIARY, COLOR_HIGHLIGHT_LIGHT, uvs.y );
     }
 
-    _color = select( back_color, _color, color.a > 0.3 );
+    _color = select( back_color, _color * hightlight_color, color.a > 0.3 ); 
 
     // Process selection
-    var outline_color_selected = mix( selected_color, hover_color, uvs.x * uvs.y );
+    var outline_color_selected = mix( COLOR_TERCIARY, COLOR_HIGHLIGHT_LIGHT, uvs.y );
     _color = mix(outline_color_selected, _color, 1.0 - step(0.46 + (1.0 - ui_data.is_selected), d));
 
     // Process hover
     var outline_intensity = 0.8;
     var outline_mask = step(0.46 + (1.0 - ui_data.is_hovered), d) * outline_intensity;
-    var outline_color = mix( selected_color, hover_color, uvs.y );
+    var outline_color = mix( COLOR_TERCIARY, COLOR_HIGHLIGHT_LIGHT, uvs.y );
     _color = mix(outline_color, _color, 1 - outline_mask);
 
     if (GAMMA_CORRECTION == 1) {

@@ -1,5 +1,7 @@
 #include mesh_includes.wgsl
 
+#define GAMMA_CORRECTION
+
 @group(0) @binding(0) var<storage, read> mesh_data : InstanceData;
 
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
@@ -28,6 +30,14 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     var out: FragmentOutput;
     var dummy = camera_data.eye;
-    out.color = vec4f(pow(in.color, vec3f(2.2)), 0.03); // Color
+
+    var color = in.color;
+
+    if (GAMMA_CORRECTION == 1) {
+        color = pow(color, vec3f(1.0 / 2.2));
+    }
+
+    out.color = vec4f(color, 0.03);
+
     return out;
 }
