@@ -155,6 +155,13 @@ void SculptEditor::initialize()
 
     enable_tool(SCULPT);
 
+    // debug
+    ui::UIEntity* test = gui.get_widget_from_name("recent_color_1");
+    ui::ButtonWidget* child = static_cast<ui::ButtonWidget*>(test);
+    child->color = colors::RED;
+    child->set_surface_material_color(0, child->color);
+    // ...
+
     renderer->change_stroke(stroke_parameters);
 }
 
@@ -531,8 +538,9 @@ void SculptEditor::add_recent_color(const Color& color)
     assert(recent_colors.size() <= recent_group->get_children().size());
     for (uint8_t i = 0; i < recent_colors.size(); ++i)
     {
+
         ui::ButtonWidget* child = static_cast<ui::ButtonWidget*>(recent_group->get_children()[i]);
         child->color = recent_colors[i];
-        child->set_surface_material_color(0, child->color);
+        child->set_surface_material_override_color(0, child->color);
     }
 }

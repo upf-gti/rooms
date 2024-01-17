@@ -1,3 +1,4 @@
+#include ui_palette.wgsl
 #include ../mesh_includes.wgsl
 
 #define GAMMA_CORRECTION
@@ -58,13 +59,10 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     uvs.x *= divisions;
     uvs.y = 1.0 - uvs.y;
     var p = vec2f(clamp(uvs.x, 0.5, divisions - 0.5), 0.5);
-    var d = 1.0 - step(0.45, distance(uvs, p));
-
-    let selected_color = vec3f(0.15, 0.02, 0.9);
-    let hover_color = vec3f(0.87, 0.6, 0.02);
+    var d = 1.0 - step(0.46, distance(uvs, p));
 
     // add gradient at the end to simulate the slider thumb
-    var mesh_color = mix( selected_color, hover_color, in.uv.y);
+    var mesh_color = mix( COLOR_HIGHLIGHT_LIGHT, COLOR_TERCIARY, 1.0 - in.uv.y);
 
     var axis = select( in.uv.x, uvs.y, ui_data.num_group_items == 1.0 );
     var grad = smoothstep(value, 1.0, axis / value);
@@ -74,7 +72,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     let back_color = vec3f(0.02);
     var final_color = select( mesh_color, back_color, axis > value || d < 1.0 );
 
-    final_color = select( final_color, hover_color, d < 1.0 && ui_data.is_hovered > 0.0 );
+    final_color = select( final_color, COLOR_SECONDARY, d < 1.0 && ui_data.is_hovered > 0.0 );
 
     if (GAMMA_CORRECTION == 1) {
         final_color = pow(final_color, vec3f(1.0 / 2.2));
