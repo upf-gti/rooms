@@ -39,11 +39,15 @@ struct CameraData {
 
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
 
+@group(2) @binding(3) var<storage, read> ray_intersection_info: RayIntersectionInfo;
+
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
 
     let instance_index : u32 = brick_copy_buffer[in.instance_id];
     let instance_data : ProxyInstanceData = octree_proxy_data.instance_data[instance_index];
+
+    let tile_pointer : u32 = ray_intersection_info.tile_pointer;
 
     var voxel_pos : vec3f = in.position * BRICK_WORLD_SIZE * 0.5 + instance_data.position;
     var world_pos : vec3f = rotate_point_quat(voxel_pos, sculpt_data.sculpt_rotation);
@@ -62,6 +66,10 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     if ((instance_data.in_use & BRICK_HAS_PREVIEW_FLAG) == BRICK_HAS_PREVIEW_FLAG) {
         out.color = vec3f(0.0, 1.0, 0.0);
         out.has_previews = 1u;
+    }
+
+    if ((tile_pointer & 0x3FFFFFFFu) == instance_index) {
+        out.color = vec3f(0.0, 0.0, 1.0);
     }
     
     out.voxel_pos = voxel_pos;

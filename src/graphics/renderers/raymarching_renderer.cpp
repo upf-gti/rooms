@@ -31,8 +31,8 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
 #ifndef DISABLE_RAYMARCHER
 
     init_compute_octree_pipeline();
-    init_raymarching_proxy_pipeline();
     init_octree_ray_intersection_pipeline();
+    init_raymarching_proxy_pipeline();
     initialize_stroke();
 
     //for (uint32_t i = 0; i < 10; i++) {
@@ -931,7 +931,7 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
         prev_stroke_uniform_2.binding = 1u;
         prev_stroke_uniform_2.buffer_size = preview_stroke_uniform.buffer_size;
 
-        std::vector<Uniform*> uniforms = { &sculpt_data_uniform, &prev_stroke_uniform_2 };
+        std::vector<Uniform*> uniforms = { &sculpt_data_uniform, &prev_stroke_uniform_2, &ray_intersection_info_uniform };
         sculpt_data_bind_proxy_group = webgpu_context->create_bind_group(uniforms, render_proxy_shader, 2);
     }
 
@@ -985,7 +985,7 @@ void RaymarchingRenderer::init_octree_ray_intersection_pipeline()
         ray_info_uniform.buffer_size = sizeof(RayInfo);
 
         ray_intersection_info_uniform.data = webgpu_context->create_buffer(sizeof(RayIntersectionInfo), WGPUBufferUsage_CopySrc | WGPUBufferUsage_Storage, nullptr, "ray intersection info");
-        ray_intersection_info_uniform.binding = 1;
+        ray_intersection_info_uniform.binding = 3;
         ray_intersection_info_uniform.buffer_size = sizeof(RayIntersectionInfo);
 
         ray_intersection_info_read_buffer = webgpu_context->create_buffer(sizeof(RayIntersectionInfo), WGPUBufferUsage_CopyDst | WGPUBufferUsage_MapRead, nullptr, "ray intersection info read buffer");

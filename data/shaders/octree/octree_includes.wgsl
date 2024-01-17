@@ -157,3 +157,11 @@ struct SculptData {
     sculpt_rotation         : vec4f,
     sculpt_inv_rotation     : vec4f
 };
+
+struct RayIntersectionInfo
+{
+    intersected : u32,
+    tile_pointer : u32,
+    dummy0 : u32,
+    dummy1 : u32
+};

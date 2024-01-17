@@ -8,21 +8,13 @@ struct RayInfo
     dummy1     : f32
 }
 
-struct RayIntersectionInfo
-{
-    intersected : u32,
-    level: u32,
-    octant : u32,
-    dummy : u32
-}
-
 @group(0) @binding(2) var<storage, read_write> octree : Octree;
 // @group(0) @binding(3) var read_sdf: texture_3d<f32>;
 // @group(0) @binding(4) var texture_sampler : sampler;
 // @group(0) @binding(5) var<storage, read> octree_proxy_data: OctreeProxyInstancesNonAtomic;
 
 @group(1) @binding(0) var<uniform> ray_info: RayInfo;
-@group(1) @binding(1) var<storage, read_write> ray_intersection_info: RayIntersectionInfo;
+@group(1) @binding(3) var<storage, read_write> ray_intersection_info: RayIntersectionInfo;
 
 // https://gist.github.com/DomNomNom/46bb1ce47f68d255fd5d
 fn ray_AABB_intersection(ray_origin : vec3f, ray_dir : vec3f, box_min : vec3f, box_max : vec3f, t_near : ptr<function, f32>, t_far : ptr<function, f32>) -> bool
@@ -86,6 +78,8 @@ fn compute()
     var last_level : u32 = 0;
     var last_octant : u32 = 0;
 
+    var intersected_distance : f32 = 10000000.0;
+
     // Check intersection with octree aabb
     if (ray_AABB_intersection(ray_info.ray_origin, ray_info.ray_dir, bounds_min, bounds_max, &t_near, &t_far))
     {
@@ -144,8 +138,11 @@ fn compute()
                     last_octant = octants_to_visit[i].octant;
                     // If the brick is filled
                     let octree_index : u32 = octant_id + u32((pow(8.0, f32(level)) - 1) / 7);
-                    if ((octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG) {
+                    if (octants_to_visit[i].distance < intersected_distance &&
+                       (octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG) {
                         intersected = true;
+                        ray_intersection_info.tile_pointer = octree.data[octree_index].tile_pointer;
+                        intersected_distance = octants_to_visit[i].distance;
                     }
                 }
             }
@@ -154,6 +151,4 @@ fn compute()
     }
 
     ray_intersection_info.intersected = select(0u, 1u, intersected);
-    ray_intersection_info.level = last_level;
-    ray_intersection_info.octant = last_octant;
 }
