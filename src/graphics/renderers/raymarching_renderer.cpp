@@ -476,18 +476,17 @@ void RaymarchingRenderer::compute_undo(WGPUComputePassEncoder compute_pass)
         stroke_history.clear();
 
         compute_octree_cleaning_pipeline.set(compute_pass);
-        uint32_t last_layer_size = pow(2, 3 * octree_depth);
         wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_clean_octree_bind_group, 0, nullptr);
-        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, last_layer_size / (8u * 8u * 8u), 1,1);
+        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, ceil(octree_total_size / (8.0 * 8.0 * 8.0)), 1,1);
 
         // Clean the texture atlas bricks dispatch
         compute_octree_brick_removal_pipeline.set(compute_pass);
         wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_indirect_brick_removal_bind_group, 0, nullptr);
         wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(octree_indirect_brick_removal_buffer.data), 0u);
 
-        compute_octree_brick_copy_pipeline.set(compute_pass);
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_brick_copy_bind_group, 0, nullptr);
-        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, octants_max_size / (8u * 8u * 8u), 1, 1);
+        //compute_octree_brick_copy_pipeline.set(compute_pass);
+        //wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_brick_copy_bind_group, 0, nullptr);
+        //wgpuComputePassEncoderDispatchWorkgroups(compute_pass, octree_total_size / (8u * 8u * 8u), 1, 1);
     }
     else {
 
@@ -700,7 +699,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         compute_merge_data_uniform.buffer_size = sizeof(sMergeData);
 
         // Octree buffer
-        std::vector<sOctreeNode> octree_default(octree_total_size);
+        std::vector<sOctreeNode> octree_default(octree_total_size+1);
         octree_uniform.data = webgpu_context->create_buffer(sizeof(uint32_t) * 4 + octree_total_size * sizeof(sOctreeNode), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, octree_default.data(), "octree");
         octree_uniform.binding = 2;
         octree_uniform.buffer_size = sizeof(uint32_t) * 4 + octree_total_size * sizeof(sOctreeNode);
