@@ -84,7 +84,6 @@ void SculptEditor::initialize()
         gui.bind("pbr_metallic", [&](const std::string& signal, float value) { stroke_parameters.set_material_metallic(value); });
 
         gui.bind("color_picker", [&](const std::string& signal, Color color) { stroke_parameters.set_color(color); });
-        gui.bind("color_picker@released", [&](const std::string& signal, Color color) { add_recent_color(color); });
 
         // Controller buttons
 
@@ -109,7 +108,6 @@ void SculptEditor::initialize()
                 gui.bind(child->signal, [&](const std::string& signal, void* button) {
                     const Color& color = (static_cast<ui::ButtonWidget*>(button))->color;
                     stroke_parameters.set_color(color);
-                    add_recent_color(color);
                 });
             }
         }
@@ -141,6 +139,7 @@ void SculptEditor::initialize()
 
     Material preview_material;
     preview_material.shader = RendererStorage::get_shader("data/shaders/mesh_transparent.wgsl");
+    preview_material.flags |= MATERIAL_TRANSPARENT;
     preview_material.priority = 1;
 
     mesh_preview->set_surface_material_override(sphere_surface, preview_material);
@@ -151,7 +150,7 @@ void SculptEditor::initialize()
     Material outline_material;
     outline_material.shader = RendererStorage::get_shader("data/shaders/mesh_outline.wgsl");
 
-    mesh_preview->set_surface_material_override(sphere_surface, outline_material);
+    mesh_preview_outline->set_surface_material_override(sphere_surface, outline_material);
 
     enable_tool(SCULPT);
 
@@ -288,6 +287,8 @@ void SculptEditor::update(float delta_time)
 
     if (is_tool_used) {
         new_edits.push_back(edit_to_add);
+        // Add recent color only when is used...
+        add_recent_color(stroke_parameters.get_color());
     }
 
     if (renderer->get_openxr_available()) {
@@ -337,16 +338,16 @@ void SculptEditor::render()
         update_edit_preview(edit_to_add.dimensions);
 
         // Render something to be able to cull faces later...
-        if (stroke_parameters.get_operation() == OP_SUBSTRACTION ||
-            stroke_parameters.get_operation() == OP_SMOOTH_SUBSTRACTION ||
-            stroke_parameters.get_operation() == OP_PAINT ||
-            stroke_parameters.get_operation() == OP_SMOOTH_PAINT)
+        if (stroke_parameters.get_operation() == OP_SUBSTRACTION || stroke_parameters.get_operation() == OP_SMOOTH_SUBSTRACTION || 
+            stroke_parameters.get_operation() == OP_PAINT || stroke_parameters.get_operation() == OP_SMOOTH_PAINT)
         {
-            mesh_preview->render();
+                mesh_preview->render();
         }
-
-        mesh_preview_outline->set_model(mesh_preview->get_model());
-        mesh_preview_outline->render();
+        else
+        {
+            mesh_preview_outline->set_model(mesh_preview->get_model());
+            mesh_preview_outline->render();
+        }
     }
 
     if (current_tool != NONE) {
@@ -515,15 +516,18 @@ void SculptEditor::add_recent_color(const Color& color)
 {
     auto it = std::find(recent_colors.begin(), recent_colors.end(), color);
 
-    // Color is not present in recents...
-    if (it == recent_colors.end())
+    // Color is already in recents...
+    if (it != recent_colors.end())
     {
-        recent_colors.insert(recent_colors.begin(), color);
+        recent_colors.erase(it);
+    }
 
-        if (recent_colors.size() > max_recent_colors)
-        {
-            recent_colors.pop_back();
-        }
+    // Always add at the beginning
+    recent_colors.insert(recent_colors.begin(), color);
+
+    if (recent_colors.size() > max_recent_colors)
+    {
+        recent_colors.pop_back();
     }
 
     ui::UIEntity* recent_group = gui.get_widget_from_name("g_recent_colors");
@@ -531,8 +535,9 @@ void SculptEditor::add_recent_color(const Color& color)
     assert(recent_colors.size() <= recent_group->get_children().size());
     for (uint8_t i = 0; i < recent_colors.size(); ++i)
     {
+
         ui::ButtonWidget* child = static_cast<ui::ButtonWidget*>(recent_group->get_children()[i]);
         child->color = recent_colors[i];
-        child->set_surface_material_color(0, child->color);
+        child->set_surface_material_override_color(0, child->color);
     }
 }

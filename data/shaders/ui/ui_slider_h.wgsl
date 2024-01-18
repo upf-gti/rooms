@@ -35,9 +35,15 @@ fn remap_range(oldValue : f32, oldMin: f32, oldMax : f32, newMin : f32, newMax :
 @fragment
 fn fs_main(in: VertexOutput) -> FragmentOutput {
 
-    // Mask button shape
-    var m : f32 = distance(in.uv, vec2f(0.5));
-    var alpha_mask = 1.0 - step(0.5, m);
+    // Alpha mask
+    var uvs_mask = in.uv;
+    var button_size = 32.0;
+    var tx = max(button_size, 32.0 * ui_data.num_group_items);
+    var divisions = tx / button_size;
+    uvs_mask.x *= divisions;
+    uvs_mask.y = 1.0 - uvs_mask.y;
+    var m = vec2f(clamp(uvs_mask.x, 0.5, divisions - 0.5), 0.5);
+    var alpha_mask = 1.0 - step(0.5, distance(uvs_mask, m));
     if( alpha_mask < 0.1 ) {
         discard;
     }
@@ -47,18 +53,15 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var dummy = camera_data.eye;
     var value = ui_data.slider_value;
 
-    // Mask
+    // Border
     var uvs = in.uv;
-    var button_size = 32.0;
-    var tx = max(button_size, 32.0 * ui_data.num_group_items);
-    var divisions = tx / button_size;
     uvs.x *= divisions;
     uvs.y = 1.0 - uvs.y;
     var p = vec2f(clamp(uvs.x, 0.5, divisions - 0.5), 0.5);
     var d = 1.0 - step(0.46, distance(uvs, p));
 
     // add gradient at the end to simulate the slider thumb
-    var mesh_color = mix( COLOR_TERCIARY, COLOR_HIGHLIGHT_LIGHT, pow(in.uv.y, 1.25));
+    var mesh_color = mix( COLOR_HIGHLIGHT_LIGHT, COLOR_TERCIARY, pow(in.uv.x, 1.25));
 
     var axis = select( in.uv.x, uvs.y, ui_data.num_group_items == 1.0 );
     var grad = smoothstep(value, 1.0, axis / value);

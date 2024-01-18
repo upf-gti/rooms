@@ -132,7 +132,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     }
     
     let is_smooth_union : bool = current_stroke.operation == OP_SMOOTH_UNION;
-    let is_smooth_substract : bool =  stroke.operation == OP_SMOOTH_SUBSTRACTION;
+    let is_smooth_substract : bool = current_stroke.operation == OP_SMOOTH_SUBSTRACTION;
     
     let octant_min : vec3f = octant_center - vec3f(level_half_size);
     let octant_max : vec3f = octant_center + vec3f(level_half_size);
@@ -276,10 +276,10 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         }
     } else {
         if (is_evaluating_preview) {
+            let instance_index : u32 = octree.data[octree_index].tile_pointer & 0x3FFFFFFFu;
             if (local_surface_intersection) {
                 if (is_current_brick_filled) {
                     // Mark current brick in order to evaluate the stroke
-                    let instance_index : u32 = octree.data[octree_index].tile_pointer & 0x3FFFFFFFu;
                     octree_proxy_data.instance_data[instance_index].in_use = BRICK_HAS_PREVIEW_FLAG | BRICK_IN_USE_FLAG;
                 } else {
                     // If it is not the surface
@@ -292,7 +292,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                         preview_data.instance_data[preview_brick].octree_parent_id = octree_index;
                         //preview_data.instance_data[preview_brick].in_use = PREVIEW_BRICK_INSIDE_FLAG;
                     } else { // Substract
-                        if (is_interior_brick) {
+                        if (global_surface_intersection) {
                             // Add preview bricks inside
                             let preview_brick : u32 = atomicAdd(&preview_data.instance_count, 1u);
     
@@ -301,6 +301,13 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                             preview_data.instance_data[preview_brick].in_use = 0;
                         }
                     }
+                }
+            } else if (local_surface_inside) {
+                // TODO: this is more correct, but would need to run te copy_brick each frame
+                // This could be done when brick reordering is implemented
+                // octree_proxy_data.instance_data[instance_index].in_use = BRICK_HIDE_FLAG | BRICK_IN_USE_FLAG;
+                if (current_stroke.operation == OP_SUBSTRACTION || current_stroke.operation == OP_SMOOTH_SUBSTRACTION) {
+                    octree_proxy_data.instance_data[instance_index].in_use = BRICK_HAS_PREVIEW_FLAG | BRICK_IN_USE_FLAG;
                 }
             }
         }
