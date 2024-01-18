@@ -133,6 +133,10 @@ void RoomsRenderer::render_screen()
         render_pass_color_attachment.loadOp = WGPULoadOp_Clear;
         render_pass_color_attachment.storeOp = WGPUStoreOp_Store;
 
+#ifndef __EMSCRIPTEN__
+        render_pass_color_attachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
+#endif
+
         glm::vec4 clear_color = RoomsRenderer::instance->get_clear_color();
         render_pass_color_attachment.clearValue = WGPUColor(clear_color.r, clear_color.g, clear_color.b, clear_color.a);
 
@@ -176,6 +180,11 @@ void RoomsRenderer::render_screen()
             color_attachments.storeOp = WGPUStoreOp_Store;
             color_attachments.clearValue = { 0.0, 0.0, 0.0, 0.0 };
             color_attachments.view = swapchain_view;
+
+#ifndef __EMSCRIPTEN__
+            color_attachments.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
+#endif
+
             WGPURenderPassDescriptor render_pass_desc = {};
             render_pass_desc.colorAttachmentCount = 1;
             render_pass_desc.colorAttachments = &color_attachments;

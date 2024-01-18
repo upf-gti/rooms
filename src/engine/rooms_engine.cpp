@@ -311,7 +311,7 @@ bool RoomsEngine::show_tree_recursive(Entity* entity)
 void RoomsEngine::set_skybox_texture(const std::string& filename)
 {
     Texture* tex = RendererStorage::get_texture(filename);
-    skybox->set_material_diffuse(tex);
+    skybox->set_surface_material_diffuse(0, tex);
 }
 
 void RoomsEngine::load_glb(const std::string& filename)

@@ -123,13 +123,13 @@
                     "name": "pbr_roughness",
                     "type": "slider",
                     "mode": "vertical",
-                    "default": 0.7
+                    "value": 0.7
                 },
                 {
                     "name": "pbr_metallic",
                     "type": "slider",
                     "mode": "vertical",
-                    "default": 0.2
+                    "value": 0.2
                 }
             ]
         },
@@ -145,12 +145,12 @@
                 {
                     "name": "color_picker",
                     "type": "picker",
-                    "default": "1 0 0 1",
+                    "color": "1 0 0 1",
                     "slider": {
                         "name": "intensity",
                         "type": "slider",
                         "mode": "vertical",
-                        "default": 1
+                        "value": 1
                     }
                 },
                 {
@@ -259,7 +259,7 @@
                     "type": "slider",
                     "mode": "vertical",
                     "min": 0.01,
-                    "default": 0
+                    "value": 0
                 },
                 {
                     "name": "g_capped",
@@ -277,7 +277,7 @@
                     "name": "cap_value",
                     "type": "slider",
                     "mode": "vertical",
-                    "default": 0
+                    "value": 0
                 }
             ]
         },

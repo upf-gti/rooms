@@ -34,13 +34,6 @@ struct FragmentOutput {
 @fragment
 fn fs_main(in: VertexOutput) -> FragmentOutput {
 
-    var dummy = camera_data.eye;
-
-    var out: FragmentOutput;
-
-    var color : vec4f = textureSample(albedo_texture, texture_sampler, in.uv);
-    color = pow(color, vec4f(2.2));
-
     // Mask button shape
     var uvs = in.uv;
     var d : f32 = distance(uvs, vec2f(0.5));
@@ -48,6 +41,13 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     if( alpha_mask < 0.1 ) {
         discard;
     }
+
+    var dummy = camera_data.eye;
+
+    var out: FragmentOutput;
+
+    var color : vec4f = textureSample(albedo_texture, texture_sampler, in.uv);
+    color = pow(color, vec4f(2.2));
 
     var selected_color = COLOR_HIGHLIGHT_DARK;
     var hightlight_color = COLOR_SECONDARY;

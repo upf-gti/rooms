@@ -38,7 +38,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var color : vec4f = textureSample(albedo_texture, texture_sampler, in.uv);
     color = pow(color, vec4f(2.2));
 
-    if (color.a < 0.01) {
+    if (color.a < 0.9) {
         discard;
     }
 
