@@ -11,12 +11,6 @@ if (NOT EXISTS ${CMAKE_BINARY_DIR}/CMakeCache.txt)
     endif()
 endif()
 
-if (WIN32)
-    set(DAWN_BUILD "STATIC" CACHE STRING "Choose between SRC or STATIC to build from source (slower, better debugging) or download an static library (faster)")
-else()
-    set(DAWN_BUILD "SRC")
-endif()
-
 project(rooms LANGUAGES C CXX)
 
 add_definitions(-D_SILENCE_STDEXT_ARR_ITERS_DEPRECATION_WARNING)
