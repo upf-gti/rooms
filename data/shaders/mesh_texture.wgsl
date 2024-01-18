@@ -35,7 +35,8 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var dummy = camera_data.eye;
 
     var out: FragmentOutput;
-    let color : vec4f = textureSample(albedo_texture, texture_sampler, in.uv);
+    var color : vec4f = textureSample(albedo_texture, texture_sampler, in.uv);
+    color = pow(color, vec4f(2.2));
 
     if (color.a < 0.01) {
         discard;

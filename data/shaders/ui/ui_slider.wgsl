@@ -45,7 +45,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var color : vec4f = textureSample(albedo_texture, texture_sampler, in.uv);
     color = pow(color, vec4f(2.2));
 
-    if (color.a < 0.01) {
+    if (color.a < 0.9) {
         discard;
     }
 
@@ -62,7 +62,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var d = 1.0 - step(0.46, distance(uvs, p));
 
     // add gradient at the end to simulate the slider thumb
-    var mesh_color = mix( COLOR_HIGHLIGHT_LIGHT, COLOR_TERCIARY, 1.0 - in.uv.y);
+    var mesh_color = mix( COLOR_TERCIARY, COLOR_HIGHLIGHT_LIGHT, pow(in.uv.y, 1.25));
 
     var axis = select( in.uv.x, uvs.y, ui_data.num_group_items == 1.0 );
     var grad = smoothstep(value, 1.0, axis / value);

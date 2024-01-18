@@ -52,6 +52,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var selected_color = COLOR_HIGHLIGHT_DARK;
     var hightlight_color = COLOR_SECONDARY;
     var back_color = vec3f(0.01);
+    var gradient_factor = pow(uvs.y, 1.25);
 
     // Assign basic color
     var lum = color.r * 0.3 + color.g * 0.59 + color.b * 0.11;
@@ -72,19 +73,19 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     } 
     // not selected but hovered
     else if( ui_data.is_hovered > 0.0 ) {
-        hightlight_color = mix( COLOR_TERCIARY, COLOR_HIGHLIGHT_LIGHT, uvs.y );
+        hightlight_color = mix( COLOR_TERCIARY, COLOR_HIGHLIGHT_LIGHT, gradient_factor );
     }
 
     _color = select( back_color, _color * hightlight_color, color.a > 0.3 ); 
 
     // Process selection
-    var outline_color_selected = mix( COLOR_TERCIARY, COLOR_HIGHLIGHT_LIGHT, uvs.y );
+    var outline_color_selected = mix( COLOR_TERCIARY, COLOR_HIGHLIGHT_LIGHT, gradient_factor );
     _color = mix(outline_color_selected, _color, 1.0 - step(0.46 + (1.0 - ui_data.is_selected), d));
 
     // Process hover
     var outline_intensity = 0.8;
     var outline_mask = step(0.46 + (1.0 - ui_data.is_hovered), d) * outline_intensity;
-    var outline_color = mix( COLOR_TERCIARY, COLOR_HIGHLIGHT_LIGHT, uvs.y );
+    var outline_color = mix( COLOR_TERCIARY, COLOR_HIGHLIGHT_LIGHT, gradient_factor );
     _color = mix(outline_color, _color, 1 - outline_mask);
 
     if (GAMMA_CORRECTION == 1) {

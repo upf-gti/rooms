@@ -292,7 +292,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                         preview_data.instance_data[preview_brick].octree_parent_id = octree_index;
                         //preview_data.instance_data[preview_brick].in_use = PREVIEW_BRICK_INSIDE_FLAG;
                     } else { // Substract
-                        if (is_interior_brick) {
+                        if (global_surface_intersection) {
                             // Add preview bricks inside
                             let preview_brick : u32 = atomicAdd(&preview_data.instance_count, 1u);
     

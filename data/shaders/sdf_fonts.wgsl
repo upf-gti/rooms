@@ -42,6 +42,7 @@ fn screenPxRange( pxRange : f32, texCoord : vec2f ) -> f32 {
 fn fs_main(in: VertexOutput) -> FragmentOutput {
     
     var dummy = camera_data.eye;
+    var dummy_sampler : vec3f = textureSample(texture, texture_sampler, in.uv).rgb;
 
     var out: FragmentOutput;
 
@@ -49,8 +50,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var fgColor : vec4f = vec4f(in.color, 1.0);
 
     var sz : vec2f = vec2f(textureDimensions(texture));
-    // var msd : vec3f = textureLoad(texture, vec2u(in.uv * sz), 0).rgb;
-    var msd : vec3f = textureSample(texture, texture_sampler, in.uv).rgb;
+    var msd : vec3f = textureLoad(texture, vec2u(in.uv * sz), 0).rgb;
     var sd : f32 = median(msd.r, msd.g, msd.b);
     var screenPxDistance = screenPxRange(4.0, in.uv) * (sd - 0.5);
     var opacity = clamp(screenPxDistance + 0.5, 0.0, 1.0);
