@@ -4,9 +4,9 @@
 #include "sweep.h"
 #include "graphics/renderers/rooms_renderer.h"
 #include "framework/scene/parse_scene.h"
-
 #include "graphics/renderer_storage.h"
-
+#include "backends/imgui_impl_glfw.h"
+#include "backends/imgui_impl_wgpu.h"
 #include "spdlog/spdlog.h"
 
 void SculptEditor::initialize()
@@ -83,7 +83,7 @@ void SculptEditor::initialize()
         gui.bind("pbr_roughness", [&](const std::string& signal, float value) { stroke_parameters.set_material_roughness(value); });
         gui.bind("pbr_metallic", [&](const std::string& signal, float value) { stroke_parameters.set_material_metallic(value); });
 
-        gui.bind("color_picker", [&](const std::string& signal, Color color) { stroke_parameters.set_color(color); });
+        gui.bind("color_picker", [&](const std::string& signal, Color color) { stroke_parameters.set_material_color(color); });
 
         // Controller buttons
 
@@ -107,7 +107,7 @@ void SculptEditor::initialize()
             if (child->is_color_button) {
                 gui.bind(child->signal, [&](const std::string& signal, void* button) {
                     const Color& color = (static_cast<ui::ButtonWidget*>(button))->color;
-                    stroke_parameters.set_color(color);
+                    stroke_parameters.set_material_color(color);
                 });
             }
         }
@@ -117,7 +117,7 @@ void SculptEditor::initialize()
         {
             ui::ButtonWidget* child = static_cast<ui::ButtonWidget*>(recent_group->get_children()[i]);
             gui.bind(child->signal, [&](const std::string& signal, void* button) {
-                stroke_parameters.set_color((static_cast<ui::ButtonWidget*>(button))->color);
+                stroke_parameters.set_material_color((static_cast<ui::ButtonWidget*>(button))->color);
             });
         }
     }
@@ -288,7 +288,7 @@ void SculptEditor::update(float delta_time)
     if (is_tool_used) {
         new_edits.push_back(edit_to_add);
         // Add recent color only when is used...
-        add_recent_color(stroke_parameters.get_color());
+        add_recent_color(stroke_parameters.get_material().color);
     }
 
     if (renderer->get_openxr_available()) {
@@ -387,6 +387,36 @@ void SculptEditor::render()
     }
 
     floor_grid_mesh->render();
+}
+
+void SculptEditor::render_gui()
+{
+    StrokeMaterial& stroke_material = stroke_parameters.get_material();
+
+    bool changed = false;
+
+    ImGui::Text("Material");
+
+    ImGui::Separator();
+
+    ImGui::Text("PBR");
+    changed |= ImGui::ColorEdit4("Base Color", &stroke_material.color[0]);
+    changed |= ImGui::SliderFloat("Roughness", &stroke_material.roughness, 0.f, 1.0f);
+    changed |= ImGui::SliderFloat("Metallic", &stroke_material.metallic, 0.f, 1.0f);
+
+    ImGui::Separator();
+
+    ImGui::Text("Noise");
+    changed |= ImGui::ColorEdit4("Color", &stroke_material.noise_color[0]);
+    changed |= ImGui::SliderFloat("Intensity", &stroke_material.noise_params.x, 0.f, 1.0f);
+    changed |= ImGui::SliderFloat("Frequency", &stroke_material.noise_params.y, 0.f, 50.0f);
+
+    int tmp = static_cast<int>(stroke_material.noise_params.z);
+    changed |= ImGui::SliderInt("Octaves", &tmp, 1, 16);
+    stroke_material.noise_params.z = tmp;
+
+    if (changed)
+        stroke_parameters.set_dirty(true);
 }
 
 void SculptEditor::update_edit_preview(const glm::vec4& dims)

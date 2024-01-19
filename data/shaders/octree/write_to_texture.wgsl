@@ -57,9 +57,9 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     let texture_coordinates : vec3u = atlas_tile_coordinate + local_id;
 
     var material : Material;
-    material.albedo = stroke.color.xyz;
-    material.roughness = stroke.material.x;
-    material.metalness = stroke.material.y;
+    material.albedo = stroke.material.color.xyz;
+    material.roughness = stroke.material.roughness;
+    material.metalness = stroke.material.metallic;
 
     //sSurface.material = material;
 
@@ -91,12 +91,19 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
         // Rust example.. ??
 
-        var noise_value = fbm( pos, vec3f(0.0), 20.0, 1.0, 8 );
+        let stroke_color : vec3f = stroke.material.color.xyz;
+        
+        let noise_color : vec3f = stroke.material.noise_color.xyz;
+        let noise_intensity : f32 = stroke.material.noise_params.x;
+        let noise_freq : f32 = stroke.material.noise_params.y;
+        let noise_octaves : u32 = u32(stroke.material.noise_params.z);
+
+        var noise_value = fbm( pos, vec3f(0.0), noise_freq, noise_intensity, noise_octaves );
         noise_value = clamp(noise_value, 0.0, 1.0);
 
-        material.albedo = mix(stroke.color.xyz, stroke.color.xyz * vec3f(0.82, 0.35, 0.15), noise_value);
-        material.roughness = mix(stroke.material.x, 1.0, noise_value * 1.5);
-        material.metalness = mix(stroke.material.y, 0.25, noise_value * 1.5);
+        material.albedo = mix(stroke_color, stroke_color * noise_color, noise_value);
+        material.roughness = mix(stroke.material.roughness, 1.0, noise_value * 1.5);
+        material.metalness = mix(stroke.material.metallic, 0.25, noise_value * 1.5);
 
         sSurface = evaluate_edit(pos, stroke.primitive, stroke.operation, stroke.parameters, sSurface, material, edit);
     }

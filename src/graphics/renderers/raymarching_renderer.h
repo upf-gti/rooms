@@ -180,7 +180,6 @@ class RaymarchingRenderer {
             .edit_count = 1u,
             .primitive = SD_SPHERE,
             .operation = OP_UNION,
-            .color = {0.0f, 0.0f, 1.0f, 1.0f},
             .edits = {
                 {
                     .position = {0.00f, 0.10f, 0.0f},

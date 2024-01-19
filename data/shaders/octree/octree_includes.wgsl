@@ -47,18 +47,28 @@ struct Edit {
     //padding : vec4f
 };
 
+struct StrokeMaterial {
+    roughness       : f32,
+    metallic        : f32,
+    emissive        : f32,
+    dummy0          : f32,
+    color           : vec4f,
+    // Noise params
+    noise_color     : vec4f,
+    noise_params    : vec4f
+};
+
 struct Stroke {
     stroke_id       : u32,
     edit_count      : u32,
     primitive       : u32,
     operation       : u32,
     parameters      : vec4f,
-    color           : vec4f,
-    material        : vec4f,
-    padding          : Edit, // Padding of 48 * 4 bytes
-    padding1         : Edit,
-    padding2         : Edit,
-    padding3         : Edit,
+    dummy           : vec4f,
+    material        : StrokeMaterial,   // 48 bytes
+    padding         : Edit,             // Padding of (48 * 3) bytes
+    padding1        : Edit,
+    padding2        : Edit,
     edits           : array<Edit, MAX_EDITS_PER_EVALUATION>
 };
 
