@@ -146,9 +146,9 @@ fn sample_sdf(position : vec3f, world_pos : vec3f) -> f32
 fn sample_sdf_with_preview(position : vec3f, world_pos : vec3f) -> Surface
 {
     var material : Material;
-    material.albedo = preview_data.preview_stroke.color.xyz;
-    material.roughness = preview_data.preview_stroke.material.x;
-    material.metalness = preview_data.preview_stroke.material.y;
+    material.albedo = preview_data.preview_stroke.material.color.xyz;
+    material.roughness = preview_data.preview_stroke.material.roughness;
+    material.metalness = preview_data.preview_stroke.material.metallic;
 
     var surface : Surface;
     surface.distance = textureSampleLevel(read_sdf, texture_sampler, position, 0.0).r;

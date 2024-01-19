@@ -238,6 +238,11 @@ void RoomsEngine::render_gui()
             }
             ImGui::EndTabItem();
         }
+        if (ImGui::BeginTabItem("Sculpt Editor"))
+        {
+            sculpt_editor.render_gui();
+            ImGui::EndTabItem();
+        }
         if (ImGui::BeginTabItem("Debugger"))
         {
             const RayIntersectionInfo& info = static_cast<RoomsRenderer*>(RoomsRenderer::instance)->get_raymarching_renderer()->get_ray_intersection_info();

@@ -112,8 +112,10 @@ public:
 
     void initialize();
     void clean();
+
     void update(float delta_time);
     void render();
+    void render_gui();
 
     void set_sculpt_started(bool value);
 

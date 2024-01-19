@@ -45,34 +45,45 @@ struct Edit {
     float weigth_difference(const Edit& edit);
 };
 
-class StrokeParameters {
-    sdPrimitive primitive = SD_SPHERE;
-    sdOperation operation = OP_UNION;
-    glm::vec4   parameters = { 0.f, -1.f, 0.f, 0.0f };
-    Color       color = colors::RED;
-    glm::vec4   material = { 0.7f, 0.2f, 0.f, 0.f }; // rough, metallic, emissive, unused
+struct StrokeMaterial {
 
-    bool dirty = false;
+    float roughness = 0.7f;
+    float metallic  = 0.2f;
+    float emissive  = 0.2f;
+    float dummy0    = 0.0f;
+
+    glm::vec4	color           = colors::RED;
+    Color	    noise_color     = Color(0.82f, 0.35f, 0.15f, 1.0f);
+    glm::vec4	noise_params    = glm::vec4(1.0f, 20.0f, 8.0f, 1.0f); // intensity, frequency, octaves, unused
+};
+
+class StrokeParameters {
+
+    sdPrimitive     primitive = SD_SPHERE;
+    sdOperation     operation = OP_UNION;
+    glm::vec4       parameters = { 0.f, -1.f, 0.f, 0.0f };
+    StrokeMaterial  material;
+
+    bool dirty      = false;
 
 public:
     void set_primitive(sdPrimitive primitive);
     void set_operation(sdOperation op);
     void set_parameters(const glm::vec4& parameters);
     void set_smooth_factor(const float smooth_factor);
-    void set_color(const Color& color);
-    void set_material(const glm::vec4& material);
+    void set_material(const StrokeMaterial& material);
+    void set_material_color(const Color& color);
     void set_material_roughness(float roughness);
     void set_material_metallic(float metallic);
 
     sdPrimitive get_primitive() const { return primitive; }
     sdOperation get_operation() const { return operation; }
     glm::vec4 get_parameters() const { return parameters; }
-    Color get_color() const  { return color; }
-    glm::vec4 get_material() const { return material; }
+    StrokeMaterial& get_material() { return material; }
+    const StrokeMaterial& get_material() const { return material; }
 
     bool is_dirty() { return dirty; }
     void set_dirty(bool dirty) { this->dirty = dirty; }
-
 };
 
 struct Stroke {
@@ -81,15 +92,17 @@ struct Stroke {
     sdPrimitive primitive;
     sdOperation operation;
     glm::vec4	parameters = { 0.f, -1.f, 0.f, 0.f };
-    glm::vec4	color;
-    glm::vec4   material = { 0.7f, 0.2f, 0.f, 0.f }; // rough, metallic, emissive, unused
+    glm::vec4	_dummy_;
 
-    Edit    padding; // Padding of 48 * 4 bytes
+    // 48 bytes
+    StrokeMaterial material;
+
+    // Padding of 48 * 3 bytes
+    Edit    padding; 
     Edit    padding1;
     Edit    padding2;
-    Edit    padding3;
 
-    Edit        edits[MAX_EDITS_PER_EVALUATION] = {};
+    Edit    edits[MAX_EDITS_PER_EVALUATION] = {};
 
     glm::vec3 get_edit_world_half_size(const uint8_t edit_index) const;
     AABB get_edit_world_AABB(const uint8_t edit_index) const;

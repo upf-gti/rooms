@@ -71,9 +71,9 @@ struct FragmentOutput {
 
 fn sample_material(pos : vec3f, padding : vec3f) -> Material {
     var material : Material;
-    material.albedo = preview_data.preview_stroke.color.xyz;
-    material.roughness = preview_data.preview_stroke.material.x;
-    material.metalness = preview_data.preview_stroke.material.y;
+    material.albedo = preview_data.preview_stroke.material.color.xyz;
+    material.roughness = preview_data.preview_stroke.material.roughness;
+    material.metalness = preview_data.preview_stroke.material.metallic;
     return material;
 }
 

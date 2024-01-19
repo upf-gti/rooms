@@ -79,27 +79,27 @@ void StrokeParameters::set_smooth_factor(const float smooth_factor) {
     dirty = true;
 }
 
-void StrokeParameters::set_color(const Color& color)
-{
-    this->color = color;
-    dirty = true;
-}
-
-void StrokeParameters::set_material(const glm::vec4& material)
+void StrokeParameters::set_material(const StrokeMaterial& material)
 {
     this->material = material;
     dirty = true;
 }
 
+void StrokeParameters::set_material_color(const Color& color)
+{
+    material.color = color;
+    dirty = true;
+}
+
 void StrokeParameters::set_material_roughness(float roughness)
 {
-    material.x = roughness;
+    material.roughness = roughness;
     dirty = true;
 }
 
 void StrokeParameters::set_material_metallic(float metallic)
 {
-    material.y = metallic;
+    material.metallic = metallic;
     dirty = true;
 }
 
