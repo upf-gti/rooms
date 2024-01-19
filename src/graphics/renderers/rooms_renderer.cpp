@@ -4,10 +4,10 @@
 #include "dawnxr/dawnxr_internal.h"
 #endif
 
+#include "spdlog/spdlog.h"
+
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_wgpu.h"
-
-#include "spdlog/spdlog.h"
 
 RoomsRenderer::RoomsRenderer() : Renderer()
 {
@@ -246,6 +246,10 @@ void RoomsRenderer::render_xr()
             render_pass_color_attachment.loadOp = WGPULoadOp_Clear;
             render_pass_color_attachment.storeOp = WGPUStoreOp_Store;
 
+#ifndef __EMSCRIPTEN__
+            render_pass_color_attachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
+#endif
+
             glm::vec4 clear_color = RoomsRenderer::instance->get_clear_color();
             render_pass_color_attachment.clearValue = WGPUColor(clear_color.r, clear_color.g, clear_color.b, clear_color.a);
 
@@ -324,6 +328,10 @@ void RoomsRenderer::render_mirror()
         render_pass_color_attachment.loadOp = WGPULoadOp_Clear;
         render_pass_color_attachment.storeOp = WGPUStoreOp_Store;
         render_pass_color_attachment.clearValue = WGPUColor(clear_color.x, clear_color.y, clear_color.z, 1.0f);
+
+#ifndef __EMSCRIPTEN__
+        render_pass_color_attachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
+#endif
 
         WGPURenderPassDescriptor render_pass_descr = {};
         render_pass_descr.colorAttachmentCount = 1;

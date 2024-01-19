@@ -2,7 +2,6 @@
 
 #include "tool.h"
 #include "framework/ui/transform_gizmo.h"
-#include "framework/utils/json_utils.h"
 #include "framework/ui/ui_controller.h"
 
 enum eTool : uint8_t {
@@ -107,9 +106,7 @@ class SculptEditor {
 
     void enable_tool(eTool tool);
 
-    bool is_rotation_being_used() {
-        return Input::get_trigger_value(HAND_LEFT) > 0.5;
-    }
+    bool is_rotation_being_used();
 
 public:
 

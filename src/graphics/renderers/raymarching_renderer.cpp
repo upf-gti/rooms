@@ -9,6 +9,8 @@
 
 #include "spdlog/spdlog.h"
 
+#include "framework/input.h"
+
 RaymarchingRenderer::RaymarchingRenderer()
 {
     

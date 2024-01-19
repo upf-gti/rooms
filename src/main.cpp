@@ -1,8 +1,6 @@
 #include "engine/rooms_engine.h"
 #include "graphics/renderers/rooms_renderer.h"
 
-#include <GLFW/glfw3.h>
-
 #include "spdlog/spdlog.h"
 
 #ifdef __EMSCRIPTEN__
@@ -31,6 +29,8 @@ EMSCRIPTEN_BINDINGS(_Class_) {
         .class_function("toggleSceneRotation", &RoomsEngine::toggle_rotation);
 }
 #endif
+
+#include <GLFW/glfw3.h>
 
 void closeWindow(GLFWwindow* window)
 {

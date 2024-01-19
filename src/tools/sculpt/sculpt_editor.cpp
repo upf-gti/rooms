@@ -1,11 +1,18 @@
 #include "sculpt_editor.h"
+
 #include "sculpt.h"
 #include "paint.h"
 #include "sweep.h"
-#include "graphics/renderers/rooms_renderer.h"
-#include "framework/scene/parse_scene.h"
 
+#include "includes.h"
+
+#include "framework/scene/parse_scene.h"
+#include "framework/entities/entity_ui.h"
+#include "framework/input.h"
+
+#include "graphics/renderers/rooms_renderer.h"
 #include "graphics/renderer_storage.h"
+
 
 #include "spdlog/spdlog.h"
 
@@ -510,6 +517,10 @@ void SculptEditor::enable_tool(eTool tool)
     default:
         break;
     }
+}
+
+bool SculptEditor::is_rotation_being_used() {
+    return Input::get_trigger_value(HAND_LEFT) > 0.5;
 }
 
 void SculptEditor::add_recent_color(const Color& color)

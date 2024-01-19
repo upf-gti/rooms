@@ -9,8 +9,8 @@
 
 #include "spdlog/spdlog.h"
 
-#include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_wgpu.h"
+#include "backends/imgui_impl_glfw.h"
 
 #include "framework/utils/tinyfiledialogs.h"
 
