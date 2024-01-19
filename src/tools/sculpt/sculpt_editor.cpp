@@ -58,9 +58,6 @@ void SculptEditor::initialize()
         }
     }
 
-    // Load ui and Bind callbacks
-    bind_events();
-
     // Edit preview mesh
     {
         Surface* sphere_surface = new Surface();
@@ -93,6 +90,9 @@ void SculptEditor::initialize()
         add_pbr_material_data("concrete",   Color(0.51f, 0.51f, 0.51f, 1.0f),       0.5f,   0.0f);
         add_pbr_material_data("rusted_iron",Color(0.531f, 0.512f, 0.496f, 1.0f),    0.0f,   1.0f);
     }
+
+    // Load ui and Bind callbacks
+    bind_events();
 
     enable_tool(SCULPT);
 
@@ -558,6 +558,24 @@ void SculptEditor::bind_events()
             ui::ButtonWidget* child = static_cast<ui::ButtonWidget*>(recent_group->get_children()[i]);
             gui.bind(child->signal, [&](const std::string& signal, void* button) {
                 stroke_parameters.set_material_color((static_cast<ui::ButtonWidget*>(button))->color);
+            });
+        }
+
+        // Bind material samples callback...
+
+        ui::UIEntity* samples_group = gui.get_widget_from_name("g_material_samples");
+        for (size_t i = 0; i < samples_group->get_children().size(); ++i)
+        {
+            ui::ButtonWidget* child = static_cast<ui::ButtonWidget*>(samples_group->get_children()[i]);
+            gui.bind(child->signal, [&](const std::string& signal, void* button) {
+                const PBRMaterialData& data = pbr_materials_data[signal];
+                // Set all data
+                stroke_parameters.set_material_color(data.base_color);
+                stroke_parameters.set_material_roughness(data.roughness * 1.5f); // this is a hack because hdres don't have too much roughness..
+                stroke_parameters.set_material_metallic(data.metallic);
+                // Emit signals to change UI values
+                gui.emit_signal("pbr_roughness@changed", stroke_parameters.get_material().roughness);
+                gui.emit_signal("pbr_metallic@changed", stroke_parameters.get_material().metallic);
             });
         }
     }

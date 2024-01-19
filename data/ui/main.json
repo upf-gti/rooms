@@ -214,7 +214,7 @@
                 {
                     "name": "g_material_samples",
                     "type": "group",
-                    "nitems": 4
+                    "nitems": 5
                 },
                 {
                     "name": "aluminium",
