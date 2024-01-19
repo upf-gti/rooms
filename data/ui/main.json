@@ -115,6 +115,11 @@
                     "texture": "data/textures/colors.png"
                 },
                 {
+                    "name": "materials",
+                    "type": "button",
+                    "texture": "data/textures/material_old.png"
+                },
+                {
                     "name": "pbr",
                     "type": "group",
                     "nitems": 2
@@ -199,6 +204,47 @@
                     "type": "button",
                     "texture": "data/textures/recent_colors.png",
                     "keep_rgb": true
+                }
+            ]
+        },
+        {
+            "name": "materials",
+            "type": "submenu",
+            "children": [
+                {
+                    "name": "g_material_samples",
+                    "type": "group",
+                    "nitems": 4
+                },
+                {
+                    "name": "aluminium",
+                    "type": "button",
+                    "texture": "data/textures/material_old.png",
+                    "unique_selection": true
+                },
+                {
+                    "name": "charcoal",
+                    "type": "button",
+                    "texture": "data/textures/material_old.png",
+                    "unique_selection": true
+                },
+                {
+                    "name": "copper",
+                    "type": "button",
+                    "texture": "data/textures/material_old.png",
+                    "unique_selection": true
+                },
+                {
+                    "name": "concrete",
+                    "type": "button",
+                    "texture": "data/textures/material_old.png",
+                    "unique_selection": true
+                },
+                {
+                    "name": "rusted_iron",
+                    "type": "button",
+                    "texture": "data/textures/material_old.png",
+                    "unique_selection": true
                 }
             ]
         },

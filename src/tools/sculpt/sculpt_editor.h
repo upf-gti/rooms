@@ -24,18 +24,22 @@ class SculptEditor {
 
     EntityMesh*             floor_grid_mesh = nullptr;
 
-    std::vector<Edit>       preview_tmp_edits;
-    std::vector<Edit>       new_edits;
-
-    StrokeParameters        stroke_parameters;
+    bool is_rotation_being_used();
+    void add_pbr_material_data(const std::string& name, const Color& base_color, float roughness, float metallic);
 
     /*
     *	Edits
     */
 
+    std::vector<Edit>   preview_tmp_edits;
+    std::vector<Edit>   new_edits;
+
+    std::map<std::string, PBRMaterialData> pbr_materials_data;
+
+    StrokeParameters stroke_parameters;
+
     EntityMesh* mesh_preview = nullptr;
     EntityMesh* mesh_preview_outline = nullptr;
-
 
     void set_primitive( sdPrimitive primitive );
     void toggle_onion_modifier();
@@ -102,11 +106,8 @@ class SculptEditor {
     size_t                max_recent_colors;
     std::vector<Color>    recent_colors;
 
+    void bind_events();
     void add_recent_color(const Color& color);
-
-    void enable_tool(eTool tool);
-
-    bool is_rotation_being_used();
 
 public:
 
@@ -117,6 +118,7 @@ public:
     void render();
     void render_gui();
 
+    void enable_tool(eTool tool);
     void set_sculpt_started(bool value);
 
     void add_preview_edit_list(std::vector<Edit>& new_edit_lists) {

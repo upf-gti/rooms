@@ -108,3 +108,10 @@ struct Stroke {
     AABB get_edit_world_AABB(const uint8_t edit_index) const;
     AABB get_world_AABB() const;
 };
+
+struct PBRMaterialData {
+
+    Color base_color = colors::BLACK;
+    float roughness = 0.0f;
+    float metallic = 0.0f;
+};
