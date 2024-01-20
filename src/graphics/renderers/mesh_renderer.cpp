@@ -73,6 +73,7 @@ void MeshRenderer::init_render_mesh_pipelines()
     Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/mesh_outline.wgsl"), color_target, { .cull_mode = WGPUCullMode_Front });
     Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/ui/ui_group.wgsl"), color_target);
     Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/ui/ui_button.wgsl"), color_target);
+    Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/ui/ui_button.wgsl", { "USES_TEXTURE" }), color_target);
     Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/ui/ui_slider.wgsl"), color_target);
     Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/ui/ui_slider_h.wgsl"), color_target);
     Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/ui/ui_color_picker.wgsl"), color_target);

@@ -7,10 +7,14 @@
 
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
 
+#ifdef USES_TEXTURE
 @group(2) @binding(0) var albedo_texture: texture_2d<f32>;
 @group(2) @binding(7) var texture_sampler : sampler;
 
 @group(3) @binding(0) var<uniform> ui_data : UIData;
+#else
+@group(2) @binding(0) var<uniform> ui_data : UIData;
+#endif
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
@@ -46,8 +50,12 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     var out: FragmentOutput;
 
+#ifdef USES_TEXTURE
     var color : vec4f = textureSample(albedo_texture, texture_sampler, in.uv);
     color = pow(color, vec4f(2.2));
+#else
+    var color : vec4f = vec4f(1.0);
+#endif
 
     var selected_color = COLOR_HIGHLIGHT_DARK;
     var hightlight_color = COLOR_SECONDARY;
