@@ -54,8 +54,8 @@ struct StrokeMaterial {
     dummy0          : f32,
     color           : vec4f,
     // Noise params
-    noise_color     : vec4f,
-    noise_params    : vec4f
+    noise_params    : vec4f,
+    noise_color     : vec4f
 };
 
 struct Stroke {

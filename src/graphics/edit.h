@@ -53,8 +53,8 @@ struct StrokeMaterial {
     float dummy0    = 0.0f;
 
     glm::vec4	color           = colors::RED;
-    Color	    noise_color     = Color(0.82f, 0.35f, 0.15f, 1.0f);
-    glm::vec4	noise_params    = glm::vec4(1.0f, 20.0f, 8.0f, 1.0f); // intensity, frequency, octaves, unused
+    glm::vec4   noise_params    = glm::vec4(0.0f, 20.0f, 8.0f, 1.0f); // intensity, frequency, octaves, unused
+    Color       noise_color     = colors::RUST;
 };
 
 class StrokeParameters {
@@ -75,6 +75,7 @@ public:
     void set_material_color(const Color& color);
     void set_material_roughness(float roughness);
     void set_material_metallic(float metallic);
+    void set_material_noise(float intensity = -1.0f, float frequency = -1.0f, int octaves = -1);
 
     sdPrimitive get_primitive() const { return primitive; }
     sdOperation get_operation() const { return operation; }
@@ -114,4 +115,6 @@ struct PBRMaterialData {
     Color base_color = colors::BLACK;
     float roughness = 0.0f;
     float metallic = 0.0f;
+    glm::vec4 noise_params = glm::vec4(0.0f);
+    Color noise_color = colors::RUST;
 };

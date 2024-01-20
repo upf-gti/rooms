@@ -117,24 +117,12 @@
                 {
                     "name": "materials",
                     "type": "button",
-                    "texture": "data/textures/material_old.png"
+                    "texture": "data/textures/material_samples.png"
                 },
                 {
-                    "name": "pbr",
-                    "type": "group",
-                    "nitems": 2
-                },
-                {
-                    "name": "pbr_roughness",
-                    "type": "slider",
-                    "mode": "vertical",
-                    "value": 0.7
-                },
-                {
-                    "name": "pbr_metallic",
-                    "type": "slider",
-                    "mode": "vertical",
-                    "value": 0.2
+                    "name": "material_editor",
+                    "type": "button",
+                    "texture": "data/textures/material_editor.png"
                 }
             ]
         },
@@ -214,37 +202,91 @@
                 {
                     "name": "g_material_samples",
                     "type": "group",
-                    "nitems": 5
+                    "nitems": 3
                 },
                 {
                     "name": "aluminium",
                     "type": "button",
-                    "texture": "data/textures/material_old.png",
+                    "texture": "data/textures/material_samples.png",
                     "unique_selection": true
                 },
                 {
                     "name": "charcoal",
                     "type": "button",
-                    "texture": "data/textures/material_old.png",
-                    "unique_selection": true
-                },
-                {
-                    "name": "copper",
-                    "type": "button",
-                    "texture": "data/textures/material_old.png",
-                    "unique_selection": true
-                },
-                {
-                    "name": "concrete",
-                    "type": "button",
-                    "texture": "data/textures/material_old.png",
+                    "texture": "data/textures/material_samples.png",
                     "unique_selection": true
                 },
                 {
                     "name": "rusted_iron",
                     "type": "button",
-                    "texture": "data/textures/material_old.png",
+                    "texture": "data/textures/material_samples.png",
                     "unique_selection": true
+                },
+                {
+                    "name": "save_material",
+                    "type": "button",
+                    "texture": "data/textures/submenu_mark.png"
+                }
+            ]
+        },
+        {
+            "name": "material_editor",
+            "type": "submenu",
+            "children": [
+                {
+                    "name": "edit_pbr",
+                    "type": "group",
+                    "nitems": 2,
+                    "icon_texture": {
+                        "name": "pbr",
+                        "type": "button",
+                        "texture": "data/textures/shading.png",
+                        "disabled": true
+                    }
+                },
+                {
+                    "name": "roughness",
+                    "type": "slider",
+                    "mode": "vertical",
+                    "value": 0.7
+                },
+                {
+                    "name": "metallic",
+                    "type": "slider",
+                    "mode": "vertical",
+                    "value": 0.2
+                },
+                {
+                    "name": "edit_pattern",
+                    "type": "group",
+                    "nitems": 3,
+                    "icon_texture": {
+                        "name": "pattern",
+                        "type": "button",
+                        "texture": "data/textures/pattern.png",
+                        "disabled": true
+                    }
+                },
+                {
+                    "name": "noise_intensity",
+                    "type": "slider",
+                    "mode": "vertical",
+                    "value": 0.0
+                },
+                {
+                    "name": "noise_frequency",
+                    "type": "slider",
+                    "mode": "vertical",
+                    "value": 20.0,
+                    "max": 50.0
+                },
+                {
+                    "name": "noise_octaves",
+                    "type": "slider",
+                    "mode": "vertical",
+                    "step": 1,
+                    "value": 8,
+                    "max": 16
                 }
             ]
         },
@@ -525,32 +567,32 @@
                 {
                     "name": "recent_color_1",
                     "type": "button",
-                    "shader": "data/shaders/mesh_texture.wgsl"
+                    "color": "1 1 1 1"
                 },
                 {
                     "name": "recent_color_2",
                     "type": "button",
-                    "shader": "data/shaders/mesh_texture.wgsl"
+                    "color": "1 1 1 1"
                 },
                 {
                     "name": "recent_color_3",
                     "type": "button",
-                    "shader": "data/shaders/mesh_texture.wgsl"
+                    "color": "1 1 1 1"
                 },
                 {
                     "name": "recent_color_4",
                     "type": "button",
-                    "shader": "data/shaders/mesh_texture.wgsl"
+                    "color": "1 1 1 1"
                 },
                 {
                     "name": "recent_color_5",
                     "type": "button",
-                    "shader": "data/shaders/mesh_texture.wgsl"
+                    "color": "1 1 1 1"
                 },
                 {
                     "name": "recent_color_6",
                     "type": "button",
-                    "shader": "data/shaders/mesh_texture.wgsl"
+                    "color": "1 1 1 1"
                 }
             ]
         }

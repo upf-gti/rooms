@@ -16,6 +16,8 @@
 
 #include "spdlog/spdlog.h"
 
+uint8_t SculptEditor::last_generated_material_uid = 0;
+
 void SculptEditor::initialize()
 {
     renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
@@ -84,11 +86,9 @@ void SculptEditor::initialize()
 
     // Add pbr materials data 
     {
-        add_pbr_material_data("aluminium",  Color(0.912f, 0.914f, 0.92f, 1.0f),     0.0f,   1.0f);
-        add_pbr_material_data("charcoal",   Color(0.02f, 0.02f, 0.02f, 1.0f),       0.5f,   0.0f);
-        add_pbr_material_data("copper",     Color(0.926f, 0.721f, 0.504f, 1.0f),    0.0f,   1.0f);
-        add_pbr_material_data("concrete",   Color(0.51f, 0.51f, 0.51f, 1.0f),       0.5f,   0.0f);
-        add_pbr_material_data("rusted_iron",Color(0.531f, 0.512f, 0.496f, 1.0f),    0.0f,   1.0f);
+        add_pbr_material_data("aluminium",   Color(0.912f, 0.914f, 0.92f, 1.0f),  0.0f, 1.0f);
+        add_pbr_material_data("charcoal",    Color(0.02f, 0.02f, 0.02f, 1.0f),    0.5f, 0.0f);
+        add_pbr_material_data("rusted_iron", Color(0.531f, 0.512f, 0.496f, 1.0f), 0.0f, 1.0f, 1.0f); // add noise
     }
 
     // Load ui and Bind callbacks
@@ -520,8 +520,11 @@ void SculptEditor::bind_events()
         gui.bind("lock_axis_y", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_Y; });
         gui.bind("lock_axis_z", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_Z; });
 
-        gui.bind("pbr_roughness", [&](const std::string& signal, float value) { stroke_parameters.set_material_roughness(value); });
-        gui.bind("pbr_metallic", [&](const std::string& signal, float value) { stroke_parameters.set_material_metallic(value); });
+        gui.bind("roughness", [&](const std::string& signal, float value) { stroke_parameters.set_material_roughness(value); });
+        gui.bind("metallic", [&](const std::string& signal, float value) { stroke_parameters.set_material_metallic(value); });
+        gui.bind("noise_intensity", [&](const std::string& signal, float value) { stroke_parameters.set_material_noise(value); });
+        gui.bind("noise_frequency", [&](const std::string& signal, float value) { stroke_parameters.set_material_noise(-1.0f, value); });
+        gui.bind("noise_octaves", [&](const std::string& signal, float value) { stroke_parameters.set_material_noise(-1.0f, -1.0f, static_cast<int>(value)); });
 
         gui.bind("color_picker", [&](const std::string& signal, Color color) { stroke_parameters.set_material_color(color); });
 
@@ -568,16 +571,13 @@ void SculptEditor::bind_events()
         {
             ui::ButtonWidget* child = static_cast<ui::ButtonWidget*>(samples_group->get_children()[i]);
             gui.bind(child->signal, [&](const std::string& signal, void* button) {
-                const PBRMaterialData& data = pbr_materials_data[signal];
-                // Set all data
-                stroke_parameters.set_material_color(data.base_color);
-                stroke_parameters.set_material_roughness(data.roughness * 1.5f); // this is a hack because hdres don't have too much roughness..
-                stroke_parameters.set_material_metallic(data.metallic);
-                // Emit signals to change UI values
-                gui.emit_signal("pbr_roughness@changed", stroke_parameters.get_material().roughness);
-                gui.emit_signal("pbr_metallic@changed", stroke_parameters.get_material().metallic);
+                update_stroke_from_material(signal);
             });
         }
+
+        gui.bind("save_material", [&](const std::string& signal, void* button) {
+            generate_material_from_stroke(button);
+        });
     }
 
     // Create helper ui
@@ -620,7 +620,54 @@ void SculptEditor::add_recent_color(const Color& color)
     }
 }
 
-void SculptEditor::add_pbr_material_data(const std::string& name, const Color& base_color, float roughness, float metallic)
+void SculptEditor::add_pbr_material_data(const std::string& name, const Color& base_color, float roughness, float metallic,
+    float noise_intensity, const Color& noise_color, float noise_frequency, int noise_octaves)
 {
-    pbr_materials_data[name] = { .base_color = base_color, .roughness = roughness, .metallic = metallic };
+    pbr_materials_data[name] = {
+        .base_color = base_color,
+        .roughness = roughness,
+        .metallic = metallic,
+        .noise_params = glm::vec4(noise_intensity, noise_frequency, static_cast<float>(noise_octaves), 0.0f),
+        .noise_color = noise_color
+    };
+}
+
+void SculptEditor::generate_material_from_stroke(void* button)
+{
+    ui::ButtonWidget* b = reinterpret_cast<ui::ButtonWidget*>(button);
+    ui::WidgetGroup* mat_samples = dynamic_cast<ui::WidgetGroup*>(b->get_parent()->get_children().at(0));
+    assert(mat_samples);
+    // When making the button, it will be added here!
+    gui.set_next_parent(mat_samples);
+
+    std::string name = "new_material_" + std::to_string(last_generated_material_uid++);
+    gui.make_button(name, "data/textures/material_samples.png");
+
+    // Add data to existing samples..
+    const StrokeMaterial& mat = stroke_parameters.get_material();
+    add_pbr_material_data(name, mat.color, mat.roughness, mat.metallic,
+        mat.noise_params.x, mat.noise_color, mat.noise_params.y, mat.noise_params.z);
+
+    gui.bind(name, [&](const std::string& signal, void* button) {
+        update_stroke_from_material(signal);
+    });
+}
+
+void SculptEditor::update_stroke_from_material(const std::string& name)
+{
+    const PBRMaterialData& data = pbr_materials_data[name];
+
+    // Set all data
+    stroke_parameters.set_material_color(data.base_color);
+    stroke_parameters.set_material_roughness(data.roughness * 1.5f); // this is a hack because hdres don't have too much roughness..
+    stroke_parameters.set_material_metallic(data.metallic);
+    stroke_parameters.set_material_noise(data.noise_params.x, data.noise_params.y, data.noise_params.z);
+
+    // Emit signals to change UI values
+    const StrokeMaterial& mat = stroke_parameters.get_material();
+    gui.emit_signal("roughness@changed", mat.roughness);
+    gui.emit_signal("metallic@changed", mat.metallic);
+    gui.emit_signal("noise_intensity@changed", mat.noise_params.x);
+    gui.emit_signal("noise_frequency@changed", mat.noise_params.y);
+    gui.emit_signal("noise_octaves@changed", mat.noise_params.z);
 }

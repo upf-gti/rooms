@@ -62,6 +62,10 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var back_color = vec3f(0.01);
     var gradient_factor = pow(uvs.y, 1.25);
 
+    if(ui_data.is_button_disabled > 0.0) {
+        back_color = pow(vec3f(0.41, 0.38, 0.44), vec3f(2.2));
+    }
+
     // Assign basic color
     var lum = color.r * 0.3 + color.g * 0.59 + color.b * 0.11;
     var _color = vec3f( 1.0 - smoothstep(0.15, 0.4, lum) );

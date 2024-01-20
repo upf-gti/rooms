@@ -103,6 +103,14 @@ void StrokeParameters::set_material_metallic(float metallic)
     dirty = true;
 }
 
+void StrokeParameters::set_material_noise(float intensity, float frequency, int octaves)
+{
+    material.noise_params.x = intensity != -1.0f ? intensity : material.noise_params.x;
+    material.noise_params.y = frequency != -1.0f ? frequency : material.noise_params.y;
+    material.noise_params.z = octaves   != -1    ? octaves   : material.noise_params.z;
+    dirty = true;
+}
+
 glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const {
 
     glm::vec3 size = glm::vec3(edits[edit_index].dimensions);

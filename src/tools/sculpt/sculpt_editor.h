@@ -16,16 +16,22 @@ class RoomsRenderer;
 
 class SculptEditor {
 
-    RoomsRenderer*          renderer = nullptr;
-    bool                    sculpt_started = false;
-    bool                    was_tool_used = false;
-    Tool*                   tools[TOOL_COUNT];
-    eTool					current_tool = NONE;
+    RoomsRenderer*  renderer = nullptr;
+    EntityMesh*     floor_grid_mesh = nullptr;
 
-    EntityMesh*             floor_grid_mesh = nullptr;
+    bool sculpt_started = false;
+    bool was_tool_used = false;
+
+    Tool* tools[TOOL_COUNT];
+    eTool current_tool = NONE;
+
+    static uint8_t last_generated_material_uid;
 
     bool is_rotation_being_used();
-    void add_pbr_material_data(const std::string& name, const Color& base_color, float roughness, float metallic);
+    void add_pbr_material_data(const std::string& name, const Color& base_color, float roughness, float metallic,
+        float noise_intensity = 0.0f, const Color& noise_color = colors::RUST, float noise_frequency = 20.0f, int noise_octaves = 8);
+    void generate_material_from_stroke(void* button);
+    void update_stroke_from_material(const std::string& name);
 
     /*
     *	Edits
