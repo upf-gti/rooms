@@ -11,8 +11,8 @@ std::ostream& operator<<(std::ostream& os, const Edit& edit)
     return os;
 }
 
-std::string Edit::to_string() const {
-
+std::string Edit::to_string() const
+{
     std::string text;
     text += std::to_string(position.x) + " " + std::to_string(position.y) + " " + std::to_string(position.z) + "/";
     //text += std::to_string(primitive) + "/";
@@ -23,8 +23,8 @@ std::string Edit::to_string() const {
     return text;
 }
 
-void Edit::parse_string(const std::string& str) {
-
+void Edit::parse_string(const std::string& str)
+{
     size_t pos = 0;
     std::vector<std::string> tokens;
     std::string s = str;
@@ -46,8 +46,8 @@ void Edit::parse_string(const std::string& str) {
     //parameters  = load_vec4(tokens[6]);
 }
 
-float Edit::weigth_difference(const Edit& edit) {
-
+float Edit::weigth_difference(const Edit& edit)
+{
     float position_diff = glm::length(position - edit.position);
     glm::quat quat_diff = rotation * glm::inverse(edit.rotation);
     float angle_diff = 2.0f * atan2(glm::length(glm::vec3(quat_diff.x, quat_diff.y, quat_diff.z)), quat_diff.w);
@@ -74,7 +74,8 @@ void StrokeParameters::set_parameters(const glm::vec4& parameters)
     dirty = true;
 }
 
-void StrokeParameters::set_smooth_factor(const float smooth_factor) {
+void StrokeParameters::set_smooth_factor(const float smooth_factor)
+{
     parameters.w = smooth_factor;
     dirty = true;
 }
@@ -111,12 +112,14 @@ void StrokeParameters::set_material_noise(float intensity, float frequency, int 
     dirty = true;
 }
 
-void StrokeParameters::set_material_noise_color(const Color& color) {
+void StrokeParameters::set_material_noise_color(const Color& color)
+{
     material.noise_color = color;
     dirty = true;
 }
 
-glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const {
+glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const
+{
 
     glm::vec3 size = glm::vec3(edits[edit_index].dimensions);
     float radius = edits[edit_index].dimensions.x;
@@ -144,7 +147,8 @@ glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const {
     }
 }
 
-AABB Stroke::get_edit_world_AABB(const uint8_t edit_index) const {
+AABB Stroke::get_edit_world_AABB(const uint8_t edit_index) const
+{
     glm::vec3 pure_edit_half_size = get_edit_world_half_size(edit_index);
 
     // TODO: Add smooth margin
@@ -187,7 +191,8 @@ AABB Stroke::get_edit_world_AABB(const uint8_t edit_index) const {
 }
 
 
-AABB Stroke::get_world_AABB() const {
+AABB Stroke::get_world_AABB() const
+{
     AABB world_aabb;
     for (uint8_t i = 0u; i < edit_count; i++) {
         AABB aabb = get_edit_world_AABB(i);

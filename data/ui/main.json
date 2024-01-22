@@ -140,8 +140,6 @@
                     "type": "picker",
                     "color": "1 0 0 1",
                     "slider": {
-                        "name": "intensity",
-                        "type": "slider",
                         "mode": "vertical",
                         "value": 1
                     }
@@ -287,6 +285,15 @@
                     "step": 1,
                     "value": 8,
                     "max": 16
+                },
+                {
+                    "name": "noise_color_picker",
+                    "type": "picker",
+                    "color": "1 1 1 1",
+                    "slider": {
+                        "mode": "vertical",
+                        "value": 1
+                    }
                 }
             ]
         },

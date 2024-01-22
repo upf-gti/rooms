@@ -54,7 +54,7 @@ struct StrokeMaterial {
 
     glm::vec4	color           = colors::RED;
     glm::vec4   noise_params    = glm::vec4(0.0f, 20.0f, 8.0f, 1.0f); // intensity, frequency, octaves, unused
-    Color       noise_color     = colors::RUST;
+    Color       noise_color     = colors::WHITE;
 };
 
 class StrokeParameters {
