@@ -111,6 +111,11 @@ void StrokeParameters::set_material_noise(float intensity, float frequency, int 
     dirty = true;
 }
 
+void StrokeParameters::set_material_noise_color(const Color& color) {
+    material.noise_color = color;
+    dirty = true;
+}
+
 glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const {
 
     glm::vec3 size = glm::vec3(edits[edit_index].dimensions);

@@ -525,6 +525,7 @@ void SculptEditor::bind_events()
         gui.bind("noise_intensity", [&](const std::string& signal, float value) { stroke_parameters.set_material_noise(value); });
         gui.bind("noise_frequency", [&](const std::string& signal, float value) { stroke_parameters.set_material_noise(-1.0f, value); });
         gui.bind("noise_octaves", [&](const std::string& signal, float value) { stroke_parameters.set_material_noise(-1.0f, -1.0f, static_cast<int>(value)); });
+        gui.bind("noise_color_picker", [&](const std::string& signal, Color color) { stroke_parameters.set_material_noise_color(color); });
 
         gui.bind("color_picker", [&](const std::string& signal, Color color) { stroke_parameters.set_material_color(color); });
 

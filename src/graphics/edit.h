@@ -76,6 +76,7 @@ public:
     void set_material_roughness(float roughness);
     void set_material_metallic(float metallic);
     void set_material_noise(float intensity = -1.0f, float frequency = -1.0f, int octaves = -1);
+    void set_material_noise_color(const Color& color);
 
     sdPrimitive get_primitive() const { return primitive; }
     sdOperation get_operation() const { return operation; }
