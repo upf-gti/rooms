@@ -635,14 +635,24 @@ void SculptEditor::add_pbr_material_data(const std::string& name, const Color& b
 
 void SculptEditor::generate_material_from_stroke(void* button)
 {
+    // Max of 5 materials
+    if (num_generated_materials == 5) {
+        return;
+    }
+
     ui::ButtonWidget* b = reinterpret_cast<ui::ButtonWidget*>(button);
-    ui::WidgetGroup* mat_samples = dynamic_cast<ui::WidgetGroup*>(b->get_parent()->get_children().at(0));
+    ui::WidgetGroup* mat_samples = dynamic_cast<ui::WidgetGroup*>(b->get_parent()->get_children().at(1));
     assert(mat_samples);
+
     // When making the button, it will be added here!
     gui.set_next_parent(mat_samples);
 
     std::string name = "new_material_" + std::to_string(last_generated_material_uid++);
-    gui.make_button(name, "data/textures/material_samples.png");
+    ui::UIEntity* new_button = gui.make_button(name, "data/textures/material_samples.png");
+    dynamic_cast<ui::ButtonWidget*>(new_button)->set_ui_priority(1);
+
+    mat_samples->set_number_of_widgets(static_cast<float>(mat_samples->get_children().size()));
+    num_generated_materials++;
 
     // Add data to existing samples..
     const StrokeMaterial& mat = stroke_parameters.get_material();

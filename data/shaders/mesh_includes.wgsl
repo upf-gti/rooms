@@ -1,4 +1,7 @@
 
+// UI
+const UI_BUTTON_SIZE = 32.0;
+
 struct VertexInput {
     @builtin(instance_index) instance_id : u32,
     @location(0) position: vec3f,

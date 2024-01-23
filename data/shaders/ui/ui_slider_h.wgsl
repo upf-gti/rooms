@@ -37,9 +37,8 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     // Alpha mask
     var uvs_mask = in.uv;
-    var button_size = 32.0;
-    var tx = max(button_size, 32.0 * ui_data.num_group_items);
-    var divisions = tx / button_size;
+    var tx = max(UI_BUTTON_SIZE, UI_BUTTON_SIZE * ui_data.num_group_items);
+    var divisions = tx / UI_BUTTON_SIZE;
     uvs_mask.x *= divisions;
     uvs_mask.y = 1.0 - uvs_mask.y;
     var m = vec2f(clamp(uvs_mask.x, 0.5, divisions - 0.5), 0.5);

@@ -198,6 +198,11 @@
             "type": "submenu",
             "children": [
                 {
+                    "name": "save_material",
+                    "type": "button",
+                    "texture": "data/textures/submenu_mark.png"
+                },
+                {
                     "name": "g_material_samples",
                     "type": "group",
                     "nitems": 3
@@ -219,11 +224,6 @@
                     "type": "button",
                     "texture": "data/textures/material_samples.png",
                     "unique_selection": true
-                },
-                {
-                    "name": "save_material",
-                    "type": "button",
-                    "texture": "data/textures/submenu_mark.png"
                 }
             ]
         },

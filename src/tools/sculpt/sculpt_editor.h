@@ -26,6 +26,7 @@ class SculptEditor {
     eTool current_tool = NONE;
 
     static uint8_t last_generated_material_uid;
+    uint8_t num_generated_materials = 0u;
 
     bool is_rotation_being_used();
     void add_pbr_material_data(const std::string& name, const Color& base_color, float roughness, float metallic,
