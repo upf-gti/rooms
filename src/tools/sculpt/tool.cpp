@@ -1,7 +1,6 @@
 #include "tool.h"
-#include "framework/utils/utils.h"
+
 #include "framework/input.h"
-#include "sculpt_editor.h"
 
 void Tool::initialize()
 {
@@ -21,6 +20,15 @@ bool Tool::update(float delta_time, StrokeParameters& stroke_parameters)
     edit_to_add.rotation = glm::inverse(Input::get_controller_rotation(HAND_RIGHT));
 
     return true;
+}
+
+bool Tool::is_tool_activated() {
+#ifdef XR_SUPPORT
+    return Input::was_key_pressed(GLFW_KEY_SPACE) ||
+        (stamp ? Input::was_trigger_pressed(HAND_RIGHT) : Input::get_trigger_value(HAND_RIGHT) > 0.5f);
+#else
+    return Input::is_key_pressed(GLFW_KEY_SPACE);
+#endif
 }
 
 bool Tool::use_tool()

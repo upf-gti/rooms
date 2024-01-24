@@ -9,6 +9,8 @@
 
 #include "spdlog/spdlog.h"
 
+#include "framework/input.h"
+
 RaymarchingRenderer::RaymarchingRenderer()
 {
     
@@ -35,47 +37,6 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
     init_raymarching_proxy_pipeline();
     initialize_stroke();
 
-    //for (uint32_t i = 0; i < 10; i++) {
-    //    push_edit({ glm::vec3(glm::vec3(0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1))),
-    //                glm::vec3(0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1)),
-    //                glm::vec4(0.1f, 0.1f, 0.1f, 0.1f),f
-    //                glm::quat(1.0, 0.0, 0.0, 0.0)
-    //    });
-
-    //    change_stroke(SD_SPHERE, OP_UNION, { 0.f, -1.f, 0.f, 0.f });
-    //}
-
-    //edits[compute_merge_data.edits_to_process++] = 
-
-   /* edits[compute_merge_data.edits_to_process++] = {
-        .position = { 0.0f, 0.0f, 0.0f },
-        .primitive = SD_SPHERE,
-        .color = { 0.0, 1.0, 0.0 },
-        .operation = OP_UNION,
-        .dimensions = { 0.05f, 0.05f, 0.05f, 0.05f },
-        .rotation = { 0.f, 0.f, 0.f, 1.f },
-        .parameters = { 0.0, -1.0, 0.0, 0.0 },
-    };*/
-
-    //edits[compute_merge_data.edits_to_process++] = {
-    //    .position = { -0.1, 0.0, 0.0 },
-    //    .primitive = SD_SPHERE,
-    //    .color = { 0.0, 1.0, 0.0 },
-    //    .operation = OP_UNION,
-    //    .dimensions = { 0.1f, 0.1f, 0.1f, 0.1f },
-    //    .rotation = { 0.f, 0.f, 0.f, 1.f },
-    //    .parameters = { 0.0, -1.0, 0.0, 0.0 },
-    //};
-
-    //edits[compute_merge_data.edits_to_process++] = {
-    //    .position = { 0.2, 0.2, 0.2 },
-    //    .primitive = SD_SPHERE,
-    //    .color = { 1.0, 1.0, 1.0 },
-    //    .operation = OP_SMOOTH_UNION,
-    //    .dimensions = { 0.16f, 0.16f, 0.16f, 0.16f },
-    //    .rotation = { 0.f, 0.f, 0.f, 1.f },
-    //    .parameters = { 0.0, -1.0, 0.0, 0.0 },
-    //};
 #endif
 
     return 0;
@@ -162,7 +123,6 @@ void RaymarchingRenderer::change_stroke(const StrokeParameters& params, const ui
     new_stroke.primitive = params.get_primitive();
     new_stroke.operation = params.get_operation();
     new_stroke.parameters = params.get_parameters();
-    new_stroke.color = params.get_color();
     new_stroke.material = params.get_material();
     new_stroke.edit_count = 0u;
 

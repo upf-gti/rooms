@@ -2,7 +2,6 @@
 
 #include "tool.h"
 #include "framework/ui/transform_gizmo.h"
-#include "framework/utils/json_utils.h"
 #include "framework/ui/ui_controller.h"
 
 enum eTool : uint8_t {
@@ -17,26 +16,37 @@ class RoomsRenderer;
 
 class SculptEditor {
 
-    RoomsRenderer*          renderer = nullptr;
-    bool                    sculpt_started = false;
-    bool                    was_tool_used = false;
-    Tool*                   tools[TOOL_COUNT];
-    eTool					current_tool = NONE;
+    RoomsRenderer*  renderer = nullptr;
+    EntityMesh*     floor_grid_mesh = nullptr;
 
-    EntityMesh*             floor_grid_mesh = nullptr;
+    bool sculpt_started = false;
+    bool was_tool_used = false;
 
-    std::vector<Edit>       preview_tmp_edits;
-    std::vector<Edit>       new_edits;
+    Tool* tools[TOOL_COUNT];
+    eTool current_tool = NONE;
 
-    StrokeParameters        stroke_parameters;
+    static uint8_t last_generated_material_uid;
+    uint8_t num_generated_materials = 0u;
+
+    bool is_rotation_being_used();
+    void add_pbr_material_data(const std::string& name, const Color& base_color, float roughness, float metallic,
+        float noise_intensity = 0.0f, const Color& noise_color = colors::RUST, float noise_frequency = 20.0f, int noise_octaves = 8);
+    void generate_material_from_stroke(void* button);
+    void update_stroke_from_material(const std::string& name);
 
     /*
     *	Edits
     */
 
+    std::vector<Edit>   preview_tmp_edits;
+    std::vector<Edit>   new_edits;
+
+    std::map<std::string, PBRMaterialData> pbr_materials_data;
+
+    StrokeParameters stroke_parameters;
+
     EntityMesh* mesh_preview = nullptr;
     EntityMesh* mesh_preview_outline = nullptr;
-
 
     void set_primitive( sdPrimitive primitive );
     void toggle_onion_modifier();
@@ -103,21 +113,19 @@ class SculptEditor {
     size_t                max_recent_colors;
     std::vector<Color>    recent_colors;
 
+    void bind_events();
     void add_recent_color(const Color& color);
-
-    void enable_tool(eTool tool);
-
-    bool is_rotation_being_used() {
-        return Input::get_trigger_value(HAND_LEFT) > 0.5;
-    }
 
 public:
 
     void initialize();
     void clean();
+
     void update(float delta_time);
     void render();
+    void render_gui();
 
+    void enable_tool(eTool tool);
     void set_sculpt_started(bool value);
 
     void add_preview_edit_list(std::vector<Edit>& new_edit_lists) {

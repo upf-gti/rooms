@@ -1,13 +1,22 @@
 #include "sculpt_editor.h"
+
 #include "sculpt.h"
 #include "paint.h"
 #include "sweep.h"
-#include "graphics/renderers/rooms_renderer.h"
-#include "framework/scene/parse_scene.h"
 
+#include "includes.h"
+
+#include "framework/entities/entity_ui.h"
+#include "framework/input.h"
+
+#include "graphics/renderers/rooms_renderer.h"
 #include "graphics/renderer_storage.h"
+#include "backends/imgui_impl_wgpu.h"
+#include "backends/imgui_impl_glfw.h"
 
 #include "spdlog/spdlog.h"
+
+uint8_t SculptEditor::last_generated_material_uid = 0;
 
 void SculptEditor::initialize()
 {
@@ -51,106 +60,39 @@ void SculptEditor::initialize()
         }
     }
 
-    // UI Layout from JSON
+    // Edit preview mesh
     {
-        gui.load_layout( "data/ui/main.json" );
+        Surface* sphere_surface = new Surface();
+        sphere_surface->create_sphere();
+
+        mesh_preview = new EntityMesh();
+        mesh_preview->add_surface(sphere_surface);
+
+        Material preview_material;
+        preview_material.shader = RendererStorage::get_shader("data/shaders/mesh_transparent.wgsl");
+        preview_material.flags |= MATERIAL_TRANSPARENT;
+        preview_material.priority = 1;
+
+        mesh_preview->set_surface_material_override(sphere_surface, preview_material);
+
+        mesh_preview_outline = new EntityMesh();
+        mesh_preview_outline->add_surface(sphere_surface);
+
+        Material outline_material;
+        outline_material.shader = RendererStorage::get_shader("data/shaders/mesh_outline.wgsl");
+
+        mesh_preview_outline->set_surface_material_override(sphere_surface, outline_material);
     }
 
-    // Set events
+    // Add pbr materials data 
     {
-        gui.bind("sculpt", [&](const std::string& signal, void* button) { enable_tool(SCULPT); });
-        gui.bind("paint", [&](const std::string& signal, void* button) { enable_tool(PAINT); });
-
-        gui.bind("sphere", [&](const std::string& signal, void* button) {  set_primitive(SD_SPHERE); });
-        gui.bind("cube", [&](const std::string& signal, void* button) { set_primitive(SD_BOX); });
-        gui.bind("cone", [&](const std::string& signal, void* button) { set_primitive(SD_CONE); });
-        gui.bind("capsule", [&](const std::string& signal, void* button) { set_primitive(SD_CAPSULE); });
-        gui.bind("cylinder", [&](const std::string& signal, void* button) { set_primitive(SD_CYLINDER); });
-        gui.bind("torus", [&](const std::string& signal, void* button) { set_primitive(SD_TORUS); });
-
-        gui.bind("onion", [&](const std::string& signal, void* button) { toggle_onion_modifier(); });
-        gui.bind("onion_value", [&](const std::string& signal, float value) { onion_thickness = glm::clamp(value, 0.f, 1.f); });
-        gui.bind("capped", [&](const std::string& signal, void* button) { toggle_capped_modifier(); });
-        gui.bind("cap_value", [&](const std::string& signal, float value) { capped_value = glm::clamp(value * 2.f - 1.f, -1.f, 1.f); }); 
-
-        gui.bind("mirror", [&](const std::string& signal, void* button) { use_mirror = !use_mirror; });
-        gui.bind("snap_to_grid", [&](const std::string& signal, void* button) { /*enable_tool(SWEEP);*/ snap_to_grid = !snap_to_grid; });
-        gui.bind("lock_axis_toggle", [&](const std::string& signal, void* button) { axis_lock = !axis_lock; });
-        gui.bind("lock_axis_x", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_X; });
-        gui.bind("lock_axis_y", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_Y; });
-        gui.bind("lock_axis_z", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_Z; });
-
-        gui.bind("pbr_roughness", [&](const std::string& signal, float value) { stroke_parameters.set_material_roughness(value); });
-        gui.bind("pbr_metallic", [&](const std::string& signal, float value) { stroke_parameters.set_material_metallic(value); });
-
-        gui.bind("color_picker", [&](const std::string& signal, Color color) { stroke_parameters.set_color(color); });
-
-        // Controller buttons
-
-        helper_gui.bind(XR_BUTTON_B, [&]() { stamp_enabled = !stamp_enabled; });
-
-        // Bind recent color buttons...
-
-        ui::UIEntity* recent_group = gui.get_widget_from_name("g_recent_colors");
-        if (!recent_group) {
-            assert(0);
-            spdlog::error("Cannot find recent_colors button group!");
-            return;
-        }
-
-        // Bind colors callback...
-
-        for (auto it : gui.get_widgets())
-        {
-            if (it.second->type != ui::BUTTON) continue;
-            ui::ButtonWidget* child = static_cast<ui::ButtonWidget*>(it.second);
-            if (child->is_color_button) {
-                gui.bind(child->signal, [&](const std::string& signal, void* button) {
-                    const Color& color = (static_cast<ui::ButtonWidget*>(button))->color;
-                    stroke_parameters.set_color(color);
-                });
-            }
-        }
-
-        max_recent_colors = recent_group->get_children().size();
-        for (size_t i = 0; i < max_recent_colors; ++i)
-        {
-            ui::ButtonWidget* child = static_cast<ui::ButtonWidget*>(recent_group->get_children()[i]);
-            gui.bind(child->signal, [&](const std::string& signal, void* button) {
-                stroke_parameters.set_color((static_cast<ui::ButtonWidget*>(button))->color);
-            });
-        }
+        add_pbr_material_data("aluminium",   Color(0.912f, 0.914f, 0.92f, 1.0f),  0.0f, 1.0f);
+        add_pbr_material_data("charcoal",    Color(0.02f, 0.02f, 0.02f, 1.0f),    0.5f, 0.0f);
+        add_pbr_material_data("rusted_iron", Color(0.531f, 0.512f, 0.496f, 1.0f), 0.0f, 1.0f, 1.0f); // add noise
     }
 
-    // Create helper ui
-    {
-        helper_gui.load_layout("data/ui/helper.json");
-
-        // Customize a little bit...
-        helper_gui.get_workspace().hand = HAND_RIGHT;
-        helper_gui.get_workspace().root_pose = POSE_GRIP;
-    }
-
-    Surface* sphere_surface = new Surface();
-    sphere_surface->create_sphere();
-
-    mesh_preview = new EntityMesh();
-    mesh_preview->add_surface(sphere_surface);
-
-    Material preview_material;
-    preview_material.shader = RendererStorage::get_shader("data/shaders/mesh_transparent.wgsl");
-    preview_material.flags |= MATERIAL_TRANSPARENT;
-    preview_material.priority = 1;
-
-    mesh_preview->set_surface_material_override(sphere_surface, preview_material);
-    
-    mesh_preview_outline = new EntityMesh();
-    mesh_preview_outline->add_surface(sphere_surface);
-
-    Material outline_material;
-    outline_material.shader = RendererStorage::get_shader("data/shaders/mesh_outline.wgsl");
-
-    mesh_preview_outline->set_surface_material_override(sphere_surface, outline_material);
+    // Load ui and Bind callbacks
+    bind_events();
 
     enable_tool(SCULPT);
 
@@ -288,7 +230,7 @@ void SculptEditor::update(float delta_time)
     if (is_tool_used) {
         new_edits.push_back(edit_to_add);
         // Add recent color only when is used...
-        add_recent_color(stroke_parameters.get_color());
+        add_recent_color(stroke_parameters.get_material().color);
     }
 
     if (renderer->get_openxr_available()) {
@@ -389,6 +331,36 @@ void SculptEditor::render()
     floor_grid_mesh->render();
 }
 
+void SculptEditor::render_gui()
+{
+    StrokeMaterial& stroke_material = stroke_parameters.get_material();
+
+    bool changed = false;
+
+    ImGui::Text("Material");
+
+    ImGui::Separator();
+
+    ImGui::Text("PBR");
+    changed |= ImGui::ColorEdit4("Base Color", &stroke_material.color[0]);
+    changed |= ImGui::SliderFloat("Roughness", &stroke_material.roughness, 0.f, 1.0f);
+    changed |= ImGui::SliderFloat("Metallic", &stroke_material.metallic, 0.f, 1.0f);
+
+    ImGui::Separator();
+
+    ImGui::Text("Noise");
+    changed |= ImGui::ColorEdit4("Color", &stroke_material.noise_color[0]);
+    changed |= ImGui::SliderFloat("Intensity", &stroke_material.noise_params.x, 0.f, 1.0f);
+    changed |= ImGui::SliderFloat("Frequency", &stroke_material.noise_params.y, 0.f, 50.0f);
+
+    int tmp = static_cast<int>(stroke_material.noise_params.z);
+    changed |= ImGui::SliderInt("Octaves", &tmp, 1, 16);
+    stroke_material.noise_params.z = static_cast<float>(tmp);
+
+    if (changed)
+        stroke_parameters.set_dirty(true);
+}
+
 void SculptEditor::update_edit_preview(const glm::vec4& dims)
 {
     // Recreate mesh depending on primitive parameters
@@ -421,7 +393,7 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
             mesh_preview->translate({ 0.f, -dims.x * 0.5f, 0.f });
             break;
         case SD_TORUS:
-            mesh_preview->get_surface(0)->create_torus(grow_dims.x, std::clamp(grow_dims.w, 0.0001f, grow_dims.x));
+            mesh_preview->get_surface(0)->create_torus(grow_dims.x, glm::clamp(grow_dims.w, 0.0001f, grow_dims.x));
             mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
             break;
         default:
@@ -512,6 +484,113 @@ void SculptEditor::enable_tool(eTool tool)
     }
 }
 
+bool SculptEditor::is_rotation_being_used() {
+    return Input::get_trigger_value(HAND_LEFT) > 0.5;
+}
+
+
+void SculptEditor::bind_events()
+{
+    // UI Layout from JSON
+    {
+        gui.load_layout("data/ui/main.json");
+    }
+
+    // Set events
+    {
+        gui.bind("sculpt", [&](const std::string& signal, void* button) { enable_tool(SCULPT); });
+        gui.bind("paint", [&](const std::string& signal, void* button) { enable_tool(PAINT); });
+
+        gui.bind("sphere", [&](const std::string& signal, void* button) {  set_primitive(SD_SPHERE); });
+        gui.bind("cube", [&](const std::string& signal, void* button) { set_primitive(SD_BOX); });
+        gui.bind("cone", [&](const std::string& signal, void* button) { set_primitive(SD_CONE); });
+        gui.bind("capsule", [&](const std::string& signal, void* button) { set_primitive(SD_CAPSULE); });
+        gui.bind("cylinder", [&](const std::string& signal, void* button) { set_primitive(SD_CYLINDER); });
+        gui.bind("torus", [&](const std::string& signal, void* button) { set_primitive(SD_TORUS); });
+
+        gui.bind("onion", [&](const std::string& signal, void* button) { toggle_onion_modifier(); });
+        gui.bind("onion_value", [&](const std::string& signal, float value) { onion_thickness = glm::clamp(value, 0.f, 1.f); });
+        gui.bind("capped", [&](const std::string& signal, void* button) { toggle_capped_modifier(); });
+        gui.bind("cap_value", [&](const std::string& signal, float value) { capped_value = glm::clamp(value * 2.f - 1.f, -1.f, 1.f); });
+
+        gui.bind("mirror", [&](const std::string& signal, void* button) { use_mirror = !use_mirror; });
+        gui.bind("snap_to_grid", [&](const std::string& signal, void* button) { snap_to_grid = !snap_to_grid; });
+        gui.bind("lock_axis_toggle", [&](const std::string& signal, void* button) { axis_lock = !axis_lock; });
+        gui.bind("lock_axis_x", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_X; });
+        gui.bind("lock_axis_y", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_Y; });
+        gui.bind("lock_axis_z", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_Z; });
+
+        gui.bind("roughness", [&](const std::string& signal, float value) { stroke_parameters.set_material_roughness(value); });
+        gui.bind("metallic", [&](const std::string& signal, float value) { stroke_parameters.set_material_metallic(value); });
+        gui.bind("noise_intensity", [&](const std::string& signal, float value) { stroke_parameters.set_material_noise(value); });
+        gui.bind("noise_frequency", [&](const std::string& signal, float value) { stroke_parameters.set_material_noise(-1.0f, value); });
+        gui.bind("noise_octaves", [&](const std::string& signal, float value) { stroke_parameters.set_material_noise(-1.0f, -1.0f, static_cast<int>(value)); });
+        gui.bind("noise_color_picker", [&](const std::string& signal, Color color) { stroke_parameters.set_material_noise_color(color); });
+
+        gui.bind("color_picker", [&](const std::string& signal, Color color) { stroke_parameters.set_material_color(color); });
+
+        // Controller buttons
+
+        helper_gui.bind(XR_BUTTON_B, [&]() { stamp_enabled = !stamp_enabled; });
+
+        // Bind recent color buttons...
+
+        ui::UIEntity* recent_group = gui.get_widget_from_name("g_recent_colors");
+        if (!recent_group) {
+            assert(0);
+            spdlog::error("Cannot find recent_colors button group!");
+            return;
+        }
+
+        // Bind colors callback...
+
+        for (auto it : gui.get_widgets())
+        {
+            if (it.second->type != ui::BUTTON) continue;
+            ui::ButtonWidget* child = static_cast<ui::ButtonWidget*>(it.second);
+            if (child->is_color_button) {
+                gui.bind(child->signal, [&](const std::string& signal, void* button) {
+                    const Color& color = (static_cast<ui::ButtonWidget*>(button))->color;
+                    stroke_parameters.set_material_color(color);
+                });
+            }
+        }
+
+        max_recent_colors = recent_group->get_children().size();
+        for (size_t i = 0; i < max_recent_colors; ++i)
+        {
+            ui::ButtonWidget* child = static_cast<ui::ButtonWidget*>(recent_group->get_children()[i]);
+            gui.bind(child->signal, [&](const std::string& signal, void* button) {
+                stroke_parameters.set_material_color((static_cast<ui::ButtonWidget*>(button))->color);
+            });
+        }
+
+        // Bind material samples callback...
+
+        ui::UIEntity* samples_group = gui.get_widget_from_name("g_material_samples");
+        for (size_t i = 0; i < samples_group->get_children().size(); ++i)
+        {
+            ui::ButtonWidget* child = static_cast<ui::ButtonWidget*>(samples_group->get_children()[i]);
+            gui.bind(child->signal, [&](const std::string& signal, void* button) {
+                update_stroke_from_material(signal);
+            });
+        }
+
+        gui.bind("save_material", [&](const std::string& signal, void* button) {
+            generate_material_from_stroke(button);
+        });
+    }
+
+    // Create helper ui
+    {
+        helper_gui.load_layout("data/ui/helper.json");
+
+        // Customize a little bit...
+        helper_gui.get_workspace().hand = HAND_RIGHT;
+        helper_gui.get_workspace().root_pose = POSE_GRIP;
+    }
+}
+
 void SculptEditor::add_recent_color(const Color& color)
 {
     auto it = std::find(recent_colors.begin(), recent_colors.end(), color);
@@ -540,4 +619,66 @@ void SculptEditor::add_recent_color(const Color& color)
         child->color = recent_colors[i];
         child->set_surface_material_override_color(0, child->color);
     }
+}
+
+void SculptEditor::add_pbr_material_data(const std::string& name, const Color& base_color, float roughness, float metallic,
+    float noise_intensity, const Color& noise_color, float noise_frequency, int noise_octaves)
+{
+    pbr_materials_data[name] = {
+        .base_color = base_color,
+        .roughness = roughness,
+        .metallic = metallic,
+        .noise_params = glm::vec4(noise_intensity, noise_frequency, static_cast<float>(noise_octaves), 0.0f),
+        .noise_color = noise_color
+    };
+}
+
+void SculptEditor::generate_material_from_stroke(void* button)
+{
+    // Max of 5 materials
+    if (num_generated_materials == 5) {
+        return;
+    }
+
+    ui::ButtonWidget* b = reinterpret_cast<ui::ButtonWidget*>(button);
+    ui::WidgetGroup* mat_samples = dynamic_cast<ui::WidgetGroup*>(b->get_parent()->get_children().at(1));
+    assert(mat_samples);
+
+    // When making the button, it will be added here!
+    gui.set_next_parent(mat_samples);
+
+    std::string name = "new_material_" + std::to_string(last_generated_material_uid++);
+    ui::UIEntity* new_button = gui.make_button(name, "data/textures/material_samples.png");
+    dynamic_cast<ui::ButtonWidget*>(new_button)->set_ui_priority(1);
+
+    mat_samples->set_number_of_widgets(static_cast<float>(mat_samples->get_children().size()));
+    num_generated_materials++;
+
+    // Add data to existing samples..
+    const StrokeMaterial& mat = stroke_parameters.get_material();
+    add_pbr_material_data(name, mat.color, mat.roughness, mat.metallic,
+        mat.noise_params.x, mat.noise_color, mat.noise_params.y, mat.noise_params.z);
+
+    gui.bind(name, [&](const std::string& signal, void* button) {
+        update_stroke_from_material(signal);
+    });
+}
+
+void SculptEditor::update_stroke_from_material(const std::string& name)
+{
+    const PBRMaterialData& data = pbr_materials_data[name];
+
+    // Set all data
+    stroke_parameters.set_material_color(data.base_color);
+    stroke_parameters.set_material_roughness(data.roughness * 1.5f); // this is a hack because hdres don't have too much roughness..
+    stroke_parameters.set_material_metallic(data.metallic);
+    stroke_parameters.set_material_noise(data.noise_params.x, data.noise_params.y, data.noise_params.z);
+
+    // Emit signals to change UI values
+    const StrokeMaterial& mat = stroke_parameters.get_material();
+    gui.emit_signal("roughness@changed", mat.roughness);
+    gui.emit_signal("metallic@changed", mat.metallic);
+    gui.emit_signal("noise_intensity@changed", mat.noise_params.x);
+    gui.emit_signal("noise_frequency@changed", mat.noise_params.y);
+    gui.emit_signal("noise_octaves@changed", mat.noise_params.z);
 }

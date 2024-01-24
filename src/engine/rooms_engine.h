@@ -3,6 +3,10 @@
 #include "engine.h"
 #include "tools/sculpt/sculpt_editor.h"
 
+#include <vector>
+
+class Entity;
+
 class RoomsEngine : public Engine {
 
     static std::vector<Entity*> entities;

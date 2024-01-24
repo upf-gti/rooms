@@ -9,8 +9,8 @@
 
 #include "spdlog/spdlog.h"
 
-#include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_wgpu.h"
+#include "backends/imgui_impl_glfw.h"
 
 #include "framework/utils/tinyfiledialogs.h"
 
@@ -236,6 +236,11 @@ void RoomsEngine::render_gui()
                 
                 ImGui::TreePop();
             }
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem("Sculpt Editor"))
+        {
+            sculpt_editor.render_gui();
             ImGui::EndTabItem();
         }
         if (ImGui::BeginTabItem("Debugger"))

@@ -100,7 +100,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var d = 1.0 - step(0.435, distance(uvs, p));
 
     uvs = in.uv;
-    var current_color = pow(ui_data.picker_color.rgb, vec3f(2.2)) * ui_data.picker_color.a;
+    var current_color = pow(ui_data.picker_color.rgb * ui_data.picker_color.a, vec3f(2.2));
     var final_color = pow(getColor(uvs * 2 - 1), vec3f(2.2)) * d + current_color * (1 - d);
 
     if (GAMMA_CORRECTION == 1) {

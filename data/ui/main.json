@@ -115,21 +115,14 @@
                     "texture": "data/textures/colors.png"
                 },
                 {
-                    "name": "pbr",
-                    "type": "group",
-                    "nitems": 2
+                    "name": "materials",
+                    "type": "button",
+                    "texture": "data/textures/material_samples.png"
                 },
                 {
-                    "name": "pbr_roughness",
-                    "type": "slider",
-                    "mode": "vertical",
-                    "value": 0.7
-                },
-                {
-                    "name": "pbr_metallic",
-                    "type": "slider",
-                    "mode": "vertical",
-                    "value": 0.2
+                    "name": "material_editor",
+                    "type": "button",
+                    "texture": "data/textures/material_editor.png"
                 }
             ]
         },
@@ -147,8 +140,6 @@
                     "type": "picker",
                     "color": "1 0 0 1",
                     "slider": {
-                        "name": "intensity",
-                        "type": "slider",
                         "mode": "vertical",
                         "value": 1
                     }
@@ -199,6 +190,110 @@
                     "type": "button",
                     "texture": "data/textures/recent_colors.png",
                     "keep_rgb": true
+                }
+            ]
+        },
+        {
+            "name": "materials",
+            "type": "submenu",
+            "children": [
+                {
+                    "name": "save_material",
+                    "type": "button",
+                    "texture": "data/textures/submenu_mark.png"
+                },
+                {
+                    "name": "g_material_samples",
+                    "type": "group",
+                    "nitems": 3
+                },
+                {
+                    "name": "aluminium",
+                    "type": "button",
+                    "texture": "data/textures/material_samples.png",
+                    "unique_selection": true
+                },
+                {
+                    "name": "charcoal",
+                    "type": "button",
+                    "texture": "data/textures/material_samples.png",
+                    "unique_selection": true
+                },
+                {
+                    "name": "rusted_iron",
+                    "type": "button",
+                    "texture": "data/textures/material_samples.png",
+                    "unique_selection": true
+                }
+            ]
+        },
+        {
+            "name": "material_editor",
+            "type": "submenu",
+            "children": [
+                {
+                    "name": "edit_pbr",
+                    "type": "group",
+                    "nitems": 2,
+                    "icon_texture": {
+                        "name": "pbr",
+                        "type": "button",
+                        "texture": "data/textures/shading.png",
+                        "disabled": true
+                    }
+                },
+                {
+                    "name": "roughness",
+                    "type": "slider",
+                    "mode": "vertical",
+                    "value": 0.7
+                },
+                {
+                    "name": "metallic",
+                    "type": "slider",
+                    "mode": "vertical",
+                    "value": 0.2
+                },
+                {
+                    "name": "edit_pattern",
+                    "type": "group",
+                    "nitems": 3,
+                    "icon_texture": {
+                        "name": "pattern",
+                        "type": "button",
+                        "texture": "data/textures/pattern.png",
+                        "disabled": true
+                    }
+                },
+                {
+                    "name": "noise_intensity",
+                    "type": "slider",
+                    "mode": "vertical",
+                    "value": 0.0
+                },
+                {
+                    "name": "noise_frequency",
+                    "type": "slider",
+                    "mode": "vertical",
+                    "value": 20.0,
+                    "max": 50.0
+                },
+                {
+                    "name": "noise_octaves",
+                    "type": "slider",
+                    "mode": "vertical",
+                    "step": 1,
+                    "value": 8,
+                    "max": 16
+                },
+                {
+                    "name": "noise_color_picker",
+                    "type": "picker",
+                    "color": "1 1 1 1",
+                    "slider": {
+                        "mode": "vertical",
+                        "value": 1
+                    }
                 }
             ]
         },
@@ -293,25 +388,21 @@
                 {
                     "name": "colors_t1_1",
                     "type": "button",
-                    "texture": "data/textures/circle_white.png",
                     "color": "0.2 0.21 0.77 1"
                 },
                 {
                     "name": "colors_t1_2",
                     "type": "button",
-                    "texture": "data/textures/circle_white.png",
                     "color": "0.41 0.57 0.79 1"
                 },
                 {
                     "name": "colors_t1_3",
                     "type": "button",
-                    "texture": "data/textures/circle_white.png",
                     "color": "0.41 0.76 0.79 1"
                 },
                 {
                     "name": "colors_t1_4",
                     "type": "button",
-                    "texture": "data/textures/circle_white.png",
                     "color": "0.64 0.9 0.93 1"
                 }
             ]
@@ -328,25 +419,21 @@
                 {
                     "name": "colors_t2_1",
                     "type": "button",
-                    "texture": "data/textures/circle_white.png",
                     "color": "0.36 0.61 0.35 1"
                 },
                 {
                     "name": "colors_t2_2",
                     "type": "button",
-                    "texture": "data/textures/circle_white.png",
                     "color": "0.51 0.8 0.49 1"
                 },
                 {
                     "name": "colors_t2_3",
                     "type": "button",
-                    "texture": "data/textures/circle_white.png",
                     "color": "0.68 0.84 0.05 1"
                 },
                 {
                     "name": "colors_t2_4",
                     "type": "button",
-                    "texture": "data/textures/circle_white.png",
                     "color": "0.71 0.96 0.49 1"
                 }
             ]
@@ -363,25 +450,21 @@
                 {
                     "name": "colors_t3_1",
                     "type": "button",
-                    "texture": "data/textures/circle_white.png",
                     "color": "0.94 0.77 0.44 1"
                 },
                 {
                     "name": "colors_t3_2",
                     "type": "button",
-                    "texture": "data/textures/circle_white.png",
                     "color": "0.96 0.67 0.09 1"
                 },
                 {
                     "name": "colors_t3_3",
                     "type": "button",
-                    "texture": "data/textures/circle_white.png",
                     "color": "0.98 0.9 0.08 1"
                 },
                 {
                     "name": "colors_t3_4",
                     "type": "button",
-                    "texture": "data/textures/circle_white.png",
                     "color": "0.94 0.92 0.7 1"
                 }
             ]
@@ -398,25 +481,21 @@
                 {
                     "name": "colors_t4_1",
                     "type": "button",
-                    "texture": "data/textures/circle_white.png",
                     "color": "0.58 0.12 0.12 1"
                 },
                 {
                     "name": "colors_t4_2",
                     "type": "button",
-                    "texture": "data/textures/circle_white.png",
                     "color": "0.83 0.09 0.09 1"
                 },
                 {
                     "name": "colors_t4_3",
                     "type": "button",
-                    "texture": "data/textures/circle_white.png",
                     "color": "0.88 0.42 0.42 1"
                 },
                 {
                     "name": "colors_t4_4",
                     "type": "button",
-                    "texture": "data/textures/circle_white.png",
                     "color": "0.90 0.71 0.71 1"
                 }
             ]
@@ -433,25 +512,21 @@
                 {
                     "name": "colors_t5_1",
                     "type": "button",
-                    "texture": "data/textures/circle_white.png",
                     "color": "0.65 0.02 0.83 1"
                 },
                 {
                     "name": "colors_t5_2",
                     "type": "button",
-                    "texture": "data/textures/circle_white.png",
                     "color": "0.8 0.49 0.89 1"
                 },
                 {
                     "name": "colors_t5_3",
                     "type": "button",
-                    "texture": "data/textures/circle_white.png",
                     "color": "0.95 0.12 0.85 1"
                 },
                 {
                     "name": "colors_t5_4",
                     "type": "button",
-                    "texture": "data/textures/circle_white.png",
                     "color": "0.95 0.62 0.91 1"
                 }
             ]
@@ -468,25 +543,21 @@
                 {
                     "name": "colors_t6_1",
                     "type": "button",
-                    "texture": "data/textures/circle_white.png",
                     "color": "0.0 0.0 0.0 1"
                 },
                 {
                     "name": "colors_t6_2",
                     "type": "button",
-                    "texture": "data/textures/circle_white.png",
                     "color": "0.33 0.33 0.33 1"
                 },
                 {
                     "name": "colors_t6_3",
                     "type": "button",
-                    "texture": "data/textures/circle_white.png",
                     "color": "0.66 0.66 0.66 1"
                 },
                 {
                     "name": "colors_t6_4",
                     "type": "button",
-                    "texture": "data/textures/circle_white.png",
                     "color": "1.0 1.0 1.0 1"
                 }
             ]
@@ -503,38 +574,32 @@
                 {
                     "name": "recent_color_1",
                     "type": "button",
-                    "texture": "data/textures/circle_white.png",
-                    "shader": "data/shaders/mesh_texture.wgsl"
+                    "color": "1 1 1 1"
                 },
                 {
                     "name": "recent_color_2",
                     "type": "button",
-                    "texture": "data/textures/circle_white.png",
-                    "shader": "data/shaders/mesh_texture.wgsl"
+                    "color": "1 1 1 1"
                 },
                 {
                     "name": "recent_color_3",
                     "type": "button",
-                    "texture": "data/textures/circle_white.png",
-                    "shader": "data/shaders/mesh_texture.wgsl"
+                    "color": "1 1 1 1"
                 },
                 {
                     "name": "recent_color_4",
                     "type": "button",
-                    "texture": "data/textures/circle_white.png",
-                    "shader": "data/shaders/mesh_texture.wgsl"
+                    "color": "1 1 1 1"
                 },
                 {
                     "name": "recent_color_5",
                     "type": "button",
-                    "texture": "data/textures/circle_white.png",
-                    "shader": "data/shaders/mesh_texture.wgsl"
+                    "color": "1 1 1 1"
                 },
                 {
                     "name": "recent_color_6",
                     "type": "button",
-                    "texture": "data/textures/circle_white.png",
-                    "shader": "data/shaders/mesh_texture.wgsl"
+                    "color": "1 1 1 1"
                 }
             ]
         }
