@@ -99,10 +99,10 @@ void RaymarchingRenderer::render()
 
 void RaymarchingRenderer::add_preview_edit(const Edit& edit)
 {
-    //if (preview_edit_data.preview_edits_count >= PREVIEW_EDITS_MAX) {
-    //    return;
-    //}
-    //preview_edit_data.preview_edits[preview_edit_data.preview_edits_count++] = edit;
+    if (preview_data.preview_stroke.edit_count == MAX_EDITS_PER_EVALUATION) {
+        return;
+    }
+    preview_data.preview_stroke.edits[preview_data.preview_stroke.edit_count++] = edit;
 }
 
 const RayIntersectionInfo& RaymarchingRenderer::get_ray_intersection_info() const

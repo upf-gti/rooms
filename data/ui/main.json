@@ -72,36 +72,42 @@
                     "name": "cube",
                     "type": "button",
                     "texture": "data/textures/cube.png",
-                    "unique_selection": true
+                    "unique_selection": true,
+                    "disabled": true
                 },
                 {
                     "name": "cone",
                     "type": "button",
                     "texture": "data/textures/cone.png",
-                    "unique_selection": true
+                    "unique_selection": true,
+                    "disabled": true
                 },
                 {
                     "name": "capsule",
                     "type": "button",
                     "texture": "data/textures/capsule.png",
-                    "unique_selection": true
+                    "unique_selection": true,
+                    "disabled": true
                 },
                 {
                     "name": "cylinder",
                     "type": "button",
                     "texture": "data/textures/cylinder.png",
-                    "unique_selection": true
+                    "unique_selection": true,
+                    "disabled": true
                 },
                 {
                     "name": "torus",
                     "type": "button",
                     "texture": "data/textures/torus.png",
-                    "unique_selection": true
+                    "unique_selection": true,
+                    "disabled": true
                 },
                 {
                     "name": "shape_editor",
                     "type": "button",
-                    "texture": "data/textures/shape_editor.png"
+                    "texture": "data/textures/shape_editor.png",
+                    "disabled": true
                 }
             ]
         },
@@ -269,7 +275,8 @@
                     "name": "noise_intensity",
                     "type": "slider",
                     "mode": "vertical",
-                    "value": 0.0
+                    "value": 0.0,
+                    "max": 10.0
                 },
                 {
                     "name": "noise_frequency",
