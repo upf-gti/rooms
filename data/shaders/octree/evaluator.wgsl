@@ -189,9 +189,9 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
         surface_interval = eval_edit_interval(x_range, y_range, z_range, current_stroke.primitive, current_stroke.operation, current_stroke.parameters, surface_interval, current_edit, &edit_interval);
 
-        // if (stroke.operation == OP_SMOOTH_UNION) {
-        //     current_edit.dimensions += vec4f(SMOOTH_FACTOR * 2.0);
-        // }
+        if (is_smooth_union || is_smooth_substract) {
+            current_edit.dimensions += vec4f(current_stroke.parameters.w);
+        }
 
         new_edits_surface_interval = eval_edit_interval(x_range, y_range, z_range, current_stroke.primitive, OP_UNION, current_stroke.parameters, new_edits_surface_interval, current_edit, &edit_interval);
 
@@ -220,10 +220,10 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     var surface_interval_smooth : vec2f = surface_interval;
 
 
-    if (is_smooth_union) {
-        surface_interval_smooth += vec2f(-current_stroke.parameters.w * 0.25, 10.0 / 512.0);
-        new_edits_surface_interval += vec2f(-current_stroke.parameters.w * 0.25, 10.0 / 512.0);
-    } 
+    // if (is_smooth_union) {
+    //     surface_interval_smooth += vec2f(-current_stroke.parameters.w * 0.25, 10.0 / 512.0);
+    //     new_edits_surface_interval += vec2f(-current_stroke.parameters.w * 0.25, 10.0 / 512.0);
+    // } 
     // else if (is_smooth_substract) {
     //     // surface_interval_smooth += vec2f(-SMOOTH_FACTOR * 0.25, 10.0 / 512.0);
     //     // new_edits_surface_interval += vec2f(-SMOOTH_FACTOR * 0.25, 10.0 / 512.0);
@@ -307,7 +307,10 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 // This could be done when brick reordering is implemented
                 // octree_proxy_data.instance_data[instance_index].in_use = BRICK_HIDE_FLAG | BRICK_IN_USE_FLAG;
                 if (current_stroke.operation == OP_SUBSTRACTION || current_stroke.operation == OP_SMOOTH_SUBSTRACTION) {
-                    octree_proxy_data.instance_data[instance_index].in_use = BRICK_HAS_PREVIEW_FLAG | BRICK_IN_USE_FLAG;
+                    if (is_current_brick_filled) {
+                        octree_proxy_data.instance_data[instance_index].in_use = BRICK_HAS_PREVIEW_FLAG | BRICK_IN_USE_FLAG;
+                    } 
+                    
                 }
             }
         }

@@ -136,7 +136,9 @@ fn raymarch_world(ray_origin_world : vec3f, ray_dir : vec3f, max_distance : f32,
 
         let material : Material = sample_material(pos, vec3f(0.0, 0.0, 0.0));
         //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
-		return vec4f(apply_light(-ray_dir, pos, pos_world, lightPos + lightOffset, material), depth);
+		return vec4f(apply_light(-ray_dir, pos, pos_world, normal, lightPos + lightOffset, material), depth);
+        //return vec4f(vec3f(material.albedo), depth);
+        //return vec4f(normal, depth);
 	}
 
     // Use a two band spherical harmonic as a skymap

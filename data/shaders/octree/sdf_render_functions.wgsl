@@ -42,10 +42,10 @@ fn ray_AABB_intersection_distance(ray_origin : vec3f,
 }
 
 // TODO: if diffuse variable is not used, performance is increased by 20% (????)
-fn apply_light(toEye : vec3f, position : vec3f, position_world : vec3f, lightPosition : vec3f, material : Material) -> vec3f
+fn apply_light(toEye : vec3f, position : vec3f, position_world : vec3f, normal_i : vec3f, lightPosition : vec3f, material : Material) -> vec3f
 {
-    var normal : vec3f = estimate_normal(position, position_world);
-    normal = normalize(rotate_point_quat(normal, sculpt_data.sculpt_rotation));
+    //var normal : vec3f = estimate_normal(position, position_world);
+    let normal : vec3f = normalize(rotate_point_quat(normal_i, sculpt_data.sculpt_rotation));
 
     let toLight : vec3f = normalize(lightPosition - position_world);
 
@@ -132,9 +132,11 @@ fn raymarch(ray_origin : vec3f, ray_origin_world : vec3f, ray_dir : vec3f, max_d
 
         let material : Material = sample_material(pos, pos_world);
         //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
-		return vec4f(apply_light(-ray_dir, pos, pos_world, lightPos + lightOffset, material), depth);
+		return vec4f(apply_light(-ray_dir, pos, pos_world, normal, lightPos + lightOffset, material), depth);
         //return vec4f(normal, depth);
         //return vec4f(material.albedo, depth);
+        //return vec4f(normal, depth);
+        //return vec4f(vec3f(material.albedo), depth);
 	}
 
     // Use a two band spherical harmonic as a skymap
