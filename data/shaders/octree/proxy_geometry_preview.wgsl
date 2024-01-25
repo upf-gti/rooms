@@ -21,7 +21,7 @@ struct VertexOutput {
     @location(2) color: vec3f,
     @location(3) world_pos : vec3f,
     @location(4) voxel_pos : vec3f,
-    @location(5) @interpolate(flat) voxel_center_world : vec3f
+    @location(5) @interpolate(flat) voxel_center : vec3f
 };
 
 struct CameraData {
@@ -51,7 +51,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     out.normal = in.normal;
     
     out.voxel_pos = voxel_pos;
-    out.voxel_center_world = rotate_point_quat(instance_data.position, sculpt_data.sculpt_rotation) + sculpt_data.sculpt_start_position;
+    out.voxel_center = instance_data.position;
     // This is in an attribute for debugging
     out.world_pos = world_pos.xyz; 
     return out;
@@ -127,7 +127,7 @@ fn raymarch_world(ray_origin_world : vec3f, ray_dir : vec3f, max_distance : f32,
 	}
 
     if (exit == 1u) {
-        let pos_world : vec3f = pos + sculpt_data.sculpt_start_position;
+        let pos_world : vec3f = rotate_point_quat(pos + sculpt_data.sculpt_start_position, sculpt_data.sculpt_rotation);
         let epsilon : f32 = 0.000001; // avoids flashing when camera inside sdf
         let proj_pos : vec4f = view_proj * vec4f(pos_world + ray_dir * epsilon, 1.0);
         depth = proj_pos.z / proj_pos.w;
@@ -149,11 +149,13 @@ fn raymarch_world(ray_origin_world : vec3f, ray_dir : vec3f, max_distance : f32,
 fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     var out: FragmentOutput;
-    let ray_dir : vec3f = normalize(in.world_pos.xyz - eye_position);
 
-    let raymarch_distance : f32 = ray_AABB_intersection_distance(in.world_pos.xyz, ray_dir, in.voxel_center_world, vec3f(BRICK_WORLD_SIZE));
+    let eye_position_voxel = rotate_point_quat(eye_position - sculpt_data.sculpt_start_position, sculpt_data.sculpt_inv_rotation);
+    let ray_dir_voxel_space : vec3f = normalize(in.voxel_pos - eye_position_voxel);
 
-    let ray_result = raymarch_world(in.world_pos.xyz - sculpt_data.sculpt_start_position, ray_dir, raymarch_distance, camera_data.view_projection);
+    let raymarch_distance : f32 = ray_AABB_intersection_distance(in.voxel_pos, ray_dir_voxel_space, in.voxel_center, vec3f(BRICK_WORLD_SIZE));
+
+    let ray_result = raymarch_world(in.voxel_pos, ray_dir_voxel_space, raymarch_distance, camera_data.view_projection);
 
     var final_color : vec3f = ray_result.rgb; 
 

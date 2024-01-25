@@ -91,7 +91,7 @@ fn estimate_normal( p : vec3f, p_world: vec3f) -> vec3f
 }
 
 
-fn raymarch(ray_origin : vec3f, ray_origin_world : vec3f, ray_dir : vec3f, max_distance : f32, view_proj : mat4x4f) -> vec4f
+fn raymarch(ray_origin : vec3f, ray_origin_world : vec3f, ray_dir : vec3f, ray_dir_world : vec3f, max_distance : f32, view_proj : mat4x4f) -> vec4f
 {
     let ambientColor = vec3f(0.4);
 	let hitColor = vec3f(1.0, 1.0, 1.0);
@@ -109,7 +109,7 @@ fn raymarch(ray_origin : vec3f, ray_origin_world : vec3f, ray_dir : vec3f, max_d
 	for (i = 0; depth < max_distance && i < MAX_ITERATIONS; i++)
     {
 		pos = ray_origin + ray_dir * depth;
-        pos_world = ray_origin_world + ray_dir * (depth / SCALE_CONVERSION_FACTOR);
+        pos_world = ray_origin_world + ray_dir_world * (depth / SCALE_CONVERSION_FACTOR);
 
         distance = sample_sdf(pos, pos_world);
 
@@ -123,7 +123,7 @@ fn raymarch(ray_origin : vec3f, ray_origin_world : vec3f, ray_dir : vec3f, max_d
 
     if (exit == 1u) {
         let epsilon : f32 = 0.000001; // avoids flashing when camera inside sdf
-        let proj_pos : vec4f = view_proj * vec4f(pos_world + ray_dir * epsilon, 1.0);
+        let proj_pos : vec4f = view_proj * vec4f(pos_world + ray_dir_world * epsilon, 1.0);
         depth = proj_pos.z / proj_pos.w;
 
         let normal : vec3f = estimate_normal(pos, pos_world);
@@ -132,7 +132,7 @@ fn raymarch(ray_origin : vec3f, ray_origin_world : vec3f, ray_dir : vec3f, max_d
 
         let material : Material = sample_material(pos, pos_world);
         //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
-		return vec4f(apply_light(-ray_dir, pos, pos_world, normal, lightPos + lightOffset, material), depth);
+		return vec4f(apply_light(-ray_dir_world, pos, pos_world, normal, lightPos + lightOffset, material), depth);
         //return vec4f(normal, depth);
         //return vec4f(material.albedo, depth);
         //return vec4f(normal, depth);
