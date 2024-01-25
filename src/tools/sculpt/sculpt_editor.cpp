@@ -485,7 +485,7 @@ void SculptEditor::enable_tool(eTool tool)
 }
 
 bool SculptEditor::is_rotation_being_used() {
-    return Input::get_trigger_value(HAND_LEFT) > 0.5;
+    return false;// Input::get_trigger_value(HAND_LEFT) > 0.5;
 }
 
 
