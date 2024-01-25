@@ -158,7 +158,7 @@ fn sample_sdf_with_preview(position : vec3f, world_pos : vec3f) -> Surface
         for(var i : u32 = 0u; i < preview_data.preview_stroke.edit_count; i++) {
             var curr_edit = preview_data.preview_stroke.edits[i];
             curr_edit.position = curr_edit.position;// + sculpt_data.sculpt_start_position;
-            surface = evaluate_edit(world_pos, preview_data.preview_stroke.primitive, preview_data.preview_stroke.operation, preview_data.preview_stroke.parameters, surface, material, curr_edit);
+            surface = evaluate_edit(world_pos - sculpt_data.sculpt_start_position, preview_data.preview_stroke.primitive, preview_data.preview_stroke.operation, preview_data.preview_stroke.parameters, surface, material, curr_edit);
         }
     //}
     
@@ -177,7 +177,7 @@ fn sample_sdf_with_preview_without_material(position : vec3f, world_pos : vec3f)
         for(var i : u32 = 0u; i < preview_data.preview_stroke.edit_count; i++) {
             var curr_edit = preview_data.preview_stroke.edits[i];
             curr_edit.position = curr_edit.position;// + sculpt_data.sculpt_start_position;
-            surface = evaluate_edit(world_pos, preview_data.preview_stroke.primitive, preview_data.preview_stroke.operation, preview_data.preview_stroke.parameters, surface, material, curr_edit);
+            surface = evaluate_edit(world_pos - sculpt_data.sculpt_start_position, preview_data.preview_stroke.primitive, preview_data.preview_stroke.operation, preview_data.preview_stroke.parameters, surface, material, curr_edit);
         }
     //}
     
@@ -232,8 +232,6 @@ fn raymarch_with_previews(ray_origin : vec3f, ray_origin_world : vec3f, ray_dir 
 	}
 
     if (exit == 1u) {
-        pos_world = rotate_point_quat(pos + sculpt_data.sculpt_start_position, sculpt_data.sculpt_rotation);
-
         let epsilon : f32 = 0.000001; // avoids flashing when camera inside sdf
         let proj_pos : vec4f = view_proj * vec4f(pos_world + ray_dir * epsilon, 1.0);
         depth = proj_pos.z / proj_pos.w;
@@ -259,18 +257,16 @@ var<private> last_sampled_material : Material;
 fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     var out: FragmentOutput;
-
-    let eye_position_voxel = rotate_point_quat(eye_position - sculpt_data.sculpt_start_position, sculpt_data.sculpt_inv_rotation);
-    let ray_dir_voxel_space : vec3f = normalize(in.voxel_pos - eye_position_voxel);
-    let ray_dir_world : vec3f = normalize(in.world_pos.xyz - eye_position);
+    let ray_dir : vec3f = normalize(in.world_pos.xyz - eye_position);
+    let ray_dir_voxel_space : vec3f = normalize(in.voxel_pos - rotate_point_quat(eye_position - sculpt_data.sculpt_start_position, sculpt_data.sculpt_inv_rotation));
 
     let raymarch_distance : f32 = ray_AABB_intersection_distance(in.voxel_pos, ray_dir_voxel_space, in.voxel_center, vec3f(BRICK_WORLD_SIZE));
 
     var ray_result : vec4f;
     if (in.has_previews == 1) {
-        ray_result = raymarch_with_previews(in.in_atlas_pos.xyz, in.voxel_pos.xyz, ray_dir_voxel_space, raymarch_distance * SCALE_CONVERSION_FACTOR, camera_data.view_projection);
+        ray_result = raymarch_with_previews(in.in_atlas_pos.xyz, in.world_pos.xyz, ray_dir_voxel_space, raymarch_distance * SCALE_CONVERSION_FACTOR, camera_data.view_projection);
     } else {
-        ray_result = raymarch(in.in_atlas_pos.xyz, in.world_pos.xyz, ray_dir_voxel_space, ray_dir_world, raymarch_distance * SCALE_CONVERSION_FACTOR, camera_data.view_projection);
+        ray_result = raymarch(in.in_atlas_pos.xyz, in.world_pos.xyz, ray_dir_voxel_space, raymarch_distance * SCALE_CONVERSION_FACTOR, camera_data.view_projection);
     }
     var final_color : vec3f = ray_result.rgb; 
 
@@ -281,10 +277,10 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     out.color = vec4f(final_color, 1.0); // Color
     out.depth = ray_result.a;
 
-    // if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
-    //     out.color = vec4f(in.color.x, in.color.y, in.color.z, 1.0);
-    //     out.depth = in.position.z;
-    // }
+    if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
+        out.color = vec4f(in.color.x, in.color.y, in.color.z, 1.0);
+        out.depth = in.position.z;
+    }
 
     // out.color = vec4f(1.0, 0.0, 0.0, 1.0); // Color
     // out.depth = 0.0;
