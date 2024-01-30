@@ -68,7 +68,10 @@ void RoomsEngine::update(float delta_time)
 
 void RoomsEngine::render()
 {
+
+#ifndef __EMSCRIPTEN__
     render_gui();
+#endif
 
     skybox->render();
 
@@ -189,7 +192,7 @@ void RoomsEngine::render_gui()
     bool active = true;
 
     ImGui::SetNextWindowSize({ 300, 400 });
-    ImGui::Begin("Debug panel", &active, ImGuiWindowFlags_MenuBar);
+    ImGui::Begin("Debug panel", &active, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoFocusOnAppearing);
 
     if (ImGui::BeginMenuBar())
     {
@@ -323,7 +326,7 @@ void RoomsEngine::load_glb(const std::string& filename)
 {
     // TODO: We should destroy entities...
     entities.clear();
-    parse_gltf(filename, entities);
+    parse_gltf(filename.c_str(), entities);
 }
 
 void RoomsEngine::toggle_rotation()

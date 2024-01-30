@@ -41,8 +41,8 @@ int RoomsRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
 
     camera->set_perspective(glm::radians(45.0f), webgpu_context.render_width / static_cast<float>(webgpu_context.render_height), z_near, z_far);
     camera->look_at(glm::vec3(0.0f, 0.1f, 0.4f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    camera->set_mouse_sensitivity(0.004f);
-    camera->set_speed(0.75f);
+    camera->set_mouse_sensitivity(0.003f);
+    camera->set_speed(0.5f);
 
     return 0;
 }
@@ -78,7 +78,8 @@ void RoomsRenderer::update(float delta_time)
 #endif
 
     if (!is_openxr_available) {
-        if (const auto& io = ImGui::GetIO(); !io.WantCaptureMouse && !io.WantCaptureKeyboard) {
+        const auto& io = ImGui::GetIO();
+        if (!io.WantCaptureMouse && !io.WantCaptureKeyboard) {
             camera->update(delta_time);
         }
     } else {
@@ -132,10 +133,7 @@ void RoomsRenderer::render_screen()
         render_pass_color_attachment.view = swapchain_view;
         render_pass_color_attachment.loadOp = WGPULoadOp_Clear;
         render_pass_color_attachment.storeOp = WGPUStoreOp_Store;
-
-#ifndef __EMSCRIPTEN__
         render_pass_color_attachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
-#endif
 
         glm::vec4 clear_color = RoomsRenderer::instance->get_clear_color();
         render_pass_color_attachment.clearValue = WGPUColor(clear_color.r, clear_color.g, clear_color.b, clear_color.a);
@@ -180,10 +178,7 @@ void RoomsRenderer::render_screen()
             color_attachments.storeOp = WGPUStoreOp_Store;
             color_attachments.clearValue = { 0.0, 0.0, 0.0, 0.0 };
             color_attachments.view = swapchain_view;
-
-#ifndef __EMSCRIPTEN__
             color_attachments.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
-#endif
 
             WGPURenderPassDescriptor render_pass_desc = {};
             render_pass_desc.colorAttachmentCount = 1;
@@ -245,10 +240,7 @@ void RoomsRenderer::render_xr()
             render_pass_color_attachment.view = swapchainData.images[swapchainData.image_index].textureView;
             render_pass_color_attachment.loadOp = WGPULoadOp_Clear;
             render_pass_color_attachment.storeOp = WGPUStoreOp_Store;
-
-#ifndef __EMSCRIPTEN__
             render_pass_color_attachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
-#endif
 
             glm::vec4 clear_color = RoomsRenderer::instance->get_clear_color();
             render_pass_color_attachment.clearValue = WGPUColor(clear_color.r, clear_color.g, clear_color.b, clear_color.a);
@@ -328,10 +320,7 @@ void RoomsRenderer::render_mirror()
         render_pass_color_attachment.loadOp = WGPULoadOp_Clear;
         render_pass_color_attachment.storeOp = WGPUStoreOp_Store;
         render_pass_color_attachment.clearValue = WGPUColor(clear_color.x, clear_color.y, clear_color.z, 1.0f);
-
-#ifndef __EMSCRIPTEN__
         render_pass_color_attachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
-#endif
 
         WGPURenderPassDescriptor render_pass_descr = {};
         render_pass_descr.colorAttachmentCount = 1;

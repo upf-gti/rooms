@@ -72,6 +72,7 @@ void RaymarchingRenderer::update(float delta_time)
         compute_octree();
     //}
 
+#ifndef DISABLE_RAYMARCHER
     if (Input::is_mouse_pressed(GLFW_MOUSE_BUTTON_RIGHT)) {
         RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
         WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
@@ -90,6 +91,8 @@ void RaymarchingRenderer::update(float delta_time)
 
         octree_ray_intersect(camera->get_eye(), glm::normalize(glm::vec3(ray_dir)));
     }
+#endif
+
 }
 
 void RaymarchingRenderer::render()

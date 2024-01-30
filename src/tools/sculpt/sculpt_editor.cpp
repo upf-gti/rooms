@@ -657,7 +657,7 @@ void SculptEditor::generate_material_from_stroke(void* button)
     // Add data to existing samples..
     const StrokeMaterial& mat = stroke_parameters.get_material();
     add_pbr_material_data(name, mat.color, mat.roughness, mat.metallic,
-        mat.noise_params.x, mat.noise_color, mat.noise_params.y, mat.noise_params.z);
+        mat.noise_params.x, mat.noise_color, mat.noise_params.y, static_cast<int>(mat.noise_params.z));
 
     gui.bind(name, [&](const std::string& signal, void* button) {
         update_stroke_from_material(signal);
@@ -672,7 +672,7 @@ void SculptEditor::update_stroke_from_material(const std::string& name)
     stroke_parameters.set_material_color(data.base_color);
     stroke_parameters.set_material_roughness(data.roughness * 1.5f); // this is a hack because hdres don't have too much roughness..
     stroke_parameters.set_material_metallic(data.metallic);
-    stroke_parameters.set_material_noise(data.noise_params.x, data.noise_params.y, data.noise_params.z);
+    stroke_parameters.set_material_noise(data.noise_params.x, data.noise_params.y, static_cast<int>(data.noise_params.z));
 
     // Emit signals to change UI values
     const StrokeMaterial& mat = stroke_parameters.get_material();
