@@ -19,9 +19,9 @@ struct VertexOutput {
     @location(0) uv: vec2f,
     @location(1) normal: vec3f,
     @location(2) color: vec3f,
-    @location(3) world_pos : vec3f,
-    @location(4) voxel_pos : vec3f,
-    @location(5) @interpolate(flat) voxel_center_world : vec3f
+    @location(3) vertex_in_world_space : vec3f,
+    @location(4) vertex_in_sculpt_space : vec3f,
+    @location(5) @interpolate(flat) voxel_center_sculpt_space : vec3f,
 };
 
 struct CameraData {
@@ -37,23 +37,23 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 
     let instance_data : ProxyInstanceData = preview_data.instance_data[in.instance_id];
 
-    var voxel_pos : vec3f = in.position * BRICK_WORLD_SIZE * 0.5 + instance_data.position;
-    var world_pos : vec3f = rotate_point_quat(voxel_pos, sculpt_data.sculpt_rotation);
-    world_pos += sculpt_data.sculpt_start_position;
+    var vertex_in_sculpt_space : vec3f = in.position * BRICK_WORLD_SIZE * 0.5 + instance_data.position;
+    var vertex_in_world_space : vec3f = rotate_point_quat(vertex_in_sculpt_space, sculpt_data.sculpt_rotation);
+    vertex_in_world_space += sculpt_data.sculpt_start_position;
 
     // let model_mat = mat4x4f(vec4f(BOX_SIZE, 0.0, 0.0, 0.0), vec4f(0.0, BOX_SIZE, 0.0, 0.0), vec4f(0.0, 0.0, BOX_SIZE, 0.0), vec4f(instance_pos.x, instance_pos.y, instance_pos.z, 1.0));
 
     var out: VertexOutput;
     // world_pos = vec4f(rotate_point_quat(world_pos.xyz, sculpt_data.sculpt_rotation), 1.0);
-    out.position = camera_data.view_projection * vec4f(world_pos, 1.0);
+    out.position = camera_data.view_projection * vec4f(vertex_in_world_space, 1.0);
     out.uv = in.uv; // forward to the fragment shader
     out.color = in.color;
     out.normal = in.normal;
     
-    out.voxel_pos = voxel_pos;
-    out.voxel_center_world = rotate_point_quat(instance_data.position, sculpt_data.sculpt_rotation) + sculpt_data.sculpt_start_position;
+    out.vertex_in_sculpt_space = vertex_in_sculpt_space;
     // This is in an attribute for debugging
-    out.world_pos = world_pos.xyz; 
+    out.vertex_in_world_space = vertex_in_world_space.xyz;
+    out.voxel_center_sculpt_space = instance_data.position;
     return out;
 }
 
@@ -98,7 +98,7 @@ var<private> last_found_surface_distance : f32;
 // Add the generic SDF rendering functions
 #include sdf_render_functions.wgsl
 
-fn raymarch_world(ray_origin_world : vec3f, ray_dir : vec3f, max_distance : f32, view_proj : mat4x4f) -> vec4f
+fn raymarch_sculpt_space(ray_origin_sculpt_space : vec3f, ray_dir : vec3f, max_distance : f32, view_proj : mat4x4f) -> vec4f
 {
     let ambientColor = vec3f(0.4);
 	let hitColor = vec3f(1.0, 1.0, 1.0);
@@ -114,7 +114,7 @@ fn raymarch_world(ray_origin_world : vec3f, ray_dir : vec3f, max_distance : f32,
 
 	for (i = 0; depth < max_distance && i < MAX_ITERATIONS; i++)
     {
-		pos = ray_origin_world + ray_dir * depth;
+		pos = ray_origin_sculpt_space + ray_dir * depth;
 
         distance = sample_sdf(pos, vec3f(0.0));
 
@@ -127,7 +127,7 @@ fn raymarch_world(ray_origin_world : vec3f, ray_dir : vec3f, max_distance : f32,
 	}
 
     if (exit == 1u) {
-        let pos_world : vec3f = pos + sculpt_data.sculpt_start_position;
+        let pos_world : vec3f = rotate_point_quat(pos, (sculpt_data.sculpt_rotation)) + sculpt_data.sculpt_start_position;
         let epsilon : f32 = 0.000001; // avoids flashing when camera inside sdf
         let proj_pos : vec4f = view_proj * vec4f(pos_world + ray_dir * epsilon, 1.0);
         depth = proj_pos.z / proj_pos.w;
@@ -149,11 +149,12 @@ fn raymarch_world(ray_origin_world : vec3f, ray_dir : vec3f, max_distance : f32,
 fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     var out: FragmentOutput;
-    let ray_dir : vec3f = normalize(in.world_pos.xyz - eye_position);
+    let ray_dir_world : vec3f = normalize(in.vertex_in_world_space.xyz - eye_position);
+    let ray_dir_sculpt : vec3f = rotate_point_quat(ray_dir_world, quat_conj(sculpt_data.sculpt_rotation));
 
-    let raymarch_distance : f32 = ray_AABB_intersection_distance(in.world_pos.xyz, ray_dir, in.voxel_center_world, vec3f(BRICK_WORLD_SIZE));
+    let raymarch_distance : f32 = ray_AABB_intersection_distance(in.vertex_in_sculpt_space.xyz, ray_dir_sculpt, in.voxel_center_sculpt_space, vec3f(BRICK_WORLD_SIZE));
 
-    let ray_result = raymarch_world(in.world_pos.xyz - sculpt_data.sculpt_start_position, ray_dir, raymarch_distance, camera_data.view_projection);
+    let ray_result = raymarch_sculpt_space(in.vertex_in_sculpt_space.xyz, ray_dir_sculpt, raymarch_distance, camera_data.view_projection);
 
     var final_color : vec3f = ray_result.rgb; 
 
