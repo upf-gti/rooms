@@ -61,6 +61,10 @@ set_property(DIRECTORY ${ROOMS_DIR_ROOT} PROPERTY VS_STARTUP_PROJECT ${PROJECT_N
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 20)
 set_property(TARGET ${PROJECT_NAME} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${ROOMS_DIR_ROOT}")
 
+if (MSVC)
+    add_compile_options(/Zc:__cplusplus)
+endif()
+
 if (EMSCRIPTEN)
     set(SHELL_FILE shell.html)
 
