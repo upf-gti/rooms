@@ -101,13 +101,13 @@
                     "type": "button",
                     "texture": "data/textures/torus.png",
                     "unique_selection": true,
-                    "disabled": true
+                    "disabled": false
                 },
                 {
                     "name": "shape_editor",
                     "type": "button",
                     "texture": "data/textures/shape_editor.png",
-                    "disabled": true
+                    "disabled": false
                 }
             ]
         },

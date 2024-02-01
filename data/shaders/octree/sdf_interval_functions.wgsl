@@ -500,6 +500,17 @@ fn cylinder_interval(p : mat3x3f, start_pos : vec3f, rotation : vec4f, radius : 
     //return idiv_vecs(imul_vec2_vec2(isign_vec2(d), isqrt(iabs(d))), cyl_lenght_square);
 }
 
+fn torus_interval( p : mat3x3f, c : vec3f, t : vec2f, rotation : vec4f) -> vec2f
+{
+    let pos : mat3x3f = irotate_point_quat(isub_mat_vec(p, c), rotation);
+
+    let d_x = isub_vec_float(isqrt(ipow2_vec(pos[0].xy) + ipow2_vec(pos[1].xy)), t.x);
+    let d_y = pos[2].xy;
+
+    return isub_vec_float(isqrt(ipow2_vec(d_x) + ipow2_vec(d_y)), t.y);
+}
+
+
 fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f,  primitive : u32, operation : u32, edit_parameters : vec4f, current_interval : vec2f, edit : Edit, resulting_interval : ptr<function, vec2f>) -> vec2f
 {
     var pSurface : vec2f;
@@ -575,7 +586,7 @@ fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f,  primitive : u32, 
                 var angles = vec2f(sin(an), cos(an));
                 // pSurface = sdCappedTorus(position, edit.position, vec2f(radius, size_param), edit.rotation, angles, edit.color);
             } else {
-                // pSurface = sdTorus(position, edit.position, vec2f(radius, size_param), edit.rotation, edit.color);
+                pSurface = torus_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, vec2f(radius, size_param), edit.rotation);
             }
             break;
         }
