@@ -73,7 +73,7 @@
                     "type": "button",
                     "texture": "data/textures/cube.png",
                     "unique_selection": true,
-                    "disabled": true
+                    "disabled": false
                 },
                 {
                     "name": "cone",
@@ -94,7 +94,7 @@
                     "type": "button",
                     "texture": "data/textures/cylinder.png",
                     "unique_selection": true,
-                    "disabled": true
+                    "disabled": false
                 },
                 {
                     "name": "torus",

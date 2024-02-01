@@ -431,7 +431,7 @@ fn sphere_interval(p : mat3x3f, offset : vec3f, r : f32) -> vec2f
 }
 
 // TODO rotation
-fn box_interval(p : mat3x3f, edit_pos : vec3f, rotation : vec4f, size : vec3f) -> vec2f {
+fn box_interval(p : mat3x3f, edit_pos : vec3f, rotation : vec4f, size : vec3f, r : f32) -> vec2f {
     let mat_zero_interval : mat3x3f = mat3x3f(vec3f(0.0), vec3f(0.0), vec3f(0.0));
 
     // Move edit
@@ -441,7 +441,7 @@ fn box_interval(p : mat3x3f, edit_pos : vec3f, rotation : vec4f, size : vec3f) -
 
     var i_distance : vec2f = ilength(imax_mats(interval_translated_sized, mat_zero_interval));
     var max_on_all_axis : vec2f = imax(interval_translated_sized[0].xy, imax(interval_translated_sized[1].xy, interval_translated_sized[2].xy));
-    var i_dist2 : vec2f =  imin(max_on_all_axis , vec2f(0.0, 0.0));
+    var i_dist2 : vec2f =  isub_vecs(imin(max_on_all_axis , vec2f(0.0, 0.0)), vec2f(r, r));
 
     return iadd_vecs(i_distance, i_dist2);
 }
@@ -466,8 +466,8 @@ fn cylinder_interval(p : mat3x3f, start_pos : vec3f, rotation : vec4f, radius : 
 {
     let cyl_origin : mat3x3f = irotate_point_quat(isub_mat_vec(p, start_pos), rotation);
     
-    let d_x : vec2f = isub_vec_float(iabs(isqrt(ipow2_vec(cyl_origin[0].xy) + ipow2_vec(cyl_origin[2].xy))), height); 
-    let d_y : vec2f = isub_vec_float(iabs(cyl_origin[1].xy), height); 
+    let d_x : vec2f = isub_vecs(iabs(isqrt(ipow2_vec(cyl_origin[0].xy) + ipow2_vec(cyl_origin[1].xy))), vec2f(radius, radius)); 
+    let d_y : vec2f = isub_vecs(iabs(cyl_origin[2].xy), vec2f(height, height)); 
 
     let max_d_x : vec2f = imax(vec2f(0.0), d_x);
     let max_d_y : vec2f = imax(vec2f(0.0), d_y);
@@ -533,9 +533,10 @@ fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f,  primitive : u32, 
 
             // Compensate onion size (Substract from box radius bc onion will add it later...)
             size -= onion_thickness;
-            size_param -= onion_thickness; 
+            size -= size_param;
+            size_param -= onion_thickness;
 
-            pSurface = box_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.rotation, size);
+            pSurface = box_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.rotation, size, size_param);
             break;
         }
         case SD_CAPSULE: {
@@ -561,7 +562,7 @@ fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f,  primitive : u32, 
             //onion_thickness = map_thickness( onion_thickness, size_param );
             //size_param -= onion_thickness; // Compensate onion size
             // pSurface = sdCylinder(position, edit.position,  edit.position - vec3f(0.0, 0.0, radius), edit.rotation, size_param, 0.0, edit.color);
-            pSurface = cylinder_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.rotation, size.y, radius);
+            pSurface = cylinder_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.rotation, size_param, radius);
             break;
         }
         case SD_TORUS: {

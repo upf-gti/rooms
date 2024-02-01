@@ -179,7 +179,7 @@ fn sdCylinder(p : vec3f, a : vec3f, rotation : vec4f, r : f32, h : f32, rr : f32
 
     let posA : vec3f = rotate_point_quat(p - a, rotation);
 
-    let d : vec2f = abs(vec2f(length(vec2f(posA.x, posA.z)), posA.y)) - h;
+    let d : vec2f = abs(vec2f(length(vec2f(posA.x, posA.y)), posA.z)) - vec2(r, h);
     sf.distance = min(max(d.x, d.y), 0.0) + length(max(d, vec2f(0.0))) - rr;
     sf.material = material;
     return sf;
@@ -429,9 +429,10 @@ fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters
 
             // Compensate onion size (Substract from box radius bc onion will add it later...)
             size -= onion_thickness;
-            size_param -= onion_thickness; 
+            size -= size_param;
+            size_param -= onion_thickness;
 
-            pSurface = sdBox(position, edit.position, edit.rotation, size, 0.0, stroke_material);
+            pSurface = sdBox(position, edit.position, edit.rotation, size, size_param, stroke_material);
             break;
         }
         case SD_CAPSULE: {
@@ -456,7 +457,7 @@ fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters
         case SD_CYLINDER: {
             onion_thickness = map_thickness( onion_thickness, size_param );
             size_param -= onion_thickness; // Compensate onion size
-            pSurface = sdCylinder(position, edit.position, edit.rotation, size.y, radius, 0.0, stroke_material);
+            pSurface = sdCylinder(position, edit.position, edit.rotation, size_param, radius, 0.0, stroke_material);
             break;
         }
         case SD_TORUS: {

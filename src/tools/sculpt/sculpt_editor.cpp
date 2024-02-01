@@ -383,9 +383,9 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
             mesh_preview->rotate(glm::radians(-90.f), { 1.f, 0.f, 0.f });
             break;
         case SD_CYLINDER:
-            mesh_preview->get_surface(0)->create_cylinder(grow_dims.w, grow_dims.x);
+            mesh_preview->get_surface(0)->create_cylinder(grow_dims.w, grow_dims.x * 2.0f);
             mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
-            mesh_preview->translate({ 0.f, -dims.x * 0.5f, 0.f });
+            mesh_preview->translate({ 0.f, 0.0f, 0.f });
             break;
         case SD_CAPSULE:
             mesh_preview->get_surface(0)->create_capsule(grow_dims.w, grow_dims.x);
@@ -415,7 +415,7 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
         break;
     case SD_CYLINDER:
         mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
-        mesh_preview->translate({ 0.f, -dims.x * 0.5f, 0.f });
+        mesh_preview->translate({ 0.f, 0.0f, 0.f });
         break;
     case SD_CAPSULE:
         mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
