@@ -188,67 +188,6 @@ fn estimate_normal_with_previews( p : vec3f, p_world: vec3f) -> vec3f
                       k.xxx * sample_sdf_with_preview_without_material( p + k.xxx * DERIVATIVE_STEP, p_world + k.xxx * DERIVATIVE_STEP) );
 }
 
-fn from_brick_to_sculpt_position(brick_position : vec3f) -> vec3f {
-    return brick_position * BRICK_WORLD_SIZE + voxel_center;
-}
-
-fn from_brick_to_atlas_position(brick_position : vec3f) -> vec3f {
-    return (brick_position * 0.5 + 0.5) * 8.0/SDF_RESOLUTION + 1.0/SDF_RESOLUTION + atlas_tile_coordinates;
-}
-
-fn raymarch_with_previews2(ray_origin_space : vec3f, ray_dir : vec3f, max_distance : f32, view_proj : mat4x4f) -> vec4f
-{
-    let ambientColor = vec3f(0.4);
-	let hitColor = vec3f(1.0, 1.0, 1.0);
-	let missColor = vec3f(0.0, 0.0, 0.0);
-    let lightOffset = vec3f(0.0, 0.0, 0.0);
-
-	var depth : f32 = 0.0;
-    var surface : Surface;
-    var distance : f32;
-
-    var brick_position : vec3f;
-    var pos_atlas_space : vec3f;
-    var pos_sculpt_space : vec3f;
-    var i : i32 = 0;
-    var exit : u32 = 0u;
-
-	for (i = 0; depth < max_distance && i < MAX_ITERATIONS; i++)
-    {
-		brick_position = ray_origin_space + ray_dir * depth;
-        pos_atlas_space = from_brick_to_atlas_position(brick_position);
-        pos_sculpt_space = from_brick_to_sculpt_position(brick_position);
-
-        surface = sample_sdf_with_preview(pos_sculpt_space, pos_atlas_space);
-        distance = surface.distance;
-
-		if (distance < MIN_HIT_DIST) {
-            exit = 1u;
-            break;
-		} 
-
-        depth += distance;
-	}
-
-    if (exit == 1u) {
-        let pos_world : vec3f = rotate_point_quat(pos_sculpt_space, (sculpt_data.sculpt_rotation)) + sculpt_data.sculpt_start_position;
-        let epsilon : f32 = 0.000001; // avoids flashing when camera inside sdf
-        let proj_pos : vec4f = view_proj * vec4f(pos_world + ray_dir * epsilon, 1.0);
-        depth = proj_pos.z / proj_pos.w;
-
-        let normal : vec3f = estimate_normal_with_previews(pos_sculpt_space, pos_atlas_space);
-
-        //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
-		//return vec4f(apply_light(-ray_dir, pos_sculpt_space, pos_world, normal, lightPos + lightOffset, surface.material), depth);
-        return vec4f(normal, depth);
-        //return vec4f(surface.material.albedo, depth);
-        //return vec4f(vec3f(surface.material.albedo), depth);
-	}
-
-    // Use a two band spherical harmonic as a skymap
-    return vec4f(0.0, 0.0, 0.0, 0.999);
-}
-
 fn raymarch_with_previews(ray_origin_atlas_space : vec3f, ray_origin_sculpt_space : vec3f, ray_dir : vec3f, max_distance : f32, view_proj : mat4x4f) -> vec4f
 {
     let ambientColor = vec3f(0.4);
