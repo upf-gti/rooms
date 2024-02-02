@@ -81,64 +81,11 @@ fn apply_light(toEye : vec3f, position : vec3f, position_world : vec3f, normal_i
 }
 
 // https://iquilezles.org/articles/normalsSDF/
-fn estimate_normal( p : vec3f, p_world: vec3f) -> vec3f
+fn estimate_normal(sculpt_position : vec3f, atlas_position : vec3f) -> vec3f
 {
     let k : vec2f = vec2f(1.0, -1.0);
-    return normalize( k.xyy * sample_sdf( p + k.xyy * DERIVATIVE_STEP, p_world) + 
-                      k.yyx * sample_sdf( p + k.yyx * DERIVATIVE_STEP, p_world ) + 
-                      k.yxy * sample_sdf( p + k.yxy * DERIVATIVE_STEP, p_world) + 
-                      k.xxx * sample_sdf( p + k.xxx * DERIVATIVE_STEP, p_world) );
-}
-
-
-fn raymarch(ray_origin : vec3f, ray_origin_world : vec3f, ray_dir : vec3f, max_distance : f32, view_proj : mat4x4f) -> vec4f
-{
-    let ambientColor = vec3f(0.4);
-	let hitColor = vec3f(1.0, 1.0, 1.0);
-	let missColor = vec3f(0.0, 0.0, 0.0);
-    let lightOffset = vec3f(0.0, 0.0, 0.0);
-
-	var depth : f32 = 0.0;
-    var distance : f32;
-
-    var pos : vec3f;
-    var pos_world : vec3f;
-    var i : i32 = 0;
-    var exit : u32 = 0u;
-
-	for (i = 0; depth < max_distance && i < MAX_ITERATIONS; i++)
-    {
-		pos = ray_origin + ray_dir * depth;
-        pos_world = ray_origin_world + ray_dir * (depth / SCALE_CONVERSION_FACTOR);
-
-        distance = sample_sdf(pos, pos_world);
-
-		if (distance < MIN_HIT_DIST) {
-            exit = 1u;
-            break;
-		} 
-
-        depth += distance * SCALE_CONVERSION_FACTOR;
-	}
-
-    if (exit == 1u) {
-        let epsilon : f32 = 0.000001; // avoids flashing when camera inside sdf
-        let proj_pos : vec4f = view_proj * vec4f(pos_world + ray_dir * epsilon, 1.0);
-        depth = proj_pos.z / proj_pos.w;
-
-        let normal : vec3f = estimate_normal(pos, pos_world);
-
-        last_found_surface_distance = distance;
-
-        let material : Material = sample_material(pos, pos_world);
-        //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
-		return vec4f(apply_light(-ray_dir, pos, pos_world, normal, lightPos + lightOffset, material), depth);
-        //return vec4f(normal, depth);
-        //return vec4f(material.albedo, depth);
-        //return vec4f(normal, depth);
-        //return vec4f(vec3f(material.albedo), depth);
-	}
-
-    // Use a two band spherical harmonic as a skymap
-    return vec4f(irradiance_spherical_harmonics(ray_dir.xzy), 0.999);
+    return normalize( k.xyy * sample_sdf( sculpt_position + k.xyy * DERIVATIVE_STEP, atlas_position) + 
+                      k.yyx * sample_sdf( sculpt_position + k.yyx * DERIVATIVE_STEP, atlas_position ) + 
+                      k.yxy * sample_sdf( sculpt_position + k.yxy * DERIVATIVE_STEP, atlas_position) + 
+                      k.xxx * sample_sdf( sculpt_position + k.xxx * DERIVATIVE_STEP, atlas_position) );
 }

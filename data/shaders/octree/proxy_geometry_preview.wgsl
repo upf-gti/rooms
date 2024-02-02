@@ -69,7 +69,7 @@ struct FragmentOutput {
 @group(3) @binding(1) var brdf_lut_texture: texture_2d<f32>;
 @group(3) @binding(2) var sampler_clamp: sampler;
 
-fn sample_material(pos : vec3f, padding : vec3f) -> Material {
+fn sample_material(padding : vec3f, pos : vec3f) -> Material {
     var material : Material;
     material.albedo = preview_data.preview_stroke.material.color.xyz;
     material.roughness = preview_data.preview_stroke.material.roughness;
@@ -77,7 +77,7 @@ fn sample_material(pos : vec3f, padding : vec3f) -> Material {
     return material;
 }
 
-fn sample_sdf(position : vec3f, padding : vec3f) -> f32
+fn sample_sdf(padding : vec3f, position : vec3f) -> f32
 {
     // TODO: preview edits
     var material : Material = sample_material(vec3f(0.0, 0.0, 0.0), vec3f(0.0, 0.0, 0.0));
@@ -116,7 +116,7 @@ fn raymarch_sculpt_space(ray_origin_sculpt_space : vec3f, ray_dir : vec3f, max_d
     {
 		pos = ray_origin_sculpt_space + ray_dir * depth;
 
-        distance = sample_sdf(pos, vec3f(0.0));
+        distance = sample_sdf(vec3f(0.0), pos);
 
 		if (distance < MIN_HIT_DIST) {
             exit = 1u;
@@ -132,9 +132,9 @@ fn raymarch_sculpt_space(ray_origin_sculpt_space : vec3f, ray_dir : vec3f, max_d
         let proj_pos : vec4f = view_proj * vec4f(pos_world + ray_dir * epsilon, 1.0);
         depth = proj_pos.z / proj_pos.w;
 
-        let normal : vec3f = estimate_normal(pos, vec3f(0.0));
+        let normal : vec3f = estimate_normal(vec3f(0.0), pos);
 
-        let material : Material = sample_material(pos, vec3f(0.0, 0.0, 0.0));
+        let material : Material = sample_material(vec3f(0.0), pos);
         //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
 		return vec4f(apply_light(-ray_dir, pos, pos_world, normal, lightPos + lightOffset, material), depth);
         //return vec4f(vec3f(material.albedo), depth);
