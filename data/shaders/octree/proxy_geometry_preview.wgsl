@@ -69,7 +69,7 @@ struct FragmentOutput {
 @group(3) @binding(1) var brdf_lut_texture: texture_2d<f32>;
 @group(3) @binding(2) var sampler_clamp: sampler;
 
-fn sample_material(padding : vec3f, pos : vec3f) -> Material {
+fn get_material_preview() -> Material {
     var material : Material;
     material.albedo = preview_data.preview_stroke.material.color.xyz;
     material.roughness = preview_data.preview_stroke.material.roughness;
@@ -77,10 +77,10 @@ fn sample_material(padding : vec3f, pos : vec3f) -> Material {
     return material;
 }
 
-fn sample_sdf(padding : vec3f, position : vec3f) -> f32
+fn sample_sdf_preview(position : vec3f) -> f32
 {
     // TODO: preview edits
-    var material : Material = sample_material(vec3f(0.0, 0.0, 0.0), vec3f(0.0, 0.0, 0.0));
+    var material : Material = get_material_preview();
     var surface : Surface;
     if (preview_data.preview_stroke.operation == OP_SUBSTRACTION || preview_data.preview_stroke.operation == OP_SMOOTH_SUBSTRACTION) {
         surface.distance = -10000.0;
@@ -94,6 +94,16 @@ fn sample_sdf(padding : vec3f, position : vec3f) -> f32
 }
 
 var<private> last_found_surface_distance : f32;
+
+// https://iquilezles.org/articles/normalsSDF/
+fn estimate_normal_preview(sculpt_position : vec3f) -> vec3f
+{
+    let k : vec2f = vec2f(1.0, -1.0);
+    return normalize( k.xyy * sample_sdf_preview( sculpt_position + k.xyy * DERIVATIVE_STEP) + 
+                      k.yyx * sample_sdf_preview( sculpt_position + k.yyx * DERIVATIVE_STEP) + 
+                      k.yxy * sample_sdf_preview( sculpt_position + k.yxy * DERIVATIVE_STEP) + 
+                      k.xxx * sample_sdf_preview( sculpt_position + k.xxx * DERIVATIVE_STEP) );
+}
 
 // Add the generic SDF rendering functions
 #include sdf_render_functions.wgsl
@@ -116,7 +126,7 @@ fn raymarch_sculpt_space(ray_origin_sculpt_space : vec3f, ray_dir : vec3f, max_d
     {
 		pos = ray_origin_sculpt_space + ray_dir * depth;
 
-        distance = sample_sdf(vec3f(0.0), pos);
+        distance = sample_sdf_preview(pos);
 
 		if (distance < MIN_HIT_DIST) {
             exit = 1u;
@@ -132,13 +142,13 @@ fn raymarch_sculpt_space(ray_origin_sculpt_space : vec3f, ray_dir : vec3f, max_d
         let proj_pos : vec4f = view_proj * vec4f(pos_world + ray_dir * epsilon, 1.0);
         depth = proj_pos.z / proj_pos.w;
 
-        let normal : vec3f = estimate_normal(vec3f(0.0), pos);
+        let normal : vec3f = estimate_normal_preview(pos);
 
-        let material : Material = sample_material(vec3f(0.0), pos);
+        let material : Material = get_material_preview();
         //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
-		return vec4f(apply_light(-ray_dir, pos, pos_world, normal, lightPos + lightOffset, material), depth);
+		//return vec4f(apply_light(-ray_dir, pos, pos_world, normal, lightPos + lightOffset, material), depth);
         //return vec4f(vec3f(material.albedo), depth);
-        //return vec4f(normal, depth);
+        return vec4f(normal, depth);
 	}
 
     // Use a two band spherical harmonic as a skymap
@@ -165,12 +175,12 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     out.color = vec4f(final_color, 1.0); // Color
     out.depth = ray_result.a;
 
-    // if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
-    //     out.color = vec4f(0.0, 0.0, 1.0, 1.0);
-    //     out.depth = in.position.z;
-    // } else {
-    //     //discard;
-    // }
+    if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
+        out.color = vec4f(0.0, 0.0, 1.0, 1.0);
+        out.depth = in.position.z;
+    } else {
+        //discard;
+    }
 
     // out.color = vec4f(1.0, 0.0, 0.0, 1.0); // Color
     // out.depth = 0.0;

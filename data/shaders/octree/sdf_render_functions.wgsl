@@ -79,13 +79,3 @@ fn apply_light(toEye : vec3f, position : vec3f, position_world : vec3f, normal_i
     // return vec3f(m.roughness);
 
 }
-
-// https://iquilezles.org/articles/normalsSDF/
-fn estimate_normal(sculpt_position : vec3f, atlas_position : vec3f) -> vec3f
-{
-    let k : vec2f = vec2f(1.0, -1.0);
-    return normalize( k.xyy * sample_sdf( sculpt_position + k.xyy * DERIVATIVE_STEP, atlas_position) + 
-                      k.yyx * sample_sdf( sculpt_position + k.yyx * DERIVATIVE_STEP, atlas_position ) + 
-                      k.yxy * sample_sdf( sculpt_position + k.yxy * DERIVATIVE_STEP, atlas_position) + 
-                      k.xxx * sample_sdf( sculpt_position + k.xxx * DERIVATIVE_STEP, atlas_position) );
-}

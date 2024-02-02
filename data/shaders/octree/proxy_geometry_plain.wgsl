@@ -134,11 +134,11 @@ fn interpolate_material(pos : vec3f) -> Material {
     return result;
 }
 
-fn sample_material(sculpt_position : vec3f, atlas_position : vec3f) -> Material {
-    return interpolate_material(sculpt_position * SDF_RESOLUTION);
+fn sample_material_atlas(atlas_position : vec3f) -> Material {
+    return interpolate_material(atlas_position * SDF_RESOLUTION);
 }
 
-fn sample_sdf(sculpt_position : vec3f, atlas_position : vec3f) -> f32
+fn sample_sdf_atlas(sculpt_position : vec3f) -> f32
 {
     return textureSampleLevel(read_sdf, texture_sampler, sculpt_position, 0.0).r;
 }
@@ -151,16 +151,13 @@ fn sample_sdf_with_preview(sculpt_position : vec3f, atlas_position : vec3f) -> S
     material.metalness = preview_data.preview_stroke.material.metallic;
 
     var surface : Surface;
-    surface.distance = 1000.0; //textureSampleLevel(read_sdf, texture_sampler, position, 0.0).r;
-    //surface.material = interpolate_material(pos_atlas_space * SDF_RESOLUTION);
+    surface.distance = textureSampleLevel(read_sdf, texture_sampler, atlas_position, 0.0).r;
+    surface.material = interpolate_material(atlas_position * SDF_RESOLUTION);
     
-    //if (has_previews == 1u) {
-        for(var i : u32 = 0u; i < preview_data.preview_stroke.edit_count; i++) {
-            surface = evaluate_edit(sculpt_position, preview_data.preview_stroke.primitive, preview_data.preview_stroke.operation, preview_data.preview_stroke.parameters, surface, material, preview_data.preview_stroke.edits[i]);
-        }
-    //}
+    for(var i : u32 = 0u; i < preview_data.preview_stroke.edit_count; i++) {
+        surface = evaluate_edit(sculpt_position, preview_data.preview_stroke.primitive, preview_data.preview_stroke.operation, preview_data.preview_stroke.parameters, surface, material, preview_data.preview_stroke.edits[i]);
+    }
     
-    // TODO: preview edits
     return surface;
 }
 
@@ -169,15 +166,12 @@ fn sample_sdf_with_preview_without_material(sculpt_position : vec3f, atlas_posit
     var material : Material;
 
     var surface : Surface;
-    surface.distance = 1000.0;//textureSampleLevel(read_sdf, texture_sampler, position, 0.0).r;
+    surface.distance = textureSampleLevel(read_sdf, texture_sampler, atlas_position, 0.0).r;
     
-    //if (has_previews == 1u) {
-        for(var i : u32 = 0u; i < preview_data.preview_stroke.edit_count; i++) {
-            surface = evaluate_edit(sculpt_position, preview_data.preview_stroke.primitive, preview_data.preview_stroke.operation, preview_data.preview_stroke.parameters, surface, material, preview_data.preview_stroke.edits[i]);
-        }
-    //}
+    for(var i : u32 = 0u; i < preview_data.preview_stroke.edit_count; i++) {
+        surface = evaluate_edit(sculpt_position, preview_data.preview_stroke.primitive, preview_data.preview_stroke.operation, preview_data.preview_stroke.parameters, surface, material, preview_data.preview_stroke.edits[i]);
+    }
     
-    // TODO: preview edits
     return surface.distance;
 }
 
@@ -194,8 +188,15 @@ fn estimate_normal_with_previews( p : vec3f, p_world: vec3f) -> vec3f
                       k.xxx * sample_sdf_with_preview_without_material( p + k.xxx * DERIVATIVE_STEP, p_world + k.xxx * DERIVATIVE_STEP) );
 }
 
+fn from_brick_to_sculpt_position(brick_position : vec3f) -> vec3f {
+    return brick_position * BRICK_WORLD_SIZE + voxel_center;
+}
 
-fn raymarch_with_previews(ray_origin_sculpt_space : vec3f, ray_origin_atlas_space : vec3f, ray_dir : vec3f, max_distance : f32, view_proj : mat4x4f) -> vec4f
+fn from_brick_to_atlas_position(brick_position : vec3f) -> vec3f {
+    return (brick_position * 0.5 + 0.5) * 8.0/SDF_RESOLUTION + 1.0/SDF_RESOLUTION + atlas_tile_coordinates;
+}
+
+fn raymarch_with_previews2(ray_origin_space : vec3f, ray_dir : vec3f, max_distance : f32, view_proj : mat4x4f) -> vec4f
 {
     let ambientColor = vec3f(0.4);
 	let hitColor = vec3f(1.0, 1.0, 1.0);
@@ -206,15 +207,17 @@ fn raymarch_with_previews(ray_origin_sculpt_space : vec3f, ray_origin_atlas_spac
     var surface : Surface;
     var distance : f32;
 
-    var pos_sculpt_space : vec3f;
+    var brick_position : vec3f;
     var pos_atlas_space : vec3f;
+    var pos_sculpt_space : vec3f;
     var i : i32 = 0;
     var exit : u32 = 0u;
 
 	for (i = 0; depth < max_distance && i < MAX_ITERATIONS; i++)
     {
-		pos_sculpt_space = ray_origin_sculpt_space + ray_dir * depth;
-        pos_atlas_space = ray_origin_atlas_space + ray_dir * (depth / SCALE_CONVERSION_FACTOR);
+		brick_position = ray_origin_space + ray_dir * depth;
+        pos_atlas_space = from_brick_to_atlas_position(brick_position);
+        pos_sculpt_space = from_brick_to_sculpt_position(brick_position);
 
         surface = sample_sdf_with_preview(pos_sculpt_space, pos_atlas_space);
         distance = surface.distance;
@@ -246,8 +249,70 @@ fn raymarch_with_previews(ray_origin_sculpt_space : vec3f, ray_origin_atlas_spac
     return vec4f(0.0, 0.0, 0.0, 0.999);
 }
 
+fn raymarch_with_previews(ray_origin_atlas_space : vec3f, ray_origin_sculpt_space : vec3f, ray_dir : vec3f, max_distance : f32, view_proj : mat4x4f) -> vec4f
+{
+    let ambientColor = vec3f(0.4);
+	let hitColor = vec3f(1.0, 1.0, 1.0);
+	let missColor = vec3f(0.0, 0.0, 0.0);
+    let lightOffset = vec3f(0.0, 0.0, 0.0);
 
-fn raymarch(ray_origin : vec3f, ray_origin_world : vec3f, ray_dir : vec3f, max_distance : f32, view_proj : mat4x4f) -> vec4f
+	var depth : f32 = 0.0;
+    var surface : Surface;
+    var distance : f32;
+
+    var pos_sculpt_space : vec3f;
+    var pos_atlas_space : vec3f;
+    var i : i32 = 0;
+    var exit : u32 = 0u;
+
+	for (i = 0; depth < max_distance && i < MAX_ITERATIONS; i++)
+    {
+		pos_sculpt_space = ray_origin_sculpt_space + ray_dir * (depth / SCALE_CONVERSION_FACTOR);
+        pos_atlas_space = ray_origin_atlas_space + ray_dir * depth ;
+
+        surface = sample_sdf_with_preview(pos_sculpt_space, pos_atlas_space);
+        distance = surface.distance;
+
+		if (distance < MIN_HIT_DIST) {
+            exit = 1u;
+            break;
+		} 
+
+        depth += distance;
+	}
+
+    if (exit == 1u) {
+        
+        let pos_world : vec3f = rotate_point_quat(pos_sculpt_space, (sculpt_data.sculpt_rotation)) + sculpt_data.sculpt_start_position;
+        let epsilon : f32 = 0.000001; // avoids flashing when camera inside sdf
+        let proj_pos : vec4f = view_proj * vec4f(pos_world + ray_dir * epsilon, 1.0);
+        depth = proj_pos.z / proj_pos.w;
+
+        let normal : vec3f = estimate_normal_with_previews(pos_sculpt_space, pos_atlas_space);
+
+        //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
+		//return vec4f(apply_light(-ray_dir, pos_sculpt_space, pos_world, normal, lightPos + lightOffset, surface.material), depth);
+        return vec4f(normal, depth);
+        //return vec4f(surface.material.albedo, depth);
+        //return vec4f(vec3f(surface.material.albedo), depth);
+	}
+
+    // Use a two band spherical harmonic as a skymap
+    return vec4f(0.0, 0.0, 0.0, 0.999);
+}
+
+// https://iquilezles.org/articles/normalsSDF/
+fn estimate_normal_atlas(atlas_position : vec3f) -> vec3f
+{
+    let k : vec2f = vec2f(1.0, -1.0);
+    return normalize( k.xyy * sample_sdf_atlas(atlas_position + k.xyy * DERIVATIVE_STEP) + 
+                      k.yyx * sample_sdf_atlas(atlas_position + k.yyx * DERIVATIVE_STEP) + 
+                      k.yxy * sample_sdf_atlas(atlas_position + k.yxy * DERIVATIVE_STEP) + 
+                      k.xxx * sample_sdf_atlas(atlas_position + k.xxx * DERIVATIVE_STEP) );
+}
+
+
+fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3f, ray_dir : vec3f, max_distance : f32, view_proj : mat4x4f) -> vec4f
 {
     let ambientColor = vec3f(0.4);
 	let hitColor = vec3f(1.0, 1.0, 1.0);
@@ -257,48 +322,52 @@ fn raymarch(ray_origin : vec3f, ray_origin_world : vec3f, ray_dir : vec3f, max_d
 	var depth : f32 = 0.0;
     var distance : f32;
 
-    var pos : vec3f;
-    var pos_world : vec3f;
+    var position_in_atlas : vec3f;
     var i : i32 = 0;
     var exit : u32 = 0u;
 
 	for (i = 0; depth < max_distance && i < MAX_ITERATIONS; i++)
     {
-		pos = ray_origin + ray_dir * depth;
-        pos_world = ray_origin_world + ray_dir * (depth / SCALE_CONVERSION_FACTOR);
+		position_in_atlas = ray_origin_in_atlas_space + ray_dir * depth;
 
-        distance = sample_sdf(pos, pos_world);
+        distance = sample_sdf_atlas(position_in_atlas);
 
 		if (distance < MIN_HIT_DIST) {
             exit = 1u;
             break;
 		} 
 
-        depth += distance * SCALE_CONVERSION_FACTOR;
+        depth += distance;
 	}
 
     if (exit == 1u) {
+        // From atlas position, to sculpt, to world
+        let position_in_sculpt : vec3f = ray_origin_in_sculpt_space + ray_dir * (depth / SCALE_CONVERSION_FACTOR);
+        let position_in_world : vec3f = rotate_point_quat(position_in_sculpt, (sculpt_data.sculpt_rotation)) + sculpt_data.sculpt_start_position;
+
         let epsilon : f32 = 0.000001; // avoids flashing when camera inside sdf
-        let proj_pos : vec4f = view_proj * vec4f(pos_world + ray_dir * epsilon, 1.0);
+        let proj_pos : vec4f = view_proj * vec4f(position_in_world + ray_dir * epsilon, 1.0);
         depth = proj_pos.z / proj_pos.w;
 
-        let normal : vec3f = estimate_normal(pos, pos_world);
+        let normal : vec3f = estimate_normal_atlas(position_in_atlas);
 
         last_found_surface_distance = distance;
 
-        let material : Material = sample_material(pos, pos_world);
+        let material : Material = sample_material_atlas(position_in_atlas);
         //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
-		return vec4f(apply_light(-ray_dir, pos, pos_world, normal, lightPos + lightOffset, material), depth);
-        //return vec4f(normal, depth);
+		//return vec4f(apply_light(-ray_dir, position_in_world, position_in_world, normal, lightPos + lightOffset, material), depth);
+        return vec4f(normal, depth);
         //return vec4f(material.albedo, depth);
         //return vec4f(normal, depth);
         //return vec4f(vec3f(material.albedo), depth);
 	}
 
     // Use a two band spherical harmonic as a skymap
-    return vec4f(irradiance_spherical_harmonics(ray_dir.xzy), 0.999);
+    return vec4f(0.0, 0.0, 0.0, 0.999);
 }
 
+var<private> voxel_center : vec3f;
+var<private> atlas_tile_coordinates : vec3f;
 
 var<private> last_found_surface_distance : f32;
 
@@ -310,14 +379,18 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var out: FragmentOutput;
     let ray_dir_world : vec3f = normalize(in.vertex_in_world_space.xyz - eye_position);
     let ray_dir_sculpt : vec3f = rotate_point_quat(ray_dir_world, quat_conj(sculpt_data.sculpt_rotation));
+    let ray_dir_atlas : vec3f = rotate_point_quat(normalize(in.in_atlas_pos.xyz - eye_position), quat_conj(sculpt_data.sculpt_rotation));
     
     let raymarch_distance : f32 = ray_AABB_intersection_distance(in.vertex_in_sculpt_space, ray_dir_sculpt, in.voxel_center, vec3f(BRICK_WORLD_SIZE));
 
+    atlas_tile_coordinates = in.atlas_tile_coordinate;
+    voxel_center = in.voxel_center;
+
     var ray_result : vec4f;
     if (in.has_previews == 1) {
-        ray_result = raymarch_with_previews(in.vertex_in_sculpt_space.xyz, in.in_atlas_pos.xyz, ray_dir_sculpt, raymarch_distance, camera_data.view_projection);
+        ray_result = raymarch_with_previews(in.in_atlas_pos.xyz, in.vertex_in_sculpt_space.xyz, ray_dir_sculpt, raymarch_distance* SCALE_CONVERSION_FACTOR, camera_data.view_projection);
     } else {
-        ray_result = raymarch(in.in_atlas_pos.xyz, in.vertex_in_world_space.xyz, ray_dir_sculpt, raymarch_distance * SCALE_CONVERSION_FACTOR, camera_data.view_projection);
+        ray_result = raymarch(in.in_atlas_pos.xyz, in.vertex_in_sculpt_space.xyz, ray_dir_sculpt, raymarch_distance * SCALE_CONVERSION_FACTOR, camera_data.view_projection);
     }
     var final_color : vec3f = ray_result.rgb; 
 
@@ -328,10 +401,10 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     out.color = vec4f(final_color, 1.0); // Color
     out.depth = ray_result.a;
 
-    // if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
-    //     out.color = vec4f(in.color.x, in.color.y, in.color.z, 1.0);
-    //     out.depth = in.position.z;
-    // }
+    if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
+        out.color = vec4f(in.color.x, in.color.y, in.color.z, 1.0);
+        out.depth = in.position.z;
+    }
 
     // out.color = vec4f(1.0, 0.0, 0.0, 1.0); // Color
     // out.depth = 0.0;
