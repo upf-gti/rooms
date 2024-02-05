@@ -26,6 +26,8 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
     // total size considering leaves and intermediate levels
     octree_total_size = (pow(8, octree_depth + 1) - 1) / 7;
 
+    // Scale the size of a brick
+    Shader::set_custom_define("WORLD_SPACE_SCALE", powf(2.0, octree_depth + 3)); // Worldspace scale is 1/octree_max_width
     Shader::set_custom_define("OCTREE_DEPTH", octree_depth);
     Shader::set_custom_define("OCTREE_TOTAL_SIZE", octree_total_size);
     Shader::set_custom_define("PREVIEW_PROXY_BRICKS_COUNT", PREVIEW_PROXY_BRICKS_COUNT);
