@@ -785,7 +785,9 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
     }
 
     {
-        std::vector<Uniform*> uniforms = { &sdf_texture_uniform, &octree_uniform,
+        octree_indirect_brick_removal_buffer_biding_2 = octree_indirect_brick_removal_buffer;
+        octree_indirect_brick_removal_buffer_biding_2.binding = 7u;
+        std::vector<Uniform*> uniforms = { &sdf_texture_uniform, &octree_uniform, &octree_indirect_brick_removal_buffer_biding_2,
                                            &octree_edit_culling_data, &octree_proxy_instance_buffer, &sdf_material_texture_uniform };
         compute_octree_write_to_texture_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_write_to_texture_shader, 0);
     }

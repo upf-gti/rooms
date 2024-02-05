@@ -91,6 +91,7 @@ class RaymarchingRenderer {
     Uniform         octree_proxy_indirect_buffer;
     Uniform         octree_edit_culling_data;
     Uniform         octree_indirect_brick_removal_buffer;
+    Uniform         octree_indirect_brick_removal_buffer_biding_2;
     Uniform         octree_brick_copy_buffer;
     Uniform         proxy_geometry_eye_position;
     WGPUBindGroup   render_camera_bind_group = nullptr;
