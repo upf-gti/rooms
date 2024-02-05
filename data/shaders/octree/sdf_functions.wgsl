@@ -183,21 +183,6 @@ fn sdCylinder(p : vec3f, a : vec3f, rotation : vec4f, r : f32, h : f32, rr : f32
     sf.distance = min(max(d.x, d.y), 0.0) + length(max(d, vec2f(0.0))) - rr;
     sf.material = material;
     return sf;
-
-    // let pa : vec3f = posA;
-    // let ba : vec3f = b - a;
-    // let baba : f32 = dot(ba, ba);
-    // let paba : f32 = dot(pa, ba);
-
-    // let x  : f32 = length(pa * baba - ba * paba) - r * baba;
-    // let y  : f32 = abs(paba - baba * 0.5) - baba * 0.5;
-    // let x2 : f32 = x * x;
-    // let y2 : f32 = y * y * baba;
-    // let d  : f32 = select(select(0.0, x2, x > 0.0) + select(0.0, y2, y > 0.0), -min(x2, y2), max(x, y) < 0.0);
-
-    // sf.distance = sign(d) * sqrt(abs(d)) / baba - rr;
-    // sf.color = color;
-    // return sf;
 }
 
 // t: (circle radius, thickness radius)

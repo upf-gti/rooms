@@ -80,7 +80,7 @@
                     "type": "button",
                     "texture": "data/textures/cone.png",
                     "unique_selection": true,
-                    "disabled": true
+                    "disabled": false
                 },
                 {
                     "name": "capsule",
