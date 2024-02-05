@@ -18,7 +18,6 @@
 
 EntityMesh* RoomsEngine::skybox = nullptr;
 std::vector<Entity*> RoomsEngine::entities;
-bool RoomsEngine::rotate_scene = false;
 
 int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen)
 {
@@ -52,11 +51,6 @@ void RoomsEngine::update(float delta_time)
 
     RoomsRenderer* renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     skybox->set_translation(renderer->get_camera_eye());
-
-#ifdef __EMSCRIPTEN__
-    if (rotate_scene)
-        for (auto e : entities) e->rotate(delta_time, normals::pY);
-#endif
 
     sculpt_editor.update(delta_time);
 
@@ -314,23 +308,3 @@ bool RoomsEngine::show_tree_recursive(Entity* entity)
 
     return false;
 }
-
-#ifdef __EMSCRIPTEN__
-void RoomsEngine::set_skybox_texture(const std::string& filename)
-{
-    Texture* tex = RendererStorage::get_texture(filename);
-    skybox->set_surface_material_diffuse(0, tex);
-}
-
-void RoomsEngine::load_glb(const std::string& filename)
-{
-    // TODO: We should destroy entities...
-    entities.clear();
-    parse_gltf(filename.c_str(), entities);
-}
-
-void RoomsEngine::toggle_rotation()
-{
-    rotate_scene = !rotate_scene;
-}
-#endif
