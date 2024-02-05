@@ -192,13 +192,27 @@ void SculptEditor::update(float delta_time)
         renderer->set_sculpt_start_position(sculpt_start_position + translation_diff);
 
         rotation_started = true;
+
+        // Edit rotation WHILE rotation
+        glm::quat tmp_rotation = sculpt_rotation * rotation_diff;
+        edit_to_add.position -= (sculpt_start_position + translation_diff);
+        edit_to_add.position = tmp_rotation * edit_to_add.position;
+        edit_to_add.rotation *= (glm::conjugate(tmp_rotation));
     }
-    else if (rotation_started) {
-        sculpt_rotation = sculpt_rotation * rotation_diff;
-        sculpt_start_position = sculpt_start_position + translation_diff;
-        rotation_started = false;
-        rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
-        translation_diff = {};
+    else {
+        // If rotation has stopped
+        if (rotation_started) {
+            sculpt_rotation = sculpt_rotation * rotation_diff;
+            sculpt_start_position = sculpt_start_position + translation_diff;
+            rotation_started = false;
+            rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
+            translation_diff = {};
+        }
+
+        // Push edits in 3d texture space
+        edit_to_add.position -= (sculpt_start_position + translation_diff);
+        edit_to_add.position = (sculpt_rotation * rotation_diff) * edit_to_add.position;
+        edit_to_add.rotation *= (glm::conjugate(sculpt_rotation) * rotation_diff);
     }
 
     // Update edit dimensions
@@ -216,11 +230,6 @@ void SculptEditor::update(float delta_time)
 
     // Update current edit properties...
 
-    // Push edits in 3d texture space
-    edit_to_add.position -= (sculpt_start_position + translation_diff);
-    edit_to_add.position = (sculpt_rotation * rotation_diff) * edit_to_add.position;
-    edit_to_add.rotation *= (sculpt_rotation * rotation_diff);
-
     // if any parameter changed or just stopped sculpting
     if (stroke_parameters.is_dirty() || (was_tool_used && !is_tool_used)) {
         renderer->change_stroke(stroke_parameters);
@@ -231,10 +240,6 @@ void SculptEditor::update(float delta_time)
         new_edits.push_back(edit_to_add);
         // Add recent color only when is used...
         add_recent_color(stroke_parameters.get_material().color);
-    }
-
-    if (renderer->get_openxr_available()) {
-        preview_tmp_edits.push_back(edit_to_add);
     }
 
     // Mirror functionality
