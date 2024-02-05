@@ -87,7 +87,7 @@
                     "type": "button",
                     "texture": "data/textures/capsule.png",
                     "unique_selection": true,
-                    "disabled": true
+                    "disabled": false
                 },
                 {
                     "name": "cylinder",
