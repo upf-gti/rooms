@@ -77,7 +77,6 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 #ifdef ALBEDO_TEXTURE
     let albedo_texture : vec4f = textureSample(albedo_texture, sampler_2d, in.uv);
     m.albedo = albedo_texture.rgb * in.color;
-    m.albedo = pow(m.albedo, vec3f(2.2)) * albedo.rgb;
     alpha = albedo_texture.a * albedo.a;
 #else
     m.albedo = albedo.rgb;
@@ -92,7 +91,6 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
 #ifdef EMISSIVE_TEXTURE
     m.emissive = textureSample(emissive_texture, sampler_2d, in.uv).rgb;
-    m.emissive = pow(m.emissive, vec3f(2.2)) * emissive;
 #else
     m.emissive = emissive;
 #endif
