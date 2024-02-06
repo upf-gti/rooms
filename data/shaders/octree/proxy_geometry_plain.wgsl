@@ -321,13 +321,13 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     let ray_dir_atlas : vec3f = rotate_point_quat(normalize(in.in_atlas_pos.xyz - eye_position), quat_conj(sculpt_data.sculpt_rotation));
     
     let raymarch_distance : f32 = ray_AABB_intersection_distance(in.vertex_in_sculpt_space, ray_dir_sculpt, in.voxel_center, vec3f(BRICK_WORLD_SIZE));
-
+    
     atlas_tile_coordinates = in.atlas_tile_coordinate;
     voxel_center = in.voxel_center;
 
     var ray_result : vec4f;
     if (in.has_previews == 1) {
-        ray_result = raymarch_with_previews(in.in_atlas_pos.xyz, in.vertex_in_sculpt_space.xyz, ray_dir_sculpt, raymarch_distance* SCALE_CONVERSION_FACTOR, camera_data.view_projection);
+        ray_result = raymarch_with_previews(in.in_atlas_pos.xyz, in.vertex_in_sculpt_space.xyz, ray_dir_sculpt, raymarch_distance * SCALE_CONVERSION_FACTOR, camera_data.view_projection);
     } else {
         ray_result = raymarch(in.in_atlas_pos.xyz, in.vertex_in_sculpt_space.xyz, ray_dir_sculpt, raymarch_distance * SCALE_CONVERSION_FACTOR, camera_data.view_projection);
     }
@@ -340,10 +340,13 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     out.color = vec4f(final_color, 1.0); // Color
     out.depth = ray_result.a;
 
-    if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
-        out.color = vec4f(in.color.x, in.color.y, in.color.z, 1.0);
-        out.depth = in.position.z;
-    }
+    // if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
+    //     out.color = vec4f(in.color.x, in.color.y, in.color.z, 1.0);
+    //     out.depth = in.position.z;
+    // }
+
+    // out.color = vec4f(raymarch_distance * 10.0, 0.0, 0.0, 0.0); // Color
+    // out.depth = in.position.z / in.position.w;
 
     // out.color = vec4f(1.0, 0.0, 0.0, 1.0); // Color
     // out.depth = 0.0;
