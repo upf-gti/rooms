@@ -36,8 +36,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     let proxy_data : ProxyInstanceData = octree_proxy_data.instance_data[brick_index];
 
     let voxel_world_coords : vec3f = proxy_data.position + (10.0 / vec3f(local_id) - 5.0) * PIXEL_WORLD_SIZE;
-    let voxel_AABB_min : vec3f = voxel_world_coords - vec3f(PIXEL_WORLD_SIZE / 2.0);
-    let voxel_AABB_max : vec3f = voxel_world_coords + vec3f(PIXEL_WORLD_SIZE / 2.0);
 
     // Get the 3D atlas coords of the brick, with a stride of 10 (the size of the brick)
     let atlas_tile_coordinate : vec3u = 10 * vec3u(proxy_data.atlas_tile_index % BRICK_COUNT,
@@ -48,8 +46,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     
     let parent_octree_index : u32 =  proxy_data.octree_parent_id;
     let octant_center : vec3f = proxy_data.position;
-
-    let level_half_size : f32 = SCULPT_MAX_SIZE / pow(2.0, f32(level + 1));
 
     var sSurface : Surface;
     sSurface.distance = 10000.0;
@@ -134,14 +130,14 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
         let filled_pixel_count : u32 = atomicLoad(&used_pixels);
         if (filled_pixel_count == 0u) {
-            octree_proxy_data.instance_data[brick_index].in_use = 0;
+            // octree_proxy_data.instance_data[brick_index].in_use = 0;
+            let brick_to_delete_idx = atomicLoad(&indirect_brick_removal.brick_removal_counter);
+            // // Add the brick to the indirect
+            // let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
+            // indirect_brick_removal.brick_removal_buffer[brick_to_delete_idx] = brick_index;
 
-            // Add the brick to the indirect
-            let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
-            indirect_brick_removal.brick_removal_buffer[brick_to_delete_idx] = brick_index;
-
-            octree.data[octree_leaf_id].octant_center_distance = vec2f(10000.0, 10000.0);
-            octree.data[octree_leaf_id].tile_pointer = 0u;
+            // octree.data[octree_leaf_id].octant_center_distance = vec2f(10000.0, 10000.0);
+            // octree.data[octree_leaf_id].tile_pointer = 0u;
         } else {
             // Add "filled" flag and remove "interior" flag
             octree.data[octree_leaf_id].tile_pointer = brick_index | FILLED_BRICK_FLAG;
