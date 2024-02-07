@@ -157,31 +157,25 @@ fn FresnelSchlickRoughness(n_dot_v : f32, F0 : vec3f, roughness : f32) -> vec3f
     return F0 + (max(vec3f(1.0 - roughness), F0) - F0) * pow(1.0 - n_dot_v, 5.0);
 }
 
-//Javi Agenjo Snipet for Bump Mapping
-
-fn cotangent_frame( N : vec3f, p : vec3f, uv : vec2f ) -> mat3x3f
+// http://www.thetenthplanet.de/archives/1180
+fn cotangent_frame( normal : vec3f, p : vec3f, uv : vec2f ) -> mat3x3f
 {
-    // get edge vectors of the pixel triangle
-    var dp1 : vec3f = dpdx( p );
-    var dp2 : vec3f = dpdy( p );
-    var duv1 : vec2f = dpdx( uv );
-    var duv2 : vec2f = dpdy( uv );
+    let pos_dx : vec3f = dpdx(p);
+    let pos_dy : vec3f = dpdy(p);
+    let tex_dx : vec3f = dpdx(vec3f(uv, 0.0));
+    let tex_dy : vec3f = dpdy(vec3f(uv, 0.0));
+    var t : vec3f = (tex_dy.y * pos_dx - tex_dx.y * pos_dy) / (tex_dx.x * tex_dy.y - tex_dy.x * tex_dx.y);
 
-    // solve the linear system
-    var dp2perp : vec3f = cross( dp2, N );
-    var dp1perp : vec3f = cross( N, dp1 );
-    var T : vec3f = dp2perp * duv1.x + dp1perp * duv2.x;
-    var B : vec3f = dp2perp * duv1.y + dp1perp * duv2.y;
+    t = normalize(t - normal * dot(normal, t));
+    let b : vec3f = normalize(cross(normal, t));
 
-    // construct a scale-invariant frame
-    var invmax : f32 = inverseSqrt( max( dot(T,T), dot(B,B) ) );
-    return mat3x3( T * invmax, B * invmax, N );
+    return mat3x3(t, b, normal);
 }
 
 fn perturb_normal( N : vec3f, V : vec3f, texcoord : vec2f, normal_color : vec3f ) -> vec3f
 {
     // assume N, the interpolated vertex normal and
     // V, the view vector (vertex to eye)
-    var TBN : mat3x3f = cotangent_frame(N, V, texcoord);
+    var TBN : mat3x3f = cotangent_frame(N, -V, texcoord);
     return normalize(TBN * normal_color);
 }

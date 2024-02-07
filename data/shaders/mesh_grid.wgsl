@@ -51,7 +51,7 @@ fn pristine_grid(uv : vec2f, lineWidth : vec2f) -> f32
 
 const GRID_AREA_SIZE : f32 = 3.0;
 const GRID_QUAD_SIZE :f32 = 0.5;
-const LINE_WIDTH : f32 = 0.04;
+const LINE_WIDTH : f32 = 0.02;
 
 @fragment
 fn fs_main(in: VertexOutput) -> FragmentOutput {
@@ -65,7 +65,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     var out: FragmentOutput;
 
-    out.color = vec4f(0.57, 0.57, 0.57, 1.0) *
+    out.color = vec4f(0.27, 0.27, 0.27, 1.0) *
                 pristine_grid(wrapped_uvs, vec2f(LINE_WIDTH));
 
     if (out.color.a < 0.1) {

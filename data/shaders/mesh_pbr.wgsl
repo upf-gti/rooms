@@ -54,7 +54,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     out.position = camera_data.view_projection * world_position;
     out.uv = in.uv; // forward to the fragment shader
     out.color = in.color * instance_data.color.rgb;
-    out.normal = (instance_data.model * vec4f(in.normal, 0.0)).xyz;
+    out.normal = (instance_data.rotation * vec4f(in.normal, 0.0)).xyz;
     return out;
 }
 
@@ -119,6 +119,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
 #ifdef NORMAL_TEXTURE
     var normal_color = textureSample(normal_texture, sampler_2d, in.uv).rgb * 2.0 - 1.0;
+    // normal_color.y = -normal_color.y;
     m.normal = perturb_normal(m.normal, m.view_dir, in.uv, normal_color);
 #endif
 
@@ -126,7 +127,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     // var distance : f32 = length(light_position - m.pos);
     // var attenuation : f32 = pow(1.0 - saturate(distance/light_max_radius), 1.5);
-    var final_color : vec3f = vec3f(0.0); 
+    var final_color : vec3f = vec3f(0.0);
     // final_color += get_direct_light(m, vec3f(1.0), 1.0);
 
     final_color += m.emissive;

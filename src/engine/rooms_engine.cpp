@@ -220,6 +220,16 @@ void RoomsEngine::render_gui()
         {
             if (ImGui::TreeNodeEx("Root", ImGuiTreeNodeFlags_DefaultOpen))
             {
+                if (ImGui::BeginPopupContextItem()) // <-- use last item id as popup id
+                {
+                    if (ImGui::Button("Delete All")) {
+                        entities.clear();
+                        ImGui::CloseCurrentPopup();
+                    }
+
+                    ImGui::EndPopup();
+                }
+
                 std::vector<Entity*>::iterator it = entities.begin();
                 while (it != entities.end())
                 {
@@ -249,7 +259,7 @@ void RoomsEngine::render_gui()
             ImGui::EndTabItem();
         }
         ImGui::EndTabBar();
-}
+    }
     ImGui::Separator();
 
     ImGui::End();
