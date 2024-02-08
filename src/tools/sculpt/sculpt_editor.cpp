@@ -1,8 +1,5 @@
 #include "sculpt_editor.h"
 
-#include "sculpt.h"
-#include "paint.h"
-#include "sweep.h"
 
 #include "includes.h"
 
@@ -48,17 +45,6 @@ void SculptEditor::initialize()
     axis_lock_gizmo.initialize(POSITION_GIZMO, sculpt_start_position);
     mirror_gizmo.initialize(POSITION_GIZMO, sculpt_start_position);
 
-    tools[SCULPT] = new SculptTool();
-    tools[PAINT] = new PaintTool();
-    tools[SWEEP] = new SweepTool();
-
-    dynamic_cast<SweepTool*>(tools[SWEEP])->set_sculpt_editor(this);
-
-    for (auto& tool : tools) {
-        if (tool) {
-            tool->initialize();
-        }
-    }
 
     // Edit preview mesh
     {
@@ -110,6 +96,122 @@ void SculptEditor::clean()
     }
 }
 
+bool SculptEditor::is_tool_being_used() {
+#ifdef XR_SUPPORT
+    return Input::was_key_pressed(GLFW_KEY_SPACE) ||
+        (stamp_enabled ? Input::was_trigger_pressed(HAND_RIGHT) : Input::get_trigger_value(HAND_RIGHT) > 0.5f);
+#else
+    return Input::is_key_pressed(GLFW_KEY_SPACE);
+#endif
+}
+
+bool SculptEditor::edit_update(float delta_time) {
+    bool is_tool_used = is_tool_being_used();
+
+    // Update edit transform
+    edit_to_add.position = Input::get_controller_position(HAND_RIGHT);
+    edit_to_add.rotation = glm::inverse(Input::get_controller_rotation(HAND_RIGHT));
+
+    // Update edit dimensions
+    {
+        float size_multiplier = Input::get_thumbstick_value(HAND_RIGHT).y * delta_time * 0.1f;
+        dimensions_dirty |= (fabsf(size_multiplier) > 0.f);
+        glm::vec3 new_dimensions = glm::clamp(size_multiplier + glm::vec3(edit_to_add.dimensions), 0.001f, 0.1f);
+        edit_to_add.dimensions = glm::vec4(new_dimensions, edit_to_add.dimensions.w);
+
+        // Update primitive specific size
+        size_multiplier = Input::get_thumbstick_value(HAND_LEFT).y * delta_time * 0.1f;
+        edit_to_add.dimensions.w = glm::clamp(size_multiplier + edit_to_add.dimensions.w, 0.001f, 0.1f);
+        dimensions_dirty |= (fabsf(size_multiplier) > 0.f);
+    }
+
+    // Edit modifiers
+    {
+        if (snap_to_grid) {
+            float grid_multiplier = 1.f / snap_grid_size;
+            // Uncomment for grid size of half of the edit radius
+            // grid_multiplier = 1.f / (edit_to_add.dimensions.x / 2.f);
+            edit_to_add.position = glm::round(edit_to_add.position * grid_multiplier) / grid_multiplier;
+        }
+
+        if (axis_lock) {
+
+            axis_lock_position = axis_lock_gizmo.update(axis_lock_position, delta_time);
+
+            glm::vec3 locked_pos = edit_to_add.position;
+
+            if (axis_lock_mode & AXIS_LOCK_X)
+                locked_pos.x = axis_lock_position.x;
+            else if (axis_lock_mode & AXIS_LOCK_Y)
+                locked_pos.y = axis_lock_position.y;
+            else if (axis_lock_mode & AXIS_LOCK_Z)
+                locked_pos.z = axis_lock_position.z;
+
+            edit_to_add.position = locked_pos;
+            edit_to_add.rotation = glm::quat();
+        }
+    }
+
+    // Operation changer for the different tools
+    {
+        if (Input::was_button_pressed(XR_BUTTON_Y)) {
+            sdOperation op = stroke_parameters.get_operation();
+
+            if (current_tool == SCULPT) {
+                switch (op) {
+                case OP_UNION:
+                    op = OP_SUBSTRACTION;
+                    break;
+                case OP_SUBSTRACTION:
+                    op = OP_UNION;
+                    break;
+                case OP_SMOOTH_UNION:
+                    op = OP_SMOOTH_SUBSTRACTION;
+                    break;
+                case OP_SMOOTH_SUBSTRACTION:
+                    op = OP_SMOOTH_UNION;
+                    break;
+                default:
+                    break;
+                }
+            }
+            else if (current_tool == PAINT) {
+                op = OP_PAINT ? OP_SMOOTH_PAINT : OP_PAINT;
+            }
+
+            stroke_parameters.set_operation(op);
+        }
+    }
+
+    // Debug sculpting
+    {
+        if (current_tool == SCULPT && is_tool_being_used()) {
+            // For debugging sculpture without a headset
+            if (!Renderer::instance->get_openxr_available()) {
+
+                //edit_to_add.position = glm::vec3(0.0);
+                edit_to_add.position = glm::vec3(glm::vec3(0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1)));
+                glm::vec3 euler_angles(random_f() * 90, random_f() * 90, random_f() * 90);
+                edit_to_add.dimensions = glm::vec4(0.05f, 0.01f, 0.01f, 0.01f) * 10.0f;
+                //edit_to_add.dimensions = (edit_to_add.operation == OP_SUBSTRACTION) ? 3.0f * glm::vec4(0.2f, 0.2f, 0.2f, 0.2f) : glm::vec4(0.2f, 0.2f, 0.2f, 0.2f);
+                edit_to_add.rotation = glm::inverse(glm::quat(euler_angles));
+                // Stroke
+                //stroke_parameters.set_color(glm::vec4(0.1f, 0.1f, 0.1f, 1.f));
+                //stroke_parameters.set_primitive((random_f() > 0.25f) ? ((random_f() > 0.5f) ? SD_SPHERE : SD_CYLINDER) : SD_BOX);
+                ////stroke_parameters.primitive = (random_f() > 0.5f) ? SD_SPHERE : SD_BOX;
+                //// stroke_parameters.material = glm::vec4(random_f(), random_f(), 0.f, 0.f);
+                ////stroke_parameters.set_operation( (random_f() > 0.5f) ? OP_UNION : OP_SUBSTRACTION);
+                //stroke_parameters.set_operation(OP_UNION);
+                //stroke_parameters.set_material_metallic(0.9);
+                //stroke_parameters.set_material_roughness(0.2);
+                //stroke_parameters.set_smooth_factor(0.01);
+            }
+        }
+    }
+
+    return is_tool_used;
+}
+
 void SculptEditor::update(float delta_time)
 {
     if (current_tool == NONE) {
@@ -123,61 +225,92 @@ void SculptEditor::update(float delta_time)
     gui.update(delta_time);
     helper_gui.update(delta_time);
 
-    Tool& tool_used = *tools[current_tool];
+    bool is_tool_used = edit_update(delta_time);
 
-    // Update tool properties...
-    tool_used.stamp = stamp_enabled;
-    // ...
+    // Interaction input
+    {
+        if (Input::was_key_pressed(GLFW_KEY_U) || Input::was_grab_pressed(HAND_LEFT)) {
+            renderer->undo();
+        }
 
-    bool is_tool_used = tool_used.update(delta_time, stroke_parameters);
-
-    Edit& edit_to_add = tool_used.get_edit_to_add();
-
-    if (Input::was_key_pressed(GLFW_KEY_U) || Input::was_grab_pressed(HAND_LEFT)) {
-        renderer->undo();
+        if (Input::was_key_pressed(GLFW_KEY_R) || Input::was_grab_pressed(HAND_RIGHT)) {
+            renderer->redo();
+        }
     }
 
-    if (Input::was_key_pressed(GLFW_KEY_R) || Input::was_grab_pressed(HAND_RIGHT)) {
-        renderer->redo();
+    // Sculpt lifecicle
+    {
+        // Set center of sculpture and reuse it as mirror center
+        if (!sculpt_started) {
+            sculpt_start_position = edit_to_add.position;
+            renderer->set_sculpt_start_position(sculpt_start_position);
+            mirror_origin = sculpt_start_position;
+            axis_lock_position = sculpt_start_position;
+        }
+
+        // Mark the start of the sculpture for the origin
+        if (current_tool == SCULPT && is_tool_used) {
+            sculpt_started = true;
+        }
     }
 
-    if (snap_to_grid) {
-        float grid_multiplier = 1.f / snap_grid_size;
-        // Uncomment for grid size of half of the edit radius
-        // grid_multiplier = 1.f / (edit_to_add.dimensions.x / 2.f);
-        edit_to_add.position = glm::round(edit_to_add.position * grid_multiplier) / grid_multiplier;
+    scene_update_rotation();
+
+    // Edit & Stroke submission
+    {
+        // if any parameter changed or just stopped sculpting change the stroke
+        if (stroke_parameters.is_dirty() || (was_tool_used && !is_tool_used)) {
+            renderer->change_stroke(stroke_parameters);
+            stroke_parameters.set_dirty(false);
+        }
+
+        // Upload the edit to the  edit list
+        if (is_tool_used) {
+            new_edits.push_back(edit_to_add);
+            // Add recent color only when is used...
+            add_recent_color(stroke_parameters.get_material().color);
+        }
     }
 
-    // Set center of sculpture and reuse it as mirror center
-    if (!sculpt_started) {
-        sculpt_start_position = edit_to_add.position;
-        renderer->set_sculpt_start_position(sculpt_start_position);
-        mirror_origin = sculpt_start_position;
-        axis_lock_position = sculpt_start_position;
+    // Mirror functionality
+    if (use_mirror) {
+        mirror_current_edits(delta_time);
     }
 
-    if (axis_lock) {
+    // Set the edit as the preview
+    renderer->set_preview_edit(edit_to_add);
 
-        axis_lock_position = axis_lock_gizmo.update(axis_lock_position, delta_time);
+    // Push to the renderer the edits and the previews
+    renderer->push_preview_edit_list(preview_tmp_edits);
+    renderer->push_edit_list(new_edits);
 
-        glm::vec3 locked_pos = edit_to_add.position;
+    was_tool_used = is_tool_used;
+}
 
-        if (axis_lock_mode & AXIS_LOCK_X)
-            locked_pos.x = axis_lock_position.x;
-        else if (axis_lock_mode & AXIS_LOCK_Y)
-            locked_pos.y = axis_lock_position.y;
-        else if (axis_lock_mode & AXIS_LOCK_Z)
-            locked_pos.z = axis_lock_position.z;
 
-        edit_to_add.position = locked_pos;
-        edit_to_add.rotation = glm::quat();
+void SculptEditor::mirror_current_edits(const float delta_time) {
+    mirror_origin = mirror_gizmo.update(mirror_origin, delta_time);
+
+    uint64_t preview_edit_count = preview_tmp_edits.size();
+    for (uint64_t i = 0u; i < preview_edit_count; i++) {
+        Edit inverted_preview_edit = preview_tmp_edits[i];
+        float dist_to_plane = glm::dot(mirror_normal, inverted_preview_edit.position - mirror_origin);
+        inverted_preview_edit.position = inverted_preview_edit.position - mirror_normal * dist_to_plane * 2.0f;
+
+        preview_tmp_edits.push_back(inverted_preview_edit);
     }
 
-    if (current_tool == SCULPT && is_tool_used) {
-        sculpt_started = true;
-    }
+    uint64_t edit_count = new_edits.size();
+    for (uint64_t i = 0u; i < edit_count; i++) {
+        Edit inverted_edit = new_edits[i];
+        float dist_to_plane = glm::dot(mirror_normal, inverted_edit.position - mirror_origin);
+        inverted_edit.position = inverted_edit.position - mirror_normal * dist_to_plane * 2.0f;
 
-    // Rotate the scene
+        new_edits.push_back(inverted_edit);
+    }
+}
+
+void SculptEditor::scene_update_rotation() {
     if (is_rotation_being_used()) {
 
         if (!rotation_started) {
@@ -215,71 +348,11 @@ void SculptEditor::update(float delta_time)
         edit_to_add.rotation *= (glm::conjugate(sculpt_rotation) * rotation_diff);
     }
 
-    // Update edit dimensions
-    {
-        float size_multiplier = Input::get_thumbstick_value(HAND_RIGHT).y * delta_time * 0.1f;
-        dimensions_dirty |= (fabsf(size_multiplier) > 0.f);
-        glm::vec3 new_dimensions = glm::clamp(size_multiplier + glm::vec3(edit_to_add.dimensions), 0.001f, 0.1f);
-        edit_to_add.dimensions = glm::vec4(new_dimensions, edit_to_add.dimensions.w);
-
-        // Update primitive specific size
-        size_multiplier = Input::get_thumbstick_value(HAND_LEFT).y * delta_time * 0.1f;
-        edit_to_add.dimensions.w = glm::clamp(size_multiplier + edit_to_add.dimensions.w, 0.001f, 0.1f);
-        dimensions_dirty |= (fabsf(size_multiplier) > 0.f);
-    }
-
-    // Update current edit properties...
-
-    // if any parameter changed or just stopped sculpting
-    if (stroke_parameters.is_dirty() || (was_tool_used && !is_tool_used)) {
-        renderer->change_stroke(stroke_parameters);
-        stroke_parameters.set_dirty(false);
-    }
-
-    if (is_tool_used) {
-        new_edits.push_back(edit_to_add);
-        // Add recent color only when is used...
-        add_recent_color(stroke_parameters.get_material().color);
-    }
-
-    // Mirror functionality
-    if (use_mirror) {
-        mirror_origin = mirror_gizmo.update(mirror_origin, delta_time);
-
-        uint64_t preview_edit_count = preview_tmp_edits.size();
-        for (uint64_t i = 0u; i < preview_edit_count; i++) {
-            Edit inverted_preview_edit = preview_tmp_edits[i];
-            float dist_to_plane = glm::dot(mirror_normal, inverted_preview_edit.position - mirror_origin);
-            inverted_preview_edit.position = inverted_preview_edit.position - mirror_normal * dist_to_plane * 2.0f;
-
-            preview_tmp_edits.push_back(inverted_preview_edit);
-        }
-
-        uint64_t edit_count = new_edits.size();
-        for (uint64_t i = 0u; i < edit_count; i++) {
-            Edit inverted_edit = new_edits[i];
-            float dist_to_plane = glm::dot(mirror_normal, inverted_edit.position - mirror_origin);
-            inverted_edit.position = inverted_edit.position - mirror_normal * dist_to_plane * 2.0f;
-
-            new_edits.push_back(inverted_edit);
-        }
-    }
-
-    // TODO tmp preview stroke
-    renderer->set_preview_edit(edit_to_add);
-
-    // Push to the renderer the edits and the previews
-    renderer->push_preview_edit_list(preview_tmp_edits);
-    renderer->push_edit_list(new_edits);
-
-    was_tool_used = is_tool_used;
 }
+
 
 void SculptEditor::render()
 {
-    Tool& tool_used = *tools[current_tool];
-    Edit& edit_to_add = tool_used.get_edit_to_add();
-
     if (mesh_preview && renderer->get_openxr_available())
     {
         update_edit_preview(edit_to_add.dimensions);
@@ -295,11 +368,6 @@ void SculptEditor::render()
             mesh_preview_outline->set_model(mesh_preview->get_model());
             mesh_preview_outline->render();
         }
-    }
-
-    if (current_tool != NONE) {
-        tool_used.render_scene();
-        tool_used.render_ui();
     }
 
     if (renderer->get_openxr_available()) {
@@ -336,6 +404,9 @@ void SculptEditor::render()
     floor_grid_mesh->render();
 }
 
+// =====================
+// GUI =================
+// =====================
 void SculptEditor::render_gui()
 {
     StrokeMaterial& stroke_material = stroke_parameters.get_material();
@@ -469,11 +540,6 @@ void SculptEditor::toggle_capped_modifier()
 
 void SculptEditor::enable_tool(eTool tool)
 {
-    if (current_tool != NONE) {
-        tools[current_tool]->stop();
-    }
-
-    tools[tool]->start();
     current_tool = tool;
 
     switch (tool)

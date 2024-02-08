@@ -1,6 +1,7 @@
 #pragma once
 
-#include "tool.h"
+#include <graphics/edit.h>
+
 #include "framework/ui/transform_gizmo.h"
 #include "framework/ui/ui_controller.h"
 
@@ -22,7 +23,6 @@ class SculptEditor {
     bool sculpt_started = false;
     bool was_tool_used = false;
 
-    Tool* tools[TOOL_COUNT];
     eTool current_tool = NONE;
 
     static uint8_t last_generated_material_uid;
@@ -43,6 +43,7 @@ class SculptEditor {
 
     std::map<std::string, PBRMaterialData> pbr_materials_data;
 
+    Edit             edit_to_add;
     StrokeParameters stroke_parameters;
 
     EntityMesh* mesh_preview = nullptr;
@@ -116,6 +117,11 @@ class SculptEditor {
     void bind_events();
     void add_recent_color(const Color& color);
 
+    // Editor
+    bool is_tool_being_used();
+    bool edit_update(float delta_time);
+    void scene_update_rotation();
+    void mirror_current_edits(const float delta_time);
 public:
 
     void initialize();
