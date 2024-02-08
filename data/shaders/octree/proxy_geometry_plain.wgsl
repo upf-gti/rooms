@@ -21,7 +21,7 @@ struct VertexOutput {
     @location(2) color: vec3f,
     @location(3) vertex_in_world_space : vec3f,
     @location(4) vertex_in_sculpt_space : vec3f,
-    @location(5) @interpolate(flat) voxel_center : vec3f,
+    @location(5) @interpolate(flat) brick_center_in_sculpt_space : vec3f,
     @location(6) @interpolate(flat) atlas_tile_coordinate : vec3f,
     @location(7) in_atlas_pos : vec3f,
     @location(8) @interpolate(flat) has_previews : u32
@@ -73,7 +73,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     }
     
     out.vertex_in_sculpt_space = vertex_in_sculpt_space;
-    out.voxel_center = instance_data.position;
+    out.brick_center_in_sculpt_space = instance_data.position;
     // This is in an attribute for debugging
     out.atlas_tile_coordinate = vec3f(10 * vec3u(instance_data.atlas_tile_index % BRICK_COUNT,
                                                   (instance_data.atlas_tile_index / BRICK_COUNT) % BRICK_COUNT,
@@ -138,9 +138,9 @@ fn sample_material_atlas(atlas_position : vec3f) -> Material {
     return interpolate_material(atlas_position * SDF_RESOLUTION);
 }
 
-fn sample_sdf_atlas(sculpt_position : vec3f) -> f32
+fn sample_sdf_atlas(atlas_position : vec3f) -> f32
 {
-    return textureSampleLevel(read_sdf, texture_sampler, sculpt_position, 0.0).r;
+    return textureSampleLevel(read_sdf, texture_sampler, atlas_position, 0.0).r / SCULPT_MAX_SIZE;
 }
 
 fn sample_sdf_with_preview(sculpt_position : vec3f, atlas_position : vec3f) -> Surface
@@ -151,11 +151,12 @@ fn sample_sdf_with_preview(sculpt_position : vec3f, atlas_position : vec3f) -> S
     material.metalness = preview_data.preview_stroke.material.metallic;
 
     var surface : Surface;
-    surface.distance = textureSampleLevel(read_sdf, texture_sampler, atlas_position, 0.0).r;
+    surface.distance = sample_sdf_atlas(atlas_position);
     surface.material = interpolate_material(atlas_position * SDF_RESOLUTION);
     
     for(var i : u32 = 0u; i < preview_data.preview_stroke.edit_count; i++) {
         surface = evaluate_edit(sculpt_position, preview_data.preview_stroke.primitive, preview_data.preview_stroke.operation, preview_data.preview_stroke.parameters, surface, material, preview_data.preview_stroke.edits[i]);
+        surface.distance = surface.distance / 2.0; 
     }
     
     return surface;
@@ -166,7 +167,7 @@ fn sample_sdf_with_preview_without_material(sculpt_position : vec3f, atlas_posit
     var material : Material;
 
     var surface : Surface;
-    surface.distance = textureSampleLevel(read_sdf, texture_sampler, atlas_position, 0.0).r;
+    surface.distance = sample_sdf_atlas(atlas_position);
     
     for(var i : u32 = 0u; i < preview_data.preview_stroke.edit_count; i++) {
         surface = evaluate_edit(sculpt_position, preview_data.preview_stroke.primitive, preview_data.preview_stroke.operation, preview_data.preview_stroke.parameters, surface, material, preview_data.preview_stroke.edits[i]);
@@ -206,7 +207,7 @@ fn raymarch_with_previews(ray_origin_atlas_space : vec3f, ray_origin_sculpt_spac
 
 	for (i = 0; depth < max_distance && i < MAX_ITERATIONS; i++)
     {
-		pos_sculpt_space = ray_origin_sculpt_space + ray_dir * (depth / SCALE_CONVERSION_FACTOR);
+		pos_sculpt_space = ray_origin_sculpt_space + ray_dir * (depth / SCULPT_TO_ATLAS_CONVERSION_FACTOR);
         pos_atlas_space = ray_origin_atlas_space + ray_dir * depth ;
 
         surface = sample_sdf_with_preview(pos_sculpt_space, pos_atlas_space);
@@ -281,7 +282,7 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
 
     if (exit == 1u) {
         // From atlas position, to sculpt, to world
-        let position_in_sculpt : vec3f = ray_origin_in_sculpt_space + ray_dir * (depth / SCALE_CONVERSION_FACTOR);
+        let position_in_sculpt : vec3f = ray_origin_in_sculpt_space + ray_dir * (depth / SCULPT_TO_ATLAS_CONVERSION_FACTOR);
         let position_in_world : vec3f = rotate_point_quat(position_in_sculpt, (sculpt_data.sculpt_rotation)) + sculpt_data.sculpt_start_position;
 
         let epsilon : f32 = 0.000001; // avoids flashing when camera inside sdf
@@ -305,31 +306,49 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
     return vec4f(0.0, 0.0, 0.0, 0.999);
 }
 
-var<private> voxel_center : vec3f;
+var<private> brick_center_in_sculpt_space : vec3f;
 var<private> atlas_tile_coordinates : vec3f;
 
 var<private> last_found_surface_distance : f32;
 
 var<private> last_sampled_material : Material;
 
+fn intersectAABB(rayOrigin : vec3f, rayDir: vec3f, box_origin: vec3f, box_size: vec3f) -> f32 {
+    let boxMin : vec3f = box_origin - (box_size / 2.0);
+    let boxMax : vec3f = boxMin + box_size;
+
+    let tMin : vec3f = (boxMin - rayOrigin) / rayDir;
+    let tMax : vec3f = (boxMax - rayOrigin) / rayDir;
+    let t2 : vec3f = max(tMin, tMax);
+    let tFar : f32 = min(min(t2.x, t2.y), t2.z);
+    return tFar;
+};
+
 @fragment
 fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     var out: FragmentOutput;
+
+    var eye_atlas_pos : vec3f = (rotate_point_quat(eye_position - sculpt_data.sculpt_start_position, quat_conj(sculpt_data.sculpt_rotation)) - in.brick_center_in_sculpt_space);
+    eye_atlas_pos *= SCULPT_TO_ATLAS_CONVERSION_FACTOR;
+    eye_atlas_pos += in.atlas_tile_coordinate + vec3f(5.0 / SDF_RESOLUTION);
+    let ray_dir_atlas : vec3f = normalize(in.in_atlas_pos - eye_atlas_pos);
+
     let ray_dir_world : vec3f = normalize(in.vertex_in_world_space.xyz - eye_position);
     let ray_dir_sculpt : vec3f = rotate_point_quat(ray_dir_world, quat_conj(sculpt_data.sculpt_rotation));
-    let ray_dir_atlas : vec3f = rotate_point_quat(normalize(in.in_atlas_pos.xyz - eye_position), quat_conj(sculpt_data.sculpt_rotation));
+    // ray dir in atlas coords :((
     
-    let raymarch_distance : f32 = ray_AABB_intersection_distance(in.vertex_in_sculpt_space, ray_dir_sculpt, in.voxel_center, vec3f(BRICK_WORLD_SIZE));
+    // Raro
+    let raymarch_distance : f32 = intersectAABB(in.in_atlas_pos, ray_dir_atlas, in.atlas_tile_coordinate + vec3f(5.0 / SDF_RESOLUTION), vec3f(BRICK_ATLAS_SIZE));
     
     atlas_tile_coordinates = in.atlas_tile_coordinate;
-    voxel_center = in.voxel_center;
+    brick_center_in_sculpt_space = in.brick_center_in_sculpt_space;
 
     var ray_result : vec4f;
     if (in.has_previews == 1) {
-        ray_result = raymarch_with_previews(in.in_atlas_pos.xyz, in.vertex_in_sculpt_space.xyz, ray_dir_sculpt, raymarch_distance * SCALE_CONVERSION_FACTOR, camera_data.view_projection);
+        ray_result = raymarch_with_previews(in.in_atlas_pos.xyz, in.vertex_in_sculpt_space.xyz, ray_dir_atlas, raymarch_distance, camera_data.view_projection);
     } else {
-        ray_result = raymarch(in.in_atlas_pos.xyz, in.vertex_in_sculpt_space.xyz, ray_dir_sculpt, raymarch_distance * SCALE_CONVERSION_FACTOR, camera_data.view_projection);
+        ray_result = raymarch(in.in_atlas_pos.xyz, in.vertex_in_sculpt_space.xyz, ray_dir_atlas, raymarch_distance, camera_data.view_projection);
     }
     var final_color : vec3f = ray_result.rgb; 
 
@@ -340,12 +359,12 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     out.color = vec4f(final_color, 1.0); // Color
     out.depth = ray_result.a;
 
-    // if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
-    //     out.color = vec4f(in.color.x, in.color.y, in.color.z, 1.0);
-    //     out.depth = in.position.z;
-    // }
+    if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
+        out.color = vec4f(in.color.x, in.color.y, in.color.z, 1.0);
+        out.depth = in.position.z;
+    }
 
-    // out.color = vec4f(raymarch_distance * 10.0, 0.0, 0.0, 0.0); // Color
+    // out.color = vec4f(raymarch_distance / (SQRT_3 * BRICK_WORLD_SIZE), 0.0, 0.0, 0.0); // Color
     // out.depth = in.position.z / in.position.w;
 
     // out.color = vec4f(1.0, 0.0, 0.0, 1.0); // Color
