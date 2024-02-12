@@ -11,7 +11,11 @@
 #include "backends/imgui_impl_wgpu.h"
 #include "backends/imgui_impl_glfw.h"
 
+#include "framework/utils/utils.h"
+
 #include "spdlog/spdlog.h"
+
+#include <glm/gtx/quaternion.hpp>
 
 uint8_t SculptEditor::last_generated_material_uid = 0;
 
@@ -82,6 +86,10 @@ void SculptEditor::initialize()
 
     enable_tool(SCULPT);
 
+    //stamp_enabled = true;
+
+    //stroke_parameters.set_primitive(SD_BOX);
+
     renderer->change_stroke(stroke_parameters);
 }
 
@@ -96,10 +104,18 @@ void SculptEditor::clean()
     }
 }
 
+
 bool SculptEditor::is_tool_being_used() {
 #ifdef XR_SUPPORT
-    return Input::was_key_pressed(GLFW_KEY_SPACE) ||
-        (stamp_enabled ? Input::was_trigger_pressed(HAND_RIGHT) : Input::get_trigger_value(HAND_RIGHT) > 0.5f);
+    bool is_currently_pressed = Input::get_trigger_value(HAND_RIGHT) > 0.5f;
+    is_released = is_tool_pressed && !is_currently_pressed;
+
+    bool add_edit_with_tool = stamp_enabled ? is_released : Input::get_trigger_value(HAND_RIGHT) > 0.5f;
+
+    // Update the is_pressed
+    was_tool_pressed = is_tool_pressed;
+    is_tool_pressed = is_currently_pressed;
+    return Input::was_key_pressed(GLFW_KEY_SPACE) || add_edit_with_tool;
 #else
     return Input::is_key_pressed(GLFW_KEY_SPACE);
 #endif
@@ -109,11 +125,19 @@ bool SculptEditor::edit_update(float delta_time) {
     bool is_tool_used = is_tool_being_used();
 
     // Update edit transform
-    edit_to_add.position = Input::get_controller_position(HAND_RIGHT);
-    edit_to_add.rotation = glm::inverse(Input::get_controller_rotation(HAND_RIGHT));
+    if ((!stamp_enabled || !is_tool_pressed) && !is_released) {
+        edit_to_add.position = Input::get_controller_position(HAND_RIGHT);
+        edit_to_add.rotation = glm::inverse(Input::get_controller_rotation(HAND_RIGHT));
+        edit_position_stamp = edit_to_add.position;
+        edit_origin_stamp = edit_to_add.position;
+        edit_rotation_stamp = edit_to_add.rotation;
+    } else {
+        edit_to_add.position = edit_position_stamp;
+        edit_to_add.rotation = edit_rotation_stamp;
+    }
 
     // Update edit dimensions
-    {
+    if (!stamp_enabled || !is_tool_pressed && !is_released) {
         float size_multiplier = Input::get_thumbstick_value(HAND_RIGHT).y * delta_time * 0.1f;
         dimensions_dirty |= (fabsf(size_multiplier) > 0.f);
         glm::vec3 new_dimensions = glm::clamp(size_multiplier + glm::vec3(edit_to_add.dimensions), 0.001f, 0.1f);
@@ -123,6 +147,42 @@ bool SculptEditor::edit_update(float delta_time) {
         size_multiplier = Input::get_thumbstick_value(HAND_LEFT).y * delta_time * 0.1f;
         edit_to_add.dimensions.w = glm::clamp(size_multiplier + edit_to_add.dimensions.w, 0.001f, 0.1f);
         dimensions_dirty |= (fabsf(size_multiplier) > 0.f);
+    } else if (stamp_enabled && is_tool_pressed) { // Stretch the edit using motion controls
+        sdPrimitive curr_primitive = stroke_parameters.get_primitive();
+
+        const glm::quat hand_rotation = (Input::get_controller_rotation(HAND_RIGHT));
+        const glm::vec3 hand_position = Input::get_controller_position(HAND_RIGHT);
+
+        const glm::vec3 stamp_origin_to_hand = edit_origin_stamp - hand_position;
+        const float edit_to_hand_distance = glm::length(stamp_origin_to_hand);
+        const glm::vec3 stamp_to_hand_norm = stamp_origin_to_hand / (edit_to_hand_distance);
+
+        // Take into account that the capsule SDF's origin is not the SDF center
+        const glm::vec3 edit_upwards_point = (curr_primitive != SD_CAPSULE) ? glm::vec3(0.0f, -0.5f * edit_to_hand_distance, 0.0f) : glm::vec3(0.0f, 0.0f, -edit_to_hand_distance);
+        const glm::vec3 local_hand_pos = hand_position - edit_origin_stamp;
+
+        // Build orientation for the edit
+        const glm::vec3 direction = (glm::cross(local_hand_pos, edit_upwards_point));
+        const float magnitude = sqrt(glm::dot(edit_upwards_point, edit_upwards_point) * glm::dot(local_hand_pos, local_hand_pos)) + glm::dot(edit_upwards_point, local_hand_pos);
+        glm::quat edit_to_hand_orientation = glm::normalize(glm::quat(direction.x, direction.y, direction.z, magnitude));
+        // Todo: check for paralell axis
+
+        
+        glm::quat swing, twist;
+        quat_swing_twist_decomposition(stamp_to_hand_norm, hand_rotation, swing, twist);
+        twist.w *= -1.0f;
+
+        if (curr_primitive == SD_SPHERE) {
+            edit_to_add.dimensions.x = edit_to_hand_distance;
+        } else if (curr_primitive == SD_BOX) {
+            edit_position_stamp = edit_origin_stamp + stamp_to_hand_norm * (-0.25f * (edit_to_hand_distance + edit_to_add.dimensions.x));
+            edit_to_add.dimensions.y = 0.5f * edit_to_hand_distance;
+            //edit_rotation_stamp = glm::angleAxis(angle, glm::vec3{ 0.0f, 1.0f, 0.0f }) * edit_to_hand_orientation;
+            edit_rotation_stamp = edit_to_hand_orientation * twist;
+        } else if (curr_primitive == SD_CAPSULE) {
+            edit_to_add.dimensions.x = edit_to_hand_distance;
+            edit_rotation_stamp = edit_to_hand_orientation;
+        }
     }
 
     // Edit modifiers

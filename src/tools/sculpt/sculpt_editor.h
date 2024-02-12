@@ -117,7 +117,15 @@ class SculptEditor {
     void bind_events();
     void add_recent_color(const Color& color);
 
+    // Stamp slide
+    glm::vec3 edit_position_stamp;
+    glm::vec3 edit_origin_stamp;
+    glm::quat edit_rotation_stamp;
+
     // Editor
+    bool is_tool_pressed = false;
+    bool is_released = false;
+    bool was_tool_pressed = false;
     bool is_tool_being_used();
     bool edit_update(float delta_time);
     void scene_update_rotation();

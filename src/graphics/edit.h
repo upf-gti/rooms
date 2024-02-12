@@ -35,7 +35,7 @@ enum sdOperation : uint32_t {
 struct Edit {
     glm::vec3	position;
     float       dummy0;
-    glm::vec4	dimensions;
+    glm::vec4	dimensions = { 0.05f, 0.05f, 0.05f, 0.05f };
     glm::quat   rotation = { 0.f, 0.f, 0.f, 1.f };
     //glm::vec4   padding;
 
