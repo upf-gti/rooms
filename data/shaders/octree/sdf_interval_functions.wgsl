@@ -468,14 +468,44 @@ fn isign_vec2(v : vec2f) -> vec2f
 
 // Primitives
 
-fn sphere_interval(p : mat3x3f, offset : vec3f, r : f32) -> vec2f
+fn sphere_interval(p : mat3x3f, edit_pos : vec3f, r : f32) -> vec2f
 {
 	// x^2 + y^2 + z^2 - r^2
-	return isub_vecs(ilensq(isub_mat_vec(p, offset)), vec2f(r*r));
+	return isub_vecs(ilensq(isub_mat_vec(p, edit_pos)), vec2f(r*r));
 }
 
-// TODO rotation
-fn box_interval(p : mat3x3f, edit_pos : vec3f, rotation : vec4f, size : vec3f, r : f32) -> vec2f {
+fn cut_sphere_interval(p : mat3x3f, edit_pos : vec3f, rotation : vec4f, r : f32, h : f32) -> vec2f
+{
+    let pos : mat3x3f = irotate_point_quat(isub_mat_vec(p, edit_pos), rotation);
+
+    // sampling independent computations (only depend on shape)
+    var w : f32 = sqrt(r*r-h*h);
+
+    // sampling dependant computations
+    let q_x = isqrt(ipow2_vec(pos[0].xy) + ipow2_vec(pos[1].xy));
+    let q_y = pos[2].xy;
+
+    let q_x_mW = isub_vec_float(q_x, w);
+    let q_y_mH = isub_vec_float(q_y, h);
+
+    let max_0 = iadd_vecs(imul_float_vec((h-r), ipow2_vec(q_x)), imul_float_vec(w * w, ineg(isub_vec_float(imul_float_vec(2.0, q_y), (h + r)))));
+    let max_1 = isub_vecs(imul_float_vec(h, q_x), imul_float_vec(w, q_y));
+
+    let s : vec2f = imax(max_0, max_1);
+
+    return iselect(
+        iselect(
+            isqrt(ipow2_vec(q_x_mW) + ipow2_vec(q_y_mH)), 
+            ineg(isub_vec_float(q_y, h)),
+            ilessthan(q_x, vec2f(w))
+        ), 
+        isub_vec_float(isqrt(ipow2_vec(q_x) + ipow2_vec(q_y)), r),
+        ilessthan(s, vec2f(0.0))
+    );
+}
+
+fn box_interval(p : mat3x3f, edit_pos : vec3f, rotation : vec4f, size : vec3f, r : f32) -> vec2f
+{
     let mat_zero_interval : mat3x3f = mat3x3f(vec3f(0.0), vec3f(0.0), vec3f(0.0));
 
     // Move edit
@@ -507,18 +537,19 @@ fn cone_interval(p : mat3x3f, c : vec3f, rotation : vec4f, radius_dims : vec2f, 
 {
     var r2 = radius_dims.x;
     var r1 = radius_dims.y;
+    var h = height * 0.5;
 
     var pos : mat3x3f = irotate_point_quat(isub_mat_vec(p, c), rotation);
 
     let q_x = isqrt(ipow2_vec(pos[0].xy) + ipow2_vec(pos[1].xy));
-    let q_y = pos[2].xy + vec2f(height);
+    let q_y = pos[2].xy;
 
-    let k1 = vec2f(r2, height);
-    let k2 = vec2f(r2 - r1, 2.0 * height);
+    let k1 = vec2f(r2, h);
+    let k2 = vec2f(r2 - r1, 2.0 * h);
 
     let sr = iselect(vec2f(r2), vec2f(r1), ilessthan(q_y, vec2f(0.0)));
     let ca_x = isub_vecs(q_x, imin(q_x, sr));
-    let ca_y = isub_vecs(iabs(q_y), vec2f(height));
+    let ca_y = isub_vecs(iabs(q_y), vec2f(h));
 
     let m_skq_x = iavec3_vec(vec3f(isub_vecs(k1, q_x), 0.0));
     let m_skq_y = iavec3_vec(vec3f(isub_vecs(k1, q_y), 0.0));
@@ -582,7 +613,8 @@ fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f,  primitive : u32, 
             onion_thickness = map_thickness( onion_thickness, radius );
             radius -= onion_thickness; // Compensate onion size
             if(cap_value > 0.0) { 
-                // pSurface = sdCutSphere(position, edit.position, edit.rotation, radius, radius * cap_value * 0.999, edit.color);
+                cap_value = cap_value * 2.0 - 1.0;
+                pSurface = cut_sphere_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.rotation, radius, radius * cap_value * 0.999);
             } else {
                 pSurface = sphere_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, radius);
             }

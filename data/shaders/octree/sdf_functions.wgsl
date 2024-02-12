@@ -115,11 +115,12 @@ fn sdCapsule( p : vec3f, a : vec3f, b : vec3f, rotation : vec4f, r : f32, materi
 }
 
 // t: (base radius, top radius)
-fn sdCone( p : vec3f, a : vec3f, height : f32, rotation : vec4f, t : vec2f, material : Material) -> Surface
+fn sdCone( p : vec3f, a : vec3f, h : f32, rotation : vec4f, t : vec2f, material : Material) -> Surface
 {
     var sf : Surface;
     var r2 = t.x;
     var r1 = t.y;
+    var height = h * 0.5;
 
     let pos : vec3f = rotate_point_quat(p - a, rotation) + vec3f(0.0, 0.0, height);
     let q = vec2f( length(pos.xy), pos.z );
