@@ -15,6 +15,12 @@ enum eTool : uint8_t {
 
 class RoomsRenderer;
 
+struct PrimitiveState {
+    glm::vec4 dimensions;
+    // color?
+    // modifiers?
+};
+
 class SculptEditor {
 
     RoomsRenderer*  renderer = nullptr;
@@ -41,13 +47,15 @@ class SculptEditor {
     std::vector<Edit>   preview_tmp_edits;
     std::vector<Edit>   new_edits;
 
+    std::map<uint32_t, PrimitiveState> primitive_default_states;
+
     std::map<std::string, PBRMaterialData> pbr_materials_data;
 
     Edit             edit_to_add;
     StrokeParameters stroke_parameters;
 
-    EntityMesh* mesh_preview = nullptr;
-    EntityMesh* mesh_preview_outline = nullptr;
+    EntityMesh*     mesh_preview = nullptr;
+    EntityMesh*     mesh_preview_outline = nullptr;
 
     void set_primitive( sdPrimitive primitive );
     void toggle_onion_modifier();

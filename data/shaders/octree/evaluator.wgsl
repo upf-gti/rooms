@@ -256,7 +256,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     
     edit_culling_data.edit_culling_count[octree_index] = edit_counter;
 
-     if (level < OCTREE_DEPTH) {
+    if (level < OCTREE_DEPTH) {
 
         if (is_reevaluation) {
             if (is_in_reevaluation_zone) {

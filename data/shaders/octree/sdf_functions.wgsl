@@ -376,6 +376,8 @@ fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters
     var size : vec3f = edit.dimensions.xyz;
     var radius : f32 = edit.dimensions.x;
     var size_param : f32 = edit.dimensions.w;
+
+    // 0 no cap ... 1 fully capped
     var cap_value : f32 = parameters.y;
 
     var onion_thickness : f32 = parameters.x;
@@ -387,8 +389,8 @@ fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters
         case SD_SPHERE: {
             onion_thickness = map_thickness( onion_thickness, radius );
             radius -= onion_thickness; // Compensate onion size
-            // -1..1 no cap..fully capped
-            if(cap_value > -1.0) { 
+            if(cap_value > 0.0) { 
+                cap_value = cap_value * 2.0 - 1.0;
                 pSurface = sdCutSphere(position, edit.position, edit.rotation, radius, radius * cap_value * 0.999, stroke_material);
             } else {
                 pSurface = sdSphere(position, edit.position, radius, stroke_material);
@@ -416,7 +418,6 @@ fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters
         }
         case SD_CONE: {
             onion_thickness = map_thickness( onion_thickness, 0.01 );
-            cap_value = cap_value * 0.5 + 0.5;
             radius = max(radius * (1.0 - cap_value), 0.0025);
             var dims = vec2f(size_param, size_param * cap_value);
             pSurface = sdCone(position, edit.position, radius, edit.rotation, dims, stroke_material);
@@ -436,8 +437,7 @@ fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters
             onion_thickness = map_thickness( onion_thickness, size_param );
             size_param -= onion_thickness; // Compensate onion size
             size_param = clamp( size_param, 0.0001, radius );
-            if(cap_value > -1.0) { // // -1..1 no cap..fully capped
-                cap_value = cap_value * 0.5 + 0.5;
+            if(cap_value > 0.0) {
                 var an = M_PI * (1.0 - cap_value);
                 var angles = vec2f(sin(an), cos(an));
                 pSurface = sdCappedTorus(position, edit.position, vec2f(radius, size_param), edit.rotation, angles, stroke_material);

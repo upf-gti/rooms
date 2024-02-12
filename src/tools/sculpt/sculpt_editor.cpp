@@ -45,6 +45,15 @@ void SculptEditor::initialize()
     axis_lock_gizmo.initialize(POSITION_GIZMO, sculpt_start_position);
     mirror_gizmo.initialize(POSITION_GIZMO, sculpt_start_position);
 
+    // Initialize default primitive states
+    {
+        primitive_default_states[SD_SPHERE]     = { glm::vec4(0.0) };
+        primitive_default_states[SD_BOX]        = { glm::vec4(0.0) };
+        primitive_default_states[SD_CONE]       = { glm::vec4(0.0) };
+        primitive_default_states[SD_CYLINDER]   = { glm::vec4(0.0) };
+        primitive_default_states[SD_CAPSULE]    = { glm::vec4(0.0) };
+        primitive_default_states[SD_TORUS]      = { glm::vec4(0.0) };
+    }
 
     // Edit preview mesh
     {
@@ -96,7 +105,8 @@ void SculptEditor::clean()
     }
 }
 
-bool SculptEditor::is_tool_being_used() {
+bool SculptEditor::is_tool_being_used()
+{
 #ifdef XR_SUPPORT
     return Input::was_key_pressed(GLFW_KEY_SPACE) ||
         (stamp_enabled ? Input::was_trigger_pressed(HAND_RIGHT) : Input::get_trigger_value(HAND_RIGHT) > 0.5f);
@@ -105,7 +115,8 @@ bool SculptEditor::is_tool_being_used() {
 #endif
 }
 
-bool SculptEditor::edit_update(float delta_time) {
+bool SculptEditor::edit_update(float delta_time)
+{
     bool is_tool_used = is_tool_being_used();
 
     // Update edit transform
@@ -123,6 +134,9 @@ bool SculptEditor::edit_update(float delta_time) {
         size_multiplier = Input::get_thumbstick_value(HAND_LEFT).y * delta_time * 0.1f;
         edit_to_add.dimensions.w = glm::clamp(size_multiplier + edit_to_add.dimensions.w, 0.001f, 0.1f);
         dimensions_dirty |= (fabsf(size_multiplier) > 0.f);
+
+        // Update in primitive state
+        primitive_default_states[stroke_parameters.get_primitive()].dimensions = edit_to_add.dimensions;
     }
 
     // Edit modifiers
@@ -185,6 +199,11 @@ bool SculptEditor::edit_update(float delta_time) {
 
     // Debug sculpting
     {
+        if (Input::is_key_pressed(GLFW_KEY_P))
+        {
+            enable_tool(PAINT);
+        }
+
         if (current_tool == SCULPT && is_tool_being_used()) {
             // For debugging sculpture without a headset
             if (!Renderer::instance->get_openxr_available()) {
@@ -287,8 +306,8 @@ void SculptEditor::update(float delta_time)
     was_tool_used = is_tool_used;
 }
 
-
-void SculptEditor::mirror_current_edits(const float delta_time) {
+void SculptEditor::mirror_current_edits(const float delta_time)
+{
     mirror_origin = mirror_gizmo.update(mirror_origin, delta_time);
 
     uint64_t preview_edit_count = preview_tmp_edits.size();
@@ -310,7 +329,8 @@ void SculptEditor::mirror_current_edits(const float delta_time) {
     }
 }
 
-void SculptEditor::scene_update_rotation() {
+void SculptEditor::scene_update_rotation()
+{
     if (is_rotation_being_used()) {
 
         if (!rotation_started) {
@@ -514,6 +534,12 @@ void SculptEditor::set_primitive(sdPrimitive primitive)
 {
     stroke_parameters.set_primitive(primitive);
     dimensions_dirty = true;
+
+    auto it = primitive_default_states.find(primitive);
+    if (it != primitive_default_states.end())
+    {
+        edit_to_add.dimensions = (*it).second.dimensions;
+    }
 }
 
 void SculptEditor::toggle_onion_modifier()
@@ -522,7 +548,7 @@ void SculptEditor::toggle_onion_modifier()
     onion_enabled = !onion_enabled;
 
     glm::vec4 parameters = stroke_parameters.get_parameters();
-    parameters.x = onion_enabled ? onion_thickness : 0.f;
+    parameters.x = onion_enabled ? onion_thickness : 0.0f;
 
     stroke_parameters.set_parameters(parameters);
 }
@@ -533,7 +559,7 @@ void SculptEditor::toggle_capped_modifier()
     capped_enabled = !capped_enabled;
 
     glm::vec4 parameters = stroke_parameters.get_parameters();
-    parameters.y = capped_enabled ? capped_value : -1.f;
+    parameters.y = capped_enabled ? capped_value : 0.0f;
 
     stroke_parameters.set_parameters(parameters);
 }
@@ -557,10 +583,10 @@ void SculptEditor::enable_tool(eTool tool)
     }
 }
 
-bool SculptEditor::is_rotation_being_used() {
+bool SculptEditor::is_rotation_being_used()
+{
     return Input::get_trigger_value(HAND_LEFT) > 0.5;
 }
-
 
 void SculptEditor::bind_events()
 {
@@ -582,9 +608,9 @@ void SculptEditor::bind_events()
         gui.bind("torus", [&](const std::string& signal, void* button) { set_primitive(SD_TORUS); });
 
         gui.bind("onion", [&](const std::string& signal, void* button) { toggle_onion_modifier(); });
-        gui.bind("onion_value", [&](const std::string& signal, float value) { onion_thickness = glm::clamp(value, 0.f, 1.f); });
+        gui.bind("onion_value", [&](const std::string& signal, float value) { onion_thickness = glm::clamp(value, 0.0f, 1.0f); });
         gui.bind("capped", [&](const std::string& signal, void* button) { toggle_capped_modifier(); });
-        gui.bind("cap_value", [&](const std::string& signal, float value) { capped_value = glm::clamp(value * 2.f - 1.f, -1.f, 1.f); });
+        gui.bind("cap_value", [&](const std::string& signal, float value) { capped_value = glm::clamp(value, 0.0f, 1.0f); });
 
         gui.bind("mirror", [&](const std::string& signal, void* button) { use_mirror = !use_mirror; });
         gui.bind("snap_to_grid", [&](const std::string& signal, void* button) { snap_to_grid = !snap_to_grid; });
