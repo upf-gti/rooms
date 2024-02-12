@@ -546,9 +546,11 @@ void SculptEditor::enable_tool(eTool tool)
     {
     case SCULPT:
         helper_gui.change_list_layout("sculpt");
+        stroke_parameters.set_operation(OP_UNION);
         break;
     case PAINT:
         helper_gui.change_list_layout("paint");
+        stroke_parameters.set_operation(OP_PAINT);
         break;
     default:
         break;

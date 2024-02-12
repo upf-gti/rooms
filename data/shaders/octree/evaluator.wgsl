@@ -130,6 +130,9 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     } else {
         current_stroke = stroke;
     }
+
+    let is_smooth_paint : bool = current_stroke.operation == OP_SMOOTH_PAINT;
+    let is_paint : bool = current_stroke.operation == OP_PAINT; 
     
     let is_smooth_union : bool = current_stroke.operation == OP_SMOOTH_UNION;
     let is_smooth_substract : bool = current_stroke.operation == OP_SMOOTH_SUBSTRACTION;
@@ -165,6 +168,13 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         edit_cutoff_distance = current_stroke.parameters.w;
     }
 
+    if (is_paint) {
+        current_stroke.operation = OP_UNION;
+    } else if (is_smooth_paint) {
+        current_stroke.operation = OP_SMOOTH_UNION;
+        edit_cutoff_distance = current_stroke.parameters.w;
+    }
+
     // Base evaluation range
     let x_range : vec2f = vec2f(octant_center.x - level_half_size, octant_center.x + level_half_size);
     let y_range : vec2f = vec2f(octant_center.y - level_half_size, octant_center.y + level_half_size);
@@ -189,7 +199,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
         surface_interval = eval_edit_interval(x_range, y_range, z_range, current_stroke.primitive, current_stroke.operation, current_stroke.parameters, surface_interval, current_edit, &edit_interval);
 
-        if (is_smooth_union || is_smooth_substract) {
+        if (is_smooth_union || is_smooth_substract || is_smooth_paint) {
             current_edit.dimensions += vec4f(current_stroke.parameters.w);
         }
 
@@ -311,6 +321,10 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                         octree_proxy_data.instance_data[instance_index].in_use = BRICK_HAS_PREVIEW_FLAG | BRICK_IN_USE_FLAG;
                     } 
                     
+                } else if (is_paint || is_smooth_paint) {
+                    if (is_current_brick_filled) {
+                        octree_proxy_data.instance_data[instance_index].in_use = BRICK_HAS_PREVIEW_FLAG | BRICK_IN_USE_FLAG;
+                    } 
                 }
             }
         }
@@ -358,6 +372,11 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                     }
                 }
                 
+                octant_usage_write[prev_counter] = octree_index;
+            }
+        } else if (is_paint || is_smooth_paint) {
+            if (is_current_brick_filled) {
+                let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 1);
                 octant_usage_write[prev_counter] = octree_index;
             }
         } else {

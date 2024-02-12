@@ -232,8 +232,8 @@ fn raymarch_with_previews(ray_origin_atlas_space : vec3f, ray_origin_sculpt_spac
         let normal : vec3f = estimate_normal_with_previews(pos_sculpt_space, pos_atlas_space);
 
         //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
-		//return vec4f(apply_light(-ray_dir, pos_sculpt_space, pos_world, normal, lightPos + lightOffset, surface.material), depth);
-        return vec4f(normal, depth);
+		return vec4f(apply_light(-ray_dir, pos_sculpt_space, pos_world, normal, lightPos + lightOffset, surface.material), depth);
+        //return vec4f(normal, depth);
         //return vec4f(surface.material.albedo, depth);
         //return vec4f(vec3f(surface.material.albedo), depth);
 	}
@@ -296,8 +296,8 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
 
         let material : Material = sample_material_atlas(position_in_atlas);
         //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
-		//return vec4f(apply_light(-ray_dir, position_in_world, position_in_world, normal, lightPos + lightOffset, material), depth);
-        return vec4f(normal, depth);
+		return vec4f(apply_light(-ray_dir, position_in_world, position_in_world, normal, lightPos + lightOffset, material), depth);
+        //return vec4f(normal, depth);
         //return vec4f(material.albedo, depth);
         //return vec4f(normal, depth);
         //return vec4f(vec3f(material.albedo), depth);
