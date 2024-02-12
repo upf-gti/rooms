@@ -115,34 +115,21 @@ fn sdCapsule( p : vec3f, a : vec3f, b : vec3f, rotation : vec4f, r : f32, materi
 }
 
 // t: (base radius, top radius)
-fn sdCone( p : vec3f, a : vec3f, b : vec3f, rotation : vec4f, t : vec2f, material : Material) -> Surface
+fn sdCone( p : vec3f, a : vec3f, height : f32, rotation : vec4f, t : vec2f, material : Material) -> Surface
 {
     var sf : Surface;
-    var ra = t.x;
-    var rb = t.y;
+    var r2 = t.x;
+    var r1 = t.y;
 
-    let pa : vec3f = rotate_point_quat(p - a, rotation);
-    let ba = b - a;
-    var rba  = rb-ra;
-    var baba = dot(ba,ba);
-    var papa = dot(pa,pa);
-    var paba = dot(pa,ba)/baba;
+    let pos : vec3f = rotate_point_quat(p - a, rotation) + vec3f(0.0, 0.0, height);
+    let q = vec2f( length(pos.xy), pos.z );
+    let k1 = vec2f(r2, height);
+    let k2 = vec2f(r2-r1, 2.0 * height);
+    let ca = vec2f(q.x - min(q.x, select(r2, r1, q.y<0.0)), abs(q.y) - height);
+    let cb = q - k1 + k2 * clamp( dot(k1 - q, k2) / dot(k2, k2), 0.0, 1.0);
+    let s : f32 = select(1.0, -1.0, cb.x < 0.0 && ca.y < 0.0);
 
-    var x = sqrt( papa - paba*paba*baba );
-
-    var cax = max(0.0,x-select(rb, ra, paba < 0.5));
-    var cay = abs(paba-0.5) - 0.5;
-
-    var k = rba*rba + baba;
-    var f = clamp( (rba*(x-ra)+paba*baba)/k, 0.0, 1.0 );
-
-    var cbx = x-ra - f*rba;
-    var cby = paba - f;
-    
-    var s = select(1.0, -1.0, cbx < 0.0 && cay < 0.0);
-    
-    sf.distance = s*sqrt( min(cax*cax + cay*cay*baba,
-                       cbx*cbx + cby*cby*baba) );
+    sf.distance = s * sqrt(min(dot(ca, ca), dot(cb, cb)));
     sf.material = material;
     return sf;
 }
@@ -432,7 +419,7 @@ fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters
             cap_value = cap_value * 0.5 + 0.5;
             radius = max(radius * (1.0 - cap_value), 0.0025);
             var dims = vec2f(size_param, size_param * cap_value);
-            pSurface = sdCone(position, edit.position,  edit.position - vec3f(0.0, 0.0, radius), edit.rotation, dims, stroke_material);
+            pSurface = sdCone(position, edit.position, radius, edit.rotation, dims, stroke_material);
             break;
         }
         // case SD_PYRAMID: {

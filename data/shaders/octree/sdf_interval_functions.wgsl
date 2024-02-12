@@ -505,37 +505,36 @@ fn capsule_interval( p : mat3x3f, c : vec3f, rotation : vec4f, radius : f32, hei
 
 fn cone_interval(p : mat3x3f, c : vec3f, rotation : vec4f, radius_dims : vec2f, height : f32) -> vec2f
 {
-    let ra = vec2f(radius_dims.x);
-    let rb = vec2f(radius_dims.y);
+    var r2 = radius_dims.x;
+    var r1 = radius_dims.y;
 
-    let a : mat3x3f = iavec3_vec(c);
-    var pa : mat3x3f = irotate_point_quat(isub_mat_vec(p, c), rotation);
+    var pos : mat3x3f = irotate_point_quat(isub_mat_vec(p, c), rotation);
 
-    let b : mat3x3f = iavec3_vec(c - vec3f(0.0, 0.0, height));
-    var ba : mat3x3f = isub_mats(b, a);
+    let q_x = isqrt(ipow2_vec(pos[0].xy) + ipow2_vec(pos[1].xy));
+    let q_y = pos[2].xy + vec2f(height);
 
-    let rba : vec2f = isub_vecs(rb, ra);
-    let baba : vec2f = idot_mat(ba, ba);
-    let papa : vec2f = idot_mat(pa, pa);
-    let paba : vec2f = idiv_vecs(idot_mat(pa, ba), baba);
+    let k1 = vec2f(r2, height);
+    let k2 = vec2f(r2 - r1, 2.0 * height);
 
-    let x : vec2f = isqrt(isub_vecs(papa, imul_vec2_vec2(ipow2_vec(paba), baba)));
+    let sr = iselect(vec2f(r2), vec2f(r1), ilessthan(q_y, vec2f(0.0)));
+    let ca_x = isub_vecs(q_x, imin(q_x, sr));
+    let ca_y = isub_vecs(iabs(q_y), vec2f(height));
 
-    let cax : vec2f = imax(vec2f(0.0), isub_vecs(x, iselect(rb, ra, ilessthan(paba, vec2f(0.5)))));
-    let cay : vec2f = isub_vec_float(iabs(isub_vec_float(paba, 0.5)), 0.5);
+    let m_skq_x = iavec3_vec(vec3f(isub_vecs(k1, q_x), 0.0));
+    let m_skq_y = iavec3_vec(vec3f(isub_vecs(k1, q_y), 0.0));
 
-    let k : vec2f = iadd_vecs(ipow2_vec(rba), baba);
-    let f : vec2f = iclamp( idiv_vecs(iadd_vecs(imul_vec2_vec2(rba, isub_vecs(x, ra)), imul_vec2_vec2(paba, baba)), k), 0.0, 1.0 );
+    let mk2 : mat3x3f = iavec3_vec(vec3f(k2, 0.0));
 
-    let cbx : vec2f = isub_vecs(isub_vecs(x, ra), imul_vec2_vec2(f, rba));
-    let cby : vec2f = isub_vecs(paba, f);
-    
-    let s : vec2f = iselect(vec2f(1.0), vec2f(-1.0), iand(ilessthan(cbx, vec2f(0.0)), ilessthan(cay, vec2f(0.0))));
-    
-    let min_a = iadd_vecs(ipow2_vec(cax), imul_vec2_vec2(ipow2_vec(cay), baba));
-    let min_b = iadd_vecs(ipow2_vec(cbx), imul_vec2_vec2(ipow2_vec(cby), baba));
+    let cb_x = q_x - k1 + k2 * iclamp( idot_mat(m_skq_x, mk2) / idot_mat(mk2, mk2), 0.0, 1.0);
+    let cb_y = q_y - k1 + k2 * iclamp( idot_mat(m_skq_y, mk2) / idot_mat(mk2, mk2), 0.0, 1.0);
 
-    return imul_vec2_vec2(s, isqrt(imin(min_a, min_b)));
+    let cond : vec2<bool> = iand(ilessthan(cb_x, vec2f(0.0)), ilessthan(ca_y, vec2f(0.0)));
+    let s : vec2f = select(vec2f(1.0), vec2f(-1.0), cond);
+
+    let m_ca = iavec3_vecs(ca_x, ca_y, vec2f(0.0));
+    let m_cb = iavec3_vecs(cb_x, cb_y, vec2f(0.0));
+
+    return imul_vec2_vec2(s, isqrt(imin(idot_mat(m_ca, m_ca), idot_mat(m_cb, m_cb))));
 }
 
 fn cylinder_interval(p : mat3x3f, start_pos : vec3f, rotation : vec4f, radius : f32, height : f32) -> vec2f
@@ -608,10 +607,9 @@ fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f,  primitive : u32, 
         }
         case SD_CONE: {
             // onion_thickness = map_thickness( onion_thickness, 0.01 );
-            // cap_value = cap_value * 0.5 + 0.5;
-            // radius = max(radius * (1.0 - cap_value), 0.0025);
-            // var dims = vec2f(size_param, size_param * cap_value);
-            var dims = vec2f(size_param, 0.0);
+            cap_value = cap_value * 0.5 + 0.5;
+            radius = max(radius * (1.0 - cap_value), 0.0025);
+            var dims = vec2f(size_param, size_param * cap_value);
             pSurface = cone_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.rotation, dims, radius);
             break;
         }
