@@ -58,9 +58,15 @@ class SculptEditor {
     EntityMesh*     mesh_preview_outline = nullptr;
 
     void set_primitive( sdPrimitive primitive );
-    void toggle_onion_modifier();
-    void toggle_capped_modifier();
     void update_edit_preview( const glm::vec4& dims );
+
+    void set_onion_modifier(float value);
+    void set_cap_modifier(float value);
+
+    void toggle_capped_modifier();
+    void toggle_onion_modifier();
+
+    bool        modifiers_dirty = false;
 
     bool        dimensions_dirty = true;
     bool        stamp_enabled = false;

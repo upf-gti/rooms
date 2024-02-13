@@ -17,10 +17,18 @@
             "button": 3,
             "type": "label",
             "texture": "data/textures/buttons/y.png"
+        },
+        {
+            "name": "Smooth",
+            "subtext": "Hard",
+            "alias": "hard_smooth",
+            "button": 3,
+            "type": "label",
+            "texture": "data/textures/buttons/y.png"
         }
     ],
     "lists": {
         "sculpt": ["smear_stamp", "add_substract"],
-        "paint": ["smear_stamp"]
+        "paint": ["smear_stamp", "hard_smooth"]
     }
 }

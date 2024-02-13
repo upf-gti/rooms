@@ -166,6 +166,19 @@ bool SculptEditor::edit_update(float delta_time)
         }
     }
 
+    // Update shape editor values
+    {
+        if (modifiers_dirty) {
+
+            glm::vec4 parameters = stroke_parameters.get_parameters();
+            parameters.x = onion_enabled ? onion_thickness : 0.0f;
+            parameters.y = capped_enabled ? capped_value : 0.0f;
+            stroke_parameters.set_parameters(parameters);
+
+            modifiers_dirty = false;
+        }
+    }
+
     // Operation changer for the different tools
     {
         if (Input::was_button_pressed(XR_BUTTON_Y)) {
@@ -370,7 +383,6 @@ void SculptEditor::scene_update_rotation()
 
 }
 
-
 void SculptEditor::render()
 {
     if (mesh_preview && renderer->get_openxr_available())
@@ -427,6 +439,7 @@ void SculptEditor::render()
 // =====================
 // GUI =================
 // =====================
+
 void SculptEditor::render_gui()
 {
     StrokeMaterial& stroke_material = stroke_parameters.get_material();
@@ -542,6 +555,18 @@ void SculptEditor::set_primitive(sdPrimitive primitive)
     }
 }
 
+void SculptEditor::set_onion_modifier(float value)
+{
+    onion_thickness = glm::clamp(value, 0.0f, 1.0f);
+    modifiers_dirty = true;
+}
+
+void SculptEditor::set_cap_modifier(float value)
+{
+    capped_value = glm::clamp(value, 0.0f, 1.0f);
+    modifiers_dirty = true;
+}
+
 void SculptEditor::toggle_onion_modifier()
 {
     capped_enabled = false;
@@ -608,9 +633,9 @@ void SculptEditor::bind_events()
         gui.bind("torus", [&](const std::string& signal, void* button) { set_primitive(SD_TORUS); });
 
         gui.bind("onion", [&](const std::string& signal, void* button) { toggle_onion_modifier(); });
-        gui.bind("onion_value", [&](const std::string& signal, float value) { onion_thickness = glm::clamp(value, 0.0f, 1.0f); });
+        gui.bind("onion_value", [&](const std::string& signal, float value) { set_onion_modifier(value); });
         gui.bind("capped", [&](const std::string& signal, void* button) { toggle_capped_modifier(); });
-        gui.bind("cap_value", [&](const std::string& signal, float value) { capped_value = glm::clamp(value, 0.0f, 1.0f); });
+        gui.bind("cap_value", [&](const std::string& signal, float value) { set_cap_modifier(value); });
 
         gui.bind("mirror", [&](const std::string& signal, void* button) { use_mirror = !use_mirror; });
         gui.bind("snap_to_grid", [&](const std::string& signal, void* button) { snap_to_grid = !snap_to_grid; });
