@@ -134,8 +134,13 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     let is_smooth_paint : bool = current_stroke.operation == OP_SMOOTH_PAINT;
     let is_paint : bool = current_stroke.operation == OP_PAINT; 
     
+    let is_union : bool = current_stroke.operation == OP_UNION;
     let is_smooth_union : bool = current_stroke.operation == OP_SMOOTH_UNION;
+    let is_any_union : bool = is_union || is_smooth_union;
+
+    let is_substract : bool = current_stroke.operation == OP_SUBSTRACTION;
     let is_smooth_substract : bool = current_stroke.operation == OP_SMOOTH_SUBSTRACTION;
+    let is_any_substract : bool = is_substract || is_smooth_substract;
     
     let octant_min : vec3f = octant_center - vec3f(level_half_size);
     let octant_max : vec3f = octant_center + vec3f(level_half_size);
@@ -293,7 +298,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                     octree_proxy_data.instance_data[instance_index].in_use = BRICK_HAS_PREVIEW_FLAG | BRICK_IN_USE_FLAG;
                 } else {
                     // If it is not the surface
-                    if (current_stroke.operation == OP_UNION || current_stroke.operation == OP_SMOOTH_UNION) {
+                    if (is_any_union) {
                         // Add exterior preview bricks
                         // Add preview bricks inside
                         let preview_brick : u32 = atomicAdd(&preview_data.instance_count, 1u);
@@ -316,7 +321,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 // TODO: this is more correct, but would need to run te copy_brick each frame
                 // This could be done when brick reordering is implemented
                 // octree_proxy_data.instance_data[instance_index].in_use = BRICK_HIDE_FLAG | BRICK_IN_USE_FLAG;
-                if (current_stroke.operation == OP_SUBSTRACTION || current_stroke.operation == OP_SMOOTH_SUBSTRACTION) {
+                if (is_any_substract) {
                     if (is_current_brick_filled) {
                         octree_proxy_data.instance_data[instance_index].in_use = BRICK_HAS_PREVIEW_FLAG | BRICK_IN_USE_FLAG;
                     } 
@@ -330,7 +335,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         }
         // In the case that the incomming edits's operation is either Add or Smooth Add
         else 
-        if (current_stroke.operation == OP_UNION || current_stroke.operation == OP_SMOOTH_UNION) {
+        if (is_any_union) {
             // IF ITS A UNION OPERATION ================
             if (global_surface_outside || global_surface_inside) {
                 // if is inside or outside the resulting SDF, we delete the brick
