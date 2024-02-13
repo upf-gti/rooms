@@ -390,9 +390,7 @@ void SculptEditor::render()
         update_edit_preview(edit_to_add.dimensions);
 
         // Render something to be able to cull faces later...
-        if (stroke_parameters.get_operation() == OP_SUBSTRACTION || stroke_parameters.get_operation() == OP_SMOOTH_SUBSTRACTION || 
-            stroke_parameters.get_operation() == OP_PAINT || stroke_parameters.get_operation() == OP_SMOOTH_PAINT)
-        {
+        if (!mustRenderMeshPreviewOutline()) {
                 mesh_preview->render();
         }
         else
@@ -470,6 +468,11 @@ void SculptEditor::render_gui()
         stroke_parameters.set_dirty(true);
 }
 
+bool SculptEditor::mustRenderMeshPreviewOutline()
+{
+    return stroke_parameters.get_operation() == OP_UNION || stroke_parameters.get_operation() == OP_SMOOTH_UNION;
+}
+
 void SculptEditor::update_edit_preview(const glm::vec4& dims)
 {
     // Recreate mesh depending on primitive parameters
@@ -477,7 +480,11 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
     if (dimensions_dirty)
     {
         // Expand a little bit the edges
-        glm::vec4 grow_dims = dims * 1.01f;
+        glm::vec4 grow_dims = dims;
+
+        if (!mustRenderMeshPreviewOutline()) {
+            grow_dims.x = std::max(grow_dims.x - 0.002f, 0.001f);
+        }
 
         switch (stroke_parameters.get_primitive())
         {
@@ -606,6 +613,9 @@ void SculptEditor::enable_tool(eTool tool)
     default:
         break;
     }
+
+    // Set this to allow the mesh preview to give a little mergin in the outline mode
+    dimensions_dirty = true;
 }
 
 bool SculptEditor::is_rotation_being_used()

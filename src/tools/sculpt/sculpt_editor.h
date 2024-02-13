@@ -66,6 +66,8 @@ class SculptEditor {
     void toggle_capped_modifier();
     void toggle_onion_modifier();
 
+    bool mustRenderMeshPreviewOutline();
+
     bool        modifiers_dirty = false;
 
     bool        dimensions_dirty = true;

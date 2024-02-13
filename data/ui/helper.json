@@ -3,6 +3,12 @@
     "height": 42,
     "elements": [
         {
+            "name": "Select",
+            "alias": "select",
+            "type": "label",
+            "texture": "data/textures/buttons/a.png"
+        },
+        {
             "name": "Stamp",
             "subtext": "Smear",
             "alias": "smear_stamp",
@@ -28,7 +34,7 @@
         }
     ],
     "lists": {
-        "sculpt": ["smear_stamp", "add_substract"],
-        "paint": ["smear_stamp", "hard_smooth"]
+        "sculpt": ["select", "smear_stamp", "add_substract"],
+        "paint": ["select", "smear_stamp", "hard_smooth"]
     }
 }
