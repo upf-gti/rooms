@@ -342,17 +342,20 @@ fn opSmoothIntersection( s1 : Surface, s2 : Surface, k : f32 ) -> Surface
     let h : f32 = max(k - abs(s1.distance - s2.distance), 0.0);
     var s : Surface;
     s.distance = max(s1.distance, s2.distance) + h * h * 0.25 / k;
-    //s.color = s1.color;
+    s.material = Material_mix(s1.material, s2.material, h);
     return s;
 }
 
 fn opSmoothPaint( s1 : Surface, s2 : Surface, material : Material, k : f32 ) -> Surface
 {
     var sColorInter : Surface = opIntersection(s1, s2);
-    sColorInter.material = material;
-    let u : Surface = opUnion(s1, sColorInter);
-    var s : Surface = opSmoothUnion(s1, sColorInter, k);
-    s.distance = u.distance;
+    
+    let smin : vec2f = soft_min(sColorInter.distance, s1.distance, k);
+
+    var s : Surface;
+    s.distance = s1.distance;
+    s.material = Material_mix(material, s1.material, smin.y);
+
     return s;
 }
 
@@ -462,6 +465,8 @@ fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters
     {
         pSurface = opOnion(pSurface, onion_thickness);
     }
+
+    pSurface.material = stroke_material;
 
     switch (operation) {
         case OP_UNION: {
