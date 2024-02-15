@@ -83,11 +83,7 @@ fn sample_sdf_preview(position : vec3f) -> f32
     // TODO: preview edits
     var material : Material = get_material_preview();
     var surface : Surface;
-    if (preview_data.preview_stroke.operation == OP_SUBSTRACTION || preview_data.preview_stroke.operation == OP_SMOOTH_SUBSTRACTION) {
-        surface.distance = -10000.0;
-    } else {
-        surface.distance = 10000.0;
-    }
+    surface.distance = 10000.0;
     for(var i : u32 = 0u; i < preview_data.preview_stroke.edit_count; i++) {
         surface = evaluate_edit(position, preview_data.preview_stroke.primitive, preview_data.preview_stroke.operation, preview_data.preview_stroke.parameters, surface, material, preview_data.preview_stroke.edits[i]);
     }
