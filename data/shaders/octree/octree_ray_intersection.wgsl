@@ -143,6 +143,7 @@ fn compute()
                         intersected = true;
                         ray_intersection_info.tile_pointer = octree.data[octree_index].tile_pointer;
                         intersected_distance = octants_to_visit[i].distance;
+                        ray_intersection_info.intersection_center = octants_to_visit[i].octant_center;
                     }
                 }
             }

@@ -174,7 +174,7 @@ void RaymarchingRenderer::push_edit(const Edit edit) {
     current_stroke.edits[current_stroke.edit_count++] = edit;
 }
 
-void RaymarchingRenderer::octree_ray_intersect(const glm::vec3& ray_origin, const glm::vec3& ray_dir)
+void RaymarchingRenderer::octree_ray_intersect(const glm::vec3& ray_origin, const glm::vec3& ray_dir, std::function<void(glm::vec3)> callback)
 {
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
 
@@ -245,6 +245,10 @@ void RaymarchingRenderer::octree_ray_intersect(const glm::vec3& ray_origin, cons
     while (!user_data.finished) {
         // Checks for ongoing asynchronous operations and call their callbacks if needed
         webgpu_context->process_events();
+
+        if (user_data.info->intersected > 0 && callback) {
+            callback(user_data.info->intersection_center);
+        }
     }
 }
 

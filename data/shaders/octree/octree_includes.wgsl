@@ -175,5 +175,7 @@ struct RayIntersectionInfo
     intersected : u32,
     tile_pointer : u32,
     dummy0 : u32,
-    dummy1 : u32
+    dummy1 : u32,
+    intersection_center : vec3f,
+    dummy2 : u32,
 };

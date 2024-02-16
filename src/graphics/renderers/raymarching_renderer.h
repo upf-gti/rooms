@@ -18,10 +18,12 @@
 class EntityMesh;
 
 struct RayIntersectionInfo {
-    uint32_t intersected = 0;
-    uint32_t tile_pointer = 0;
-    uint32_t dummy0 = 0;
-    uint32_t dummy1 = 0;
+    uint32_t    intersected = 0;
+    uint32_t    tile_pointer = 0;
+    uint32_t    dummy0 = 0;
+    uint32_t    dummy1 = 0;
+    glm::vec3   intersection_center;
+    uint32_t    dummy2 = 0;
 };
 
 class RaymarchingRenderer {
@@ -215,8 +217,6 @@ class RaymarchingRenderer {
     bool needs_undo = false;
     bool needs_redo = false;
 
-    void octree_ray_intersect(const glm::vec3& ray_origin, const glm::vec3& ray_dir);
-
 public:
 
     RaymarchingRenderer();
@@ -240,6 +240,8 @@ public:
     void set_sculpt_start_position(const glm::vec3& position);
     void set_sculpt_rotation(const glm::quat& rotation);
     void set_camera_eye(const glm::vec3& eye_pos);
+
+    void octree_ray_intersect(const glm::vec3& ray_origin, const glm::vec3& ray_dir, std::function<void(glm::vec3)> callback = nullptr);
 
     const RayIntersectionInfo& get_ray_intersection_info() const;
 

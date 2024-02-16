@@ -119,8 +119,29 @@ bool SculptEditor::edit_update(float delta_time)
 {
     bool is_tool_used = is_tool_being_used();
 
+    glm::mat4x4 controller_pose = Input::get_controller_pose(HAND_RIGHT);
+
+    controller_pose = glm::rotate(controller_pose, glm::radians(36.9f), glm::vec3(1.0f, 0.0f, 0.0f));
+    controller_pose = glm::translate(controller_pose, glm::vec3(0.0f, -0.25f, 0.0f));
+
     // Update edit transform
-    edit_to_add.position = Input::get_controller_position(HAND_RIGHT);
+    edit_to_add.position = controller_pose[3];
+
+    // Follow surface
+    if (true) {
+
+        // TODO: modify octree intersection to get real surface, not the brick center
+        auto callback = [&](glm::vec3 center) {
+            edit_to_add.position = center;
+            edit_to_add.position = edit_to_add.position * glm::inverse(sculpt_rotation * rotation_diff);
+            edit_to_add.position += (sculpt_start_position + translation_diff);
+        };
+
+        glm::mat4x4 pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
+        glm::vec3 ray_dir = get_front(pose);
+        renderer->get_raymarching_renderer()->octree_ray_intersect(pose[3], ray_dir, callback);
+    }
+
     edit_to_add.rotation = glm::inverse(Input::get_controller_rotation(HAND_RIGHT));
 
     // Update edit dimensions
@@ -496,21 +517,15 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
             break;
         case SD_CONE:
             mesh_preview->get_surface(0)->create_cone(grow_dims.w, grow_dims.x);
-            mesh_preview->rotate(glm::radians(-90.f), { 1.f, 0.f, 0.f });
             break;
         case SD_CYLINDER:
             mesh_preview->get_surface(0)->create_cylinder(grow_dims.w, grow_dims.x * 2.0f);
-            mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
-            mesh_preview->translate({ 0.f, 0.0f, 0.f });
             break;
         case SD_CAPSULE:
             mesh_preview->get_surface(0)->create_capsule(grow_dims.w, grow_dims.x);
-            mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
-            mesh_preview->translate({ 0.f, -dims.x * 0.5f, 0.f });
             break;
         case SD_TORUS:
             mesh_preview->get_surface(0)->create_torus(grow_dims.x, glm::clamp(grow_dims.w, 0.0001f, grow_dims.x));
-            mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
             break;
         default:
             break;
@@ -543,6 +558,14 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
     default:
         break;
     }
+
+    glm::mat4x4 preview_pose = mesh_preview->get_model();
+
+    preview_pose = glm::rotate(preview_pose, glm::radians(36.9f), glm::vec3(1.0f, 0.0f, 0.0f));
+    preview_pose = glm::translate(preview_pose, glm::vec3(0.0f, -0.25f, 0.0f));
+
+    // Update edit transform
+    mesh_preview->set_model(preview_pose);
 }
 
 void SculptEditor::set_sculpt_started(bool value)
