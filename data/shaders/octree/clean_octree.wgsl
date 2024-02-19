@@ -20,7 +20,7 @@ fn compute(@builtin(workgroup_id) id: vec3<u32>, @builtin(local_invocation_index
 
     if (index_linear < OCTREE_TOTAL_SIZE-1) {
         if ((octree.data[index_linear].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG) {
-            let instance_id : u32 = octree.data[index_linear].tile_pointer & 0x3FFFFFFFu;
+            let instance_id : u32 = octree.data[index_linear].tile_pointer & OCTREE_TILE_INDEX_MASK;
             let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
             indirect_brick_removal.brick_removal_buffer[brick_to_delete_idx] = instance_id;
         }

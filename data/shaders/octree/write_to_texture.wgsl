@@ -31,7 +31,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     let brick_pointer : u32 = octree.data[octree_leaf_id].tile_pointer;
 
     // Get the brick index, without the MSb that signals if it has an already initialized brick
-    let brick_index : u32 = brick_pointer & 0x3FFFFFFFu;
+    let brick_index : u32 = brick_pointer & OCTREE_TILE_INDEX_MASK;
 
     let proxy_data : ProxyInstanceData = octree_proxy_data.instance_data[brick_index];
 

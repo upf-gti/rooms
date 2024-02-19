@@ -256,6 +256,11 @@ void RoomsEngine::render_gui()
             std::string intersected = info.intersected ? "yes" : "no";
             ImGui::Text(("Ray Intersection: " + intersected).c_str());
             ImGui::Text(("Tile pointer: " + std::to_string(info.tile_pointer)).c_str());
+            if (info.intersected) {
+                ImGui::Text("Intersection position :");
+                ImGui::Text("   : %.3f, %.3f, %.3f", info.intersection_center.x, info.intersection_center.y, info.intersection_center.z);
+            }
+
             ImGui::EndTabItem();
         }
         ImGui::EndTabBar();

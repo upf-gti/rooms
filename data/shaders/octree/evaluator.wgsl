@@ -151,7 +151,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         if (is_in_reevaluation_zone) {
             if ((octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG) {
                 let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
-                let instance_index : u32 = octree.data[octree_index].tile_pointer & 0x3FFFFFFFu;
+                let instance_index : u32 = octree.data[octree_index].tile_pointer & OCTREE_TILE_INDEX_MASK;
                 indirect_brick_removal.brick_removal_buffer[brick_to_delete_idx] = instance_index;
                 octree_proxy_data.instance_data[instance_index].in_use = 0u;
                // octree.data[octree_index].tile_pointer = 0u;
@@ -291,7 +291,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         }
     } else {
         if (is_evaluating_preview) {
-            let instance_index : u32 = octree.data[octree_index].tile_pointer & 0x3FFFFFFFu;
+            let instance_index : u32 = octree.data[octree_index].tile_pointer & OCTREE_TILE_INDEX_MASK;
             if (local_surface_intersection) {
                 if (is_current_brick_filled) {
                     // Mark current brick in order to evaluate the stroke
@@ -299,14 +299,14 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 } else {
                     if (global_surface_intersection) {
                         //Add preview bricks inside
-                            let preview_brick : u32 = atomicAdd(&preview_data.instance_count, 1u);
+                        let preview_brick : u32 = atomicAdd(&preview_data.instance_count, 1u);
     
-                            preview_data.instance_data[preview_brick].position = octant_center;
-                            preview_data.instance_data[preview_brick].octree_parent_id = octree_index;
-                            preview_data.instance_data[preview_brick].in_use = 0u;
-                            if (is_interior_brick) {
-                               preview_data.instance_data[preview_brick].in_use = INTERIOR_BRICK_FLAG; 
-                            }
+                        preview_data.instance_data[preview_brick].position = octant_center;
+                        preview_data.instance_data[preview_brick].octree_parent_id = octree_index;
+                        preview_data.instance_data[preview_brick].in_use = 0u;
+                        if (is_interior_brick) {
+                            preview_data.instance_data[preview_brick].in_use = INTERIOR_BRICK_FLAG; 
+                        }
                     }
                 }
             } else if (local_surface_inside) {
@@ -333,7 +333,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 // if is inside or outside the resulting SDF, we delete the brick
                 if (is_current_brick_filled) {
                     let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
-                    let instance_index : u32 = octree.data[octree_index].tile_pointer & 0x3FFFFFFFu;
+                    let instance_index : u32 = octree.data[octree_index].tile_pointer & OCTREE_TILE_INDEX_MASK;
                     indirect_brick_removal.brick_removal_buffer[brick_to_delete_idx] = instance_index;
                     octree_proxy_data.instance_data[instance_index].in_use = 0u;
                     octree.data[octree_index].tile_pointer = 0u;
@@ -399,7 +399,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 if (is_current_brick_filled) {
                     // If its inside the new_edits, and the brick is filled, we delete it
                     let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
-                    let instance_index : u32 = octree.data[octree_index].tile_pointer & 0x3FFFFFFFu;
+                    let instance_index : u32 = octree.data[octree_index].tile_pointer & OCTREE_TILE_INDEX_MASK;
                     indirect_brick_removal.brick_removal_buffer[brick_to_delete_idx] = instance_index;
                     octree_proxy_data.instance_data[instance_index].in_use = 0u;
                     octree.data[octree_index].tile_pointer = 0u;

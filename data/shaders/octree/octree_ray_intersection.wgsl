@@ -9,9 +9,8 @@ struct RayInfo
 }
 
 @group(0) @binding(2) var<storage, read_write> octree : Octree;
-// @group(0) @binding(3) var read_sdf: texture_3d<f32>;
-// @group(0) @binding(4) var texture_sampler : sampler;
-// @group(0) @binding(5) var<storage, read> octree_proxy_data: OctreeProxyInstancesNonAtomic;
+@group(0) @binding(3) var read_sdf: texture_3d<f32>;
+@group(0) @binding(4) var texture_sampler : sampler;
 
 @group(1) @binding(0) var<uniform> ray_info: RayInfo;
 @group(1) @binding(3) var<storage, read_write> ray_intersection_info: RayIntersectionInfo;
@@ -61,6 +60,42 @@ fn pop_iteration_data(stack_pointer : ptr<function, u32>) -> IterationData
     return iteration_data_stack[*stack_pointer];
 }
 
+
+fn sample_sdf_atlas(atlas_position : vec3f) -> f32
+{
+    return textureSampleLevel(read_sdf, texture_sampler, atlas_position, 0.0).r / SCULPT_MAX_SIZE;
+}
+
+#include sdf_utils.wgsl
+
+fn raymarch(ray_origin_in_atlas_space : vec3f, ray_dir : vec3f, max_distance : f32, has_hit: ptr<function, bool>) -> f32
+{
+	var depth : f32 = 0.0;
+    var distance : f32;
+
+    var position_in_atlas : vec3f;
+    var i : i32 = 0;
+
+    *has_hit = false;
+
+	for (i = 0; depth < max_distance && i < MAX_ITERATIONS; i++)
+    {
+		position_in_atlas = ray_origin_in_atlas_space + ray_dir * depth;
+
+        distance = sample_sdf_atlas(position_in_atlas);
+
+		if (distance < MIN_HIT_DIST) {
+            *has_hit = true;
+            return depth;
+		} 
+
+        depth += distance;
+	}
+
+    return -1000.0;
+}
+
+
 @compute @workgroup_size(1, 1, 1)
 fn compute()
 {
@@ -89,7 +124,7 @@ fn compute()
         push_iteration_data(&stack_pointer, level, 0, 0, vec3f(0.0, 0.0, 0.0));
 
         // Compute the center and the half size of the current octree level
-        while (level <= OCTREE_DEPTH && stack_pointer > 0) {
+        while (level <= OCTREE_DEPTH && stack_pointer > 0 && !intersected) {
 
             let iteration_data : IterationData = pop_iteration_data(&stack_pointer);
 
@@ -117,7 +152,7 @@ fn compute()
             // sort by distance
             for (var i : u32 = 0; i < octants_count; i++) {
                 for(var j = i; j < octants_count; j++) {
-                    if (octants_to_visit[j].distance < octants_to_visit[i].distance)
+                    if (octants_to_visit[j].distance > octants_to_visit[i].distance)
                     {
                         let swap = octants_to_visit[i];
                         octants_to_visit[i] = octants_to_visit[j];
@@ -126,7 +161,7 @@ fn compute()
                 }
             }
 
-            for (var i : u32 = 0; i < octants_count; i++) {
+            for (var i : u32 = 0; i < octants_count && !intersected; i++) {
 
                 let octant_id : u32 = parent_octant_id | (octants_to_visit[i].octant << (3 * (level - 1)));
                 let is_last_level : bool = level == OCTREE_DEPTH;
@@ -138,12 +173,40 @@ fn compute()
                     last_octant = octants_to_visit[i].octant;
                     // If the brick is filled
                     let octree_index : u32 = octant_id + u32((pow(8.0, f32(level)) - 1) / 7);
-                    if (octants_to_visit[i].distance < intersected_distance &&
-                       (octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG) {
-                        intersected = true;
-                        ray_intersection_info.tile_pointer = octree.data[octree_index].tile_pointer;
+                    if ((octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG) {
                         intersected_distance = octants_to_visit[i].distance;
-                        ray_intersection_info.intersection_center = octants_to_visit[i].octant_center;
+                        ray_intersection_info.tile_pointer = octree.data[octree_index].tile_pointer;
+
+                        let atlas_tile_index : u32 = ray_intersection_info.tile_pointer & OCTREE_TILE_INDEX_MASK;
+                        let in_atlas_tile_coordinate : vec3f = vec3f(10 * vec3u(atlas_tile_index % BRICK_COUNT,
+                                                  (atlas_tile_index / BRICK_COUNT) % BRICK_COUNT,
+                                                   atlas_tile_index / (BRICK_COUNT * BRICK_COUNT))) / SDF_RESOLUTION;
+
+                        // Ray intersection in sculpt space
+                        let in_sculpture_point : vec3f = ray_info.ray_origin + ray_info.ray_dir * octants_to_visit[i].distance;
+                        var in_atlas_position : vec3f = in_sculpture_point;
+                        // Sculpt coords 2 brick data
+                        in_atlas_position -= octants_to_visit[i].octant_center;
+                        in_atlas_position *= SCULPT_TO_ATLAS_CONVERSION_FACTOR;
+                        in_atlas_position += in_atlas_tile_coordinate + vec3f(5.0 / SDF_RESOLUTION);
+                        // From sculpt to  atlas space: (sculpt - brick_center) * SCULPT_TO_ATLAS + atlas_origin
+
+                        let raymarch_max_distance : f32 = ray_intersect_AABB_only_near(in_atlas_position, ray_info.ray_dir, in_atlas_tile_coordinate + vec3f(5.0 / SDF_RESOLUTION), vec3f(BRICK_ATLAS_SIZE));
+
+                        // Raymarching
+                        let raymarch_result_distance = raymarch(in_atlas_position, ray_info.ray_dir, raymarch_max_distance, &intersected);
+
+                        if (intersected) {
+                            let atlas_position : vec3f = in_atlas_position + ray_info.ray_dir * raymarch_result_distance;
+                            // let material : Material = sample_material_atlas(atlas_position);
+
+                            // ray_intersection_info.material_albedo = material.albedo;   
+                            // ray_intersection_info.material_roughness = material.roughness;   
+                            // ray_intersection_info.material_metalness = material.metalness;                           
+                            
+                            ray_intersection_info.intersection_center = in_sculpture_point + ray_info.ray_dir * (raymarch_result_distance / SCULPT_TO_ATLAS_CONVERSION_FACTOR);//octants_to_visit[i].octant_center;
+                            break;
+                        }
                     }
                 }
             }

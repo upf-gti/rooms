@@ -17,6 +17,8 @@ const TOTAL_BRICK_COUNT = BRICK_COUNT * BRICK_COUNT * BRICK_COUNT;
 
 const MIN_HIT_DIST = 0.00005;
 
+const OCTREE_TILE_INDEX_MASK = 0x3FFFFFFFu;
+
 const FILLED_BRICK_FLAG = 0x80000000u;
 const INTERIOR_BRICK_FLAG = 0x40000000u;
 
@@ -174,8 +176,10 @@ struct RayIntersectionInfo
 {
     intersected : u32,
     tile_pointer : u32,
+    material_roughness : f32,
+    material_metalness : f32,
+    material_albedo : vec3f,
     dummy0 : u32,
-    dummy1 : u32,
     intersection_center : vec3f,
-    dummy2 : u32,
+    dummy1 : u32,
 };

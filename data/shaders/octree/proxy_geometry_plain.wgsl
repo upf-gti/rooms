@@ -314,25 +314,19 @@ var<private> last_found_surface_distance : f32;
 
 var<private> last_sampled_material : Material;
 
-fn intersectAABB(rayOrigin : vec3f, rayDir: vec3f, box_origin: vec3f, box_size: vec3f) -> f32 {
-    let boxMin : vec3f = box_origin - (box_size / 2.0);
-    let boxMax : vec3f = boxMin + box_size;
-
-    let tMin : vec3f = (boxMin - rayOrigin) / rayDir;
-    let tMax : vec3f = (boxMax - rayOrigin) / rayDir;
-    let t2 : vec3f = max(tMin, tMax);
-    let tFar : f32 = min(min(t2.x, t2.y), t2.z);
-    return tFar;
-};
-
 @fragment
 fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     var out: FragmentOutput;
 
-    var eye_atlas_pos : vec3f = (rotate_point_quat(eye_position - sculpt_data.sculpt_start_position, quat_conj(sculpt_data.sculpt_rotation)) - in.brick_center_in_sculpt_space);
+    // From world to sculpt: make it relative to the sculpt center, and un-apply the rotation.
+    var eye_atlas_pos : vec3f = rotate_point_quat(eye_position - sculpt_data.sculpt_start_position, quat_conj(sculpt_data.sculpt_rotation));
+    // Get the sculpt space position relative to the current brick
+    eye_atlas_pos -= in.brick_center_in_sculpt_space;
+    // Atlas and sculpt space are aligned, the only difference is a change of scale, depednign on brick size. Now the coordinates are Atlas-brick relative
     eye_atlas_pos *= SCULPT_TO_ATLAS_CONVERSION_FACTOR;
-    eye_atlas_pos += in.atlas_tile_coordinate + vec3f(5.0 / SDF_RESOLUTION);
+    // make the coordinate accurate to the "global" in-brick position
+    eye_atlas_pos += in.atlas_tile_coordinate + vec3f(5.0 / SDF_RESOLUTION); 
     let ray_dir_atlas : vec3f = normalize(in.in_atlas_pos - eye_atlas_pos);
 
     let ray_dir_world : vec3f = normalize(in.vertex_in_world_space.xyz - eye_position);
@@ -340,7 +334,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     // ray dir in atlas coords :((
     
     // Raro
-    let raymarch_distance : f32 = intersectAABB(in.in_atlas_pos, ray_dir_atlas, in.atlas_tile_coordinate + vec3f(5.0 / SDF_RESOLUTION), vec3f(BRICK_ATLAS_SIZE));
+    let raymarch_distance : f32 = ray_intersect_AABB_only_near(in.in_atlas_pos, ray_dir_atlas, in.atlas_tile_coordinate + vec3f(5.0 / SDF_RESOLUTION), vec3f(BRICK_ATLAS_SIZE));
     
     atlas_tile_coordinates = in.atlas_tile_coordinate;
     brick_center_in_sculpt_space = in.brick_center_in_sculpt_space;

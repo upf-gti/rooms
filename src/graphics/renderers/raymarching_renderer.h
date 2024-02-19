@@ -20,7 +20,9 @@ class EntityMesh;
 struct RayIntersectionInfo {
     uint32_t    intersected = 0;
     uint32_t    tile_pointer = 0;
-    uint32_t    dummy0 = 0;
+    float       material_roughness = 0.0f;
+    float       material_metalness = 0.0f;
+    glm::vec3   material_albedo;
     uint32_t    dummy1 = 0;
     glm::vec3   intersection_center;
     uint32_t    dummy2 = 0;
