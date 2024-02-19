@@ -297,24 +297,16 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                     // Mark current brick in order to evaluate the stroke
                     octree_proxy_data.instance_data[instance_index].in_use = BRICK_HAS_PREVIEW_FLAG | BRICK_IN_USE_FLAG;
                 } else {
-                    // If it is not the surface
-                    if (is_any_union) {
-                        // Add exterior preview bricks
-                        // Add preview bricks inside
-                        let preview_brick : u32 = atomicAdd(&preview_data.instance_count, 1u);
-    
-                        preview_data.instance_data[preview_brick].position = octant_center;
-                        preview_data.instance_data[preview_brick].octree_parent_id = octree_index;
-                        //preview_data.instance_data[preview_brick].in_use = PREVIEW_BRICK_INSIDE_FLAG;
-                    } else { // Substract
-                        if (global_surface_intersection) {
-                            // Add preview bricks inside
+                    if (global_surface_intersection) {
+                        //Add preview bricks inside
                             let preview_brick : u32 = atomicAdd(&preview_data.instance_count, 1u);
     
                             preview_data.instance_data[preview_brick].position = octant_center;
                             preview_data.instance_data[preview_brick].octree_parent_id = octree_index;
-                            preview_data.instance_data[preview_brick].in_use = 0;
-                        }
+                            preview_data.instance_data[preview_brick].in_use = 0u;
+                            if (is_interior_brick) {
+                               preview_data.instance_data[preview_brick].in_use = INTERIOR_BRICK_FLAG; 
+                            }
                     }
                 }
             } else if (local_surface_inside) {
