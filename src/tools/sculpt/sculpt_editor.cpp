@@ -21,7 +21,7 @@ void SculptEditor::initialize()
 
     mirror_mesh = new EntityMesh();
     mirror_mesh->add_surface(RendererStorage::get_surface("quad"));
-    mirror_mesh->scale(glm::vec3(0.5f));
+    mirror_mesh->scale(glm::vec3(0.25f));
 
     Material mirror_material;
     mirror_material.shader = RendererStorage::get_shader("data/shaders/mesh_texture.wgsl");
@@ -44,6 +44,7 @@ void SculptEditor::initialize()
 
     axis_lock_gizmo.initialize(POSITION_GIZMO, sculpt_start_position);
     mirror_gizmo.initialize(POSITION_GIZMO, sculpt_start_position);
+    mirror_origin = sculpt_start_position;
 
     // Initialize default primitive states
     {
@@ -128,13 +129,13 @@ bool SculptEditor::edit_update(float delta_time)
     edit_to_add.position = controller_pose[3];
 
     // Follow surface
-    if (true) {
+    if (false) {
 
         // TODO: modify octree intersection to get real surface, not the brick center
         auto callback = [&](glm::vec3 center) {
             edit_to_add.position = center;
-            edit_to_add.position = edit_to_add.position * glm::inverse(sculpt_rotation * rotation_diff);
-            edit_to_add.position += (sculpt_start_position + translation_diff);
+            //edit_to_add.position = edit_to_add.position * glm::inverse(sculpt_rotation * rotation_diff);
+            edit_to_add.position += (sculpt_start_position);
         };
 
         glm::mat4x4 pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
@@ -245,7 +246,7 @@ bool SculptEditor::edit_update(float delta_time)
                 //edit_to_add.position = glm::vec3(0.0);
                 edit_to_add.position = glm::vec3(glm::vec3(0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1)));
                 glm::vec3 euler_angles(random_f() * 90, random_f() * 90, random_f() * 90);
-                edit_to_add.dimensions = glm::vec4(0.05f, 0.01f, 0.01f, 0.01f) * 10.0f;
+                edit_to_add.dimensions = glm::vec4(0.05f, 0.01f, 0.01f, 0.01f) * 1.0f;
                 //edit_to_add.dimensions = (edit_to_add.operation == OP_SUBSTRACTION) ? 3.0f * glm::vec4(0.2f, 0.2f, 0.2f, 0.2f) : glm::vec4(0.2f, 0.2f, 0.2f, 0.2f);
                 edit_to_add.rotation = glm::inverse(glm::quat(euler_angles));
                 // Stroke
@@ -325,13 +326,13 @@ void SculptEditor::update(float delta_time)
         }
     }
 
+    // Set the edit as the preview
+    //preview_tmp_edits.push_back(edit_to_add);
+
     // Mirror functionality
     if (use_mirror) {
         mirror_current_edits(delta_time);
     }
-
-    // Set the edit as the preview
-    renderer->set_preview_edit(edit_to_add);
 
     // Push to the renderer the edits and the previews
     renderer->push_preview_edit_list(preview_tmp_edits);
@@ -346,20 +347,22 @@ void SculptEditor::mirror_current_edits(const float delta_time)
 
     uint64_t preview_edit_count = preview_tmp_edits.size();
     for (uint64_t i = 0u; i < preview_edit_count; i++) {
-        Edit inverted_preview_edit = preview_tmp_edits[i];
-        float dist_to_plane = glm::dot(mirror_normal, inverted_preview_edit.position - mirror_origin);
-        inverted_preview_edit.position = inverted_preview_edit.position - mirror_normal * dist_to_plane * 2.0f;
+        Edit mirrored_preview_edit = preview_tmp_edits[i];
+        float dist_to_plane = glm::dot(mirror_normal, mirror_origin - mirrored_preview_edit.position);
+        mirrored_preview_edit.position = mirrored_preview_edit.position + mirror_normal * dist_to_plane * 2.0f;
 
-        preview_tmp_edits.push_back(inverted_preview_edit);
+        preview_tmp_edits.push_back(mirrored_preview_edit);
     }
 
     uint64_t edit_count = new_edits.size();
     for (uint64_t i = 0u; i < edit_count; i++) {
-        Edit inverted_edit = new_edits[i];
-        float dist_to_plane = glm::dot(mirror_normal, inverted_edit.position - mirror_origin);
-        inverted_edit.position = inverted_edit.position - mirror_normal * dist_to_plane * 2.0f;
-
-        new_edits.push_back(inverted_edit);
+        Edit mirrored_edit = new_edits[i];
+        float dist_to_plane = glm::dot(mirror_normal, mirror_origin - mirrored_edit.position);
+        
+        mirrored_edit.position = mirrored_edit.position + mirror_normal * dist_to_plane * 2.0f;
+        mirrored_edit.dimensions += glm::vec4(0.01f);
+        spdlog::info("{}", dist_to_plane);
+        new_edits.push_back(mirrored_edit);
     }
 }
 
@@ -448,7 +451,9 @@ void SculptEditor::render()
     else if (use_mirror) {
         mirror_gizmo.render();
         mirror_mesh->set_translation(mirror_origin);
-        mirror_mesh->rotate(glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        mirror_mesh->scale(glm::vec3(0.25f));
+        //mirror_mesh->rotate(glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        //mirror_mesh->translate(mirror_origin);
         mirror_mesh->render();
     }
 

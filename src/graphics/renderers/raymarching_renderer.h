@@ -24,7 +24,7 @@ struct RayIntersectionInfo {
     float       material_metalness = 0.0f;
     glm::vec3   material_albedo;
     uint32_t    dummy1 = 0;
-    glm::vec3   intersection_center;
+    glm::vec3   intersection_position;
     uint32_t    dummy2 = 0;
 };
 

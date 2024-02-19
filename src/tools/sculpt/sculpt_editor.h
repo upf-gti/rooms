@@ -120,7 +120,7 @@ class SculptEditor {
     EntityMesh* mirror_mesh = nullptr;
 
     glm::vec3 mirror_origin = glm::vec3(0.f);
-    glm::vec3 mirror_normal = glm::vec3(1.f, 0.f, 0.f);
+    glm::vec3 mirror_normal = glm::vec3(0.f, 0.f, 1.f);
 
     
     // UI

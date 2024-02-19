@@ -180,6 +180,6 @@ struct RayIntersectionInfo
     material_metalness : f32,
     material_albedo : vec3f,
     dummy0 : u32,
-    intersection_center : vec3f,
+    intersection_position : vec3f,
     dummy1 : u32,
 };

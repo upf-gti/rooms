@@ -247,7 +247,7 @@ void RaymarchingRenderer::octree_ray_intersect(const glm::vec3& ray_origin, cons
         webgpu_context->process_events();
 
         if (user_data.info->intersected > 0 && callback) {
-            callback(user_data.info->intersection_center);
+            callback(user_data.info->intersection_position);
         }
     }
 }
@@ -944,7 +944,7 @@ void RaymarchingRenderer::init_octree_ray_intersection_pipeline()
         linear_sampler_uniform.data = webgpu_context->create_sampler(WGPUAddressMode_ClampToEdge, WGPUAddressMode_ClampToEdge, WGPUAddressMode_ClampToEdge, WGPUFilterMode_Linear, WGPUFilterMode_Linear);
         linear_sampler_uniform.binding = 4;
 
-        std::vector<Uniform*> uniforms = { &octree_uniform, &sdf_texture_uniform, &linear_sampler_uniform };
+        std::vector<Uniform*> uniforms = { &octree_uniform, &sdf_texture_uniform, &linear_sampler_uniform, &sdf_material_texture_uniform };
         octree_ray_intersection_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_ray_intersection_shader, 0);
     }
 

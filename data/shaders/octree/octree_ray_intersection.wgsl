@@ -11,6 +11,7 @@ struct RayInfo
 @group(0) @binding(2) var<storage, read_write> octree : Octree;
 @group(0) @binding(3) var read_sdf: texture_3d<f32>;
 @group(0) @binding(4) var texture_sampler : sampler;
+@group(0) @binding(8) var read_material_sdf: texture_3d<u32>;
 
 @group(1) @binding(0) var<uniform> ray_info: RayInfo;
 @group(1) @binding(3) var<storage, read_write> ray_intersection_info: RayIntersectionInfo;
@@ -61,12 +62,74 @@ fn pop_iteration_data(stack_pointer : ptr<function, u32>) -> IterationData
 }
 
 
+
 fn sample_sdf_atlas(atlas_position : vec3f) -> f32
 {
     return textureSampleLevel(read_sdf, texture_sampler, atlas_position, 0.0).r / SCULPT_MAX_SIZE;
 }
 
 #include sdf_utils.wgsl
+
+// TODO: LOTS of duplication ahead, because current inludes will bloat this file. Need restructuring!
+struct Material {
+    albedo      : vec3f,
+    roughness   : f32,
+    metalness   : f32
+};
+
+#include material_packing.wgsl
+
+fn sample_material_raw(pos : vec3u) -> Material {
+    let sample : u32 = textureLoad(read_material_sdf, pos, 0).r;
+
+    return unpack_material(sample);
+}
+
+// Material operation functions
+fn Material_mult_by(m : Material, v : f32) -> Material {
+    return Material(m.albedo * v, m.roughness * v, m.metalness * v);
+}
+
+fn Material_sum_Material(m1 : Material, m2 : Material) -> Material {
+    return Material(m1.albedo + m2.albedo, m1.roughness + m2.roughness, m1.metalness + m2.metalness);
+}
+
+fn Material_mix(m1 : Material, m2 : Material, t : f32) -> Material {
+    return Material_sum_Material(Material_mult_by(m1, 1.0 - t), Material_mult_by(m2, t));
+}
+
+
+// From: http://paulbourke.net/miscellaneous/interpolation/
+fn interpolate_material(pos : vec3f) -> Material {
+    var result : Material;
+
+    let pos_f_part : vec3f = abs(fract(pos));
+    let pos_i_part : vec3u = vec3u(floor(pos));
+
+    let index000 : vec3u = pos_i_part;
+    let index010 : vec3u = vec3u(pos_i_part.x + 0, pos_i_part.y + 1, pos_i_part.z + 0)  ;
+    let index100 : vec3u = vec3u(pos_i_part.x + 1, pos_i_part.y + 0, pos_i_part.z + 0)  ;
+    let index001 : vec3u = vec3u(pos_i_part.x + 0, pos_i_part.y + 0, pos_i_part.z + 1)  ;
+    let index101 : vec3u = vec3u(pos_i_part.x + 1, pos_i_part.y + 0, pos_i_part.z + 1)  ;
+    let index011 : vec3u = vec3u(pos_i_part.x + 0, pos_i_part.y + 1, pos_i_part.z + 1)  ;
+    let index110 : vec3u = vec3u(pos_i_part.x + 1, pos_i_part.y + 1, pos_i_part.z + 0)  ;
+    let index111 : vec3u = vec3u(pos_i_part.x + 1, pos_i_part.y + 1, pos_i_part.z + 1)  ;
+
+    result = Material_mult_by(sample_material_raw(index000), (1.0 - pos_f_part.x) * (1.0 - pos_f_part.y) * (1.0 - pos_f_part.z));
+    result = Material_sum_Material(result, Material_mult_by(sample_material_raw(index100), (pos_f_part.x) * (1.0 - pos_f_part.y) * (1.0 - pos_f_part.z)));
+    result = Material_sum_Material(result, Material_mult_by(sample_material_raw(index010), (1.0 - pos_f_part.x) * (pos_f_part.y) * (1.0 - pos_f_part.z)));
+    result = Material_sum_Material(result, Material_mult_by(sample_material_raw(index001), (1.0 - pos_f_part.x) * (1.0 - pos_f_part.y) * (pos_f_part.z)));
+    result = Material_sum_Material(result, Material_mult_by(sample_material_raw(index101), (pos_f_part.x) * (1.0 - pos_f_part.y) * (pos_f_part.z)));
+    result = Material_sum_Material(result, Material_mult_by(sample_material_raw(index011), (1.0 - pos_f_part.x) * (pos_f_part.y) * (pos_f_part.z)));
+    result = Material_sum_Material(result, Material_mult_by(sample_material_raw(index110), (pos_f_part.x) * (pos_f_part.y) * (1.0 - pos_f_part.z)));
+    result = Material_sum_Material(result, Material_mult_by(sample_material_raw(index111), (pos_f_part.x) * (pos_f_part.y) * (pos_f_part.z)));
+
+    return result;
+}
+
+fn sample_material_atlas(atlas_position : vec3f) -> Material {
+    return interpolate_material(atlas_position * SDF_RESOLUTION);
+}
 
 fn raymarch(ray_origin_in_atlas_space : vec3f, ray_dir : vec3f, max_distance : f32, has_hit: ptr<function, bool>) -> f32
 {
@@ -114,6 +177,8 @@ fn compute()
     var last_octant : u32 = 0;
 
     var intersected_distance : f32 = 10000000.0;
+    ray_intersection_info.intersected = 0u;
+    ray_intersection_info.tile_pointer = 0u;
 
     // Check intersection with octree aabb
     if (ray_AABB_intersection(ray_info.ray_origin, ray_info.ray_dir, bounds_min, bounds_max, &t_near, &t_far))
@@ -175,9 +240,8 @@ fn compute()
                     let octree_index : u32 = octant_id + u32((pow(8.0, f32(level)) - 1) / 7);
                     if ((octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG) {
                         intersected_distance = octants_to_visit[i].distance;
-                        ray_intersection_info.tile_pointer = octree.data[octree_index].tile_pointer;
 
-                        let atlas_tile_index : u32 = ray_intersection_info.tile_pointer & OCTREE_TILE_INDEX_MASK;
+                        let atlas_tile_index : u32 = octree.data[octree_index].tile_pointer & OCTREE_TILE_INDEX_MASK;
                         let in_atlas_tile_coordinate : vec3f = vec3f(10 * vec3u(atlas_tile_index % BRICK_COUNT,
                                                   (atlas_tile_index / BRICK_COUNT) % BRICK_COUNT,
                                                    atlas_tile_index / (BRICK_COUNT * BRICK_COUNT))) / SDF_RESOLUTION;
@@ -198,14 +262,15 @@ fn compute()
 
                         if (intersected) {
                             let atlas_position : vec3f = in_atlas_position + ray_info.ray_dir * raymarch_result_distance;
-                            // let material : Material = sample_material_atlas(atlas_position);
+                            let material : Material = sample_material_atlas(atlas_position);
+                            ray_intersection_info.tile_pointer = octree.data[octree_index].tile_pointer;
 
-                            // ray_intersection_info.material_albedo = material.albedo;   
-                            // ray_intersection_info.material_roughness = material.roughness;   
-                            // ray_intersection_info.material_metalness = material.metalness;                           
-                            
-                            ray_intersection_info.intersection_center = in_sculpture_point + ray_info.ray_dir * (raymarch_result_distance / SCULPT_TO_ATLAS_CONVERSION_FACTOR);//octants_to_visit[i].octant_center;
-                            break;
+                            ray_intersection_info.material_albedo = material.albedo;   
+                            ray_intersection_info.material_roughness = material.roughness;   
+                            ray_intersection_info.material_metalness = material.metalness;                           
+                            ray_intersection_info.intersected = 1u;
+                            ray_intersection_info.intersection_position = in_sculpture_point + ray_info.ray_dir * (raymarch_result_distance / SCULPT_TO_ATLAS_CONVERSION_FACTOR);//octants_to_visit[i].octant_center;
+                            return;
                         }
                     }
                 }
@@ -214,5 +279,5 @@ fn compute()
 
     }
 
-    ray_intersection_info.intersected = select(0u, 1u, intersected);
+    
 }
