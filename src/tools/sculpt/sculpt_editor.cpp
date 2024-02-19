@@ -106,7 +106,7 @@ void SculptEditor::clean()
     }
 }
 
-bool SculptEditor::is_tool_being_used()
+bool SculptEditor::is_tool_being_used(bool stamp_enabled)
 {
 #ifdef XR_SUPPORT
     return Input::was_key_pressed(GLFW_KEY_SPACE) ||
@@ -118,20 +118,28 @@ bool SculptEditor::is_tool_being_used()
 
 bool SculptEditor::edit_update(float delta_time)
 {
-    bool is_tool_used = is_tool_being_used();
+    // Poll action using stamp mode when picking material also mode to detect once
+    bool is_tool_used = is_tool_being_used(stamp_enabled || is_picking_material);
+
+    if (is_picking_material && is_tool_used)
+    {
+        pick_material();
+        return false;
+    }
 
     glm::mat4x4 controller_pose = Input::get_controller_pose(HAND_RIGHT);
 
+    // Hacky to use the ray direction of the gui ray
     controller_pose = glm::rotate(controller_pose, glm::radians(36.9f), glm::vec3(1.0f, 0.0f, 0.0f));
     controller_pose = glm::translate(controller_pose, glm::vec3(0.0f, -0.25f, 0.0f));
 
     // Update edit transform
     edit_to_add.position = controller_pose[3];
 
-    // Follow surface
-    if (false) {
+    // Snap surface
+    if (canSnapToSurface()) {
 
-        // TODO: modify octree intersection to get real surface, not the brick center
+        // TODO: rotations
         auto callback = [&](glm::vec3 center) {
             edit_to_add.position = center;
             //edit_to_add.position = edit_to_add.position * glm::inverse(sculpt_rotation * rotation_diff);
@@ -239,7 +247,7 @@ bool SculptEditor::edit_update(float delta_time)
             enable_tool(PAINT);
         }
 
-        if (current_tool == SCULPT && is_tool_being_used()) {
+        if (current_tool == SCULPT && is_tool_being_used(stamp_enabled)) {
             // For debugging sculpture without a headset
             if (!Renderer::instance->get_openxr_available()) {
 
@@ -323,6 +331,10 @@ void SculptEditor::update(float delta_time)
             new_edits.push_back(edit_to_add);
             // Add recent color only when is used...
             add_recent_color(stroke_parameters.get_material().color);
+            // Reset smear mode
+            if (was_material_picked) {
+                stamp_enabled = false;
+            }
         }
     }
 
@@ -492,6 +504,11 @@ void SculptEditor::render_gui()
 
     if (changed)
         stroke_parameters.set_dirty(true);
+}
+
+bool SculptEditor::canSnapToSurface()
+{
+    return snap_to_surface && (stamp_enabled || current_tool == PAINT);
 }
 
 bool SculptEditor::mustRenderMeshPreviewOutline()
@@ -676,6 +693,7 @@ void SculptEditor::bind_events()
         gui.bind("cap_value", [&](const std::string& signal, float value) { set_cap_modifier(value); });
 
         gui.bind("mirror", [&](const std::string& signal, void* button) { use_mirror = !use_mirror; });
+        gui.bind("snap_to_surface", [&](const std::string& signal, void* button) { snap_to_surface = !snap_to_surface; });
         gui.bind("snap_to_grid", [&](const std::string& signal, void* button) { snap_to_grid = !snap_to_grid; });
         gui.bind("lock_axis_toggle", [&](const std::string& signal, void* button) { axis_lock = !axis_lock; });
         gui.bind("lock_axis_x", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_X; });
@@ -690,6 +708,7 @@ void SculptEditor::bind_events()
         gui.bind("noise_color_picker", [&](const std::string& signal, Color color) { stroke_parameters.set_material_noise_color(color); });
 
         gui.bind("color_picker", [&](const std::string& signal, Color color) { stroke_parameters.set_material_color(color); });
+        gui.bind("pick_material", [&](const std::string& signal, void* button) { is_picking_material = !is_picking_material; });
 
         // Controller buttons
 
@@ -826,6 +845,18 @@ void SculptEditor::generate_material_from_stroke(void* button)
     });
 }
 
+void SculptEditor::update_gui_from_stroke_material(const StrokeMaterial& mat)
+{
+    // Emit signals to change UI values
+    gui.emit_signal("color_picker@changed", mat.color);
+    gui.emit_signal("roughness@changed", mat.roughness);
+    gui.emit_signal("metallic@changed", mat.metallic);
+    gui.emit_signal("noise_intensity@changed", mat.noise_params.x);
+    gui.emit_signal("noise_frequency@changed", mat.noise_params.y);
+    gui.emit_signal("noise_octaves@changed", mat.noise_params.z);
+    gui.emit_signal("noise_color_picker@changed", mat.noise_color);
+}
+
 void SculptEditor::update_stroke_from_material(const std::string& name)
 {
     const PBRMaterialData& data = pbr_materials_data[name];
@@ -836,11 +867,32 @@ void SculptEditor::update_stroke_from_material(const std::string& name)
     stroke_parameters.set_material_metallic(data.metallic);
     stroke_parameters.set_material_noise(data.noise_params.x, data.noise_params.y, static_cast<int>(data.noise_params.z));
 
-    // Emit signals to change UI values
-    const StrokeMaterial& mat = stroke_parameters.get_material();
-    gui.emit_signal("roughness@changed", mat.roughness);
-    gui.emit_signal("metallic@changed", mat.metallic);
-    gui.emit_signal("noise_intensity@changed", mat.noise_params.x);
-    gui.emit_signal("noise_frequency@changed", mat.noise_params.y);
-    gui.emit_signal("noise_octaves@changed", mat.noise_params.z);
+    update_gui_from_stroke_material(stroke_parameters.get_material());
+}
+
+void SculptEditor::pick_material()
+{
+    glm::mat4x4 pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
+    glm::vec3 ray_dir = get_front(pose);
+    renderer->get_raymarching_renderer()->octree_ray_intersect(pose[3], ray_dir);
+
+    const RayIntersectionInfo& info = static_cast<RoomsRenderer*>(RoomsRenderer::instance)->get_raymarching_renderer()->get_ray_intersection_info();
+
+    if (info.intersected)
+    {
+        // Set all data
+        stroke_parameters.set_material_color(Color(info.material_albedo, 1.0f));
+        stroke_parameters.set_material_roughness(info.material_roughness);
+        stroke_parameters.set_material_metallic(info.material_metalness);
+        // stroke_parameters.set_material_noise(-1.0f);
+
+        update_gui_from_stroke_material(stroke_parameters.get_material());
+    }
+
+    // Disable picking..
+    gui.emit_signal("pick_material", (void*)nullptr);
+
+    // Manage interactions, set stamp mode until tool is used again
+    stamp_enabled = true;
+    was_material_picked = true;
 }

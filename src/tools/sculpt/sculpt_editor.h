@@ -39,6 +39,8 @@ class SculptEditor {
         float noise_intensity = 0.0f, const Color& noise_color = colors::RUST, float noise_frequency = 20.0f, int noise_octaves = 8);
     void generate_material_from_stroke(void* button);
     void update_stroke_from_material(const std::string& name);
+    void update_gui_from_stroke_material(const StrokeMaterial& mat);
+    void pick_material();
 
     /*
     *	Edits
@@ -68,11 +70,15 @@ class SculptEditor {
 
     bool mustRenderMeshPreviewOutline();
 
-    bool        modifiers_dirty = false;
+    bool canSnapToSurface();
 
-    bool        dimensions_dirty = true;
-    bool        stamp_enabled = false;
-    bool		rotation_started = false;
+    bool        modifiers_dirty     = false;
+    bool        dimensions_dirty    = true;
+    bool        stamp_enabled       = false;
+    bool		rotation_started    = false;
+    bool        snap_to_surface     = false;
+    bool        is_picking_material = false;
+    bool        was_material_picked = false;
 
     glm::vec3	sculpt_start_position;
     glm::vec3	initial_hand_translation = {};
@@ -134,7 +140,7 @@ class SculptEditor {
     void add_recent_color(const Color& color);
 
     // Editor
-    bool is_tool_being_used();
+    bool is_tool_being_used(bool stamp_enabled);
     bool edit_update(float delta_time);
     void scene_update_rotation();
     void mirror_current_edits(const float delta_time);

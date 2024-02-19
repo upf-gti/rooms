@@ -31,14 +31,20 @@
             "texture": "data/textures/material.png"
         },
         {
-            "name": "g_guides",
+            "name": "g_utilities",
             "type": "group",
-            "nitems": 3
+            "nitems": 4
         },
         {
             "name": "mirror",
             "type": "button",
             "texture": "data/textures/mirror.png",
+            "allow_toggle": true
+        },
+        {
+            "name": "snap_to_surface",
+            "type": "button",
+            "texture": "data/textures/snap_to_surface.png",
             "allow_toggle": true
         },
         {
@@ -209,6 +215,12 @@
                     "texture": "data/textures/submenu_mark.png"
                 },
                 {
+                    "name": "pick_material",
+                    "type": "button",
+                    "texture": "data/textures/pick_material.png",
+                    "allow_toggle": true
+                },
+                {
                     "name": "g_material_samples",
                     "type": "group",
                     "nitems": 3
@@ -263,7 +275,7 @@
                 {
                     "name": "edit_pattern",
                     "type": "group",
-                    "nitems": 3,
+                    "nitems": 5,
                     "icon_texture": {
                         "name": "pattern",
                         "type": "button",
