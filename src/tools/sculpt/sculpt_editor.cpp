@@ -150,7 +150,18 @@ bool SculptEditor::edit_update(float delta_time)
     controller_pose = glm::translate(controller_pose, glm::vec3(0.0f, -0.25f, 0.0f));
 
     // Update edit transform
-    edit_to_add.position = controller_pose[3];
+    if ((!stamp_enabled || !is_tool_pressed) && !is_released) {
+        edit_to_add.position = controller_pose[3];
+        edit_to_add.rotation = glm::inverse(Input::get_controller_rotation(HAND_RIGHT));
+        edit_position_stamp = edit_to_add.position;
+        edit_origin_stamp = edit_to_add.position;
+        edit_rotation_stamp = edit_to_add.rotation;
+    }
+    else {
+        edit_to_add.position = edit_position_stamp;
+        edit_to_add.rotation = edit_rotation_stamp;
+    }
+    //edit_to_add.position = controller_pose[3];
 
     // Snap surface
     if (canSnapToSurface()) {
@@ -167,7 +178,7 @@ bool SculptEditor::edit_update(float delta_time)
         renderer->get_raymarching_renderer()->octree_ray_intersect(pose[3], ray_dir, callback);
     }
 
-    edit_to_add.rotation = glm::inverse(Input::get_controller_rotation(HAND_RIGHT));
+    //edit_to_add.rotation = glm::inverse(Input::get_controller_rotation(HAND_RIGHT));
 
     // Update edit dimensions
     if (!stamp_enabled || !is_tool_pressed && !is_released) {
@@ -184,7 +195,7 @@ bool SculptEditor::edit_update(float delta_time)
         sdPrimitive curr_primitive = stroke_parameters.get_primitive();
 
         const glm::quat hand_rotation = (Input::get_controller_rotation(HAND_RIGHT));
-        const glm::vec3 hand_position = Input::get_controller_position(HAND_RIGHT);
+        const glm::vec3 hand_position = controller_pose[3];
 
         const glm::vec3 stamp_origin_to_hand = edit_origin_stamp - hand_position;
         const float edit_to_hand_distance = glm::length(stamp_origin_to_hand);
@@ -391,7 +402,7 @@ void SculptEditor::update(float delta_time)
     }
 
     // Set the edit as the preview
-    //preview_tmp_edits.push_back(edit_to_add);
+    preview_tmp_edits.push_back(edit_to_add);
 
     // Mirror functionality
     if (use_mirror) {

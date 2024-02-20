@@ -297,6 +297,8 @@ void RaymarchingRenderer::compute_preview_edit(WGPUComputePassEncoder compute_pa
 
         ping_pong_idx = (ping_pong_idx + 1) % 2;
     }
+
+    preview_data.preview_stroke.edit_count = 0u;
 };
 
 void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, const std::vector<Stroke> strokes, bool is_undo, bool is_redo)
