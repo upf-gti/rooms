@@ -464,6 +464,23 @@ void RaymarchingRenderer::compute_undo(WGPUComputePassEncoder compute_pass)
             deleted_strokes_aabb = merge_aabbs(deleted_strokes_aabb, stroke_history[i].get_world_AABB());
         }
 
+        //Adjust AABB to evaluation grid size (discretize to brick size)
+        glm::vec3 deleted_stroke_min = deleted_strokes_aabb.center - deleted_strokes_aabb.half_size;
+        glm::vec3 deleted_stroke_max = deleted_strokes_aabb.center + deleted_strokes_aabb.half_size;
+
+        const float texel_size = SCULPT_MAX_SIZE / powf(2.0, octree_depth + 3);
+        const float brick_size = 8.0f * texel_size;
+
+        // Round upwards and downwards the max and min, in order to wrap arround brick size
+        deleted_stroke_min = glm::floor(deleted_stroke_min / brick_size) * brick_size;
+        deleted_stroke_max = glm::ceil(deleted_stroke_max / brick_size) * brick_size;
+
+        deleted_strokes_aabb.half_size = (deleted_stroke_max - deleted_stroke_min) / 2.0f;
+        deleted_strokes_aabb.center = deleted_stroke_min + deleted_strokes_aabb.half_size;
+
+        // Reduce the size in a texel, for possible precission issues
+        deleted_strokes_aabb.half_size -= texel_size;
+
         // get strokes with same id and add into the redo history
         stroke_redo_history.insert(stroke_redo_history.begin(), stroke_history.begin() + (united_stroke_idx + 1), stroke_history.end());
 

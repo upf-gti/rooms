@@ -75,6 +75,14 @@
      - Union operation interior brick check
 */
 
+fn is_inside_AABB(point : vec3f, aabb_min : vec3f, aabb_max : vec3f) -> bool {
+    return (aabb_min.x <= point.x && point.x <= aabb_max.x) && (aabb_min.y <= point.y && point.y <= aabb_max.y) && (aabb_min.z <= point.z && point.z <= aabb_max.z);
+}
+
+fn fully_inside_AABB_AABB(b1_min : vec3f, b1_max : vec3f, b2_min : vec3f, b2_max : vec3f) -> bool {
+    return is_inside_AABB(b1_min, b2_min, b2_max) && is_inside_AABB(b1_max, b2_min, b2_max);
+}
+
 fn intersection_AABB_AABB(b1_min : vec3f, b1_max : vec3f, b2_min : vec3f, b2_max : vec3f) -> bool {
     return (b1_min.x <= b2_max.x && b1_min.y <= b2_max.y && b1_min.z <= b2_max.z) && (b1_max.x >= b2_min.x && b1_max.y >= b2_min.y && b1_max.z >= b2_min.z);
 }
@@ -149,15 +157,18 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
     if (is_reevaluation && level == OCTREE_DEPTH) {
         if (is_in_reevaluation_zone) {
+            // Verify with only clean the cully inside brikcs (for debug)
+            //if (fully_inside_AABB_AABB(octant_min, octant_max, merge_data.reevaluation_AABB_min, merge_data.reevaluation_AABB_max)) {
             if ((octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG) {
                 let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
                 let instance_index : u32 = octree.data[octree_index].tile_pointer & OCTREE_TILE_INDEX_MASK;
                 indirect_brick_removal.brick_removal_buffer[brick_to_delete_idx] = instance_index;
                 octree_proxy_data.instance_data[instance_index].in_use = 0u;
-               // octree.data[octree_index].tile_pointer = 0u;
+                // octree.data[octree_index].tile_pointer = 0u;
             }
             octree.data[octree_index].octant_center_distance = vec2f(10000.0, 10000.0);
             octree.data[octree_index].tile_pointer = 0u;
+            //}
         }
     }
 
