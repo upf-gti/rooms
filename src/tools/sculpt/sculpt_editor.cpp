@@ -339,7 +339,7 @@ void SculptEditor::update(float delta_time)
     }
 
     // Set the edit as the preview
-    //preview_tmp_edits.push_back(edit_to_add);
+    preview_tmp_edits.push_back(edit_to_add);
 
     // Mirror functionality
     if (use_mirror) {
