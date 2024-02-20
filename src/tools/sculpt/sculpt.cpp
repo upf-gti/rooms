@@ -56,7 +56,7 @@ bool SculptTool::update(float delta_time, StrokeParameters& stroke_parameters)
             //edit_to_add.position = glm::vec3(0.0);
             edit_to_add.position = glm::vec3(glm::vec3( 0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1)));
 			glm::vec3 euler_angles(random_f() * 90, random_f() * 90, random_f() * 90);
-			edit_to_add.dimensions = glm::vec4(0.05f, 0.01f, 0.01f, 0.01f) * 10.0f;
+			edit_to_add.dimensions = glm::vec4(0.02f, 0.01f, 0.01f, 0.01f) * 1.0f;
             //edit_to_add.dimensions = (edit_to_add.operation == OP_SUBSTRACTION) ? 3.0f * glm::vec4(0.2f, 0.2f, 0.2f, 0.2f) : glm::vec4(0.2f, 0.2f, 0.2f, 0.2f);
             edit_to_add.rotation = glm::inverse(glm::quat(euler_angles));
             // Stroke

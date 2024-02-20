@@ -25,7 +25,7 @@ void SculptEditor::initialize()
 
     mirror_mesh = new EntityMesh();
     mirror_mesh->add_surface(RendererStorage::get_surface("quad"));
-    mirror_mesh->scale(glm::vec3(0.5f));
+    mirror_mesh->scale(glm::vec3(0.25f));
 
     Material mirror_material;
     mirror_material.shader = RendererStorage::get_shader("data/shaders/mesh_texture.wgsl");
@@ -48,7 +48,17 @@ void SculptEditor::initialize()
 
     axis_lock_gizmo.initialize(POSITION_GIZMO, sculpt_start_position);
     mirror_gizmo.initialize(POSITION_GIZMO, sculpt_start_position);
+    mirror_origin = sculpt_start_position;
 
+    // Initialize default primitive states
+    {
+        primitive_default_states[SD_SPHERE]     = { glm::vec4(0.0) };
+        primitive_default_states[SD_BOX]        = { glm::vec4(0.0) };
+        primitive_default_states[SD_CONE]       = { glm::vec4(0.0) };
+        primitive_default_states[SD_CYLINDER]   = { glm::vec4(0.0) };
+        primitive_default_states[SD_CAPSULE]    = { glm::vec4(0.0) };
+        primitive_default_states[SD_TORUS]      = { glm::vec4(0.0) };
+    }
 
     // Edit preview mesh
     {
@@ -74,7 +84,7 @@ void SculptEditor::initialize()
         mesh_preview_outline->set_surface_material_override(sphere_surface, outline_material);
     }
 
-    // Add pbr materials data 
+    // Add pbr materials data
     {
         add_pbr_material_data("aluminium",   Color(0.912f, 0.914f, 0.92f, 1.0f),  0.0f, 1.0f);
         add_pbr_material_data("charcoal",    Color(0.02f, 0.02f, 0.02f, 1.0f),    0.5f, 0.0f);
@@ -105,7 +115,8 @@ void SculptEditor::clean()
 }
 
 
-bool SculptEditor::is_tool_being_used() {
+bool SculptEditor::is_tool_being_used(bool stamp_enabled)
+{
 #ifdef XR_SUPPORT
     bool is_currently_pressed = Input::get_trigger_value(HAND_RIGHT) > 0.5f;
     is_released = is_tool_pressed && !is_currently_pressed;
@@ -121,20 +132,42 @@ bool SculptEditor::is_tool_being_used() {
 #endif
 }
 
-bool SculptEditor::edit_update(float delta_time) {
-    bool is_tool_used = is_tool_being_used();
+bool SculptEditor::edit_update(float delta_time)
+{
+    // Poll action using stamp mode when picking material also mode to detect once
+    bool is_tool_used = is_tool_being_used(stamp_enabled || is_picking_material);
+
+    if (is_picking_material && is_tool_used)
+    {
+        pick_material();
+        return false;
+    }
+
+    glm::mat4x4 controller_pose = Input::get_controller_pose(HAND_RIGHT);
+
+    // Hacky to use the ray direction of the gui ray
+    controller_pose = glm::rotate(controller_pose, glm::radians(36.9f), glm::vec3(1.0f, 0.0f, 0.0f));
+    controller_pose = glm::translate(controller_pose, glm::vec3(0.0f, -0.25f, 0.0f));
 
     // Update edit transform
-    if ((!stamp_enabled || !is_tool_pressed) && !is_released) {
-        edit_to_add.position = Input::get_controller_position(HAND_RIGHT);
-        edit_to_add.rotation = glm::inverse(Input::get_controller_rotation(HAND_RIGHT));
-        edit_position_stamp = edit_to_add.position;
-        edit_origin_stamp = edit_to_add.position;
-        edit_rotation_stamp = edit_to_add.rotation;
-    } else {
-        edit_to_add.position = edit_position_stamp;
-        edit_to_add.rotation = edit_rotation_stamp;
+    edit_to_add.position = controller_pose[3];
+
+    // Snap surface
+    if (canSnapToSurface()) {
+
+        // TODO: rotations
+        auto callback = [&](glm::vec3 center) {
+            edit_to_add.position = center;
+            //edit_to_add.position = edit_to_add.position * glm::inverse(sculpt_rotation * rotation_diff);
+            edit_to_add.position += (sculpt_start_position);
+        };
+
+        glm::mat4x4 pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
+        glm::vec3 ray_dir = get_front(pose);
+        renderer->get_raymarching_renderer()->octree_ray_intersect(pose[3], ray_dir, callback);
     }
+
+    edit_to_add.rotation = glm::inverse(Input::get_controller_rotation(HAND_RIGHT));
 
     // Update edit dimensions
     if (!stamp_enabled || !is_tool_pressed && !is_released) {
@@ -167,7 +200,7 @@ bool SculptEditor::edit_update(float delta_time) {
         glm::quat edit_to_hand_orientation = glm::normalize(glm::quat(direction.x, direction.y, direction.z, magnitude));
         // Todo: check for paralell axis
 
-        
+
         glm::quat swing, twist;
         quat_swing_twist_decomposition(stamp_to_hand_norm, hand_rotation, swing, twist);
         twist.w *= -1.0f;
@@ -183,6 +216,9 @@ bool SculptEditor::edit_update(float delta_time) {
             edit_to_add.dimensions.x = edit_to_hand_distance;
             edit_rotation_stamp = edit_to_hand_orientation;
         }
+
+        // Update in primitive state
+        //primitive_default_states[stroke_parameters.get_primitive()].dimensions = edit_to_add.dimensions;
     }
 
     // Edit modifiers
@@ -209,6 +245,19 @@ bool SculptEditor::edit_update(float delta_time) {
 
             edit_to_add.position = locked_pos;
             edit_to_add.rotation = glm::quat();
+        }
+    }
+
+    // Update shape editor values
+    {
+        if (modifiers_dirty) {
+
+            glm::vec4 parameters = stroke_parameters.get_parameters();
+            parameters.x = onion_enabled ? onion_thickness : 0.0f;
+            parameters.y = capped_enabled ? capped_value : 0.0f;
+            stroke_parameters.set_parameters(parameters);
+
+            modifiers_dirty = false;
         }
     }
 
@@ -245,14 +294,19 @@ bool SculptEditor::edit_update(float delta_time) {
 
     // Debug sculpting
     {
-        if (current_tool == SCULPT && is_tool_being_used()) {
+        if (Input::is_key_pressed(GLFW_KEY_P))
+        {
+            enable_tool(PAINT);
+        }
+
+        if (current_tool == SCULPT && is_tool_being_used(stamp_enabled)) {
             // For debugging sculpture without a headset
             if (!Renderer::instance->get_openxr_available()) {
 
                 //edit_to_add.position = glm::vec3(0.0);
                 edit_to_add.position = glm::vec3(glm::vec3(0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1)));
                 glm::vec3 euler_angles(random_f() * 90, random_f() * 90, random_f() * 90);
-                edit_to_add.dimensions = glm::vec4(0.05f, 0.01f, 0.01f, 0.01f) * 10.0f;
+                edit_to_add.dimensions = glm::vec4(0.05f, 0.01f, 0.01f, 0.01f) * 1.0f;
                 //edit_to_add.dimensions = (edit_to_add.operation == OP_SUBSTRACTION) ? 3.0f * glm::vec4(0.2f, 0.2f, 0.2f, 0.2f) : glm::vec4(0.2f, 0.2f, 0.2f, 0.2f);
                 edit_to_add.rotation = glm::inverse(glm::quat(euler_angles));
                 // Stroke
@@ -329,16 +383,20 @@ void SculptEditor::update(float delta_time)
             new_edits.push_back(edit_to_add);
             // Add recent color only when is used...
             add_recent_color(stroke_parameters.get_material().color);
+            // Reset smear mode
+            if (was_material_picked) {
+                stamp_enabled = false;
+            }
         }
     }
+
+    // Set the edit as the preview
+    //preview_tmp_edits.push_back(edit_to_add);
 
     // Mirror functionality
     if (use_mirror) {
         mirror_current_edits(delta_time);
     }
-
-    // Set the edit as the preview
-    renderer->set_preview_edit(edit_to_add);
 
     // Push to the renderer the edits and the previews
     renderer->push_preview_edit_list(preview_tmp_edits);
@@ -347,30 +405,33 @@ void SculptEditor::update(float delta_time)
     was_tool_used = is_tool_used;
 }
 
-
-void SculptEditor::mirror_current_edits(const float delta_time) {
+void SculptEditor::mirror_current_edits(const float delta_time)
+{
     mirror_origin = mirror_gizmo.update(mirror_origin, delta_time);
 
     uint64_t preview_edit_count = preview_tmp_edits.size();
     for (uint64_t i = 0u; i < preview_edit_count; i++) {
-        Edit inverted_preview_edit = preview_tmp_edits[i];
-        float dist_to_plane = glm::dot(mirror_normal, inverted_preview_edit.position - mirror_origin);
-        inverted_preview_edit.position = inverted_preview_edit.position - mirror_normal * dist_to_plane * 2.0f;
+        Edit mirrored_preview_edit = preview_tmp_edits[i];
+        float dist_to_plane = glm::dot(mirror_normal, mirror_origin - mirrored_preview_edit.position);
+        mirrored_preview_edit.position = mirrored_preview_edit.position + mirror_normal * dist_to_plane * 2.0f;
 
-        preview_tmp_edits.push_back(inverted_preview_edit);
+        preview_tmp_edits.push_back(mirrored_preview_edit);
     }
 
     uint64_t edit_count = new_edits.size();
     for (uint64_t i = 0u; i < edit_count; i++) {
-        Edit inverted_edit = new_edits[i];
-        float dist_to_plane = glm::dot(mirror_normal, inverted_edit.position - mirror_origin);
-        inverted_edit.position = inverted_edit.position - mirror_normal * dist_to_plane * 2.0f;
+        Edit mirrored_edit = new_edits[i];
+        float dist_to_plane = glm::dot(mirror_normal, mirror_origin - mirrored_edit.position);
 
-        new_edits.push_back(inverted_edit);
+        mirrored_edit.position = mirrored_edit.position + mirror_normal * dist_to_plane * 2.0f;
+        mirrored_edit.dimensions += glm::vec4(0.01f);
+        spdlog::info("{}", dist_to_plane);
+        new_edits.push_back(mirrored_edit);
     }
 }
 
-void SculptEditor::scene_update_rotation() {
+void SculptEditor::scene_update_rotation()
+{
     if (is_rotation_being_used()) {
 
         if (!rotation_started) {
@@ -410,7 +471,6 @@ void SculptEditor::scene_update_rotation() {
 
 }
 
-
 void SculptEditor::render()
 {
     if (mesh_preview && renderer->get_openxr_available())
@@ -418,9 +478,7 @@ void SculptEditor::render()
         update_edit_preview(edit_to_add.dimensions);
 
         // Render something to be able to cull faces later...
-        if (stroke_parameters.get_operation() == OP_SUBSTRACTION || stroke_parameters.get_operation() == OP_SMOOTH_SUBSTRACTION || 
-            stroke_parameters.get_operation() == OP_PAINT || stroke_parameters.get_operation() == OP_SMOOTH_PAINT)
-        {
+        if (!mustRenderMeshPreviewOutline()) {
                 mesh_preview->render();
         }
         else
@@ -457,7 +515,9 @@ void SculptEditor::render()
     else if (use_mirror) {
         mirror_gizmo.render();
         mirror_mesh->set_translation(mirror_origin);
-        mirror_mesh->rotate(glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        mirror_mesh->scale(glm::vec3(0.25f));
+        //mirror_mesh->rotate(glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        //mirror_mesh->translate(mirror_origin);
         mirror_mesh->render();
     }
 
@@ -467,6 +527,7 @@ void SculptEditor::render()
 // =====================
 // GUI =================
 // =====================
+
 void SculptEditor::render_gui()
 {
     StrokeMaterial& stroke_material = stroke_parameters.get_material();
@@ -497,6 +558,16 @@ void SculptEditor::render_gui()
         stroke_parameters.set_dirty(true);
 }
 
+bool SculptEditor::canSnapToSurface()
+{
+    return snap_to_surface && (stamp_enabled || current_tool == PAINT);
+}
+
+bool SculptEditor::mustRenderMeshPreviewOutline()
+{
+    return stroke_parameters.get_operation() == OP_UNION || stroke_parameters.get_operation() == OP_SMOOTH_UNION;
+}
+
 void SculptEditor::update_edit_preview(const glm::vec4& dims)
 {
     // Recreate mesh depending on primitive parameters
@@ -504,7 +575,11 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
     if (dimensions_dirty)
     {
         // Expand a little bit the edges
-        glm::vec4 grow_dims = dims * 1.01f;
+        glm::vec4 grow_dims = dims;
+
+        if (!mustRenderMeshPreviewOutline()) {
+            grow_dims.x = std::max(grow_dims.x - 0.002f, 0.001f);
+        }
 
         switch (stroke_parameters.get_primitive())
         {
@@ -516,21 +591,15 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
             break;
         case SD_CONE:
             mesh_preview->get_surface(0)->create_cone(grow_dims.w, grow_dims.x);
-            mesh_preview->rotate(glm::radians(-90.f), { 1.f, 0.f, 0.f });
             break;
         case SD_CYLINDER:
             mesh_preview->get_surface(0)->create_cylinder(grow_dims.w, grow_dims.x * 2.0f);
-            mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
-            mesh_preview->translate({ 0.f, 0.0f, 0.f });
             break;
         case SD_CAPSULE:
             mesh_preview->get_surface(0)->create_capsule(grow_dims.w, grow_dims.x);
-            mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
-            mesh_preview->translate({ 0.f, -dims.x * 0.5f, 0.f });
             break;
         case SD_TORUS:
             mesh_preview->get_surface(0)->create_torus(grow_dims.x, glm::clamp(grow_dims.w, 0.0001f, grow_dims.x));
-            mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
             break;
         default:
             break;
@@ -563,6 +632,14 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
     default:
         break;
     }
+
+    glm::mat4x4 preview_pose = mesh_preview->get_model();
+
+    preview_pose = glm::rotate(preview_pose, glm::radians(36.9f), glm::vec3(1.0f, 0.0f, 0.0f));
+    preview_pose = glm::translate(preview_pose, glm::vec3(0.0f, -0.25f, 0.0f));
+
+    // Update edit transform
+    mesh_preview->set_model(preview_pose);
 }
 
 void SculptEditor::set_sculpt_started(bool value)
@@ -574,6 +651,24 @@ void SculptEditor::set_primitive(sdPrimitive primitive)
 {
     stroke_parameters.set_primitive(primitive);
     dimensions_dirty = true;
+
+    auto it = primitive_default_states.find(primitive);
+    if (it != primitive_default_states.end())
+    {
+        edit_to_add.dimensions = (*it).second.dimensions;
+    }
+}
+
+void SculptEditor::set_onion_modifier(float value)
+{
+    onion_thickness = glm::clamp(value, 0.0f, 1.0f);
+    modifiers_dirty = true;
+}
+
+void SculptEditor::set_cap_modifier(float value)
+{
+    capped_value = glm::clamp(value, 0.0f, 1.0f);
+    modifiers_dirty = true;
 }
 
 void SculptEditor::toggle_onion_modifier()
@@ -582,7 +677,7 @@ void SculptEditor::toggle_onion_modifier()
     onion_enabled = !onion_enabled;
 
     glm::vec4 parameters = stroke_parameters.get_parameters();
-    parameters.x = onion_enabled ? onion_thickness : 0.f;
+    parameters.x = onion_enabled ? onion_thickness : 0.0f;
 
     stroke_parameters.set_parameters(parameters);
 }
@@ -593,7 +688,7 @@ void SculptEditor::toggle_capped_modifier()
     capped_enabled = !capped_enabled;
 
     glm::vec4 parameters = stroke_parameters.get_parameters();
-    parameters.y = capped_enabled ? capped_value : -1.f;
+    parameters.y = capped_enabled ? capped_value : 0.0f;
 
     stroke_parameters.set_parameters(parameters);
 }
@@ -606,19 +701,24 @@ void SculptEditor::enable_tool(eTool tool)
     {
     case SCULPT:
         helper_gui.change_list_layout("sculpt");
+        stroke_parameters.set_operation(OP_UNION);
         break;
     case PAINT:
         helper_gui.change_list_layout("paint");
+        stroke_parameters.set_operation(OP_PAINT);
         break;
     default:
         break;
     }
+
+    // Set this to allow the mesh preview to give a little mergin in the outline mode
+    dimensions_dirty = true;
 }
 
-bool SculptEditor::is_rotation_being_used() {
+bool SculptEditor::is_rotation_being_used()
+{
     return Input::get_trigger_value(HAND_LEFT) > 0.5;
 }
-
 
 void SculptEditor::bind_events()
 {
@@ -640,11 +740,12 @@ void SculptEditor::bind_events()
         gui.bind("torus", [&](const std::string& signal, void* button) { set_primitive(SD_TORUS); });
 
         gui.bind("onion", [&](const std::string& signal, void* button) { toggle_onion_modifier(); });
-        gui.bind("onion_value", [&](const std::string& signal, float value) { onion_thickness = glm::clamp(value, 0.f, 1.f); });
+        gui.bind("onion_value", [&](const std::string& signal, float value) { set_onion_modifier(value); });
         gui.bind("capped", [&](const std::string& signal, void* button) { toggle_capped_modifier(); });
-        gui.bind("cap_value", [&](const std::string& signal, float value) { capped_value = glm::clamp(value * 2.f - 1.f, -1.f, 1.f); });
+        gui.bind("cap_value", [&](const std::string& signal, float value) { set_cap_modifier(value); });
 
         gui.bind("mirror", [&](const std::string& signal, void* button) { use_mirror = !use_mirror; });
+        gui.bind("snap_to_surface", [&](const std::string& signal, void* button) { snap_to_surface = !snap_to_surface; });
         gui.bind("snap_to_grid", [&](const std::string& signal, void* button) { snap_to_grid = !snap_to_grid; });
         gui.bind("lock_axis_toggle", [&](const std::string& signal, void* button) { axis_lock = !axis_lock; });
         gui.bind("lock_axis_x", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_X; });
@@ -659,6 +760,7 @@ void SculptEditor::bind_events()
         gui.bind("noise_color_picker", [&](const std::string& signal, Color color) { stroke_parameters.set_material_noise_color(color); });
 
         gui.bind("color_picker", [&](const std::string& signal, Color color) { stroke_parameters.set_material_color(color); });
+        gui.bind("pick_material", [&](const std::string& signal, void* button) { is_picking_material = !is_picking_material; });
 
         // Controller buttons
 
@@ -795,6 +897,18 @@ void SculptEditor::generate_material_from_stroke(void* button)
     });
 }
 
+void SculptEditor::update_gui_from_stroke_material(const StrokeMaterial& mat)
+{
+    // Emit signals to change UI values
+    gui.emit_signal("color_picker@changed", mat.color);
+    gui.emit_signal("roughness@changed", mat.roughness);
+    gui.emit_signal("metallic@changed", mat.metallic);
+    gui.emit_signal("noise_intensity@changed", mat.noise_params.x);
+    gui.emit_signal("noise_frequency@changed", mat.noise_params.y);
+    gui.emit_signal("noise_octaves@changed", mat.noise_params.z);
+    gui.emit_signal("noise_color_picker@changed", mat.noise_color);
+}
+
 void SculptEditor::update_stroke_from_material(const std::string& name)
 {
     const PBRMaterialData& data = pbr_materials_data[name];
@@ -805,11 +919,32 @@ void SculptEditor::update_stroke_from_material(const std::string& name)
     stroke_parameters.set_material_metallic(data.metallic);
     stroke_parameters.set_material_noise(data.noise_params.x, data.noise_params.y, static_cast<int>(data.noise_params.z));
 
-    // Emit signals to change UI values
-    const StrokeMaterial& mat = stroke_parameters.get_material();
-    gui.emit_signal("roughness@changed", mat.roughness);
-    gui.emit_signal("metallic@changed", mat.metallic);
-    gui.emit_signal("noise_intensity@changed", mat.noise_params.x);
-    gui.emit_signal("noise_frequency@changed", mat.noise_params.y);
-    gui.emit_signal("noise_octaves@changed", mat.noise_params.z);
+    update_gui_from_stroke_material(stroke_parameters.get_material());
+}
+
+void SculptEditor::pick_material()
+{
+    glm::mat4x4 pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
+    glm::vec3 ray_dir = get_front(pose);
+    renderer->get_raymarching_renderer()->octree_ray_intersect(pose[3], ray_dir);
+
+    const RayIntersectionInfo& info = static_cast<RoomsRenderer*>(RoomsRenderer::instance)->get_raymarching_renderer()->get_ray_intersection_info();
+
+    if (info.intersected)
+    {
+        // Set all data
+        stroke_parameters.set_material_color(Color(info.material_albedo, 1.0f));
+        stroke_parameters.set_material_roughness(info.material_roughness);
+        stroke_parameters.set_material_metallic(info.material_metalness);
+        // stroke_parameters.set_material_noise(-1.0f);
+
+        update_gui_from_stroke_material(stroke_parameters.get_material());
+    }
+
+    // Disable picking..
+    gui.emit_signal("pick_material", (void*)nullptr);
+
+    // Manage interactions, set stamp mode until tool is used again
+    stamp_enabled = true;
+    was_material_picked = true;
 }

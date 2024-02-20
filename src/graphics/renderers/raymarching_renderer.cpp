@@ -174,7 +174,7 @@ void RaymarchingRenderer::push_edit(const Edit edit) {
     current_stroke.edits[current_stroke.edit_count++] = edit;
 }
 
-void RaymarchingRenderer::octree_ray_intersect(const glm::vec3& ray_origin, const glm::vec3& ray_dir)
+void RaymarchingRenderer::octree_ray_intersect(const glm::vec3& ray_origin, const glm::vec3& ray_dir, std::function<void(glm::vec3)> callback)
 {
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
 
@@ -245,6 +245,10 @@ void RaymarchingRenderer::octree_ray_intersect(const glm::vec3& ray_origin, cons
     while (!user_data.finished) {
         // Checks for ongoing asynchronous operations and call their callbacks if needed
         webgpu_context->process_events();
+
+        if (user_data.info->intersected > 0 && callback) {
+            callback(user_data.info->intersection_position);
+        }
     }
 }
 
@@ -459,6 +463,23 @@ void RaymarchingRenderer::compute_undo(WGPUComputePassEncoder compute_pass)
         for (int i = united_stroke_idx + 1; i < stroke_history.size(); ++i) {
             deleted_strokes_aabb = merge_aabbs(deleted_strokes_aabb, stroke_history[i].get_world_AABB());
         }
+
+        //Adjust AABB to evaluation grid size (discretize to brick size)
+        glm::vec3 deleted_stroke_min = deleted_strokes_aabb.center - deleted_strokes_aabb.half_size;
+        glm::vec3 deleted_stroke_max = deleted_strokes_aabb.center + deleted_strokes_aabb.half_size;
+
+        const float texel_size = SCULPT_MAX_SIZE / powf(2.0, octree_depth + 3);
+        const float brick_size = 8.0f * texel_size;
+
+        // Round upwards and downwards the max and min, in order to wrap arround brick size
+        deleted_stroke_min = glm::floor(deleted_stroke_min / brick_size) * brick_size;
+        deleted_stroke_max = glm::ceil(deleted_stroke_max / brick_size) * brick_size;
+
+        deleted_strokes_aabb.half_size = (deleted_stroke_max - deleted_stroke_min) / 2.0f;
+        deleted_strokes_aabb.center = deleted_stroke_min + deleted_strokes_aabb.half_size;
+
+        // Reduce the size in a texel, for possible precission issues
+        deleted_strokes_aabb.half_size -= texel_size;
 
         // get strokes with same id and add into the redo history
         stroke_redo_history.insert(stroke_redo_history.begin(), stroke_history.begin() + (united_stroke_idx + 1), stroke_history.end());
@@ -878,9 +899,6 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
 
         camera_uniform = rooms_renderer->get_current_camera_uniform();
 
-        linear_sampler_uniform.data = webgpu_context->create_sampler(WGPUAddressMode_ClampToEdge, WGPUAddressMode_ClampToEdge, WGPUAddressMode_ClampToEdge, WGPUFilterMode_Linear, WGPUFilterMode_Linear);
-        linear_sampler_uniform.binding = 4;
-
         std::vector<Uniform*> uniforms = { &linear_sampler_uniform, &sdf_texture_uniform, &octree_proxy_instance_buffer, &proxy_geometry_eye_position, &octree_brick_copy_buffer, &sdf_material_texture_uniform };
 
         render_proxy_geometry_bind_group = webgpu_context->create_bind_group(uniforms, render_proxy_shader, 0);
@@ -940,7 +958,10 @@ void RaymarchingRenderer::init_octree_ray_intersection_pipeline()
 
     // Ray Octree intersection bindgroup
     {
-        std::vector<Uniform*> uniforms = { &octree_uniform/*, &sdf_texture_uniform, &linear_sampler_uniform, &octree_proxy_instance_buffer*/ };
+        linear_sampler_uniform.data = webgpu_context->create_sampler(WGPUAddressMode_ClampToEdge, WGPUAddressMode_ClampToEdge, WGPUAddressMode_ClampToEdge, WGPUFilterMode_Linear, WGPUFilterMode_Linear);
+        linear_sampler_uniform.binding = 4;
+
+        std::vector<Uniform*> uniforms = { &octree_uniform, &sdf_texture_uniform, &linear_sampler_uniform, &sdf_material_texture_uniform };
         octree_ray_intersection_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_ray_intersection_shader, 0);
     }
 

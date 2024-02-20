@@ -115,34 +115,22 @@ fn sdCapsule( p : vec3f, a : vec3f, b : vec3f, rotation : vec4f, r : f32, materi
 }
 
 // t: (base radius, top radius)
-fn sdCone( p : vec3f, a : vec3f, b : vec3f, rotation : vec4f, t : vec2f, material : Material) -> Surface
+fn sdCone( p : vec3f, a : vec3f, h : f32, rotation : vec4f, t : vec2f, material : Material) -> Surface
 {
     var sf : Surface;
-    var ra = t.x;
-    var rb = t.y;
+    var r2 = t.x;
+    var r1 = t.y;
+    var height = h * 0.5;
 
-    let pa : vec3f = rotate_point_quat(p - a, rotation);
-    let ba = b - a;
-    var rba  = rb-ra;
-    var baba = dot(ba,ba);
-    var papa = dot(pa,pa);
-    var paba = dot(pa,ba)/baba;
+    let pos : vec3f = rotate_point_quat(p - a, rotation) + vec3f(0.0, 0.0, height);
+    let q = vec2f( length(pos.xy), pos.z );
+    let k1 = vec2f(r2, height);
+    let k2 = vec2f(r2-r1, 2.0 * height);
+    let ca = vec2f(q.x - min(q.x, select(r2, r1, q.y<0.0)), abs(q.y) - height);
+    let cb = q - k1 + k2 * clamp( dot(k1 - q, k2) / dot(k2, k2), 0.0, 1.0);
+    let s : f32 = select(1.0, -1.0, cb.x < 0.0 && ca.y < 0.0);
 
-    var x = sqrt( papa - paba*paba*baba );
-
-    var cax = max(0.0,x-select(rb, ra, paba < 0.5));
-    var cay = abs(paba-0.5) - 0.5;
-
-    var k = rba*rba + baba;
-    var f = clamp( (rba*(x-ra)+paba*baba)/k, 0.0, 1.0 );
-
-    var cbx = x-ra - f*rba;
-    var cby = paba - f;
-    
-    var s = select(1.0, -1.0, cbx < 0.0 && cay < 0.0);
-    
-    sf.distance = s*sqrt( min(cax*cax + cay*cay*baba,
-                       cbx*cbx + cby*cby*baba) );
+    sf.distance = s * sqrt(min(dot(ca, ca), dot(cb, cb)));
     sf.material = material;
     return sf;
 }
@@ -354,17 +342,20 @@ fn opSmoothIntersection( s1 : Surface, s2 : Surface, k : f32 ) -> Surface
     let h : f32 = max(k - abs(s1.distance - s2.distance), 0.0);
     var s : Surface;
     s.distance = max(s1.distance, s2.distance) + h * h * 0.25 / k;
-    //s.color = s1.color;
+    s.material = Material_mix(s1.material, s2.material, h);
     return s;
 }
 
 fn opSmoothPaint( s1 : Surface, s2 : Surface, material : Material, k : f32 ) -> Surface
 {
     var sColorInter : Surface = opIntersection(s1, s2);
-    sColorInter.material = material;
-    let u : Surface = opUnion(s1, sColorInter);
-    var s : Surface = opSmoothUnion(s1, sColorInter, k);
-    s.distance = u.distance;
+    
+    let smin : vec2f = soft_min(sColorInter.distance, s1.distance, k);
+
+    var s : Surface;
+    s.distance = s1.distance;
+    s.material = Material_mix(material, s1.material, smin.y);
+
     return s;
 }
 
@@ -389,6 +380,8 @@ fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters
     var size : vec3f = edit.dimensions.xyz;
     var radius : f32 = edit.dimensions.x;
     var size_param : f32 = edit.dimensions.w;
+
+    // 0 no cap ... 1 fully capped
     var cap_value : f32 = parameters.y;
 
     var onion_thickness : f32 = parameters.x;
@@ -400,8 +393,8 @@ fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters
         case SD_SPHERE: {
             onion_thickness = map_thickness( onion_thickness, radius );
             radius -= onion_thickness; // Compensate onion size
-            // -1..1 no cap..fully capped
-            if(cap_value > -1.0) { 
+            if(cap_value > 0.0) { 
+                cap_value = cap_value * 2.0 - 1.0;
                 pSurface = sdCutSphere(position, edit.position, edit.rotation, radius, radius * cap_value * 0.999, stroke_material);
             } else {
                 pSurface = sdSphere(position, edit.position, radius, stroke_material);
@@ -429,10 +422,9 @@ fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters
         }
         case SD_CONE: {
             onion_thickness = map_thickness( onion_thickness, 0.01 );
-            cap_value = cap_value * 0.5 + 0.5;
             radius = max(radius * (1.0 - cap_value), 0.0025);
             var dims = vec2f(size_param, size_param * cap_value);
-            pSurface = sdCone(position, edit.position,  edit.position - vec3f(0.0, 0.0, radius), edit.rotation, dims, stroke_material);
+            pSurface = sdCone(position, edit.position, radius, edit.rotation, dims, stroke_material);
             break;
         }
         // case SD_PYRAMID: {
@@ -449,8 +441,7 @@ fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters
             onion_thickness = map_thickness( onion_thickness, size_param );
             size_param -= onion_thickness; // Compensate onion size
             size_param = clamp( size_param, 0.0001, radius );
-            if(cap_value > -1.0) { // // -1..1 no cap..fully capped
-                cap_value = cap_value * 0.5 + 0.5;
+            if(cap_value > 0.0) {
                 var an = M_PI * (1.0 - cap_value);
                 var angles = vec2f(sin(an), cos(an));
                 pSurface = sdCappedTorus(position, edit.position, vec2f(radius, size_param), edit.rotation, angles, stroke_material);
@@ -474,6 +465,8 @@ fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters
     {
         pSurface = opOnion(pSurface, onion_thickness);
     }
+
+    pSurface.material = stroke_material;
 
     switch (operation) {
         case OP_UNION: {

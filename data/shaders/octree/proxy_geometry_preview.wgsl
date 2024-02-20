@@ -19,7 +19,7 @@ struct VertexOutput {
     @builtin(position) position: vec4f,
     @location(0) uv: vec2f,
     @location(1) normal: vec3f,
-    @location(2) color: vec3f,
+    @location(2) @interpolate(flat) is_interior: u32,
     @location(3) vertex_in_world_space : vec3f,
     @location(4) vertex_in_sculpt_space : vec3f,
     @location(5) @interpolate(flat) voxel_center_sculpt_space : vec3f,
@@ -48,7 +48,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     // world_pos = vec4f(rotate_point_quat(world_pos.xyz, sculpt_data.sculpt_rotation), 1.0);
     out.position = camera_data.view_projection * vec4f(vertex_in_world_space, 1.0);
     out.uv = in.uv; // forward to the fragment shader
-    out.color = in.color;
+    out.is_interior = instance_data.in_use;
     out.normal = in.normal;
     
     out.vertex_in_sculpt_space = vertex_in_sculpt_space;
@@ -83,11 +83,12 @@ fn sample_sdf_preview(position : vec3f) -> f32
     // TODO: preview edits
     var material : Material = get_material_preview();
     var surface : Surface;
-    if (preview_data.preview_stroke.operation == OP_SUBSTRACTION || preview_data.preview_stroke.operation == OP_SMOOTH_SUBSTRACTION) {
+    if (is_inside_brick) {
         surface.distance = -10000.0;
     } else {
         surface.distance = 10000.0;
     }
+    
     for(var i : u32 = 0u; i < preview_data.preview_stroke.edit_count; i++) {
         surface = evaluate_edit(position, preview_data.preview_stroke.primitive, preview_data.preview_stroke.operation, preview_data.preview_stroke.parameters, surface, material, preview_data.preview_stroke.edits[i]);
     }
@@ -147,14 +148,16 @@ fn raymarch_sculpt_space(ray_origin_sculpt_space : vec3f, ray_dir : vec3f, max_d
 
         let material : Material = get_material_preview();
         //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
-		//return vec4f(apply_light(-ray_dir, pos, pos_world, normal, lightPos + lightOffset, material), depth);
+		return vec4f(apply_light(-ray_dir, pos, pos_world, normal, lightPos + lightOffset, material), depth);
         //return vec4f(vec3f(material.albedo), depth);
-        return vec4f(normal, depth);
+        //return vec4f(normal, depth);
 	}
 
     // Use a two band spherical harmonic as a skymap
     return vec4f(vec3f(0.0), 0.999);
 }
+
+var<private> is_inside_brick : bool;
 
 @fragment
 fn fs_main(in: VertexOutput) -> FragmentOutput {
@@ -164,6 +167,8 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     let ray_dir_sculpt : vec3f = rotate_point_quat(ray_dir_world, quat_conj(sculpt_data.sculpt_rotation));
 
     let raymarch_distance : f32 = ray_AABB_intersection_distance(in.vertex_in_sculpt_space.xyz, ray_dir_sculpt, in.voxel_center_sculpt_space, vec3f(BRICK_WORLD_SIZE));
+
+    is_inside_brick = (in.is_interior & INTERIOR_BRICK_FLAG) == INTERIOR_BRICK_FLAG;
 
     let ray_result = raymarch_sculpt_space(in.vertex_in_sculpt_space.xyz, ray_dir_sculpt, raymarch_distance, camera_data.view_projection);
 
@@ -177,10 +182,13 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     out.depth = ray_result.a;
 
     if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
-        out.color = vec4f(0.0, 0.0, 1.0, 1.0);
+        if (is_inside_brick) {
+            out.color = vec4f(1.0, 0.0, 1.0, 1.0);
+        } else {
+            out.color = vec4f(0.0, 0.0, 1.0, 1.0);
+        }
+        
         out.depth = in.position.z;
-    } else {
-        //discard;
     }
 
     // out.color = vec4f(1.0, 0.0, 0.0, 1.0); // Color

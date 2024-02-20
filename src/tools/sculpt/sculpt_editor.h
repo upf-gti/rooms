@@ -15,6 +15,12 @@ enum eTool : uint8_t {
 
 class RoomsRenderer;
 
+struct PrimitiveState {
+    glm::vec4 dimensions;
+    // color?
+    // modifiers?
+};
+
 class SculptEditor {
 
     RoomsRenderer*  renderer = nullptr;
@@ -33,6 +39,8 @@ class SculptEditor {
         float noise_intensity = 0.0f, const Color& noise_color = colors::RUST, float noise_frequency = 20.0f, int noise_octaves = 8);
     void generate_material_from_stroke(void* button);
     void update_stroke_from_material(const std::string& name);
+    void update_gui_from_stroke_material(const StrokeMaterial& mat);
+    void pick_material();
 
     /*
     *	Edits
@@ -41,22 +49,36 @@ class SculptEditor {
     std::vector<Edit>   preview_tmp_edits;
     std::vector<Edit>   new_edits;
 
+    std::map<uint32_t, PrimitiveState> primitive_default_states;
+
     std::map<std::string, PBRMaterialData> pbr_materials_data;
 
     Edit             edit_to_add;
     StrokeParameters stroke_parameters;
 
-    EntityMesh* mesh_preview = nullptr;
-    EntityMesh* mesh_preview_outline = nullptr;
+    EntityMesh*     mesh_preview = nullptr;
+    EntityMesh*     mesh_preview_outline = nullptr;
 
     void set_primitive( sdPrimitive primitive );
-    void toggle_onion_modifier();
-    void toggle_capped_modifier();
     void update_edit_preview( const glm::vec4& dims );
 
-    bool        dimensions_dirty = true;
-    bool        stamp_enabled = false;
-    bool		rotation_started = false;
+    void set_onion_modifier(float value);
+    void set_cap_modifier(float value);
+
+    void toggle_capped_modifier();
+    void toggle_onion_modifier();
+
+    bool mustRenderMeshPreviewOutline();
+
+    bool canSnapToSurface();
+
+    bool        modifiers_dirty     = false;
+    bool        dimensions_dirty    = true;
+    bool        stamp_enabled       = false;
+    bool		rotation_started    = false;
+    bool        snap_to_surface     = false;
+    bool        is_picking_material = false;
+    bool        was_material_picked = false;
 
     glm::vec3	sculpt_start_position;
     glm::vec3	initial_hand_translation = {};
@@ -104,9 +126,9 @@ class SculptEditor {
     EntityMesh* mirror_mesh = nullptr;
 
     glm::vec3 mirror_origin = glm::vec3(0.f);
-    glm::vec3 mirror_normal = glm::vec3(1.f, 0.f, 0.f);
+    glm::vec3 mirror_normal = glm::vec3(0.f, 0.f, 1.f);
 
-    
+
     // UI
 
     ui::Controller        gui;
@@ -126,7 +148,7 @@ class SculptEditor {
     bool is_tool_pressed = false;
     bool is_released = false;
     bool was_tool_pressed = false;
-    bool is_tool_being_used();
+    bool is_tool_being_used(bool stamp_enabled);
     bool edit_update(float delta_time);
     void scene_update_rotation();
     void mirror_current_edits(const float delta_time);
