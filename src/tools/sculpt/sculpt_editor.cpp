@@ -34,7 +34,7 @@ void SculptEditor::initialize()
     floor_grid_mesh->add_surface(RendererStorage::get_surface("quad"));
     floor_grid_mesh->set_translation(glm::vec3(0.0f));
     floor_grid_mesh->rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-    floor_grid_mesh->scale(glm::vec3(3.f));
+    floor_grid_mesh->scale(glm::vec3(10.f));
 
     Material grid_material;
     grid_material.shader = RendererStorage::get_shader("data/shaders/mesh_grid.wgsl");
