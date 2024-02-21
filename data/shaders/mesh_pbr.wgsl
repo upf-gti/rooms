@@ -79,7 +79,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     m.albedo = albedo_texture.rgb * in.color * albedo.rgb;
     alpha = albedo_texture.a * albedo.a;
 #else
-    m.albedo = albedo.rgb;
+    m.albedo = in.color * albedo.rgb;
     alpha = albedo.a;
 #endif
 
