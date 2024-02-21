@@ -568,15 +568,9 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
     case SD_CONE:
         mesh_preview->rotate(glm::radians(-90.f), { 1.f, 0.f, 0.f });
         break;
-    case SD_CYLINDER:
-        mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
-        break;
     case SD_CAPSULE:
         mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
         mesh_preview->translate({ 0.f, 0.f, 0.f });
-        break;
-    case SD_TORUS:
-        mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
         break;
     default:
         break;
