@@ -356,29 +356,54 @@ void SculptEditor::update(float delta_time)
     was_tool_used = is_tool_used;
 }
 
+void SculptEditor::mirror_position(glm::vec3& position)
+{
+    glm::vec3 origin_texture_space = world_to_texture3d(mirror_origin);
+    glm::vec3 pos_to_origin = origin_texture_space - position;
+    glm::vec3 reflection = glm::reflect(pos_to_origin, mirror_normal);
+    position = origin_texture_space - reflection;
+}
+
 void SculptEditor::mirror_current_edits(float delta_time)
 {
     uint64_t preview_edit_count = preview_tmp_edits.size();
 
     for (uint64_t i = 0u; i < preview_edit_count; i++) {
-        Edit mirrored_preview_edit = preview_tmp_edits[i];
-        float dist_to_plane = glm::dot(mirror_normal, mirror_origin - mirrored_preview_edit.position);
-        mirrored_preview_edit.position = mirrored_preview_edit.position + mirror_normal * dist_to_plane * 2.0f;
 
+        Edit mirrored_preview_edit = preview_tmp_edits[i];
+        mirror_position(mirrored_preview_edit.position);
         preview_tmp_edits.push_back(mirrored_preview_edit);
     }
 
     uint64_t edit_count = new_edits.size();
 
     for (uint64_t i = 0u; i < edit_count; i++) {
+
         Edit mirrored_edit = new_edits[i];
-        float dist_to_plane = glm::dot(mirror_normal, mirror_origin - mirrored_edit.position);
-        
-        mirrored_edit.position = mirrored_edit.position + mirror_normal * dist_to_plane * 2.0f;
+        mirror_position(mirrored_edit.position);
         mirrored_edit.dimensions += glm::vec4(0.01f);
-        //spdlog::info("{}", dist_to_plane);
         new_edits.push_back(mirrored_edit);
     }
+}
+
+glm::vec3 SculptEditor::world_to_texture3d(const glm::vec3& position)
+{
+    glm::vec3 pos_texture_space;
+
+    pos_texture_space = position - (sculpt_start_position + translation_diff);
+    pos_texture_space = (sculpt_rotation * rotation_diff) * pos_texture_space;
+
+    return pos_texture_space;
+}
+
+glm::vec3 SculptEditor::texture3d_to_world(const glm::vec3& position)
+{
+    glm::vec3 pos_world_space;
+
+    pos_world_space = position * glm::inverse(sculpt_rotation * rotation_diff);
+    pos_world_space = pos_world_space - (sculpt_start_position + translation_diff);
+
+    return pos_world_space;
 }
 
 void SculptEditor::scene_update_rotation()
@@ -415,8 +440,7 @@ void SculptEditor::scene_update_rotation()
         }
 
         // Push edits in 3d texture space
-        edit_to_add.position -= (sculpt_start_position + translation_diff);
-        edit_to_add.position = (sculpt_rotation * rotation_diff) * edit_to_add.position;
+        edit_to_add.position = world_to_texture3d(edit_to_add.position);
         edit_to_add.rotation *= (glm::conjugate(sculpt_rotation) * rotation_diff);
     }
 

@@ -143,9 +143,14 @@ class SculptEditor {
     void add_recent_color(const Color& color);
 
     // Editor
+
     bool is_tool_being_used(bool stamp_enabled);
     bool edit_update(float delta_time);
     void mirror_current_edits(float delta_time);
+    void mirror_position(glm::vec3& position);
+
+    glm::vec3 world_to_texture3d(const glm::vec3& position);
+    glm::vec3 texture3d_to_world(const glm::vec3& position);
     void scene_update_rotation();
 
 public:
