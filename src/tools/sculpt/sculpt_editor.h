@@ -88,6 +88,8 @@ class SculptEditor {
     glm::quat	rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
     glm::quat	sculpt_rotation = { 0.0, 0.0, 0.0, 1.0 };
 
+    float       hand2edit_distance = 0.2f;
+
     /*
     *	Modifiers
     */

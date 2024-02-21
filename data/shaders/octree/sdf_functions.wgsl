@@ -167,7 +167,7 @@ fn sdCylinder(p : vec3f, a : vec3f, rotation : vec4f, r : f32, h : f32, rr : f32
 
     let posA : vec3f = rotate_point_quat(p - a, rotation);
 
-    let d : vec2f = abs(vec2f(length(vec2f(posA.x, posA.y)), posA.z)) - vec2(r, h);
+    let d : vec2f = abs(vec2f(length(vec2f(posA.x, posA.z)), posA.y)) - vec2(r, h);
     sf.distance = min(max(d.x, d.y), 0.0) + length(max(d, vec2f(0.0))) - rr;
     sf.material = material;
     return sf;
@@ -178,7 +178,7 @@ fn sdTorus( p : vec3f, c : vec3f, t : vec2f, rotation : vec4f, material : Materi
 {
     var sf : Surface;
     let pos : vec3f = rotate_point_quat(p - c, rotation);
-    var q = vec2f(length(pos.xy) - t.x, pos.z);
+    var q = vec2f(length(pos.xz) - t.x, pos.y);
     sf.distance = length(q) - t.y;
     sf.material = material;
     return sf;

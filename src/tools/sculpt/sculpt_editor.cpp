@@ -34,7 +34,7 @@ void SculptEditor::initialize()
     floor_grid_mesh->add_surface(RendererStorage::get_surface("quad"));
     floor_grid_mesh->set_translation(glm::vec3(0.0f));
     floor_grid_mesh->rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-    floor_grid_mesh->scale(glm::vec3(3.f));
+    floor_grid_mesh->scale(glm::vec3(10.f));
 
     Material grid_material;
     grid_material.shader = RendererStorage::get_shader("data/shaders/mesh_grid.wgsl");
@@ -127,11 +127,9 @@ bool SculptEditor::edit_update(float delta_time)
         return false;
     }
 
-    glm::mat4x4 controller_pose = Input::get_controller_pose(HAND_RIGHT);
-
-    // Hacky to use the ray direction of the gui ray
-    controller_pose = glm::rotate(controller_pose, glm::radians(36.9f), glm::vec3(1.0f, 0.0f, 0.0f));
-    controller_pose = glm::translate(controller_pose, glm::vec3(0.0f, -0.25f, 0.0f));
+    // Move the edit a little away
+    glm::mat4x4 controller_pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
+    controller_pose = glm::translate(controller_pose, glm::vec3(0.0f, 0.0f, -hand2edit_distance));
 
     // Update edit transform
     edit_to_add.position = controller_pose[3];
@@ -151,7 +149,7 @@ bool SculptEditor::edit_update(float delta_time)
         renderer->get_raymarching_renderer()->octree_ray_intersect(pose[3], ray_dir, callback);
     }
 
-    edit_to_add.rotation = glm::inverse(Input::get_controller_rotation(HAND_RIGHT));
+    edit_to_add.rotation = glm::inverse(Input::get_controller_rotation(HAND_RIGHT, POSE_AIM));
 
     // Update edit dimensions
     {
@@ -558,7 +556,11 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
         dimensions_dirty = false;
     }
 
-    mesh_preview->set_model(Input::get_controller_pose(gui.get_workspace().select_hand));
+    glm::mat4x4 preview_pose = Input::get_controller_pose(gui.get_workspace().select_hand, POSE_AIM);
+    preview_pose = glm::translate(preview_pose, glm::vec3(0.0f, 0.0f, -hand2edit_distance));
+
+    // Update edit transform
+    mesh_preview->set_model(preview_pose);
 
     // Update model depending on the primitive
     switch (stroke_parameters.get_primitive())
@@ -566,28 +568,13 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
     case SD_CONE:
         mesh_preview->rotate(glm::radians(-90.f), { 1.f, 0.f, 0.f });
         break;
-    case SD_CYLINDER:
-        mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
-        mesh_preview->translate({ 0.f, 0.0f, 0.f });
-        break;
     case SD_CAPSULE:
         mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
-        mesh_preview->translate({ 0.f, -dims.x * 0.5f, 0.f });
-        break;
-    case SD_TORUS:
-        mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
+        mesh_preview->translate({ 0.f, -dims.x * 0.5, 0.f });
         break;
     default:
         break;
     }
-
-    glm::mat4x4 preview_pose = mesh_preview->get_model();
-
-    preview_pose = glm::rotate(preview_pose, glm::radians(36.9f), glm::vec3(1.0f, 0.0f, 0.0f));
-    preview_pose = glm::translate(preview_pose, glm::vec3(0.0f, -0.25f, 0.0f));
-
-    // Update edit transform
-    mesh_preview->set_model(preview_pose);
 }
 
 void SculptEditor::set_sculpt_started(bool value)
@@ -650,10 +637,12 @@ void SculptEditor::enable_tool(eTool tool)
     case SCULPT:
         helper_gui.change_list_layout("sculpt");
         stroke_parameters.set_operation(OP_UNION);
+        hand2edit_distance = 0.0f;
         break;
     case PAINT:
         helper_gui.change_list_layout("paint");
         stroke_parameters.set_operation(OP_PAINT);
+        hand2edit_distance = 0.1f;
         break;
     default:
         break;
