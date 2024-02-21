@@ -122,6 +122,7 @@ glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const
 {
 
     glm::vec3 size = glm::vec3(edits[edit_index].dimensions);
+    float size_param = edits[edit_index].dimensions.w;
     float radius = edits[edit_index].dimensions.x;
 
     const glm::vec3 smooth_margin = glm::vec3(parameters.w);
@@ -132,13 +133,13 @@ glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const
     case SD_BOX:
         return size + smooth_margin;
     case SD_CAPSULE:
-        return glm::abs(edits[edit_index].position - size) + radius + smooth_margin;
+        return glm::vec3(size_param) + glm::vec3(0.0f, 0.0f, radius / 2.0f);// +smooth_margin;
     case SD_CONE:
-     	return glm::abs(edits[edit_index].position - size) + radius * 2.0f + smooth_margin;
+        return glm::vec3(size_param, radius, size_param) + smooth_margin;
     //case SD_PYRAMID:
         //	return glm::abs(position - size) + radius * 2.0f;
     case SD_CYLINDER:
-        return glm::vec3(radius, size.y, radius) + smooth_margin;
+        return glm::vec3(size_param, radius, size_param) + smooth_margin;
     case SD_TORUS:
         return glm::abs(size) + radius * 2.0f + smooth_margin;
     default:
@@ -149,6 +150,30 @@ glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const
 
 AABB Stroke::get_edit_world_AABB(const uint8_t edit_index) const
 {
+    // Special case for the capsule
+    if (primitive == SD_CAPSULE) {
+        const float size_param = edits[edit_index].dimensions.w;
+        const float radius = edits[edit_index].dimensions.x;
+        const float smooht_margin = parameters.w;
+
+        const glm::vec3 capsule_dir = glm::normalize((edits[edit_index].rotation) * glm::vec3(0.0f, 0.0f, 1.0f));
+        const glm::vec3 p1_point = edits[edit_index].position + capsule_dir * (radius * 2.0f);
+        const glm::vec3 p2_point = edits[edit_index].position -capsule_dir * (size_param );
+
+        glm::vec3 max_size, min_size;
+        max_size.x = glm::max(p1_point.x, p2_point.x);
+        max_size.y = glm::max(p1_point.y, p2_point.y);
+        max_size.z = glm::max(p1_point.z, p2_point.z);
+
+        min_size.x = glm::min(p1_point.x, p2_point.x);
+        min_size.y = glm::min(p1_point.y, p2_point.y);
+        min_size.z = glm::min(p1_point.z, p2_point.z);
+
+        const glm::vec3 half_size = (max_size - min_size) / 2.0f;
+
+        return { min_size + half_size, half_size + glm::vec3(size_param)};
+    }
+
     glm::vec3 pure_edit_half_size = get_edit_world_half_size(edit_index);
 
     // TODO: Add smooth margin
@@ -160,6 +185,8 @@ AABB Stroke::get_edit_world_AABB(const uint8_t edit_index) const
     if (primitive != SD_SPHERE) {
         edit_rotation = edits[edit_index].rotation;
     }
+
+    glm::vec3 aabb_center = edits[edit_index].position;
 
     // Rotate the AABB (turning it into an OBB) and compute the AABB
     const glm::vec3 axis[8] = { edit_rotation * glm::vec3(pure_edit_half_size.x,  pure_edit_half_size.y,  pure_edit_half_size.z),
@@ -187,7 +214,7 @@ AABB Stroke::get_edit_world_AABB(const uint8_t edit_index) const
 
     const glm::vec3 edit_half_size = (rotated_max_size - rotated_min_size) / 2.0f;
 
-    return { (edits[edit_index].position), edit_half_size };
+    return { aabb_center, edit_half_size };
 }
 
 
