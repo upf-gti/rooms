@@ -81,6 +81,7 @@ class SculptEditor {
     bool        was_material_picked = false;
 
     glm::vec3	sculpt_start_position;
+    glm::vec3	edit_position_world;
     glm::vec3	initial_hand_translation = {};
     glm::vec3	translation_diff = {};
 
@@ -144,8 +145,9 @@ class SculptEditor {
     // Editor
     bool is_tool_being_used(bool stamp_enabled);
     bool edit_update(float delta_time);
+    void mirror_current_edits(float delta_time);
     void scene_update_rotation();
-    void mirror_current_edits(const float delta_time);
+
 public:
 
     void initialize();
