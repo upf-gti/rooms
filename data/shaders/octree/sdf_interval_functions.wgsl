@@ -572,8 +572,8 @@ fn cylinder_interval(p : mat3x3f, start_pos : vec3f, rotation : vec4f, radius : 
 {
     let cyl_origin : mat3x3f = irotate_point_quat(isub_mat_vec(p, start_pos), rotation);
     
-    let d_x : vec2f = isub_vecs(iabs(isqrt(ipow2_vec(cyl_origin[0].xy) + ipow2_vec(cyl_origin[1].xy))), vec2f(radius, radius)); 
-    let d_y : vec2f = isub_vecs(iabs(cyl_origin[2].xy), vec2f(height, height)); 
+    let d_x : vec2f = isub_vecs(iabs(isqrt(ipow2_vec(cyl_origin[0].xy) + ipow2_vec(cyl_origin[2].xy))), vec2f(radius, radius)); 
+    let d_y : vec2f = isub_vecs(iabs(cyl_origin[1].xy), vec2f(height, height)); 
 
     let max_d_x : vec2f = imax(vec2f(0.0), d_x);
     let max_d_y : vec2f = imax(vec2f(0.0), d_y);
@@ -585,8 +585,8 @@ fn torus_interval( p : mat3x3f, c : vec3f, t : vec2f, rotation : vec4f) -> vec2f
 {
     let pos : mat3x3f = irotate_point_quat(isub_mat_vec(p, c), rotation);
 
-    let d_x = isub_vec_float(isqrt(ipow2_vec(pos[0].xy) + ipow2_vec(pos[1].xy)), t.x);
-    let d_y = pos[2].xy;
+    let d_x = isub_vec_float(isqrt(ipow2_vec(pos[0].xy) + ipow2_vec(pos[2].xy)), t.x);
+    let d_y = pos[1].xy;
 
     return isub_vec_float(isqrt(ipow2_vec(d_x) + ipow2_vec(d_y)), t.y);
 }

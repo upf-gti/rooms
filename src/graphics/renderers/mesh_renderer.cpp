@@ -78,5 +78,6 @@ void MeshRenderer::init_render_mesh_pipelines()
     Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/ui/ui_slider.wgsl"), color_target);
     Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/ui/ui_slider_h.wgsl"), color_target);
     Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/ui/ui_color_picker.wgsl"), color_target);
+    Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/ui/ui_ray_pointer.wgsl"), color_target);
     Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/sdf_fonts.wgsl"), color_target);
 }
