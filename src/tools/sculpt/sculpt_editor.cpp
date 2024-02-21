@@ -358,8 +358,9 @@ void SculptEditor::update(float delta_time)
 
 void SculptEditor::mirror_current_edits(float delta_time)
 {
-    for (uint64_t i = 0u; i < preview_tmp_edits.size(); i++) {
+    uint64_t preview_edit_count = preview_tmp_edits.size();
 
+    for (uint64_t i = 0u; i < preview_edit_count; i++) {
         Edit mirrored_preview_edit = preview_tmp_edits[i];
         float dist_to_plane = glm::dot(mirror_normal, mirror_origin - mirrored_preview_edit.position);
         mirrored_preview_edit.position = mirrored_preview_edit.position + mirror_normal * dist_to_plane * 2.0f;
@@ -367,15 +368,15 @@ void SculptEditor::mirror_current_edits(float delta_time)
         preview_tmp_edits.push_back(mirrored_preview_edit);
     }
 
-    for (uint64_t i = 0u; i < new_edits.size(); i++) {
+    uint64_t edit_count = new_edits.size();
 
+    for (uint64_t i = 0u; i < edit_count; i++) {
         Edit mirrored_edit = new_edits[i];
         float dist_to_plane = glm::dot(mirror_normal, mirror_origin - mirrored_edit.position);
         
         mirrored_edit.position = mirrored_edit.position + mirror_normal * dist_to_plane * 2.0f;
         mirrored_edit.dimensions += glm::vec4(0.01f);
         //spdlog::info("{}", dist_to_plane);
-
         new_edits.push_back(mirrored_edit);
     }
 }
