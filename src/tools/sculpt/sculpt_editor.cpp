@@ -711,7 +711,10 @@ void SculptEditor::bind_events()
         gui.bind("capped", [&](const std::string& signal, void* button) { toggle_capped_modifier(); });
         gui.bind("cap_value", [&](const std::string& signal, float value) { set_cap_modifier(value); });
 
-        gui.bind("mirror", [&](const std::string& signal, void* button) { use_mirror = !use_mirror; });
+        gui.bind("mirror_toggle", [&](const std::string& signal, void* button) { use_mirror = !use_mirror; });
+        gui.bind("mirror_translation", [&](const std::string& signal, void* button) { mirror_gizmo.set_mode(eGizmoType::POSITION_GIZMO); });
+        gui.bind("mirror_rotation", [&](const std::string& signal, void* button) { mirror_gizmo.set_mode(eGizmoType::ROTATION_GIZMO); });
+        gui.bind("mirror_both", [&](const std::string& signal, void* button) { mirror_gizmo.set_mode(eGizmoType::POSITION_ROTATION_GIZMO); });
         gui.bind("snap_to_surface", [&](const std::string& signal, void* button) { snap_to_surface = !snap_to_surface; });
         gui.bind("snap_to_grid", [&](const std::string& signal, void* button) { snap_to_grid = !snap_to_grid; });
         gui.bind("lock_axis_toggle", [&](const std::string& signal, void* button) { axis_lock = !axis_lock; });
