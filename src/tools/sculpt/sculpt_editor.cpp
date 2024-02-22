@@ -139,9 +139,7 @@ bool SculptEditor::edit_update(float delta_time)
 
         // TODO: rotations
         auto callback = [&](glm::vec3 center) {
-            edit_to_add.position = center;
-            //edit_to_add.position = edit_to_add.position * glm::inverse(sculpt_rotation * rotation_diff);
-            edit_to_add.position += (sculpt_start_position);
+            edit_to_add.position = texture3d_to_world(center);
         };
 
         glm::mat4x4 pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
@@ -358,9 +356,12 @@ void SculptEditor::update(float delta_time)
 
 void SculptEditor::mirror_position(glm::vec3& position)
 {
+    // Don't rotate the mirror origin..
+    // glm::vec3 origin_texture_space = mirror_origin - (sculpt_start_position + translation_diff);
     glm::vec3 origin_texture_space = world_to_texture3d(mirror_origin);
+    glm::vec3 normal_texture_space = world_to_texture3d(mirror_normal, true);
     glm::vec3 pos_to_origin = origin_texture_space - position;
-    glm::vec3 reflection = glm::reflect(pos_to_origin, mirror_normal);
+    glm::vec3 reflection = glm::reflect(pos_to_origin, normal_texture_space);
     position = origin_texture_space - reflection;
 }
 
@@ -381,16 +382,18 @@ void SculptEditor::mirror_current_edits(float delta_time)
 
         Edit mirrored_edit = new_edits[i];
         mirror_position(mirrored_edit.position);
-        mirrored_edit.dimensions += glm::vec4(0.01f);
         new_edits.push_back(mirrored_edit);
     }
 }
 
-glm::vec3 SculptEditor::world_to_texture3d(const glm::vec3& position)
+glm::vec3 SculptEditor::world_to_texture3d(const glm::vec3& position, bool skip_translation)
 {
-    glm::vec3 pos_texture_space;
+    glm::vec3 pos_texture_space = position;
 
-    pos_texture_space = position - (sculpt_start_position + translation_diff);
+    if (!skip_translation) {
+        pos_texture_space -= (sculpt_start_position + translation_diff);
+    }
+
     pos_texture_space = (sculpt_rotation * rotation_diff) * pos_texture_space;
 
     return pos_texture_space;
@@ -400,8 +403,8 @@ glm::vec3 SculptEditor::texture3d_to_world(const glm::vec3& position)
 {
     glm::vec3 pos_world_space;
 
-    pos_world_space = position * glm::inverse(sculpt_rotation * rotation_diff);
-    pos_world_space = pos_world_space - (sculpt_start_position + translation_diff);
+    pos_world_space = glm::inverse(sculpt_rotation * rotation_diff) * position;
+    pos_world_space = pos_world_space + (sculpt_start_position + translation_diff);
 
     return pos_world_space;
 }
@@ -491,8 +494,6 @@ void SculptEditor::render()
         mirror_gizmo.render();
         mirror_mesh->set_translation(mirror_origin);
         mirror_mesh->scale(glm::vec3(0.25f));
-        //mirror_mesh->rotate(glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-        //mirror_mesh->translate(mirror_origin);
         mirror_mesh->render();
     }
 
