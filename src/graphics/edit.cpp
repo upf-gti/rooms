@@ -156,22 +156,10 @@ AABB Stroke::get_edit_world_AABB(const uint8_t edit_index) const
         const float radius = edits[edit_index].dimensions.x;
         const float smooht_margin = parameters.w;
 
-        const glm::vec3 capsule_dir = glm::normalize((edits[edit_index].rotation) * glm::vec3(0.0f, 0.0f, 1.0f));
-        const glm::vec3 p1_point = edits[edit_index].position + capsule_dir * (radius * 2.0f);
-        const glm::vec3 p2_point = edits[edit_index].position -capsule_dir * (size_param );
+        AABB a1 = { edits[edit_index].position, glm::vec3(size_param)};
+        AABB a2 = { edits[edit_index].position - (glm::inverse(edits[edit_index].rotation) * glm::vec3(0.0f, 0.0f, radius)), glm::vec3(size_param) };
 
-        glm::vec3 max_size, min_size;
-        max_size.x = glm::max(p1_point.x, p2_point.x);
-        max_size.y = glm::max(p1_point.y, p2_point.y);
-        max_size.z = glm::max(p1_point.z, p2_point.z);
-
-        min_size.x = glm::min(p1_point.x, p2_point.x);
-        min_size.y = glm::min(p1_point.y, p2_point.y);
-        min_size.z = glm::min(p1_point.z, p2_point.z);
-
-        const glm::vec3 half_size = (max_size - min_size) / 2.0f;
-
-        return { min_size + half_size, half_size + glm::vec3(size_param)};
+        return merge_aabbs(a1, a2);
     }
 
     glm::vec3 pure_edit_half_size = get_edit_world_half_size(edit_index);
