@@ -319,7 +319,9 @@ void SculptEditor::update(float delta_time)
 
     // Edit & Stroke submission
     {
-        is_tool_used &= !(mirror_gizmo.update(mirror_origin, edit_position_world, delta_time));
+        is_tool_used &= !(mirror_gizmo.update(mirror_origin, mirror_rotation, edit_position_world, delta_time));
+
+        mirror_normal = glm::normalize(mirror_rotation * glm::vec3(0.f, 0.f, 1.f));
 
         // if any parameter changed or just stopped sculpting change the stroke
         if (stroke_parameters.is_dirty() || (was_tool_used && !is_tool_used)) {
@@ -494,6 +496,7 @@ void SculptEditor::render()
         mirror_gizmo.render();
         mirror_mesh->set_translation(mirror_origin);
         mirror_mesh->scale(glm::vec3(0.25f));
+        mirror_mesh->rotate(mirror_rotation);
         mirror_mesh->render();
     }
 

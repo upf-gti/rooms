@@ -123,14 +123,14 @@ class SculptEditor {
 
     // Mirror
 
-    bool use_mirror = false;
+    bool use_mirror = true;
 
     TransformGizmo mirror_gizmo;
     EntityMesh* mirror_mesh = nullptr;
 
     glm::vec3 mirror_origin = glm::vec3(0.f);
     glm::vec3 mirror_normal = glm::vec3(0.f, 0.f, 1.f);
-
+    glm::quat mirror_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
     
     // UI
 
