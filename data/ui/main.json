@@ -72,7 +72,8 @@
                     "name": "sphere",
                     "type": "button",
                     "texture": "data/textures/sphere.png",
-                    "unique_selection": true
+                    "unique_selection": true,
+                    "selected": true
                 },
                 {
                     "name": "cube",
@@ -313,6 +314,43 @@
                         "mode": "vertical",
                         "value": 1
                     }
+                }
+            ]
+        },
+        {
+            "name": "mirror",
+            "type": "submenu",
+            "children": [
+                {
+                    "name": "mirror_toggle",
+                    "type": "button",
+                    "texture": "data/textures/mirror.png",
+                    "allow_toggle": true
+                },
+                {
+                    "name": "g_mirror",
+                    "type": "group",
+                    "nitems": 3
+                },
+                {
+                    "name": "mirror_translation",
+                    "type": "button",
+                    "texture": "data/textures/mirror.png",
+                    "unique_selection": true,
+                    "selected": true
+                },
+                {
+                    "name": "mirror_rotation",
+                    "type": "button",
+                    "texture": "data/textures/mirror.png",
+                    "unique_selection": true
+                },
+                {
+                    "name": "mirror_both",
+                    "type": "button",
+                    "texture": "data/textures/mirror.png",
+                    "unique_selection": true,
+                    "selected": true
                 }
             ]
         },

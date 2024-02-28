@@ -19,7 +19,7 @@
 @group(2) @binding(2) var metallic_roughness_texture: texture_2d<f32>;
 #endif
 
-@group(2) @binding(3) var<uniform> metallic_roughness: vec2f;
+@group(2) @binding(3) var<uniform> occlusion_roughness_metallic: vec3f;
 
 #ifdef NORMAL_TEXTURE
 @group(2) @binding(4) var normal_texture: texture_2d<f32>;
@@ -27,6 +27,10 @@
 
 #ifdef EMISSIVE_TEXTURE
 @group(2) @binding(5) var emissive_texture: texture_2d<f32>;
+#endif
+
+#ifdef OCLUSSION_TEXTURE
+@group(2) @binding(9) var oclussion_texture: texture_2d<f32>;
 #endif
 
 @group(2) @binding(6) var<uniform> emissive: vec3f;
@@ -79,7 +83,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     m.albedo = albedo_texture.rgb * in.color * albedo.rgb;
     alpha = albedo_texture.a * albedo.a;
 #else
-    m.albedo = albedo.rgb;
+    m.albedo = in.color * albedo.rgb;
     alpha = albedo.a;
 #endif
 
@@ -95,20 +99,25 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     m.emissive = emissive;
 #endif
 
+#ifdef OCLUSSION_TEXTURE
+    m.ao = textureSample(oclussion_texture, sampler_2d, in.uv).r;
+    m.ao = m.ao * occlusion_roughness_metallic.r;
+#else
+    m.ao = 1.0;
+#endif
+
 #ifdef METALLIC_ROUGHNESS_TEXTURE
     var metal_rough : vec3f = textureSample(metallic_roughness_texture, sampler_2d, in.uv).rgb;
-    m.metallic = metal_rough.b * metallic_roughness.x;
-    m.roughness = metal_rough.g * metallic_roughness.y;
+    m.roughness = metal_rough.g * occlusion_roughness_metallic.g;
+    m.metallic = metal_rough.b * occlusion_roughness_metallic.b;
 #else
-    m.metallic = metallic_roughness.x;
-    m.roughness = metallic_roughness.y;
+    m.roughness = occlusion_roughness_metallic.g;
+    m.metallic = occlusion_roughness_metallic.b;
 #endif
 
     m.roughness = max(m.roughness, 0.04);
     m.c_diff = mix(m.albedo, vec3f(0.0), m.metallic);
     m.f0 = mix(vec3f(0.04), m.albedo, m.metallic);
-
-    m.ao = 1.0;
 
     // Vectors
 

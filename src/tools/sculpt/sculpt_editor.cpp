@@ -38,7 +38,7 @@ void SculptEditor::initialize()
     floor_grid_mesh->add_surface(RendererStorage::get_surface("quad"));
     floor_grid_mesh->set_translation(glm::vec3(0.0f));
     floor_grid_mesh->rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-    floor_grid_mesh->scale(glm::vec3(3.f));
+    floor_grid_mesh->scale(glm::vec3(10.f));
 
     Material grid_material;
     grid_material.shader = RendererStorage::get_shader("data/shaders/mesh_grid.wgsl");
@@ -143,11 +143,9 @@ bool SculptEditor::edit_update(float delta_time)
         return false;
     }
 
-    glm::mat4x4 controller_pose = Input::get_controller_pose(HAND_RIGHT);
-
-    // Hacky to use the ray direction of the gui ray
-    controller_pose = glm::rotate(controller_pose, glm::radians(36.9f), glm::vec3(1.0f, 0.0f, 0.0f));
-    controller_pose = glm::translate(controller_pose, glm::vec3(0.0f, -0.25f, 0.0f));
+    // Move the edit a little away
+    glm::mat4x4 controller_pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
+    controller_pose = glm::translate(controller_pose, glm::vec3(0.0f, 0.0f, -hand2edit_distance));
 
     // Update edit transform
     if ((!stamp_enabled || !is_tool_pressed) && !is_released) {
@@ -168,9 +166,7 @@ bool SculptEditor::edit_update(float delta_time)
 
         // TODO: rotations
         auto callback = [&](glm::vec3 center) {
-            edit_to_add.position = center;
-            //edit_to_add.position = edit_to_add.position * glm::inverse(sculpt_rotation * rotation_diff);
-            edit_to_add.position += (sculpt_start_position);
+            edit_to_add.position = texture3d_to_world(center);
         };
 
         glm::mat4x4 pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
@@ -178,7 +174,7 @@ bool SculptEditor::edit_update(float delta_time)
         renderer->get_raymarching_renderer()->octree_ray_intersect(pose[3], ray_dir, callback);
     }
 
-    //edit_to_add.rotation = glm::inverse(Input::get_controller_rotation(HAND_RIGHT));
+    edit_to_add.rotation = glm::inverse(Input::get_controller_rotation(HAND_RIGHT, POSE_AIM));
 
     // Update edit dimensions
     if (!stamp_enabled || !is_tool_pressed && !is_released) {
@@ -243,7 +239,7 @@ bool SculptEditor::edit_update(float delta_time)
 
         if (axis_lock) {
 
-            axis_lock_position = axis_lock_gizmo.update(axis_lock_position, delta_time);
+            is_tool_used &= !(axis_lock_gizmo.update(axis_lock_position, edit_to_add.position, delta_time));
 
             glm::vec3 locked_pos = edit_to_add.position;
 
@@ -334,6 +330,9 @@ bool SculptEditor::edit_update(float delta_time)
         }
     }
 
+    // Store now since later it will be converted to 3d texture space
+    edit_position_world = edit_to_add.position;
+
     return is_tool_used;
 }
 
@@ -383,6 +382,10 @@ void SculptEditor::update(float delta_time)
 
     // Edit & Stroke submission
     {
+        is_tool_used &= !(mirror_gizmo.update(mirror_origin, mirror_rotation, edit_position_world, delta_time));
+
+        mirror_normal = glm::normalize(mirror_rotation * glm::vec3(0.f, 0.f, 1.f));
+
         // if any parameter changed or just stopped sculpting change the stroke
         if (stroke_parameters.is_dirty() || (was_tool_used && !is_tool_used)) {
             renderer->change_stroke(stroke_parameters);
@@ -416,29 +419,59 @@ void SculptEditor::update(float delta_time)
     was_tool_used = is_tool_used;
 }
 
-void SculptEditor::mirror_current_edits(const float delta_time)
+void SculptEditor::mirror_position(glm::vec3& position)
 {
-    mirror_origin = mirror_gizmo.update(mirror_origin, delta_time);
+    // Don't rotate the mirror origin..
+    // glm::vec3 origin_texture_space = mirror_origin - (sculpt_start_position + translation_diff);
+    glm::vec3 origin_texture_space = world_to_texture3d(mirror_origin);
+    glm::vec3 normal_texture_space = world_to_texture3d(mirror_normal, true);
+    glm::vec3 pos_to_origin = origin_texture_space - position;
+    glm::vec3 reflection = glm::reflect(pos_to_origin, normal_texture_space);
+    position = origin_texture_space - reflection;
+}
 
+void SculptEditor::mirror_current_edits(float delta_time)
+{
     uint64_t preview_edit_count = preview_tmp_edits.size();
-    for (uint64_t i = 0u; i < preview_edit_count; i++) {
-        Edit mirrored_preview_edit = preview_tmp_edits[i];
-        float dist_to_plane = glm::dot(mirror_normal, mirror_origin - mirrored_preview_edit.position);
-        mirrored_preview_edit.position = mirrored_preview_edit.position + mirror_normal * dist_to_plane * 2.0f;
 
+    for (uint64_t i = 0u; i < preview_edit_count; i++) {
+
+        Edit mirrored_preview_edit = preview_tmp_edits[i];
+        mirror_position(mirrored_preview_edit.position);
         preview_tmp_edits.push_back(mirrored_preview_edit);
     }
 
     uint64_t edit_count = new_edits.size();
-    for (uint64_t i = 0u; i < edit_count; i++) {
-        Edit mirrored_edit = new_edits[i];
-        float dist_to_plane = glm::dot(mirror_normal, mirror_origin - mirrored_edit.position);
 
-        mirrored_edit.position = mirrored_edit.position + mirror_normal * dist_to_plane * 2.0f;
-        mirrored_edit.dimensions += glm::vec4(0.01f);
-        spdlog::info("{}", dist_to_plane);
+    for (uint64_t i = 0u; i < edit_count; i++) {
+
+        Edit mirrored_edit = new_edits[i];
+        mirror_position(mirrored_edit.position);
         new_edits.push_back(mirrored_edit);
     }
+}
+
+glm::vec3 SculptEditor::world_to_texture3d(const glm::vec3& position, bool skip_translation)
+{
+    glm::vec3 pos_texture_space = position;
+
+    if (!skip_translation) {
+        pos_texture_space -= (sculpt_start_position + translation_diff);
+    }
+
+    pos_texture_space = (sculpt_rotation * rotation_diff) * pos_texture_space;
+
+    return pos_texture_space;
+}
+
+glm::vec3 SculptEditor::texture3d_to_world(const glm::vec3& position)
+{
+    glm::vec3 pos_world_space;
+
+    pos_world_space = glm::inverse(sculpt_rotation * rotation_diff) * position;
+    pos_world_space = pos_world_space + (sculpt_start_position + translation_diff);
+
+    return pos_world_space;
 }
 
 void SculptEditor::scene_update_rotation()
@@ -475,8 +508,7 @@ void SculptEditor::scene_update_rotation()
         }
 
         // Push edits in 3d texture space
-        edit_to_add.position -= (sculpt_start_position + translation_diff);
-        edit_to_add.position = (sculpt_rotation * rotation_diff) * edit_to_add.position;
+        edit_to_add.position = world_to_texture3d(edit_to_add.position);
         edit_to_add.rotation *= (glm::conjugate(sculpt_rotation) * rotation_diff);
     }
 
@@ -527,8 +559,7 @@ void SculptEditor::render()
         mirror_gizmo.render();
         mirror_mesh->set_translation(mirror_origin);
         mirror_mesh->scale(glm::vec3(0.25f));
-        //mirror_mesh->rotate(glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-        //mirror_mesh->translate(mirror_origin);
+        mirror_mesh->rotate(mirror_rotation);
         mirror_mesh->render();
     }
 
@@ -621,7 +652,11 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
         dimensions_dirty = false;
     }
 
-    mesh_preview->set_model(Input::get_controller_pose(gui.get_workspace().select_hand));
+    glm::mat4x4 preview_pose = Input::get_controller_pose(gui.get_workspace().select_hand, POSE_AIM);
+    preview_pose = glm::translate(preview_pose, glm::vec3(0.0f, 0.0f, -hand2edit_distance));
+
+    // Update edit transform
+    mesh_preview->set_model(preview_pose);
 
     // Update model depending on the primitive
     switch (stroke_parameters.get_primitive())
@@ -629,28 +664,13 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
     case SD_CONE:
         mesh_preview->rotate(glm::radians(-90.f), { 1.f, 0.f, 0.f });
         break;
-    case SD_CYLINDER:
-        mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
-        mesh_preview->translate({ 0.f, 0.0f, 0.f });
-        break;
     case SD_CAPSULE:
         mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
-        mesh_preview->translate({ 0.f, -dims.x * 0.5f, 0.f });
-        break;
-    case SD_TORUS:
-        mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
+        mesh_preview->translate({ 0.f, -dims.x * 0.5, 0.f });
         break;
     default:
         break;
     }
-
-    glm::mat4x4 preview_pose = mesh_preview->get_model();
-
-    preview_pose = glm::rotate(preview_pose, glm::radians(36.9f), glm::vec3(1.0f, 0.0f, 0.0f));
-    preview_pose = glm::translate(preview_pose, glm::vec3(0.0f, -0.25f, 0.0f));
-
-    // Update edit transform
-    mesh_preview->set_model(preview_pose);
 }
 
 void SculptEditor::set_sculpt_started(bool value)
@@ -713,10 +733,12 @@ void SculptEditor::enable_tool(eTool tool)
     case SCULPT:
         helper_gui.change_list_layout("sculpt");
         stroke_parameters.set_operation(OP_UNION);
+        hand2edit_distance = 0.0f;
         break;
     case PAINT:
         helper_gui.change_list_layout("paint");
         stroke_parameters.set_operation(OP_PAINT);
+        hand2edit_distance = 0.1f;
         break;
     default:
         break;
@@ -755,7 +777,10 @@ void SculptEditor::bind_events()
         gui.bind("capped", [&](const std::string& signal, void* button) { toggle_capped_modifier(); });
         gui.bind("cap_value", [&](const std::string& signal, float value) { set_cap_modifier(value); });
 
-        gui.bind("mirror", [&](const std::string& signal, void* button) { use_mirror = !use_mirror; });
+        gui.bind("mirror_toggle", [&](const std::string& signal, void* button) { use_mirror = !use_mirror; });
+        gui.bind("mirror_translation", [&](const std::string& signal, void* button) { mirror_gizmo.set_mode(eGizmoType::POSITION_GIZMO); });
+        gui.bind("mirror_rotation", [&](const std::string& signal, void* button) { mirror_gizmo.set_mode(eGizmoType::ROTATION_GIZMO); });
+        gui.bind("mirror_both", [&](const std::string& signal, void* button) { mirror_gizmo.set_mode(eGizmoType::POSITION_ROTATION_GIZMO); });
         gui.bind("snap_to_surface", [&](const std::string& signal, void* button) { snap_to_surface = !snap_to_surface; });
         gui.bind("snap_to_grid", [&](const std::string& signal, void* button) { snap_to_grid = !snap_to_grid; });
         gui.bind("lock_axis_toggle", [&](const std::string& signal, void* button) { axis_lock = !axis_lock; });

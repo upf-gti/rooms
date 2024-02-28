@@ -81,12 +81,15 @@ class SculptEditor {
     bool        was_material_picked = false;
 
     glm::vec3	sculpt_start_position;
+    glm::vec3	edit_position_world;
     glm::vec3	initial_hand_translation = {};
     glm::vec3	translation_diff = {};
 
     glm::quat	initial_hand_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
     glm::quat	rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
     glm::quat	sculpt_rotation = { 0.0, 0.0, 0.0, 1.0 };
+
+    float       hand2edit_distance = 0.2f;
 
     /*
     *	Modifiers
@@ -120,17 +123,16 @@ class SculptEditor {
 
     // Mirror
 
-    bool use_mirror = false;
+    bool use_mirror = true;
 
     TransformGizmo mirror_gizmo;
     EntityMesh* mirror_mesh = nullptr;
 
     glm::vec3 mirror_origin = glm::vec3(0.f);
     glm::vec3 mirror_normal = glm::vec3(0.f, 0.f, 1.f);
-
-
+    glm::quat mirror_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
+    
     // UI
-
     ui::Controller        gui;
     ui::Controller        helper_gui;
     size_t                max_recent_colors;
@@ -148,10 +150,16 @@ class SculptEditor {
     bool is_tool_pressed = false;
     bool is_released = false;
     bool was_tool_pressed = false;
+
     bool is_tool_being_used(bool stamp_enabled);
     bool edit_update(float delta_time);
+    void mirror_current_edits(float delta_time);
+    void mirror_position(glm::vec3& position);
+
+    glm::vec3 world_to_texture3d(const glm::vec3& position, bool skip_translation = false);
+    glm::vec3 texture3d_to_world(const glm::vec3& position);
     void scene_update_rotation();
-    void mirror_current_edits(const float delta_time);
+
 public:
 
     void initialize();
