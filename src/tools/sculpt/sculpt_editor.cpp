@@ -114,6 +114,15 @@ void SculptEditor::clean()
     }
 }
 
+glm::quat get_quat_between_vec3s(const glm::vec3& p1, const glm::vec3& p2) {
+    const float facing = glm::dot(p1, p2);
+    if (facing > 0.9999f || facing < -0.9999f) {
+        return { 0.0f, 0.0f, 0.0f, 1.0f };
+    }
+    const glm::vec3 closs_p = glm::cross(p1, p2);
+    const float a = sqrtf(powf(glm::length(p1), 2.0f) * powf(glm::length(p1), 2.0f)) + facing;
+    return glm::normalize(glm::quat{ closs_p.x, closs_p.y, closs_p.z, a });
+}
 
 bool SculptEditor::is_tool_being_used(bool stamp_enabled)
 {
@@ -141,6 +150,18 @@ bool SculptEditor::edit_update(float delta_time)
     {
         pick_material();
         return false;
+    }
+
+    // Compute controller speed and acceleration
+    {
+        const glm::vec3 controller_pos = Input::get_controller_position(HAND_RIGHT);
+        const glm::vec3 curr_controller_velocity = (controller_pos - controller_prev_position) / delta_time;
+        controller_acceleration = (curr_controller_velocity - controller_velocity) / delta_time;
+        controller_velocity = curr_controller_velocity;
+        controller_prev_position = controller_pos;
+
+        //spdlog::info("{}", glm::length(controller_acceleration));
+        //spdlog::info("V: {} A: {}", glm::length(controller_velocity), glm::length(controller_acceleration));
     }
 
     // Move the edit a little away
@@ -174,10 +195,10 @@ bool SculptEditor::edit_update(float delta_time)
         renderer->get_raymarching_renderer()->octree_ray_intersect(pose[3], ray_dir, callback);
     }
 
-    edit_to_add.rotation = glm::inverse(Input::get_controller_rotation(HAND_RIGHT, POSE_AIM));
-
     // Update edit dimensions
     if (!stamp_enabled || !is_tool_pressed && !is_released) {
+        // Get the data from the primitive default 
+        edit_to_add.dimensions = primitive_default_states[stroke_parameters.get_primitive()].dimensions;
         float size_multiplier = Input::get_thumbstick_value(HAND_RIGHT).y * delta_time * 0.1f;
         dimensions_dirty |= (fabsf(size_multiplier) > 0.f);
         glm::vec3 new_dimensions = glm::clamp(size_multiplier + glm::vec3(edit_to_add.dimensions), 0.001f, 0.1f);
@@ -187,6 +208,10 @@ bool SculptEditor::edit_update(float delta_time)
         size_multiplier = Input::get_thumbstick_value(HAND_LEFT).y * delta_time * 0.1f;
         edit_to_add.dimensions.w = glm::clamp(size_multiplier + edit_to_add.dimensions.w, 0.001f, 0.1f);
         dimensions_dirty |= (fabsf(size_multiplier) > 0.f);
+
+        // Update in primitive state
+        primitive_default_states[stroke_parameters.get_primitive()].dimensions = edit_to_add.dimensions;
+        edit_to_add.rotation = glm::inverse(Input::get_controller_rotation(HAND_RIGHT, POSE_AIM));
     } else if (stamp_enabled && is_tool_pressed) { // Stretch the edit using motion controls
         sdPrimitive curr_primitive = stroke_parameters.get_primitive();
 
@@ -194,38 +219,37 @@ bool SculptEditor::edit_update(float delta_time)
         const glm::vec3 hand_position = controller_pose[3];
 
         const glm::vec3 stamp_origin_to_hand = edit_origin_stamp - hand_position;
-        const float edit_to_hand_distance = glm::length(stamp_origin_to_hand);
-        const glm::vec3 stamp_to_hand_norm = stamp_origin_to_hand / (edit_to_hand_distance);
+        const float stamp_to_hand_distance = glm::length(stamp_origin_to_hand);
+        const glm::vec3 stamp_to_hand_norm = stamp_origin_to_hand / (stamp_to_hand_distance);
 
-        // Take into account that the capsule SDF's origin is not the SDF center
-        const glm::vec3 edit_upwards_point = (curr_primitive != SD_CAPSULE) ? glm::vec3(0.0f, -0.5f * edit_to_hand_distance, 0.0f) : glm::vec3(0.0f, 0.0f, -edit_to_hand_distance);
-        const glm::vec3 local_hand_pos = hand_position - edit_origin_stamp;
+        edit_to_add.position = edit_origin_stamp;
+        edit_to_add.dimensions.x = stamp_to_hand_distance;
+        edit_rotation_stamp = get_quat_between_vec3s(stamp_origin_to_hand, glm::vec3(0.0f, 0.0f, stamp_to_hand_distance));
 
-        // Build orientation for the edit
-        const glm::vec3 direction = (glm::cross(local_hand_pos, edit_upwards_point));
-        const float magnitude = sqrt(glm::dot(edit_upwards_point, edit_upwards_point) * glm::dot(local_hand_pos, local_hand_pos)) + glm::dot(edit_upwards_point, local_hand_pos);
-        glm::quat edit_to_hand_orientation = glm::normalize(glm::quat(direction.x, direction.y, direction.z, magnitude));
-        // Todo: check for paralell axis
+        //// Take into account that the capsule SDF's origin is not the SDF center
+        //const glm::vec3 edit_upwards_point = (curr_primitive != SD_CAPSULE) ? glm::vec3(0.0f, -0.5f * stamp_to_hand_distance, 0.0f) : glm::vec3(0.0f, 0.0f, stamp_to_hand_distance);
+        //const glm::vec3 local_hand_pos = hand_position - edit_origin_stamp;
 
+        //// Build orientation for the edit
+        //const glm::vec3 direction = (glm::cross(local_hand_pos, edit_upwards_point));
+        //const float magnitude = sqrt(glm::dot(edit_upwards_point, edit_upwards_point) * glm::dot(local_hand_pos, local_hand_pos)) + glm::dot(edit_upwards_point, local_hand_pos);
+        //glm::quat edit_to_hand_orientation = glm::normalize(glm::quat(direction.x, direction.y, direction.z, magnitude));
 
-        glm::quat swing, twist;
-        quat_swing_twist_decomposition(stamp_to_hand_norm, hand_rotation, swing, twist);
-        twist.w *= -1.0f;
+        //glm::quat swing, twist;
+        //quat_swing_twist_decomposition(stamp_to_hand_norm, hand_rotation, swing, twist);
+        //twist.w *= -1.0f; 
 
-        if (curr_primitive == SD_SPHERE) {
-            edit_to_add.dimensions.x = edit_to_hand_distance;
-        } else if (curr_primitive == SD_BOX) {
-            edit_position_stamp = edit_origin_stamp + stamp_to_hand_norm * (-0.25f * (edit_to_hand_distance + edit_to_add.dimensions.x));
-            edit_to_add.dimensions.y = 0.5f * edit_to_hand_distance;
-            //edit_rotation_stamp = glm::angleAxis(angle, glm::vec3{ 0.0f, 1.0f, 0.0f }) * edit_to_hand_orientation;
-            edit_rotation_stamp = edit_to_hand_orientation * twist;
-        } else if (curr_primitive == SD_CAPSULE) {
-            edit_to_add.dimensions.x = edit_to_hand_distance;
-            edit_rotation_stamp = edit_to_hand_orientation;
-        }
-
-        // Update in primitive state
-        //primitive_default_states[stroke_parameters.get_primitive()].dimensions = edit_to_add.dimensions;
+        //if (curr_primitive == SD_SPHERE) {
+        //    edit_to_add.dimensions.x = stamp_to_hand_distance;
+        //} else if (curr_primitive == SD_BOX) {
+        //    edit_position_stamp = edit_origin_stamp + stamp_to_hand_norm * (0.25f * (stamp_to_hand_distance + edit_to_add.dimensions.x));
+        //    edit_to_add.dimensions.y = 0.5f * stamp_to_hand_distance;
+        //    //edit_rotation_stamp = glm::angleAxis(angle, glm::vec3{ 0.0f, 1.0f, 0.0f }) * edit_to_hand_orientation;
+        //    edit_rotation_stamp = edit_to_hand_orientation * twist;
+        //} else if (curr_primitive == SD_CAPSULE) {
+        //    edit_to_add.dimensions.x = stamp_to_hand_distance;
+        //    edit_rotation_stamp = edit_to_hand_orientation;
+        //}
     }
 
     // Edit modifiers
@@ -296,6 +320,12 @@ bool SculptEditor::edit_update(float delta_time)
             }
 
             stroke_parameters.set_operation(op);
+        }
+    }
+
+    {
+        if (Input::was_button_pressed(XR_BUTTON_B)) {
+            stamp_enabled = !stamp_enabled;
         }
     }
 
@@ -419,7 +449,7 @@ void SculptEditor::update(float delta_time)
     was_tool_used = is_tool_used;
 }
 
-void SculptEditor::mirror_position(glm::vec3& position)
+void SculptEditor::apply_mirror_position(glm::vec3& position)
 {
     // Don't rotate the mirror origin..
     // glm::vec3 origin_texture_space = mirror_origin - (sculpt_start_position + translation_diff);
@@ -430,6 +460,13 @@ void SculptEditor::mirror_position(glm::vec3& position)
     position = origin_texture_space - reflection;
 }
 
+void SculptEditor::apply_mirror_rotation(glm::quat& rotation) const
+{
+    // TODO
+    //rotation = glm::inverse(mirror_rotation) * mirror_rotation * rotation;
+    //rotation.w *= -1.0f;
+}
+
 void SculptEditor::mirror_current_edits(float delta_time)
 {
     uint64_t preview_edit_count = preview_tmp_edits.size();
@@ -437,7 +474,8 @@ void SculptEditor::mirror_current_edits(float delta_time)
     for (uint64_t i = 0u; i < preview_edit_count; i++) {
 
         Edit mirrored_preview_edit = preview_tmp_edits[i];
-        mirror_position(mirrored_preview_edit.position);
+        apply_mirror_position(mirrored_preview_edit.position);
+        apply_mirror_rotation(mirrored_preview_edit.rotation);
         preview_tmp_edits.push_back(mirrored_preview_edit);
     }
 
@@ -446,7 +484,8 @@ void SculptEditor::mirror_current_edits(float delta_time)
     for (uint64_t i = 0u; i < edit_count; i++) {
 
         Edit mirrored_edit = new_edits[i];
-        mirror_position(mirrored_edit.position);
+        apply_mirror_position(mirrored_edit.position);
+        apply_mirror_rotation(mirrored_edit.rotation);
         new_edits.push_back(mirrored_edit);
     }
 }
@@ -800,7 +839,8 @@ void SculptEditor::bind_events()
 
         // Controller buttons
 
-        helper_gui.bind(XR_BUTTON_B, [&]() { stamp_enabled = !stamp_enabled; });
+        //gui.bind(XR_BUTTON_B, [&]() { spdlog::info("B"); stamp_enabled = !stamp_enabled; });
+
 
         // Bind recent color buttons...
 

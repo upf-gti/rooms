@@ -151,10 +151,15 @@ class SculptEditor {
     bool is_released = false;
     bool was_tool_pressed = false;
 
+    glm::vec3 controller_prev_position;
+    glm::vec3 controller_velocity;
+    glm::vec3 controller_acceleration;
+
     bool is_tool_being_used(bool stamp_enabled);
     bool edit_update(float delta_time);
     void mirror_current_edits(float delta_time);
-    void mirror_position(glm::vec3& position);
+    void apply_mirror_position(glm::vec3& position);
+    void apply_mirror_rotation(glm::quat& position) const;
 
     glm::vec3 world_to_texture3d(const glm::vec3& position, bool skip_translation = false);
     glm::vec3 texture3d_to_world(const glm::vec3& position);
