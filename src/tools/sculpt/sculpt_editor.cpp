@@ -164,7 +164,6 @@ bool SculptEditor::edit_update(float delta_time)
     // Snap surface
     if (canSnapToSurface()) {
 
-        // TODO: rotations
         auto callback = [&](glm::vec3 center) {
             edit_to_add.position = texture3d_to_world(center);
         };

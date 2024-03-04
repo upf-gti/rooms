@@ -184,8 +184,13 @@ void RaymarchingRenderer::octree_ray_intersect(const glm::vec3& ray_origin, cons
     compute_pass_desc.timestampWrites = nullptr;
     WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
 
+    // Convert ray, origin from world to sculpt space
+
     ray_info.ray_origin = ray_origin - sculpt_data.sculpt_start_position;
+    ray_info.ray_origin = sculpt_data.sculpt_inv_rotation * ray_info.ray_origin;
+
     ray_info.ray_dir = ray_dir;
+    ray_info.ray_dir = sculpt_data.sculpt_inv_rotation * ray_info.ray_dir;
 
     webgpu_context->update_buffer(std::get<WGPUBuffer>(ray_info_uniform.data), 0, &ray_info, sizeof(RayInfo));
 
@@ -193,7 +198,6 @@ void RaymarchingRenderer::octree_ray_intersect(const glm::vec3& ray_origin, cons
 
     wgpuComputePassEncoderSetBindGroup(compute_pass, 0, octree_ray_intersection_bind_group, 0, nullptr);
     wgpuComputePassEncoderSetBindGroup(compute_pass, 1, octree_ray_intersection_info_bind_group, 0, nullptr);
-    //wgpuComputePassEncoderSetBindGroup(compute_pass, 2, sculpt_data_ray_bind_group, 0, nullptr);
 
     wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
 
@@ -223,8 +227,6 @@ void RaymarchingRenderer::octree_ray_intersect(const glm::vec3& ray_origin, cons
 
     user_data.read_buffer = ray_intersection_info_read_buffer;
     user_data.info = &ray_intersection_info;
-
-    //spdlog::info("ray_orig: ({},{}.{}) , ray_dir: ({},{}.{})", ray_origin.x, ray_origin.y, ray_origin.z, ray_dir.x, ray_dir.y, ray_dir.z);
 
     wgpuBufferMapAsync(ray_intersection_info_read_buffer, WGPUMapMode_Read, 0, sizeof(RayIntersectionInfo), [](WGPUBufferMapAsyncStatus status, void* user_data_ptr) {
 

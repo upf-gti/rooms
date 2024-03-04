@@ -252,7 +252,6 @@ public:
         preview_data.preview_stroke.edit_count = 1u;
     }
 
-
     /*
     *   Edits
     */

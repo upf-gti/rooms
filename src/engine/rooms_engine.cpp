@@ -35,7 +35,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     //    //Renderer::instance->get_camera()->look_at_entity(entities.back());
     //}
 
-    import_scene();
+    //import_scene();
 
 	return error;
 }
