@@ -332,6 +332,7 @@ bool SculptEditor::edit_update(float delta_time)
 
     // Store now since later it will be converted to 3d texture space
     edit_position_world = edit_to_add.position;
+    edit_rotation_world = edit_to_add.rotation;
 
     return is_tool_used;
 }
@@ -673,8 +674,8 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
         dimensions_dirty = false;
     }
 
-    glm::mat4x4 preview_pose = Input::get_controller_pose(gui.get_workspace().select_hand, POSE_AIM);
-    preview_pose = glm::translate(preview_pose, glm::vec3(0.0f, 0.0f, -hand2edit_distance));
+    glm::mat4x4 preview_pose = glm::translate(glm::mat4x4(1.0f), edit_position_world);
+    preview_pose *= glm::inverse(glm::toMat4(edit_rotation_world));
 
     // Update edit transform
     mesh_preview->set_model(preview_pose);
