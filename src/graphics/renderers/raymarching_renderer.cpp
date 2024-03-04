@@ -131,15 +131,6 @@ void RaymarchingRenderer::change_stroke(const StrokeParameters& params, const ui
     new_stroke.material = params.get_material();
     new_stroke.edit_count = 0u;
 
-    // Only store the strokes that actually changes the sculpt
-    //if (in_frame_stroke.edit_count > 0u) {
-    //    // Add it to the history
-    //    stroke_history.push_back(in_frame_stroke);
-    //    AABB new_aabb;
-    //    in_frame_stroke.get_world_AABB(&new_aabb.min, &new_aabb.max, compute_merge_data.sculpt_start_position, compute_merge_data.sculpt_rotation);
-    //    stroke_history_AABB.push_back(new_aabb);
-    //}
-
     if (current_stroke.edit_count > 0u) {
         // Add it to the history
         stroke_history.push_back(current_stroke);

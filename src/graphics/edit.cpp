@@ -15,11 +15,8 @@ std::string Edit::to_string() const
 {
     std::string text;
     text += std::to_string(position.x) + " " + std::to_string(position.y) + " " + std::to_string(position.z) + "/";
-    //text += std::to_string(primitive) + "/";
-    //text += std::to_string(operation) + "/";
     text += std::to_string(dimensions.x) + " " + std::to_string(dimensions.y) + " " + std::to_string(dimensions.z) + " " + std::to_string(dimensions.w) + "/";
     text += std::to_string(rotation.x) + " " + std::to_string(rotation.y) + " " + std::to_string(rotation.z) + " " + std::to_string(rotation.w) + "/";
-    //text += std::to_string(parameters.x) + " " + std::to_string(parameters.y) + " " + std::to_string(parameters.z) + " " + std::to_string(parameters.w);
     return text;
 }
 
@@ -39,11 +36,8 @@ void Edit::parse_string(const std::string& str)
 
     // Set data...
     position    = load_vec3(tokens[0]);
-    //primitive   = (sdPrimitive)std::atoi(tokens[1].c_str());
-    //operation   = (sdOperation)std::atoi(tokens[3].c_str());
-    dimensions  = load_vec4(tokens[4]);
-    rotation    = load_quat(tokens[5]);
-    //parameters  = load_vec4(tokens[6]);
+    dimensions  = load_vec4(tokens[1]);
+    rotation    = load_quat(tokens[2]);
 }
 
 float Edit::weigth_difference(const Edit& edit)
