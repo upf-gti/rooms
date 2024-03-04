@@ -151,7 +151,7 @@ bool SculptEditor::edit_update(float delta_time)
     // Update edit transform
     if ((!stamp_enabled || !is_tool_pressed) && !is_released) {
         edit_to_add.position = controller_pose[3];
-        edit_to_add.rotation = glm::inverse(Input::get_controller_rotation(HAND_RIGHT));
+        edit_to_add.rotation = glm::inverse(Input::get_controller_rotation(HAND_RIGHT, POSE_AIM));
         edit_position_stamp = edit_to_add.position;
         edit_origin_stamp = edit_to_add.position;
         edit_rotation_stamp = edit_to_add.rotation;
@@ -195,7 +195,7 @@ bool SculptEditor::edit_update(float delta_time)
         if (is_stretching_edit) {
             sdPrimitive curr_primitive = stroke_parameters.get_primitive();
 
-            const glm::quat hand_rotation = (Input::get_controller_rotation(HAND_RIGHT));
+            const glm::quat hand_rotation = (Input::get_controller_rotation(HAND_RIGHT, POSE_AIM));
             const glm::vec3 hand_position = controller_pose[3];
 
             const glm::vec3 stamp_origin_to_hand = edit_origin_stamp - hand_position;
