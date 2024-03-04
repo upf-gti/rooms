@@ -462,9 +462,10 @@ void SculptEditor::apply_mirror_position(glm::vec3& position)
 
 void SculptEditor::apply_mirror_rotation(glm::quat& rotation) const
 {
-    // TODO
-    //rotation = glm::inverse(mirror_rotation) * mirror_rotation * rotation;
-    //rotation.w *= -1.0f;
+    glm::vec3 curr_dir = rotation * glm::vec3{ 0.0f, 0.0f, 1.0f };
+    glm::vec3 mirror_dir = glm::reflect(curr_dir, mirror_normal);
+
+    rotation = get_quat_between_vec3s(curr_dir, mirror_dir) * rotation;
 }
 
 void SculptEditor::mirror_current_edits(float delta_time)
