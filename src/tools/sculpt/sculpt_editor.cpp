@@ -819,10 +819,6 @@ void SculptEditor::bind_events()
         gui.bind("color_picker", [&](const std::string& signal, Color color) { stroke_parameters.set_material_color(color); });
         gui.bind("pick_material", [&](const std::string& signal, void* button) { is_picking_material = !is_picking_material; });
 
-        // Controller buttons
-
-        helper_gui.bind(XR_BUTTON_B, [&]() { stamp_enabled = !stamp_enabled; });
-
         // Bind recent color buttons...
 
         ui::UIEntity* recent_group = gui.get_widget_from_name("g_recent_colors");
@@ -878,6 +874,9 @@ void SculptEditor::bind_events()
         // Customize a little bit...
         helper_gui.get_workspace().hand = HAND_RIGHT;
         helper_gui.get_workspace().root_pose = POSE_GRIP;
+
+        // Controller buttons
+        helper_gui.bind(XR_BUTTON_B, [&]() { stamp_enabled = !stamp_enabled; });
     }
 }
 
