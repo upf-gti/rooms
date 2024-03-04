@@ -114,15 +114,7 @@ void SculptEditor::clean()
     }
 }
 
-glm::quat get_quat_between_vec3s(const glm::vec3& p1, const glm::vec3& p2) {
-    const float facing = glm::dot(p1, p2);
-    if (facing > 0.9999f || facing < -0.9999f) {
-        return { 0.0f, 0.0f, 0.0f, 1.0f };
-    }
-    const glm::vec3 closs_p = glm::cross(p1, p2);
-    const float a = sqrtf(powf(glm::length(p1), 2.0f) * powf(glm::length(p1), 2.0f)) + facing;
-    return glm::normalize(glm::quat{ closs_p.x, closs_p.y, closs_p.z, a });
-}
+
 
 bool SculptEditor::is_tool_being_used(bool stamp_enabled)
 {
@@ -152,18 +144,6 @@ bool SculptEditor::edit_update(float delta_time)
         return false;
     }
 
-    // Compute controller speed and acceleration
-    {
-        const glm::vec3 controller_pos = Input::get_controller_position(HAND_RIGHT);
-        const glm::vec3 curr_controller_velocity = (controller_pos - controller_prev_position) / delta_time;
-        controller_acceleration = (curr_controller_velocity - controller_velocity) / delta_time;
-        controller_velocity = curr_controller_velocity;
-        controller_prev_position = controller_pos;
-
-        //spdlog::info("{}", glm::length(controller_acceleration));
-        //spdlog::info("V: {} A: {}", glm::length(controller_velocity), glm::length(controller_acceleration));
-    }
-
     // Move the edit a little away
     glm::mat4x4 controller_pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
     controller_pose = glm::translate(controller_pose, glm::vec3(0.0f, 0.0f, -hand2edit_distance));
@@ -180,7 +160,6 @@ bool SculptEditor::edit_update(float delta_time)
         edit_to_add.position = edit_position_stamp;
         edit_to_add.rotation = edit_rotation_stamp;
     }
-    //edit_to_add.position = controller_pose[3];
 
     // Snap surface
     if (canSnapToSurface()) {
@@ -212,44 +191,42 @@ bool SculptEditor::edit_update(float delta_time)
         // Update in primitive state
         primitive_default_states[stroke_parameters.get_primitive()].dimensions = edit_to_add.dimensions;
         edit_to_add.rotation = glm::inverse(Input::get_controller_rotation(HAND_RIGHT, POSE_AIM));
+        is_stretching_edit = false;
     } else if (stamp_enabled && is_tool_pressed) { // Stretch the edit using motion controls
-        sdPrimitive curr_primitive = stroke_parameters.get_primitive();
+        if (is_stretching_edit) {
+            sdPrimitive curr_primitive = stroke_parameters.get_primitive();
 
-        const glm::quat hand_rotation = (Input::get_controller_rotation(HAND_RIGHT));
-        const glm::vec3 hand_position = controller_pose[3];
+            const glm::quat hand_rotation = (Input::get_controller_rotation(HAND_RIGHT));
+            const glm::vec3 hand_position = controller_pose[3];
 
-        const glm::vec3 stamp_origin_to_hand = edit_origin_stamp - hand_position;
-        const float stamp_to_hand_distance = glm::length(stamp_origin_to_hand);
-        const glm::vec3 stamp_to_hand_norm = stamp_origin_to_hand / (stamp_to_hand_distance);
+            const glm::vec3 stamp_origin_to_hand = edit_origin_stamp - hand_position;
+            const float stamp_to_hand_distance = glm::length(stamp_origin_to_hand);
+            const glm::vec3 stamp_to_hand_norm = stamp_origin_to_hand / (stamp_to_hand_distance);
 
-        edit_to_add.position = edit_origin_stamp;
-        edit_to_add.dimensions.x = stamp_to_hand_distance;
-        edit_rotation_stamp = get_quat_between_vec3s(stamp_origin_to_hand, glm::vec3(0.0f, 0.0f, stamp_to_hand_distance));
+            // Get rotation of the controller, along the stretch direction
+            glm::quat swing, twist;
+            quat_swing_twist_decomposition(stamp_to_hand_norm, hand_rotation, swing, twist);
+            twist.w *= -1.0f;
 
-        //// Take into account that the capsule SDF's origin is not the SDF center
-        //const glm::vec3 edit_upwards_point = (curr_primitive != SD_CAPSULE) ? glm::vec3(0.0f, -0.5f * stamp_to_hand_distance, 0.0f) : glm::vec3(0.0f, 0.0f, stamp_to_hand_distance);
-        //const glm::vec3 local_hand_pos = hand_position - edit_origin_stamp;
+            edit_rotation_stamp = get_quat_between_vec3(stamp_origin_to_hand, glm::vec3(0.0f, 0.0f, stamp_to_hand_distance)) * twist;
 
-        //// Build orientation for the edit
-        //const glm::vec3 direction = (glm::cross(local_hand_pos, edit_upwards_point));
-        //const float magnitude = sqrt(glm::dot(edit_upwards_point, edit_upwards_point) * glm::dot(local_hand_pos, local_hand_pos)) + glm::dot(edit_upwards_point, local_hand_pos);
-        //glm::quat edit_to_hand_orientation = glm::normalize(glm::quat(direction.x, direction.y, direction.z, magnitude));
-
-        //glm::quat swing, twist;
-        //quat_swing_twist_decomposition(stamp_to_hand_norm, hand_rotation, swing, twist);
-        //twist.w *= -1.0f; 
-
-        //if (curr_primitive == SD_SPHERE) {
-        //    edit_to_add.dimensions.x = stamp_to_hand_distance;
-        //} else if (curr_primitive == SD_BOX) {
-        //    edit_position_stamp = edit_origin_stamp + stamp_to_hand_norm * (0.25f * (stamp_to_hand_distance + edit_to_add.dimensions.x));
-        //    edit_to_add.dimensions.y = 0.5f * stamp_to_hand_distance;
-        //    //edit_rotation_stamp = glm::angleAxis(angle, glm::vec3{ 0.0f, 1.0f, 0.0f }) * edit_to_hand_orientation;
-        //    edit_rotation_stamp = edit_to_hand_orientation * twist;
-        //} else if (curr_primitive == SD_CAPSULE) {
-        //    edit_to_add.dimensions.x = stamp_to_hand_distance;
-        //    edit_rotation_stamp = edit_to_hand_orientation;
-        //}
+            if (curr_primitive == SD_SPHERE) {
+                edit_to_add.dimensions.x = stamp_to_hand_distance;
+            }
+            else if (curr_primitive == SD_CAPSULE) {
+                edit_to_add.position = edit_origin_stamp;
+                edit_to_add.dimensions.x = stamp_to_hand_distance;
+            }
+            else if (curr_primitive == SD_BOX) {
+                edit_position_stamp = edit_origin_stamp + stamp_to_hand_norm * stamp_to_hand_distance * -0.5f;
+                edit_to_add.dimensions.z = stamp_to_hand_distance * 0.5f;
+            }
+        }
+        else {
+            // Only stretch the edit when the acceleration of the hand exceds a threshold
+            is_stretching_edit = glm::length(glm::abs(controller_velocity)) > 0.20f;
+        }
+        
     }
 
     // Edit modifiers
@@ -375,6 +352,17 @@ void SculptEditor::update(float delta_time)
     preview_tmp_edits.clear();
     new_edits.clear();
 
+    // Update controller speed & acceleration
+    {
+        const glm::vec3 curr_controller_pos = Input::get_controller_position(HAND_RIGHT);
+        const glm::vec3 curr_controller_velocity = (curr_controller_pos - prev_controller_pos) / delta_time;
+        controller_acceleration = (curr_controller_velocity - controller_velocity) / delta_time;
+        controller_velocity = curr_controller_velocity;
+        prev_controller_pos = curr_controller_pos;
+
+        //spdlog::info("{}", glm::length(glm::abs(controller_acceleration)));
+    }
+
     // Update ui/vr controller actions
     gui.update(delta_time);
     helper_gui.update(delta_time);
@@ -465,7 +453,7 @@ void SculptEditor::apply_mirror_rotation(glm::quat& rotation) const
     glm::vec3 curr_dir = rotation * glm::vec3{ 0.0f, 0.0f, 1.0f };
     glm::vec3 mirror_dir = glm::reflect(curr_dir, mirror_normal);
 
-    rotation = get_quat_between_vec3s(curr_dir, mirror_dir) * rotation;
+    rotation = get_quat_between_vec3(curr_dir, mirror_dir) * rotation;
 }
 
 void SculptEditor::mirror_current_edits(float delta_time)

@@ -85,6 +85,10 @@ class SculptEditor {
     glm::vec3	initial_hand_translation = {};
     glm::vec3	translation_diff = {};
 
+    glm::vec3   prev_controller_pos;
+    glm::vec3   controller_velocity;
+    glm::vec3   controller_acceleration;
+
     glm::quat	initial_hand_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
     glm::quat	rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
     glm::quat	sculpt_rotation = { 0.0, 0.0, 0.0, 1.0 };
@@ -150,10 +154,7 @@ class SculptEditor {
     bool is_tool_pressed = false;
     bool is_released = false;
     bool was_tool_pressed = false;
-
-    glm::vec3 controller_prev_position;
-    glm::vec3 controller_velocity;
-    glm::vec3 controller_acceleration;
+    bool is_stretching_edit = false;
 
     bool is_tool_being_used(bool stamp_enabled);
     bool edit_update(float delta_time);
