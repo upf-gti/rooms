@@ -35,7 +35,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     //    //Renderer::instance->get_camera()->look_at_entity(entities.back());
     //}
 
-    // import_scene();
+    import_scene();
 
 	return error;
 }
@@ -102,10 +102,8 @@ bool RoomsEngine::export_scene()
 
     for (const Stroke& stroke : strokes)
     {
-        file << "@stroke " << stroke.stroke_id << "\n";
+        file << "@stroke " << stroke.stroke_id << " " << stroke.primitive << " " << stroke.operation << "\n";
 
-        file << stroke.primitive << "\n";
-        file << stroke.operation << "\n";
         file << std::to_string(stroke.parameters.x) + " " + std::to_string(stroke.parameters.y) + " " + std::to_string(stroke.parameters.z) + " " + std::to_string(stroke.parameters.w) + "\n";
 
         file << "@stroke-material" << "\n";
@@ -147,14 +145,11 @@ bool RoomsEngine::import_scene()
     RoomsRenderer* renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     RaymarchingRenderer* rmr = renderer->get_raymarching_renderer();
 
-    uint32_t num_strokes = 0;
-    uint32_t num_edits = 0;
-
-    int stroke_it = -1;
-
     // Num strokes
     std::getline(file, line);
-    num_strokes = std::stoi(line.substr(1));
+    uint32_t num_strokes = std::stoi(line.substr(1));
+
+    uint32_t num_edits = 0;
 
     // Starting sculpt position
     std::getline(file, line);
@@ -162,8 +157,7 @@ bool RoomsEngine::import_scene()
     rmr->set_sculpt_start_position(position);
     sculpt_editor.set_sculpt_started(true);
 
-    std::vector<Stroke> strokes;
-    strokes.resize(num_strokes);
+    Stroke current_stroke;
 
     // Parse edits
     while (std::getline(file, line))
@@ -173,35 +167,48 @@ bool RoomsEngine::import_scene()
 
         if (tokens[0] == "stroke")
         {
-            stroke_it++;
-            strokes[stroke_it].stroke_id = std::stoi(tokens[1]);
+            // Push last stroke
+            if (current_stroke.edit_count > 0) {
+                rmr->push_stroke(current_stroke);
+            }
+
+            current_stroke.stroke_id = static_cast<uint32_t>(std::stoi(tokens[1]));
+            current_stroke.primitive = static_cast<sdPrimitive>(std::stoi(tokens[2]));
+            current_stroke.operation = static_cast<sdOperation>(std::stoi(tokens[3]));
+
+            std::getline(file, line);
+            current_stroke.parameters = load_vec4(line);
         }
         else if (tokens[0] == "stroke-material")
         {
+            StrokeMaterial mat;
+
             // Roughness, metallic, emissive
             std::getline(file, line);
-            auto lt = tokenize(line);
-            strokes[stroke_it].material.roughness = std::stof(lt[0]);
-            strokes[stroke_it].material.metallic = std::stof(lt[1]);
-            strokes[stroke_it].material.emissive = std::stof(lt[2]);
+            glm::vec3 pbr_data = load_vec3(line);
+            mat.roughness = pbr_data.x;
+            mat.metallic = pbr_data.y;
+            mat.emissive = pbr_data.z;
 
             // Color + noise parameters
             std::getline(file, line);
-            strokes[stroke_it].material.color = load_vec4(line);
+            mat.color = load_vec4(line);
             std::getline(file, line);
-            strokes[stroke_it].material.noise_params = load_vec4(line);
+            mat.noise_params = load_vec4(line);
             std::getline(file, line);
-            strokes[stroke_it].material.noise_color = load_vec4(line);
+            mat.noise_color = load_vec4(line);
+
+            current_stroke.material = mat;
         }
         else if (tokens[0] == "stroke-edits")
         {
             uint32_t edit_count = std::stoi(tokens[1]);
-            strokes[stroke_it].edit_count = edit_count;
+            current_stroke.edit_count = edit_count;
 
             for (size_t i = 0; i < edit_count; ++i)
             {
                 std::getline(file, line);
-                strokes[stroke_it].edits[i].parse_string(line);
+                current_stroke.edits[i].parse_string(line);
                 num_edits++;
             }
         }
@@ -209,32 +216,14 @@ bool RoomsEngine::import_scene()
 
     file.close();
 
-    /*if (edit_count != scene_header.num_edits)
-    {
-        spdlog::error("[import_scene] Some edits couldn't be imported!");
-        return false;
-    }*/
-
-    // Merge them into the scene in chunks of 64
-
-    /*int chunk_size = 64;
-    int chunks = ceil((float)edit_count / chunk_size);
-
-    for (int i = 0; i < chunks; ++i)
-    {
-        int start_index = i * chunk_size;
-        int end_index = std::min(start_index + chunk_size, scene_header.num_edits);
-
-        for (int j = start_index; j < end_index; ++j)
-        {
-            rmr->push_edit( edits[j] );
-            edit_count--;
-        }
-
-        rmr->compute_octree();
+    // Push current (and last) stroke data
+    if (current_stroke.edit_count > 0) {
+        rmr->push_stroke(current_stroke);
     }
 
-    spdlog::info("Scene imported! ({} edits, {} left)", scene_header.num_edits, edit_count);*/
+    rmr->compute_octree();
+
+    spdlog::info("Scene imported! ({} edits)", num_edits);
     
     return true;
 }

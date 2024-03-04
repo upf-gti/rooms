@@ -127,7 +127,7 @@ class SculptEditor {
 
     // Mirror
 
-    bool use_mirror = true;
+    bool use_mirror = false;
 
     TransformGizmo mirror_gizmo;
     EntityMesh* mirror_mesh = nullptr;

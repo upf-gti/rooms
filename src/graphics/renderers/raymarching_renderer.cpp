@@ -142,8 +142,8 @@ void RaymarchingRenderer::change_stroke(const StrokeParameters& params, const ui
     preview_data.preview_stroke = new_stroke;
 }
 
-void RaymarchingRenderer::push_edit(const Edit edit) {
-
+void RaymarchingRenderer::push_edit(const Edit edit)
+{
     // Check for max edits -> Prolongation of the stroke! (increment is 0)
     if (in_frame_stroke.edit_count == MAX_EDITS_PER_EVALUATION) {
         to_compute_stroke_buffer.push_back(in_frame_stroke);
@@ -163,6 +163,12 @@ void RaymarchingRenderer::push_edit(const Edit edit) {
     }
 
     current_stroke.edits[current_stroke.edit_count++] = edit;
+}
+
+void RaymarchingRenderer::push_stroke(const Stroke& new_stroke)
+{
+    to_compute_stroke_buffer.push_back(new_stroke);
+    stroke_history.push_back(new_stroke);
 }
 
 void RaymarchingRenderer::octree_ray_intersect(const glm::vec3& ray_origin, const glm::vec3& ray_dir, std::function<void(glm::vec3)> callback)

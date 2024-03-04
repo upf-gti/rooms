@@ -268,6 +268,8 @@ public:
         }
     };
 
+    void push_stroke(const Stroke& new_stroke);
+
     void add_preview_edit(const Edit& edit);
 
     const glm::vec3& get_sculpt_start_position() { return sculpt_data.sculpt_start_position; }
