@@ -299,12 +299,6 @@ bool SculptEditor::edit_update(float delta_time)
         }
     }
 
-    {
-        if (Input::was_button_pressed(XR_BUTTON_B)) {
-            stamp_enabled = !stamp_enabled;
-        }
-    }
-
     // Debug sculpting
     {
         if (Input::is_key_pressed(GLFW_KEY_P))
@@ -827,8 +821,7 @@ void SculptEditor::bind_events()
 
         // Controller buttons
 
-        //gui.bind(XR_BUTTON_B, [&]() { spdlog::info("B"); stamp_enabled = !stamp_enabled; });
-
+        helper_gui.bind(XR_BUTTON_B, [&]() { stamp_enabled = !stamp_enabled; });
 
         // Bind recent color buttons...
 
