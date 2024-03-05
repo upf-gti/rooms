@@ -754,7 +754,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         octree_indirect_buffer.binding = 0;
         octree_indirect_buffer.buffer_size = sizeof(uint32_t) * 3;
 
-        EntityMesh* cube = parse_mesh("data/meshes/cube/cube.obj");
+        MeshInstance3D* cube = parse_mesh("data/meshes/cube/cube.obj");
 
         preview_data.vertex_count = cube->get_surface(0)->get_vertex_count();
 

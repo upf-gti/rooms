@@ -1,7 +1,6 @@
 #include "rooms_engine.h"
 
-#include "framework/entities/entity_mesh.h"
-#include "framework/entities/entity_text.h"
+#include "framework/nodes/mesh_instance_3d.h"
 #include "framework/input.h"
 #include "framework/scene/parse_scene.h"
 #include "framework/scene/parse_gltf.h"
@@ -16,8 +15,8 @@
 
 #include <fstream>
 
-EntityMesh* RoomsEngine::skybox = nullptr;
-std::vector<Entity*> RoomsEngine::entities;
+MeshInstance3D* RoomsEngine::skybox = nullptr;
+std::vector<Node3D*> RoomsEngine::entities;
 
 int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen)
 {
@@ -280,7 +279,7 @@ void RoomsEngine::render_gui()
                     ImGui::EndPopup();
                 }
 
-                std::vector<Entity*>::iterator it = entities.begin();
+                std::vector<Node3D*>::iterator it = entities.begin();
                 while (it != entities.end())
                 {
                     if (show_tree_recursive(*it)) {
@@ -321,11 +320,11 @@ void RoomsEngine::render_gui()
     ImGui::End();
 }
 
-bool RoomsEngine::show_tree_recursive(Entity* entity)
+bool RoomsEngine::show_tree_recursive(Node* entity)
 {
-    std::vector<Entity*>& children = entity->get_children();
+    std::vector<Node*>& children = entity->get_children();
 
-    EntityMesh* entity_mesh = dynamic_cast<EntityMesh*>(entity);
+    MeshInstance3D* entity_mesh = dynamic_cast<MeshInstance3D*>(entity);
 
     ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
 
@@ -357,7 +356,7 @@ bool RoomsEngine::show_tree_recursive(Entity* entity)
             }
         }
 
-        std::vector<Entity*>::iterator it = children.begin();
+        std::vector<Node*>::iterator it = children.begin();
 
         while (it != children.end())
         {

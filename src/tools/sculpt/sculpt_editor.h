@@ -14,6 +14,7 @@ enum eTool : uint8_t {
 };
 
 class RoomsRenderer;
+class MeshInstance3D;
 
 struct PrimitiveState {
     glm::vec4 dimensions;
@@ -24,7 +25,7 @@ struct PrimitiveState {
 class SculptEditor {
 
     RoomsRenderer*  renderer = nullptr;
-    EntityMesh*     floor_grid_mesh = nullptr;
+    MeshInstance3D* floor_grid_mesh = nullptr;
 
     bool sculpt_started = false;
     bool was_tool_used = false;
@@ -56,11 +57,11 @@ class SculptEditor {
     Edit             edit_to_add;
     StrokeParameters stroke_parameters;
 
-    EntityMesh*     mesh_preview = nullptr;
-    EntityMesh*     mesh_preview_outline = nullptr;
+    MeshInstance3D* mesh_preview = nullptr;
+    MeshInstance3D* mesh_preview_outline = nullptr;
 
-    void set_primitive( sdPrimitive primitive );
-    void update_edit_preview( const glm::vec4& dims );
+    void set_primitive(sdPrimitive primitive);
+    void update_edit_preview(const glm::vec4& dims);
 
     void set_onion_modifier(float value);
     void set_cap_modifier(float value);
@@ -72,11 +73,11 @@ class SculptEditor {
 
     bool canSnapToSurface();
 
-    bool        modifiers_dirty     = false;
-    bool        dimensions_dirty    = true;
-    bool        stamp_enabled       = false;
-    bool		rotation_started    = false;
-    bool        snap_to_surface     = false;
+    bool        modifiers_dirty = false;
+    bool        dimensions_dirty = true;
+    bool        stamp_enabled = false;
+    bool		rotation_started = false;
+    bool        snap_to_surface = false;
     bool        is_picking_material = false;
     bool        was_material_picked = false;
 
@@ -102,11 +103,11 @@ class SculptEditor {
 
     // Shape Editor
 
-    bool onion_enabled      = false;
-    float onion_thickness   = 0.0f;
+    bool onion_enabled = false;
+    float onion_thickness = 0.0f;
 
     bool capped_enabled = false;
-    float capped_value  = -1.0f; // -1..1 no cap..fully capped
+    float capped_value = -1.0f; // -1..1 no cap..fully capped
 
     // Axis lock
 
@@ -131,7 +132,7 @@ class SculptEditor {
     bool use_mirror = false;
 
     TransformGizmo mirror_gizmo;
-    EntityMesh* mirror_mesh = nullptr;
+    MeshInstance3D* mirror_mesh = nullptr;
 
     glm::vec3 mirror_origin = glm::vec3(0.f);
     glm::vec3 mirror_normal = glm::vec3(0.f, 0.f, 1.f);

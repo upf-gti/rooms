@@ -3,7 +3,7 @@
 
 #include "includes.h"
 
-#include "framework/entities/entity_ui.h"
+#include "framework/nodes/ui.h"
 #include "framework/input.h"
 
 #include "graphics/renderers/rooms_renderer.h"
@@ -23,7 +23,7 @@ void SculptEditor::initialize()
 {
     renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
 
-    mirror_mesh = new EntityMesh();
+    mirror_mesh = new MeshInstance3D();
     mirror_mesh->add_surface(RendererStorage::get_surface("quad"));
     mirror_mesh->scale(glm::vec3(0.25f));
 
@@ -34,7 +34,7 @@ void SculptEditor::initialize()
 
     mirror_mesh->set_surface_material_override(mirror_mesh->get_surface(0), mirror_material);
 
-    floor_grid_mesh = new EntityMesh();
+    floor_grid_mesh = new MeshInstance3D();
     floor_grid_mesh->add_surface(RendererStorage::get_surface("quad"));
     floor_grid_mesh->set_translation(glm::vec3(0.0f));
     floor_grid_mesh->rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
@@ -65,7 +65,7 @@ void SculptEditor::initialize()
         Surface* sphere_surface = new Surface();
         sphere_surface->create_sphere();
 
-        mesh_preview = new EntityMesh();
+        mesh_preview = new MeshInstance3D();
         mesh_preview->add_surface(sphere_surface);
 
         Material preview_material;
@@ -75,7 +75,7 @@ void SculptEditor::initialize()
 
         mesh_preview->set_surface_material_override(sphere_surface, preview_material);
 
-        mesh_preview_outline = new EntityMesh();
+        mesh_preview_outline = new MeshInstance3D();
         mesh_preview_outline->add_surface(sphere_surface);
 
         Material outline_material;

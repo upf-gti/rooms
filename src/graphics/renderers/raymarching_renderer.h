@@ -15,7 +15,7 @@
 #define SCULPT_MAX_SIZE 2 // meters
 #define PREVIEW_PROXY_BRICKS_COUNT 4000u
 
-class EntityMesh;
+class MeshInstance3D;
 
 struct RayIntersectionInfo {
     uint32_t    intersected = 0;
@@ -120,7 +120,7 @@ class RaymarchingRenderer {
     Uniform         compute_merge_data_uniform;
     Uniform         compute_stroke_buffer_uniform;
 
-    EntityMesh*     cube_mesh = nullptr;
+    MeshInstance3D* cube_mesh = nullptr;
 
     struct sSculptData {
         glm::vec3 sculpt_start_position = {0.f, 0.f, 0.f};
