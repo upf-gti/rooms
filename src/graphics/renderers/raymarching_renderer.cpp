@@ -21,7 +21,7 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
     bool is_openxr_available = RoomsRenderer::instance->get_openxr_available();
 
-    octree_depth = static_cast<uint8_t>(6);
+    octree_depth = static_cast<uint8_t>(OCTREE_DEPTH);
 
     // total size considering leaves and intermediate levels
     octree_total_size = (pow(8, octree_depth + 1) - 1) / 7;
@@ -669,21 +669,25 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         static_cast<WGPUTextureUsage>(WGPUTextureUsage_TextureBinding | WGPUTextureUsage_StorageBinding | WGPUTextureUsage_CopySrc),
         1, nullptr);
 
+    vram_usage += SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION * sizeof(float);
+
     sdf_texture_uniform.data = sdf_texture.get_view();
     sdf_texture_uniform.binding = 3;
 
     sdf_material_texture.create(
         WGPUTextureDimension_3D,
         WGPUTextureFormat_R32Uint,
-        { SDF_RESOLUTION, SDF_RESOLUTION, SDF_RESOLUTION },
+        { MATERIAL_RESOLUTION, MATERIAL_RESOLUTION, MATERIAL_RESOLUTION },
         static_cast<WGPUTextureUsage>(WGPUTextureUsage_TextureBinding | WGPUTextureUsage_StorageBinding | WGPUTextureUsage_CopySrc),
         1, nullptr);
+
+    vram_usage += MATERIAL_RESOLUTION * MATERIAL_RESOLUTION * MATERIAL_RESOLUTION * sizeof(float);
 
     sdf_material_texture_uniform.data = sdf_material_texture.get_view();
     sdf_material_texture_uniform.binding = 8; // TODO: set as 4
 
     // Size of penultimate level
-    octants_max_size = pow(floorf(SDF_RESOLUTION / 10.0f), 3.0f);
+    octants_max_size = pow(floorf(SDF_RESOLUTION / SDF_BRICK_SIZE), 3.0f);
 
     // Uniforms & buffers for octree generation
     {
@@ -692,18 +696,23 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         compute_merge_data_uniform.binding = 1;
         compute_merge_data_uniform.buffer_size = sizeof(sMergeData);
 
+        vram_usage += compute_merge_data_uniform.buffer_size;
+
         // Octree buffer
         std::vector<sOctreeNode> octree_default(octree_total_size+1);
         octree_uniform.data = webgpu_context->create_buffer(sizeof(uint32_t) * 4 + octree_total_size * sizeof(sOctreeNode), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, octree_default.data(), "octree");
         octree_uniform.binding = 2;
         octree_uniform.buffer_size = sizeof(uint32_t) * 4 + octree_total_size * sizeof(sOctreeNode);
 
+        vram_usage += octree_uniform.buffer_size;
+
         // Counters for octree merge
         uint32_t default_vals_zero[4] = { 0, 0, 0, 0 };
         octree_state.data = webgpu_context->create_buffer(sizeof(uint32_t) * 4, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, default_vals_zero, "octree_state");
         octree_state.binding = 4;
         octree_state.buffer_size = sizeof(uint32_t) * 4;
-        // TO DELETE
+
+        vram_usage += octree_state.buffer_size;
 
         // Proxy geometry instance data
         // An struct that contines: a empty brick counter in the atlas, the empty brick buffer, and the data off all the instances
@@ -714,6 +723,8 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         octree_proxy_instance_buffer.data = webgpu_context->create_buffer(struct_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, default_bytes.data(), "proxy_boxes_position_buffer");
         octree_proxy_instance_buffer.binding = 5;
         octree_proxy_instance_buffer.buffer_size = struct_size;
+
+        vram_usage += octree_proxy_instance_buffer.buffer_size;
 
         // Empty atlas malloc data
         uint32_t* atlas_indices = new uint32_t[octants_max_size + 1u];
@@ -732,12 +743,16 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         octree_edit_culling_data.binding = 6;
         octree_edit_culling_data.buffer_size = edit_culling_data_size;
 
+        vram_usage += octree_edit_culling_data.buffer_size;
+
         // Buffer for brick removal & indirect buffers
         // 3 uints for the indirect buffer data + 1 padding +  and then the brick size
         uint32_t buffer_removal_buffer_size = sizeof(uint32_t) + octants_max_size * sizeof(uint32_t);
         octree_indirect_brick_removal_buffer.data = webgpu_context->create_buffer(buffer_removal_buffer_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Indirect | WGPUBufferUsage_Storage, nullptr, "indirect_brick_removal");
         octree_indirect_brick_removal_buffer.binding = 8;
         octree_indirect_brick_removal_buffer.buffer_size = buffer_removal_buffer_size;
+
+        vram_usage += octree_indirect_brick_removal_buffer.buffer_size;
 
         uint32_t default_removal_indirect[4] = {0, 1, 1, 0};
         webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_indirect_brick_removal_buffer.data), 0, default_removal_indirect, sizeof(uint32_t) * 4u);
@@ -761,6 +776,8 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         octree_indirect_buffer.binding = 0;
         octree_indirect_buffer.buffer_size = sizeof(uint32_t) * 3;
 
+        vram_usage += octree_indirect_buffer.buffer_size;
+
         MeshInstance3D* cube = parse_mesh("data/meshes/cube/cube.obj");
 
         preview_data.vertex_count = cube->get_surface(0)->get_vertex_count();
@@ -770,6 +787,8 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         octree_proxy_indirect_buffer.data = webgpu_context->create_buffer(sizeof(uint32_t) * 4, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage | WGPUBufferUsage_Indirect, default_indirect_buffer, "proxy_boxes_indirect_buffer");
         octree_proxy_indirect_buffer.binding = 2;
         octree_proxy_indirect_buffer.buffer_size = sizeof(uint32_t) * 4;
+
+        vram_usage += octree_proxy_indirect_buffer.buffer_size;
 
         std::vector<Uniform*> uniforms = { &octree_indirect_buffer, &octree_uniform };
 
@@ -781,6 +800,8 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         octree_brick_copy_buffer.data = webgpu_context->create_buffer(sizeof(uint32_t) * octants_max_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "brick_copy_buffer");
         octree_brick_copy_buffer.binding = 0;
         octree_brick_copy_buffer.buffer_size = sizeof(uint32_t) * octants_max_size;
+
+        vram_usage += octree_brick_copy_buffer.buffer_size;
 
         std::vector<Uniform*> uniforms = { &octree_brick_copy_buffer, &octree_proxy_instance_buffer, &octree_proxy_indirect_buffer };
 
@@ -808,6 +829,8 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         octant_usage_uniform[i].data = octant_usage_buffers[i / 2];
         octant_usage_uniform[i].binding = i % 2;
         octant_usage_uniform[i].buffer_size = octants_max_size * sizeof(uint32_t);
+
+        vram_usage += octant_usage_uniform[i].buffer_size;
     }
 
     for (int i = 0; i < 2; ++i) {
@@ -832,6 +855,8 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         compute_stroke_buffer_uniform.binding = 0;
         compute_stroke_buffer_uniform.buffer_size = sizeof(Stroke);
 
+        vram_usage += compute_stroke_buffer_uniform.buffer_size;
+
         std::vector<Uniform*> uniforms = { &compute_stroke_buffer_uniform };
 
         compute_stroke_buffer_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_evaluate_shader, 1);
@@ -843,6 +868,8 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         preview_stroke_uniform.data = webgpu_context->create_buffer(struct_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage | WGPUBufferUsage_Indirect, nullptr, "preview_data_bindgroup");
         preview_stroke_uniform.binding = 0;
         preview_stroke_uniform.buffer_size = struct_size;
+
+        vram_usage += preview_stroke_uniform.buffer_size;
 
         std::vector<Uniform*> uniforms = { &preview_stroke_uniform };
 
@@ -886,6 +913,8 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
     compute_octree_initialization_pipeline.create_compute(compute_octree_initialization_shader);
     compute_octree_cleaning_pipeline.create_compute(compute_octree_cleaning_shader);
     compute_octree_brick_unmark_pipeline.create_compute(compute_octree_brick_unmark_shader);
+
+    spdlog::info("Min VRAM usage on octree {}", vram_usage);
 }
 
 

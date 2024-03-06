@@ -48,12 +48,10 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
     let proxy_data : ProxyInstanceData = octree_proxy_data.instance_data[brick_index];
 
-    let voxel_world_coords : vec3f = proxy_data.position + (10.0 / vec3f(local_id) - 5.0) * PIXEL_WORLD_SIZE;
-
-    // Get the 3D atlas coords of the brick, with a stride of 10 (the size of the brick)
-    let atlas_tile_coordinate : vec3u = 10 * vec3u(proxy_data.atlas_tile_index % BRICK_COUNT,
-                                                  (proxy_data.atlas_tile_index / BRICK_COUNT) % BRICK_COUNT,
-                                                   proxy_data.atlas_tile_index / (BRICK_COUNT * BRICK_COUNT));
+    // Get the 3D atlas coords of the brick, with a stride of the size of the brick
+    let atlas_tile_coordinate : vec3u = SDF_BRICK_SIZE * vec3u(proxy_data.atlas_tile_index % BRICK_COUNT,
+                                                              (proxy_data.atlas_tile_index / BRICK_COUNT) % BRICK_COUNT,
+                                                              proxy_data.atlas_tile_index / (BRICK_COUNT * BRICK_COUNT));
 
     let level : u32 = atomicLoad(&octree.current_level);
     
@@ -86,11 +84,12 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     }
 
     // Offset for a 10 pixel wide brick
-    let pixel_offset : vec3f = (vec3f(local_id) - 4.5) * PIXEL_WORLD_SIZE;
+    let pixel_offset : vec3f = (vec3f(local_id) - f32(SDF_BRICK_SIZE/2.0)) * PIXEL_WORLD_SIZE;
 
     var result_surface : Surface;
     result_surface.distance = 0.0;
 
+    let pos = octant_center + pixel_offset;
 #ifdef SSAA_SDF_WRITE_TO_TEXTURE
     // Super Sampling iterations
     for(var j : u32 = 0u; j < 9u; j++) {
@@ -105,7 +104,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
             let packed_index : u32 = 3 - (i % 4);
             let current_unpacked_edit_idx : u32 = (current_packed_edit_idx & (0xFFu << (packed_index * 8u))) >> (packed_index * 8u);
             let edit = stroke.edits[current_unpacked_edit_idx];
-            let pos = octant_center + pixel_offset;
 
             // Rust example.. ??
 
@@ -156,7 +154,55 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
     // Duplicate the texture Store, becuase then we have a branch depeding on an uniform!
     textureStore(write_sdf, texture_coordinates, vec4f(result_surface.distance));
-    textureStore(write_material_sdf, texture_coordinates, vec4<u32>((pack_material(result_surface.material))));
+
+    if (SDF_MATERIAL_BRICK_DIFFERENCE == 1u) {
+        textureStore(write_material_sdf, texture_coordinates, vec4<u32>((pack_material(result_surface.material))));
+    } else {
+        let material_sample_count : u32 = SDF_MATERIAL_BRICK_DIFFERENCE * SDF_MATERIAL_BRICK_DIFFERENCE * SDF_MATERIAL_BRICK_DIFFERENCE;
+        let starting_coordinate : vec3u = texture_coordinates * SDF_MATERIAL_BRICK_DIFFERENCE + vec3u(1u);
+        let SDF_MAT_DIFF2 = SDF_MATERIAL_BRICK_DIFFERENCE * SDF_MATERIAL_BRICK_DIFFERENCE;
+
+        for(var i : u32 = 0u; i < material_sample_count; i++) {
+            let texture_pos : vec3u = vec3u(i % SDF_MATERIAL_BRICK_DIFFERENCE, (i / SDF_MATERIAL_BRICK_DIFFERENCE) % SDF_MATERIAL_BRICK_DIFFERENCE, i / SDF_MAT_DIFF2);
+            let sampling_pos = octant_center + pixel_offset  + (vec3f(texture_pos)) * PIXEL_WORLD_SIZE / 2.0;
+
+            var it_surface : Surface = sSurface;
+
+            if ((FILLED_BRICK_FLAG & brick_pointer) == FILLED_BRICK_FLAG) {
+                 let raw_color : vec4<u32> = textureLoad(write_material_sdf, starting_coordinate + texture_pos);
+
+                let material : Material = unpack_material(u32(raw_color.r));
+                it_surface.material = material;
+            }
+
+            for (var i : u32 = 0; i < edit_culling_data.edit_culling_count[parent_octree_index]; i++) {
+                // Get the packed indices
+                let current_packed_edit_idx : u32 = edit_culling_data.edit_culling_lists[i / 4 + parent_octree_index * PACKED_LIST_SIZE];
+                let packed_index : u32 = 3 - (i % 4);
+                let current_unpacked_edit_idx : u32 = (current_packed_edit_idx & (0xFFu << (packed_index * 8u))) >> (packed_index * 8u);
+                let edit = stroke.edits[current_unpacked_edit_idx];
+                
+
+                let stroke_color : vec3f = stroke.material.color.xyz;
+                
+                let noise_color : vec3f = stroke.material.noise_color.xyz;
+                let noise_intensity : f32 = stroke.material.noise_params.x;
+                let noise_freq : f32 = stroke.material.noise_params.y;
+                let noise_octaves : u32 = u32(stroke.material.noise_params.z);
+
+                var noise_value = fbm( sampling_pos, vec3f(0.0), noise_freq, noise_intensity, noise_octaves );
+                noise_value = clamp(noise_value, 0.0, 1.0);
+
+                material.albedo = mix(stroke_color, stroke_color * noise_color, noise_value);
+                material.roughness = mix(stroke.material.roughness, 1.0, noise_value * 1.5);
+                material.metalness = mix(stroke.material.metallic, 0.25, noise_value * 1.5);
+
+                it_surface = evaluate_edit(sampling_pos, stroke.primitive, stroke.operation, stroke.parameters, it_surface, material, edit);
+            }
+        
+            textureStore(write_material_sdf, starting_coordinate + texture_pos, vec4<u32>((pack_material(it_surface.material))));
+        }
+    }
     
     //textureStore(write_sdf, texture_coordinates, vec4f(debug_surf.x, debug_surf.y, debug_surf.z, result_surface.distance));
     // Hack, for buffer usage

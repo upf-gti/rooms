@@ -52,7 +52,7 @@ struct StrokeMaterial {
     float emissive  = 0.2f;
     float dummy0    = 0.0f;
 
-    glm::vec4	color           = colors::RED;
+    glm::vec4	color           = colors::BLUE;
     glm::vec4   noise_params    = glm::vec4(0.0f, 20.0f, 8.0f, 1.0f); // intensity, frequency, octaves, unused
     Color       noise_color     = colors::WHITE;
 };
@@ -60,8 +60,8 @@ struct StrokeMaterial {
 class StrokeParameters {
 
     sdPrimitive     primitive = SD_SPHERE;
-    sdOperation     operation = OP_UNION;
-    glm::vec4       parameters = { 0.f, -1.f, 0.f, 0.001f };
+    sdOperation     operation = OP_SMOOTH_UNION;
+    glm::vec4       parameters = { 0.f, -1.f, 0.f, 0.1f };
     StrokeMaterial  material = {};
 
     bool dirty      = false;

@@ -128,7 +128,7 @@ fn interpolate_material(pos : vec3f) -> Material {
 }
 
 fn sample_material_atlas(atlas_position : vec3f) -> Material {
-    return interpolate_material(atlas_position * SDF_RESOLUTION);
+    return interpolate_material(atlas_position * MATERIAL_BRICK_SIZE);
 }
 
 fn raymarch(ray_origin_in_atlas_space : vec3f, ray_dir : vec3f, max_distance : f32, has_hit: ptr<function, bool>) -> f32
@@ -242,9 +242,9 @@ fn compute()
                         intersected_distance = octants_to_visit[i].distance;
 
                         let atlas_tile_index : u32 = octree.data[octree_index].tile_pointer & OCTREE_TILE_INDEX_MASK;
-                        let in_atlas_tile_coordinate : vec3f = vec3f(10 * vec3u(atlas_tile_index % BRICK_COUNT,
-                                                  (atlas_tile_index / BRICK_COUNT) % BRICK_COUNT,
-                                                   atlas_tile_index / (BRICK_COUNT * BRICK_COUNT))) / SDF_RESOLUTION;
+                        let in_atlas_tile_coordinate : vec3f = vec3f(SDF_BRICK_SIZE * vec3u(atlas_tile_index % BRICK_COUNT,
+                                                                    (atlas_tile_index / BRICK_COUNT) % BRICK_COUNT,
+                                                                    atlas_tile_index / (BRICK_COUNT * BRICK_COUNT))) / SDF_RESOLUTION;
 
                         // Ray intersection in sculpt space
                         let in_sculpture_point : vec3f = ray_info.ray_origin + ray_info.ray_dir * octants_to_visit[i].distance;

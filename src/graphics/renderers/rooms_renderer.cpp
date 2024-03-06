@@ -18,9 +18,17 @@ int RoomsRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
 {
     Renderer::initialize(window, use_mirror_screen);
 
+    // There needs to be the same number of distance bricks and material bricks
+    assert((SDF_RESOLUTION / SDF_BRICK_SIZE) == (MATERIAL_RESOLUTION / MATERIAL_BRICK_SIZE));
+    // Our octree indexing system only supports a max of 10 levels
+    assert(OCTREE_DEPTH < 10);
+
     Shader::set_custom_define("SDF_RESOLUTION", SDF_RESOLUTION);
     Shader::set_custom_define("SCULPT_MAX_SIZE", SCULPT_MAX_SIZE);
+    Shader::set_custom_define("MATERIAL_RESOLUTION", MATERIAL_RESOLUTION);
     Shader::set_custom_define("MAX_EDITS_PER_EVALUATION", MAX_EDITS_PER_EVALUATION);
+    Shader::set_custom_define("SDF_BRICK_SIZE", SDF_BRICK_SIZE);
+    Shader::set_custom_define("MATERIAL_BRICK_SIZE", MATERIAL_BRICK_SIZE);
 
     clear_color = glm::vec4(0.22f, 0.22f, 0.22f, 1.0);
 

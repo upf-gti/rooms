@@ -76,7 +76,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     out.vertex_in_sculpt_space = vertex_in_sculpt_space;
     out.brick_center_in_sculpt_space = instance_data.position;
     // This is in an attribute for debugging
-    out.atlas_tile_coordinate = vec3f(10 * vec3u(instance_data.atlas_tile_index % BRICK_COUNT,
+    out.atlas_tile_coordinate = vec3f(SDF_BRICK_SIZE * vec3u(instance_data.atlas_tile_index % BRICK_COUNT,
                                                   (instance_data.atlas_tile_index / BRICK_COUNT) % BRICK_COUNT,
                                                    instance_data.atlas_tile_index / (BRICK_COUNT * BRICK_COUNT))) / SDF_RESOLUTION;
     out.vertex_in_world_space = vertex_in_world_space.xyz; 
@@ -136,7 +136,7 @@ fn interpolate_material(pos : vec3f) -> Material {
 }
 
 fn sample_material_atlas(atlas_position : vec3f) -> Material {
-    return interpolate_material(atlas_position * SDF_RESOLUTION);
+    return interpolate_material(atlas_position * MATERIAL_RESOLUTION);
 }
 
 fn sample_sdf_atlas(atlas_position : vec3f) -> f32
@@ -153,7 +153,7 @@ fn sample_sdf_with_preview(sculpt_position : vec3f, atlas_position : vec3f) -> S
 
     var surface : Surface;
     surface.distance = sample_sdf_atlas(atlas_position);
-    surface.material = interpolate_material(atlas_position * SDF_RESOLUTION);
+    surface.material = interpolate_material(atlas_position * MATERIAL_RESOLUTION);
     
     for(var i : u32 = 0u; i < preview_data.preview_stroke.edit_count; i++) {
         surface = evaluate_edit(sculpt_position, preview_data.preview_stroke.primitive, preview_data.preview_stroke.operation, preview_data.preview_stroke.parameters, surface, material, preview_data.preview_stroke.edits[i]);
@@ -231,11 +231,7 @@ fn raymarch_with_previews(ray_origin_atlas_space : vec3f, ray_origin_sculpt_spac
 
         let normal : vec3f = estimate_normal_with_previews(pos_sculpt_space, pos_atlas_space);
 
-        //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
 		return vec4f(apply_light(-ray_dir, pos_sculpt_space, pos_world, normal, lightPos + lightOffset, surface.material), depth);
-        //return vec4f(normal, depth);
-        //return vec4f(surface.material.albedo, depth);
-        //return vec4f(vec3f(surface.material.albedo), depth);
 	}
 
     // Use a two band spherical harmonic as a skymap
@@ -295,12 +291,7 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
         last_found_surface_distance = distance;
 
         let material : Material = sample_material_atlas(position_in_atlas);
-        //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
 		return vec4f(apply_light(-ray_dir, position_in_world, position_in_world, normal, lightPos + lightOffset, material), depth);
-        //return vec4f(normal, depth);
-        //return vec4f(material.albedo, depth);
-        //return vec4f(normal, depth);
-        //return vec4f(vec3f(material.albedo), depth);
 	}
 
     // Use a two band spherical harmonic as a skymap

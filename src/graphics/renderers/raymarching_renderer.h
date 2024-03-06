@@ -10,11 +10,16 @@
 
 #include <list>
 
-#define SSAA_SDF_WRITE_TO_TEXTURE true
+#define MATERIAL_BRICK_RESOLUTION 2
+#define SSAA_SDF_WRITE_TO_TEXTURE false
 #define PREVIEW_EDITS_MAX 128
 #define SDF_RESOLUTION 400
+#define MATERIAL_RESOLUTION (SDF_RESOLUTION * MATERIAL_BRICK_RESOLUTION)
 #define SCULPT_MAX_SIZE 2 // meters
 #define PREVIEW_PROXY_BRICKS_COUNT 4000u
+#define OCTREE_DEPTH 6
+#define SDF_BRICK_SIZE 10
+#define MATERIAL_BRICK_SIZE (SDF_BRICK_SIZE * MATERIAL_BRICK_RESOLUTION)
 
 class MeshInstance3D;
 
@@ -122,6 +127,8 @@ class RaymarchingRenderer {
     Uniform         compute_stroke_buffer_uniform;
 
     MeshInstance3D* cube_mesh = nullptr;
+
+    uint64_t vram_usage = 0u;
 
     struct sSculptData {
         glm::vec3 sculpt_start_position = {0.f, 0.f, 0.f};
