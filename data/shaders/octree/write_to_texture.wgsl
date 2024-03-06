@@ -22,6 +22,19 @@ fn intersection_AABB_AABB(b1_min : vec3f, b1_max : vec3f, b2_min : vec3f, b2_max
     return (b1_min.x <= b2_max.x && b1_min.y <= b2_max.y && b1_min.z <= b2_max.z) && (b1_max.x >= b2_min.x && b1_max.y >= b2_min.y && b1_max.z >= b2_min.z);
 }
 
+
+const delta_pos_world = array<vec3f, 9>(
+    vec3f(PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER),
+    vec3f(PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER, -PIXEL_WORLD_SIZE_QUARTER),
+    vec3f(PIXEL_WORLD_SIZE_QUARTER, -PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER),
+    vec3f(PIXEL_WORLD_SIZE_QUARTER, -PIXEL_WORLD_SIZE_QUARTER, -PIXEL_WORLD_SIZE_QUARTER),
+    vec3f(-PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER),
+    vec3f(-PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER, -PIXEL_WORLD_SIZE_QUARTER),
+    vec3f(-PIXEL_WORLD_SIZE_QUARTER, -PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER),
+    vec3f(-PIXEL_WORLD_SIZE_QUARTER, -PIXEL_WORLD_SIZE_QUARTER, -PIXEL_WORLD_SIZE_QUARTER),
+    vec3f(0.0, 0.0, 0.0),
+);
+
 @compute @workgroup_size(10,10,10)
 fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation_id) local_id: vec3<u32>)
 {
@@ -58,8 +71,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     material.roughness = stroke.material.roughness;
     material.metalness = stroke.material.metallic;
 
-    //sSurface.material = material;
-
     // If the MSb is setted we load the previous data of brick
     // if not, we set it for the next iteration
     if ((FILLED_BRICK_FLAG & brick_pointer) == FILLED_BRICK_FLAG) {
@@ -77,35 +88,62 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     // Offset for a 10 pixel wide brick
     let pixel_offset : vec3f = (vec3f(local_id) - 4.5) * PIXEL_WORLD_SIZE;
 
-    // Traverse the according edits and evaluate them in the brick
-    for (var i : u32 = 0; i < edit_culling_data.edit_culling_count[parent_octree_index]; i++) {
-        // Get the packed indices
-        let current_packed_edit_idx : u32 = edit_culling_data.edit_culling_lists[i / 4 + parent_octree_index * PACKED_LIST_SIZE];
-        let packed_index : u32 = 3 - (i % 4);
-        let current_unpacked_edit_idx : u32 = (current_packed_edit_idx & (0xFFu << (packed_index * 8u))) >> (packed_index * 8u);
-        let edit = stroke.edits[current_unpacked_edit_idx];
-        let pos = octant_center + pixel_offset;
+    var result_surface : Surface;
+    result_surface.distance = 0.0;
 
-        // Rust example.. ??
+#ifdef SSAA_SDF_WRITE_TO_TEXTURE
+    // Super Sampling iterations
+    for(var j : u32 = 0u; j < 9u; j++) {
+#endif
 
-        let stroke_color : vec3f = stroke.material.color.xyz;
-        
-        let noise_color : vec3f = stroke.material.noise_color.xyz;
-        let noise_intensity : f32 = stroke.material.noise_params.x;
-        let noise_freq : f32 = stroke.material.noise_params.y;
-        let noise_octaves : u32 = u32(stroke.material.noise_params.z);
+        var curr_surface : Surface = sSurface;
 
-        var noise_value = fbm( pos, vec3f(0.0), noise_freq, noise_intensity, noise_octaves );
-        noise_value = clamp(noise_value, 0.0, 1.0);
+        // Traverse the according edits and evaluate them in the brick
+        for (var i : u32 = 0; i < edit_culling_data.edit_culling_count[parent_octree_index]; i++) {
+            // Get the packed indices
+            let current_packed_edit_idx : u32 = edit_culling_data.edit_culling_lists[i / 4 + parent_octree_index * PACKED_LIST_SIZE];
+            let packed_index : u32 = 3 - (i % 4);
+            let current_unpacked_edit_idx : u32 = (current_packed_edit_idx & (0xFFu << (packed_index * 8u))) >> (packed_index * 8u);
+            let edit = stroke.edits[current_unpacked_edit_idx];
+            let pos = octant_center + pixel_offset;
 
-        material.albedo = mix(stroke_color, stroke_color * noise_color, noise_value);
-        material.roughness = mix(stroke.material.roughness, 1.0, noise_value * 1.5);
-        material.metalness = mix(stroke.material.metallic, 0.25, noise_value * 1.5);
+            // Rust example.. ??
 
-        sSurface = evaluate_edit(pos, stroke.primitive, stroke.operation, stroke.parameters, sSurface, material, edit);
+            let stroke_color : vec3f = stroke.material.color.xyz;
+            
+            let noise_color : vec3f = stroke.material.noise_color.xyz;
+            let noise_intensity : f32 = stroke.material.noise_params.x;
+            let noise_freq : f32 = stroke.material.noise_params.y;
+            let noise_octaves : u32 = u32(stroke.material.noise_params.z);
+
+            var noise_value = fbm( pos, vec3f(0.0), noise_freq, noise_intensity, noise_octaves );
+            noise_value = clamp(noise_value, 0.0, 1.0);
+
+            material.albedo = mix(stroke_color, stroke_color * noise_color, noise_value);
+            material.roughness = mix(stroke.material.roughness, 1.0, noise_value * 1.5);
+            material.metalness = mix(stroke.material.metallic, 0.25, noise_value * 1.5);
+
+#ifdef SSAA_SDF_WRITE_TO_TEXTURE
+            curr_surface = evaluate_edit(pos + delta_pos_world[j], stroke.primitive, stroke.operation, stroke.parameters, curr_surface, material, edit);
+#else
+            curr_surface = evaluate_edit(pos, stroke.primitive, stroke.operation, stroke.parameters, curr_surface, material, edit);
+#endif
+        }
+
+#ifdef SSAA_SDF_WRITE_TO_TEXTURE
+        // Accumulate the sampling results
+        result_surface.distance = curr_surface.distance + result_surface.distance;
+        result_surface.material = Material_sum_Material(curr_surface.material, result_surface.material);
     }
 
-    if (sSurface.distance < MIN_HIT_DIST) {
+    // Average all the samples
+    result_surface.material = Material_mult_by(result_surface.material, 1.0 / 9.0);
+    result_surface.distance = result_surface.distance / 9.0;
+#else
+    result_surface = curr_surface;
+#endif
+
+    if (result_surface.distance < MIN_HIT_DIST) {
         atomicAdd(&used_pixels, 1);
     }
 
@@ -117,10 +155,10 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     heatmap_color.b = cos(interpolant);
 
     // Duplicate the texture Store, becuase then we have a branch depeding on an uniform!
-    textureStore(write_sdf, texture_coordinates, vec4f(sSurface.distance));
-    textureStore(write_material_sdf, texture_coordinates, vec4<u32>((pack_material(sSurface.material))));
+    textureStore(write_sdf, texture_coordinates, vec4f(result_surface.distance));
+    textureStore(write_material_sdf, texture_coordinates, vec4<u32>((pack_material(result_surface.material))));
     
-    //textureStore(write_sdf, texture_coordinates, vec4f(debug_surf.x, debug_surf.y, debug_surf.z, sSurface.distance));
+    //textureStore(write_sdf, texture_coordinates, vec4f(debug_surf.x, debug_surf.y, debug_surf.z, result_surface.distance));
     // Hack, for buffer usage
     octant_usage_write[0] = 0;
 

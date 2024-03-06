@@ -643,10 +643,17 @@ void RaymarchingRenderer::set_camera_eye(const glm::vec3& eye_pos) {
 
 void RaymarchingRenderer::init_compute_octree_pipeline()
 {
+    std::vector<std::string> define_specializations;
+
+    // Enable SSAA for SDF write to texture
+    if (SSAA_SDF_WRITE_TO_TEXTURE) {
+        define_specializations.push_back("SSAA_SDF_WRITE_TO_TEXTURE");
+    }
+
     // Load compute_raymarching shader
     compute_octree_evaluate_shader = RendererStorage::get_shader("data/shaders/octree/evaluator.wgsl");
     compute_octree_increment_level_shader = RendererStorage::get_shader("data/shaders/octree/increment_level.wgsl");
-    compute_octree_write_to_texture_shader = RendererStorage::get_shader("data/shaders/octree/write_to_texture.wgsl");
+    compute_octree_write_to_texture_shader = RendererStorage::get_shader("data/shaders/octree/write_to_texture.wgsl", define_specializations);
     compute_octree_brick_removal_shader = RendererStorage::get_shader("data/shaders/octree/brick_removal.wgsl");
     compute_octree_brick_copy_shader = RendererStorage::get_shader("data/shaders/octree/brick_copy.wgsl");
     compute_octree_initialization_shader = RendererStorage::get_shader("data/shaders/octree/initialization.wgsl");
