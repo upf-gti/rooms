@@ -5,12 +5,13 @@
 
 #include <vector>
 
-class Entity;
+class Node;
+class Node3D;
 
 class RoomsEngine : public Engine {
 
-    static std::vector<Entity*> entities;
-    static EntityMesh* skybox;
+    static std::vector<Node3D*> entities;
+    static MeshInstance3D* skybox;
 
     SculptEditor sculpt_editor;
 
@@ -18,7 +19,7 @@ class RoomsEngine : public Engine {
     bool import_scene();
 
     void render_gui();
-    bool show_tree_recursive(Entity* entity);
+    bool show_tree_recursive(Node* entity);
 
 public:
 

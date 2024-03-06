@@ -2,7 +2,7 @@
 #include "framework/utils/utils.h"
 #include "framework/input.h"
 #include "framework/utils/intersections.h"
-#include "framework/entities/entity_mesh.h"
+#include "framework/nodes/mesh_instance_3d.h"
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/shader.h"
 #include "sculpt_editor.h"
