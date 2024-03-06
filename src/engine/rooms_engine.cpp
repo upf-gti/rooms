@@ -18,6 +18,7 @@
 std::vector<Node3D*> RoomsEngine::entities;
 
 ui::Panel2D* panel = nullptr;
+ui::Text2D* text = nullptr;
 
 int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen)
 {
@@ -35,7 +36,9 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 
     //import_scene();
 
-    panel = new ui::Panel2D({ 0.0f, 0.0f }, {1.0f, 1.0f}, colors::RED);
+    panel = new ui::Panel2D({ 0.1f, 0.1f }, {0.25f, 0.25f}, colors::RED);
+
+    text = new ui::Text2D("oppenheimer", { 0.1f, 0.1f }, 0.1f, colors::BLACK);
 
 	return error;
 }
@@ -66,6 +69,7 @@ void RoomsEngine::render()
 #endif
 
     panel->render();
+    text->render();
 
 	for (auto entity : entities) {
 		entity->render();

@@ -1,4 +1,5 @@
 #include "rooms_renderer.h"
+#include "framework/camera/camera_2d.h"
 
 #ifdef XR_SUPPORT
 #include "dawnxr/dawnxr_internal.h"
@@ -35,16 +36,24 @@ int RoomsRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
     }
 #endif
 
-    camera = new FlyoverCamera();
+    // Main 3D Camera
 
+    camera = new FlyoverCamera();
     camera->set_perspective(glm::radians(45.0f), webgpu_context.render_width / static_cast<float>(webgpu_context.render_height), z_near, z_far);
     camera->look_at(glm::vec3(0.0f, 0.1f, 0.4f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     camera->set_mouse_sensitivity(0.003f);
     camera->set_speed(0.5f);
 
-    // Camera
     std::vector<Uniform*> uniforms = { &camera_uniform };
     render_bind_group_camera = webgpu_context.create_bind_group(uniforms, RendererStorage::get_shader("data/shaders/mesh_pbr.wgsl"), 1);
+
+    // Orthographic camera for ui rendering
+
+    camera_2d = new Camera2D();
+    camera_2d->set_orthographic(-1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f);
+
+    uniforms = { &camera_2d_uniform };
+    render_bind_group_camera_2d = webgpu_context.create_bind_group(uniforms, RendererStorage::get_shader("data/shaders/mesh_color.wgsl"), 1);
 
     return 0;
 }
@@ -113,11 +122,21 @@ void RoomsRenderer::render()
 
 void RoomsRenderer::render_screen()
 {
+    // Update main 3d camera
+
     camera_data.eye = camera->get_eye();
     camera_data.mvp = camera->get_view_projection();
     camera_data.dummy = 0.f;
 
-    wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(camera_uniform.data), 0, &(camera_data), sizeof(sCameraData));
+    wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(camera_uniform.data), 0, &camera_data, sizeof(sCameraData));
+
+    // Update 2d camera for UI
+
+    camera_2d_data.eye = camera_2d->get_eye();
+    camera_2d_data.mvp = camera_2d->get_view_projection();
+    camera_2d_data.dummy = 0.f;
+
+    wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(camera_2d_uniform.data), 0, &camera_2d_data, sizeof(sCameraData));
 
     WGPUTextureView swapchain_view = wgpuSwapChainGetCurrentTextureView(webgpu_context.screen_swapchain);
 
@@ -167,7 +186,7 @@ void RoomsRenderer::render_screen()
 
         render_transparent(render_pass, render_bind_group_camera);
 
-        //render_2D(render_pass, render_bind_group_camera);
+        render_2D(render_pass, render_bind_group_camera_2d);
 
         wgpuRenderPassEncoderEnd(render_pass);
 
@@ -276,7 +295,7 @@ void RoomsRenderer::render_xr()
 
             render_transparent(render_pass, render_bind_group_camera);
 
-            //render_2D(render_pass, render_bind_group_camera);
+            render_2D(render_pass, render_bind_group_camera_2d);
 
             wgpuRenderPassEncoderEnd(render_pass);
 
@@ -446,6 +465,10 @@ void RoomsRenderer::init_camera_bind_group()
     camera_uniform.data = webgpu_context.create_buffer(sizeof(sCameraData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "camera_buffer");
     camera_uniform.binding = 0;
     camera_uniform.buffer_size = sizeof(sCameraData);
+
+    camera_2d_uniform.data = webgpu_context.create_buffer(sizeof(sCameraData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "camera_buffer");
+    camera_2d_uniform.binding = 0;
+    camera_2d_uniform.buffer_size = sizeof(sCameraData);
 }
 
 void RoomsRenderer::resize_window(int width, int height)

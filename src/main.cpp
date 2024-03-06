@@ -100,7 +100,7 @@ int main()
         glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
-        window = glfwCreateWindow(screen_width, screen_height, "WebGPU Engine", NULL, NULL);
+        window = glfwCreateWindow(screen_width, screen_height, "ROOMS", NULL, NULL);
     }
 
     if (engine->initialize(renderer, window, use_glfw, use_mirror_screen)) {
