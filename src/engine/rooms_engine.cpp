@@ -6,8 +6,9 @@
 #include "graphics/renderers/rooms_renderer.h"
 
 #include "spdlog/spdlog.h"
-#include "backends/imgui_impl_wgpu.h"
-#include "backends/imgui_impl_glfw.h"
+
+#include "imgui.h"
+
 #include "framework/utils/tinyfiledialogs.h"
 
 #include <fstream>

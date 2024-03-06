@@ -6,7 +6,6 @@
 
 #include "spdlog/spdlog.h"
 
-#include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_wgpu.h"
 
 RoomsRenderer::RoomsRenderer() : Renderer()
@@ -29,7 +28,6 @@ int RoomsRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
     init_ibl_bind_group();
 
     raymarching_renderer.initialize(use_mirror_screen);
-    mesh_renderer.initialize();
 
 #ifdef XR_SUPPORT
     if (is_openxr_available && use_mirror_screen) {
@@ -44,6 +42,10 @@ int RoomsRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
     camera->set_mouse_sensitivity(0.003f);
     camera->set_speed(0.5f);
 
+    // Camera
+    std::vector<Uniform*> uniforms = { &camera_uniform };
+    render_bind_group_camera = webgpu_context.create_bind_group(uniforms, RendererStorage::get_shader("data/shaders/mesh_pbr.wgsl"), 1);
+
     return 0;
 }
 
@@ -52,7 +54,6 @@ void RoomsRenderer::clean()
     Renderer::clean();
 
     raymarching_renderer.clean();
-    mesh_renderer.clean();
 
     wgpuTextureViewRelease(eye_depth_texture_view[EYE_LEFT]);
     wgpuTextureViewRelease(eye_depth_texture_view[EYE_RIGHT]);
@@ -87,7 +88,6 @@ void RoomsRenderer::update(float delta_time)
     }
 
     raymarching_renderer.update(delta_time);
-    mesh_renderer.update(delta_time);
 }
 
 void RoomsRenderer::render()
@@ -158,14 +158,16 @@ void RoomsRenderer::render_screen()
         // Create & fill the render pass (encoder)
         WGPURenderPassEncoder render_pass = wgpuCommandEncoderBeginRenderPass(command_encoder, &render_pass_descr);
 
-        mesh_renderer.render_opaque(render_pass);
+        render_opaque(render_pass, render_bind_group_camera);
 
 #ifndef DISABLE_RAYMARCHER
         raymarching_renderer.set_camera_eye(camera->get_eye());
         raymarching_renderer.render_raymarching_proxy(render_pass);
 #endif
 
-        mesh_renderer.render_transparent(render_pass);
+        render_transparent(render_pass, render_bind_group_camera);
+
+        //render_2D(render_pass, render_bind_group_camera);
 
         wgpuRenderPassEncoderEnd(render_pass);
 
@@ -265,14 +267,16 @@ void RoomsRenderer::render_xr()
             // Create & fill the render pass (encoder)
             WGPURenderPassEncoder render_pass = wgpuCommandEncoderBeginRenderPass(command_encoder, &render_pass_descr);
 
-            mesh_renderer.render_opaque(render_pass);
+            render_opaque(render_pass, render_bind_group_camera);
 
 #ifndef DISABLE_RAYMARCHER
             raymarching_renderer.set_camera_eye(xr_context.per_view_data[i].position);
             raymarching_renderer.render_raymarching_proxy(render_pass);
 #endif
 
-            mesh_renderer.render_transparent(render_pass);
+            render_transparent(render_pass, render_bind_group_camera);
+
+            //render_2D(render_pass, render_bind_group_camera);
 
             wgpuRenderPassEncoderEnd(render_pass);
 
@@ -432,7 +436,7 @@ void RoomsRenderer::init_mirror_pipeline()
         swapchain_bind_groups.push_back(webgpu_context.create_bind_group(uniforms, mirror_shader, 0));
     }
 
-    mirror_pipeline.create_render(mirror_shader, color_target, { .uses_depth_buffer = false });
+    mirror_pipeline.create_render(mirror_shader, color_target, { .depth_read = false });
 }
 
 #endif

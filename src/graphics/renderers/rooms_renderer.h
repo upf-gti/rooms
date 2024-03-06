@@ -7,7 +7,6 @@
 #include "graphics/texture.h"
 
 #include "raymarching_renderer.h"
-#include "mesh_renderer.h"
 
 #include "framework/camera/flyover_camera.h"
 #include "framework/camera/orbit_camera.h"
@@ -34,6 +33,10 @@ class RoomsRenderer : public Renderer {
 
     void render_screen();
 
+
+    // Render meshes with material color
+    WGPUBindGroup render_bind_group_camera = nullptr;
+
     void init_depth_buffers();
     void init_camera_bind_group();
 
@@ -56,8 +59,6 @@ class RoomsRenderer : public Renderer {
 #endif // XR_SUPPORT
 
 public:
-    MeshRenderer mesh_renderer;
-
 
     RoomsRenderer();
 

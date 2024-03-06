@@ -8,12 +8,11 @@
 
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/renderer_storage.h"
-#include "backends/imgui_impl_wgpu.h"
-#include "backends/imgui_impl_glfw.h"
 
 #include "framework/utils/utils.h"
 
 #include "spdlog/spdlog.h"
+#include "imgui.h"
 
 #include <glm/gtx/quaternion.hpp>
 
@@ -28,9 +27,9 @@ void SculptEditor::initialize()
     mirror_mesh->scale(glm::vec3(0.25f));
 
     Material mirror_material;
-    mirror_material.shader = RendererStorage::get_shader("data/shaders/mesh_texture.wgsl");
     mirror_material.diffuse_texture = RendererStorage::get_texture("data/textures/mirror_quad_texture.png");
-    mirror_material.flags |= MATERIAL_DIFFUSE | MATERIAL_TRANSPARENT;
+    mirror_material.flags |= MATERIAL_DIFFUSE;
+    mirror_material.shader = RendererStorage::get_shader("data/shaders/mesh_texture.wgsl", mirror_material);
 
     mirror_mesh->set_surface_material_override(mirror_mesh->get_surface(0), mirror_material);
 
@@ -41,8 +40,8 @@ void SculptEditor::initialize()
     floor_grid_mesh->scale(glm::vec3(10.f));
 
     Material grid_material;
-    grid_material.shader = RendererStorage::get_shader("data/shaders/mesh_grid.wgsl");
-    grid_material.flags |= MATERIAL_TRANSPARENT;
+    grid_material.transparency_type = ALPHA_BLEND;
+    grid_material.shader = RendererStorage::get_shader("data/shaders/mesh_grid.wgsl", grid_material);
 
     floor_grid_mesh->set_surface_material_override(mirror_mesh->get_surface(0), grid_material);
 
@@ -69,9 +68,10 @@ void SculptEditor::initialize()
         mesh_preview->add_surface(sphere_surface);
 
         Material preview_material;
-        preview_material.shader = RendererStorage::get_shader("data/shaders/mesh_transparent.wgsl");
-        preview_material.flags |= MATERIAL_TRANSPARENT;
         preview_material.priority = 1;
+        preview_material.cull_type = CULL_FRONT;
+        preview_material.transparency_type = ALPHA_BLEND;
+        preview_material.shader = RendererStorage::get_shader("data/shaders/mesh_transparent.wgsl", preview_material);
 
         mesh_preview->set_surface_material_override(sphere_surface, preview_material);
 
@@ -79,7 +79,8 @@ void SculptEditor::initialize()
         mesh_preview_outline->add_surface(sphere_surface);
 
         Material outline_material;
-        outline_material.shader = RendererStorage::get_shader("data/shaders/mesh_outline.wgsl");
+        outline_material.cull_type = CULL_FRONT;
+        outline_material.shader = RendererStorage::get_shader("data/shaders/mesh_outline.wgsl", outline_material);
 
         mesh_preview_outline->set_surface_material_override(sphere_surface, outline_material);
     }
