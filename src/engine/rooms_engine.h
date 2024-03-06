@@ -7,11 +7,13 @@
 
 class Node;
 class Node3D;
+class Environment3D;
 
 class RoomsEngine : public Engine {
 
     static std::vector<Node3D*> entities;
-    static MeshInstance3D* skybox;
+
+    Environment3D* skybox = nullptr;
 
     SculptEditor sculpt_editor;
 

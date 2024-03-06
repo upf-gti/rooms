@@ -1,21 +1,17 @@
 #include "rooms_engine.h"
-
-#include "framework/nodes/mesh_instance_3d.h"
+#include "framework/nodes/environment_3d.h"
 #include "framework/input.h"
 #include "framework/scene/parse_scene.h"
 #include "framework/scene/parse_gltf.h"
 #include "graphics/renderers/rooms_renderer.h"
 
 #include "spdlog/spdlog.h"
-
 #include "backends/imgui_impl_wgpu.h"
 #include "backends/imgui_impl_glfw.h"
-
 #include "framework/utils/tinyfiledialogs.h"
 
 #include <fstream>
 
-MeshInstance3D* RoomsEngine::skybox = nullptr;
 std::vector<Node3D*> RoomsEngine::entities;
 
 int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen)
@@ -24,11 +20,9 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 
     sculpt_editor.initialize();
 
-    skybox = parse_mesh("data/meshes/cube.obj");
-    skybox->set_surface_material_shader(0, RendererStorage::get_shader("data/shaders/mesh_texture_cube.wgsl"));
-    skybox->set_surface_material_diffuse(0, Renderer::instance->get_irradiance_texture());
-    skybox->scale(glm::vec3(100.f));
-    skybox->set_surface_material_priority(0, 2);
+    skybox = new Environment3D();
+
+    entities.push_back(skybox);
 
     //if (parse_scene("data/gltf_tests/Sponza/Sponza.gltf", entities)) {
     //    //Renderer::instance->get_camera()->look_at_entity(entities.back());
@@ -50,9 +44,6 @@ void RoomsEngine::update(float delta_time)
 {
     Engine::update(delta_time);
 
-    RoomsRenderer* renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
-    skybox->set_translation(renderer->get_camera_eye());
-
     sculpt_editor.update(delta_time);
 
     if (Input::was_key_pressed(GLFW_KEY_E))
@@ -63,12 +54,9 @@ void RoomsEngine::update(float delta_time)
 
 void RoomsEngine::render()
 {
-
 #ifndef __EMSCRIPTEN__
     render_gui();
 #endif
-
-    skybox->render();
 
 	for (auto entity : entities) {
 		entity->render();
