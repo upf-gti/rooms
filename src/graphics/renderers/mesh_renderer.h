@@ -4,8 +4,6 @@
 
 #include "graphics/pipeline.h"
 
-#include "tools/sculpt/tool.h"
-
 class MeshRenderer {
 
     // Render meshes with material color
