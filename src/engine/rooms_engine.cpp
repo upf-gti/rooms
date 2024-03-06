@@ -13,7 +13,11 @@
 
 #include <fstream>
 
+#include "framework/nodes/ui.h"
+
 std::vector<Node3D*> RoomsEngine::entities;
+
+ui::Panel2D* panel = nullptr;
 
 int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen)
 {
@@ -30,6 +34,8 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     //}
 
     //import_scene();
+
+    panel = new ui::Panel2D({ 0.0f, 0.0f }, {1.0f, 1.0f}, colors::RED);
 
 	return error;
 }
@@ -58,6 +64,8 @@ void RoomsEngine::render()
 #ifndef __EMSCRIPTEN__
     render_gui();
 #endif
+
+    panel->render();
 
 	for (auto entity : entities) {
 		entity->render();
