@@ -22,6 +22,8 @@ ui::Text2D* text = nullptr;
 ui::Slider2D* slider = nullptr;
 ui::ColorPicker2D* picker = nullptr;
 ui::ButtonGroup2D* group = nullptr;
+ui::HContainer2D* h_container = nullptr;
+ui::VContainer2D* v_container = nullptr;
 
 int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen)
 {
@@ -39,18 +41,44 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 
     //import_scene();
 
-    panel = new ui::Panel2D({ 96.0f, 96.0f }, { 240.0f, 620.f }, colors::CYAN);
+    panel = new ui::Panel2D("panel", { 96.0f, 96.0f }, {240.0f, 720.f}, colors::CYAN);
 
-    text = new ui::Text2D("oppenheimer", { 100.0f, 60.0f }, 48.f, colors::BLACK);
+    text = new ui::Text2D("oppenheimer", { 100.0f, 0.0f }, 48.f, colors::BLACK);
 
-    slider = new ui::Slider2D("slider", 0.5f, { 120.0f, 100.f }, ui::SliderMode::VERTICAL);
+    slider = new ui::Slider2D("slider", 0.5f, { 120.0f, 60.f }, ui::SliderMode::VERTICAL);
 
-    group = new ui::ButtonGroup2D({ 120.0f, 280.f }, { 128.0f, 128.0f });
+    picker = new ui::ColorPicker2D("color", { 100.0f, 390.0f }, { 256.0f, 256.0f }, colors::RED);
 
-    picker = new ui::ColorPicker2D("color", { 100.0f, 450.0f }, { 128.0f, 128.0f }, colors::RED);
+    Node::bind("color", [&](const std::string& sg, Color c) {
+        panel->set_color(c);
+    });
+
+    Node::bind("color@released", [&](const std::string& sg, Color c) {
+        spdlog::info("{} RELEASED", sg);
+    });
+
+
+    group = new ui::ButtonGroup2D({ 120.0f, 220.f });
 
     group->add_child(new ui::Button2D("test1"));
     group->add_child(new ui::Button2D("test2"));
+
+    Node::bind("test1", [](const std::string& sg, void* data) {
+        spdlog::info("BUTTON {} PRESSED", sg);
+    });
+
+    h_container = new ui::HContainer2D("h_container", { 120.0f, 680.f });
+
+    h_container->add_child(new ui::Button2D("test3"));
+    h_container->add_child(new ui::Button2D("test4"));
+    h_container->add_child(new ui::Button2D("test5"));
+
+    v_container = new ui::VContainer2D("v_container", { 520.0f, 280.f });
+
+    v_container->add_child(new ui::Button2D("test6"));
+    v_container->add_child(new ui::Button2D("test7"));
+    v_container->add_child(group);
+    v_container->add_child(new ui::Button2D("test8"));
 
 	return error;
 }
@@ -66,12 +94,16 @@ void RoomsEngine::update(float delta_time)
 {
     Engine::update(delta_time);
 
+    Node::check_controller_signals();
+
     sculpt_editor.update(delta_time);
 
+    panel->update(delta_time);
     picker->update(delta_time);
     slider->update(delta_time);
-
-    group->update(delta_time);
+    h_container->update(delta_time);
+    v_container->update(delta_time);
+    //group->update(delta_time);
 
     if (Input::was_key_pressed(GLFW_KEY_E))
     {
@@ -89,7 +121,9 @@ void RoomsEngine::render()
     slider->render();
     text->render();
     picker->render();
-    group->render();
+    //group->render();
+    h_container->render();
+    v_container->render();
 
 	for (auto entity : entities) {
 		entity->render();

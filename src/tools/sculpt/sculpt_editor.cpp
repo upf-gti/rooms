@@ -780,12 +780,12 @@ void SculptEditor::bind_events()
 {
     // UI Layout from JSON
     {
-        gui.load_layout("data/ui/main.json");
+        // gui.load_layout("data/ui/main.json");
     }
 
     // Set events
     {
-        gui.bind("sculpt", [&](const std::string& signal, void* button) { enable_tool(SCULPT); });
+        /*gui.bind("sculpt", [&](const std::string& signal, void* button) { enable_tool(SCULPT); });
         gui.bind("paint", [&](const std::string& signal, void* button) { enable_tool(PAINT); });
 
         gui.bind("sphere", [&](const std::string& signal, void* button) {  set_primitive(SD_SPHERE); });
@@ -819,7 +819,7 @@ void SculptEditor::bind_events()
         gui.bind("noise_color_picker", [&](const std::string& signal, Color color) { stroke_parameters.set_material_noise_color(color); });
 
         gui.bind("color_picker", [&](const std::string& signal, Color color) { stroke_parameters.set_material_color(color); });
-        gui.bind("pick_material", [&](const std::string& signal, void* button) { is_picking_material = !is_picking_material; });
+        gui.bind("pick_material", [&](const std::string& signal, void* button) { is_picking_material = !is_picking_material; });*/
 
         // Bind recent color buttons...
 
@@ -864,21 +864,21 @@ void SculptEditor::bind_events()
         //    });
         //}
 
-        gui.bind("save_material", [&](const std::string& signal, void* button) {
+        /*gui.bind("save_material", [&](const std::string& signal, void* button) {
             generate_material_from_stroke(button);
-        });
+        });*/
     }
 
     // Create helper ui
     {
-        helper_gui.load_layout("data/ui/helper.json");
+        //helper_gui.load_layout("data/ui/helper.json");
 
-        // Customize a little bit...
-        helper_gui.get_workspace().hand = HAND_RIGHT;
-        helper_gui.get_workspace().root_pose = POSE_GRIP;
+        //// Customize a little bit...
+        //helper_gui.get_workspace().hand = HAND_RIGHT;
+        //helper_gui.get_workspace().root_pose = POSE_GRIP;
 
-        // Controller buttons
-        helper_gui.bind(XR_BUTTON_B, [&]() { stamp_enabled = !stamp_enabled; });
+        //// Controller buttons
+        //helper_gui.bind(XR_BUTTON_B, [&]() { stamp_enabled = !stamp_enabled; });
     }
 }
 
@@ -958,13 +958,13 @@ void SculptEditor::generate_material_from_stroke(void* button)
 void SculptEditor::update_gui_from_stroke_material(const StrokeMaterial& mat)
 {
     // Emit signals to change UI values
-    gui.emit_signal("color_picker@changed", mat.color);
+    /*gui.emit_signal("color_picker@changed", mat.color);
     gui.emit_signal("roughness@changed", mat.roughness);
     gui.emit_signal("metallic@changed", mat.metallic);
     gui.emit_signal("noise_intensity@changed", mat.noise_params.x);
     gui.emit_signal("noise_frequency@changed", mat.noise_params.y);
     gui.emit_signal("noise_octaves@changed", mat.noise_params.z);
-    gui.emit_signal("noise_color_picker@changed", mat.noise_color);
+    gui.emit_signal("noise_color_picker@changed", mat.noise_color);*/
 }
 
 void SculptEditor::update_stroke_from_material(const std::string& name)
@@ -1000,7 +1000,7 @@ void SculptEditor::pick_material()
     }
 
     // Disable picking..
-    gui.emit_signal("pick_material", (void*)nullptr);
+    // gui.emit_signal("pick_material", (void*)nullptr);
 
     // Manage interactions, set stamp mode until tool is used again
     stamp_enabled = true;
