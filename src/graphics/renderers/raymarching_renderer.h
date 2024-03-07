@@ -10,16 +10,20 @@
 
 #include <list>
 
+// Tweakable parameters
 #define MATERIAL_DOUBLE_RESULTION true
 #define SSAA_SDF_WRITE_TO_TEXTURE true
+#define SCULPT_MAX_SIZE 2 // meters
+#define OCTREE_DEPTH 6
+#define SDF_RESOLUTION 400
+#define PREVIEW_PROXY_BRICKS_COUNT 4000u
+
+// More static constant
+#define SDF_BRICK_SIZE 10
+#define PREVIEW_EDITS_MAX 128
 #define MATERIAL_RESOLUTION (SDF_RESOLUTION * ((MATERIAL_DOUBLE_RESULTION) ? 2 : 1))
 #define MATERIAL_BRICK_SIZE (SDF_BRICK_SIZE * ((MATERIAL_DOUBLE_RESULTION) ? 2 : 1))
-#define PREVIEW_EDITS_MAX 128
-#define SDF_RESOLUTION 400
-#define SCULPT_MAX_SIZE 2 // meters
-#define PREVIEW_PROXY_BRICKS_COUNT 4000u
-#define OCTREE_DEPTH 6
-#define SDF_BRICK_SIZE 10
+
 
 class MeshInstance3D;
 

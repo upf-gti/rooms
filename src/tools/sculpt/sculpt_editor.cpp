@@ -1,6 +1,5 @@
 #include "sculpt_editor.h"
 
-
 #include "includes.h"
 
 #include "framework/nodes/ui.h"

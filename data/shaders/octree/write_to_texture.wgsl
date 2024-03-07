@@ -93,7 +93,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
         let distance : f32 = textureLoad(write_sdf, texture_coordinates).r;
 
 #ifdef DOUBLE_MATERIAL_RES
-        // Load all the material subsamples of the current position
+        // Initialize all the samples with the according material subsamples
         for(var i : u32 = 0u; i < 8u; i++) {
             let texture_pos : vec3u = delta_pos_texture[i];
             let raw_material : u32 = textureLoad(write_material_sdf, material_coordinates_origin + texture_pos).r;
@@ -101,6 +101,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
             surface_samples[i] = Surface(unpack_material(u32(raw_material)), distance);
         }  
 #else
+        // Initialize all the samples with the same material
         sSurface.distance = distance;
         let raw_material : u32 = textureLoad(write_material_sdf, texture_coordinates).r;
         sSurface.material = unpack_material(u32(raw_material));
@@ -116,10 +117,12 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
         surface_samples[8] = sSurface;
 #endif
     } else {
+        // If the brick is not filled, or is an interior brick, we just filled it with a the same material
         if ((INTERIOR_BRICK_FLAG & brick_pointer) == INTERIOR_BRICK_FLAG) {
             sSurface.distance = -100.0;
         }
 
+        // If we are not capturing multiple samples, just take one
 #ifdef SSAA_OR_DOUBLE_MATERIAL_RES
         surface_samples[0] = sSurface;
         surface_samples[1] = sSurface;
