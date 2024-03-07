@@ -1,4 +1,5 @@
 #include "rooms_renderer.h"
+#include "framework/camera/camera_2d.h"
 
 #ifdef XR_SUPPORT
 #include "dawnxr/dawnxr_internal.h"
@@ -6,7 +7,6 @@
 
 #include "spdlog/spdlog.h"
 
-#include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_wgpu.h"
 
 RoomsRenderer::RoomsRenderer() : Renderer()
@@ -35,7 +35,6 @@ int RoomsRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
     init_ibl_bind_group();
 
     raymarching_renderer.initialize(use_mirror_screen);
-    mesh_renderer.initialize();
 
 #ifdef XR_SUPPORT
     if (is_openxr_available && use_mirror_screen) {
@@ -43,12 +42,27 @@ int RoomsRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
     }
 #endif
 
-    camera = new FlyoverCamera();
+    // Main 3D Camera
 
+    camera = new FlyoverCamera();
     camera->set_perspective(glm::radians(45.0f), webgpu_context.render_width / static_cast<float>(webgpu_context.render_height), z_near, z_far);
     camera->look_at(glm::vec3(0.0f, 0.1f, 0.4f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     camera->set_mouse_sensitivity(0.003f);
     camera->set_speed(0.5f);
+
+    std::vector<Uniform*> uniforms = { &camera_uniform };
+    render_bind_group_camera = webgpu_context.create_bind_group(uniforms, RendererStorage::get_shader("data/shaders/mesh_pbr.wgsl"), 1);
+
+    // Orthographic camera for ui rendering
+
+    float w = static_cast<float>(webgpu_context.render_width);
+    float h = static_cast<float>(webgpu_context.render_height);
+
+    camera_2d = new Camera2D();
+    camera_2d->set_orthographic(0.0f, w, h, 0.0f, -1.0f, 1.0f);
+
+    uniforms = { &camera_2d_uniform };
+    render_bind_group_camera_2d = webgpu_context.create_bind_group(uniforms, RendererStorage::get_shader("data/shaders/mesh_color.wgsl"), 1);
 
     return 0;
 }
@@ -58,7 +72,6 @@ void RoomsRenderer::clean()
     Renderer::clean();
 
     raymarching_renderer.clean();
-    mesh_renderer.clean();
 
     wgpuTextureViewRelease(eye_depth_texture_view[EYE_LEFT]);
     wgpuTextureViewRelease(eye_depth_texture_view[EYE_RIGHT]);
@@ -93,7 +106,6 @@ void RoomsRenderer::update(float delta_time)
     }
 
     raymarching_renderer.update(delta_time);
-    mesh_renderer.update(delta_time);
 }
 
 void RoomsRenderer::render()
@@ -119,11 +131,21 @@ void RoomsRenderer::render()
 
 void RoomsRenderer::render_screen()
 {
+    // Update main 3d camera
+
     camera_data.eye = camera->get_eye();
     camera_data.mvp = camera->get_view_projection();
     camera_data.dummy = 0.f;
 
-    wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(camera_uniform.data), 0, &(camera_data), sizeof(sCameraData));
+    wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(camera_uniform.data), 0, &camera_data, sizeof(sCameraData));
+
+    // Update 2d camera for UI
+
+    camera_2d_data.eye = camera_2d->get_eye();
+    camera_2d_data.mvp = camera_2d->get_view_projection();
+    camera_2d_data.dummy = 0.f;
+
+    wgpuQueueWriteBuffer(webgpu_context.device_queue, std::get<WGPUBuffer>(camera_2d_uniform.data), 0, &camera_2d_data, sizeof(sCameraData));
 
     WGPUTextureView swapchain_view = wgpuSwapChainGetCurrentTextureView(webgpu_context.screen_swapchain);
 
@@ -164,14 +186,16 @@ void RoomsRenderer::render_screen()
         // Create & fill the render pass (encoder)
         WGPURenderPassEncoder render_pass = wgpuCommandEncoderBeginRenderPass(command_encoder, &render_pass_descr);
 
-        mesh_renderer.render_opaque(render_pass);
+        render_opaque(render_pass, render_bind_group_camera);
 
 #ifndef DISABLE_RAYMARCHER
         raymarching_renderer.set_camera_eye(camera->get_eye());
         raymarching_renderer.render_raymarching_proxy(render_pass);
 #endif
 
-        mesh_renderer.render_transparent(render_pass);
+        render_transparent(render_pass, render_bind_group_camera);
+
+        render_2D(render_pass, render_bind_group_camera_2d);
 
         wgpuRenderPassEncoderEnd(render_pass);
 
@@ -271,14 +295,16 @@ void RoomsRenderer::render_xr()
             // Create & fill the render pass (encoder)
             WGPURenderPassEncoder render_pass = wgpuCommandEncoderBeginRenderPass(command_encoder, &render_pass_descr);
 
-            mesh_renderer.render_opaque(render_pass);
+            render_opaque(render_pass, render_bind_group_camera);
 
 #ifndef DISABLE_RAYMARCHER
             raymarching_renderer.set_camera_eye(xr_context.per_view_data[i].position);
             raymarching_renderer.render_raymarching_proxy(render_pass);
 #endif
 
-            mesh_renderer.render_transparent(render_pass);
+            render_transparent(render_pass, render_bind_group_camera);
+
+            render_2D(render_pass, render_bind_group_camera_2d);
 
             wgpuRenderPassEncoderEnd(render_pass);
 
@@ -438,7 +464,7 @@ void RoomsRenderer::init_mirror_pipeline()
         swapchain_bind_groups.push_back(webgpu_context.create_bind_group(uniforms, mirror_shader, 0));
     }
 
-    mirror_pipeline.create_render(mirror_shader, color_target, { .uses_depth_buffer = false });
+    mirror_pipeline.create_render(mirror_shader, color_target, { .depth_read = false });
 }
 
 #endif
@@ -448,6 +474,10 @@ void RoomsRenderer::init_camera_bind_group()
     camera_uniform.data = webgpu_context.create_buffer(sizeof(sCameraData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "camera_buffer");
     camera_uniform.binding = 0;
     camera_uniform.buffer_size = sizeof(sCameraData);
+
+    camera_2d_uniform.data = webgpu_context.create_buffer(sizeof(sCameraData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "camera_buffer");
+    camera_2d_uniform.binding = 0;
+    camera_2d_uniform.buffer_size = sizeof(sCameraData);
 }
 
 void RoomsRenderer::resize_window(int width, int height)

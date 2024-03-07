@@ -1,6 +1,5 @@
 #include "rooms_engine.h"
-
-#include "framework/nodes/mesh_instance_3d.h"
+#include "framework/nodes/environment_3d.h"
 #include "framework/input.h"
 #include "framework/scene/parse_scene.h"
 #include "framework/scene/parse_gltf.h"
@@ -8,15 +7,21 @@
 
 #include "spdlog/spdlog.h"
 
-#include "backends/imgui_impl_wgpu.h"
-#include "backends/imgui_impl_glfw.h"
+#include "imgui.h"
 
 #include "framework/utils/tinyfiledialogs.h"
 
 #include <fstream>
 
-MeshInstance3D* RoomsEngine::skybox = nullptr;
+#include "framework/nodes/ui.h"
+
 std::vector<Node3D*> RoomsEngine::entities;
+
+ui::Panel2D* panel = nullptr;
+ui::Text2D* text = nullptr;
+ui::Slider2D* slider = nullptr;
+ui::ColorPicker2D* picker = nullptr;
+ui::ButtonGroup2D* group = nullptr;
 
 int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen)
 {
@@ -24,17 +29,28 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 
     sculpt_editor.initialize();
 
-    skybox = parse_mesh("data/meshes/cube.obj");
-    skybox->set_surface_material_shader(0, RendererStorage::get_shader("data/shaders/mesh_texture_cube.wgsl"));
-    skybox->set_surface_material_diffuse(0, Renderer::instance->get_irradiance_texture());
-    skybox->scale(glm::vec3(100.f));
-    skybox->set_surface_material_priority(0, 2);
+    skybox = new Environment3D();
+
+    entities.push_back(skybox);
 
     //if (parse_scene("data/gltf_tests/Sponza/Sponza.gltf", entities)) {
     //    //Renderer::instance->get_camera()->look_at_entity(entities.back());
     //}
 
     //import_scene();
+
+    panel = new ui::Panel2D({ 96.0f, 96.0f }, { 240.0f, 620.f }, colors::CYAN);
+
+    text = new ui::Text2D("oppenheimer", { 100.0f, 60.0f }, 48.f, colors::BLACK);
+
+    slider = new ui::Slider2D("slider", 0.5f, { 120.0f, 100.f }, ui::SliderMode::VERTICAL);
+
+    group = new ui::ButtonGroup2D({ 120.0f, 280.f }, { 128.0f, 128.0f });
+
+    picker = new ui::ColorPicker2D("color", { 100.0f, 450.0f }, { 128.0f, 128.0f }, colors::RED);
+
+    group->add_child(new ui::Button2D("test1"));
+    group->add_child(new ui::Button2D("test2"));
 
 	return error;
 }
@@ -50,10 +66,12 @@ void RoomsEngine::update(float delta_time)
 {
     Engine::update(delta_time);
 
-    RoomsRenderer* renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
-    skybox->set_translation(renderer->get_camera_eye());
-
     sculpt_editor.update(delta_time);
+
+    picker->update(delta_time);
+    slider->update(delta_time);
+
+    group->update(delta_time);
 
     if (Input::was_key_pressed(GLFW_KEY_E))
     {
@@ -63,12 +81,15 @@ void RoomsEngine::update(float delta_time)
 
 void RoomsEngine::render()
 {
-
 #ifndef __EMSCRIPTEN__
     render_gui();
 #endif
 
-    skybox->render();
+    panel->render();
+    slider->render();
+    text->render();
+    picker->render();
+    group->render();
 
 	for (auto entity : entities) {
 		entity->render();
@@ -297,6 +318,14 @@ void RoomsEngine::render_gui()
         if (ImGui::BeginTabItem("Sculpt Editor"))
         {
             sculpt_editor.render_gui();
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem("GUI"))
+        {
+            if (ImGui::Button("Add child to group")) {
+                auto button = new ui::Button2D("test");
+                group->add_child(button);
+            }
             ImGui::EndTabItem();
         }
         if (ImGui::BeginTabItem("Debugger"))

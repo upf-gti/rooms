@@ -30,7 +30,7 @@ class SculptEditor {
     bool sculpt_started = false;
     bool was_tool_used = false;
 
-    eTool current_tool = NONE;
+    eTool current_tool = eTool::NONE;
 
     static uint8_t last_generated_material_uid;
     uint8_t num_generated_materials = 0u;

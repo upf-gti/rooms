@@ -7,7 +7,6 @@
 #include "graphics/texture.h"
 
 #include "raymarching_renderer.h"
-#include "mesh_renderer.h"
 
 #include "framework/camera/flyover_camera.h"
 #include "framework/camera/orbit_camera.h"
@@ -20,19 +19,28 @@ class RoomsRenderer : public Renderer {
 
     RaymarchingRenderer raymarching_renderer;
 
-    Surface             quad_surface;
-    Uniform             camera_uniform;
+    Surface quad_surface;
+
+    Uniform camera_uniform;
+    Uniform camera_2d_uniform;
 
     struct sCameraData {
         glm::mat4x4 mvp;
         glm::vec3 eye;
         float dummy;
-    } camera_data;
+    };
+
+    sCameraData camera_data;
+    sCameraData camera_2d_data;
 
     Texture         eye_depth_textures[EYE_COUNT] = {};
     WGPUTextureView eye_depth_texture_view[EYE_COUNT] = {};
 
     void render_screen();
+
+    // Render meshes with material color
+    WGPUBindGroup render_bind_group_camera = nullptr;
+    WGPUBindGroup render_bind_group_camera_2d = nullptr;
 
     void init_depth_buffers();
     void init_camera_bind_group();
@@ -56,8 +64,6 @@ class RoomsRenderer : public Renderer {
 #endif // XR_SUPPORT
 
 public:
-    MeshRenderer mesh_renderer;
-
 
     RoomsRenderer();
 
