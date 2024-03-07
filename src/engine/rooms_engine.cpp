@@ -19,6 +19,9 @@ std::vector<Node3D*> RoomsEngine::entities;
 
 ui::Panel2D* panel = nullptr;
 ui::Text2D* text = nullptr;
+ui::Slider2D* slider = nullptr;
+ui::ColorPicker2D* picker = nullptr;
+ui::ButtonGroup2D* group = nullptr;
 
 int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen)
 {
@@ -36,9 +39,18 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 
     //import_scene();
 
-    panel = new ui::Panel2D({ 0.1f, 0.1f }, {0.25f, 0.25f}, colors::RED);
+    panel = new ui::Panel2D({ 96.0f, 96.0f }, { 240.0f, 620.f }, colors::CYAN);
 
-    text = new ui::Text2D("oppenheimer", { 0.1f, 0.1f }, 0.1f, colors::BLACK);
+    text = new ui::Text2D("oppenheimer", { 100.0f, 60.0f }, 48.f, colors::BLACK);
+
+    slider = new ui::Slider2D("slider", 0.5f, { 120.0f, 100.f }, ui::SliderMode::VERTICAL);
+
+    group = new ui::ButtonGroup2D({ 120.0f, 280.f }, { 128.0f, 128.0f });
+
+    picker = new ui::ColorPicker2D("color", { 100.0f, 450.0f }, { 128.0f, 128.0f }, colors::RED);
+
+    group->add_child(new ui::Button2D("test1"));
+    group->add_child(new ui::Button2D("test2"));
 
 	return error;
 }
@@ -56,6 +68,11 @@ void RoomsEngine::update(float delta_time)
 
     sculpt_editor.update(delta_time);
 
+    picker->update(delta_time);
+    slider->update(delta_time);
+
+    group->update(delta_time);
+
     if (Input::was_key_pressed(GLFW_KEY_E))
     {
         export_scene();
@@ -69,7 +86,10 @@ void RoomsEngine::render()
 #endif
 
     panel->render();
+    slider->render();
     text->render();
+    picker->render();
+    group->render();
 
 	for (auto entity : entities) {
 		entity->render();
@@ -298,6 +318,14 @@ void RoomsEngine::render_gui()
         if (ImGui::BeginTabItem("Sculpt Editor"))
         {
             sculpt_editor.render_gui();
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem("GUI"))
+        {
+            if (ImGui::Button("Add child to group")) {
+                auto button = new ui::Button2D("test");
+                group->add_child(button);
+            }
             ImGui::EndTabItem();
         }
         if (ImGui::BeginTabItem("Debugger"))

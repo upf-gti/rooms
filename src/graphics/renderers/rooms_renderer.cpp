@@ -49,8 +49,11 @@ int RoomsRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
 
     // Orthographic camera for ui rendering
 
+    float w = static_cast<float>(webgpu_context.render_width);
+    float h = static_cast<float>(webgpu_context.render_height);
+
     camera_2d = new Camera2D();
-    camera_2d->set_orthographic(-1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f);
+    camera_2d->set_orthographic(0.0f, w, h, 0.0f, -1.0f, 1.0f);
 
     uniforms = { &camera_2d_uniform };
     render_bind_group_camera_2d = webgpu_context.create_bind_group(uniforms, RendererStorage::get_shader("data/shaders/mesh_color.wgsl"), 1);
