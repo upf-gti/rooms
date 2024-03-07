@@ -21,9 +21,10 @@ ui::Panel2D* panel = nullptr;
 ui::Text2D* text = nullptr;
 ui::Slider2D* slider = nullptr;
 ui::ColorPicker2D* picker = nullptr;
-ui::ButtonGroup2D* group = nullptr;
+ui::ItemGroup2D* group = nullptr;
 ui::HContainer2D* h_container = nullptr;
 ui::VContainer2D* v_container = nullptr;
+ui::ButtonSubmenu2D* submenu = nullptr;
 
 int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen)
 {
@@ -47,7 +48,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 
     slider = new ui::Slider2D("slider", 0.5f, { 120.0f, 60.f }, ui::SliderMode::VERTICAL);
 
-    picker = new ui::ColorPicker2D("color", { 100.0f, 390.0f }, { 256.0f, 256.0f }, colors::RED);
+    picker = new ui::ColorPicker2D("color", { 100.0f, 290.0f }, { 256.0f, 256.0f }, colors::RED);
 
     Node::bind("color", [&](const std::string& sg, Color c) {
         panel->set_color(c);
@@ -58,7 +59,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     });
 
 
-    group = new ui::ButtonGroup2D({ 120.0f, 220.f });
+    group = new ui::ItemGroup2D({ 120.0f, 220.f });
 
     group->add_child(new ui::Button2D("test1"));
     group->add_child(new ui::Button2D("test2"));
@@ -67,18 +68,24 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
         spdlog::info("BUTTON {} PRESSED", sg);
     });
 
-    h_container = new ui::HContainer2D("h_container", { 120.0f, 680.f });
+    h_container = new ui::HContainer2D("h_container", { 120.0f, 120.f });
 
-    h_container->add_child(new ui::Button2D("test3"));
+    h_container->add_child(slider);
     h_container->add_child(new ui::Button2D("test4"));
     h_container->add_child(new ui::Button2D("test5"));
 
-    v_container = new ui::VContainer2D("v_container", { 520.0f, 280.f });
+    v_container = new ui::VContainer2D("v_container", { 620.0f, 120.f });
 
     v_container->add_child(new ui::Button2D("test6"));
     v_container->add_child(new ui::Button2D("test7"));
     v_container->add_child(group);
     v_container->add_child(new ui::Button2D("test8"));
+
+    submenu = new ui::ButtonSubmenu2D("submenu", { 200.0f, 580.f });
+
+    submenu->add_child(new ui::Button2D("test9"));
+    submenu->add_child(new ui::Button2D("test10"));
+    submenu->add_child(new ui::Button2D("test11"));
 
 	return error;
 }
@@ -98,12 +105,11 @@ void RoomsEngine::update(float delta_time)
 
     sculpt_editor.update(delta_time);
 
+    submenu->update(delta_time);
     panel->update(delta_time);
     picker->update(delta_time);
-    slider->update(delta_time);
     h_container->update(delta_time);
     v_container->update(delta_time);
-    //group->update(delta_time);
 
     if (Input::was_key_pressed(GLFW_KEY_E))
     {
@@ -121,9 +127,9 @@ void RoomsEngine::render()
     slider->render();
     text->render();
     picker->render();
-    //group->render();
     h_container->render();
     v_container->render();
+    submenu->render();
 
 	for (auto entity : entities) {
 		entity->render();
