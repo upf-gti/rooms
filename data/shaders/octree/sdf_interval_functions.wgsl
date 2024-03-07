@@ -264,6 +264,13 @@ fn ilength(a : mat3x3f) -> vec2f
 	return isqrt(c[0].xy + c[1].xy + c[2].xy);
 }
 
+fn ilength2(x : vec2f, y : vec2f) -> vec2f
+{
+	let c_x : vec2f = ipow2_vec(x);
+    let c_y : vec2f = ipow2_vec(y);
+	return isqrt(c_x.xy + c_y.xy);
+}
+
 fn icross_mats(a : mat3x3f, b : mat3x3f) -> mat3x3f
 {
 	return iavec3_vecs(
@@ -533,39 +540,60 @@ fn capsule_interval( p : mat3x3f, c : vec3f, rotation : vec4f, radius : f32, hei
     return isub_vec_float(ilength(d), radius);
 }
 
-fn cone_interval(p : mat3x3f, c : vec3f, rotation : vec4f, radius_dims : vec2f, height : f32) -> vec2f
+// fn cone_interval(p : mat3x3f, c : vec3f, rotation : vec4f, radius_dims : vec2f, height : f32) -> vec2f
+// {
+//     var r2 = radius_dims.x;
+//     var r1 = radius_dims.y;
+//     var h = height * 0.5;
+
+//     var pos : mat3x3f = irotate_point_quat(isub_mat_vec(p, c), rotation);
+
+//     let q_x = isqrt(ipow2_vec(pos[0].xy) + ipow2_vec(pos[1].xy));
+//     let q_y = pos[2].xy;
+
+//     let k1 = vec2f(r2, h);
+//     let k2 = vec2f(r2 - r1, 2.0 * h);
+
+//     let sr = iselect(vec2f(r2), vec2f(r1), ilessthan(q_y, vec2f(0.0)));
+//     let ca_x = isub_vecs(q_x, imin(q_x, sr));
+//     let ca_y = isub_vecs(iabs(q_y), vec2f(h));
+
+//     let m_skq_x = iavec3_vec(vec3f(isub_vecs(k1, q_x), 0.0));
+//     let m_skq_y = iavec3_vec(vec3f(isub_vecs(k1, q_y), 0.0));
+
+//     let mk2 : mat3x3f = iavec3_vec(vec3f(k2, 0.0));
+
+//     let cb_x = q_x - k1 + k2 * iclamp( idot_mat(m_skq_x, mk2) / idot_mat(mk2, mk2), 0.0, 1.0);
+//     let cb_y = q_y - k1 + k2 * iclamp( idot_mat(m_skq_y, mk2) / idot_mat(mk2, mk2), 0.0, 1.0);
+
+//     let cond : vec2<bool> = iand(ilessthan(cb_x, vec2f(0.0)), ilessthan(ca_y, vec2f(0.0)));
+//     let s : vec2f = select(vec2f(1.0), vec2f(-1.0), cond);
+
+//     let m_ca = iavec3_vecs(ca_x, ca_y, vec2f(0.0));
+//     let m_cb = iavec3_vecs(cb_x, cb_y, vec2f(0.0));
+
+//     return imul_vec2_vec2(s, isqrt(imin(idot_mat(m_ca, m_ca), idot_mat(m_cb, m_cb))));
+// }
+
+fn cone_interval(p : mat3x3f, edit_position : vec3f, rotation : vec4f, radius_dims : vec2f, h : f32) -> vec2f
 {
     var r2 = radius_dims.x;
     var r1 = radius_dims.y;
-    var h = height * 0.5;
+    var height = h * 0.5;
 
-    var pos : mat3x3f = irotate_point_quat(isub_mat_vec(p, c), rotation);
+    var pos : mat3x3f = irotate_point_quat(isub_mat_vec(p, edit_position), rotation);
 
-    let q_x = isqrt(ipow2_vec(pos[0].xy) + ipow2_vec(pos[1].xy));
-    let q_y = pos[2].xy;
+    let slope : f32 = -height / r2;
+    let ratio : f32 = sqrt(1.0/(slope * slope + 1.0));
 
-    let k1 = vec2f(r2, h);
-    let k2 = vec2f(r2 - r1, 2.0 * h);
+    let test_x : vec2f = iabs(ilength2(pos[0].xy, pos[1].xy));
+    let test_y : vec2f = pos[2].xy;
 
-    let sr = iselect(vec2f(r2), vec2f(r1), ilessthan(q_y, vec2f(0.0)));
-    let ca_x = isub_vecs(q_x, imin(q_x, sr));
-    let ca_y = isub_vecs(iabs(q_y), vec2f(h));
+    // vertical = (slope * test.x) + height - test.y
+    let vertical : vec2f = isub_vecs(imul_vec_float(test_x, slope) + height, test_y);
+    let perpendicular : vec2f = imul_vec_float(vertical, ratio);
 
-    let m_skq_x = iavec3_vec(vec3f(isub_vecs(k1, q_x), 0.0));
-    let m_skq_y = iavec3_vec(vec3f(isub_vecs(k1, q_y), 0.0));
-
-    let mk2 : mat3x3f = iavec3_vec(vec3f(k2, 0.0));
-
-    let cb_x = q_x - k1 + k2 * iclamp( idot_mat(m_skq_x, mk2) / idot_mat(mk2, mk2), 0.0, 1.0);
-    let cb_y = q_y - k1 + k2 * iclamp( idot_mat(m_skq_y, mk2) / idot_mat(mk2, mk2), 0.0, 1.0);
-
-    let cond : vec2<bool> = iand(ilessthan(cb_x, vec2f(0.0)), ilessthan(ca_y, vec2f(0.0)));
-    let s : vec2f = select(vec2f(1.0), vec2f(-1.0), cond);
-
-    let m_ca = iavec3_vecs(ca_x, ca_y, vec2f(0.0));
-    let m_cb = iavec3_vecs(cb_x, cb_y, vec2f(0.0));
-
-    return imul_vec2_vec2(s, isqrt(imin(idot_mat(m_ca, m_ca), idot_mat(m_cb, m_cb))));
+    return ineg(imin(perpendicular, test_y));
 }
 
 fn cylinder_interval(p : mat3x3f, start_pos : vec3f, rotation : vec4f, radius : f32, height : f32) -> vec2f

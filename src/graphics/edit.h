@@ -59,7 +59,7 @@ struct StrokeMaterial {
 
 class StrokeParameters {
 
-    sdPrimitive     primitive = SD_SPHERE;
+    sdPrimitive     primitive = SD_CONE;
     sdOperation     operation = OP_UNION;
     glm::vec4       parameters = { 0.f, -1.f, 0.f, 0.001f };
     StrokeMaterial  material = {};

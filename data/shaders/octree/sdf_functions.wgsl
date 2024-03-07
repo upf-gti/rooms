@@ -114,7 +114,29 @@ fn sdCapsule( p : vec3f, a : vec3f, b : vec3f, rotation : vec4f, r : f32, materi
     return sf;
 }
 
+// // t: (base radius, top radius)
+// fn sdCone( p : vec3f, a : vec3f, h : f32, rotation : vec4f, t : vec2f, material : Material) -> Surface
+// {
+//     var sf : Surface;
+//     var r2 = t.x;
+//     var r1 = t.y;
+//     var height = h * 0.5;
+
+//     let pos : vec3f = rotate_point_quat(p - a, rotation) + vec3f(0.0, 0.0, height);
+//     let q = vec2f( length(pos.xy), pos.z );
+//     let k1 = vec2f(r2, height);
+//     let k2 = vec2f(r2-r1, 2.0 * height);
+//     let ca = vec2f(q.x - min(q.x, select(r2, r1, q.y<0.0)), abs(q.y) - height);
+//     let cb = q - k1 + k2 * clamp( dot(k1 - q, k2) / dot(k2, k2), 0.0, 1.0);
+//     let s : f32 = select(1.0, -1.0, cb.x < 0.0 && ca.y < 0.0);
+
+//     sf.distance = s * sqrt(min(dot(ca, ca), dot(cb, cb)));
+//     sf.material = material;
+//     return sf;
+// }
 // t: (base radius, top radius)
+// https://www.shadertoy.com/view/ttc3Dl
+// A malas: bounding box de cono https://www.shadertoy.com/view/WdjSRK
 fn sdCone( p : vec3f, a : vec3f, h : f32, rotation : vec4f, t : vec2f, material : Material) -> Surface
 {
     var sf : Surface;
@@ -123,14 +145,15 @@ fn sdCone( p : vec3f, a : vec3f, h : f32, rotation : vec4f, t : vec2f, material 
     var height = h * 0.5;
 
     let pos : vec3f = rotate_point_quat(p - a, rotation) + vec3f(0.0, 0.0, height);
-    let q = vec2f( length(pos.xy), pos.z );
-    let k1 = vec2f(r2, height);
-    let k2 = vec2f(r2-r1, 2.0 * height);
-    let ca = vec2f(q.x - min(q.x, select(r2, r1, q.y<0.0)), abs(q.y) - height);
-    let cb = q - k1 + k2 * clamp( dot(k1 - q, k2) / dot(k2, k2), 0.0, 1.0);
-    let s : f32 = select(1.0, -1.0, cb.x < 0.0 && ca.y < 0.0);
 
-    sf.distance = s * sqrt(min(dot(ca, ca), dot(cb, cb)));
+    let slope : f32 = -height / r2;
+    let ratio : f32 = sqrt(1.0/(slope * slope + 1.0));
+
+    let test : vec2f = vec2f(abs(length(pos.xy)), pos.z);
+    let vertical : f32 = (slope * test.x) + height - test.y;
+    let perpendicular = vertical * ratio;
+
+    sf.distance = -min(perpendicular, test.y);
     sf.material = material;
     return sf;
 }
