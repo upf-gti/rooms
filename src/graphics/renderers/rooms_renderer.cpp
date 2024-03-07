@@ -18,8 +18,6 @@ int RoomsRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
 {
     Renderer::initialize(window, use_mirror_screen);
 
-    // There needs to be the same number of distance bricks and material bricks
-    assert((SDF_RESOLUTION / SDF_BRICK_SIZE) == (MATERIAL_RESOLUTION / MATERIAL_BRICK_SIZE));
     // Our octree indexing system only supports a max of 10 levels
     assert(OCTREE_DEPTH < 10);
 

@@ -22,6 +22,19 @@ fn intersection_AABB_AABB(b1_min : vec3f, b1_max : vec3f, b2_min : vec3f, b2_max
     return (b1_min.x <= b2_max.x && b1_min.y <= b2_max.y && b1_min.z <= b2_max.z) && (b1_max.x >= b2_min.x && b1_max.y >= b2_min.y && b1_max.z >= b2_min.z);
 }
 
+const SDF_MATERIAL_BRICK_DIFFERENCE = u32(MATERIAL_BRICK_SIZE / SDF_BRICK_SIZE);
+const PIXEL_WORLD_SIZE_QUARTER = PIXEL_WORLD_SIZE / 4;
+
+const delta_pos_texture = array<vec3u, 8>(
+    vec3u(1u,1u,1u),
+    vec3u(1u,1u,0u),
+    vec3u(1u,0u,1u),
+    vec3u(1u,0u,0u),
+    vec3u(0u,1u,1u),
+    vec3u(0u,1u,0u),
+    vec3u(0u,0u,1u),
+    vec3u(0u,0u,0u)
+);
 
 const delta_pos_world = array<vec3f, 9>(
     vec3f(PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER),
@@ -34,6 +47,7 @@ const delta_pos_world = array<vec3f, 9>(
     vec3f(-PIXEL_WORLD_SIZE_QUARTER, -PIXEL_WORLD_SIZE_QUARTER, -PIXEL_WORLD_SIZE_QUARTER),
     vec3f(0.0, 0.0, 0.0),
 );
+
 
 @compute @workgroup_size(10,10,10)
 fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation_id) local_id: vec3<u32>)
@@ -69,19 +83,55 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     material.roughness = stroke.material.roughness;
     material.metalness = stroke.material.metallic;
 
+    var surface_samples : array<Surface, 9> = array<Surface, 9>();
+
+    let material_coordinates_origin : vec3u = texture_coordinates * SDF_MATERIAL_BRICK_DIFFERENCE + vec3u(1u);
+
     // If the MSb is setted we load the previous data of brick
     // if not, we set it for the next iteration
     if ((FILLED_BRICK_FLAG & brick_pointer) == FILLED_BRICK_FLAG) {
-        let sample : vec4f = textureLoad(write_sdf, texture_coordinates);
-        sSurface.distance = sample.r;
-        let raw_color : vec4<u32> = textureLoad(write_material_sdf, texture_coordinates);
+        let distance : f32 = textureLoad(write_sdf, texture_coordinates).r;
 
-        let material : Material = unpack_material(u32(raw_color.r));
-        sSurface.material = material;
+#ifdef DOUBLE_MATERIAL_RES
+        // Load all the material subsamples of the current position
+        for(var i : u32 = 0u; i < 8u; i++) {
+            let texture_pos : vec3u = delta_pos_texture[i];
+            let raw_material : u32 = textureLoad(write_material_sdf, material_coordinates_origin + texture_pos).r;
+
+            surface_samples[i] = Surface(unpack_material(u32(raw_material)), distance);
+        }  
+#else
+        sSurface.distance = distance;
+        let raw_material : u32 = textureLoad(write_material_sdf, texture_coordinates).r;
+        sSurface.material = unpack_material(u32(raw_material));
+
+        surface_samples[0] = sSurface;
+        surface_samples[1] = sSurface;
+        surface_samples[2] = sSurface;
+        surface_samples[3] = sSurface;
+        surface_samples[4] = sSurface;
+        surface_samples[5] = sSurface;
+        surface_samples[6] = sSurface;
+        surface_samples[7] = sSurface;
+        surface_samples[8] = sSurface;
+#endif
+    } else {
+        if ((INTERIOR_BRICK_FLAG & brick_pointer) == INTERIOR_BRICK_FLAG) {
+            sSurface.distance = -100.0;
+        }
+
+#ifdef SSAA_OR_DOUBLE_MATERIAL_RES
+        surface_samples[0] = sSurface;
+        surface_samples[1] = sSurface;
+        surface_samples[2] = sSurface;
+        surface_samples[3] = sSurface;
+        surface_samples[4] = sSurface;
+        surface_samples[5] = sSurface;
+        surface_samples[6] = sSurface;
+        surface_samples[7] = sSurface;
+#endif
+        surface_samples[8] = sSurface;
     } 
-    else if ((INTERIOR_BRICK_FLAG & brick_pointer) == INTERIOR_BRICK_FLAG) {
-        sSurface.distance = -100.0;
-    }
 
     // Offset for a 10 pixel wide brick
     let pixel_offset : vec3f = (vec3f(local_id) - f32(SDF_BRICK_SIZE/2.0)) * PIXEL_WORLD_SIZE;
@@ -90,13 +140,13 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     result_surface.distance = 0.0;
 
     let pos = octant_center + pixel_offset;
-#ifdef SSAA_SDF_WRITE_TO_TEXTURE
     // Super Sampling iterations
-    for(var j : u32 = 0u; j < 9u; j++) {
+
+#ifdef SSAA_OR_DOUBLE_MATERIAL_RES
+    for(var j : u32 = 0u; j < 8u; j++) {
+#else
+    let j : u32 = 8u;
 #endif
-
-        var curr_surface : Surface = sSurface;
-
         // Traverse the according edits and evaluate them in the brick
         for (var i : u32 = 0; i < edit_culling_data.edit_culling_count[parent_octree_index]; i++) {
             // Get the packed indices
@@ -121,90 +171,42 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
             material.roughness = mix(stroke.material.roughness, 1.0, noise_value * 1.5);
             material.metalness = mix(stroke.material.metallic, 0.25, noise_value * 1.5);
 
-#ifdef SSAA_SDF_WRITE_TO_TEXTURE
-            curr_surface = evaluate_edit(pos + delta_pos_world[j], stroke.primitive, stroke.operation, stroke.parameters, curr_surface, material, edit);
-#else
-            curr_surface = evaluate_edit(pos, stroke.primitive, stroke.operation, stroke.parameters, curr_surface, material, edit);
-#endif
+            surface_samples[j] = evaluate_edit(pos + delta_pos_world[j], stroke.primitive, stroke.operation, stroke.parameters, surface_samples[j], material, edit);
         }
 
-#ifdef SSAA_SDF_WRITE_TO_TEXTURE
+#ifdef SSAA_OR_DOUBLE_MATERIAL_RES
+
         // Accumulate the sampling results
-        result_surface.distance = curr_surface.distance + result_surface.distance;
-        result_surface.material = Material_sum_Material(curr_surface.material, result_surface.material);
+        result_surface.distance = surface_samples[j].distance + result_surface.distance;
+        result_surface.material = Material_sum_Material(surface_samples[j].material, result_surface.material);
     }
 
     // Average all the samples
-    result_surface.material = Material_mult_by(result_surface.material, 1.0 / 9.0);
     result_surface.distance = result_surface.distance / 9.0;
+    result_surface.material = Material_mult_by(result_surface.material, 1.0 / 9.0);
 #else
-    result_surface = curr_surface;
+    result_surface = surface_samples[j];
 #endif
 
+    // Take note of how many pixels have been written to the current brick
     if (result_surface.distance < MIN_HIT_DIST) {
         atomicAdd(&used_pixels, 1);
     }
 
-    // Heatmap Edit debugging
-    let interpolant : f32 = (f32( edit_culling_data.edit_culling_count[parent_octree_index] ) / f32(5)) * (M_PI / 2.0);
-    var heatmap_color : vec3f;
-    heatmap_color.r = sin(interpolant);
-    heatmap_color.g = sin(interpolant * 2.0);
-    heatmap_color.b = cos(interpolant);
-
-    // Duplicate the texture Store, becuase then we have a branch depeding on an uniform!
     textureStore(write_sdf, texture_coordinates, vec4f(result_surface.distance));
 
-    if (SDF_MATERIAL_BRICK_DIFFERENCE == 1u) {
-        textureStore(write_material_sdf, texture_coordinates, vec4<u32>((pack_material(result_surface.material))));
-    } else {
-        let material_sample_count : u32 = SDF_MATERIAL_BRICK_DIFFERENCE * SDF_MATERIAL_BRICK_DIFFERENCE * SDF_MATERIAL_BRICK_DIFFERENCE;
-        let starting_coordinate : vec3u = texture_coordinates * SDF_MATERIAL_BRICK_DIFFERENCE + vec3u(1u);
-        let SDF_MAT_DIFF2 = SDF_MATERIAL_BRICK_DIFFERENCE * SDF_MATERIAL_BRICK_DIFFERENCE;
+#ifdef DOUBLE_MATERIAL_RES
+        // Store all the different subsamples if we have the double material resolution
+        for(var i : u32 = 0u; i < 8u; i++) {
+            let texture_pos : vec3u = delta_pos_texture[i];
 
-        for(var i : u32 = 0u; i < material_sample_count; i++) {
-            let texture_pos : vec3u = vec3u(i % SDF_MATERIAL_BRICK_DIFFERENCE, (i / SDF_MATERIAL_BRICK_DIFFERENCE) % SDF_MATERIAL_BRICK_DIFFERENCE, i / SDF_MAT_DIFF2);
-            let sampling_pos = octant_center + pixel_offset  + (vec3f(texture_pos)) * PIXEL_WORLD_SIZE / 2.0;
-
-            var it_surface : Surface = sSurface;
-
-            if ((FILLED_BRICK_FLAG & brick_pointer) == FILLED_BRICK_FLAG) {
-                 let raw_color : vec4<u32> = textureLoad(write_material_sdf, starting_coordinate + texture_pos);
-
-                let material : Material = unpack_material(u32(raw_color.r));
-                it_surface.material = material;
-            }
-
-            for (var i : u32 = 0; i < edit_culling_data.edit_culling_count[parent_octree_index]; i++) {
-                // Get the packed indices
-                let current_packed_edit_idx : u32 = edit_culling_data.edit_culling_lists[i / 4 + parent_octree_index * PACKED_LIST_SIZE];
-                let packed_index : u32 = 3 - (i % 4);
-                let current_unpacked_edit_idx : u32 = (current_packed_edit_idx & (0xFFu << (packed_index * 8u))) >> (packed_index * 8u);
-                let edit = stroke.edits[current_unpacked_edit_idx];
-                
-
-                let stroke_color : vec3f = stroke.material.color.xyz;
-                
-                let noise_color : vec3f = stroke.material.noise_color.xyz;
-                let noise_intensity : f32 = stroke.material.noise_params.x;
-                let noise_freq : f32 = stroke.material.noise_params.y;
-                let noise_octaves : u32 = u32(stroke.material.noise_params.z);
-
-                var noise_value = fbm( sampling_pos, vec3f(0.0), noise_freq, noise_intensity, noise_octaves );
-                noise_value = clamp(noise_value, 0.0, 1.0);
-
-                material.albedo = mix(stroke_color, stroke_color * noise_color, noise_value);
-                material.roughness = mix(stroke.material.roughness, 1.0, noise_value * 1.5);
-                material.metalness = mix(stroke.material.metallic, 0.25, noise_value * 1.5);
-
-                it_surface = evaluate_edit(sampling_pos, stroke.primitive, stroke.operation, stroke.parameters, it_surface, material, edit);
-            }
-        
-            textureStore(write_material_sdf, starting_coordinate + texture_pos, vec4<u32>((pack_material(it_surface.material))));
+            textureStore(write_material_sdf, material_coordinates_origin + texture_pos, vec4<u32>(pack_material(surface_samples[i].material)));
         }
-    }
+#else
+        // No double of the material resolution, just store the current sample
+        textureStore(write_material_sdf, texture_coordinates, vec4<u32>(pack_material(result_surface.material)));
+#endif
     
-    //textureStore(write_sdf, texture_coordinates, vec4f(debug_surf.x, debug_surf.y, debug_surf.z, result_surface.distance));
     // Hack, for buffer usage
     octant_usage_write[0] = 0;
 
