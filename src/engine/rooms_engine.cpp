@@ -17,18 +17,11 @@
 
 std::vector<Node3D*> RoomsEngine::entities;
 
-ui::Panel2D* panel = nullptr;
-ui::Text2D* text = nullptr;
-ui::Slider2D* slider = nullptr;
-ui::ColorPicker2D* picker = nullptr;
-ui::ItemGroup2D* group = nullptr;
-ui::HContainer2D* h_container = nullptr;
-ui::VContainer2D* v_container = nullptr;
-ui::ButtonSubmenu2D* submenu = nullptr;
+ui::HContainer2D* root = nullptr;
 
 int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen)
 {
-	int error = Engine::initialize(renderer, window, use_glfw, use_mirror_screen);
+    int error = Engine::initialize(renderer, window, use_glfw, use_mirror_screen);
 
     sculpt_editor.initialize();
 
@@ -42,50 +35,75 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 
     //import_scene();
 
-    panel = new ui::Panel2D("panel", { 96.0f, 96.0f }, {240.0f, 720.f}, colors::CYAN);
+    root = new ui::HContainer2D("root", { 12.0f, 12.f });
 
-    text = new ui::Text2D("oppenheimer", { 100.0f, 0.0f }, 48.f, colors::BLACK);
+    {
+        ui::ItemGroup2D* g_main_tools = new ui::ItemGroup2D("g_main_tools");
+        g_main_tools->add_child(new ui::TextureButton2D("sculpt", "data/textures/cube.png", ui::UNIQUE_SELECTION | ui::SELECTED));
+        g_main_tools->add_child(new ui::TextureButton2D("paint", "data/textures/paint.png", ui::UNIQUE_SELECTION));
+        root->add_child(g_main_tools);
 
-    slider = new ui::Slider2D("slider", 0.5f, { 120.0f, 60.f }, ui::SliderMode::VERTICAL);
+        ui::ButtonSubmenu2D* primitives_submenu = new ui::ButtonSubmenu2D("primitives", "data/textures/primitives.png");
+        ui::ItemGroup2D* g0_primitives = new ui::ItemGroup2D("g0_primitives");
+        g0_primitives->add_child(new ui::TextureButton2D("sphere", "data/textures/sphere.png", ui::UNIQUE_SELECTION | ui::SELECTED));
+        g0_primitives->add_child(new ui::TextureButton2D("cube", "data/textures/cube.png", ui::UNIQUE_SELECTION));
+        g0_primitives->add_child(new ui::TextureButton2D("cone", "data/textures/cone.png", ui::UNIQUE_SELECTION));
+        g0_primitives->add_child(new ui::TextureButton2D("capsule", "data/textures/capsule.png", ui::UNIQUE_SELECTION));
+        g0_primitives->add_child(new ui::TextureButton2D("cylinder", "data/textures/cylinder.png", ui::UNIQUE_SELECTION));
+        g0_primitives->add_child(new ui::TextureButton2D("torus", "data/textures/torus.png", ui::UNIQUE_SELECTION));
+        primitives_submenu->add_child(g0_primitives);
+        primitives_submenu->add_child(new ui::TextureButton2D("shape_editor", "data/textures/shape_editor.png"));
+        root->add_child(primitives_submenu);
 
-    picker = new ui::ColorPicker2D("color", { 100.0f, 290.0f }, { 256.0f, 256.0f }, colors::RED);
+        ui::ButtonSubmenu2D* material_submenu = new ui::ButtonSubmenu2D("material", "data/textures/material.png");
+        material_submenu->add_child(new ui::TextureButton2D("colors", "data/textures/colors.png"));
+        material_submenu->add_child(new ui::TextureButton2D("materials", "data/textures/material_samples.png"));
+        material_submenu->add_child(new ui::TextureButton2D("material_editor", "data/textures/material_editor.png"));
+        root->add_child(material_submenu);
 
-    Node::bind("color", [&](const std::string& sg, Color c) {
-        panel->set_color(c);
-    });
+        ui::ItemGroup2D* g_utilities = new ui::ItemGroup2D("g_utilities");
+        g_utilities->add_child(new ui::TextureButton2D("mirror", "data/textures/mirror.png", ui::ALLOW_TOGGLE));
+        g_utilities->add_child(new ui::TextureButton2D("snap_to_surface", "data/textures/snap_to_surface.png", ui::ALLOW_TOGGLE));
+        g_utilities->add_child(new ui::TextureButton2D("snap_to_grid", "data/textures/snap_to_grid.png", ui::ALLOW_TOGGLE));
+        g_utilities->add_child(new ui::TextureButton2D("lock_axis", "data/textures/lock_axis.png", ui::ALLOW_TOGGLE));
+        root->add_child(g_utilities);
+    }
+
+    /*
+    ui::Panel2D* panel = new ui::Panel2D("panel", { 96.0f, 96.0f }, { 240.0f, 720.f }, colors::CYAN);
+    root_2d->add_child(panel);
+
+    ui::Text2D* text = new ui::Text2D("oppenheimer", { 100.0f, 0.0f }, 48.f, colors::BLACK);
+    root_2d->add_child(text);
+
+    ui::Slider2D* slider = new ui::Slider2D("slider", 0.5f, { 120.0f, 60.f });
+
+    Node::bind("slider", [&](const std::string& sg, float value) {
+        spdlog::info("SLIDER VALUE = {}", value);
+        });
+
+    ui::ColorPicker2D* picker = new ui::ColorPicker2D("color", { 100.0f, 290.0f }, { 256.0f, 256.0f }, colors::RED);
+    root_2d->add_child(picker);
+
+    Node::bind("color", [p = panel](const std::string& sg, Color c) {
+        p->set_color(c);
+        });
 
     Node::bind("color@released", [&](const std::string& sg, Color c) {
         spdlog::info("{} RELEASED", sg);
-    });
-
-
-    group = new ui::ItemGroup2D({ 120.0f, 220.f });
-
-    group->add_child(new ui::Button2D("test1"));
-    group->add_child(new ui::Button2D("test2"));
+        });
 
     Node::bind("test1", [](const std::string& sg, void* data) {
         spdlog::info("BUTTON {} PRESSED", sg);
-    });
+        });
 
-    h_container = new ui::HContainer2D("h_container", { 120.0f, 120.f });
+    ui::VContainer2D* v_container = new ui::VContainer2D("v_container", { 620.0f, 120.f });
+    root_2d->add_child(v_container);
 
-    h_container->add_child(slider);
-    h_container->add_child(new ui::Button2D("test4"));
-    h_container->add_child(new ui::Button2D("test5"));
-
-    v_container = new ui::VContainer2D("v_container", { 620.0f, 120.f });
-
-    v_container->add_child(new ui::Button2D("test6"));
-    v_container->add_child(new ui::Button2D("test7"));
+    v_container->add_child(new ui::TextureButton2D("test2", "data/textures/primitives.png"));
     v_container->add_child(group);
-    v_container->add_child(new ui::Button2D("test8"));
-
-    submenu = new ui::ButtonSubmenu2D("submenu", { 200.0f, 580.f });
-
-    submenu->add_child(new ui::Button2D("test9"));
-    submenu->add_child(new ui::Button2D("test10"));
-    submenu->add_child(new ui::Button2D("test11"));
+    v_container->add_child(new ui::Button2D("test8", colors::BLUE));
+    */
 
 	return error;
 }
@@ -105,11 +123,7 @@ void RoomsEngine::update(float delta_time)
 
     sculpt_editor.update(delta_time);
 
-    submenu->update(delta_time);
-    panel->update(delta_time);
-    picker->update(delta_time);
-    h_container->update(delta_time);
-    v_container->update(delta_time);
+    root->update(delta_time);
 
     if (Input::was_key_pressed(GLFW_KEY_E))
     {
@@ -123,13 +137,7 @@ void RoomsEngine::render()
     render_gui();
 #endif
 
-    panel->render();
-    slider->render();
-    text->render();
-    picker->render();
-    h_container->render();
-    v_container->render();
-    submenu->render();
+    root->render();
 
 	for (auto entity : entities) {
 		entity->render();
@@ -358,14 +366,6 @@ void RoomsEngine::render_gui()
         if (ImGui::BeginTabItem("Sculpt Editor"))
         {
             sculpt_editor.render_gui();
-            ImGui::EndTabItem();
-        }
-        if (ImGui::BeginTabItem("GUI"))
-        {
-            if (ImGui::Button("Add child to group")) {
-                auto button = new ui::Button2D("test");
-                group->add_child(button);
-            }
             ImGui::EndTabItem();
         }
         if (ImGui::BeginTabItem("Debugger"))

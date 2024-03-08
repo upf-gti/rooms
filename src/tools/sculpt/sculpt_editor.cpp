@@ -778,11 +778,6 @@ bool SculptEditor::is_rotation_being_used()
 
 void SculptEditor::bind_events()
 {
-    // UI Layout from JSON
-    {
-        // gui.load_layout("data/ui/main.json");
-    }
-
     // Set events
     {
         /*gui.bind("sculpt", [&](const std::string& signal, void* button) { enable_tool(SCULPT); });
@@ -871,8 +866,6 @@ void SculptEditor::bind_events()
 
     // Create helper ui
     {
-        //helper_gui.load_layout("data/ui/helper.json");
-
         //// Customize a little bit...
         //helper_gui.get_workspace().hand = HAND_RIGHT;
         //helper_gui.get_workspace().root_pose = POSE_GRIP;
