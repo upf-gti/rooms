@@ -17,7 +17,7 @@
 
 std::vector<Node3D*> RoomsEngine::entities;
 
-ui::HContainer2D* root = nullptr;
+ui::HContainer2D* root_2d = nullptr;
 
 int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen)
 {
@@ -35,13 +35,13 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 
     //import_scene();
 
-    root = new ui::HContainer2D("root", { 12.0f, 12.f });
+    root_2d = new ui::HContainer2D("root", { 12.0f, 12.f });
 
     {
         ui::ItemGroup2D* g_main_tools = new ui::ItemGroup2D("g_main_tools");
         g_main_tools->add_child(new ui::TextureButton2D("sculpt", "data/textures/cube.png", ui::UNIQUE_SELECTION | ui::SELECTED));
         g_main_tools->add_child(new ui::TextureButton2D("paint", "data/textures/paint.png", ui::UNIQUE_SELECTION));
-        root->add_child(g_main_tools);
+        root_2d->add_child(g_main_tools);
     }
 
     {
@@ -78,7 +78,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
             primitives_submenu->add_child(shape_editor_submenu);
         }
 
-        root->add_child(primitives_submenu);
+        root_2d->add_child(primitives_submenu);
     }
 
     {
@@ -95,13 +95,16 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 
             {
                 ui::ItemGroup2D* g_colors = new ui::ItemGroup2D("g_colors");
-                g_colors->add_child(new ui::TextureButton2D("color_template_palette_1", "data/textures/colors_template_1.png", ui::KEEP_RGB));
-                g_colors->add_child(new ui::TextureButton2D("color_template_palette_2", "data/textures/colors_template_2.png", ui::KEEP_RGB));
-                g_colors->add_child(new ui::TextureButton2D("color_template_palette_3", "data/textures/colors_template_3.png", ui::KEEP_RGB));
-                g_colors->add_child(new ui::TextureButton2D("color_template_palette_4", "data/textures/colors_template_4.png", ui::KEEP_RGB));
-                g_colors->add_child(new ui::TextureButton2D("color_template_palette_5", "data/textures/colors_template_5.png", ui::KEEP_RGB));
-                g_colors->add_child(new ui::TextureButton2D("color_template_palette_6", "data/textures/colors_template_6.png", ui::KEEP_RGB));
-                g_colors->add_child(new ui::TextureButton2D("recent_colors", "data/textures/recent_colors.png", ui::KEEP_RGB));
+                g_colors->add_child(new ui::ButtonSubmenu2D("color_template_palette_1", "data/textures/colors_template_1.png", ui::KEEP_RGB));
+                g_colors->add_child(new ui::ButtonSubmenu2D("color_template_palette_2", "data/textures/colors_template_2.png", ui::KEEP_RGB));
+                g_colors->add_child(new ui::ButtonSubmenu2D("color_template_palette_3", "data/textures/colors_template_3.png", ui::KEEP_RGB));
+                g_colors->add_child(new ui::ButtonSubmenu2D("color_template_palette_4", "data/textures/colors_template_4.png", ui::KEEP_RGB));
+                g_colors->add_child(new ui::ButtonSubmenu2D("color_template_palette_5", "data/textures/colors_template_5.png", ui::KEEP_RGB));
+                g_colors->add_child(new ui::ButtonSubmenu2D("color_template_palette_6", "data/textures/colors_template_6.png", ui::KEEP_RGB));
+                g_colors->add_child(new ui::ButtonSubmenu2D("recent_colors", "data/textures/recent_colors.png", ui::KEEP_RGB));
+
+                // TODO: missing specific color palettes..
+
                 colors_submenu->add_child(g_colors);
             }
 
@@ -147,7 +150,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
             material_submenu->add_child(material_editor_submenu);
         }
 
-        root->add_child(material_submenu);
+        root_2d->add_child(material_submenu);
     }
 
     {
@@ -178,7 +181,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
             g_utilities->add_child(lock_axis_submenu);
         }
 
-        root->add_child(g_utilities);
+        root_2d->add_child(g_utilities);
     }
 
 	return error;
@@ -201,7 +204,7 @@ void RoomsEngine::update(float delta_time)
 
     sculpt_editor.update(delta_time);
 
-    root->update(delta_time);
+    root_2d->update(delta_time);
 
     if (Input::was_key_pressed(GLFW_KEY_E))
     {
@@ -215,7 +218,7 @@ void RoomsEngine::render()
     render_gui();
 #endif
 
-    root->render();
+    root_2d->render();
 
 	for (auto entity : entities) {
 		entity->render();
