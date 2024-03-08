@@ -290,9 +290,6 @@ bool RoomsEngine::import_scene()
 
 void RoomsEngine::render_gui()
 {
-    if (RoomsRenderer::instance->get_openxr_available()) {
-        return;
-    }
     bool active = true;
 
     ImGui::SetNextWindowSize({ 300, 400 });
@@ -378,6 +375,17 @@ void RoomsEngine::render_gui()
             if (info.intersected) {
                 ImGui::Text("Intersection position :");
                 ImGui::Text("   : %.3f, %.3f, %.3f", info.intersection_position.x, info.intersection_position.y, info.intersection_position.z);
+            }
+
+            bool msaa_enabled = Renderer::instance->get_msaa_count() != 1;
+
+            if (ImGui::Checkbox("Enable MSAAx4", &msaa_enabled)) {
+                if (msaa_enabled) {
+                    Renderer::instance->set_msaa_count(4);
+                }
+                else {
+                    Renderer::instance->set_msaa_count(1);
+                }
             }
 
             ImGui::EndTabItem();

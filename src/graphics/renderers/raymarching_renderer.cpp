@@ -667,7 +667,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         WGPUTextureFormat_R32Float,
         { SDF_RESOLUTION, SDF_RESOLUTION, SDF_RESOLUTION },
         static_cast<WGPUTextureUsage>(WGPUTextureUsage_TextureBinding | WGPUTextureUsage_StorageBinding | WGPUTextureUsage_CopySrc),
-        1, nullptr);
+        1, 1, nullptr);
 
     sdf_texture_uniform.data = sdf_texture.get_view();
     sdf_texture_uniform.binding = 3;
@@ -677,7 +677,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         WGPUTextureFormat_R32Uint,
         { SDF_RESOLUTION, SDF_RESOLUTION, SDF_RESOLUTION },
         static_cast<WGPUTextureUsage>(WGPUTextureUsage_TextureBinding | WGPUTextureUsage_StorageBinding | WGPUTextureUsage_CopySrc),
-        1, nullptr);
+        1, 1, nullptr);
 
     sdf_material_texture_uniform.data = sdf_material_texture.get_view();
     sdf_material_texture_uniform.binding = 8; // TODO: set as 4
