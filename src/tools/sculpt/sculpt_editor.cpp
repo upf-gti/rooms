@@ -883,6 +883,9 @@ void SculptEditor::add_recent_color(const Color& color)
     }
 
     Node2D* recent_group = Node2D::get_widget_from_name("g_recent_colors");
+    if (!recent_group) {
+        return;
+    }
 
     assert(recent_colors.size() <= recent_group->get_children().size());
     for (uint8_t i = 0; i < recent_colors.size(); ++i)
