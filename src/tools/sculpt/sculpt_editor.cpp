@@ -93,13 +93,9 @@ void SculptEditor::initialize()
     }
 
     // Load ui and Bind callbacks
-    // bind_events();
+    bind_events();
 
     enable_tool(SCULPT);
-
-    //stamp_enabled = true;
-
-    //stroke_parameters.set_primitive(SD_BOX);
 
     renderer->change_stroke(stroke_parameters);
 }
@@ -114,8 +110,6 @@ void SculptEditor::clean()
         delete floor_grid_mesh;
     }
 }
-
-
 
 bool SculptEditor::is_tool_being_used(bool stamp_enabled)
 {
@@ -778,107 +772,95 @@ bool SculptEditor::is_rotation_being_used()
 
 void SculptEditor::bind_events()
 {
-    // UI Layout from JSON
-    {
-        // gui.load_layout("data/ui/main.json");
-    }
-
     // Set events
     {
-        /*gui.bind("sculpt", [&](const std::string& signal, void* button) { enable_tool(SCULPT); });
-        gui.bind("paint", [&](const std::string& signal, void* button) { enable_tool(PAINT); });
+        Node::bind("sculpt", [&](const std::string& signal, void* button) { enable_tool(SCULPT); });
+        Node::bind("paint", [&](const std::string& signal, void* button) { enable_tool(PAINT); });
 
-        gui.bind("sphere", [&](const std::string& signal, void* button) {  set_primitive(SD_SPHERE); });
-        gui.bind("cube", [&](const std::string& signal, void* button) { set_primitive(SD_BOX); });
-        gui.bind("cone", [&](const std::string& signal, void* button) { set_primitive(SD_CONE); });
-        gui.bind("capsule", [&](const std::string& signal, void* button) { set_primitive(SD_CAPSULE); });
-        gui.bind("cylinder", [&](const std::string& signal, void* button) { set_primitive(SD_CYLINDER); });
-        gui.bind("torus", [&](const std::string& signal, void* button) { set_primitive(SD_TORUS); });
+        Node::bind("sphere", [&](const std::string& signal, void* button) {  set_primitive(SD_SPHERE); });
+        Node::bind("cube", [&](const std::string& signal, void* button) { set_primitive(SD_BOX); });
+        Node::bind("cone", [&](const std::string& signal, void* button) { set_primitive(SD_CONE); });
+        Node::bind("capsule", [&](const std::string& signal, void* button) { set_primitive(SD_CAPSULE); });
+        Node::bind("cylinder", [&](const std::string& signal, void* button) { set_primitive(SD_CYLINDER); });
+        Node::bind("torus", [&](const std::string& signal, void* button) { set_primitive(SD_TORUS); });
 
-        gui.bind("onion", [&](const std::string& signal, void* button) { toggle_onion_modifier(); });
-        gui.bind("onion_value", [&](const std::string& signal, float value) { set_onion_modifier(value); });
-        gui.bind("capped", [&](const std::string& signal, void* button) { toggle_capped_modifier(); });
-        gui.bind("cap_value", [&](const std::string& signal, float value) { set_cap_modifier(value); });
+        Node::bind("onion", [&](const std::string& signal, void* button) { toggle_onion_modifier(); });
+        Node::bind("onion_value", [&](const std::string& signal, float value) { set_onion_modifier(value); });
+        Node::bind("capped", [&](const std::string& signal, void* button) { toggle_capped_modifier(); });
+        Node::bind("cap_value", [&](const std::string& signal, float value) { set_cap_modifier(value); });
 
-        gui.bind("mirror_toggle", [&](const std::string& signal, void* button) { use_mirror = !use_mirror; });
-        gui.bind("mirror_translation", [&](const std::string& signal, void* button) { mirror_gizmo.set_mode(eGizmoType::POSITION_GIZMO); });
-        gui.bind("mirror_rotation", [&](const std::string& signal, void* button) { mirror_gizmo.set_mode(eGizmoType::ROTATION_GIZMO); });
-        gui.bind("mirror_both", [&](const std::string& signal, void* button) { mirror_gizmo.set_mode(eGizmoType::POSITION_ROTATION_GIZMO); });
-        gui.bind("snap_to_surface", [&](const std::string& signal, void* button) { snap_to_surface = !snap_to_surface; });
-        gui.bind("snap_to_grid", [&](const std::string& signal, void* button) { snap_to_grid = !snap_to_grid; });
-        gui.bind("lock_axis_toggle", [&](const std::string& signal, void* button) { axis_lock = !axis_lock; });
-        gui.bind("lock_axis_x", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_X; });
-        gui.bind("lock_axis_y", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_Y; });
-        gui.bind("lock_axis_z", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_Z; });
+        Node::bind("mirror_toggle", [&](const std::string& signal, void* button) { use_mirror = !use_mirror; });
+        Node::bind("mirror_translation", [&](const std::string& signal, void* button) { mirror_gizmo.set_mode(eGizmoType::POSITION_GIZMO); });
+        Node::bind("mirror_rotation", [&](const std::string& signal, void* button) { mirror_gizmo.set_mode(eGizmoType::ROTATION_GIZMO); });
+        Node::bind("mirror_both", [&](const std::string& signal, void* button) { mirror_gizmo.set_mode(eGizmoType::POSITION_ROTATION_GIZMO); });
+        Node::bind("snap_to_surface", [&](const std::string& signal, void* button) { snap_to_surface = !snap_to_surface; });
+        Node::bind("snap_to_grid", [&](const std::string& signal, void* button) { snap_to_grid = !snap_to_grid; });
+        Node::bind("lock_axis_toggle", [&](const std::string& signal, void* button) { axis_lock = !axis_lock; });
+        Node::bind("lock_axis_x", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_X; });
+        Node::bind("lock_axis_y", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_Y; });
+        Node::bind("lock_axis_z", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_Z; });
 
-        gui.bind("roughness", [&](const std::string& signal, float value) { stroke_parameters.set_material_roughness(value); });
-        gui.bind("metallic", [&](const std::string& signal, float value) { stroke_parameters.set_material_metallic(value); });
-        gui.bind("noise_intensity", [&](const std::string& signal, float value) { stroke_parameters.set_material_noise(value); });
-        gui.bind("noise_frequency", [&](const std::string& signal, float value) { stroke_parameters.set_material_noise(-1.0f, value); });
-        gui.bind("noise_octaves", [&](const std::string& signal, float value) { stroke_parameters.set_material_noise(-1.0f, -1.0f, static_cast<int>(value)); });
-        gui.bind("noise_color_picker", [&](const std::string& signal, Color color) { stroke_parameters.set_material_noise_color(color); });
+        Node::bind("roughness", [&](const std::string& signal, float value) { stroke_parameters.set_material_roughness(value); });
+        Node::bind("metallic", [&](const std::string& signal, float value) { stroke_parameters.set_material_metallic(value); });
+        Node::bind("noise_intensity", [&](const std::string& signal, float value) { stroke_parameters.set_material_noise(value); });
+        Node::bind("noise_frequency", [&](const std::string& signal, float value) { stroke_parameters.set_material_noise(-1.0f, value); });
+        Node::bind("noise_octaves", [&](const std::string& signal, float value) { stroke_parameters.set_material_noise(-1.0f, -1.0f, static_cast<int>(value)); });
+        Node::bind("noise_color_picker", [&](const std::string& signal, Color color) { stroke_parameters.set_material_noise_color(color); });
 
-        gui.bind("color_picker", [&](const std::string& signal, Color color) { stroke_parameters.set_material_color(color); });
-        gui.bind("pick_material", [&](const std::string& signal, void* button) { is_picking_material = !is_picking_material; });*/
+        Node::bind("color_picker", [&](const std::string& signal, Color color) { stroke_parameters.set_material_color(color); });
+        Node::bind("pick_material", [&](const std::string& signal, void* button) { is_picking_material = !is_picking_material; });
+
+        // Bind colors callback...
+
+        for (auto it : Node2D::all_widgets)
+        {
+            if (it.second->get_class_type() != Node2DClassType::BUTTON) continue;
+            ui::Button2D* child = static_cast<ui::Button2D*>(it.second);
+            if (child->is_color_button) {
+                Node::bind(child->signal, [&](const std::string& signal, void* button) {
+                    const Color& color = (reinterpret_cast<ui::Button2D*>(button))->color;
+                    stroke_parameters.set_material_color(color);
+                });
+            }
+        }
 
         // Bind recent color buttons...
 
-        //ui::UIEntity* recent_group = gui.get_widget_from_name("g_recent_colors");
-        //if (!recent_group) {
-        //    assert(0);
-        //    spdlog::error("Cannot find recent_colors button group!");
-        //    return;
-        //}
+        Node2D* recent_group = Node2D::get_widget_from_name("g_recent_colors");
+        if (!recent_group) {
+            spdlog::error("Cannot find recent_colors button group!");
+            return;
+        }
 
-        //// Bind colors callback...
+        max_recent_colors = recent_group->get_children().size();
+        for (size_t i = 0; i < max_recent_colors; ++i)
+        {
+            ui::Button2D* child = static_cast<ui::Button2D*>(recent_group->get_children()[i]);
+            Node::bind(child->signal, [&](const std::string& signal, void* button) {
+                const Color& color = (reinterpret_cast<ui::Button2D*>(button))->color;
+                stroke_parameters.set_material_color(color);
+            });
+        }
 
-        //for (auto it : gui.get_widgets())
-        //{
-        //    if (it.second->type != ui::BUTTON) continue;
-        //    ui::ButtonWidget* child = static_cast<ui::ButtonWidget*>(it.second);
-        //    if (child->is_color_button) {
-        //        gui.bind(child->signal, [&](const std::string& signal, void* button) {
-        //            const Color& color = (static_cast<ui::ButtonWidget*>(button))->color;
-        //            stroke_parameters.set_material_color(color);
-        //        });
-        //    }
-        //}
+        // Bind material samples callback...
 
-        //max_recent_colors = recent_group->get_children().size();
-        //for (size_t i = 0; i < max_recent_colors; ++i)
-        //{
-        //    ui::ButtonWidget* child = static_cast<ui::ButtonWidget*>(recent_group->get_children()[i]);
-        //    gui.bind(child->signal, [&](const std::string& signal, void* button) {
-        //        stroke_parameters.set_material_color((static_cast<ui::ButtonWidget*>(button))->color);
-        //    });
-        //}
+        Node2D* samples_group = Node2D::get_widget_from_name("g_material_samples");
+        for (size_t i = 0; i < samples_group->get_children().size(); ++i)
+        {
+            ui::Button2D* child = static_cast<ui::Button2D*>(samples_group->get_children()[i]);
+            Node::bind(child->signal, [&](const std::string& signal, void* button) {
+                update_stroke_from_material(signal);
+            });
+        }
 
-        //// Bind material samples callback...
-
-        //ui::UIEntity* samples_group = gui.get_widget_from_name("g_material_samples");
-        //for (size_t i = 0; i < samples_group->get_children().size(); ++i)
-        //{
-        //    ui::ButtonWidget* child = static_cast<ui::ButtonWidget*>(samples_group->get_children()[i]);
-        //    gui.bind(child->signal, [&](const std::string& signal, void* button) {
-        //        update_stroke_from_material(signal);
-        //    });
-        //}
-
-        /*gui.bind("save_material", [&](const std::string& signal, void* button) {
+        Node::bind("save_material", [&](const std::string& signal, void* button) {
             generate_material_from_stroke(button);
-        });*/
+        });
     }
 
-    // Create helper ui
+    // Bind Controller buttons
     {
-        //helper_gui.load_layout("data/ui/helper.json");
-
-        //// Customize a little bit...
-        //helper_gui.get_workspace().hand = HAND_RIGHT;
-        //helper_gui.get_workspace().root_pose = POSE_GRIP;
-
-        //// Controller buttons
-        //helper_gui.bind(XR_BUTTON_B, [&]() { stamp_enabled = !stamp_enabled; });
+        Node::bind(XR_BUTTON_B, [&]() { stamp_enabled = !stamp_enabled; });
     }
 }
 
@@ -900,16 +882,17 @@ void SculptEditor::add_recent_color(const Color& color)
         recent_colors.pop_back();
     }
 
-    /*ui::UIEntity* recent_group = gui.get_widget_from_name("g_recent_colors");
+    Node2D* recent_group = Node2D::get_widget_from_name("g_recent_colors");
+    if (!recent_group) {
+        return;
+    }
 
     assert(recent_colors.size() <= recent_group->get_children().size());
     for (uint8_t i = 0; i < recent_colors.size(); ++i)
     {
-
-        ui::ButtonWidget* child = static_cast<ui::ButtonWidget*>(recent_group->get_children()[i]);
-        child->color = recent_colors[i];
-        child->set_surface_material_override_color(0, child->color);
-    }*/
+        ui::Button2D* child = static_cast<ui::Button2D*>(recent_group->get_children()[i]);
+        child->set_color(recent_colors[i]);
+    }
 }
 
 void SculptEditor::add_pbr_material_data(const std::string& name, const Color& base_color, float roughness, float metallic,
@@ -931,7 +914,7 @@ void SculptEditor::generate_material_from_stroke(void* button)
         return;
     }
 
-    //ui::ButtonWidget* b = reinterpret_cast<ui::ButtonWidget*>(button);
+    //ui::Button2D* b = reinterpret_cast<ui::Button2D*>(button);
     //ui::WidgetGroup* mat_samples = dynamic_cast<ui::WidgetGroup*>(b->get_parent()->get_children().at(1));
     //assert(mat_samples);
 
@@ -958,13 +941,13 @@ void SculptEditor::generate_material_from_stroke(void* button)
 void SculptEditor::update_gui_from_stroke_material(const StrokeMaterial& mat)
 {
     // Emit signals to change UI values
-    /*gui.emit_signal("color_picker@changed", mat.color);
-    gui.emit_signal("roughness@changed", mat.roughness);
-    gui.emit_signal("metallic@changed", mat.metallic);
-    gui.emit_signal("noise_intensity@changed", mat.noise_params.x);
-    gui.emit_signal("noise_frequency@changed", mat.noise_params.y);
-    gui.emit_signal("noise_octaves@changed", mat.noise_params.z);
-    gui.emit_signal("noise_color_picker@changed", mat.noise_color);*/
+    Node::emit_signal("color_picker@changed", mat.color);
+    Node::emit_signal("roughness@changed", mat.roughness);
+    Node::emit_signal("metallic@changed", mat.metallic);
+    Node::emit_signal("noise_intensity@changed", mat.noise_params.x);
+    Node::emit_signal("noise_frequency@changed", mat.noise_params.y);
+    Node::emit_signal("noise_octaves@changed", mat.noise_params.z);
+    Node::emit_signal("noise_color_picker@changed", mat.noise_color);
 }
 
 void SculptEditor::update_stroke_from_material(const std::string& name)
@@ -1000,7 +983,7 @@ void SculptEditor::pick_material()
     }
 
     // Disable picking..
-    // gui.emit_signal("pick_material", (void*)nullptr);
+    Node::emit_signal("pick_material", (void*)nullptr);
 
     // Manage interactions, set stamp mode until tool is used again
     stamp_enabled = true;

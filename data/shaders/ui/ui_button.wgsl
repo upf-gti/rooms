@@ -75,6 +75,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     if(keep_colors) {
         _color = color.rgb * in.color;
+        hightlight_color = vec3f(1.0);
     }
 
     if( ui_data.is_selected > 0.0 ) {
@@ -85,7 +86,9 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     } 
     // not selected but hovered
     else if( ui_data.is_hovered > 0.0 ) {
-        hightlight_color = mix( COLOR_TERCIARY, COLOR_HIGHLIGHT_LIGHT, gradient_factor );
+        if( !keep_colors ) {
+            hightlight_color = mix( COLOR_TERCIARY, COLOR_HIGHLIGHT_LIGHT, gradient_factor );
+        }
     }
 
     _color = select( back_color, _color * hightlight_color, color.a > 0.3 ); 
