@@ -42,7 +42,9 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
         g_main_tools->add_child(new ui::TextureButton2D("sculpt", "data/textures/cube.png", ui::UNIQUE_SELECTION | ui::SELECTED));
         g_main_tools->add_child(new ui::TextureButton2D("paint", "data/textures/paint.png", ui::UNIQUE_SELECTION));
         root->add_child(g_main_tools);
+    }
 
+    {
         ui::ButtonSubmenu2D* primitives_submenu = new ui::ButtonSubmenu2D("primitives", "data/textures/primitives.png");
         ui::ItemGroup2D* g0_primitives = new ui::ItemGroup2D("g0_primitives");
         g0_primitives->add_child(new ui::TextureButton2D("sphere", "data/textures/sphere.png", ui::UNIQUE_SELECTION | ui::SELECTED));
@@ -54,18 +56,44 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
         primitives_submenu->add_child(g0_primitives);
         primitives_submenu->add_child(new ui::TextureButton2D("shape_editor", "data/textures/shape_editor.png"));
         root->add_child(primitives_submenu);
+    }
 
+    {
         ui::ButtonSubmenu2D* material_submenu = new ui::ButtonSubmenu2D("material", "data/textures/material.png");
         material_submenu->add_child(new ui::TextureButton2D("colors", "data/textures/colors.png"));
         material_submenu->add_child(new ui::TextureButton2D("materials", "data/textures/material_samples.png"));
         material_submenu->add_child(new ui::TextureButton2D("material_editor", "data/textures/material_editor.png"));
         root->add_child(material_submenu);
+    }
 
+    {
         ui::ItemGroup2D* g_utilities = new ui::ItemGroup2D("g_utilities");
-        g_utilities->add_child(new ui::TextureButton2D("mirror", "data/textures/mirror.png", ui::ALLOW_TOGGLE));
+
+        {
+            ui::ButtonSubmenu2D* mirror_submenu = new ui::ButtonSubmenu2D("mirror", "data/textures/mirror.png");
+            mirror_submenu->add_child(new ui::TextureButton2D("mirror_toggle", "data/textures/mirror.png", ui::ALLOW_TOGGLE));
+            ui::ItemGroup2D* g_mirror = new ui::ItemGroup2D("g_mirror");
+            g_mirror->add_child(new ui::TextureButton2D("mirror_translation", "data/textures/mirror.png", ui::UNIQUE_SELECTION | ui::SELECTED));
+            g_mirror->add_child(new ui::TextureButton2D("mirror_rotation", "data/textures/mirror.png", ui::UNIQUE_SELECTION));
+            g_mirror->add_child(new ui::TextureButton2D("mirror_both", "data/textures/mirror.png", ui::UNIQUE_SELECTION));
+            mirror_submenu->add_child(g_mirror);
+            g_utilities->add_child(mirror_submenu);
+        }
+
         g_utilities->add_child(new ui::TextureButton2D("snap_to_surface", "data/textures/snap_to_surface.png", ui::ALLOW_TOGGLE));
         g_utilities->add_child(new ui::TextureButton2D("snap_to_grid", "data/textures/snap_to_grid.png", ui::ALLOW_TOGGLE));
-        g_utilities->add_child(new ui::TextureButton2D("lock_axis", "data/textures/lock_axis.png", ui::ALLOW_TOGGLE));
+
+        {
+            ui::ButtonSubmenu2D* lock_axis_submenu = new ui::ButtonSubmenu2D("lock_axis", "data/textures/lock_axis.png");
+            lock_axis_submenu->add_child(new ui::TextureButton2D("lock_axis_toggle", "data/textures/lock_axis.png", ui::ALLOW_TOGGLE));
+            ui::ItemGroup2D* g_lock_axis = new ui::ItemGroup2D("g_lock_axis");
+            g_lock_axis->add_child(new ui::TextureButton2D("lock_axis_x", "data/textures/x.png", ui::UNIQUE_SELECTION));
+            g_lock_axis->add_child(new ui::TextureButton2D("lock_axis_y", "data/textures/y.png", ui::UNIQUE_SELECTION));
+            g_lock_axis->add_child(new ui::TextureButton2D("lock_axis_z", "data/textures/z.png", ui::UNIQUE_SELECTION | ui::SELECTED));
+            lock_axis_submenu->add_child(g_lock_axis);
+            g_utilities->add_child(lock_axis_submenu);
+        }
+
         root->add_child(g_utilities);
     }
 
@@ -111,6 +139,8 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 void RoomsEngine::clean()
 {
     Engine::clean();
+
+    Node2D::clean();
 
     sculpt_editor.clean();
 }
