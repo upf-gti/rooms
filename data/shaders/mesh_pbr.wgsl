@@ -58,7 +58,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     out.position = camera_data.view_projection * world_position;
     out.uv = in.uv; // forward to the fragment shader
     out.color = in.color * instance_data.color.rgb;
-    out.normal = (instance_data.rotation * vec4f(in.normal, 0.0)).xyz;
+    out.normal = (instance_data.model * vec4f(in.normal, 0.0)).xyz;
     return out;
 }
 
