@@ -3,6 +3,7 @@
 #include "rooms_renderer.h"
 #include "framework/scene/parse_scene.h"
 #include "framework/utils/intersections.h"
+#include "framework/nodes/mesh_instance_3d.h"
 
 #include <algorithm>
 #include <numeric>
