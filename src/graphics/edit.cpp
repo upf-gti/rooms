@@ -1,6 +1,7 @@
 #include "edit.h"
 #include <sstream>
 #include "spdlog/spdlog.h"
+#include "framework/utils/intersections.h"
 
 std::ostream& operator<<(std::ostream& os, const Edit& edit)
 {
@@ -119,7 +120,7 @@ glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const
     float size_param = edits[edit_index].dimensions.w;
     float radius = edits[edit_index].dimensions.x;
 
-    const glm::vec3 smooth_margin = glm::vec3(parameters.w);
+    const glm::vec3 smooth_margin = (operation == OP_SMOOTH_PAINT || operation == OP_SMOOTH_UNION || operation == OP_SMOOTH_SUBSTRACTION) ? glm::vec3(parameters.w) : glm::vec3(0.0f);
 
     switch (primitive) {
     case SD_SPHERE:
@@ -209,4 +210,21 @@ AABB Stroke::get_world_AABB() const
     }
 
     return world_aabb;
+}
+
+// Compute the resulting stroke on the current stroke's edits that are inside the area
+void Stroke::get_AABB_intersecting_stroke(const AABB intersection_area,
+                                                Stroke& resulting_stroke) const {
+    resulting_stroke.edit_count = 0u;
+    resulting_stroke.primitive = primitive;
+    resulting_stroke.operation = operation;
+    resulting_stroke.parameters = parameters;
+    resulting_stroke.material = material;
+    resulting_stroke.stroke_id = stroke_id;
+
+    for (uint16_t i = 0u; i < edit_count; i++) {
+        if (intersection::AABB_AABB_min_max(intersection_area, get_edit_world_AABB(i))) {
+            resulting_stroke.edits[resulting_stroke.edit_count++] = edits[i];
+        }
+    }
 }
