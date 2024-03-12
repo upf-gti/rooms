@@ -1,15 +1,12 @@
 #include "sculpt_editor.h"
 
-
 #include "includes.h"
 
+#include "framework/utils/utils.h"
 #include "framework/nodes/ui.h"
 #include "framework/input.h"
-
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/renderer_storage.h"
-
-#include "framework/utils/utils.h"
 
 #include "spdlog/spdlog.h"
 #include "imgui.h"
@@ -352,10 +349,6 @@ void SculptEditor::update(float delta_time)
         //spdlog::info("{}", glm::length(glm::abs(controller_acceleration)));
     }
 
-    // Update ui/vr controller actions
-    gui.update(delta_time);
-    helper_gui.update(delta_time);
-
     bool is_tool_used = edit_update(delta_time);
 
     // Interaction input
@@ -429,7 +422,6 @@ void SculptEditor::update(float delta_time)
 void SculptEditor::apply_mirror_position(glm::vec3& position)
 {
     // Don't rotate the mirror origin..
-    // glm::vec3 origin_texture_space = mirror_origin - (sculpt_start_position + translation_diff);
     glm::vec3 origin_texture_space = world_to_texture3d(mirror_origin);
     glm::vec3 normal_texture_space = world_to_texture3d(mirror_normal, true);
     glm::vec3 pos_to_origin = origin_texture_space - position;
@@ -546,11 +538,6 @@ void SculptEditor::render()
             mesh_preview_outline->set_model(mesh_preview->get_model());
             mesh_preview_outline->render();
         }
-    }
-
-    if (renderer->get_openxr_available()) {
-        gui.render();
-        helper_gui.render();
     }
 
     if (axis_lock) {
@@ -827,30 +814,35 @@ void SculptEditor::bind_events()
         // Bind recent color buttons...
 
         Node2D* recent_group = Node2D::get_widget_from_name("g_recent_colors");
-        if (!recent_group) {
-            spdlog::error("Cannot find recent_colors button group!");
-            return;
+        if (recent_group) {
+            max_recent_colors = recent_group->get_children().size();
+            for (size_t i = 0; i < max_recent_colors; ++i)
+            {
+                ui::Button2D* child = static_cast<ui::Button2D*>(recent_group->get_children()[i]);
+                Node::bind(child->signal, [&](const std::string& signal, void* button) {
+                    const Color& color = (reinterpret_cast<ui::Button2D*>(button))->color;
+                    stroke_parameters.set_material_color(color);
+                });
+            }
         }
-
-        max_recent_colors = recent_group->get_children().size();
-        for (size_t i = 0; i < max_recent_colors; ++i)
-        {
-            ui::Button2D* child = static_cast<ui::Button2D*>(recent_group->get_children()[i]);
-            Node::bind(child->signal, [&](const std::string& signal, void* button) {
-                const Color& color = (reinterpret_cast<ui::Button2D*>(button))->color;
-                stroke_parameters.set_material_color(color);
-            });
+        else {
+            spdlog::error("Cannot find recent_colors button group!");
         }
 
         // Bind material samples callback...
 
         Node2D* samples_group = Node2D::get_widget_from_name("g_material_samples");
-        for (size_t i = 0; i < samples_group->get_children().size(); ++i)
-        {
-            ui::Button2D* child = static_cast<ui::Button2D*>(samples_group->get_children()[i]);
-            Node::bind(child->signal, [&](const std::string& signal, void* button) {
-                update_stroke_from_material(signal);
-            });
+        if (samples_group) {
+            for (size_t i = 0; i < samples_group->get_children().size(); ++i)
+            {
+                ui::Button2D* child = static_cast<ui::Button2D*>(samples_group->get_children()[i]);
+                Node::bind(child->signal, [&](const std::string& signal, void* button) {
+                    update_stroke_from_material(signal);
+                });
+            }
+        }
+        else {
+            spdlog::error("Cannot find material_samples button group!");
         }
 
         Node::bind("save_material", [&](const std::string& signal, void* button) {
@@ -914,28 +906,24 @@ void SculptEditor::generate_material_from_stroke(void* button)
         return;
     }
 
-    //ui::Button2D* b = reinterpret_cast<ui::Button2D*>(button);
-    //ui::WidgetGroup* mat_samples = dynamic_cast<ui::WidgetGroup*>(b->get_parent()->get_children().at(1));
-    //assert(mat_samples);
+    ui::Button2D* b = reinterpret_cast<ui::Button2D*>(button);
+    ui::ItemGroup2D* mat_samples = static_cast<ui::ItemGroup2D*>(Node2D::get_widget_from_name("g_material_samples"));
+    assert(mat_samples);
 
-    //// When making the button, it will be added here!
-    //gui.set_next_parent(mat_samples);
+    std::string name = "new_material_" + std::to_string(last_generated_material_uid++);
+    ui::TextureButton2D* new_button = new ui::TextureButton2D(name, "data/textures/material_samples.png", ui::UNIQUE_SELECTION);
+    new_button->remove_flag(MATERIAL_2D);
+    mat_samples->add_child(new_button);
+    num_generated_materials++;
 
-    //std::string name = "new_material_" + std::to_string(last_generated_material_uid++);
-    //ui::UIEntity* new_button = gui.make_button(name, "data/textures/material_samples.png");
-    //dynamic_cast<ui::ButtonWidget*>(new_button)->set_ui_priority(1);
+    // Add data to existing samples..
+    const StrokeMaterial& mat = stroke_parameters.get_material();
+    add_pbr_material_data(name, mat.color, mat.roughness, mat.metallic,
+        mat.noise_params.x, mat.noise_color, mat.noise_params.y, static_cast<int>(mat.noise_params.z));
 
-    //mat_samples->set_number_of_widgets(static_cast<float>(mat_samples->get_children().size()));
-    //num_generated_materials++;
-
-    //// Add data to existing samples..
-    //const StrokeMaterial& mat = stroke_parameters.get_material();
-    //add_pbr_material_data(name, mat.color, mat.roughness, mat.metallic,
-    //    mat.noise_params.x, mat.noise_color, mat.noise_params.y, static_cast<int>(mat.noise_params.z));
-
-    //gui.bind(name, [&](const std::string& signal, void* button) {
-    //    update_stroke_from_material(signal);
-    //});
+    Node::bind(name, [&](const std::string& signal, void* button) {
+        update_stroke_from_material(signal);
+    });
 }
 
 void SculptEditor::update_gui_from_stroke_material(const StrokeMaterial& mat)

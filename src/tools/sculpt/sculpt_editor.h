@@ -1,9 +1,10 @@
 #pragma once
 
-#include <graphics/edit.h>
+#include "graphics/edit.h"
 
 #include "framework/ui/transform_gizmo.h"
-#include "framework/ui/ui_controller.h"
+
+#include <map>
 
 enum eTool : uint8_t {
     NONE = 0,
@@ -73,13 +74,13 @@ class SculptEditor {
 
     bool canSnapToSurface();
 
-    bool        modifiers_dirty = false;
-    bool        dimensions_dirty = true;
-    bool        stamp_enabled = false;
-    bool		rotation_started = false;
-    bool        snap_to_surface = false;
-    bool        is_picking_material = false;
-    bool        was_material_picked = false;
+    bool modifiers_dirty    = false;
+    bool dimensions_dirty   = true;
+    bool stamp_enabled      = false;
+    bool rotation_started   = false;
+    bool snap_to_surface    = false;
+    bool is_picking_material = false;
+    bool was_material_picked = false;
 
     glm::vec3	sculpt_start_position;
     glm::vec3	edit_position_world;
@@ -139,8 +140,6 @@ class SculptEditor {
     glm::quat mirror_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
     
     // UI
-    ui::Controller        gui;
-    ui::Controller        helper_gui;
     size_t                max_recent_colors;
     std::vector<Color>    recent_colors;
 
