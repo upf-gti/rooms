@@ -54,6 +54,7 @@ void SculptEditor::initialize()
         primitive_default_states[SD_CYLINDER]   = { glm::vec4(0.0) };
         primitive_default_states[SD_CAPSULE]    = { glm::vec4(0.0) };
         primitive_default_states[SD_TORUS]      = { glm::vec4(0.0) };
+        primitive_default_states[SD_BEZIER]     = { glm::vec4(0.0) };
     }
 
     // Edit preview mesh
