@@ -149,7 +149,7 @@ class SculptEditor {
     // Stamp slide
     glm::vec3 edit_position_stamp;
     glm::vec3 edit_origin_stamp;
-    glm::quat edit_rotation_stamp;
+    glm::quat edit_rotation_stamp = { 0.0f, 0.0f, 0.0f, 1.0f };
 
     // Editor
     bool is_tool_pressed = false;

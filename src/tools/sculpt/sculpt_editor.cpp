@@ -183,7 +183,8 @@ bool SculptEditor::edit_update(float delta_time)
         primitive_default_states[stroke_parameters.get_primitive()].dimensions = edit_to_add.dimensions;
         edit_to_add.rotation = glm::inverse(Input::get_controller_rotation(HAND_RIGHT, POSE_AIM));
         is_stretching_edit = false;
-    } else if (stamp_enabled && is_tool_pressed) { // Stretch the edit using motion controls
+    }
+    else if (stamp_enabled && is_tool_pressed) { // Stretch the edit using motion controls
         if (is_stretching_edit) {
             sdPrimitive curr_primitive = stroke_parameters.get_primitive();
 
@@ -298,11 +299,11 @@ bool SculptEditor::edit_update(float delta_time)
             enable_tool(PAINT);
         }
 
-        if (current_tool == SCULPT && is_tool_being_used(stamp_enabled)) {
-            // For debugging sculpture without a headset
-            if (!Renderer::instance->get_openxr_available()) {
+        // For debugging sculpture without a headset
+        if (!Renderer::instance->get_openxr_available()) {
 
-                //edit_to_add.position = glm::vec3(0.0);
+            if (current_tool == SCULPT && is_tool_being_used(stamp_enabled)) {
+
                 edit_to_add.position = glm::vec3(glm::vec3(0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1)));
                 glm::vec3 euler_angles(random_f() * 90, random_f() * 90, random_f() * 90);
                 edit_to_add.dimensions = glm::vec4(0.05f, 0.01f, 0.01f, 0.01f) * 1.0f;
@@ -318,6 +319,10 @@ bool SculptEditor::edit_update(float delta_time)
                 //stroke_parameters.set_material_metallic(0.9);
                 //stroke_parameters.set_material_roughness(0.2);
                 //stroke_parameters.set_smooth_factor(0.01);
+            }
+            else {
+                // Make sure we don't get NaNs in preview rotation due to polling XR controllers in 2D mode
+                edit_to_add.rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
             }
         }
     }
