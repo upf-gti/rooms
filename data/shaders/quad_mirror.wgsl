@@ -28,12 +28,11 @@ struct FragmentOutput {
 
 @fragment
 fn fs_main(in: VertexOutput) -> FragmentOutput {
-    var uv_flip = in.uv;
-    uv_flip.y = 1.0 - uv_flip.y;
-    let xr_image = textureSample(left_eye_texture, texture_sampler, uv_flip);
+
+    let xr_image = textureSample(left_eye_texture, texture_sampler, in.uv);
 
     var out: FragmentOutput;
-    out.color = vec4f(pow(xr_image.rgb, 1.0 / vec3f(2.2, 2.2, 2.2)), 1.0); // Color
+    out.color = vec4f(pow(xr_image.rgb, 1.0 / vec3f(2.2)), 1.0); // Color
 
     return out;
 }

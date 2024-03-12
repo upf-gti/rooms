@@ -1,23 +1,18 @@
 #include "rooms_engine.h"
 #include "framework/nodes/environment_3d.h"
+#include "framework/nodes/viewport_3d.h"
 #include "framework/input.h"
 #include "framework/scene/parse_scene.h"
 #include "framework/scene/parse_gltf.h"
 #include "graphics/renderers/rooms_renderer.h"
 
 #include "spdlog/spdlog.h"
-
 #include "imgui.h"
-
 #include "framework/utils/tinyfiledialogs.h"
 
 #include <fstream>
 
-#include "framework/nodes/ui.h"
-
 std::vector<Node3D*> RoomsEngine::entities;
-
-ui::HContainer2D* root_2d = nullptr;
 
 int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen)
 {
@@ -184,6 +179,11 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
         root_2d->add_child(g_utilities);
     }
 
+    if (Renderer::instance->get_openxr_available()) {
+        ui_3d = new Viewport3D(root_2d);
+        entities.push_back(ui_3d);
+    }
+
 	return error;
 }
 
@@ -202,9 +202,20 @@ void RoomsEngine::update(float delta_time)
 
     Node::check_controller_signals();
 
-    sculpt_editor.update(delta_time);
+    if(ui_3d) {
+        glm::mat4x4 pose = Input::get_controller_pose(HAND_LEFT, POSE_AIM);
+        pose = glm::rotate(pose, glm::radians(-45.f), glm::vec3(1.0f, 0.0f, 0.0f));
+        ui_3d->set_model(pose);
+    }
+    else {
+        root_2d->update(delta_time);
+    }
 
-    root_2d->update(delta_time);
+    for (auto entity : entities) {
+        entity->update(delta_time);
+    }
+
+    sculpt_editor.update(delta_time);
 
     if (Input::was_key_pressed(GLFW_KEY_E))
     {
@@ -218,8 +229,10 @@ void RoomsEngine::render()
     render_gui();
 #endif
 
-    root_2d->render();
-
+    if (!ui_3d) {
+        root_2d->render();
+    }
+    
 	for (auto entity : entities) {
 		entity->render();
 	}

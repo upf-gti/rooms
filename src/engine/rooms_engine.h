@@ -2,18 +2,24 @@
 
 #include "engine.h"
 #include "tools/sculpt/sculpt_editor.h"
+#include "framework/nodes/ui.h"
 
 #include <vector>
 
 class Node;
 class Node3D;
 class Environment3D;
+class Viewport3D;
 
 class RoomsEngine : public Engine {
 
     static std::vector<Node3D*> entities;
 
     Environment3D* skybox = nullptr;
+
+    // UI
+    ui::HContainer2D* root_2d = nullptr;
+    Viewport3D* ui_3d = nullptr;
 
     SculptEditor sculpt_editor;
 
