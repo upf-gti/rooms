@@ -15,7 +15,6 @@
 #define DISABLE_RAYMARCHER
 #endif
 
-
 class RoomsRenderer : public Renderer {
 
     RaymarchingRenderer raymarching_renderer;

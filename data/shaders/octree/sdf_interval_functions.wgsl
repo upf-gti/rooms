@@ -591,6 +591,48 @@ fn torus_interval( p : mat3x3f, c : vec3f, t : vec2f, rotation : vec4f) -> vec2f
     return isub_vec_float(isqrt(ipow2_vec(d_x) + ipow2_vec(d_y)), t.y);
 }
 
+fn bezier_interval( p : mat3x3f, start : vec3f, cp : vec3f, end : vec3f, thickness : f32, rotation : vec4f) -> vec2f
+{
+    let b0 : mat3x3f = irotate_point_quat(isub_mat_vec(p, start), rotation);
+    let b1 : mat3x3f = irotate_point_quat(isub_mat_vec(p, cp), rotation);
+    let b2 : mat3x3f = irotate_point_quat(isub_mat_vec(p, end), rotation);
+
+    var b01 : mat3x3f = icross_mats(b0, b1);
+    var b12 : mat3x3f = icross_mats(b1, b2);
+    var b20 : mat3x3f = icross_mats(b2, b0);
+
+    var n : mat3x3f = iadd_mats(iadd_mats(b01, b12), b20);
+
+    var a : vec2f = -idot_mat(b20, n);
+    var b : vec2f = -idot_mat(b01, n);
+    var d : vec2f = -idot_mat(b12, n);
+
+    var m : vec2f = -idot_mat(n, n);
+
+    var g0 : mat3x3f = imul_vec2_mat(isub_vecs(d, b), b1);
+    var g1 : mat3x3f = imul_vec2_mat(iadd_vecs(b, imul_float_vec(0.5, a)), b2);
+    var g2 : mat3x3f = imul_vec2_mat(isub_vecs(ineg(d), imul_float_vec(0.5, a)), b0);
+    var g : mat3x3f = iadd_mats(iadd_mats(g0, g1), g2);
+
+    var f : vec2f = isub_vecs(imul_float_vec(0.25, imul_vec2_vec2(a, a)), imul_vec2_vec2(b, d));
+    var k : mat3x3f = iadd_mats(isub_mats(b0, imul_float_mat(2.0, b1)), b2);
+
+    var t0 : vec2f = isub_vecs(iadd_vecs(imul_float_vec(0.5, a), b), imul_vec2_vec2(imul_float_vec(0.5, f), idot_mat(g,k)));
+    var t1 : vec2f = idot_mat(g, g);
+    var t2 : vec2f = idiv_vecs(idiv_vecs(t0, t1), m);
+    var t : vec2f = iclamp(t2, 0.0, 1.0 );
+
+    var x0 : mat3x3f = iadd_mats(imul_vec2_mat(vec2f(1.0) - t, b0), imul_vec2_mat(t, b1));
+    var x1 : mat3x3f = iadd_mats(imul_vec2_mat(vec2f(1.0) - t, b1), imul_vec2_mat(t, b2));
+    var x : mat3x3f = iadd_mats(imul_vec2_mat(vec2f(1.0) - t, x0), imul_vec2_mat(t, x1));
+
+    let d_x : vec2f = x[0].xy;
+    let d_y : vec2f = x[1].xy;
+    let d_z : vec2f = x[2].xy;
+
+    return isub_vec_float(isqrt(ipow2_vec(d_x) + ipow2_vec(d_y)  + ipow2_vec(d_z)), thickness);
+}
+
 fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f,  primitive : u32, operation : u32, edit_parameters : vec4f, current_interval : vec2f, edit : Edit, resulting_interval : ptr<function, vec2f>) -> vec2f
 {
     var pSurface : vec2f;
@@ -667,6 +709,11 @@ fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f,  primitive : u32, 
             } else {
                 pSurface = torus_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, vec2f(radius, size_param), edit.rotation);
             }
+            break;
+        }
+        case SD_BEZIER: {
+            var curve_thickness : f32 = 0.01;
+            pSurface = bezier_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.position + vec3f(0.0, 0.5, 0.0), edit.position + vec3f(0.2, 0.1, 0.0), curve_thickness, edit.rotation);
             break;
         }
         default: {
