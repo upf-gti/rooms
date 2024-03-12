@@ -149,6 +149,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     let is_substract : bool = current_stroke.operation == OP_SUBSTRACTION;
     let is_smooth_substract : bool = current_stroke.operation == OP_SMOOTH_SUBSTRACTION;
     let is_any_substract : bool = is_substract || is_smooth_substract;
+
+    let is_any_smooth : bool = is_smooth_substract || is_smooth_paint || is_smooth_union;
     
     let octant_min : vec3f = octant_center - vec3f(level_half_size);
     let octant_max : vec3f = octant_center + vec3f(level_half_size);
@@ -178,9 +180,9 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
     var new_packed_edit_idx : u32 = 0;
 
-    var edit_cutoff_distance : f32 = 0.0;
+    var edit_cutoff_distance : f32 = MIN_HIT_DIST;
 
-    if (is_smooth_union) {
+    if (is_any_smooth) {
         edit_cutoff_distance = current_stroke.parameters.w;
     }
 
@@ -215,7 +217,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
         surface_interval = eval_edit_interval(x_range, y_range, z_range, current_stroke.primitive, current_stroke.operation, current_stroke.parameters, surface_interval, current_edit, &edit_interval);
 
-        if (is_smooth_union || is_smooth_substract || is_smooth_paint) {
+        if (is_any_smooth) {
             current_edit.dimensions += vec4f(current_stroke.parameters.w);
         }
 

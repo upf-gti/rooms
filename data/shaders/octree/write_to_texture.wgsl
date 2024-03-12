@@ -93,7 +93,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
 #ifdef SSAA_SDF_WRITE_TO_TEXTURE
     // Super Sampling iterations
-    for(var j : u32 = 0u; j < 9u; j++) {
+    for(var j : u32 = 0u; j < 8u; j++) {
 #endif
 
         var curr_surface : Surface = sSurface;
@@ -137,8 +137,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     }
 
     // Average all the samples
-    result_surface.material = Material_mult_by(result_surface.material, 1.0 / 9.0);
-    result_surface.distance = result_surface.distance / 9.0;
+    result_surface.material = Material_mult_by(result_surface.material, 1.0 / 8.0);
+    result_surface.distance = result_surface.distance / 8.0;
 #else
     result_surface = curr_surface;
 #endif
