@@ -50,6 +50,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
             g0_primitives->add_child(new ui::TextureButton2D("capsule", "data/textures/capsule.png", ui::UNIQUE_SELECTION));
             g0_primitives->add_child(new ui::TextureButton2D("cylinder", "data/textures/cylinder.png", ui::UNIQUE_SELECTION));
             g0_primitives->add_child(new ui::TextureButton2D("torus", "data/textures/torus.png", ui::UNIQUE_SELECTION));
+            g0_primitives->add_child(new ui::TextureButton2D("bezier", "data/textures/bezier.png", ui::UNIQUE_SELECTION));
             primitives_submenu->add_child(g0_primitives);
         }
 

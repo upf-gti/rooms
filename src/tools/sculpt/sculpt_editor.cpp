@@ -776,6 +776,7 @@ void SculptEditor::bind_events()
         Node::bind("capsule", [&](const std::string& signal, void* button) { set_primitive(SD_CAPSULE); });
         Node::bind("cylinder", [&](const std::string& signal, void* button) { set_primitive(SD_CYLINDER); });
         Node::bind("torus", [&](const std::string& signal, void* button) { set_primitive(SD_TORUS); });
+        Node::bind("bezier", [&](const std::string& signal, void* button) { set_primitive(SD_BEZIER); });
 
         Node::bind("onion", [&](const std::string& signal, void* button) { toggle_onion_modifier(); });
         Node::bind("onion_value", [&](const std::string& signal, float value) { set_onion_modifier(value); });
