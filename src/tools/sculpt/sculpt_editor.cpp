@@ -250,6 +250,36 @@ void SculptEditor::initialize()
         RoomsEngine::entities.push_back(main_pannel_3d);
     }
 
+    // Load controller UI labels
+    //if (Renderer::instance->get_openxr_available())
+    {
+        // Left hand
+        {
+            left_hand_container = new ui::VContainer2D("left_controller_root", { 5.0f, 5.f });
+
+            controller_labels.X_button_label = ui::Text2D("X button", { 0.0f, 0.0f });
+            left_hand_container->add_child(&controller_labels.X_button_label);
+            controller_labels.Y_button_label = ui::Text2D("Y button", { 0.0f, 0.0f });
+            left_hand_container->add_child(&controller_labels.Y_button_label);
+
+            left_hand_ui_3D = new Viewport3D(left_hand_container);
+            RoomsEngine::entities.push_back(left_hand_ui_3D);
+        }
+
+        // Right hand
+        {
+            right_hand_container = new ui::VContainer2D("right_controller_root", { 15.0f, 15.f });
+
+            controller_labels.B_button_label = ui::Text2D("B button", { 0.04f, 0.04f }, 16.0f);
+            right_hand_container->add_child(&controller_labels.B_button_label);
+            controller_labels.A_button_label = ui::Text2D("A button", { 0.50f, 0.50f }, 16.0f);
+            right_hand_container->add_child(&controller_labels.A_button_label);
+
+            right_hand_ui_3D = new Viewport3D(right_hand_container);
+            RoomsEngine::entities.push_back(right_hand_ui_3D);
+        }
+    }
+
     // Load ui and Bind callbacks
     bind_events();
 
@@ -510,6 +540,13 @@ void SculptEditor::update(float delta_time)
         }
         else {
             main_pannel_2d->update(delta_time);
+        }
+
+        // Update controller UI
+        //if (Renderer::instance->get_openxr_available())
+        {
+            right_hand_ui_3D->set_model(glm::mat4(1.0f));
+            left_hand_ui_3D->set_model(Input::get_controller_pose(HAND_LEFT, POSE_AIM));
         }
     }
 

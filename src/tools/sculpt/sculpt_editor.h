@@ -2,7 +2,9 @@
 
 #include "graphics/edit.h"
 #include "framework/nodes/ui.h"
+#include "framework/nodes/text.h"
 #include "framework/ui/transform_gizmo.h"
+
 
 #include <map>
 
@@ -141,25 +143,27 @@ class SculptEditor {
     glm::quat mirror_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
 
     // Controller UI
-    //struct {
-    //    ui::VContainer2D* right_hand_container = nullptr;
-    //    ui::VContainer2D* left_hand_container = nullptr;
+    ui::VContainer2D* right_hand_container = nullptr;
+    ui::VContainer2D* left_hand_container = nullptr;
+    Viewport3D* right_hand_ui_3D = nullptr;
+    Viewport3D* left_hand_ui_3D = nullptr;
 
-    //    // Right hand
-    //    ui::Text2D B_button_label;
-    //    ui::Text2D A_button_label;
-    //    ui::Text2D right_grip_label;
-    //    ui::Text2D right_trigger_label;
-    //    ui::Text2D right_joystick_label;
+    struct {
+        // Right hand
+        ui::Text2D B_button_label;
+        ui::Text2D A_button_label;
+        ui::Text2D right_grip_label;
+        ui::Text2D right_trigger_label;
+        ui::Text2D right_joystick_label;
 
-    //    // Left hand
-    //    ui::Text2D X_button_label;
-    //    ui::Text2D y_button_label;
-    //    ui::Text2D left_grip_label;
-    //    ui::Text2D left_trigger_label;
-    //    ui::Text2D left_joystick_label;
+        // Left hand
+        ui::Text2D X_button_label;
+        ui::Text2D Y_button_label;
+        ui::Text2D left_grip_label;
+        ui::Text2D left_trigger_label;
+        ui::Text2D left_joystick_label;
 
-    //} controller_labels;
+    } controller_labels;
     
 
     // Main pannel UI
