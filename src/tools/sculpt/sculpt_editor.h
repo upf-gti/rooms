@@ -1,7 +1,7 @@
 #pragma once
 
 #include "graphics/edit.h"
-
+#include "framework/nodes/ui.h"
 #include "framework/ui/transform_gizmo.h"
 
 #include <map>
@@ -16,6 +16,7 @@ enum eTool : uint8_t {
 
 class RoomsRenderer;
 class MeshInstance3D;
+class Viewport3D;
 
 struct PrimitiveState {
     glm::vec4 dimensions;
@@ -51,12 +52,12 @@ class SculptEditor {
     std::vector<Edit>   preview_tmp_edits;
     std::vector<Edit>   new_edits;
 
-    std::map<uint32_t, PrimitiveState> primitive_default_states;
+    std::map<uint32_t, PrimitiveState> primitive_default_states = {};
 
-    std::map<std::string, PBRMaterialData> pbr_materials_data;
+    std::map<std::string, PBRMaterialData> pbr_materials_data = {};
 
-    Edit             edit_to_add;
-    StrokeParameters stroke_parameters;
+    Edit             edit_to_add = {};
+    StrokeParameters stroke_parameters = {};
 
     MeshInstance3D* mesh_preview = nullptr;
     MeshInstance3D* mesh_preview_outline = nullptr;
@@ -119,7 +120,7 @@ class SculptEditor {
     };
 
     bool axis_lock = false;
-    TransformGizmo axis_lock_gizmo;
+    TransformGizmo axis_lock_gizmo = {};
     uint8_t axis_lock_mode = AXIS_LOCK_Z;
     glm::vec3 axis_lock_position = glm::vec3(0.f);
 
@@ -132,14 +133,39 @@ class SculptEditor {
 
     bool use_mirror = false;
 
-    TransformGizmo mirror_gizmo;
+    TransformGizmo mirror_gizmo = {};
     MeshInstance3D* mirror_mesh = nullptr;
 
     glm::vec3 mirror_origin = glm::vec3(0.f);
     glm::vec3 mirror_normal = glm::vec3(0.f, 0.f, 1.f);
     glm::quat mirror_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
+
+    // Controller UI
+    //struct {
+    //    ui::VContainer2D* right_hand_container = nullptr;
+    //    ui::VContainer2D* left_hand_container = nullptr;
+
+    //    // Right hand
+    //    ui::Text2D B_button_label;
+    //    ui::Text2D A_button_label;
+    //    ui::Text2D right_grip_label;
+    //    ui::Text2D right_trigger_label;
+    //    ui::Text2D right_joystick_label;
+
+    //    // Left hand
+    //    ui::Text2D X_button_label;
+    //    ui::Text2D y_button_label;
+    //    ui::Text2D left_grip_label;
+    //    ui::Text2D left_trigger_label;
+    //    ui::Text2D left_joystick_label;
+
+    //} controller_labels;
     
-    // UI
+
+    // Main pannel UI
+    ui::HContainer2D* main_pannel_2d = nullptr;
+    Viewport3D* main_pannel_3d = nullptr;
+
     size_t                max_recent_colors;
     std::vector<Color>    recent_colors;
 
@@ -168,7 +194,7 @@ class SculptEditor {
     void scene_update_rotation();
 
 public:
-
+    SculptEditor() {};
     void initialize();
     void clean();
 
