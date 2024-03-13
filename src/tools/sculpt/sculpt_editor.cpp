@@ -51,12 +51,12 @@ void SculptEditor::initialize()
 
     // Initialize default primitive states
     {
-        primitive_default_states[SD_SPHERE]     = { glm::vec4(0.0) };
-        primitive_default_states[SD_BOX]        = { glm::vec4(0.0) };
-        primitive_default_states[SD_CONE]       = { glm::vec4(0.0) };
-        primitive_default_states[SD_CYLINDER]   = { glm::vec4(0.0) };
-        primitive_default_states[SD_CAPSULE]    = { glm::vec4(0.0) };
-        primitive_default_states[SD_TORUS]      = { glm::vec4(0.0) };
+        primitive_default_states[SD_SPHERE]     = { glm::vec4(0.02f, 0.0f, 0.0f, 0.0f) };
+        primitive_default_states[SD_BOX]        = { glm::vec4(0.02f, 0.02f, 0.02f, 0.0f) };
+        primitive_default_states[SD_CONE]       = { glm::vec4(0.05f, 0.0f, 0.0f, 0.03f) };
+        primitive_default_states[SD_CYLINDER]   = { glm::vec4(0.05f, 0.0f, 0.0f, 0.03f) };
+        primitive_default_states[SD_CAPSULE]    = { glm::vec4(0.05f, 0.0f, 0.0f, 0.03f) };
+        primitive_default_states[SD_TORUS]      = { glm::vec4(0.03f, 0.0f, 0.0f, 0.01f) };
         primitive_default_states[SD_BEZIER]     = { glm::vec4(0.0) };
     }
 
@@ -251,7 +251,7 @@ void SculptEditor::initialize()
     }
 
     // Load controller UI labels
-    //if (Renderer::instance->get_openxr_available())
+    if (Renderer::instance->get_openxr_available())
     {
         // Left hand
         {
@@ -543,7 +543,7 @@ void SculptEditor::update(float delta_time)
         }
 
         // Update controller UI
-        //if (Renderer::instance->get_openxr_available())
+        if (Renderer::instance->get_openxr_available())
         {
             right_hand_ui_3D->set_model(glm::mat4(1.0f));
             left_hand_ui_3D->set_model(Input::get_controller_pose(HAND_LEFT, POSE_AIM));
