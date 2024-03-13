@@ -94,7 +94,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
 #ifdef DOUBLE_MATERIAL_RES
         // Initialize all the samples with the according material subsamples
-        for(var i : u32 = 0u; i < 8u; i++) {
+        for(var i : u32 = 0u; i < 9u; i++) {
             let texture_pos : vec3u = delta_pos_texture[i];
             let raw_material : u32 = textureLoad(write_material_sdf, material_coordinates_origin + texture_pos).r;
 
@@ -146,7 +146,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     // Super Sampling iterations
 
 #ifdef SSAA_OR_DOUBLE_MATERIAL_RES
-    for(var j : u32 = 0u; j < 8u; j++) {
+    for(var j : u32 = 0u; j < 9u; j++) {
 #else
     let j : u32 = 8u;
 #endif
@@ -180,13 +180,12 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 #ifdef SSAA_OR_DOUBLE_MATERIAL_RES
 
         // Accumulate the sampling results
-        result_surface.distance = surface_samples[j].distance + result_surface.distance;
         result_surface.material = Material_sum_Material(surface_samples[j].material, result_surface.material);
     }
 
     // Average all the samples
-    result_surface.material = Material_mult_by(result_surface.material, 1.0 / 8.0);
-    result_surface.distance = result_surface.distance / 8.0;
+    result_surface.material = Material_mult_by(result_surface.material, 1.0 / 9.0);
+    result_surface.distance = surface_samples[8u].distance;
 #else
     result_surface = surface_samples[j];
 #endif
