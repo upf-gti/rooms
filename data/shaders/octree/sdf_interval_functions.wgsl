@@ -21,9 +21,12 @@ fn imax(a : vec2f, b : vec2f) -> vec2f
 	return vec2f(max(a.x,b.x),max(a.y,b.y));
 }
 
-fn iclamp(a : vec2f, min : f32, max: f32) -> vec2f
-{
-	return imax(imin(a, vec2f(max)), vec2f(min));
+fn imax_mats(v : mat3x3f, q : mat3x3f) -> mat3x3f
+{ 
+    return iavec3_vecs(
+		imax(v[0].xy, q[0].xy),
+		imax(v[1].xy, q[1].xy),
+		imax(v[2].xy, q[2].xy));
 }
 
 fn imix(x : vec2f, y : vec2f, a: vec2f) -> vec2f
@@ -31,12 +34,17 @@ fn imix(x : vec2f, y : vec2f, a: vec2f) -> vec2f
     return iadd_vecs(x, imul_vec2_vec2(isub_vecs(y, x), a));
 }
 
-fn imax_mats(v : mat3x3f, q : mat3x3f) -> mat3x3f
-{ 
+fn imix_mats(x : mat3x3f, y : mat3x3f, a: vec2f) -> mat3x3f
+{
     return iavec3_vecs(
-		imax(v[0].xy, q[0].xy),
-		imax(v[1].xy, q[1].xy),
-		imax(v[2].xy, q[2].xy));
+		imix(x[0].xy, y[0].xy, a),
+		imix(x[1].xy, y[1].xy, a),
+		imix(x[2].xy, y[2].xy, a));
+}
+
+fn iclamp(a : vec2f, min : f32, max: f32) -> vec2f
+{
+	return imax(imin(a, vec2f(max)), vec2f(min));
 }
 
 fn iadd_vecs(a : vec2f, b : vec2f) -> vec2f
@@ -598,78 +606,44 @@ fn torus_interval( p : mat3x3f, c : vec3f, t : vec2f, rotation : vec4f) -> vec2f
 
 fn bezier_interval( p : mat3x3f, start : vec3f, cp : vec3f, end : vec3f, thickness : f32, rotation : vec4f) -> vec2f
 {
-    // let b0 : mat3x3f = irotate_point_quat(isub_mat_vec(p, start), rotation);
-    // let b1 : mat3x3f = irotate_point_quat(isub_mat_vec(p, cp), rotation);
-    // let b2 : mat3x3f = irotate_point_quat(isub_mat_vec(p, end), rotation);
+    let ip : mat3x3f = ineg_mats(p);
 
-    // var b01 : mat3x3f = icross_mats(b0, b1);
-    // var b12 : mat3x3f = icross_mats(b1, b2);
-    // var b20 : mat3x3f = icross_mats(b2, b0);
+    let b0 : mat3x3f = irotate_point_quat(iadd_vec_mat(start, ip), rotation);
+    let b1 : mat3x3f = irotate_point_quat(iadd_vec_mat(cp, ip), rotation);
+    let b2 : mat3x3f = irotate_point_quat(iadd_vec_mat(end, ip), rotation);
 
-    // var n : mat3x3f = iadd_mats(iadd_mats(b01, b12), b20);
+    var b01 : mat3x3f = icross_mats(b0, b1);
+    var b12 : mat3x3f = icross_mats(b1, b2);
+    var b20 : mat3x3f = icross_mats(b2, b0);
 
-    // var a : vec2f = ineg(idot_mat(b20, n));
-    // var b : vec2f = ineg(idot_mat(b01, n));
-    // var d : vec2f = ineg(idot_mat(b12, n));
+    var n : mat3x3f = iadd_mats(iadd_mats(b01, b12), b20);
 
-    // var m : vec2f = ineg(idot_mat(n, n));
+    var a : vec2f = ineg(idot_mat(b20, n));
+    var b : vec2f = ineg(idot_mat(b01, n));
+    var d : vec2f = ineg(idot_mat(b12, n));
 
-    // var g0 : mat3x3f = imul_vec2_mat(isub_vecs(d, b), b1);
-    // var g1 : mat3x3f = imul_vec2_mat(iadd_vecs(b, imul_float_vec(0.5, a)), b2);
-    // var g2 : mat3x3f = imul_vec2_mat(isub_vecs(ineg(d), imul_float_vec(0.5, a)), b0);
-    // var g : mat3x3f = iadd_mats(iadd_mats(g0, g1), g2);
+    var m : vec2f = ineg(idot_mat(n, n));
 
-    // var f : vec2f = isub_vecs(imul_float_vec(0.25, ipow2_vec(a)), imul_vec2_vec2(b, d));
-    // var k : mat3x3f = iadd_mats(isub_mats(b0, imul_float_mat(2.0, b1)), b2);
+    var g0 : mat3x3f = imul_vec2_mat(isub_vecs(d, b), b1);
+    var g1 : mat3x3f = imul_vec2_mat(iadd_vecs(b, imul_float_vec(0.5, a)), b2);
+    var g2 : mat3x3f = imul_vec2_mat(isub_vecs(ineg(d), imul_float_vec(0.5, a)), b0);
+    var g : mat3x3f = iadd_mats(iadd_mats(g0, g1), g2);
 
-    // var t00 : vec2f = iadd_vecs(imul_float_vec(0.5, a), b);         // [a * 0.5 + b]
-    // var t01 : vec2f = imul_float_vec(0.5, f);                       // [f * 0.5]
-    // var t10 : vec2f = idiv_vecs(idot_mat(g,k), idot_mat(g, g));     // [dot(g,k) / dot(g,g)]
-    // var t1 : vec2f = isub_vecs(t00, imul_vec2_vec2(t01, t10));      // [a * 0.5 + b] - [0.5 * f * dot(g,k) / dot(g,g)]
-    // var t2 : vec2f = idiv_vecs(t1, m);                              // [a * 0.5 + b - 0.5 * f * dot(g,k) / dot(g,g)] / [m]
-    // var t : vec2f = iclamp(t2, 0.0, 1.0 );
+    var f : vec2f = isub_vecs(imul_float_vec(0.25, ipow2_vec(a)), imul_vec2_vec2(b, d));
+    var k : mat3x3f = iadd_mats(isub_mats(b0, imul_float_mat(2.0, b1)), b2);
 
-    // var one_minus_t : vec2f = isub_vecs(vec2f(1.0), t);
-    // var x0 : mat3x3f = imix(b0, b1, t);
-    // var x1 : mat3x3f = iadd_mats(imul_vec2_mat(one_minus_t, b1), imul_vec2_mat(t, b2));
-    // var x : mat3x3f = iadd_mats(imul_vec2_mat(one_minus_t, x0), imul_vec2_mat(t, x1));
+    var t00 : vec2f = iadd_vecs(imul_float_vec(0.5, a), b);         // [a * 0.5 + b]
+    var t01 : vec2f = imul_float_vec(0.5, f);                       // [f * 0.5]
+    var t10 : vec2f = idiv_vecs(idot_mat(g,k), idot_mat(g, g));     // [dot(g,k) / dot(g,g)]
+    var t1 : vec2f = isub_vecs(t00, imul_vec2_vec2(t01, t10));      // [a * 0.5 + b] - [0.5 * f * dot(g,k) / dot(g,g)]
+    var t2 : vec2f = idiv_vecs(t1, m);                              // [a * 0.5 + b - 0.5 * f * dot(g,k) / dot(g,g)] / [m]
+    var t : vec2f = iclamp(t2, 0.0, 1.0 );
 
-    // let d_x : vec2f = x[0].xy;
-    // let d_y : vec2f = x[1].xy;
-    // let d_z : vec2f = x[2].xy;
+    var x0 : mat3x3f = imix_mats(b0, b1, t);
+    var x1 : mat3x3f = imix_mats(b1, b2, t);
+    var x : mat3x3f = imix_mats(x0, x1, t);
 
-    // return isub_vec_float(isqrt(ipow2_vec(d_x) + ipow2_vec(d_y)  + ipow2_vec(d_z)), thickness);
-
-    var b0 : vec3f = start;
-    var b1 : vec3f = cp;
-    var b2 : vec3f = end;
-    
-    var b01 : vec3f = cross(b0, b1);
-    var b12 : vec3f = cross(b1, b2);
-    var b20 : vec3f = cross(b2, b0);
-    
-    var n : vec3f =  b01 + b12 + b20;
-    
-    var a : f32 = -dot(b20, n);
-    var b : f32 = -dot(b01, n);
-    var d : f32 = -dot(b12, n);
-
-    var m : f32 = -dot(n,n);
-    
-    var g : vec3f =  (d-b)*b1 + (b+a*0.5)*b2 + (-d-a*0.5)*b0;
-    var f : f32 = a*a*0.25-b*d;
-    var k : vec3f = b0-2.0*b1+b2;
-    var t : f32 = clamp((a*0.5+b-0.5*f*dot(g,k)/dot(g,g))/m, 0.0, 1.0 );
-    
-    var r : vec3f = mix(mix(b0,b1,t), mix(b1,b2,t),t);
-
-    var rm : mat3x3f = irotate_point_quat(isub_mat_vec(p, r), rotation);
-
-    let d_x : vec2f = rm[0].xy;
-    let d_y : vec2f = rm[1].xy;
-    let d_z : vec2f = rm[2].xy;
-
-    return isub_vec_float(isqrt(ipow2_vec(d_x) + ipow2_vec(d_y)  + ipow2_vec(d_z)), thickness);
+    return isub_vec_float(ilength(x), thickness);
 }
 
 fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f,  primitive : u32, operation : u32, edit_parameters : vec4f, current_interval : vec2f, edit : Edit, resulting_interval : ptr<function, vec2f>) -> vec2f
