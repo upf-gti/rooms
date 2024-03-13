@@ -251,15 +251,15 @@ void SculptEditor::initialize()
     }
 
     // Load controller UI labels
-    if (true || Renderer::instance->get_openxr_available())
+    if (Renderer::instance->get_openxr_available())
     {
         // Left hand
         {
             left_hand_container = new ui::VContainer2D("left_controller_root", { 0.0f, 0.f });
 
-            controller_labels[HAND_LEFT].main_button_label = new ui::ImageLabel2D("Xbutton", "data/textures/buttons/x.png");
+            controller_labels[HAND_LEFT].main_button_label = new ui::ImageLabel2D("X button", "data/textures/buttons/x.png", 23.0f);
             left_hand_container->add_child(controller_labels[HAND_LEFT].main_button_label);
-            controller_labels[HAND_LEFT].secondary_button_label = new ui::ImageLabel2D("Ybutton", "data/textures/buttons/y.png");
+            controller_labels[HAND_LEFT].secondary_button_label = new ui::ImageLabel2D("Change to Substract", "data/textures/buttons/y.png", 23.0f);
             left_hand_container->add_child(controller_labels[HAND_LEFT].secondary_button_label);
 
             left_hand_ui_3D = new Viewport3D(left_hand_container);
@@ -270,9 +270,9 @@ void SculptEditor::initialize()
         {
             right_hand_container = new ui::VContainer2D("right_controller_root", { 0.0f, 0.f });
 
-            controller_labels[HAND_RIGHT].main_button_label = new ui::ImageLabel2D("Abutton", "data/textures/buttons/a.png");
+            controller_labels[HAND_RIGHT].main_button_label = new ui::ImageLabel2D("Click on the UI", "data/textures/buttons/a.png", 23.0f);
             right_hand_container->add_child(controller_labels[HAND_RIGHT].main_button_label);
-            controller_labels[HAND_RIGHT].secondary_button_label = new ui::ImageLabel2D("Bbutton", "data/textures/buttons/b.png");
+            controller_labels[HAND_RIGHT].secondary_button_label = new ui::ImageLabel2D("Change to Stamp", "data/textures/buttons/b.png", 23.0f);
             right_hand_container->add_child(controller_labels[HAND_RIGHT].secondary_button_label);
 
             right_hand_ui_3D = new Viewport3D(right_hand_container);
@@ -460,29 +460,36 @@ bool SculptEditor::edit_update(float delta_time)
     {
         if (Input::was_button_pressed(XR_BUTTON_Y)) {
             sdOperation op = stroke_parameters.get_operation();
+            std::string new_label_text = "";
 
             if (current_tool == SCULPT) {
                 switch (op) {
                 case OP_UNION:
                     op = OP_SUBSTRACTION;
+                    new_label_text = "Change to Addition";
                     break;
                 case OP_SUBSTRACTION:
                     op = OP_UNION;
+                    new_label_text = "Change to Substraction";
                     break;
                 case OP_SMOOTH_UNION:
                     op = OP_SMOOTH_SUBSTRACTION;
+                    new_label_text = "Change to Smooth Addition";
                     break;
                 case OP_SMOOTH_SUBSTRACTION:
                     op = OP_SMOOTH_UNION;
+                    new_label_text = "Change to Smooth Substraction";
                     break;
                 default:
+                    new_label_text = "@Alex socorro";
                     break;
                 }
             }
             else if (current_tool == PAINT) {
                 op = OP_PAINT ? OP_SMOOTH_PAINT : OP_PAINT;
+                new_label_text = (op == OP_PAINT) ? "Change to Smooth Paint" : "Change to Paint";
             }
-
+            controller_labels[HAND_LEFT].main_button_label->set_text(new_label_text);
             stroke_parameters.set_operation(op);
         }
     }
@@ -549,8 +556,8 @@ void SculptEditor::update(float delta_time)
         // Update controller UI
         if (Renderer::instance->get_openxr_available())
         {
-            right_hand_ui_3D->set_model(glm::mat4(1.0f));
-            left_hand_ui_3D->set_model(Input::get_controller_pose(HAND_LEFT, POSE_AIM));
+            right_hand_ui_3D->set_model(Input::get_controller_pose(HAND_RIGHT));
+            left_hand_ui_3D->set_model(Input::get_controller_pose(HAND_LEFT));
         }
     }
 
@@ -1076,7 +1083,7 @@ void SculptEditor::bind_events()
 
     // Bind Controller buttons
     {
-        Node::bind(XR_BUTTON_B, [&]() { stamp_enabled = !stamp_enabled; });
+        Node::bind(XR_BUTTON_B, [&]() { stamp_enabled = !stamp_enabled; controller_labels[HAND_RIGHT].main_button_label->set_text(stamp_enabled ? "Switch to Smear" : "Switch to Stamp"); });
     }
 }
 
