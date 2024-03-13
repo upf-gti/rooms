@@ -2,17 +2,18 @@
 
 #include "includes.h"
 
+#include "framework/utils/utils.h"
 #include "framework/nodes/ui.h"
 #include "framework/input.h"
+#include "framework/nodes/viewport_3d.h"
 
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/renderer_storage.h"
 
-#include "framework/utils/utils.h"
+#include "engine/rooms_engine.h"
 
 #include "spdlog/spdlog.h"
 #include "imgui.h"
-
 #include <glm/gtx/quaternion.hpp>
 
 uint8_t SculptEditor::last_generated_material_uid = 0;
@@ -50,12 +51,13 @@ void SculptEditor::initialize()
 
     // Initialize default primitive states
     {
-        primitive_default_states[SD_SPHERE]     = { glm::vec4(0.0) };
-        primitive_default_states[SD_BOX]        = { glm::vec4(0.0) };
-        primitive_default_states[SD_CONE]       = { glm::vec4(0.0) };
-        primitive_default_states[SD_CYLINDER]   = { glm::vec4(0.0) };
-        primitive_default_states[SD_CAPSULE]    = { glm::vec4(0.0) };
-        primitive_default_states[SD_TORUS]      = { glm::vec4(0.0) };
+        primitive_default_states[SD_SPHERE]     = { glm::vec4(0.02f, 0.0f, 0.0f, 0.0f) };
+        primitive_default_states[SD_BOX]        = { glm::vec4(0.02f, 0.02f, 0.02f, 0.0f) };
+        primitive_default_states[SD_CONE]       = { glm::vec4(0.05f, 0.0f, 0.0f, 0.03f) };
+        primitive_default_states[SD_CYLINDER]   = { glm::vec4(0.05f, 0.0f, 0.0f, 0.03f) };
+        primitive_default_states[SD_CAPSULE]    = { glm::vec4(0.05f, 0.0f, 0.0f, 0.03f) };
+        primitive_default_states[SD_TORUS]      = { glm::vec4(0.03f, 0.0f, 0.0f, 0.01f) };
+        primitive_default_states[SD_BEZIER]     = { glm::vec4(0.0) };
     }
 
     // Edit preview mesh
@@ -91,14 +93,197 @@ void SculptEditor::initialize()
         add_pbr_material_data("rusted_iron", Color(0.531f, 0.512f, 0.496f, 1.0f), 0.0f, 1.0f, 1.0f); // add noise
     }
 
+    // Load main UI pannel
+    main_panel_2d = new ui::HContainer2D("root", { 12.0f, 12.f });
+    {
+        {
+            ui::ItemGroup2D* g_main_tools = new ui::ItemGroup2D("g_main_tools");
+            g_main_tools->add_child(new ui::TextureButton2D("sculpt", "data/textures/cube.png", ui::UNIQUE_SELECTION | ui::SELECTED));
+            g_main_tools->add_child(new ui::TextureButton2D("paint", "data/textures/paint.png", ui::UNIQUE_SELECTION));
+            main_panel_2d->add_child(g_main_tools);
+        }
+
+        {
+            ui::ButtonSubmenu2D* primitives_submenu = new ui::ButtonSubmenu2D("primitives", "data/textures/primitives.png");
+
+            {
+                ui::ItemGroup2D* g0_primitives = new ui::ItemGroup2D("g0_primitives");
+                g0_primitives->add_child(new ui::TextureButton2D("sphere", "data/textures/sphere.png", ui::UNIQUE_SELECTION | ui::SELECTED));
+                g0_primitives->add_child(new ui::TextureButton2D("cube", "data/textures/cube.png", ui::UNIQUE_SELECTION));
+                g0_primitives->add_child(new ui::TextureButton2D("cone", "data/textures/cone.png", ui::UNIQUE_SELECTION));
+                g0_primitives->add_child(new ui::TextureButton2D("capsule", "data/textures/capsule.png", ui::UNIQUE_SELECTION));
+                g0_primitives->add_child(new ui::TextureButton2D("cylinder", "data/textures/cylinder.png", ui::UNIQUE_SELECTION));
+                g0_primitives->add_child(new ui::TextureButton2D("torus", "data/textures/torus.png", ui::UNIQUE_SELECTION));
+                g0_primitives->add_child(new ui::TextureButton2D("bezier", "data/textures/bezier.png", ui::UNIQUE_SELECTION));
+                primitives_submenu->add_child(g0_primitives);
+            }
+
+            {
+                ui::ButtonSubmenu2D* shape_editor_submenu = new ui::ButtonSubmenu2D("shape_editor", "data/textures/shape_editor.png");
+
+                {
+                    ui::ItemGroup2D* g_onion = new ui::ItemGroup2D("g_onion");
+                    g_onion->add_child(new ui::TextureButton2D("onion", "data/textures/onion.png", ui::UNIQUE_SELECTION | ui::ALLOW_TOGGLE));
+                    g_onion->add_child(new ui::Slider2D("onion_value", 0.0f, ui::SliderMode::VERTICAL, 0.01f));
+                    shape_editor_submenu->add_child(g_onion);
+                }
+
+                {
+                    ui::ItemGroup2D* g_capped = new ui::ItemGroup2D("g_capped");
+                    g_capped->add_child(new ui::TextureButton2D("capped", "data/textures/capped.png", ui::UNIQUE_SELECTION | ui::ALLOW_TOGGLE));
+                    g_capped->add_child(new ui::Slider2D("cap_value", 0.0f, ui::SliderMode::VERTICAL, 0.01f));
+                    shape_editor_submenu->add_child(g_capped);
+                }
+
+                primitives_submenu->add_child(shape_editor_submenu);
+            }
+
+            main_panel_2d->add_child(primitives_submenu);
+        }
+
+        {
+            ui::ButtonSubmenu2D* material_submenu = new ui::ButtonSubmenu2D("material", "data/textures/material.png");
+
+            {
+                ui::ButtonSubmenu2D* colors_submenu = new ui::ButtonSubmenu2D("colors", "data/textures/colors.png");
+
+                {
+                    ui::ItemGroup2D* g_picker = new ui::ItemGroup2D("g_picker");
+                    g_picker->add_child(new ui::ColorPicker2D("color_picker", colors::RED));
+                    colors_submenu->add_child(g_picker);
+                }
+
+                {
+                    ui::ItemGroup2D* g_colors = new ui::ItemGroup2D("g_colors");
+                    g_colors->add_child(new ui::ButtonSubmenu2D("color_template_palette_1", "data/textures/colors_template_1.png", ui::KEEP_RGB));
+                    g_colors->add_child(new ui::ButtonSubmenu2D("color_template_palette_2", "data/textures/colors_template_2.png", ui::KEEP_RGB));
+                    g_colors->add_child(new ui::ButtonSubmenu2D("color_template_palette_3", "data/textures/colors_template_3.png", ui::KEEP_RGB));
+                    g_colors->add_child(new ui::ButtonSubmenu2D("color_template_palette_4", "data/textures/colors_template_4.png", ui::KEEP_RGB));
+                    g_colors->add_child(new ui::ButtonSubmenu2D("color_template_palette_5", "data/textures/colors_template_5.png", ui::KEEP_RGB));
+                    g_colors->add_child(new ui::ButtonSubmenu2D("color_template_palette_6", "data/textures/colors_template_6.png", ui::KEEP_RGB));
+                    g_colors->add_child(new ui::ButtonSubmenu2D("recent_colors", "data/textures/recent_colors.png", ui::KEEP_RGB));
+
+                    // TODO: missing specific color palettes..
+
+                    colors_submenu->add_child(g_colors);
+                }
+
+                material_submenu->add_child(colors_submenu);
+            }
+
+            {
+                ui::ButtonSubmenu2D* mat_list_submenu = new ui::ButtonSubmenu2D("materials", "data/textures/material_samples.png");
+
+                mat_list_submenu->add_child(new ui::TextureButton2D("save_material", "data/textures/submenu_mark.png"));
+                mat_list_submenu->add_child(new ui::TextureButton2D("pick_material", "data/textures/pick_material.png", ui::ALLOW_TOGGLE));
+
+                {
+                    ui::ItemGroup2D* g_material_samples = new ui::ItemGroup2D("g_material_samples");
+                    g_material_samples->add_child(new ui::TextureButton2D("aluminium", "data/textures/material_samples.png", ui::UNIQUE_SELECTION));
+                    g_material_samples->add_child(new ui::TextureButton2D("charcoal", "data/textures/material_samples.png", ui::UNIQUE_SELECTION));
+                    g_material_samples->add_child(new ui::TextureButton2D("rusted_iron", "data/textures/material_samples.png", ui::UNIQUE_SELECTION));
+                    mat_list_submenu->add_child(g_material_samples);
+                }
+
+                material_submenu->add_child(mat_list_submenu);
+            }
+
+            {
+                ui::ButtonSubmenu2D* material_editor_submenu = new ui::ButtonSubmenu2D("material_editor", "data/textures/material_editor.png");
+
+                {
+                    ui::ItemGroup2D* g_edit_pbr = new ui::ItemGroup2D("g_edit_pbr");
+                    g_edit_pbr->add_child(new ui::Slider2D("roughness", 0.7f));
+                    g_edit_pbr->add_child(new ui::Slider2D("metallic", 0.2f));
+                    material_editor_submenu->add_child(g_edit_pbr);
+                }
+
+                {
+                    ui::ItemGroup2D* g_edit_pattern = new ui::ItemGroup2D("g_edit_pattern");
+                    g_edit_pattern->add_child(new ui::Slider2D("noise_intensity", 0.0f, ui::SliderMode::VERTICAL, 0.0f, 10.0f));
+                    g_edit_pattern->add_child(new ui::Slider2D("noise_frequency", 20.0f, ui::SliderMode::VERTICAL, 0.0f, 50.0f));
+                    g_edit_pattern->add_child(new ui::Slider2D("noise_octaves", 8.0f, ui::SliderMode::VERTICAL, 0.0f, 16.0f, 1.0f));
+                    g_edit_pattern->add_child(new ui::ColorPicker2D("noise_color_picker", colors::WHITE));
+                    material_editor_submenu->add_child(g_edit_pattern);
+                }
+
+                material_submenu->add_child(material_editor_submenu);
+            }
+
+            main_panel_2d->add_child(material_submenu);
+        }
+
+        {
+            ui::ItemGroup2D* g_utilities = new ui::ItemGroup2D("g_utilities");
+
+            {
+                ui::ButtonSubmenu2D* mirror_submenu = new ui::ButtonSubmenu2D("mirror", "data/textures/mirror.png");
+                mirror_submenu->add_child(new ui::TextureButton2D("mirror_toggle", "data/textures/mirror.png", ui::ALLOW_TOGGLE));
+                ui::ItemGroup2D* g_mirror = new ui::ItemGroup2D("g_mirror");
+                g_mirror->add_child(new ui::TextureButton2D("mirror_translation", "data/textures/mirror.png", ui::UNIQUE_SELECTION | ui::SELECTED));
+                g_mirror->add_child(new ui::TextureButton2D("mirror_rotation", "data/textures/mirror.png", ui::UNIQUE_SELECTION));
+                g_mirror->add_child(new ui::TextureButton2D("mirror_both", "data/textures/mirror.png", ui::UNIQUE_SELECTION));
+                mirror_submenu->add_child(g_mirror);
+                g_utilities->add_child(mirror_submenu);
+            }
+
+            g_utilities->add_child(new ui::TextureButton2D("snap_to_surface", "data/textures/snap_to_surface.png", ui::ALLOW_TOGGLE));
+            g_utilities->add_child(new ui::TextureButton2D("snap_to_grid", "data/textures/snap_to_grid.png", ui::ALLOW_TOGGLE));
+
+            {
+                ui::ButtonSubmenu2D* lock_axis_submenu = new ui::ButtonSubmenu2D("lock_axis", "data/textures/lock_axis.png");
+                lock_axis_submenu->add_child(new ui::TextureButton2D("lock_axis_toggle", "data/textures/lock_axis.png", ui::ALLOW_TOGGLE));
+                ui::ItemGroup2D* g_lock_axis = new ui::ItemGroup2D("g_lock_axis");
+                g_lock_axis->add_child(new ui::TextureButton2D("lock_axis_x", "data/textures/x.png", ui::UNIQUE_SELECTION));
+                g_lock_axis->add_child(new ui::TextureButton2D("lock_axis_y", "data/textures/y.png", ui::UNIQUE_SELECTION));
+                g_lock_axis->add_child(new ui::TextureButton2D("lock_axis_z", "data/textures/z.png", ui::UNIQUE_SELECTION | ui::SELECTED));
+                lock_axis_submenu->add_child(g_lock_axis);
+                g_utilities->add_child(lock_axis_submenu);
+            }
+
+            main_panel_2d->add_child(g_utilities);
+        }
+    }
+
+    if (Renderer::instance->get_openxr_available()) {
+        main_panel_3d = new Viewport3D(main_panel_2d);
+        RoomsEngine::entities.push_back(main_panel_3d);
+    }
+
+    // Load controller UI labels
+    if (Renderer::instance->get_openxr_available())
+    {
+        // Left hand
+        {
+            left_hand_container = new ui::VContainer2D("left_controller_root", { 0.0f, 0.f });
+
+            controller_labels[HAND_LEFT].secondary_button_label = new ui::ImageLabel2D("Change to Substract", "data/textures/buttons/y.png", 39.0f);
+            left_hand_container->add_child(controller_labels[HAND_LEFT].secondary_button_label);
+            /*controller_labels[HAND_LEFT].main_button_label = new ui::ImageLabel2D("Show UI", "data/textures/buttons/x.png", 30.0f);
+            left_hand_container->add_child(controller_labels[HAND_LEFT].main_button_label);*/
+
+            left_hand_ui_3D = new Viewport3D(left_hand_container);
+            RoomsEngine::entities.push_back(left_hand_ui_3D);
+        }
+
+        // Right hand
+        {
+            right_hand_container = new ui::VContainer2D("right_controller_root", { 0.0f, 0.f });
+
+            controller_labels[HAND_RIGHT].secondary_button_label = new ui::ImageLabel2D("Change to Stamp", "data/textures/buttons/b.png", 30.0f);
+            right_hand_container->add_child(controller_labels[HAND_RIGHT].secondary_button_label);
+            controller_labels[HAND_RIGHT].main_button_label = new ui::ImageLabel2D("Click on the UI", "data/textures/buttons/a.png", 30.0f);
+            right_hand_container->add_child(controller_labels[HAND_RIGHT].main_button_label);
+
+            right_hand_ui_3D = new Viewport3D(right_hand_container);
+            RoomsEngine::entities.push_back(right_hand_ui_3D);
+        }
+    }
+
     // Load ui and Bind callbacks
-    // bind_events();
+    bind_events();
 
     enable_tool(SCULPT);
-
-    //stamp_enabled = true;
-
-    //stroke_parameters.set_primitive(SD_BOX);
 
     renderer->change_stroke(stroke_parameters);
 }
@@ -112,9 +297,11 @@ void SculptEditor::clean()
     if (floor_grid_mesh) {
         delete floor_grid_mesh;
     }
+
+    // TODO
+    // Clean all UI widgets
+    // ...
 }
-
-
 
 bool SculptEditor::is_tool_being_used(bool stamp_enabled)
 {
@@ -191,7 +378,8 @@ bool SculptEditor::edit_update(float delta_time)
         primitive_default_states[stroke_parameters.get_primitive()].dimensions = edit_to_add.dimensions;
         edit_to_add.rotation = glm::inverse(Input::get_controller_rotation(HAND_RIGHT, POSE_AIM));
         is_stretching_edit = false;
-    } else if (stamp_enabled && is_tool_pressed) { // Stretch the edit using motion controls
+    }
+    else if (stamp_enabled && is_tool_pressed) { // Stretch the edit using motion controls
         if (is_stretching_edit) {
             sdPrimitive curr_primitive = stroke_parameters.get_primitive();
 
@@ -272,29 +460,36 @@ bool SculptEditor::edit_update(float delta_time)
     {
         if (Input::was_button_pressed(XR_BUTTON_Y)) {
             sdOperation op = stroke_parameters.get_operation();
+            std::string new_label_text = "";
 
             if (current_tool == SCULPT) {
                 switch (op) {
                 case OP_UNION:
                     op = OP_SUBSTRACTION;
+                    new_label_text = "Change to Addition";
                     break;
                 case OP_SUBSTRACTION:
                     op = OP_UNION;
+                    new_label_text = "Change to Substraction";
                     break;
                 case OP_SMOOTH_UNION:
                     op = OP_SMOOTH_SUBSTRACTION;
+                    new_label_text = "Change to Smooth Addition";
                     break;
                 case OP_SMOOTH_SUBSTRACTION:
                     op = OP_SMOOTH_UNION;
+                    new_label_text = "Change to Smooth Substraction";
                     break;
                 default:
+                    new_label_text = "@Alex socorro";
                     break;
                 }
             }
             else if (current_tool == PAINT) {
                 op = OP_PAINT ? OP_SMOOTH_PAINT : OP_PAINT;
+                new_label_text = (op == OP_PAINT) ? "Change to Smooth Paint" : "Change to Paint";
             }
-
+            controller_labels[HAND_LEFT].secondary_button_label->set_text(new_label_text);
             stroke_parameters.set_operation(op);
         }
     }
@@ -306,11 +501,11 @@ bool SculptEditor::edit_update(float delta_time)
             enable_tool(PAINT);
         }
 
-        if (current_tool == SCULPT && is_tool_being_used(stamp_enabled)) {
-            // For debugging sculpture without a headset
-            if (!Renderer::instance->get_openxr_available()) {
+        // For debugging sculpture without a headset
+        if (!Renderer::instance->get_openxr_available()) {
 
-                //edit_to_add.position = glm::vec3(0.0);
+            if (current_tool == SCULPT && is_tool_being_used(stamp_enabled)) {
+
                 edit_to_add.position = glm::vec3(glm::vec3(0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1)));
                 glm::vec3 euler_angles(random_f() * 90, random_f() * 90, random_f() * 90);
                 edit_to_add.dimensions = glm::vec4(0.05f, 0.01f, 0.01f, 0.01f) * 1.0f;
@@ -326,6 +521,10 @@ bool SculptEditor::edit_update(float delta_time)
                 //stroke_parameters.set_material_metallic(0.9);
                 //stroke_parameters.set_material_roughness(0.2);
                 //stroke_parameters.set_smooth_factor(0.01);
+            }
+            else {
+                // Make sure we don't get NaNs in preview rotation due to polling XR controllers in 2D mode
+                edit_to_add.rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
             }
         }
     }
@@ -343,6 +542,31 @@ void SculptEditor::update(float delta_time)
         return;
     }
 
+    // Update UI
+    {
+        if (main_panel_3d) {
+            glm::mat4x4 pose = Input::get_controller_pose(HAND_LEFT, POSE_AIM);
+            pose = glm::rotate(pose, glm::radians(-45.f), glm::vec3(1.0f, 0.0f, 0.0f));
+            main_panel_3d->set_model(pose);
+        }
+        else {
+            main_panel_2d->update(delta_time);
+        }
+
+        // Update controller UI
+        if (Renderer::instance->get_openxr_available())
+        {
+            glm::mat4x4 pose = Input::get_controller_pose(HAND_RIGHT);
+            pose = glm::rotate(pose, glm::radians(-110.f), glm::vec3(1.0f, 0.0f, 0.0f));
+            right_hand_ui_3D->set_model(pose);
+
+            pose = Input::get_controller_pose(HAND_LEFT);
+            pose = glm::rotate(pose, glm::radians(-110.f), glm::vec3(1.0f, 0.0f, 0.0f));
+
+            left_hand_ui_3D->set_model(pose);
+        }
+    }
+
     preview_tmp_edits.clear();
     new_edits.clear();
 
@@ -356,10 +580,6 @@ void SculptEditor::update(float delta_time)
 
         //spdlog::info("{}", glm::length(glm::abs(controller_acceleration)));
     }
-
-    // Update ui/vr controller actions
-    gui.update(delta_time);
-    helper_gui.update(delta_time);
 
     bool is_tool_used = edit_update(delta_time);
 
@@ -394,9 +614,11 @@ void SculptEditor::update(float delta_time)
 
     // Edit & Stroke submission
     {
-        is_tool_used &= !(mirror_gizmo.update(mirror_origin, mirror_rotation, edit_position_world, delta_time));
-
-        mirror_normal = glm::normalize(mirror_rotation * glm::vec3(0.f, 0.f, 1.f));
+        if (use_mirror) {
+            is_tool_used &= !(mirror_gizmo.update(mirror_origin, mirror_rotation, edit_position_world, delta_time));
+            mirror_normal = glm::normalize(mirror_rotation * glm::vec3(0.f, 0.f, 1.f));
+        }
+       
 
         // if any parameter changed or just stopped sculpting change the stroke
         if (stroke_parameters.is_dirty() || (was_tool_used && !is_tool_used)) {
@@ -434,7 +656,6 @@ void SculptEditor::update(float delta_time)
 void SculptEditor::apply_mirror_position(glm::vec3& position)
 {
     // Don't rotate the mirror origin..
-    // glm::vec3 origin_texture_space = mirror_origin - (sculpt_start_position + translation_diff);
     glm::vec3 origin_texture_space = world_to_texture3d(mirror_origin);
     glm::vec3 normal_texture_space = world_to_texture3d(mirror_normal, true);
     glm::vec3 pos_to_origin = origin_texture_space - position;
@@ -553,11 +774,6 @@ void SculptEditor::render()
         }
     }
 
-    if (renderer->get_openxr_available()) {
-        gui.render();
-        helper_gui.render();
-    }
-
     if (axis_lock) {
         axis_lock_gizmo.render();
 
@@ -586,6 +802,10 @@ void SculptEditor::render()
     }
 
     floor_grid_mesh->render();
+
+    if (!main_panel_3d) {
+        main_panel_2d->render();
+    }
 }
 
 // =====================
@@ -777,107 +997,101 @@ bool SculptEditor::is_rotation_being_used()
 
 void SculptEditor::bind_events()
 {
-    // UI Layout from JSON
-    {
-        gui.load_layout("data/ui/main.json");
-    }
-
     // Set events
     {
-        gui.bind("sculpt", [&](const std::string& signal, void* button) { enable_tool(SCULPT); });
-        gui.bind("paint", [&](const std::string& signal, void* button) { enable_tool(PAINT); });
+        Node::bind("sculpt", [&](const std::string& signal, void* button) { enable_tool(SCULPT); });
+        Node::bind("paint", [&](const std::string& signal, void* button) { enable_tool(PAINT); });
 
-        gui.bind("sphere", [&](const std::string& signal, void* button) {  set_primitive(SD_SPHERE); });
-        gui.bind("cube", [&](const std::string& signal, void* button) { set_primitive(SD_BOX); });
-        gui.bind("cone", [&](const std::string& signal, void* button) { set_primitive(SD_CONE); });
-        gui.bind("capsule", [&](const std::string& signal, void* button) { set_primitive(SD_CAPSULE); });
-        gui.bind("cylinder", [&](const std::string& signal, void* button) { set_primitive(SD_CYLINDER); });
-        gui.bind("torus", [&](const std::string& signal, void* button) { set_primitive(SD_TORUS); });
+        Node::bind("sphere", [&](const std::string& signal, void* button) {  set_primitive(SD_SPHERE); });
+        Node::bind("cube", [&](const std::string& signal, void* button) { set_primitive(SD_BOX); });
+        Node::bind("cone", [&](const std::string& signal, void* button) { set_primitive(SD_CONE); });
+        Node::bind("capsule", [&](const std::string& signal, void* button) { set_primitive(SD_CAPSULE); });
+        Node::bind("cylinder", [&](const std::string& signal, void* button) { set_primitive(SD_CYLINDER); });
+        Node::bind("torus", [&](const std::string& signal, void* button) { set_primitive(SD_TORUS); });
+        Node::bind("bezier", [&](const std::string& signal, void* button) { set_primitive(SD_BEZIER); });
 
-        gui.bind("onion", [&](const std::string& signal, void* button) { toggle_onion_modifier(); });
-        gui.bind("onion_value", [&](const std::string& signal, float value) { set_onion_modifier(value); });
-        gui.bind("capped", [&](const std::string& signal, void* button) { toggle_capped_modifier(); });
-        gui.bind("cap_value", [&](const std::string& signal, float value) { set_cap_modifier(value); });
+        Node::bind("onion", [&](const std::string& signal, void* button) { toggle_onion_modifier(); });
+        Node::bind("onion_value", [&](const std::string& signal, float value) { set_onion_modifier(value); });
+        Node::bind("capped", [&](const std::string& signal, void* button) { toggle_capped_modifier(); });
+        Node::bind("cap_value", [&](const std::string& signal, float value) { set_cap_modifier(value); });
 
-        gui.bind("mirror_toggle", [&](const std::string& signal, void* button) { use_mirror = !use_mirror; });
-        gui.bind("mirror_translation", [&](const std::string& signal, void* button) { mirror_gizmo.set_mode(eGizmoType::POSITION_GIZMO); });
-        gui.bind("mirror_rotation", [&](const std::string& signal, void* button) { mirror_gizmo.set_mode(eGizmoType::ROTATION_GIZMO); });
-        gui.bind("mirror_both", [&](const std::string& signal, void* button) { mirror_gizmo.set_mode(eGizmoType::POSITION_ROTATION_GIZMO); });
-        gui.bind("snap_to_surface", [&](const std::string& signal, void* button) { snap_to_surface = !snap_to_surface; });
-        gui.bind("snap_to_grid", [&](const std::string& signal, void* button) { snap_to_grid = !snap_to_grid; });
-        gui.bind("lock_axis_toggle", [&](const std::string& signal, void* button) { axis_lock = !axis_lock; });
-        gui.bind("lock_axis_x", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_X; });
-        gui.bind("lock_axis_y", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_Y; });
-        gui.bind("lock_axis_z", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_Z; });
+        Node::bind("mirror_toggle", [&](const std::string& signal, void* button) { use_mirror = !use_mirror; });
+        Node::bind("mirror_translation", [&](const std::string& signal, void* button) { mirror_gizmo.set_mode(eGizmoType::POSITION_GIZMO); });
+        Node::bind("mirror_rotation", [&](const std::string& signal, void* button) { mirror_gizmo.set_mode(eGizmoType::ROTATION_GIZMO); });
+        Node::bind("mirror_both", [&](const std::string& signal, void* button) { mirror_gizmo.set_mode(eGizmoType::POSITION_ROTATION_GIZMO); });
+        Node::bind("snap_to_surface", [&](const std::string& signal, void* button) { snap_to_surface = !snap_to_surface; });
+        Node::bind("snap_to_grid", [&](const std::string& signal, void* button) { snap_to_grid = !snap_to_grid; });
+        Node::bind("lock_axis_toggle", [&](const std::string& signal, void* button) { axis_lock = !axis_lock; });
+        Node::bind("lock_axis_x", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_X; });
+        Node::bind("lock_axis_y", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_Y; });
+        Node::bind("lock_axis_z", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_Z; });
 
-        gui.bind("roughness", [&](const std::string& signal, float value) { stroke_parameters.set_material_roughness(value); });
-        gui.bind("metallic", [&](const std::string& signal, float value) { stroke_parameters.set_material_metallic(value); });
-        gui.bind("noise_intensity", [&](const std::string& signal, float value) { stroke_parameters.set_material_noise(value); });
-        gui.bind("noise_frequency", [&](const std::string& signal, float value) { stroke_parameters.set_material_noise(-1.0f, value); });
-        gui.bind("noise_octaves", [&](const std::string& signal, float value) { stroke_parameters.set_material_noise(-1.0f, -1.0f, static_cast<int>(value)); });
-        gui.bind("noise_color_picker", [&](const std::string& signal, Color color) { stroke_parameters.set_material_noise_color(color); });
+        Node::bind("roughness", [&](const std::string& signal, float value) { stroke_parameters.set_material_roughness(value); });
+        Node::bind("metallic", [&](const std::string& signal, float value) { stroke_parameters.set_material_metallic(value); });
+        Node::bind("noise_intensity", [&](const std::string& signal, float value) { stroke_parameters.set_material_noise(value); });
+        Node::bind("noise_frequency", [&](const std::string& signal, float value) { stroke_parameters.set_material_noise(-1.0f, value); });
+        Node::bind("noise_octaves", [&](const std::string& signal, float value) { stroke_parameters.set_material_noise(-1.0f, -1.0f, static_cast<int>(value)); });
+        Node::bind("noise_color_picker", [&](const std::string& signal, Color color) { stroke_parameters.set_material_noise_color(color); });
 
-        gui.bind("color_picker", [&](const std::string& signal, Color color) { stroke_parameters.set_material_color(color); });
-        gui.bind("pick_material", [&](const std::string& signal, void* button) { is_picking_material = !is_picking_material; });
+        Node::bind("color_picker", [&](const std::string& signal, Color color) { stroke_parameters.set_material_color(color); });
+        Node::bind("pick_material", [&](const std::string& signal, void* button) { is_picking_material = !is_picking_material; });
+
+        // Bind colors callback...
+
+        for (auto it : Node2D::all_widgets)
+        {
+            if (it.second->get_class_type() != Node2DClassType::BUTTON) continue;
+            ui::Button2D* child = static_cast<ui::Button2D*>(it.second);
+            if (child->is_color_button) {
+                Node::bind(child->signal, [&](const std::string& signal, void* button) {
+                    const Color& color = (reinterpret_cast<ui::Button2D*>(button))->color;
+                    stroke_parameters.set_material_color(color);
+                });
+            }
+        }
 
         // Bind recent color buttons...
 
-        //ui::UIEntity* recent_group = gui.get_widget_from_name("g_recent_colors");
-        //if (!recent_group) {
-        //    assert(0);
-        //    spdlog::error("Cannot find recent_colors button group!");
-        //    return;
-        //}
+        Node2D* recent_group = Node2D::get_widget_from_name("g_recent_colors");
+        if (recent_group) {
+            max_recent_colors = recent_group->get_children().size();
+            for (size_t i = 0; i < max_recent_colors; ++i)
+            {
+                ui::Button2D* child = static_cast<ui::Button2D*>(recent_group->get_children()[i]);
+                Node::bind(child->signal, [&](const std::string& signal, void* button) {
+                    const Color& color = (reinterpret_cast<ui::Button2D*>(button))->color;
+                    stroke_parameters.set_material_color(color);
+                });
+            }
+        }
+        else {
+            spdlog::error("Cannot find recent_colors button group!");
+        }
 
-        //// Bind colors callback...
+        // Bind material samples callback...
 
-        //for (auto it : gui.get_widgets())
-        //{
-        //    if (it.second->type != ui::BUTTON) continue;
-        //    ui::ButtonWidget* child = static_cast<ui::ButtonWidget*>(it.second);
-        //    if (child->is_color_button) {
-        //        gui.bind(child->signal, [&](const std::string& signal, void* button) {
-        //            const Color& color = (static_cast<ui::ButtonWidget*>(button))->color;
-        //            stroke_parameters.set_material_color(color);
-        //        });
-        //    }
-        //}
+        Node2D* samples_group = Node2D::get_widget_from_name("g_material_samples");
+        if (samples_group) {
+            for (size_t i = 0; i < samples_group->get_children().size(); ++i)
+            {
+                ui::Button2D* child = static_cast<ui::Button2D*>(samples_group->get_children()[i]);
+                Node::bind(child->signal, [&](const std::string& signal, void* button) {
+                    update_stroke_from_material(signal);
+                });
+            }
+        }
+        else {
+            spdlog::error("Cannot find material_samples button group!");
+        }
 
-        //max_recent_colors = recent_group->get_children().size();
-        //for (size_t i = 0; i < max_recent_colors; ++i)
-        //{
-        //    ui::ButtonWidget* child = static_cast<ui::ButtonWidget*>(recent_group->get_children()[i]);
-        //    gui.bind(child->signal, [&](const std::string& signal, void* button) {
-        //        stroke_parameters.set_material_color((static_cast<ui::ButtonWidget*>(button))->color);
-        //    });
-        //}
-
-        //// Bind material samples callback...
-
-        //ui::UIEntity* samples_group = gui.get_widget_from_name("g_material_samples");
-        //for (size_t i = 0; i < samples_group->get_children().size(); ++i)
-        //{
-        //    ui::ButtonWidget* child = static_cast<ui::ButtonWidget*>(samples_group->get_children()[i]);
-        //    gui.bind(child->signal, [&](const std::string& signal, void* button) {
-        //        update_stroke_from_material(signal);
-        //    });
-        //}
-
-        gui.bind("save_material", [&](const std::string& signal, void* button) {
+        Node::bind("save_material", [&](const std::string& signal, void* button) {
             generate_material_from_stroke(button);
         });
     }
 
-    // Create helper ui
+    // Bind Controller buttons
     {
-        helper_gui.load_layout("data/ui/helper.json");
-
-        // Customize a little bit...
-        helper_gui.get_workspace().hand = HAND_RIGHT;
-        helper_gui.get_workspace().root_pose = POSE_GRIP;
-
-        // Controller buttons
-        helper_gui.bind(XR_BUTTON_B, [&]() { stamp_enabled = !stamp_enabled; });
+        Node::bind(XR_BUTTON_B, [&]() { stamp_enabled = !stamp_enabled; controller_labels[HAND_RIGHT].secondary_button_label->set_text(stamp_enabled ? "Switch to Smear" : "Switch to Stamp"); });
     }
 }
 
@@ -899,16 +1113,17 @@ void SculptEditor::add_recent_color(const Color& color)
         recent_colors.pop_back();
     }
 
-    /*ui::UIEntity* recent_group = gui.get_widget_from_name("g_recent_colors");
+    Node2D* recent_group = Node2D::get_widget_from_name("g_recent_colors");
+    if (!recent_group) {
+        return;
+    }
 
     assert(recent_colors.size() <= recent_group->get_children().size());
     for (uint8_t i = 0; i < recent_colors.size(); ++i)
     {
-
-        ui::ButtonWidget* child = static_cast<ui::ButtonWidget*>(recent_group->get_children()[i]);
-        child->color = recent_colors[i];
-        child->set_surface_material_override_color(0, child->color);
-    }*/
+        ui::Button2D* child = static_cast<ui::Button2D*>(recent_group->get_children()[i]);
+        child->set_color(recent_colors[i]);
+    }
 }
 
 void SculptEditor::add_pbr_material_data(const std::string& name, const Color& base_color, float roughness, float metallic,
@@ -930,40 +1145,36 @@ void SculptEditor::generate_material_from_stroke(void* button)
         return;
     }
 
-    //ui::ButtonWidget* b = reinterpret_cast<ui::ButtonWidget*>(button);
-    //ui::WidgetGroup* mat_samples = dynamic_cast<ui::WidgetGroup*>(b->get_parent()->get_children().at(1));
-    //assert(mat_samples);
+    ui::Button2D* b = reinterpret_cast<ui::Button2D*>(button);
+    ui::ItemGroup2D* mat_samples = static_cast<ui::ItemGroup2D*>(Node2D::get_widget_from_name("g_material_samples"));
+    assert(mat_samples);
 
-    //// When making the button, it will be added here!
-    //gui.set_next_parent(mat_samples);
+    std::string name = "new_material_" + std::to_string(last_generated_material_uid++);
+    ui::TextureButton2D* new_button = new ui::TextureButton2D(name, "data/textures/material_samples.png", ui::UNIQUE_SELECTION);
+    new_button->remove_flag(MATERIAL_2D);
+    mat_samples->add_child(new_button);
+    num_generated_materials++;
 
-    //std::string name = "new_material_" + std::to_string(last_generated_material_uid++);
-    //ui::UIEntity* new_button = gui.make_button(name, "data/textures/material_samples.png");
-    //dynamic_cast<ui::ButtonWidget*>(new_button)->set_ui_priority(1);
+    // Add data to existing samples..
+    const StrokeMaterial& mat = stroke_parameters.get_material();
+    add_pbr_material_data(name, mat.color, mat.roughness, mat.metallic,
+        mat.noise_params.x, mat.noise_color, mat.noise_params.y, static_cast<int>(mat.noise_params.z));
 
-    //mat_samples->set_number_of_widgets(static_cast<float>(mat_samples->get_children().size()));
-    //num_generated_materials++;
-
-    //// Add data to existing samples..
-    //const StrokeMaterial& mat = stroke_parameters.get_material();
-    //add_pbr_material_data(name, mat.color, mat.roughness, mat.metallic,
-    //    mat.noise_params.x, mat.noise_color, mat.noise_params.y, static_cast<int>(mat.noise_params.z));
-
-    //gui.bind(name, [&](const std::string& signal, void* button) {
-    //    update_stroke_from_material(signal);
-    //});
+    Node::bind(name, [&](const std::string& signal, void* button) {
+        update_stroke_from_material(signal);
+    });
 }
 
 void SculptEditor::update_gui_from_stroke_material(const StrokeMaterial& mat)
 {
     // Emit signals to change UI values
-    gui.emit_signal("color_picker@changed", mat.color);
-    gui.emit_signal("roughness@changed", mat.roughness);
-    gui.emit_signal("metallic@changed", mat.metallic);
-    gui.emit_signal("noise_intensity@changed", mat.noise_params.x);
-    gui.emit_signal("noise_frequency@changed", mat.noise_params.y);
-    gui.emit_signal("noise_octaves@changed", mat.noise_params.z);
-    gui.emit_signal("noise_color_picker@changed", mat.noise_color);
+    Node::emit_signal("color_picker@changed", mat.color);
+    Node::emit_signal("roughness@changed", mat.roughness);
+    Node::emit_signal("metallic@changed", mat.metallic);
+    Node::emit_signal("noise_intensity@changed", mat.noise_params.x);
+    Node::emit_signal("noise_frequency@changed", mat.noise_params.y);
+    Node::emit_signal("noise_octaves@changed", mat.noise_params.z);
+    Node::emit_signal("noise_color_picker@changed", mat.noise_color);
 }
 
 void SculptEditor::update_stroke_from_material(const std::string& name)
@@ -999,7 +1210,7 @@ void SculptEditor::pick_material()
     }
 
     // Disable picking..
-    gui.emit_signal("pick_material", (void*)nullptr);
+    Node::emit_signal("pick_material", (void*)nullptr);
 
     // Manage interactions, set stamp mode until tool is used again
     stamp_enabled = true;

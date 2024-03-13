@@ -1,33 +1,27 @@
 #include "rooms_engine.h"
 #include "framework/nodes/environment_3d.h"
+#include "framework/nodes/viewport_3d.h"
 #include "framework/input.h"
 #include "framework/scene/parse_scene.h"
 #include "framework/scene/parse_gltf.h"
 #include "graphics/renderers/rooms_renderer.h"
+#include "tools/sculpt/sculpt_editor.h"
 
 #include "spdlog/spdlog.h"
-
 #include "imgui.h"
-
 #include "framework/utils/tinyfiledialogs.h"
 
 #include <fstream>
 
-#include "framework/nodes/ui.h"
-
 std::vector<Node3D*> RoomsEngine::entities;
-
-ui::Panel2D* panel = nullptr;
-ui::Text2D* text = nullptr;
-ui::Slider2D* slider = nullptr;
-ui::ColorPicker2D* picker = nullptr;
-ui::ButtonGroup2D* group = nullptr;
 
 int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen)
 {
-	int error = Engine::initialize(renderer, window, use_glfw, use_mirror_screen);
+    int error = Engine::initialize(renderer, window, use_glfw, use_mirror_screen);
 
-    sculpt_editor.initialize();
+    sculpt_editor = new SculptEditor;
+
+    sculpt_editor->initialize();
 
     skybox = new Environment3D();
 
@@ -39,18 +33,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 
     //import_scene();
 
-    panel = new ui::Panel2D({ 96.0f, 96.0f }, { 240.0f, 620.f }, colors::CYAN);
 
-    text = new ui::Text2D("oppenheimer", { 100.0f, 60.0f }, 48.f, colors::BLACK);
-
-    slider = new ui::Slider2D("slider", 0.5f, { 120.0f, 100.f }, ui::SliderMode::VERTICAL);
-
-    group = new ui::ButtonGroup2D({ 120.0f, 280.f }, { 128.0f, 128.0f });
-
-    picker = new ui::ColorPicker2D("color", { 100.0f, 450.0f }, { 128.0f, 128.0f }, colors::RED);
-
-    group->add_child(new ui::Button2D("test1"));
-    group->add_child(new ui::Button2D("test2"));
 
 	return error;
 }
@@ -59,19 +42,22 @@ void RoomsEngine::clean()
 {
     Engine::clean();
 
-    sculpt_editor.clean();
+    Node2D::clean();
+
+    sculpt_editor->clean();
 }
 
 void RoomsEngine::update(float delta_time)
 {
     Engine::update(delta_time);
 
-    sculpt_editor.update(delta_time);
+    Node::check_controller_signals();
 
-    picker->update(delta_time);
-    slider->update(delta_time);
+    for (auto entity : entities) {
+        entity->update(delta_time);
+    }
 
-    group->update(delta_time);
+    sculpt_editor->update(delta_time);
 
     if (Input::was_key_pressed(GLFW_KEY_E))
     {
@@ -85,17 +71,12 @@ void RoomsEngine::render()
     render_gui();
 #endif
 
-    panel->render();
-    slider->render();
-    text->render();
-    picker->render();
-    group->render();
-
+    
 	for (auto entity : entities) {
 		entity->render();
 	}
 
-    sculpt_editor.render();
+    sculpt_editor->render();
 
 	Engine::render();
 }
@@ -175,7 +156,7 @@ bool RoomsEngine::import_scene()
     std::getline(file, line);
     glm::vec3 position = load_vec3(line.substr(1));
     rmr->set_sculpt_start_position(position);
-    sculpt_editor.set_sculpt_started(true);
+    sculpt_editor->set_sculpt_started(true);
 
     Stroke current_stroke;
 
@@ -250,9 +231,6 @@ bool RoomsEngine::import_scene()
 
 void RoomsEngine::render_gui()
 {
-    if (RoomsRenderer::instance->get_openxr_available()) {
-        return;
-    }
     bool active = true;
 
     ImGui::SetNextWindowSize({ 300, 400 });
@@ -317,15 +295,7 @@ void RoomsEngine::render_gui()
         }
         if (ImGui::BeginTabItem("Sculpt Editor"))
         {
-            sculpt_editor.render_gui();
-            ImGui::EndTabItem();
-        }
-        if (ImGui::BeginTabItem("GUI"))
-        {
-            if (ImGui::Button("Add child to group")) {
-                auto button = new ui::Button2D("test");
-                group->add_child(button);
-            }
+            sculpt_editor->render_gui();
             ImGui::EndTabItem();
         }
         if (ImGui::BeginTabItem("Debugger"))
@@ -338,6 +308,17 @@ void RoomsEngine::render_gui()
             if (info.intersected) {
                 ImGui::Text("Intersection position :");
                 ImGui::Text("   : %.3f, %.3f, %.3f", info.intersection_position.x, info.intersection_position.y, info.intersection_position.z);
+            }
+
+            bool msaa_enabled = Renderer::instance->get_msaa_count() != 1;
+
+            if (ImGui::Checkbox("Enable MSAAx4", &msaa_enabled)) {
+                if (msaa_enabled) {
+                    Renderer::instance->set_msaa_count(4);
+                }
+                else {
+                    Renderer::instance->set_msaa_count(1);
+                }
             }
 
             ImGui::EndTabItem();

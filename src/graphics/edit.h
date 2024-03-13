@@ -60,8 +60,8 @@ struct StrokeMaterial {
 class StrokeParameters {
 
     sdPrimitive     primitive = SD_SPHERE;
-    sdOperation     operation = OP_SMOOTH_UNION;
-    glm::vec4       parameters = { 0.f, -1.f, 0.f, 0.01f };
+    sdOperation     operation = OP_UNION;
+    glm::vec4       parameters = { 0.f, -1.f, 0.f, 0.0f };
     StrokeMaterial  material = {};
 
     bool dirty      = false;
@@ -100,7 +100,7 @@ struct Stroke {
     StrokeMaterial material;
 
     // Padding of 48 * 3 bytes
-    Edit    padding; 
+    Edit    padding;
     Edit    padding1;
     Edit    padding2;
 
@@ -109,6 +109,7 @@ struct Stroke {
     glm::vec3 get_edit_world_half_size(const uint8_t edit_index) const;
     AABB get_edit_world_AABB(const uint8_t edit_index) const;
     AABB get_world_AABB() const;
+    void get_AABB_intersecting_stroke(const AABB intersection_area, Stroke& resulting_stroke) const;
 };
 
 struct PBRMaterialData {

@@ -3,6 +3,7 @@
 #include "rooms_renderer.h"
 #include "framework/scene/parse_scene.h"
 #include "framework/utils/intersections.h"
+#include "framework/nodes/mesh_instance_3d.h"
 
 #include <algorithm>
 #include <numeric>
@@ -479,9 +480,6 @@ void RaymarchingRenderer::compute_undo(WGPUComputePassEncoder compute_pass)
         deleted_strokes_aabb.half_size = (deleted_stroke_max - deleted_stroke_min) / 2.0f;
         deleted_strokes_aabb.center = deleted_stroke_min + deleted_strokes_aabb.half_size;
 
-        // Reduce the size in a texel, for possible precission issues
-        deleted_strokes_aabb.half_size -= texel_size;
-
         // get strokes with same id and add into the redo history
         stroke_redo_history.insert(stroke_redo_history.begin(), stroke_history.begin() + (united_stroke_idx + 1), stroke_history.end());
 
@@ -489,13 +487,23 @@ void RaymarchingRenderer::compute_undo(WGPUComputePassEncoder compute_pass)
 
         std::vector<Stroke> strokes_to_recompute;
 
+        // Increase 1 texel the bounding box, in order to not exclude bricks
+        // In the brick border
+        deleted_strokes_aabb.half_size += 1.0 * texel_size;
+
         // Get the strokes that are on the region of the undo
         for (uint32_t i = 0u; i < stroke_history.size(); i++) {
-            AABB stroke_aabb = stroke_history[i].get_world_AABB();
-            if (intersection::AABB_AABB_min_max(deleted_strokes_aabb, stroke_aabb)) {
-                strokes_to_recompute.push_back(stroke_history[i]);
+            Stroke intersection_stroke;
+
+            stroke_history[i].get_AABB_intersecting_stroke(deleted_strokes_aabb, intersection_stroke);
+
+            if (intersection_stroke.edit_count > 0u) {
+                strokes_to_recompute.push_back(intersection_stroke);
             }
         }
+
+        // Reduce the size in a texel, for possible precission issues
+        deleted_strokes_aabb.half_size -= 2.0 * texel_size;
 
         compute_merge_data.reevaluation_AABB_min = deleted_strokes_aabb.center - deleted_strokes_aabb.half_size;
         compute_merge_data.reevaluation_AABB_max = deleted_strokes_aabb.center + deleted_strokes_aabb.half_size;
@@ -672,7 +680,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         WGPUTextureFormat_R32Float,
         { SDF_RESOLUTION, SDF_RESOLUTION, SDF_RESOLUTION },
         static_cast<WGPUTextureUsage>(WGPUTextureUsage_TextureBinding | WGPUTextureUsage_StorageBinding | WGPUTextureUsage_CopySrc),
-        1, nullptr);
+        1, 1, nullptr);
 
     vram_usage += SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION * sizeof(float);
 
@@ -684,7 +692,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         WGPUTextureFormat_R32Uint,
         { MATERIAL_RESOLUTION, MATERIAL_RESOLUTION, MATERIAL_RESOLUTION },
         static_cast<WGPUTextureUsage>(WGPUTextureUsage_TextureBinding | WGPUTextureUsage_StorageBinding | WGPUTextureUsage_CopySrc),
-        1, nullptr);
+        1, 1, nullptr);
 
     vram_usage += MATERIAL_RESOLUTION * MATERIAL_RESOLUTION * MATERIAL_RESOLUTION * sizeof(float);
 
