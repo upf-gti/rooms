@@ -115,7 +115,6 @@ void StrokeParameters::set_material_noise_color(const Color& color)
 
 glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const
 {
-
     glm::vec3 size = glm::vec3(edits[edit_index].dimensions);
     float size_param = edits[edit_index].dimensions.w;
     float radius = edits[edit_index].dimensions.x;
@@ -137,6 +136,8 @@ glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const
         return glm::vec3(size_param, radius, size_param) + smooth_margin;
     case SD_TORUS:
         return glm::abs(size) + radius * 2.0f + smooth_margin;
+    /*case SD_BEZIER:
+        return glm::vec3(0.0f);*/
     default:
         assert(false);
         return {};

@@ -155,15 +155,39 @@ void SculptEditor::initialize()
 
                 {
                     ui::ItemGroup2D* g_colors = new ui::ItemGroup2D("g_colors");
-                    g_colors->add_child(new ui::ButtonSubmenu2D("color_template_palette_1", "data/textures/colors_template_1.png", ui::KEEP_RGB));
+                    /*
                     g_colors->add_child(new ui::ButtonSubmenu2D("color_template_palette_2", "data/textures/colors_template_2.png", ui::KEEP_RGB));
                     g_colors->add_child(new ui::ButtonSubmenu2D("color_template_palette_3", "data/textures/colors_template_3.png", ui::KEEP_RGB));
                     g_colors->add_child(new ui::ButtonSubmenu2D("color_template_palette_4", "data/textures/colors_template_4.png", ui::KEEP_RGB));
                     g_colors->add_child(new ui::ButtonSubmenu2D("color_template_palette_5", "data/textures/colors_template_5.png", ui::KEEP_RGB));
                     g_colors->add_child(new ui::ButtonSubmenu2D("color_template_palette_6", "data/textures/colors_template_6.png", ui::KEEP_RGB));
-                    g_colors->add_child(new ui::ButtonSubmenu2D("recent_colors", "data/textures/recent_colors.png", ui::KEEP_RGB));
+                    */
 
-                    // TODO: missing specific color palettes..
+                    // Color palette 1
+                    {
+                        ui::ButtonSubmenu2D* palette_1_submenu = new ui::ButtonSubmenu2D("color_template_palette_1", "data/textures/colors_template_1.png", ui::KEEP_RGB);
+                        ui::ItemGroup2D* g_colors_t1 = new ui::ItemGroup2D("g_colors_t1");
+                        g_colors_t1->add_child(new ui::Button2D("colors_t1_1", Color(0.2f, 0.21f, 0.77f, 1.0f), ui::KEEP_RGB));
+                        g_colors_t1->add_child(new ui::Button2D("colors_t1_2", Color(0.41f, 0.57f, 0.79f, 1.0f), ui::KEEP_RGB));
+                        g_colors_t1->add_child(new ui::Button2D("colors_t1_3", Color(0.41f, 0.76f, 0.79f, 1.0f), ui::KEEP_RGB));
+                        g_colors_t1->add_child(new ui::Button2D("colors_t1_4", Color(0.64f, 0.9f, 0.93f, 1.0f), ui::KEEP_RGB));
+                        palette_1_submenu->add_child(g_colors_t1);
+                        g_colors->add_child(palette_1_submenu);
+                    }
+
+                    {
+                        ui::ButtonSubmenu2D* recent_colors_submenu = new ui::ButtonSubmenu2D("recent_colors", "data/textures/recent_colors.png", ui::KEEP_RGB);
+                        ui::ItemGroup2D* g_recent_colors = new ui::ItemGroup2D("g_recent_colors");
+
+                        g_recent_colors->add_child(new ui::Button2D("recent_color_1", colors::WHITE, ui::KEEP_RGB));
+                        g_recent_colors->add_child(new ui::Button2D("recent_color_2", colors::WHITE, ui::KEEP_RGB));
+                        g_recent_colors->add_child(new ui::Button2D("recent_color_3", colors::WHITE, ui::KEEP_RGB));
+                        g_recent_colors->add_child(new ui::Button2D("recent_color_4", colors::WHITE, ui::KEEP_RGB));
+                        g_recent_colors->add_child(new ui::Button2D("recent_color_5", colors::WHITE, ui::KEEP_RGB));
+
+                        recent_colors_submenu->add_child(g_recent_colors);
+                        g_colors->add_child(recent_colors_submenu);
+                    }
 
                     colors_submenu->add_child(g_colors);
                 }
@@ -545,6 +569,7 @@ void SculptEditor::update(float delta_time)
     // Update UI
     {
         if (main_panel_3d) {
+            main_panel_3d->set_active(Input::is_button_pressed(HAND_LEFT));
             glm::mat4x4 pose = Input::get_controller_pose(HAND_LEFT, POSE_AIM);
             pose = glm::rotate(pose, glm::radians(-45.f), glm::vec3(1.0f, 0.0f, 0.0f));
             main_panel_3d->set_model(pose);
