@@ -156,7 +156,6 @@ void SculptEditor::initialize()
                 {
                     ui::ItemGroup2D* g_colors = new ui::ItemGroup2D("g_colors");
                     /*
-                    g_colors->add_child(new ui::ButtonSubmenu2D("color_template_palette_2", "data/textures/colors_template_2.png", ui::KEEP_RGB));
                     g_colors->add_child(new ui::ButtonSubmenu2D("color_template_palette_3", "data/textures/colors_template_3.png", ui::KEEP_RGB));
                     g_colors->add_child(new ui::ButtonSubmenu2D("color_template_palette_4", "data/textures/colors_template_4.png", ui::KEEP_RGB));
                     g_colors->add_child(new ui::ButtonSubmenu2D("color_template_palette_5", "data/textures/colors_template_5.png", ui::KEEP_RGB));
@@ -173,6 +172,18 @@ void SculptEditor::initialize()
                         g_colors_t1->add_child(new ui::Button2D("colors_t1_4", Color(0.64f, 0.9f, 0.93f, 1.0f), ui::KEEP_RGB));
                         palette_1_submenu->add_child(g_colors_t1);
                         g_colors->add_child(palette_1_submenu);
+                    }
+
+                    // Color palette 2
+                    {
+                        ui::ButtonSubmenu2D* palette_2_submenu = new ui::ButtonSubmenu2D("color_template_palette_2", "data/textures/colors_template_2.png", ui::KEEP_RGB);
+                        ui::ItemGroup2D* g_colors_t2 = new ui::ItemGroup2D("g_colors_t2");
+                        g_colors_t2->add_child(new ui::Button2D("colors_t2_1", Color(0.36f, 0.61f, 0.35f, 1.0f), ui::KEEP_RGB));
+                        g_colors_t2->add_child(new ui::Button2D("colors_t2_2", Color(0.51f, 0.8f, 0.49f, 1.0f), ui::KEEP_RGB));
+                        g_colors_t2->add_child(new ui::Button2D("colors_t2_3", Color(0.68f, 0.84f, 0.05f, 1.0f), ui::KEEP_RGB));
+                        g_colors_t2->add_child(new ui::Button2D("colors_t2_4", Color(0.71f, 0.96f, 0.49f, 1.0f), ui::KEEP_RGB));
+                        palette_2_submenu->add_child(g_colors_t2);
+                        g_colors->add_child(palette_2_submenu);
                     }
 
                     {
@@ -569,7 +580,7 @@ void SculptEditor::update(float delta_time)
     // Update UI
     {
         if (main_panel_3d) {
-            main_panel_3d->set_active(Input::is_button_pressed(HAND_LEFT));
+            main_panel_3d->set_active(Input::is_button_pressed(XR_BUTTON_X));
             glm::mat4x4 pose = Input::get_controller_pose(HAND_LEFT, POSE_AIM);
             pose = glm::rotate(pose, glm::radians(-45.f), glm::vec3(1.0f, 0.0f, 0.0f));
             main_panel_3d->set_model(pose);
