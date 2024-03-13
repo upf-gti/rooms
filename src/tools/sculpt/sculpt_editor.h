@@ -148,27 +148,19 @@ class SculptEditor {
     Viewport3D* right_hand_ui_3D = nullptr;
     Viewport3D* left_hand_ui_3D = nullptr;
 
-    struct {
-        // Right hand
-        ui::Text2D B_button_label;
-        ui::Text2D A_button_label;
-        ui::Text2D right_grip_label;
-        ui::Text2D right_trigger_label;
-        ui::Text2D right_joystick_label;
+    struct ControllerLabels {
+        ui::ImageLabel2D* main_button_label = nullptr;
+        ui::ImageLabel2D* secondary_button_label = nullptr;
+        ui::ImageLabel2D* grip_label = nullptr;
+        ui::ImageLabel2D* trigger_label = nullptr;
+        ui::ImageLabel2D* joystick_label = nullptr;
+    };
 
-        // Left hand
-        ui::Text2D X_button_label;
-        ui::Text2D Y_button_label;
-        ui::Text2D left_grip_label;
-        ui::Text2D left_trigger_label;
-        ui::Text2D left_joystick_label;
-
-    } controller_labels;
+    ControllerLabels controller_labels[2];
     
-
     // Main pannel UI
-    ui::HContainer2D* main_pannel_2d = nullptr;
-    Viewport3D* main_pannel_3d = nullptr;
+    ui::HContainer2D* main_panel_2d = nullptr;
+    Viewport3D* main_panel_3d = nullptr;
 
     size_t                max_recent_colors;
     std::vector<Color>    recent_colors;

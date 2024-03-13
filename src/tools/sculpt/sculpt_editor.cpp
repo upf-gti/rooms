@@ -94,13 +94,13 @@ void SculptEditor::initialize()
     }
 
     // Load main UI pannel
-    main_pannel_2d = new ui::HContainer2D("root", { 12.0f, 12.f });
+    main_panel_2d = new ui::HContainer2D("root", { 12.0f, 12.f });
     {
         {
             ui::ItemGroup2D* g_main_tools = new ui::ItemGroup2D("g_main_tools");
             g_main_tools->add_child(new ui::TextureButton2D("sculpt", "data/textures/cube.png", ui::UNIQUE_SELECTION | ui::SELECTED));
             g_main_tools->add_child(new ui::TextureButton2D("paint", "data/textures/paint.png", ui::UNIQUE_SELECTION));
-            main_pannel_2d->add_child(g_main_tools);
+            main_panel_2d->add_child(g_main_tools);
         }
 
         {
@@ -138,7 +138,7 @@ void SculptEditor::initialize()
                 primitives_submenu->add_child(shape_editor_submenu);
             }
 
-            main_pannel_2d->add_child(primitives_submenu);
+            main_panel_2d->add_child(primitives_submenu);
         }
 
         {
@@ -210,7 +210,7 @@ void SculptEditor::initialize()
                 material_submenu->add_child(material_editor_submenu);
             }
 
-            main_pannel_2d->add_child(material_submenu);
+            main_panel_2d->add_child(material_submenu);
         }
 
         {
@@ -241,26 +241,26 @@ void SculptEditor::initialize()
                 g_utilities->add_child(lock_axis_submenu);
             }
 
-            main_pannel_2d->add_child(g_utilities);
+            main_panel_2d->add_child(g_utilities);
         }
     }
 
     if (Renderer::instance->get_openxr_available()) {
-        main_pannel_3d = new Viewport3D(main_pannel_2d);
-        RoomsEngine::entities.push_back(main_pannel_3d);
+        main_panel_3d = new Viewport3D(main_panel_2d);
+        RoomsEngine::entities.push_back(main_panel_3d);
     }
 
     // Load controller UI labels
-    if (Renderer::instance->get_openxr_available())
+    if (true || Renderer::instance->get_openxr_available())
     {
         // Left hand
         {
-            left_hand_container = new ui::VContainer2D("left_controller_root", { 5.0f, 5.f });
+            left_hand_container = new ui::VContainer2D("left_controller_root", { 0.0f, 0.f });
 
-            controller_labels.X_button_label = ui::Text2D("X button", { 0.0f, 0.0f });
-            left_hand_container->add_child(&controller_labels.X_button_label);
-            controller_labels.Y_button_label = ui::Text2D("Y button", { 0.0f, 0.0f });
-            left_hand_container->add_child(&controller_labels.Y_button_label);
+            controller_labels[HAND_LEFT].main_button_label = new ui::ImageLabel2D("Xbutton", "data/textures/buttons/x.png");
+            left_hand_container->add_child(controller_labels[HAND_LEFT].main_button_label);
+            controller_labels[HAND_LEFT].secondary_button_label = new ui::ImageLabel2D("Ybutton", "data/textures/buttons/y.png");
+            left_hand_container->add_child(controller_labels[HAND_LEFT].secondary_button_label);
 
             left_hand_ui_3D = new Viewport3D(left_hand_container);
             RoomsEngine::entities.push_back(left_hand_ui_3D);
@@ -268,12 +268,12 @@ void SculptEditor::initialize()
 
         // Right hand
         {
-            right_hand_container = new ui::VContainer2D("right_controller_root", { 15.0f, 15.f });
+            right_hand_container = new ui::VContainer2D("right_controller_root", { 0.0f, 0.f });
 
-            controller_labels.B_button_label = ui::Text2D("B button", { 0.04f, 0.04f }, 16.0f);
-            right_hand_container->add_child(&controller_labels.B_button_label);
-            controller_labels.A_button_label = ui::Text2D("A button", { 0.50f, 0.50f }, 16.0f);
-            right_hand_container->add_child(&controller_labels.A_button_label);
+            controller_labels[HAND_RIGHT].main_button_label = new ui::ImageLabel2D("Abutton", "data/textures/buttons/a.png");
+            right_hand_container->add_child(controller_labels[HAND_RIGHT].main_button_label);
+            controller_labels[HAND_RIGHT].secondary_button_label = new ui::ImageLabel2D("Bbutton", "data/textures/buttons/b.png");
+            right_hand_container->add_child(controller_labels[HAND_RIGHT].secondary_button_label);
 
             right_hand_ui_3D = new Viewport3D(right_hand_container);
             RoomsEngine::entities.push_back(right_hand_ui_3D);
@@ -297,6 +297,10 @@ void SculptEditor::clean()
     if (floor_grid_mesh) {
         delete floor_grid_mesh;
     }
+
+    // TODO
+    // Clean all UI widgets
+    // ...
 }
 
 bool SculptEditor::is_tool_being_used(bool stamp_enabled)
@@ -533,13 +537,13 @@ void SculptEditor::update(float delta_time)
 
     // Update UI
     {
-        if (main_pannel_3d) {
+        if (main_panel_3d) {
             glm::mat4x4 pose = Input::get_controller_pose(HAND_LEFT, POSE_AIM);
             pose = glm::rotate(pose, glm::radians(-45.f), glm::vec3(1.0f, 0.0f, 0.0f));
-            main_pannel_3d->set_model(pose);
+            main_panel_3d->set_model(pose);
         }
         else {
-            main_pannel_2d->update(delta_time);
+            main_panel_2d->update(delta_time);
         }
 
         // Update controller UI
@@ -784,8 +788,8 @@ void SculptEditor::render()
 
     floor_grid_mesh->render();
 
-    if (!main_pannel_3d) {
-        main_pannel_2d->render();
+    if (!main_panel_3d) {
+        main_panel_2d->render();
     }
 }
 
