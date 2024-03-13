@@ -257,10 +257,10 @@ void SculptEditor::initialize()
         {
             left_hand_container = new ui::VContainer2D("left_controller_root", { 0.0f, 0.f });
 
-            controller_labels[HAND_LEFT].main_button_label = new ui::ImageLabel2D("X button", "data/textures/buttons/x.png", 23.0f);
-            left_hand_container->add_child(controller_labels[HAND_LEFT].main_button_label);
-            controller_labels[HAND_LEFT].secondary_button_label = new ui::ImageLabel2D("Change to Substract", "data/textures/buttons/y.png", 23.0f);
+            controller_labels[HAND_LEFT].secondary_button_label = new ui::ImageLabel2D("Change to Substract", "data/textures/buttons/y.png", 39.0f);
             left_hand_container->add_child(controller_labels[HAND_LEFT].secondary_button_label);
+            /*controller_labels[HAND_LEFT].main_button_label = new ui::ImageLabel2D("Show UI", "data/textures/buttons/x.png", 30.0f);
+            left_hand_container->add_child(controller_labels[HAND_LEFT].main_button_label);*/
 
             left_hand_ui_3D = new Viewport3D(left_hand_container);
             RoomsEngine::entities.push_back(left_hand_ui_3D);
@@ -270,10 +270,10 @@ void SculptEditor::initialize()
         {
             right_hand_container = new ui::VContainer2D("right_controller_root", { 0.0f, 0.f });
 
-            controller_labels[HAND_RIGHT].main_button_label = new ui::ImageLabel2D("Click on the UI", "data/textures/buttons/a.png", 23.0f);
-            right_hand_container->add_child(controller_labels[HAND_RIGHT].main_button_label);
-            controller_labels[HAND_RIGHT].secondary_button_label = new ui::ImageLabel2D("Change to Stamp", "data/textures/buttons/b.png", 23.0f);
+            controller_labels[HAND_RIGHT].secondary_button_label = new ui::ImageLabel2D("Change to Stamp", "data/textures/buttons/b.png", 30.0f);
             right_hand_container->add_child(controller_labels[HAND_RIGHT].secondary_button_label);
+            controller_labels[HAND_RIGHT].main_button_label = new ui::ImageLabel2D("Click on the UI", "data/textures/buttons/a.png", 30.0f);
+            right_hand_container->add_child(controller_labels[HAND_RIGHT].main_button_label);
 
             right_hand_ui_3D = new Viewport3D(right_hand_container);
             RoomsEngine::entities.push_back(right_hand_ui_3D);
@@ -489,7 +489,7 @@ bool SculptEditor::edit_update(float delta_time)
                 op = OP_PAINT ? OP_SMOOTH_PAINT : OP_PAINT;
                 new_label_text = (op == OP_PAINT) ? "Change to Smooth Paint" : "Change to Paint";
             }
-            controller_labels[HAND_LEFT].main_button_label->set_text(new_label_text);
+            controller_labels[HAND_LEFT].secondary_button_label->set_text(new_label_text);
             stroke_parameters.set_operation(op);
         }
     }
@@ -556,8 +556,14 @@ void SculptEditor::update(float delta_time)
         // Update controller UI
         if (Renderer::instance->get_openxr_available())
         {
-            right_hand_ui_3D->set_model(Input::get_controller_pose(HAND_RIGHT));
-            left_hand_ui_3D->set_model(Input::get_controller_pose(HAND_LEFT));
+            glm::mat4x4 pose = Input::get_controller_pose(HAND_RIGHT);
+            pose = glm::rotate(pose, glm::radians(-110.f), glm::vec3(1.0f, 0.0f, 0.0f));
+            right_hand_ui_3D->set_model(pose);
+
+            pose = Input::get_controller_pose(HAND_LEFT);
+            pose = glm::rotate(pose, glm::radians(-110.f), glm::vec3(1.0f, 0.0f, 0.0f));
+
+            left_hand_ui_3D->set_model(pose);
         }
     }
 
@@ -1083,7 +1089,7 @@ void SculptEditor::bind_events()
 
     // Bind Controller buttons
     {
-        Node::bind(XR_BUTTON_B, [&]() { stamp_enabled = !stamp_enabled; controller_labels[HAND_RIGHT].main_button_label->set_text(stamp_enabled ? "Switch to Smear" : "Switch to Stamp"); });
+        Node::bind(XR_BUTTON_B, [&]() { stamp_enabled = !stamp_enabled; controller_labels[HAND_RIGHT].secondary_button_label->set_text(stamp_enabled ? "Switch to Smear" : "Switch to Stamp"); });
     }
 }
 
