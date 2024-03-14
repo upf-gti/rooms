@@ -504,6 +504,7 @@ fn cut_sphere_interval(p : mat3x3f, edit_pos : vec3f, rotation : vec4f, r : f32,
     let pos : mat3x3f = irotate_point_quat(isub_mat_vec(p, edit_pos), rotation);
 
     // sampling independent computations (only depend on shape)
+    // be careful if h ~= r to skip the sqrt(0)!
     var w : f32 = sqrt(r*r-h*h);
 
     // sampling dependant computations
@@ -513,15 +514,21 @@ fn cut_sphere_interval(p : mat3x3f, edit_pos : vec3f, rotation : vec4f, r : f32,
     let q_x_mW = isub_vec_float(q_x, w);
     let q_y_mH = isub_vec_float(q_y, h);
 
-    let max_0 = iadd_vecs(imul_float_vec((h-r), ipow2_vec(q_x)), imul_float_vec(w * w, ineg(isub_vec_float(imul_float_vec(2.0, q_y), (h + r)))));
+    let hMr = h - r;
+    let hPr = h + r;
+
+    let max_00 = imul_float_vec(hMr, ipow2_vec(q_x));
+    let max_01 = ineg(imul_float_vec(2.0, q_y)) + hPr;
+    let max_11 = imul_float_vec(w * w, max_01);
+    let max_02 = iadd_vecs(max_00, max_11);
     let max_1 = isub_vecs(imul_float_vec(h, q_x), imul_float_vec(w, q_y));
 
-    let s : vec2f = imax(max_0, max_1);
+    let s : vec2f = imax(max_02, max_1);
 
     return iselect(
         iselect(
             isqrt(ipow2_vec(q_x_mW) + ipow2_vec(q_y_mH)), 
-            ineg(isub_vec_float(q_y, h)),
+            ineg(q_y) + h,
             ilessthan(q_x, vec2f(w))
         ), 
         isub_vec_float(isqrt(ipow2_vec(q_x) + ipow2_vec(q_y)), r),
@@ -687,7 +694,7 @@ fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f,  primitive : u32, 
     var size_param : f32 = edit.dimensions.w;
 
     // 0 no cap ... 1 fully capped
-    var cap_value : f32 = edit_parameters.y;
+    var cap_value : f32 = clamp(edit_parameters.y, 0.0, 0.99);
 
     var onion_thickness : f32 = edit_parameters.x;
     let do_onion = onion_thickness > 0.0;
@@ -696,11 +703,12 @@ fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f,  primitive : u32, 
 
     switch (primitive) {
         case SD_SPHERE: {
-            onion_thickness = map_thickness( onion_thickness, radius );
-            radius -= onion_thickness; // Compensate onion size
+            //onion_thickness = map_thickness( onion_thickness, radius );
+            //radius -= onion_thickness; // Compensate onion size
+            cap_value = clamp(cap_value, 0.0, 0.9);
             if(cap_value > 0.0) { 
                 cap_value = cap_value * 2.0 - 1.0;
-                pSurface = cut_sphere_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.rotation, radius, radius * cap_value * 0.999);
+                pSurface = cut_sphere_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.rotation, radius, radius * cap_value);
             } else {
                 pSurface = sphere_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, radius);
             }

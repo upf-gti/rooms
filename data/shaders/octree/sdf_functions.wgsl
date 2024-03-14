@@ -382,7 +382,7 @@ fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters
     var size_param : f32 = edit.dimensions.w;
 
     // 0 no cap ... 1 fully capped
-    var cap_value : f32 = parameters.y;
+    var cap_value : f32 = clamp(parameters.y, 0.0, 0.99);
 
     var onion_thickness : f32 = parameters.x;
     let do_onion = onion_thickness > 0.0;
@@ -391,11 +391,12 @@ fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters
 
     switch (primitive) {
         case SD_SPHERE: {
-            onion_thickness = map_thickness( onion_thickness, radius );
-            radius -= onion_thickness; // Compensate onion size
+            // onion_thickness = map_thickness( onion_thickness, radius );
+            //radius -= onion_thickness; // Compensate onion size
+            cap_value = clamp(cap_value, 0.0, 0.9);
             if(cap_value > 0.0) { 
                 cap_value = cap_value * 2.0 - 1.0;
-                pSurface = sdCutSphere(position, edit.position, edit.rotation, radius, radius * cap_value * 0.999, stroke_material);
+                pSurface = sdCutSphere(position, edit.position, edit.rotation, radius, radius * cap_value, stroke_material);
             } else {
                 pSurface = sdSphere(position, edit.position, radius, stroke_material);
             }
@@ -463,7 +464,7 @@ fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters
     // Shape edition ...
     if( do_onion && (operation == OP_UNION || operation == OP_SMOOTH_UNION) )
     {
-        pSurface = opOnion(pSurface, onion_thickness);
+        // pSurface = opOnion(pSurface, onion_thickness);
     }
 
     pSurface.material = stroke_material;

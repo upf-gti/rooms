@@ -131,7 +131,7 @@ void SculptEditor::initialize()
                 {
                     ui::ItemGroup2D* g_capped = new ui::ItemGroup2D("g_capped");
                     g_capped->add_child(new ui::TextureButton2D("capped", "data/textures/capped.png", ui::UNIQUE_SELECTION | ui::ALLOW_TOGGLE));
-                    g_capped->add_child(new ui::Slider2D("cap_value", 0.0f, ui::SliderMode::VERTICAL, 0.01f));
+                    g_capped->add_child(new ui::Slider2D("cap_value", 0.0f, ui::SliderMode::VERTICAL));
                     shape_editor_submenu->add_child(g_capped);
                 }
 
@@ -155,12 +155,6 @@ void SculptEditor::initialize()
 
                 {
                     ui::ItemGroup2D* g_colors = new ui::ItemGroup2D("g_colors");
-                    /*
-                    g_colors->add_child(new ui::ButtonSubmenu2D("color_template_palette_3", "data/textures/colors_template_3.png", ui::KEEP_RGB));
-                    g_colors->add_child(new ui::ButtonSubmenu2D("color_template_palette_4", "data/textures/colors_template_4.png", ui::KEEP_RGB));
-                    g_colors->add_child(new ui::ButtonSubmenu2D("color_template_palette_5", "data/textures/colors_template_5.png", ui::KEEP_RGB));
-                    g_colors->add_child(new ui::ButtonSubmenu2D("color_template_palette_6", "data/textures/colors_template_6.png", ui::KEEP_RGB));
-                    */
 
                     // Color palette 1
                     {
