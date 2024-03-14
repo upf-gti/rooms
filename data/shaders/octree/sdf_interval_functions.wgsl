@@ -348,7 +348,6 @@ fn iabs_mats(v : mat3x3f) -> mat3x3f
 		iabs(v[2].xy));
 }
 
-
 fn ilessthan(a : vec2f, b : vec2f) -> vec2<bool> 
 {    
     if (a.y < b.x) {
@@ -359,6 +358,19 @@ fn ilessthan(a : vec2f, b : vec2f) -> vec2<bool>
         return vec2<bool>(false, false);
     }
     
+    return vec2<bool>(false, true);
+}
+
+fn igreaterthan(a : vec2f, b : vec2f) -> vec2<bool> 
+{
+    if (a.x > b.y) {
+        return vec2<bool>(true, true);
+    }
+
+    if (a.y <= b.x) {
+        return vec2<bool>(false, false);
+    }
+
     return vec2<bool>(false, true);
 }
 
@@ -604,13 +616,32 @@ fn torus_interval( p : mat3x3f, c : vec3f, t : vec2f, rotation : vec4f) -> vec2f
     return isub_vec_float(isqrt(ipow2_vec(d_x) + ipow2_vec(d_y)), t.y);
 }
 
+fn capped_torus_interval( p : mat3x3f, c : vec3f, t : vec2f, rotation : vec4f, sc : vec2f) -> vec2f
+{
+    let pos : mat3x3f = irotate_point_quat(isub_mat_vec(p, c), rotation);
+
+    let ra = t.x;
+    let rb = t.y;
+    let posX : vec2f = iabs(pos[0].xy);
+    let posY : vec2f = pos[1].xy;
+
+    let mPos = iavec3_vecs(posX, posY, pos[2].xy);
+
+    var cond : vec2<bool> = igreaterthan( imul_float_vec(sc.y, posX), imul_float_vec(sc.x, posY));
+    var lenPosXY : vec2f = isqrt(ipow2_vec(posX) + ipow2_vec(posY));
+    var posXYdotSC = idot_mat(iavec3_vecs(posX, posY, vec2f(0.0)), iavec3_vecs(sc.xx, sc.yy, vec2f(0.0)));
+    var k : vec2f = iselect(lenPosXY, posXYdotSC, cond);
+
+    var pdotp : vec2f = idot_mat(mPos, mPos);
+
+    return isub_vec_float(isqrt( isub_vec_float(isub_vecs(pdotp, imul_float_vec(2.0*ra, k)), -ra * ra) ), rb);
+}
+
 fn bezier_interval( p : mat3x3f, start : vec3f, cp : vec3f, end : vec3f, thickness : f32, rotation : vec4f) -> vec2f
 {
-    let ip : mat3x3f = ineg_mats(p);
-
-    let b0 : mat3x3f = irotate_point_quat(iadd_vec_mat(start, ip), rotation);
-    let b1 : mat3x3f = irotate_point_quat(iadd_vec_mat(cp, ip), rotation);
-    let b2 : mat3x3f = irotate_point_quat(iadd_vec_mat(end, ip), rotation);
+    let b0 : mat3x3f = irotate_point_quat(isub_mats(iavec3_vec(start), p), rotation);
+    let b1 : mat3x3f = irotate_point_quat(isub_mats(iavec3_vec(cp), p), rotation);
+    let b2 : mat3x3f = irotate_point_quat(isub_mats(iavec3_vec(end), p), rotation);
 
     var b01 : mat3x3f = icross_mats(b0, b1);
     var b12 : mat3x3f = icross_mats(b1, b2);
@@ -641,7 +672,7 @@ fn bezier_interval( p : mat3x3f, start : vec3f, cp : vec3f, end : vec3f, thickne
 
     var x0 : mat3x3f = imix_mats(b0, b1, t);
     var x1 : mat3x3f = imix_mats(b1, b2, t);
-    var x : mat3x3f = imix_mats(x0, x1, t);
+    var x : mat3x3f = idiv_mats(x0, x1);
 
     return isub_vec_float(ilength(x), thickness);
 }
@@ -707,7 +738,6 @@ fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f,  primitive : u32, 
         case SD_CYLINDER: {
             //onion_thickness = map_thickness( onion_thickness, size_param );
             //size_param -= onion_thickness; // Compensate onion size
-            // pSurface = sdCylinder(position, edit.position,  edit.position - vec3f(0.0, 0.0, radius), edit.rotation, size_param, 0.0, edit.color);
             pSurface = cylinder_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.rotation, size_param, radius);
             break;
         }
@@ -718,7 +748,7 @@ fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f,  primitive : u32, 
             if(cap_value > 0.0) {
                 var an = M_PI * (1.0 - cap_value);
                 var angles = vec2f(sin(an), cos(an));
-                // pSurface = sdCappedTorus(position, edit.position, vec2f(radius, size_param), edit.rotation, angles, edit.color);
+                pSurface = capped_torus_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, vec2f(radius, size_param), edit.rotation, angles);
             } else {
                 pSurface = torus_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, vec2f(radius, size_param), edit.rotation);
             }
@@ -726,7 +756,7 @@ fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f,  primitive : u32, 
         }
         case SD_BEZIER: {
             var curve_thickness : f32 = 0.01;
-            pSurface = bezier_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.position + vec3f(0.25, 0.5, 0.0), edit.position + vec3f(0.5, 0.0, 0.0), curve_thickness, edit.rotation);
+            pSurface = bezier_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.position + vec3f(0.1, 0.2, 0.0), edit.position + vec3f(0.2, 0.0, 0.0), curve_thickness, edit.rotation);
             break;
         }
         default: {
