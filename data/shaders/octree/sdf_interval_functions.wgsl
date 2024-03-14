@@ -52,6 +52,16 @@ fn iadd_vecs(a : vec2f, b : vec2f) -> vec2f
 	return a + b;
 }
 
+fn iadd_vec_float(a : vec2f, b : f32) -> vec2f
+{
+	return iadd_vecs(a, vec2f(b));
+}
+
+fn iadd_float_vec(a : f32, b : vec2f) -> vec2f
+{
+	return iadd_vecs(vec2f(a), b);
+}
+
 fn iadd_mats(a : mat3x3f, b : mat3x3f) -> mat3x3f
 {
 	return iavec3_vecs(
@@ -198,7 +208,16 @@ fn idiv_mats(a : mat3x3f, b : mat3x3f) -> mat3x3f
 
 fn isqrt(a : vec2f) -> vec2f
 {
-	return vec2f(sqrt(a.x),sqrt(a.y));
+    if(a.x > 0.0) {
+        return vec2f(sqrt(a.x), sqrt(a.y));
+    }
+    if(a.y > 0.0) {
+        return vec2f(0.0, sqrt(a.y));
+    }
+    if(a.y == 0.0) {
+        return vec2f(0.0, 0.0);
+    }
+	return vec2f(0.0);
 }
 
 fn ipow2_vec(a : vec2f) -> vec2f
@@ -565,16 +584,18 @@ fn capsule_interval( p : mat3x3f, c : vec3f, rotation : vec4f, radius : f32, hei
     return isub_vec_float(ilength(d), radius);
 }
 
-fn cone_interval(p : mat3x3f, c : vec3f, rotation : vec4f, radius_dims : vec2f, height : f32) -> vec2f
+fn cone_interval(p : mat3x3f, c : vec3f, height : f32, radius_dims : vec2f, rotation : vec4f) -> vec2f
 {
-    var r2 = radius_dims.x;
     var r1 = radius_dims.y;
+    var r2 = radius_dims.x;
     var h = height * 0.5;
 
+    var offset : mat3x3f = iavec3_vec(vec3f(0.0, h, 0.0));
     var pos : mat3x3f = irotate_point_quat(isub_mat_vec(p, c), rotation);
+    pos = isub_mats(pos, offset);
 
-    let q_x = isqrt(ipow2_vec(pos[0].xy) + ipow2_vec(pos[1].xy));
-    let q_y = pos[2].xy;
+    let q_x = isqrt(ipow2_vec(pos[0].xy) + ipow2_vec(pos[2].xy));
+    let q_y = pos[1].xy;
 
     let k1 = vec2f(r2, h);
     let k2 = vec2f(r2 - r1, 2.0 * h);
@@ -629,19 +650,26 @@ fn capped_torus_interval( p : mat3x3f, c : vec3f, t : vec2f, rotation : vec4f, s
 
     let ra = t.x;
     let rb = t.y;
-    let posX : vec2f = iabs(pos[0].xy);
-    let posY : vec2f = pos[1].xy;
 
-    let mPos = iavec3_vecs(posX, posY, pos[2].xy);
+    let p_x : vec2f = iabs(pos[0].xy);
+    let p_y : vec2f = pos[1].xy;
+    let p_z : vec2f = pos[2].xy;
 
-    var cond : vec2<bool> = igreaterthan( imul_float_vec(sc.y, posX), imul_float_vec(sc.x, posY));
-    var lenPosXY : vec2f = isqrt(ipow2_vec(posX) + ipow2_vec(posY));
-    var posXYdotSC = idot_mat(iavec3_vecs(posX, posY, vec2f(0.0)), iavec3_vecs(sc.xx, sc.yy, vec2f(0.0)));
-    var k : vec2f = iselect(lenPosXY, posXYdotSC, cond);
+    let new_pos = iavec3_vecs(p_x, p_y, p_z);
 
-    var pdotp : vec2f = idot_mat(mPos, mPos);
+    var cond : vec2<bool> = igreaterthan(imul_float_vec(sc.y, p_x), imul_float_vec(sc.x, p_z));
 
-    return isub_vec_float(isqrt( isub_vec_float(isub_vecs(pdotp, imul_float_vec(2.0*ra, k)), -ra * ra) ), rb);
+    var lenPosXZ : vec2f = isqrt(ipow2_vec(p_x) + ipow2_vec(p_z));
+
+    var posXZdotSC = iadd_vecs( imul_float_vec(sc.x, p_x), imul_float_vec(sc.y, p_z) );
+    
+    var k : vec2f = iselect(lenPosXZ, posXZdotSC, cond);
+
+    var sqrt_inner : vec2f = idot_mat(new_pos, new_pos);
+    sqrt_inner = iadd_vec_float(sqrt_inner, (ra * ra));
+    sqrt_inner = isub_vecs(sqrt_inner, imul_float_vec(2.0*ra, k));
+
+    return isub_vec_float(isqrt((sqrt_inner)), rb);
 }
 
 fn bezier_interval( p : mat3x3f, start : vec3f, cp : vec3f, end : vec3f, thickness : f32, rotation : vec4f) -> vec2f
@@ -736,7 +764,7 @@ fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f,  primitive : u32, 
             // onion_thickness = map_thickness( onion_thickness, 0.01 );
             radius = max(radius * (1.0 - cap_value), 0.0025);
             var dims = vec2f(size_param, size_param * cap_value);
-            pSurface = cone_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.rotation, dims, radius);
+            pSurface = cone_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, radius, dims, edit.rotation);
             break;
         }
         // case SD_PYRAMID: {
@@ -750,8 +778,8 @@ fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f,  primitive : u32, 
             break;
         }
         case SD_TORUS: {
-            onion_thickness = map_thickness( onion_thickness, size_param );
-            size_param -= onion_thickness; // Compensate onion size
+            // onion_thickness = map_thickness( onion_thickness, size_param );
+            // size_param -= onion_thickness; // Compensate onion size
             size_param = clamp( size_param, 0.0001, radius );
             if(cap_value > 0.0) {
                 var an = M_PI * (1.0 - cap_value);
