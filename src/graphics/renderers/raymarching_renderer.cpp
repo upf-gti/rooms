@@ -21,7 +21,7 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
 {
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
     bool is_openxr_available = RoomsRenderer::instance->get_openxr_available();
-
+    
     octree_depth = static_cast<uint8_t>(6);
 
     // total size considering leaves and intermediate levels
@@ -670,7 +670,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         static_cast<WGPUTextureUsage>(WGPUTextureUsage_TextureBinding | WGPUTextureUsage_StorageBinding | WGPUTextureUsage_CopySrc),
         1, 1, nullptr);
 
-    sdf_texture_uniform.data = sdf_texture.get_view();
+    sdf_texture_uniform.data = sdf_texture.get_view(WGPUTextureViewDimension_3D);
     sdf_texture_uniform.binding = 3;
 
     sdf_material_texture.create(
@@ -680,7 +680,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         static_cast<WGPUTextureUsage>(WGPUTextureUsage_TextureBinding | WGPUTextureUsage_StorageBinding | WGPUTextureUsage_CopySrc),
         1, 1, nullptr);
 
-    sdf_material_texture_uniform.data = sdf_material_texture.get_view();
+    sdf_material_texture_uniform.data = sdf_material_texture.get_view(WGPUTextureViewDimension_3D);
     sdf_material_texture_uniform.binding = 8; // TODO: set as 4
 
     // Size of penultimate level

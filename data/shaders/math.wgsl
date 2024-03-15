@@ -1,4 +1,5 @@
 const M_PI = 3.14159265359;
+const M_PI_INV = 1.0 / 3.14159265359;
 
 fn rotate_point_quat(position : vec3f, rotation : vec4f) -> vec3f
 {
