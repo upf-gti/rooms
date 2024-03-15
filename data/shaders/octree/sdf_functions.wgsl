@@ -101,10 +101,11 @@ fn sdBox( p : vec3f, c : vec3f, rotation : vec4f, s : vec3f, r : f32, material :
     return sf;
 }
 
-fn sdCapsule( p : vec3f, a : vec3f, b : vec3f, rotation : vec4f, r : f32, material : Material) -> Surface
+fn sdCapsule( p : vec3f, a : vec3f, height: f32, rotation : vec4f, r : f32, material : Material) -> Surface
 {
     var sf : Surface;
     let posA : vec3f = rotate_point_quat(p - a, rotation);
+    let b : vec3f = a + vec3f(0.0, height, 0.0);
 
     let pa : vec3f = posA;
     let ba : vec3f = b - a;
@@ -417,8 +418,7 @@ fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters
         case SD_CAPSULE: {
             onion_thickness = map_thickness( onion_thickness, size_param );
             size_param -= onion_thickness; // Compensate onion size
-            var height = radius; // ...
-            pSurface = sdCapsule(position, edit.position, edit.position - vec3f(0.0, 0.0, height), edit.rotation, size_param, stroke_material);
+            pSurface = sdCapsule(position, edit.position, radius, edit.rotation, size_param, stroke_material);
             break;
         }
         case SD_CONE: {

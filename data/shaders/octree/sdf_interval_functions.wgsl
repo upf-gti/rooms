@@ -11,41 +11,7 @@ fn iavec3_vec(p : vec3f) -> mat3x3f
 	return mat3x3f(vec3f(p.xx, 0.0), vec3f(p.yy, 0.0), vec3f(p.zz, 0.0));
 }
 
-fn imin(a : vec2f, b : vec2f) -> vec2f
-{
-	return vec2f(min(a.x,b.x),min(a.y,b.y));
-}
-
-fn imax(a : vec2f, b : vec2f) -> vec2f
-{
-	return vec2f(max(a.x,b.x),max(a.y,b.y));
-}
-
-fn imax_mats(v : mat3x3f, q : mat3x3f) -> mat3x3f
-{ 
-    return iavec3_vecs(
-		imax(v[0].xy, q[0].xy),
-		imax(v[1].xy, q[1].xy),
-		imax(v[2].xy, q[2].xy));
-}
-
-fn imix(x : vec2f, y : vec2f, a: vec2f) -> vec2f
-{
-    return iadd_vecs(x, imul_vec2_vec2(isub_vecs(y, x), a));
-}
-
-fn imix_mats(x : mat3x3f, y : mat3x3f, a: vec2f) -> mat3x3f
-{
-    return iavec3_vecs(
-		imix(x[0].xy, y[0].xy, a),
-		imix(x[1].xy, y[1].xy, a),
-		imix(x[2].xy, y[2].xy, a));
-}
-
-fn iclamp(a : vec2f, min : f32, max: f32) -> vec2f
-{
-	return imax(imin(a, vec2f(max)), vec2f(min));
-}
+// Addition
 
 fn iadd_vecs(a : vec2f, b : vec2f) -> vec2f
 {
@@ -70,13 +36,15 @@ fn iadd_mats(a : mat3x3f, b : mat3x3f) -> mat3x3f
 		a[2].xy + b[2].xy);
 }
 
-fn iadd_vec_mat(a : vec3f, b : mat3x3f) -> mat3x3f
+fn iadd_vec3_mat(a : vec3f, b : mat3x3f) -> mat3x3f
 {
 	return iavec3_vecs(
 		a.xx + b[0].xy,
 		a.yy + b[1].xy,
 		a.zz + b[2].xy);
 }
+
+// Substraction
 
 fn isub_vec_float(a : vec2f, b : f32) -> vec2f
 {
@@ -96,7 +64,7 @@ fn isub_mats(a : mat3x3f, b : mat3x3f) -> mat3x3f
 		a[2].xy - b[2].yx);
 }
 
-fn isub_mat_vec(a : mat3x3f, b : vec3f) -> mat3x3f
+fn isub_mat_vec3(a : mat3x3f, b : vec3f) -> mat3x3f
 {
 	return iavec3_vecs(
 		a[0].xy - b.xx,
@@ -104,49 +72,32 @@ fn isub_mat_vec(a : mat3x3f, b : vec3f) -> mat3x3f
 		a[2].xy - b.zz);
 }
 
-fn imul_vec_float(a : vec2f, c : f32) -> vec2f
+// Multiplication
+
+fn imul_vecs(a : vec2f, b : vec2f) -> vec2f
 {
-	let b : vec2f = vec2f(c);
-	let f : vec4f = vec4f(
-		a.xxyy * b.xyxy
-	);	
+	let f : vec4f = vec4f(a.xxyy * b.xyxy);
 	return vec2f(
 		min(min(f[0],f[1]),min(f[2],f[3])),
 		max(max(f[0],f[1]),max(f[2],f[3])));
 }
 
-fn imul_vec2_vec2(a : vec2f, b : vec2f) -> vec2f
+fn imul_vec_float(a : vec2f, b : f32) -> vec2f
 {
-	let f : vec4f = vec4f(
-		a.xxyy * b.xyxy
-	);	
-	return vec2f(
-		min(min(f[0],f[1]),min(f[2],f[3])),
-		max(max(f[0],f[1]),max(f[2],f[3])));
+	return imul_vecs(a, vec2f(b));
 }
 
 fn imul_float_vec(a : f32, b : vec2f) -> vec2f
 {
-	let f : vec2f = vec2f(a*b);	
-	return vec2f(
-		min(f[0],f[1]),
-		max(f[0],f[1]));
-}
-
-fn ifix_interval(a : vec2f) -> vec2f
-{
-    return vec2f(
-		min(a[0],a[1]),
-		max(a[0],a[1])
-    );
+	return imul_vecs(vec2f(a), b);
 }
 
 fn imul_mats(a : mat3x3f, b : mat3x3f) -> mat3x3f
 {
 	return iavec3_vecs(
-		imul_vec2_vec2(a[0].xy, b[0].xy),
-		imul_vec2_vec2(a[1].xy, b[1].xy),
-		imul_vec2_vec2(a[2].xy, b[2].xy)
+		imul_vecs(a[0].xy, b[0].xy),
+		imul_vecs(a[1].xy, b[1].xy),
+		imul_vecs(a[2].xy, b[2].xy)
 	);
 }
 
@@ -162,18 +113,18 @@ fn imul_float_mat(a : f32, b : mat3x3f) -> mat3x3f
 fn imul_vec2_mat(a : vec2f, b : mat3x3f) -> mat3x3f
 {
 	return iavec3_vecs(
-		imul_vec2_vec2(a, b[0].xy),
-		imul_vec2_vec2(a, b[1].xy),
-		imul_vec2_vec2(a, b[2].xy)
+		imul_vecs(a, b[0].xy),
+		imul_vecs(a, b[1].xy),
+		imul_vecs(a, b[2].xy)
 	);
 }
 
 fn imul_vec3_mat(a : vec3f, b : mat3x3f) -> mat3x3f
 {
 	return iavec3_vecs(
-		imul_vec2_vec2(a.xx, b[0].xy),
-		imul_vec2_vec2(a.yy, b[1].xy),
-		imul_vec2_vec2(a.zz, b[2].xy)
+		imul_vecs(a.xx, b[0].xy),
+		imul_vecs(a.yy, b[1].xy),
+		imul_vecs(a.zz, b[2].xy)
 	);
 }
 
@@ -186,15 +137,11 @@ fn imul_vec3_vec2(a : vec3f, b : vec2f) -> mat3x3f
 	);
 }
 
+// Division
 
 fn idiv_vecs(a : vec2f, b : vec2f) -> vec2f
 {
-	let f : vec4f = vec4f(
-		a.x/b, a.y/b
-	);
-	return vec2f(
-		min(min(f[0],f[1]),min(f[2],f[3])),
-		max(max(f[0],f[1]),max(f[2],f[3])));
+	return imul_vecs(a, iinv(b));
 }
 
 fn idiv_mats(a : mat3x3f, b : mat3x3f) -> mat3x3f
@@ -204,6 +151,121 @@ fn idiv_mats(a : mat3x3f, b : mat3x3f) -> mat3x3f
 		idiv_vecs(a[1].xy, b[1].xy),
 		idiv_vecs(a[2].xy, b[2].xy)
 	);
+}
+
+// Other maths..
+
+fn ineg(a : vec2f) -> vec2f
+{
+	return vec2f(-a.y, -a.x);
+}
+
+fn ineg_mats(v : mat3x3f) -> mat3x3f
+{
+    return iavec3_vecs(
+		ineg(v[0].xy),
+		ineg(v[1].xy),
+		ineg(v[2].xy));
+}
+
+fn iinv(a : vec2f) -> vec2f
+{
+    if (a.x > 0.0 || a.y < 0.0) {
+        return vec2f(1.0 / a.y, 1.0 / a.x);
+    } else if (a.x < 0.0 && a.y > 0.0) {
+        return vec2f(-1000000.0, 1000000.0);
+    } else if (a.y == 0.0) {
+        return vec2f(-1000000.0, 1.0 / a.x);
+    } else {
+        return vec2f(1.0 / a.y, 1000000.0);
+    }
+}
+
+fn ipow2_vec(a : vec2f) -> vec2f
+{
+    if (a.x <= 0.0 && 0.0 <= a.y) {
+        let t : f32 = max(-a.x, a.y);
+        return vec2f(0.0, t * t);
+    }
+    if (a.y <= 0.0) {
+        return (a * a).yx;
+    }
+    return a * a;
+}
+
+// only valid for even numbers
+fn ipow_vec(a : vec2f, n : f32) -> vec2f
+{
+    if (a.x >= 0.0) {
+        return pow(a, vec2f(n));
+    } else
+    if (a.y < 0.0) {
+        return pow(a, vec2f(n)).yx;
+    } else {
+        return vec2f(0.0, max(pow(a.x, n), pow(a.y, n)));
+    }
+}
+
+fn ipow2_mat(v : mat3x3f) -> mat3x3f
+{
+	return iavec3_vecs(
+		ipow2_vec(v[0].xy),
+		ipow2_vec(v[1].xy),
+		ipow2_vec(v[2].xy));
+}
+
+fn isign(a : vec2f) -> vec2f
+{
+    return vec2f(sign(a.x), sign(a.y));
+}
+
+fn imin(a : vec2f, b : vec2f) -> vec2f
+{
+	return vec2f(min(a.x,b.x),min(a.y,b.y));
+}
+
+fn imax(a : vec2f, b : vec2f) -> vec2f
+{
+	return vec2f(max(a.x,b.x),max(a.y,b.y));
+}
+
+fn imax_mats(v : mat3x3f, q : mat3x3f) -> mat3x3f
+{
+    return iavec3_vecs(
+		imax(v[0].xy, q[0].xy),
+		imax(v[1].xy, q[1].xy),
+		imax(v[2].xy, q[2].xy));
+}
+
+fn imix(x : vec2f, y : vec2f, a: vec2f) -> vec2f
+{
+    return iadd_vecs(x, imul_vecs(isub_vecs(y, x), a));
+}
+
+fn imix_mats(x : mat3x3f, y : mat3x3f, a: vec2f) -> mat3x3f
+{
+    return iavec3_vecs(
+		imix(x[0].xy, y[0].xy, a),
+		imix(x[1].xy, y[1].xy, a),
+		imix(x[2].xy, y[2].xy, a));
+}
+
+fn iclamp_vecs(a : vec2f, min : vec2f, max: vec2f) -> vec2f
+{
+	return vec2f(clamp(a.x, min.x, max.x), clamp(a.y, min.y, max.y));
+}
+
+fn iclamp(a : vec2f, min : f32, max: f32) -> vec2f
+{
+	return iclamp_vecs(a, vec2f(min), vec2f(max));
+}
+
+fn ifix_interval(a : vec2f) -> vec2f
+{
+    return vec2f(
+		min(a[0],a[1]),
+		max(a[0],a[1])
+    );
 }
 
 fn isqrt(a : vec2f) -> vec2f
@@ -218,70 +280,6 @@ fn isqrt(a : vec2f) -> vec2f
         return vec2f(0.0, 0.0);
     }
 	return vec2f(0.0);
-}
-
-fn ipow2_vec(a : vec2f) -> vec2f
-{	
-    if (a.x >= 0.0) {
-        return vec2f(a*a);
-    } else
-    if (a.y < 0.0) {
-        return (a*a).yx;
-    } else {
-        return vec2f(0.0, max(a.x * a.x, a.y * a.y));
-    }
-}
-
-fn ipow_n_vec(a : vec2f, n : f32) -> vec2f
-{	
-    if (a.x >= 0.0) {
-        return vec2f(pow(a, vec2f(n)));
-    } else
-    if (a.y < 0.0) {
-        return (pow(a, vec2f(n))).yx;
-    } else {
-        return vec2f(0.0, max(pow(a.x, n), pow(a.y, n)));
-    }
-}
-
-fn iinv(a : vec2f) -> vec2f {
-    var inverted : vec2f;
-    if (a.x > 0.0 || a.y < 0.0) {
-        inverted = vec2f(1.0 / a.y, 1.0 / a.x);
-    } else if (a.x < 0.0 && a.y > 0.0) {
-        inverted =  vec2f(-10000.0, 10000.0);
-    } else if (a.y == 0.0) {
-        inverted =  vec2f(-10000.0, 1.0 / a.x);
-    } else {
-        inverted = vec2f(1.0 / a.y, 10000.0);
-    }
-
-
-    // Will never reach this
-    return inverted;
-}
-
-// only valid for even numbers
-fn ipow_vec(a : vec2f, n : f32) -> vec2f
-{
-    if (a.x >= 0.0) {
-        return pow(a, vec2f(n));
-    } else
-    if (a.y < 0.0) {
-        return pow(a, vec2f(n)).yx;
-    } else {
-        return vec2f(0.0, max(pow(a.x, n), pow(a.y, n)));
-    }
-
-	// return select(select(vec2f(0.0,max(a.x*a.x,a.y*a.y)), vec2f((a*a).yx), (a.y<0.0)), vec2f(a*a), (a.x>=0.0));
-}
-
-fn ipow2_mat(v : mat3x3f) -> mat3x3f
-{
-	return iavec3_vecs(
-		ipow2_vec(v[0].xy),
-		ipow2_vec(v[1].xy),
-		ipow2_vec(v[2].xy));
 }
 
 fn ilensq(a : mat3x3f) -> vec2f
@@ -299,9 +297,9 @@ fn ilength(a : mat3x3f) -> vec2f
 fn icross_mats(a : mat3x3f, b : mat3x3f) -> mat3x3f
 {
 	return iavec3_vecs(
-        isub_vecs(imul_vec2_vec2(a[1].xy, b[2].xy), imul_vec2_vec2(b[1].xy, a[2].xy)),
-        isub_vecs(imul_vec2_vec2(a[2].xy, b[0].xy), imul_vec2_vec2(b[2].xy, a[0].xy)),
-        isub_vecs(imul_vec2_vec2(a[0].xy, b[1].xy), imul_vec2_vec2(b[0].xy, a[1].xy))
+        isub_vecs(imul_vecs(a[1].xy, b[2].xy), imul_vecs(b[1].xy, a[2].xy)),
+        isub_vecs(imul_vecs(a[2].xy, b[0].xy), imul_vecs(b[2].xy, a[0].xy)),
+        isub_vecs(imul_vecs(a[0].xy, b[1].xy), imul_vecs(b[0].xy, a[1].xy))
     );
 }
 
@@ -331,19 +329,6 @@ fn idot(a : mat3x3f, b : mat3x3f) -> vec2f
 fn icontains(a : vec2f, v : f32) -> bool
 {
 	return ((v >= a.x) && (v < a.y));
-}
-
-fn ineg(a : vec2f) -> vec2f
-{
-	return vec2f(-a.y, -a.x);
-}
-
-fn ineg_mats(v : mat3x3f) -> mat3x3f
-{ 
-    return iavec3_vecs(
-		ineg(v[0].xy),
-		ineg(v[1].xy),
-		ineg(v[2].xy));
 }
 
 fn iabs(a : vec2f) -> vec2f
@@ -439,7 +424,7 @@ fn sminN_interval( a : vec2f, b : vec2f, k : f32, n : f32 ) -> vec2f
 fn isoft_min(a : vec2f, b : vec2f, r : f32) -> vec2f 
 { 
     let e : vec2f = imax(r + ineg(iabs(isub_vecs(a, b))), vec2f(0.0)); 
-    return isub_vecs(imin(a, b), imul_float_vec(0.25 / r, imul_vec2_vec2(e, e))); 
+    return isub_vecs(imin(a, b), imul_float_vec(0.25 / r, imul_vecs(e, e)));
 }
 
 fn isoft_min_poly(a : vec2f, b : vec2f, k : f32) -> vec2f {
@@ -490,24 +475,9 @@ fn imat_add_to_lower(p : mat3x3f, v : vec3f) -> mat3x3f {
 
 fn idot_mat(v1 : mat3x3f, v2 : mat3x3f) -> vec2f {
     return iadd_vecs(iadd_vecs(
-		imul_vec2_vec2(v1[0].xy, v2[0].xy),
-		imul_vec2_vec2(v1[1].xy, v2[1].xy)),
-		imul_vec2_vec2(v1[2].xy, v2[2].xy));
-}
-
-fn isign_vec2(v : vec2f) -> vec2f
-{
-    var s : vec2f = vec2f(1.0, 1.0);
-
-    if (v.x < 0.0) {
-        s.x = -1.0;
-    }
-    
-    if (v.y < 0.0) {
-        s.y = -1.0;
-    }
-
-    return s ; //vec2f(min(s.x, s.y), max(s.x, s.y));;
+		imul_vecs(v1[0].xy, v2[0].xy),
+		imul_vecs(v1[1].xy, v2[1].xy)),
+		imul_vecs(v1[2].xy, v2[2].xy));
 }
 
 // Primitives
@@ -515,12 +485,12 @@ fn isign_vec2(v : vec2f) -> vec2f
 fn sphere_interval(p : mat3x3f, edit_pos : vec3f, r : f32) -> vec2f
 {
 	// x^2 + y^2 + z^2 - r^2
-	return isub_vecs(ilensq(isub_mat_vec(p, edit_pos)), vec2f(r*r));
+	return isub_vecs(ilensq(isub_mat_vec3(p, edit_pos)), vec2f(r*r));
 }
 
 fn cut_sphere_interval(p : mat3x3f, edit_pos : vec3f, rotation : vec4f, r : f32, h : f32) -> vec2f
 {
-    let pos : mat3x3f = irotate_point_quat(isub_mat_vec(p, edit_pos), rotation);
+    let pos : mat3x3f = irotate_point_quat(isub_mat_vec3(p, edit_pos), rotation);
 
     // sampling independent computations (only depend on shape)
     // be careful if h ~= r to skip the sqrt(0)!
@@ -560,9 +530,9 @@ fn box_interval(p : mat3x3f, edit_pos : vec3f, rotation : vec4f, size : vec3f, r
     let mat_zero_interval : mat3x3f = mat3x3f(vec3f(0.0), vec3f(0.0), vec3f(0.0));
 
     // Move edit
-    let interval_translated : mat3x3f = irotate_point_quat(isub_mat_vec(p, edit_pos), rotation);
+    let interval_translated : mat3x3f = irotate_point_quat(isub_mat_vec3(p, edit_pos), rotation);
 
-    let interval_translated_sized : mat3x3f = isub_mat_vec(iabs_mats(interval_translated), size);
+    let interval_translated_sized : mat3x3f = isub_mat_vec3(iabs_mats(interval_translated), size);
 
     var i_distance : vec2f = ilength(imax_mats(interval_translated_sized, mat_zero_interval));
     var max_on_all_axis : vec2f = imax(interval_translated_sized[0].xy, imax(interval_translated_sized[1].xy, interval_translated_sized[2].xy));
@@ -574,9 +544,9 @@ fn box_interval(p : mat3x3f, edit_pos : vec3f, rotation : vec4f, size : vec3f, r
 fn capsule_interval( p : mat3x3f, c : vec3f, rotation : vec4f, radius : f32, height : f32) -> vec2f
 {
     let a : mat3x3f = iavec3_vec(c);
-    var pa : mat3x3f = irotate_point_quat(isub_mat_vec(p, c), rotation);
+    var pa : mat3x3f = irotate_point_quat(isub_mat_vec3(p, c), rotation);
 
-    let b : mat3x3f = iavec3_vec(c - vec3f(0.0, 0.0, height));
+    let b : mat3x3f = iavec3_vec(c + vec3f(0.0, height, 0.0));
     var ba : mat3x3f = isub_mats(b, a);
 
     var h : vec2f = iclamp(idiv_vecs(idot_mat(pa, ba), idot_mat(ba, ba)), 0.0, 1.0);
@@ -591,7 +561,7 @@ fn cone_interval(p : mat3x3f, c : vec3f, height : f32, radius_dims : vec2f, rota
     var h = height * 0.5;
 
     var offset : mat3x3f = iavec3_vec(vec3f(0.0, h, 0.0));
-    var pos : mat3x3f = irotate_point_quat(isub_mat_vec(p, c), rotation);
+    var pos : mat3x3f = irotate_point_quat(isub_mat_vec3(p, c), rotation);
     pos = isub_mats(pos, offset);
 
     let q_x = isqrt(ipow2_vec(pos[0].xy) + ipow2_vec(pos[2].xy));
@@ -618,12 +588,12 @@ fn cone_interval(p : mat3x3f, c : vec3f, height : f32, radius_dims : vec2f, rota
     let m_ca = iavec3_vecs(ca_x, ca_y, vec2f(0.0));
     let m_cb = iavec3_vecs(cb_x, cb_y, vec2f(0.0));
 
-    return imul_vec2_vec2(s, isqrt(imin(idot_mat(m_ca, m_ca), idot_mat(m_cb, m_cb))));
+    return imul_vecs(s, isqrt(imin(idot_mat(m_ca, m_ca), idot_mat(m_cb, m_cb))));
 }
 
 fn cylinder_interval(p : mat3x3f, start_pos : vec3f, rotation : vec4f, radius : f32, height : f32) -> vec2f
 {
-    let cyl_origin : mat3x3f = irotate_point_quat(isub_mat_vec(p, start_pos), rotation);
+    let cyl_origin : mat3x3f = irotate_point_quat(isub_mat_vec3(p, start_pos), rotation);
     
     let d_x : vec2f = isub_vecs(iabs(isqrt(ipow2_vec(cyl_origin[0].xy) + ipow2_vec(cyl_origin[2].xy))), vec2f(radius, radius)); 
     let d_y : vec2f = isub_vecs(iabs(cyl_origin[1].xy), vec2f(height, height)); 
@@ -636,7 +606,7 @@ fn cylinder_interval(p : mat3x3f, start_pos : vec3f, rotation : vec4f, radius : 
 
 fn torus_interval( p : mat3x3f, c : vec3f, t : vec2f, rotation : vec4f) -> vec2f
 {
-    let pos : mat3x3f = irotate_point_quat(isub_mat_vec(p, c), rotation);
+    let pos : mat3x3f = irotate_point_quat(isub_mat_vec3(p, c), rotation);
 
     let d_x = isub_vec_float(isqrt(ipow2_vec(pos[0].xy) + ipow2_vec(pos[2].xy)), t.x);
     let d_y = pos[1].xy;
@@ -646,7 +616,7 @@ fn torus_interval( p : mat3x3f, c : vec3f, t : vec2f, rotation : vec4f) -> vec2f
 
 fn capped_torus_interval( p : mat3x3f, c : vec3f, t : vec2f, rotation : vec4f, sc : vec2f) -> vec2f
 {
-    let pos : mat3x3f = irotate_point_quat(isub_mat_vec(p, c), rotation);
+    let pos : mat3x3f = irotate_point_quat(isub_mat_vec3(p, c), rotation);
 
     let ra = t.x;
     let rb = t.y;
@@ -695,13 +665,13 @@ fn bezier_interval( p : mat3x3f, start : vec3f, cp : vec3f, end : vec3f, thickne
     var g2 : mat3x3f = imul_vec2_mat(isub_vecs(ineg(d), imul_float_vec(0.5, a)), b0);
     var g : mat3x3f = iadd_mats(iadd_mats(g0, g1), g2);
 
-    var f : vec2f = isub_vecs(imul_float_vec(0.25, ipow2_vec(a)), imul_vec2_vec2(b, d));
+    var f : vec2f = isub_vecs(imul_float_vec(0.25, ipow2_vec(a)), imul_vecs(b, d));
     var k : mat3x3f = iadd_mats(isub_mats(b0, imul_float_mat(2.0, b1)), b2);
 
     var t00 : vec2f = iadd_vecs(imul_float_vec(0.5, a), b);         // [a * 0.5 + b]
     var t01 : vec2f = imul_float_vec(0.5, f);                       // [f * 0.5]
     var t10 : vec2f = idiv_vecs(idot_mat(g,k), idot_mat(g, g));     // [dot(g,k) / dot(g,g)]
-    var t1 : vec2f = isub_vecs(t00, imul_vec2_vec2(t01, t10));      // [a * 0.5 + b] - [0.5 * f * dot(g,k) / dot(g,g)]
+    var t1 : vec2f = isub_vecs(t00, imul_vecs(t01, t10));           // [a * 0.5 + b] - [0.5 * f * dot(g,k) / dot(g,g)]
     var t2 : vec2f = idiv_vecs(t1, m);                              // [a * 0.5 + b - 0.5 * f * dot(g,k) / dot(g,g)] / [m]
     var t : vec2f = iclamp(t2, 0.0, 1.0 );
 
