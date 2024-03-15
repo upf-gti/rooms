@@ -10,10 +10,10 @@
 
 #include <list>
 
-#define SSAA_SDF_WRITE_TO_TEXTURE true
+#define SSAA_SDF_WRITE_TO_TEXTURE false
 #define PREVIEW_EDITS_MAX 128
 #define SDF_RESOLUTION 400
-#define SCULPT_MAX_SIZE 2 // meters
+#define SCULPT_MAX_SIZE 1 // meters
 #define PREVIEW_PROXY_BRICKS_COUNT 4000u
 
 class MeshInstance3D;

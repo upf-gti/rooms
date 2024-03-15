@@ -1,9 +1,12 @@
 #pragma once
 
-#include <graphics/edit.h>
-
+#include "graphics/edit.h"
+#include "framework/nodes/ui.h"
+#include "framework/nodes/text.h"
 #include "framework/ui/transform_gizmo.h"
-#include "framework/ui/ui_controller.h"
+
+
+#include <map>
 
 enum eTool : uint8_t {
     NONE = 0,
@@ -15,6 +18,7 @@ enum eTool : uint8_t {
 
 class RoomsRenderer;
 class MeshInstance3D;
+class Viewport3D;
 
 struct PrimitiveState {
     glm::vec4 dimensions;
@@ -50,12 +54,12 @@ class SculptEditor {
     std::vector<Edit>   preview_tmp_edits;
     std::vector<Edit>   new_edits;
 
-    std::map<uint32_t, PrimitiveState> primitive_default_states;
+    std::map<uint32_t, PrimitiveState> primitive_default_states = {};
 
-    std::map<std::string, PBRMaterialData> pbr_materials_data;
+    std::map<std::string, PBRMaterialData> pbr_materials_data = {};
 
-    Edit             edit_to_add;
-    StrokeParameters stroke_parameters;
+    Edit             edit_to_add = {};
+    StrokeParameters stroke_parameters = {};
 
     MeshInstance3D* mesh_preview = nullptr;
     MeshInstance3D* mesh_preview_outline = nullptr;
@@ -73,13 +77,13 @@ class SculptEditor {
 
     bool canSnapToSurface();
 
-    bool        modifiers_dirty = false;
-    bool        dimensions_dirty = true;
-    bool        stamp_enabled = false;
-    bool		rotation_started = false;
-    bool        snap_to_surface = false;
-    bool        is_picking_material = false;
-    bool        was_material_picked = false;
+    bool modifiers_dirty    = false;
+    bool dimensions_dirty   = true;
+    bool stamp_enabled      = false;
+    bool rotation_started   = false;
+    bool snap_to_surface    = false;
+    bool is_picking_material = false;
+    bool was_material_picked = false;
 
     glm::vec3	sculpt_start_position;
     glm::vec3	edit_position_world;
@@ -118,7 +122,7 @@ class SculptEditor {
     };
 
     bool axis_lock = false;
-    TransformGizmo axis_lock_gizmo;
+    TransformGizmo axis_lock_gizmo = {};
     uint8_t axis_lock_mode = AXIS_LOCK_Z;
     glm::vec3 axis_lock_position = glm::vec3(0.f);
 
@@ -131,16 +135,33 @@ class SculptEditor {
 
     bool use_mirror = false;
 
-    TransformGizmo mirror_gizmo;
+    TransformGizmo mirror_gizmo = {};
     MeshInstance3D* mirror_mesh = nullptr;
 
     glm::vec3 mirror_origin = glm::vec3(0.f);
     glm::vec3 mirror_normal = glm::vec3(0.f, 0.f, 1.f);
     glm::quat mirror_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
+
+    // Controller UI
+    ui::VContainer2D* right_hand_container = nullptr;
+    ui::VContainer2D* left_hand_container = nullptr;
+    Viewport3D* right_hand_ui_3D = nullptr;
+    Viewport3D* left_hand_ui_3D = nullptr;
+
+    struct ControllerLabels {
+        ui::ImageLabel2D* main_button_label = nullptr;
+        ui::ImageLabel2D* secondary_button_label = nullptr;
+        ui::ImageLabel2D* grip_label = nullptr;
+        ui::ImageLabel2D* trigger_label = nullptr;
+        ui::ImageLabel2D* joystick_label = nullptr;
+    };
+
+    ControllerLabels controller_labels[2];
     
-    // UI
-    ui::Controller        gui;
-    ui::Controller        helper_gui;
+    // Main pannel UI
+    ui::HContainer2D* main_panel_2d = nullptr;
+    Viewport3D* main_panel_3d = nullptr;
+
     size_t                max_recent_colors;
     std::vector<Color>    recent_colors;
 
@@ -150,7 +171,7 @@ class SculptEditor {
     // Stamp slide
     glm::vec3 edit_position_stamp;
     glm::vec3 edit_origin_stamp;
-    glm::quat edit_rotation_stamp;
+    glm::quat edit_rotation_stamp = { 0.0f, 0.0f, 0.0f, 1.0f };
 
     // Editor
     bool is_tool_pressed = false;
@@ -169,7 +190,7 @@ class SculptEditor {
     void scene_update_rotation();
 
 public:
-
+    SculptEditor() {};
     void initialize();
     void clean();
 

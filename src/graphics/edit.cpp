@@ -1,6 +1,7 @@
 #include "edit.h"
 #include <sstream>
 #include "spdlog/spdlog.h"
+#include "framework/utils/intersections.h"
 
 std::ostream& operator<<(std::ostream& os, const Edit& edit)
 {
@@ -114,12 +115,11 @@ void StrokeParameters::set_material_noise_color(const Color& color)
 
 glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const
 {
-
     glm::vec3 size = glm::vec3(edits[edit_index].dimensions);
     float size_param = edits[edit_index].dimensions.w;
     float radius = edits[edit_index].dimensions.x;
 
-    const glm::vec3 smooth_margin = glm::vec3(parameters.w);
+    const glm::vec3 smooth_margin = (operation == OP_SMOOTH_PAINT || operation == OP_SMOOTH_UNION || operation == OP_SMOOTH_SUBSTRACTION) ? glm::vec3(parameters.w) : glm::vec3(0.0f);
 
     switch (primitive) {
     case SD_SPHERE:
@@ -127,7 +127,7 @@ glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const
     case SD_BOX:
         return size + smooth_margin;
     case SD_CAPSULE:
-        return glm::vec3(size_param) + glm::vec3(0.0f, 0.0f, radius / 2.0f);// +smooth_margin;
+        return glm::vec3(size_param) + glm::vec3(0.0f, radius / 2.0f, 0.0f);// +smooth_margin;
     case SD_CONE:
         return glm::vec3(size_param, radius, size_param) + smooth_margin;
     //case SD_PYRAMID:
@@ -136,6 +136,8 @@ glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const
         return glm::vec3(size_param, radius, size_param) + smooth_margin;
     case SD_TORUS:
         return glm::abs(size) + radius * 2.0f + smooth_margin;
+    /*case SD_BEZIER:
+        return glm::vec3(0.0f);*/
     default:
         assert(false);
         return {};
@@ -146,12 +148,12 @@ AABB Stroke::get_edit_world_AABB(const uint8_t edit_index) const
 {
     // Special case for the capsule
     if (primitive == SD_CAPSULE) {
-        const float size_param = edits[edit_index].dimensions.w;
-        const float radius = edits[edit_index].dimensions.x;
+        const float radius = edits[edit_index].dimensions.w;
+        const float height = edits[edit_index].dimensions.x;
         const float smooht_margin = parameters.w;
 
-        AABB a1 = { edits[edit_index].position, glm::vec3(size_param)};
-        AABB a2 = { edits[edit_index].position - (glm::inverse(edits[edit_index].rotation) * glm::vec3(0.0f, 0.0f, radius)), glm::vec3(size_param) };
+        AABB a1 = { edits[edit_index].position, glm::vec3(radius)};
+        AABB a2 = { edits[edit_index].position - (glm::inverse(edits[edit_index].rotation) * glm::vec3(0.0f, height, 0.0f)), glm::vec3(radius) };
 
         return merge_aabbs(a1, a2);
     }
@@ -209,4 +211,21 @@ AABB Stroke::get_world_AABB() const
     }
 
     return world_aabb;
+}
+
+// Compute the resulting stroke on the current stroke's edits that are inside the area
+void Stroke::get_AABB_intersecting_stroke(const AABB intersection_area,
+                                                Stroke& resulting_stroke) const {
+    resulting_stroke.edit_count = 0u;
+    resulting_stroke.primitive = primitive;
+    resulting_stroke.operation = operation;
+    resulting_stroke.parameters = parameters;
+    resulting_stroke.material = material;
+    resulting_stroke.stroke_id = stroke_id;
+
+    for (uint16_t i = 0u; i < edit_count; i++) {
+        if (intersection::AABB_AABB_min_max(intersection_area, get_edit_world_AABB(i))) {
+            resulting_stroke.edits[resulting_stroke.edit_count++] = edits[i];
+        }
+    }
 }

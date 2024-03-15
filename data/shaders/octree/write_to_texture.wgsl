@@ -91,10 +91,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     var result_surface : Surface;
     result_surface.distance = 0.0;
 
-#ifdef SSAA_SDF_WRITE_TO_TEXTURE
-    // Super Sampling iterations
-    for(var j : u32 = 0u; j < 9u; j++) {
-#endif
 
         var curr_surface : Surface = sSurface;
 
@@ -123,25 +119,11 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
             material.roughness = mix(stroke.material.roughness, 1.0, noise_value * 1.5);
             material.metalness = mix(stroke.material.metallic, 0.25, noise_value * 1.5);
 
-#ifdef SSAA_SDF_WRITE_TO_TEXTURE
-            curr_surface = evaluate_edit(pos + delta_pos_world[j], stroke.primitive, stroke.operation, stroke.parameters, curr_surface, material, edit);
-#else
             curr_surface = evaluate_edit(pos, stroke.primitive, stroke.operation, stroke.parameters, curr_surface, material, edit);
-#endif
         }
 
-#ifdef SSAA_SDF_WRITE_TO_TEXTURE
-        // Accumulate the sampling results
-        result_surface.distance = curr_surface.distance + result_surface.distance;
-        result_surface.material = Material_sum_Material(curr_surface.material, result_surface.material);
-    }
 
-    // Average all the samples
-    result_surface.material = Material_mult_by(result_surface.material, 1.0 / 9.0);
-    result_surface.distance = result_surface.distance / 9.0;
-#else
     result_surface = curr_surface;
-#endif
 
     if (result_surface.distance < MIN_HIT_DIST) {
         atomicAdd(&used_pixels, 1);
@@ -168,13 +150,14 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
         let filled_pixel_count : u32 = atomicLoad(&used_pixels);
         if (filled_pixel_count == 0u) {
-            octree_proxy_data.instance_data[brick_index].in_use = 0;
-            // Add the brick to the indirect
-            let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
-            indirect_brick_removal.brick_removal_buffer[brick_to_delete_idx] = brick_index;
+            let brick_to_delete_idx = atomicLoad(&indirect_brick_removal.brick_removal_counter);
+            // octree_proxy_data.instance_data[brick_index].in_use = 0;
+            // // Add the brick to the indirect
+            // let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
+            // indirect_brick_removal.brick_removal_buffer[brick_to_delete_idx] = brick_index;
 
-            octree.data[octree_leaf_id].octant_center_distance = vec2f(10000.0, 10000.0);
-            octree.data[octree_leaf_id].tile_pointer = 0u;
+            // octree.data[octree_leaf_id].octant_center_distance = vec2f(10000.0, 10000.0);
+            // octree.data[octree_leaf_id].tile_pointer = 0u;
         } else {
             // Add "filled" flag and remove "interior" flag
             octree.data[octree_leaf_id].tile_pointer = brick_index | FILLED_BRICK_FLAG;

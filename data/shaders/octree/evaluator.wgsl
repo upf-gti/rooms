@@ -149,6 +149,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     let is_substract : bool = current_stroke.operation == OP_SUBSTRACTION;
     let is_smooth_substract : bool = current_stroke.operation == OP_SMOOTH_SUBSTRACTION;
     let is_any_substract : bool = is_substract || is_smooth_substract;
+
+    let is_any_smooth : bool = is_smooth_substract || is_smooth_paint || is_smooth_union;
     
     let octant_min : vec3f = octant_center - vec3f(level_half_size);
     let octant_max : vec3f = octant_center + vec3f(level_half_size);
@@ -172,15 +174,15 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         }
     }
 
-    var new_edits_surface_interval : vec2f = vec2f(10000.0, 10000.0);
+    var current_stroke_interval : vec2f = vec2f(10000.0, 10000.0);
     var surface_interval = (octree.data[octree_index].octant_center_distance);
     var edit_counter : u32 = 0;
 
     var new_packed_edit_idx : u32 = 0;
 
-    var edit_cutoff_distance : f32 = 0.0;
+    var edit_cutoff_distance : f32 = MIN_HIT_DIST;
 
-    if (is_smooth_union) {
+    if (is_any_smooth) {
         edit_cutoff_distance = current_stroke.parameters.w;
     }
 
@@ -215,14 +217,14 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
         surface_interval = eval_edit_interval(x_range, y_range, z_range, current_stroke.primitive, current_stroke.operation, current_stroke.parameters, surface_interval, current_edit, &edit_interval);
 
-        if (is_smooth_union || is_smooth_substract || is_smooth_paint) {
-            current_edit.dimensions += vec4f(current_stroke.parameters.w);
-        }
+        // if (is_any_smooth) {
+        //     current_edit.dimensions = vec4f(current_edit.dimensions.x + current_stroke.parameters.w * 0.5, current_edit.dimensions.yzw);
+        // }
 
-        new_edits_surface_interval = eval_edit_interval(x_range, y_range, z_range, current_stroke.primitive, OP_UNION, current_stroke.parameters, new_edits_surface_interval, current_edit, &edit_interval);
+        current_stroke_interval = eval_edit_interval(x_range, y_range, z_range, current_stroke.primitive, current_stroke.operation, current_stroke.parameters, current_stroke_interval, current_edit, &edit_interval);
 
         // Check if the edit affects the current voxel, if so adds it to the packed list
-        if (edit_interval.x < edit_cutoff_distance) {
+        if (edit_interval.x < 0.0) {
             // Using the edit counter, sift the edit id to the position in the current word, and adds it
             new_packed_edit_idx = new_packed_edit_idx | (current_unpacked_edit_idx << ((3 - edit_counter % 4) * 8));
 
@@ -242,26 +244,24 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         }
     }
 
-    
     var surface_interval_smooth : vec2f = surface_interval;
 
-
-    // if (is_smooth_union) {
-    //     surface_interval_smooth += vec2f(-current_stroke.parameters.w * 0.25, 10.0 / 512.0);
-    //     new_edits_surface_interval += vec2f(-current_stroke.parameters.w * 0.25, 10.0 / 512.0);
-    // } 
+    if (is_smooth_union) {
+        surface_interval_smooth += vec2f(-current_stroke.parameters.w * 0.15, current_stroke.parameters.w * 0.15);
+        //current_stroke_interval += vec2f(-current_stroke.parameters.w * 0.15, current_stroke.parameters.w * 0.15);
+    } 
     // else if (is_smooth_substract) {
     //     // surface_interval_smooth += vec2f(-SMOOTH_FACTOR * 0.25, 10.0 / 512.0);
-    //     // new_edits_surface_interval += vec2f(-SMOOTH_FACTOR * 0.25, 10.0 / 512.0);
+    //     // current_stroke_interval += vec2f(-SMOOTH_FACTOR * 0.25, 10.0 / 512.0);
     // }
 
-    let global_surface_inside : bool = surface_interval_smooth.y < 0.0;
-    let global_surface_outside : bool = surface_interval_smooth.x > 0.0;
-    let global_surface_intersection : bool = surface_interval_smooth.x < 0.0 && surface_interval_smooth.y > 0.0;
+    let global_sculpture_inside : bool = surface_interval_smooth.y < 0.0;
+    let global_sculpture_outside : bool = surface_interval_smooth.x > 0.0;
+    let global_sculpture_in_surface : bool = surface_interval_smooth.x < 0.0 && surface_interval_smooth.y > 0.0;
 
-    let local_surface_inside : bool = new_edits_surface_interval.y < 0.0;
-    let local_surface_outside : bool = new_edits_surface_interval.x > 0.0;
-    let local_surface_intersection : bool = new_edits_surface_interval.x < 0.0 && new_edits_surface_interval.y > 0.0;
+    let current_stroke_inside : bool = current_stroke_interval.y < 0.0;
+    let current_stroke_outside : bool = current_stroke_interval.x > 0.0;
+    let current_stroke_in_surface : bool = current_stroke_interval.x < 0.0 && current_stroke_interval.y > 0.0;
 
     let is_current_brick_filled : bool = (octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG;
     let is_interior_brick : bool = (octree.data[octree_index].tile_pointer & INTERIOR_BRICK_FLAG) == INTERIOR_BRICK_FLAG;
@@ -287,7 +287,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             }
         }  
         // If there is surface of the new edits in the block 
-        else if  (new_edits_surface_interval.x < 0.0) {
+        else if  (current_stroke_interval.x < 0.0) {
             // Subdivide
             // Increase the number of children from the current level
             let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 8);
@@ -303,12 +303,12 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     } else {
         if (is_evaluating_preview) {
             let instance_index : u32 = octree.data[octree_index].tile_pointer & OCTREE_TILE_INDEX_MASK;
-            if (local_surface_intersection) {
+            if (current_stroke_in_surface) {
                 if (is_current_brick_filled) {
                     // Mark current brick in order to evaluate the stroke
                     octree_proxy_data.instance_data[instance_index].in_use = BRICK_HAS_PREVIEW_FLAG | BRICK_IN_USE_FLAG;
                 } else {
-                    if (global_surface_intersection) {
+                    if (global_sculpture_in_surface) {
                         //Add preview bricks inside
                         let preview_brick : u32 = atomicAdd(&preview_data.instance_count, 1u);
     
@@ -320,7 +320,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                         }
                     }
                 }
-            } else if (local_surface_inside) {
+            } else if (current_stroke_inside) {
                 // TODO: this is more correct, but would need to run te copy_brick each frame
                 // This could be done when brick reordering is implemented
                 // octree_proxy_data.instance_data[instance_index].in_use = BRICK_HIDE_FLAG | BRICK_IN_USE_FLAG;
@@ -340,7 +340,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         else 
         if (is_any_union) {
             // IF ITS A UNION OPERATION ================
-            if (global_surface_outside || global_surface_inside) {
+            if ((global_sculpture_outside || global_sculpture_inside)) {
                 // if is inside or outside the resulting SDF, we delete the brick
                 if (is_current_brick_filled) {
                     let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
@@ -352,11 +352,11 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 }
 
                 // In the case is inside, we mark it as an inside block
-                if (surface_interval_smooth.y < 0.0) {
+                if (global_sculpture_inside) {
                     octree.data[octree_index].tile_pointer = INTERIOR_BRICK_FLAG;
                     octree.data[octree_index].octant_center_distance = vec2f(-10000.0, -10000.0);
                 }
-            } else if (global_surface_intersection && (new_edits_surface_interval.x < 0.0)) {
+            } else if (global_sculpture_in_surface && (current_stroke_interval.x < 0.0)) {
                 // If its in theintersection of the surface of the resulting SDF and the inside of new_edits,
                 // This means to only select the newly updated bricks.
                 let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 1);
@@ -389,7 +389,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             }
         } else {
             // IF ITS A SUBSTRACTION OPERATION ==============
-            if (local_surface_intersection) {
+            if (current_stroke_in_surface) {
                 if (is_current_brick_filled) {
                     // If the block is int he surface of new_edits and is filled, update the brick
                     let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 1);
@@ -406,7 +406,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                     let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 1);
                     octant_usage_write[prev_counter] = octree_index;
                 }
-            } else if (local_surface_inside) {
+            } else if (current_stroke_inside) {
                 if (is_current_brick_filled) {
                     // If its inside the new_edits, and the brick is filled, we delete it
                     let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
