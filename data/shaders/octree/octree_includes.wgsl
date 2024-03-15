@@ -5,6 +5,7 @@
 #define OCTREE_TOTAL_SIZE
 #define PREVIEW_PROXY_BRICKS_COUNT
 #define WORLD_SPACE_SCALE
+#define STROKE_HISTORY_MAX_SIZE
 
 const SCULPT_TO_ATLAS_CONVERSION_FACTOR = (WORLD_SPACE_SCALE / SDF_RESOLUTION)  / (SCULPT_MAX_SIZE);
 const PIXEL_WORLD_SIZE = SCULPT_MAX_SIZE / WORLD_SPACE_SCALE;
@@ -75,6 +76,12 @@ struct Stroke {
     padding1        : Edit,
     padding2        : Edit,
     edits           : array<Edit, MAX_EDITS_PER_EVALUATION>
+};
+
+struct StrokeHistory {
+    count : u32,
+    padd : vec3f,
+    strokes : array<Stroke, STROKE_HISTORY_MAX_SIZE>
 };
 
 struct OctreeNode {

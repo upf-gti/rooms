@@ -22,7 +22,7 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
     bool is_openxr_available = RoomsRenderer::instance->get_openxr_available();
 
-    octree_depth = static_cast<uint8_t>(6);
+    octree_depth = static_cast<uint8_t>(7);
 
     // total size considering leaves and intermediate levels
     octree_total_size = (pow(8, octree_depth + 1) - 1) / 7;
@@ -32,6 +32,7 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
     Shader::set_custom_define("OCTREE_DEPTH", octree_depth);
     Shader::set_custom_define("OCTREE_TOTAL_SIZE", octree_total_size);
     Shader::set_custom_define("PREVIEW_PROXY_BRICKS_COUNT", PREVIEW_PROXY_BRICKS_COUNT);
+    Shader::set_custom_define("STROKE_HISTORY_MAX_SIZE", STROKE_HISTORY_MAX_SIZE);
 
 #ifndef DISABLE_RAYMARCHER
 
@@ -305,8 +306,31 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
 {
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
 
+    // Compute the list of edits that influence teh current one
+    std::vector<Stroke> influence_edits;
+
+    AABB strokes_aabb;
+    for (uint16_t i = 0u; i < strokes.size(); i++) {
+        strokes_aabb = merge_aabbs(strokes_aabb, strokes[i].get_world_AABB());
+    }
+
+    // Increase 1 texel the bounding box, in order to not exclude bricks
+    // In the brick border
+
+    // Get the strokes that are on the region of the undo
+    stroke_influence_list.stroke_count = 0u;
+     Stroke intersection_stroke;
+    for (uint32_t i = 0u; i < stroke_history.size(); i++) {
+        stroke_history[i].get_AABB_intersecting_stroke(strokes_aabb, intersection_stroke);
+
+        if (intersection_stroke.edit_count > 0u) {
+            stroke_influence_list.strokes[stroke_influence_list.stroke_count++] = intersection_stroke;
+        }
+    }
+
     // Can be done once
     {
+
         if (!strokes.empty()) {
             webgpu_context->update_buffer(std::get<WGPUBuffer>(compute_stroke_buffer_uniform.data), 0, strokes.data(), sizeof(Stroke) * strokes.size());
         }
@@ -314,6 +338,8 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
             Stroke stroke;
             webgpu_context->update_buffer(std::get<WGPUBuffer>(compute_stroke_buffer_uniform.data), 0, &stroke, sizeof(Stroke));
         }
+
+        webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_stroke_history.data), 0, &stroke_influence_list, sizeof(sStrokeInfluence));
 
         // Update uniform buffer
         webgpu_context->update_buffer(std::get<WGPUBuffer>(compute_merge_data_uniform.data), 0, &(compute_merge_data), sizeof(sMergeData));
@@ -541,6 +567,7 @@ void RaymarchingRenderer::compute_octree()
         spdlog::info("Redo");
         compute_redo(compute_pass);
     } else if (in_frame_stroke.edit_count > 0 || to_compute_stroke_buffer.size() > 0) { // Merge
+
         to_compute_stroke_buffer.push_back(in_frame_stroke);
 
         spdlog::info("Evaluate stroke");
@@ -557,7 +584,7 @@ void RaymarchingRenderer::compute_octree()
     bool is_openxr_available = RoomsRenderer::instance->get_openxr_available();
 
     //if (is_openxr_available) {
-        compute_preview_edit(compute_pass);
+        //compute_preview_edit(compute_pass);
     //}
 
     // Finalize compute_raymarching pass
@@ -740,6 +767,13 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         octree_edit_culling_data.binding = 6;
         octree_edit_culling_data.buffer_size = edit_culling_data_size;
 
+        // Stroke history
+        size_t stroke_history_size = sizeof(glm::vec4) + sizeof(Stroke) * STROKE_HISTORY_MAX_SIZE;
+        octree_stroke_history.data = webgpu_context->create_buffer(stroke_history_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "stroke_history");
+        octree_stroke_history.binding = 6;
+        octree_stroke_history.buffer_size = stroke_history_size;
+        webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_stroke_history.data), 0, &default_val, sizeof(uint32_t));
+
         // Buffer for brick removal & indirect buffers
         // 3 uints for the indirect buffer data + 1 padding +  and then the brick size
         uint32_t buffer_removal_buffer_size = sizeof(uint32_t) + octants_max_size * sizeof(uint32_t);
@@ -752,7 +786,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
 
 
         std::vector<Uniform*> uniforms = { &octree_uniform, &compute_merge_data_uniform,
-                                           &octree_proxy_instance_buffer, &octree_edit_culling_data, &octree_indirect_brick_removal_buffer };
+                                           &octree_proxy_instance_buffer, & octree_stroke_history, &octree_indirect_brick_removal_buffer };
 
         compute_octree_evaluate_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_evaluate_shader, 0);
     }
@@ -827,7 +861,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         octree_indirect_brick_removal_buffer_biding_2 = octree_indirect_brick_removal_buffer;
         octree_indirect_brick_removal_buffer_biding_2.binding = 7u;
         std::vector<Uniform*> uniforms = { &sdf_texture_uniform, &octree_uniform, &octree_indirect_brick_removal_buffer_biding_2,
-                                           &octree_edit_culling_data, &octree_proxy_instance_buffer, &sdf_material_texture_uniform };
+                                           &octree_stroke_history, &octree_proxy_instance_buffer, &sdf_material_texture_uniform };
         compute_octree_write_to_texture_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_write_to_texture_shader, 0);
     }
 

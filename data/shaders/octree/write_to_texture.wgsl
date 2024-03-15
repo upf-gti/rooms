@@ -95,29 +95,29 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
         var curr_surface : Surface = sSurface;
 
         // Traverse the according edits and evaluate them in the brick
-        for (var i : u32 = 0; i < edit_culling_data.edit_culling_count[parent_octree_index]; i++) {
+        for (var i : u32 = 0; i < stroke.edit_count; i++) {
             // Get the packed indices
-            let current_packed_edit_idx : u32 = edit_culling_data.edit_culling_lists[i / 4 + parent_octree_index * PACKED_LIST_SIZE];
-            let packed_index : u32 = 3 - (i % 4);
-            let current_unpacked_edit_idx : u32 = (current_packed_edit_idx & (0xFFu << (packed_index * 8u))) >> (packed_index * 8u);
-            let edit = stroke.edits[current_unpacked_edit_idx];
+            // let current_packed_edit_idx : u32 = edit_culling_data.edit_culling_lists[i / 4 + parent_octree_index * PACKED_LIST_SIZE];
+            // let packed_index : u32 = 3 - (i % 4);
+            // let current_unpacked_edit_idx : u32 = (current_packed_edit_idx & (0xFFu << (packed_index * 8u))) >> (packed_index * 8u);
+            let edit = stroke.edits[i];
             let pos = octant_center + pixel_offset;
 
-            // Rust example.. ??
+            // // Rust example.. ??
 
-            let stroke_color : vec3f = stroke.material.color.xyz;
+            // let stroke_color : vec3f = stroke.material.color.xyz;
             
-            let noise_color : vec3f = stroke.material.noise_color.xyz;
-            let noise_intensity : f32 = stroke.material.noise_params.x;
-            let noise_freq : f32 = stroke.material.noise_params.y;
-            let noise_octaves : u32 = u32(stroke.material.noise_params.z);
+            // let noise_color : vec3f = stroke.material.noise_color.xyz;
+            // let noise_intensity : f32 = stroke.material.noise_params.x;
+            // let noise_freq : f32 = stroke.material.noise_params.y;
+            // let noise_octaves : u32 = u32(stroke.material.noise_params.z);
 
-            var noise_value = fbm( pos, vec3f(0.0), noise_freq, noise_intensity, noise_octaves );
-            noise_value = clamp(noise_value, 0.0, 1.0);
+            // var noise_value = fbm( pos, vec3f(0.0), noise_freq, noise_intensity, noise_octaves );
+            // noise_value = clamp(noise_value, 0.0, 1.0);
 
-            material.albedo = mix(stroke_color, stroke_color * noise_color, noise_value);
-            material.roughness = mix(stroke.material.roughness, 1.0, noise_value * 1.5);
-            material.metalness = mix(stroke.material.metallic, 0.25, noise_value * 1.5);
+            material.albedo = stroke.material.color.xyz;
+            material.roughness = stroke.material.roughness;
+            material.metalness = stroke.material.metallic;
 
             curr_surface = evaluate_edit(pos, stroke.primitive, stroke.operation, stroke.parameters, curr_surface, material, edit);
         }
@@ -160,7 +160,9 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
             // octree.data[octree_leaf_id].tile_pointer = 0u;
         } else {
             // Add "filled" flag and remove "interior" flag
-            octree.data[octree_leaf_id].tile_pointer = brick_index | FILLED_BRICK_FLAG;
+            
         }
+
+        octree.data[octree_leaf_id].tile_pointer = brick_index | FILLED_BRICK_FLAG;
     }
 }

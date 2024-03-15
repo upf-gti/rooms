@@ -255,7 +255,7 @@ fn sminN( a : f32, b : f32, k : f32, n : f32 ) -> vec2f
 fn soft_min(a : f32, b : f32, k : f32) -> vec2f 
 { 
     let h : f32 = max(k - abs(a - b), 0) / k; 
-    let m : f32 = h * h * h * 0.5;
+    let m : f32 = h * h * 0.5;
     return vec2f(min(a, b) - h * h * k * 0.25, select(1.0 - m, m, a < b)); 
 }
 

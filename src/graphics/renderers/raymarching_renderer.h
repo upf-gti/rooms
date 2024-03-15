@@ -15,6 +15,7 @@
 #define SDF_RESOLUTION 400
 #define SCULPT_MAX_SIZE 1 // meters
 #define PREVIEW_PROXY_BRICKS_COUNT 4000u
+#define STROKE_HISTORY_MAX_SIZE 402u
 
 class MeshInstance3D;
 
@@ -95,6 +96,7 @@ class RaymarchingRenderer {
     Uniform         octree_proxy_instance_buffer;
     Uniform         octree_proxy_indirect_buffer;
     Uniform         octree_edit_culling_data;
+    Uniform         octree_stroke_history;
     Uniform         octree_indirect_brick_removal_buffer;
     Uniform         octree_indirect_brick_removal_buffer_biding_2;
     Uniform         octree_brick_copy_buffer;
@@ -150,6 +152,12 @@ class RaymarchingRenderer {
         glm::vec3 ray_dir;
         float dummy1;
     } ray_info;
+
+    struct sStrokeInfluence {
+        uint32_t stroke_count;
+        glm::vec3 pad;
+        Stroke strokes[STROKE_HISTORY_MAX_SIZE];
+    } stroke_influence_list;
 
     RayIntersectionInfo ray_intersection_info;
 

@@ -612,6 +612,8 @@ bool SculptEditor::edit_update(float delta_time)
     edit_position_world = edit_to_add.position;
     edit_rotation_world = edit_to_add.rotation;
 
+
+    //edit_to_add.position = glm::vec3(0.0f);
     return is_tool_used;
 }
 
@@ -1054,7 +1056,7 @@ void SculptEditor::enable_tool(eTool tool)
     {
     case SCULPT:
         // helper_gui.change_list_layout("sculpt");
-        stroke_parameters.set_operation(OP_UNION);
+        stroke_parameters.set_operation(OP_SMOOTH_UNION);
         hand2edit_distance = 0.0f;
         break;
     case PAINT:
