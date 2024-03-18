@@ -9,6 +9,10 @@
 
 Through VR headsets, users could have the possibility to create full XR experiences involving 3D sculpted assets, 3D animations and scripted element behaviours. Inside a future online community, every asset (from 3D models to scripts; generated using an XR visual scripting editor) could be exported and re-used in other experiences. 
 
+<p align="center" width="100%">
+    <img width="50%" src="./data/images/demo_capture.png"> 
+</p>
+
 ## Current status
 
 Rooms is currently in the development stages. 
