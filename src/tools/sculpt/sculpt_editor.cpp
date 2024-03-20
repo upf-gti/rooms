@@ -625,6 +625,10 @@ void SculptEditor::update(float delta_time)
         }
         else {
             main_panel_2d->update(delta_time);
+
+            if (is_picking_material && Input::was_mouse_pressed(GLFW_MOUSE_BUTTON_RIGHT)) {
+                pick_material();
+            }
         }
 
         // Update controller UI
@@ -1225,8 +1229,13 @@ void SculptEditor::generate_material_from_stroke(void* button)
 
     std::string name = "new_material_" + std::to_string(last_generated_material_uid++);
     ui::TextureButton2D* new_button = new ui::TextureButton2D(name, "data/textures/material_samples.png", ui::UNIQUE_SELECTION);
-    new_button->remove_flag(MATERIAL_2D);
     mat_samples->add_child(new_button);
+
+    // Set button as 3d
+    if (main_panel_3d) {
+        new_button->remove_flag(MATERIAL_2D);
+    }
+
     num_generated_materials++;
 
     // Add data to existing samples..
@@ -1266,9 +1275,28 @@ void SculptEditor::update_stroke_from_material(const std::string& name)
 
 void SculptEditor::pick_material()
 {
-    glm::mat4x4 pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
-    glm::vec3 ray_dir = get_front(pose);
-    renderer->get_raymarching_renderer()->octree_ray_intersect(pose[3], ray_dir);
+    if (Renderer::instance->get_openxr_available())
+    {
+        glm::mat4x4 pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
+        glm::vec3 ray_dir = get_front(pose);
+        renderer->get_raymarching_renderer()->octree_ray_intersect(pose[3], ray_dir);
+    }else
+    {
+        WebGPUContext* webgpu_context = Renderer::instance->get_webgpu_context();
+        Camera* camera = Renderer::instance->get_camera();
+        const glm::mat4x4& view_projection_inv = glm::inverse(camera->get_view_projection());
+
+        glm::vec2 mouse_pos = Input::get_mouse_position();
+        glm::vec3 mouse_pos_ndc;
+        mouse_pos_ndc.x = (mouse_pos.x / webgpu_context->render_width) * 2.0f - 1.0f;
+        mouse_pos_ndc.y = -((mouse_pos.y / webgpu_context->render_height) * 2.0f - 1.0f);
+        mouse_pos_ndc.z = 1.0f;
+
+        glm::vec4 ray_dir = view_projection_inv * glm::vec4(mouse_pos_ndc, 1.0f);
+        ray_dir /= ray_dir.w;
+
+        renderer->get_raymarching_renderer()->octree_ray_intersect(camera->get_eye(), glm::normalize(glm::vec3(ray_dir)));
+    }
 
     const RayIntersectionInfo& info = static_cast<RoomsRenderer*>(RoomsRenderer::instance)->get_raymarching_renderer()->get_ray_intersection_info();
 
