@@ -221,10 +221,10 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         //     current_edit.dimensions = vec4f(current_edit.dimensions.x + current_stroke.parameters.w * 0.5, current_edit.dimensions.yzw);
         // }
 
-        current_stroke_interval = eval_edit_interval(x_range, y_range, z_range, current_stroke.primitive, current_stroke.operation, current_stroke.parameters, current_stroke_interval, current_edit, &edit_interval);
+        current_stroke_interval = eval_edit_interval(x_range, y_range, z_range, current_stroke.primitive, OP_UNION, current_stroke.parameters, current_stroke_interval, current_edit, &edit_interval);
 
         // Check if the edit affects the current voxel, if so adds it to the packed list
-        if (edit_interval.x < 0.0) {
+        if (edit_interval.x < edit_cutoff_distance) {
             // Using the edit counter, sift the edit id to the position in the current word, and adds it
             new_packed_edit_idx = new_packed_edit_idx | (current_unpacked_edit_idx << ((3 - edit_counter % 4) * 8));
 
@@ -246,10 +246,10 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
     var surface_interval_smooth : vec2f = surface_interval;
 
-    if (is_smooth_union) {
-        surface_interval_smooth += vec2f(-current_stroke.parameters.w * 0.15, current_stroke.parameters.w * 0.15);
-        //current_stroke_interval += vec2f(-current_stroke.parameters.w * 0.15, current_stroke.parameters.w * 0.15);
-    } 
+    // if (is_smooth_union) {
+    //     surface_interval_smooth += vec2f(-current_stroke.parameters.w * 0.15, current_stroke.parameters.w * 0.15);
+    //     //current_stroke_interval += vec2f(-current_stroke.parameters.w * 0.15, current_stroke.parameters.w * 0.15);
+    // } 
     // else if (is_smooth_substract) {
     //     // surface_interval_smooth += vec2f(-SMOOTH_FACTOR * 0.25, 10.0 / 512.0);
     //     // current_stroke_interval += vec2f(-SMOOTH_FACTOR * 0.25, 10.0 / 512.0);

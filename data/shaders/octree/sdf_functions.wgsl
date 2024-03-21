@@ -1,3 +1,5 @@
+#include ../color_blend_modes.wgsl
+
 
 // SD Primitives
 
@@ -325,7 +327,44 @@ fn opIntersection( s1 : Surface, s2 : Surface ) -> Surface
 fn opPaint( s1 : Surface, s2 : Surface, material : Material ) -> Surface
 {
     var sColorInter : Surface = opIntersection(s1, s2);
-    sColorInter.material = material;
+    var new_mat : Material;
+
+    var base_color : vec3f = s1.material.albedo;
+    var new_layer_color : vec3f = material.albedo;
+    var result_color : vec3f;
+
+    var blending_color : bool = false;
+
+    if(false) {
+        result_color = multiply(base_color, new_layer_color);
+    }
+    else if(true) {
+        result_color = screen(base_color, new_layer_color);
+    }
+    else if(false) {
+        result_color = darken(base_color, new_layer_color);
+    }
+    else if(false) {
+        result_color = lighten(base_color, new_layer_color);
+    }
+    else if(false) {
+        result_color = additive(base_color, new_layer_color);
+    }
+    else if(false) {
+        result_color = mix(base_color, new_layer_color, 0.5);
+    }
+
+    if(blending_color) {
+        // Since we add too many edits in smear, we need to force blending colors
+        // to be more realistic..
+        result_color = mix(base_color, result_color, 0.5);
+    }
+
+    new_mat.albedo = clamp(result_color, vec3f(0.0), vec3f(1.0));
+    new_mat.roughness = material.roughness;
+    new_mat.metalness = material.metalness;
+
+    sColorInter.material = new_mat;
     return opUnion(s1, sColorInter);
 }
 

@@ -338,7 +338,7 @@ fn iabs(a : vec2f) -> vec2f
     }
     
     if (a.y <= 0.0) {
-        return vec2f(-a.y, -a.x);
+        return ineg(a);
     }
     
     return vec2f(0.0, max(-a.x, a.y));
@@ -453,6 +453,11 @@ fn opSmoothSubtractionInterval( s1 : vec2f, s2 : vec2f, k : f32 ) -> vec2f
 fn opSubtractionInterval( s1 : vec2f, s2 : vec2f ) -> vec2f
 {
    return imax(s1, ineg(s2));
+}
+
+fn opOnionInterval(s : vec2f, t : f32) -> vec2f
+{
+    return isub_vec_float(iabs(s), t);
 }
 
 fn imat_add_to_upper(p : mat3x3f, v : vec3f) -> mat3x3f {
