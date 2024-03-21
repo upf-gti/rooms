@@ -165,6 +165,7 @@ class SculptEditor {
     size_t                max_recent_colors;
     std::vector<Color>    recent_colors;
 
+    void init_ui();
     void bind_events();
     void add_recent_color(const Color& color);
 
