@@ -17,7 +17,7 @@ struct CubeMapUVL {
     layer: u32,
 }
 
-const SAMPLE_COUNT = 512u;
+const SAMPLE_COUNT = 1024u;
 
 // vec4 importanceSample = getImportanceSample(i, N, roughness);
 // vec3 H = importanceSample.xyz;
@@ -40,30 +40,27 @@ fn compute_lod(pdf : f32, texture_width : f32) -> f32
 }
 
 fn directionFromCubeMapUVL(uvl: CubeMapUVL) -> vec3f {
-    let s = uvl.uv.x;
-    let t = uvl.uv.y;
-    let abs_ma = 1.0;
-    let sc = 2.0 * s - 1.0;
-    let tc = 2.0 * t - 1.0;
-    var direction = vec3f(0.0);
+
+    let uvx = 2.0 * uvl.uv.x - 1.0;
+    let uvy = 2.0 * uvl.uv.y - 1.0;
     switch (uvl.layer) {
         case 0u {
-            return vec3f(1.0, -tc, -sc);
+            return vec3f(1.0, uvy, -uvx);
         }
         case 1u {
-            return vec3f(-1.0, -tc, sc);
+            return vec3f(-1.0, uvy, uvx);
         }
         case 2u {
-            return vec3f(sc, 1.0, tc);
+            return vec3f(uvx, -1.0, uvy);
         }
         case 3u {
-            return vec3f(sc, -1.0, -tc);
+            return vec3f(uvx, 1.0, -uvy);
         }
         case 4u {
-            return vec3f(sc, -tc, 1.0);
+            return vec3f(uvx,  uvy,  1.0);
         }
         case 5u {
-            return vec3f(-sc, -tc, -1.0);
+            return vec3f(-uvx, uvy, -1.0);
         }
         default {
             return vec3f(0.0); // should not happen
@@ -87,12 +84,12 @@ fn cubeMapUVLFromDirection(direction: vec3f) -> CubeMapUVL {
         } else {
             sc = direction.z;
         }
-        tc = -direction.y;
+        tc = direction.y;
     } else if (abs_direction.y > abs_direction.x && abs_direction.y > abs_direction.z) {
         major_axis_idx = 1u;
-        ma = direction.y;
+        ma = -direction.y;
         sc = direction.x;
-        if (ma >= 0) {
+        if (ma <= 0) {
             tc = direction.z;
         } else {
             tc = -direction.z;
@@ -101,11 +98,11 @@ fn cubeMapUVLFromDirection(direction: vec3f) -> CubeMapUVL {
         major_axis_idx = 2u;
         ma = direction.z;
         if (ma >= 0) {
-            sc = -direction.x;
-        } else {
             sc = direction.x;
+        } else {
+            sc = -direction.x;
         }
-        tc = -direction.y;
+        tc = direction.y;
     }
     var sign_offset = 0u;
     if (ma < 0) {
@@ -176,20 +173,21 @@ fn compute(@builtin(global_invocation_id) id: vec3u)
     var color : vec3f = vec3f(0.0, 0.0, 0.0);
     var total_weight = 0.0;
 
-    let roughness = (f32(uniforms.current_mip_level) / f32(uniforms.mip_level_count - 1));
+    let roughness = f32(uniforms.current_mip_level) / 20.0;
 
     let output_dimensions = textureDimensions(output_cubemap_texture).xy;
-    let uv = vec2f(id.xy) / vec2f(output_dimensions - 1u);
-    let N = normalize(directionFromCubeMapUVL(CubeMapUVL(uv, layer)));
+    var uv = vec2f(id.xy) / vec2f(output_dimensions);
+    uv.y = 1.0 - uv.y;
+    var N = normalize(directionFromCubeMapUVL(CubeMapUVL(uv, layer)));
 
-    let local_to_world = makeLocalFrame(N);
+    // let local_to_world = makeLocalFrame(N);
 
     for(var i : u32 = 0u; i < SAMPLE_COUNT; i = i + 1u)
     {
         let Xi : vec2f = Hammersley(i, SAMPLE_COUNT);
 
         let importance_sample : vec4f = importance_sample_GGX(Xi, N, roughness);
-        let H : vec3f = importance_sample.xyz;
+        let H : vec3f = normalize(importance_sample.xyz);
         let pdf : f32 = importance_sample.w;
 
         var lod = compute_lod(pdf, f32(output_dimensions.x));
@@ -200,20 +198,16 @@ fn compute(@builtin(global_invocation_id) id: vec3u)
         let V : vec3f = N;
         let L : vec3f = normalize(reflect(-V, H));
 
-        let NdotL : f32 = clamp(L.z, 0.0, 1.0);
-        let NdotH : f32 = clamp(H.z, 0.0, 1.0);
-        let VdotH : f32 = clamp(dot(V, H), 0.0, 1.0);
+        let NdotL : f32 = dot(N, L);
 
         if (NdotL > 0.0)
         {
-            let L_world = local_to_world * L;
-            let radiance_ortho = sampleCubeMap(input_cubemap_texture, L_world).rgb;
+            let radiance_ortho = sampleCubeMap(input_cubemap_texture, L).rgb;
 
-            // (where did factor brdf_ibl(-L, vec3f(0.0, 0.0, 1.0), alpha) go?)
             color += radiance_ortho * NdotL;
-            total_weight += L.z;
+            total_weight += NdotL;
         }
     }
 
-    textureStore(output_cubemap_texture, id.xy, layer, vec4f(color, 1.0));
+    textureStore(output_cubemap_texture, id.xy, layer, vec4(color / total_weight, 1.0));
 }

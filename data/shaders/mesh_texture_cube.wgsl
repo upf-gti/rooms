@@ -10,19 +10,23 @@
 @group(2) @binding(0) var irradiance_texture: texture_cube<f32>;
 @group(2) @binding(7) var sampler_clamp : sampler;
 
+struct SkyboxVertexOutput {
+    @builtin(position) position: vec4f,
+    @location(0) vertex_position: vec3f,
+    @location(1) world_position: vec3f,
+};
+
 
 @vertex
-fn vs_main(in: VertexInput) -> VertexOutput {
+fn vs_main(in: VertexInput) -> SkyboxVertexOutput {
 
     let instance_data : RenderMeshData = mesh_data.data[in.instance_id];
 
-    var out: VertexOutput;
+    var out: SkyboxVertexOutput;
     var world_position = instance_data.model * vec4f(in.position, 1.0);
     out.world_position = world_position.xyz;
     out.position = camera_data.view_projection * world_position;
-    out.uv = in.uv; // forward to the fragment shader
-    out.color = in.color * instance_data.color.rgb;
-    out.normal = in.normal;
+    out.vertex_position = in.position;
     return out;
 }
 
@@ -31,12 +35,12 @@ struct FragmentOutput {
 }
 
 @fragment
-fn fs_main(in: VertexOutput) -> FragmentOutput {
+fn fs_main(in: SkyboxVertexOutput) -> FragmentOutput {
     
-    var view = normalize( in.world_position - camera_data.eye );
+    var view = normalize(in.world_position - camera_data.eye);
 
     var out: FragmentOutput;
-    var final_color : vec3f = textureSampleLevel(irradiance_texture, sampler_clamp, view, 5.0).rgb;
+    var final_color : vec3f = textureSampleLevel(irradiance_texture, sampler_clamp, in.vertex_position, 0.0).rgb;
     
     final_color = tonemap_filmic(final_color, 1.0);
 
