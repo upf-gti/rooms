@@ -176,7 +176,7 @@ fn compute(@builtin(global_invocation_id) id: vec3u)
     let roughness = f32(uniforms.current_mip_level) / f32(uniforms.mip_level_count - 1);
 
     let output_dimensions = textureDimensions(output_cubemap_texture).xy;
-    var uv = vec2f(id.xy) / vec2f(output_dimensions);
+    var uv = vec2f(id.xy) / vec2f(output_dimensions - 1u);
 
     var N = normalize(directionFromCubeMapUVL(CubeMapUVL(uv, layer)));
 
