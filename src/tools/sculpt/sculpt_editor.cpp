@@ -70,7 +70,6 @@ void SculptEditor::initialize()
 
         Material preview_material;
         preview_material.priority = 1;
-        preview_material.cull_type = CULL_FRONT;
         preview_material.transparency_type = ALPHA_BLEND;
         preview_material.shader = RendererStorage::get_shader("data/shaders/mesh_transparent.wgsl", preview_material);
 
@@ -245,7 +244,7 @@ bool SculptEditor::edit_update(float delta_time)
             quat_swing_twist_decomposition(stamp_to_hand_norm, hand_rotation, swing, twist);
             twist.w *= -1.0f;
 
-            edit_rotation_stamp = get_quat_between_vec3(stamp_origin_to_hand, glm::vec3(0.0f, 0.0f, stamp_to_hand_distance)) * twist;
+            edit_rotation_stamp = get_quat_between_vec3(stamp_origin_to_hand, glm::vec3(0.0f, -stamp_to_hand_distance, 0.0f)) * twist;
 
             if (curr_primitive == SD_SPHERE) {
                 edit_to_add.dimensions.x = stamp_to_hand_distance;
@@ -256,7 +255,7 @@ bool SculptEditor::edit_update(float delta_time)
             }
             else if (curr_primitive == SD_BOX) {
                 edit_position_stamp = edit_origin_stamp + stamp_to_hand_norm * stamp_to_hand_distance * -0.5f;
-                edit_to_add.dimensions.z = stamp_to_hand_distance * 0.5f;
+                edit_to_add.dimensions.y = stamp_to_hand_distance * 0.5f;
             }
         }
         else {
@@ -726,7 +725,13 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
             mesh_preview->get_surface(0)->create_sphere(grow_dims.x);
             break;
         case SD_BOX:
-            mesh_preview->get_surface(0)->create_rounded_box(grow_dims.x, grow_dims.y, grow_dims.z, (dims.w / 0.1f) * grow_dims.x);
+            if (dims.w > 0.001f) {
+                mesh_preview->get_surface(0)->create_rounded_box(grow_dims.x, grow_dims.y, grow_dims.z, (dims.w / 0.1f) * grow_dims.x);
+            }
+            else {
+                grow_dims += 0.002f;
+                mesh_preview->get_surface(0)->create_box(grow_dims.x, grow_dims.y, grow_dims.z);
+            }
             break;
         case SD_CONE:
             mesh_preview->get_surface(0)->create_cone(grow_dims.w, grow_dims.x);
@@ -758,12 +763,8 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
     // Update model depending on the primitive
     switch (stroke_parameters.get_primitive())
     {
-    case SD_CONE:
-        mesh_preview->rotate(glm::radians(-90.f), { 1.f, 0.f, 0.f });
-        break;
     case SD_CAPSULE:
-        mesh_preview->rotate(glm::radians(90.f), { 1.f, 0.f, 0.f });
-        mesh_preview->translate({ 0.f, -dims.x * 0.5, 0.f });
+        mesh_preview->translate({ 0.f, dims.x * 0.5, 0.f });
         break;
     default:
         break;
@@ -852,7 +853,7 @@ bool SculptEditor::is_rotation_being_used()
 
 void SculptEditor::init_ui()
 {
-    main_panel_2d = new ui::HContainer2D("root", { 12.0f, 12.f });
+    main_panel_2d = new ui::HContainer2D("root", { 12.0f, 400.f });
 
     {
         {
@@ -863,40 +864,14 @@ void SculptEditor::init_ui()
         }
 
         {
-            ui::ButtonSubmenu2D* primitives_submenu = new ui::ButtonSubmenu2D("primitives", "data/textures/primitives.png");
-
-            {
-                ui::ItemGroup2D* g0_primitives = new ui::ItemGroup2D("g0_primitives");
-                g0_primitives->add_child(new ui::TextureButton2D("sphere", "data/textures/sphere.png", ui::UNIQUE_SELECTION | ui::SELECTED));
-                g0_primitives->add_child(new ui::TextureButton2D("cube", "data/textures/cube.png", ui::UNIQUE_SELECTION));
-                g0_primitives->add_child(new ui::TextureButton2D("cone", "data/textures/cone.png", ui::UNIQUE_SELECTION));
-                g0_primitives->add_child(new ui::TextureButton2D("capsule", "data/textures/capsule.png", ui::UNIQUE_SELECTION));
-                g0_primitives->add_child(new ui::TextureButton2D("cylinder", "data/textures/cylinder.png", ui::UNIQUE_SELECTION));
-                g0_primitives->add_child(new ui::TextureButton2D("torus", "data/textures/torus.png", ui::UNIQUE_SELECTION));
-                g0_primitives->add_child(new ui::TextureButton2D("bezier", "data/textures/bezier.png", ui::UNIQUE_SELECTION));
-                primitives_submenu->add_child(g0_primitives);
-            }
-
-            {
-                ui::ButtonSubmenu2D* shape_editor_submenu = new ui::ButtonSubmenu2D("shape_editor", "data/textures/shape_editor.png");
-
-                {
-                    ui::ItemGroup2D* g_onion = new ui::ItemGroup2D("g_onion");
-                    g_onion->add_child(new ui::TextureButton2D("onion", "data/textures/onion.png", ui::ALLOW_TOGGLE));
-                    g_onion->add_child(new ui::Slider2D("onion_value", 0.0f, ui::SliderMode::VERTICAL, 0.01f));
-                    shape_editor_submenu->add_child(g_onion);
-                }
-
-                {
-                    ui::ItemGroup2D* g_capped = new ui::ItemGroup2D("g_capped");
-                    g_capped->add_child(new ui::TextureButton2D("capped", "data/textures/capped.png", ui::ALLOW_TOGGLE));
-                    g_capped->add_child(new ui::Slider2D("cap_value", 0.0f, ui::SliderMode::VERTICAL));
-                    shape_editor_submenu->add_child(g_capped);
-                }
-
-                primitives_submenu->add_child(shape_editor_submenu);
-            }
-
+            ui::ButtonSelector2D* primitives_submenu = new ui::ButtonSelector2D("primitives", "data/textures/primitives.png");
+            primitives_submenu->add_child(new ui::TextureButton2D("sphere", "data/textures/sphere.png", ui::UNIQUE_SELECTION | ui::SELECTED));
+            primitives_submenu->add_child(new ui::TextureButton2D("cube", "data/textures/cube.png", ui::UNIQUE_SELECTION));
+            primitives_submenu->add_child(new ui::TextureButton2D("cone", "data/textures/cone.png", ui::UNIQUE_SELECTION));
+            primitives_submenu->add_child(new ui::TextureButton2D("capsule", "data/textures/capsule.png", ui::UNIQUE_SELECTION));
+            primitives_submenu->add_child(new ui::TextureButton2D("cylinder", "data/textures/cylinder.png", ui::UNIQUE_SELECTION));
+            primitives_submenu->add_child(new ui::TextureButton2D("torus", "data/textures/torus.png", ui::UNIQUE_SELECTION));
+            primitives_submenu->add_child(new ui::TextureButton2D("bezier", "data/textures/bezier.png", ui::UNIQUE_SELECTION));
             main_panel_2d->add_child(primitives_submenu);
         }
 
@@ -1047,6 +1022,26 @@ void SculptEditor::init_ui()
 
         {
             ui::ItemGroup2D* g_utilities = new ui::ItemGroup2D("g_utilities");
+
+            {
+                ui::ButtonSubmenu2D* shape_editor_submenu = new ui::ButtonSubmenu2D("shape_editor", "data/textures/shape_editor.png");
+
+                {
+                    ui::ItemGroup2D* g_onion = new ui::ItemGroup2D("g_onion");
+                    g_onion->add_child(new ui::TextureButton2D("onion", "data/textures/onion.png", ui::ALLOW_TOGGLE));
+                    g_onion->add_child(new ui::Slider2D("onion_value", 0.0f, ui::SliderMode::VERTICAL, 0.01f));
+                    shape_editor_submenu->add_child(g_onion);
+                }
+
+                {
+                    ui::ItemGroup2D* g_capped = new ui::ItemGroup2D("g_capped");
+                    g_capped->add_child(new ui::TextureButton2D("capped", "data/textures/capped.png", ui::ALLOW_TOGGLE));
+                    g_capped->add_child(new ui::Slider2D("cap_value", 0.0f, ui::SliderMode::VERTICAL));
+                    shape_editor_submenu->add_child(g_capped);
+                }
+
+                g_utilities->add_child(shape_editor_submenu);
+            }
 
             {
                 ui::ButtonSubmenu2D* mirror_submenu = new ui::ButtonSubmenu2D("mirror", "data/textures/mirror.png");

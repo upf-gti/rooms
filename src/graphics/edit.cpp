@@ -153,7 +153,7 @@ AABB Stroke::get_edit_world_AABB(const uint8_t edit_index) const
         const float smooht_margin = parameters.w;
 
         AABB a1 = { edits[edit_index].position, glm::vec3(radius)};
-        AABB a2 = { edits[edit_index].position - (glm::inverse(edits[edit_index].rotation) * glm::vec3(0.0f, height, 0.0f)), glm::vec3(radius) };
+        AABB a2 = { edits[edit_index].position + (glm::inverse(edits[edit_index].rotation) * glm::vec3(0.0f, height, 0.0f)), glm::vec3(radius) };
 
         return merge_aabbs(a1, a2);
     }
