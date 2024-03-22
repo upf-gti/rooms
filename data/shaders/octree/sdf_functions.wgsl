@@ -331,7 +331,7 @@ fn opPaint( s1 : Surface, s2 : Surface, material : Material ) -> Surface
 
     var base_color : vec3f = s1.material.albedo;
     var new_layer_color : vec3f = material.albedo;
-    var result_color : vec3f;
+    var result_color : vec3f = new_layer_color;
 
     var blending_color : bool = false;
 
