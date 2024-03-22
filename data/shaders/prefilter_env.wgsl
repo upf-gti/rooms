@@ -173,12 +173,14 @@ fn compute(@builtin(global_invocation_id) id: vec3u)
     var color : vec3f = vec3f(0.0, 0.0, 0.0);
     var total_weight = 0.0;
 
-    let roughness = f32(uniforms.current_mip_level) / 20.0;
+    let roughness = f32(uniforms.current_mip_level) / f32(uniforms.mip_level_count - 1);
 
     let output_dimensions = textureDimensions(output_cubemap_texture).xy;
     var uv = vec2f(id.xy) / vec2f(output_dimensions);
-    uv.y = 1.0 - uv.y;
+
     var N = normalize(directionFromCubeMapUVL(CubeMapUVL(uv, layer)));
+
+    N.y *= -1;
 
     // let local_to_world = makeLocalFrame(N);
 
@@ -190,7 +192,7 @@ fn compute(@builtin(global_invocation_id) id: vec3u)
         let H : vec3f = normalize(importance_sample.xyz);
         let pdf : f32 = importance_sample.w;
 
-        var lod = compute_lod(pdf, f32(output_dimensions.x));
+        // var lod = compute_lod(pdf, f32(output_dimensions.x));
 
         // bias
         // lod += 1.0;
@@ -209,5 +211,14 @@ fn compute(@builtin(global_invocation_id) id: vec3u)
         }
     }
 
-    textureStore(output_cubemap_texture, id.xy, layer, vec4(color / total_weight, 1.0));
+    if (total_weight != 0.0)
+    {
+        color /= total_weight;
+    }
+    else
+    {
+        color /= f32(SAMPLE_COUNT);
+    }
+
+    textureStore(output_cubemap_texture, id.xy, layer, vec4(color, 1.0));
 }
