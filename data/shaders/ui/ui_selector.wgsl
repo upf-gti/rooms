@@ -36,20 +36,25 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var out: FragmentOutput;
 
     var uvs = in.uv;
-    var d : f32 = distance(uvs, vec2f(0.5));
-    var alpha_mask = 1.0 - step(0.5, d);
-    if( d > 0.5 || d < 0.12 ) {
-        discard;
-    }
+    var dist : f32 = distance(uvs, vec2f(0.5));
+    var button_radius : f32 = 0.375;
+    var shadow : f32 = smoothstep(button_radius, 0.43, dist);
 
     let back_color = in.color;
     var final_color : vec3f = back_color;
+
+    if(dist > button_radius) {
+        final_color *= 0.5;
+    }
+    else {
+        shadow = smoothstep(0.3, 0.1, dist);
+    }
 
     if (GAMMA_CORRECTION == 1) {
         final_color = pow(final_color, vec3f(1.0 / 2.2));
     }
 
-    out.color = vec4f(final_color, alpha_mask);
+    out.color = vec4f(final_color, 1.0 - shadow);
     
     return out;
 }

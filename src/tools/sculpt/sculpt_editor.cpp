@@ -892,83 +892,69 @@ void SculptEditor::init_ui()
 
                     // Color palette 1
                     {
-                        ui::ButtonSubmenu2D* palette_1_submenu = new ui::ButtonSubmenu2D("color_template_palette_1", "data/textures/colors_template_1.png", ui::KEEP_RGB);
-                        ui::ItemGroup2D* g_colors_t1 = new ui::ItemGroup2D("g_colors_t1");
+                        ui::ButtonSelector2D* palette_1_submenu = new ui::ButtonSelector2D("color_template_palette_1", "data/textures/colors_template_1.png", ui::KEEP_RGB);
                         Color colors[4] = { Color(0.2f, 0.21f, 0.77f, 1.0f), Color(0.41f, 0.57f, 0.79f, 1.0f), Color(0.41f, 0.76f, 0.79f, 1.0f), Color(0.64f, 0.9f, 0.93f, 1.0f) };
                         for (size_t i = 0; i < 4; i++) {
-                            g_colors_t1->add_child(new ui::Button2D("colors_t1_" + std::to_string(i), colors[i], ui::KEEP_RGB));
+                            palette_1_submenu->add_child(new ui::Button2D("colors_t1_" + std::to_string(i), colors[i], ui::KEEP_RGB));
                         }
-                        palette_1_submenu->add_child(g_colors_t1);
                         g_colors->add_child(palette_1_submenu);
                     }
 
                     // Color palette 2
                     {
-                        ui::ButtonSubmenu2D* palette_2_submenu = new ui::ButtonSubmenu2D("color_template_palette_2", "data/textures/colors_template_2.png", ui::KEEP_RGB);
-                        ui::ItemGroup2D* g_colors_t2 = new ui::ItemGroup2D("g_colors_t2");
+                        ui::ButtonSelector2D* palette_2_submenu = new ui::ButtonSelector2D("color_template_palette_2", "data/textures/colors_template_2.png", ui::KEEP_RGB);
                         Color colors[4] = { Color(0.36f, 0.61f, 0.35f, 1.0f), Color(0.51f, 0.8f, 0.49f, 1.0f), Color(0.68f, 0.84f, 0.05f, 1.0f), Color(0.71f, 0.96f, 0.49f, 1.0f) };
                         for (size_t i = 0; i < 4; i++) {
-                            g_colors_t2->add_child(new ui::Button2D("colors_t2_" + std::to_string(i), colors[i], ui::KEEP_RGB));
+                            palette_2_submenu->add_child(new ui::Button2D("colors_t2_" + std::to_string(i), colors[i], ui::KEEP_RGB));
                         }
-                        palette_2_submenu->add_child(g_colors_t2);
                         g_colors->add_child(palette_2_submenu);
                     }
 
                     // Color palette 3
                     {
-                        ui::ButtonSubmenu2D* palette_3_submenu = new ui::ButtonSubmenu2D("color_template_palette_3", "data/textures/colors_template_3.png", ui::KEEP_RGB);
-                        ui::ItemGroup2D* g_colors_t3 = new ui::ItemGroup2D("g_colors_t3");
+                        ui::ButtonSelector2D* palette_3_submenu = new ui::ButtonSelector2D("color_template_palette_3", "data/textures/colors_template_3.png", ui::KEEP_RGB);
                         Color colors[4] = { Color(0.94f, 0.77f, 0.44f, 1.0f), Color(0.96f, 0.67f, 0.09f, 1.0f), Color(0.98f, 0.9f, 0.08f, 1.0f), Color(0.94f, 0.92f, 0.7f, 1.0f) };
                         for (size_t i = 0; i < 4; i++) {
-                            g_colors_t3->add_child(new ui::Button2D("colors_t3_" + std::to_string(i), colors[i], ui::KEEP_RGB));
+                            palette_3_submenu->add_child(new ui::Button2D("colors_t3_" + std::to_string(i), colors[i], ui::KEEP_RGB));
                         }
-                        palette_3_submenu->add_child(g_colors_t3);
                         g_colors->add_child(palette_3_submenu);
                     }
 
                     // Color palette 4
                     {
-                        ui::ButtonSubmenu2D* palette_4_submenu = new ui::ButtonSubmenu2D("color_template_palette_4", "data/textures/colors_template_4.png", ui::KEEP_RGB);
-                        ui::ItemGroup2D* g_colors_t4 = new ui::ItemGroup2D("g_colors_t4");
+                        ui::ButtonSelector2D* palette_4_submenu = new ui::ButtonSelector2D("color_template_palette_4", "data/textures/colors_template_4.png", ui::KEEP_RGB);
                         Color colors[4] = { Color(0.58f, 0.12f, 0.12f, 1.0f), Color(0.83f, 0.09f, 0.09f, 1.0f), Color(0.88f, 0.42f, 0.42f, 1.0f), Color(0.90f, 0.71f, 0.71f, 1.0f) };
                         for (size_t i = 0; i < 4; i++) {
-                            g_colors_t4->add_child(new ui::Button2D("colors_t4_" + std::to_string(i), colors[i], ui::KEEP_RGB));
+                            palette_4_submenu->add_child(new ui::Button2D("colors_t4_" + std::to_string(i), colors[i], ui::KEEP_RGB));
                         }
-                        palette_4_submenu->add_child(g_colors_t4);
                         g_colors->add_child(palette_4_submenu);
                     }
 
                     // Color palette 5
                     {
-                        ui::ButtonSubmenu2D* palette_5_submenu = new ui::ButtonSubmenu2D("color_template_palette_5", "data/textures/colors_template_5.png", ui::KEEP_RGB);
-                        ui::ItemGroup2D* g_colors_t5 = new ui::ItemGroup2D("g_colors_t5");
+                        ui::ButtonSelector2D* palette_5_submenu = new ui::ButtonSelector2D("color_template_palette_5", "data/textures/colors_template_5.png", ui::KEEP_RGB);
                         Color colors[4] = { Color(0.65f, 0.02f, 0.83f, 1.0f), Color(0.8f, 0.49f, 0.89f, 1.0f), Color(0.95f, 0.12f, 0.85f, 1.0f), Color(0.95f, 0.62f, 0.91f, 1.0f) };
                         for (size_t i = 0; i < 4; i++) {
-                            g_colors_t5->add_child(new ui::Button2D("colors_t5_" + std::to_string(i), colors[i], ui::KEEP_RGB));
+                            palette_5_submenu->add_child(new ui::Button2D("colors_t5_" + std::to_string(i), colors[i], ui::KEEP_RGB));
                         }
-                        palette_5_submenu->add_child(g_colors_t5);
                         g_colors->add_child(palette_5_submenu);
                     }
 
                     // Color palette 6
                     {
-                        ui::ButtonSubmenu2D* palette_6_submenu = new ui::ButtonSubmenu2D("color_template_palette_6", "data/textures/colors_template_6.png", ui::KEEP_RGB);
-                        ui::ItemGroup2D* g_colors_t6 = new ui::ItemGroup2D("g_colors_t6");
+                        ui::ButtonSelector2D* palette_6_submenu = new ui::ButtonSelector2D("color_template_palette_6", "data/textures/colors_template_6.png", ui::KEEP_RGB);
                         Color colors[4] = { Color(0.f, 0.f, 0.f, 1.0f), Color(0.33f, 0.33f, 0.33f, 1.0f), Color(0.66f, 0.66f, 0.66f, 1.0f), Color(1.0f, 1.0f, 1.0f, 1.0f) };
                         for (size_t i = 0; i < 4; i++) {
-                            g_colors_t6->add_child(new ui::Button2D("colors_t6_" + std::to_string(i), colors[i], ui::KEEP_RGB));
+                            palette_6_submenu->add_child(new ui::Button2D("colors_t6_" + std::to_string(i), colors[i], ui::KEEP_RGB));
                         }
-                        palette_6_submenu->add_child(g_colors_t6);
                         g_colors->add_child(palette_6_submenu);
                     }
 
                     {
-                        ui::ButtonSubmenu2D* recent_colors_submenu = new ui::ButtonSubmenu2D("recent_colors", "data/textures/recent_colors.png", ui::KEEP_RGB);
-                        ui::ItemGroup2D* g_recent_colors = new ui::ItemGroup2D("g_recent_colors");
+                        ui::ButtonSelector2D* recent_colors_submenu = new ui::ButtonSelector2D("recent_colors", "data/textures/recent_colors.png", ui::KEEP_RGB);
                         for (size_t i = 0; i < 5; i++) {
-                            g_recent_colors->add_child(new ui::Button2D("recent_color_" + std::to_string(i), colors::WHITE, ui::KEEP_RGB));
+                            recent_colors_submenu->add_child(new ui::Button2D("recent_color_" + std::to_string(i), colors::WHITE, ui::KEEP_RGB));
                         }
-                        recent_colors_submenu->add_child(g_recent_colors);
                         g_colors->add_child(recent_colors_submenu);
                     }
 
@@ -1118,19 +1104,17 @@ void SculptEditor::bind_events()
 
         for (auto it : Node2D::all_widgets)
         {
-            if (it.second->get_class_type() != Node2DClassType::BUTTON) continue;
-            ui::Button2D* child = static_cast<ui::Button2D*>(it.second);
-            if (child->is_color_button) {
-                Node::bind(child->signal, [&](const std::string& signal, void* button) {
-                    const Color& color = (reinterpret_cast<ui::Button2D*>(button))->color;
-                    stroke_parameters.set_material_color(color);
-                });
-            }
+            ui::Button2D* child = dynamic_cast<ui::Button2D*>(it.second);
+            if (!child || !child->is_color_button) continue;
+            Node::bind(child->signal, [&](const std::string& signal, void* button) {
+                const Color& color = (reinterpret_cast<ui::Button2D*>(button))->color;
+                stroke_parameters.set_material_color(color);
+            });
         }
 
         // Bind recent color buttons...
 
-        Node2D* recent_group = Node2D::get_widget_from_name("g_recent_colors");
+        Node2D* recent_group = Node2D::get_widget_from_name("recent_colors");
         if (recent_group) {
             max_recent_colors = recent_group->get_children().size();
             for (size_t i = 0; i < max_recent_colors; ++i)
@@ -1191,7 +1175,7 @@ void SculptEditor::add_recent_color(const Color& color)
         recent_colors.pop_back();
     }
 
-    Node2D* recent_group = Node2D::get_widget_from_name("g_recent_colors");
+    Node2D* recent_group = Node2D::get_widget_from_name("recent_colors");
     if (!recent_group) {
         return;
     }
