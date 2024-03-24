@@ -74,7 +74,7 @@ fn get_indirect_light( m : LitMaterial ) -> vec3f
     let k_s : vec3f = FresnelSchlickRoughness(n_dot_v, m.f0, m.roughness);
     let fss_ess : vec3f = (k_s * brdf_lut.x + brdf_lut.y);
 
-    let specular : vec3f = specular_sample * fss_ess * 0.5;
+    let specular : vec3f = specular_sample * fss_ess;
 
     // Diffuse sample: get last prefiltered mipmap
     let irradiance : vec3f = textureSampleLevel(irradiance_texture, sampler_clamp, m.normal, max_mipmap).rgb;

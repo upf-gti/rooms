@@ -107,7 +107,7 @@ fn importance_sample_GGX(Xi : vec2f, N : vec3f, roughness : f32) -> vec4f
 {
     let a : f32 = roughness * roughness;
 	
-    let cos_theta : f32 = sqrt((1.0 - Xi.y) / (1.0 + (a*a - 1.0) * Xi.y));
+    let cos_theta : f32 = clamp(sqrt((1.0 - Xi.y) / (1.0 + (a*a - 1.0) * Xi.y)), 0.0, 1.0);
     let sin_theta : f32 = sqrt(1.0 - cos_theta * cos_theta);
     let phi : f32 = 2.0 * PI * Xi.x;
 
