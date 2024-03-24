@@ -6,7 +6,9 @@
 
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
 
-@group(2) @binding(0) var<uniform> ui_data : UIData;
+@group(2) @binding(1) var<uniform> albedo: vec4f;
+
+@group(3) @binding(0) var<uniform> ui_data : UIData;
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
@@ -18,7 +20,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     out.world_position = world_position.xyz;
     out.position = camera_data.view_projection * world_position;
     out.uv = in.uv; // forward to the fragment shader
-    out.color = in.color * instance_data.color.rgb;
+    out.color = vec4(in.color, 1.0) * albedo;
     out.normal = in.normal;
     return out;
 }
@@ -40,7 +42,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var button_radius : f32 = 0.375;
     var shadow : f32 = smoothstep(button_radius, 0.43, dist);
 
-    let back_color = in.color;
+    let back_color = in.color.rgb;
     var final_color : vec3f = back_color;
 
     if(dist > button_radius) {

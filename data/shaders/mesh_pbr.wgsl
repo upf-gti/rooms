@@ -57,7 +57,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     out.world_position = world_position.xyz;
     out.position = camera_data.view_projection * world_position;
     out.uv = in.uv; // forward to the fragment shader
-    out.color = in.color * instance_data.color.rgb;
+    out.color = vec4(in.color, 1.0) * albedo;
     out.normal = (instance_data.model * vec4f(in.normal, 0.0)).xyz;
     return out;
 }
@@ -80,11 +80,11 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
 #ifdef ALBEDO_TEXTURE
     let albedo_texture : vec4f = textureSample(albedo_texture, sampler_2d, in.uv);
-    m.albedo = albedo_texture.rgb * in.color * albedo.rgb;
-    alpha = albedo_texture.a * albedo.a;
+    m.albedo = albedo_texture.rgb * in.color.rgb;
+    alpha = albedo_texture.a * in.color.a;
 #else
-    m.albedo = in.color * albedo.rgb;
-    alpha = albedo.a;
+    m.albedo = in.color.rgb;
+    alpha = in.color.a;
 #endif
 
 #ifdef ALPHA_MASK
@@ -141,7 +141,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     final_color += m.emissive;
 
-    final_color += tonemap_filmic(get_indirect_light(m), 1.0);
+    final_color += tonemap_khronos_pbr_neutral(get_indirect_light(m));
 
     if (GAMMA_CORRECTION == 1) {
         final_color = pow(final_color, vec3(1.0 / 2.2));

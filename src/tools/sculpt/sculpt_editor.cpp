@@ -28,7 +28,6 @@ void SculptEditor::initialize()
 
     Material mirror_material;
     mirror_material.diffuse_texture = RendererStorage::get_texture("data/textures/mirror_quad_texture.png");
-    mirror_material.flags |= MATERIAL_DIFFUSE;
     mirror_material.shader = RendererStorage::get_shader("data/shaders/mesh_texture.wgsl", mirror_material);
 
     mirror_mesh->set_surface_material_override(mirror_mesh->get_surface(0), mirror_material);

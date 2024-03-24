@@ -7,14 +7,17 @@
 
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
 
-#ifdef USES_TEXTURE
+#ifdef ALBEDO_TEXTURE
 @group(2) @binding(0) var albedo_texture: texture_2d<f32>;
+#endif
+
+@group(2) @binding(1) var<uniform> albedo: vec4f;
+
+#ifdef USE_SAMPLER
 @group(2) @binding(7) var texture_sampler : sampler;
+#endif
 
 @group(3) @binding(0) var<uniform> ui_data : UIData;
-#else
-@group(2) @binding(0) var<uniform> ui_data : UIData;
-#endif
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
@@ -26,7 +29,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     out.world_position = world_position.xyz;
     out.position = camera_data.view_projection * world_position;
     out.uv = in.uv; // forward to the fragment shader
-    out.color = in.color * instance_data.color.rgb;
+    out.color = vec4(in.color, 1.0) * albedo;
     out.normal = in.normal;
     return out;
 }
@@ -47,9 +50,8 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     var out: FragmentOutput;
 
-#ifdef USES_TEXTURE
+#ifdef ALBEDO_TEXTURE
     var color : vec4f = textureSample(albedo_texture, texture_sampler, in.uv);
-    color = pow(color, vec4f(2.2));
 #else
     var color : vec4f = vec4f(1.0);
 #endif
@@ -71,7 +73,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var keep_colors = (ui_data.keep_rgb + ui_data.is_color_button) > 0.0;
 
     if(keep_colors) {
-        _color = color.rgb * in.color;
+        _color = color.rgb * in.color.rgb;
         highlight_color = vec3f(1.0);
     }
 

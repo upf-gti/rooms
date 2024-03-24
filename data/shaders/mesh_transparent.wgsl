@@ -6,6 +6,8 @@
 
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
 
+@group(2) @binding(1) var<uniform> albedo: vec4f;
+
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
 
@@ -13,7 +15,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 
     var out: VertexOutput;
     out.uv = in.uv; // forward to the fragment shader
-    out.color = in.color * instance_data.color.rgb;
+    out.color = vec4(in.color, 1.0) * albedo;
     out.normal = (instance_data.model * vec4f(in.normal, 0.0)).xyz;
 
     var grow_pos = in.position + normalize(in.normal) * 0.0018;
@@ -34,13 +36,13 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var out: FragmentOutput;
     var dummy = camera_data.eye;
 
-    var color = in.color;
+    var final_color : vec3f = in.color.rgb;
 
     if (GAMMA_CORRECTION == 1) {
-        color = pow(color, vec3f(1.0 / 2.2));
+        final_color = pow(final_color, vec3f(1.0 / 2.2));
     }
 
-    out.color = vec4f(color, 0.3);
+    out.color = vec4f(final_color, 0.3);
 
     return out;
 }
