@@ -49,7 +49,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
         final_color *= 0.5;
     }
     else {
-        shadow = smoothstep(0.3, 0.1, dist);
+        shadow = smoothstep(0.3, 0.05, dist);
     }
 
     if (GAMMA_CORRECTION == 1) {

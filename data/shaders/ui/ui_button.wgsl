@@ -47,6 +47,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var uvs = in.uv;
     var dist : f32 = distance(uvs, vec2f(0.5));
     var button_radius : f32 = 0.42;
+    var max_radius : f32 = 0.5;
 
     var out: FragmentOutput;
 
@@ -67,53 +68,58 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     // Assign basic color
     var lum = color.r * 0.3 + color.g * 0.59 + color.b * 0.11;
-    var _color = vec3f( 1.0 - smoothstep(0.15, 0.4, lum) );
-    _color = max(_color, back_color);
+    var final_color = vec3f( 1.0 - smoothstep(0.15, 0.4, lum) );
+    final_color = max(final_color, back_color);
 
+    var is_color_button = ui_data.is_color_button > 0.0;
     var keep_colors = (ui_data.keep_rgb + ui_data.is_color_button) > 0.0;
 
     if(keep_colors) {
-        _color = color.rgb * in.color.rgb;
+        final_color = color.rgb * in.color.rgb;
         highlight_color = vec3f(1.0);
+
+        if(is_color_button) {
+            button_radius = 0.4;
+            max_radius = 0.45;
+        }
     }
 
     if( ui_data.is_selected > 0.0 ) {
         if( !keep_colors ) {
             var sel_color = mix( COLOR_TERCIARY, COLOR_HIGHLIGHT_LIGHT, pow(uvs.x + uvs.y, 3.0) );
             back_color = select( sel_color, COLOR_SECONDARY, ui_data.is_hovered > 0.0 );
-            _color = smoothstep(vec3f(0.25), vec3f(0.45), color.rgb) * 0.5;
+            final_color = smoothstep(vec3f(0.25), vec3f(0.45), color.rgb) * 0.5;
         }
     } 
     // not selected but hovered
     else if( ui_data.is_hovered > 0.0 ) {
         if( !keep_colors ) {
             highlight_color = mix( COLOR_TERCIARY, COLOR_HIGHLIGHT_LIGHT, gradient_factor );
+        } else if( is_color_button ) {
+            button_radius = 0.37;
+            max_radius = 0.42;
+        } else {
+            back_color = vec3f(0.15);
         }
     }
 
-    _color = (back_color + _color * highlight_color) * color.a;
+    final_color = (back_color + final_color * highlight_color) * color.a;
 
     // Process selection
     var outline_color_selected = mix( COLOR_TERCIARY, COLOR_HIGHLIGHT_LIGHT, gradient_factor );
-    _color = mix(outline_color_selected, _color, 1.0 - step(0.46 + (1.0 - ui_data.is_selected), dist));
+    final_color = mix(outline_color_selected, final_color, 1.0 - step(0.46 + (1.0 - ui_data.is_selected), dist));
 
-    // // Process hover
-    // var outline_intensity = 0.8;
-    // var outline_mask = step(0.375 + (1.0 - ui_data.is_hovered), dist) * outline_intensity;
-    // var outline_color = mix( COLOR_TERCIARY, COLOR_HIGHLIGHT_LIGHT, gradient_factor );
-    // _color = mix(outline_color, _color, 1 - outline_mask);
-
-    var shadow : f32 = smoothstep(button_radius, 0.5, dist);
+    var shadow : f32 = smoothstep(button_radius, max_radius, dist);
     
-    if(dist > button_radius) {
-        _color = vec3f(0.01);
+    if(dist > button_radius && ui_data.is_color_button == 0.0) {
+        final_color = vec3f(0.01);
     }
 
     if (GAMMA_CORRECTION == 1) {
-        _color = pow(_color, vec3f(1.0 / 2.2));
+        final_color = pow(final_color, vec3f(1.0 / 2.2));
     }
 
-    out.color = vec4f(_color,  1.0 - shadow);
+    out.color = vec4f(final_color,  1.0 - shadow);
 
     return out;
 }
