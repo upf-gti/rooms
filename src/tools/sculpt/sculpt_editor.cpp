@@ -970,7 +970,7 @@ void SculptEditor::init_ui()
                 mat_list_submenu->add_child(new ui::TextureButton2D("pick_material", "data/textures/pick_material.png", ui::ALLOW_TOGGLE));
 
                 {
-                    ui::ItemGroup2D* g_material_samples = new ui::ItemGroup2D("g_material_samples");
+                    ui::ButtonSelector2D* g_material_samples = new ui::ButtonSelector2D("g_material_samples", "data/textures/material_samples.png");
                     g_material_samples->add_child(new ui::TextureButton2D("aluminium", "data/textures/material_samples.png", ui::UNIQUE_SELECTION));
                     g_material_samples->add_child(new ui::TextureButton2D("charcoal", "data/textures/material_samples.png", ui::UNIQUE_SELECTION));
                     g_material_samples->add_child(new ui::TextureButton2D("rusted_iron", "data/textures/material_samples.png", ui::UNIQUE_SELECTION));
@@ -1031,10 +1031,10 @@ void SculptEditor::init_ui()
             {
                 ui::ButtonSubmenu2D* mirror_submenu = new ui::ButtonSubmenu2D("mirror", "data/textures/mirror.png");
                 mirror_submenu->add_child(new ui::TextureButton2D("mirror_toggle", "data/textures/mirror.png", ui::ALLOW_TOGGLE));
-                ui::ItemGroup2D* g_mirror = new ui::ItemGroup2D("g_mirror");
-                g_mirror->add_child(new ui::TextureButton2D("mirror_translation", "data/textures/mirror.png", ui::UNIQUE_SELECTION | ui::SELECTED));
-                g_mirror->add_child(new ui::TextureButton2D("mirror_rotation", "data/textures/mirror.png", ui::UNIQUE_SELECTION));
-                g_mirror->add_child(new ui::TextureButton2D("mirror_both", "data/textures/mirror.png", ui::UNIQUE_SELECTION));
+                ui::ComboButtons2D* g_mirror = new ui::ComboButtons2D("g_mirror");
+                g_mirror->add_child(new ui::TextureButton2D("mirror_translation", "data/textures/translation_gizmo.png", ui::SELECTED));
+                g_mirror->add_child(new ui::TextureButton2D("mirror_rotation", "data/textures/rotation_gizmo.png"));
+                g_mirror->add_child(new ui::TextureButton2D("mirror_both", "data/textures/transform_gizmo.png"));
                 mirror_submenu->add_child(g_mirror);
                 g_utilities->add_child(mirror_submenu);
             }
@@ -1045,10 +1045,10 @@ void SculptEditor::init_ui()
             {
                 ui::ButtonSubmenu2D* lock_axis_submenu = new ui::ButtonSubmenu2D("lock_axis", "data/textures/lock_axis.png");
                 lock_axis_submenu->add_child(new ui::TextureButton2D("lock_axis_toggle", "data/textures/lock_axis.png", ui::ALLOW_TOGGLE));
-                ui::ItemGroup2D* g_lock_axis = new ui::ItemGroup2D("g_lock_axis");
-                g_lock_axis->add_child(new ui::TextureButton2D("lock_axis_x", "data/textures/x.png", ui::UNIQUE_SELECTION));
-                g_lock_axis->add_child(new ui::TextureButton2D("lock_axis_y", "data/textures/y.png", ui::UNIQUE_SELECTION));
-                g_lock_axis->add_child(new ui::TextureButton2D("lock_axis_z", "data/textures/z.png", ui::UNIQUE_SELECTION | ui::SELECTED));
+                ui::ComboButtons2D* g_lock_axis = new ui::ComboButtons2D("g_lock_axis");
+                g_lock_axis->add_child(new ui::TextureButton2D("lock_axis_x", "data/textures/x.png"));
+                g_lock_axis->add_child(new ui::TextureButton2D("lock_axis_y", "data/textures/y.png"));
+                g_lock_axis->add_child(new ui::TextureButton2D("lock_axis_z", "data/textures/z.png", ui::SELECTED));
                 lock_axis_submenu->add_child(g_lock_axis);
                 g_utilities->add_child(lock_axis_submenu);
             }
@@ -1207,7 +1207,7 @@ void SculptEditor::generate_material_from_stroke(void* button)
     }
 
     ui::Button2D* b = reinterpret_cast<ui::Button2D*>(button);
-    ui::ItemGroup2D* mat_samples = static_cast<ui::ItemGroup2D*>(Node2D::get_widget_from_name("g_material_samples"));
+    ui::ButtonSelector2D* mat_samples = static_cast<ui::ButtonSelector2D*>(Node2D::get_widget_from_name("g_material_samples"));
     assert(mat_samples);
 
     std::string name = "new_material_" + std::to_string(last_generated_material_uid++);

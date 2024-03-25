@@ -68,7 +68,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     grad = pow(grad, 12.0);
     mesh_color += grad * 0.5;
 
-    let back_color = vec3f(0.01);
+    let back_color = vec3f(0.02);
     var final_color = select( mesh_color, back_color, axis > (value / max_value) );
 
     var shadow : f32 = smoothstep(button_radius, 0.5, dist);
