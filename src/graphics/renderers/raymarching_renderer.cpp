@@ -128,6 +128,7 @@ void RaymarchingRenderer::change_stroke(const StrokeParameters& params, const ui
     new_stroke.stroke_id = current_stroke.stroke_id + index_increment;
     new_stroke.primitive = params.get_primitive();
     new_stroke.operation = params.get_operation();
+    new_stroke.color_blending_op = params.get_color_blending_operation();
     new_stroke.parameters = params.get_parameters();
     new_stroke.material = params.get_material();
     new_stroke.edit_count = 0u;

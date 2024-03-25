@@ -1,6 +1,5 @@
 #include ../color_blend_modes.wgsl
 
-
 // SD Primitives
 
 const SD_SPHERE         = 0;
@@ -324,7 +323,7 @@ fn opIntersection( s1 : Surface, s2 : Surface ) -> Surface
     return s;
 }
 
-fn opPaint( s1 : Surface, s2 : Surface, material : Material ) -> Surface
+fn opPaint( s1 : Surface, s2 : Surface, material : Material, color_blend_op : u32 ) -> Surface
 {
     var sColorInter : Surface = opIntersection(s1, s2);
     var new_mat : Material;
@@ -333,28 +332,26 @@ fn opPaint( s1 : Surface, s2 : Surface, material : Material ) -> Surface
     var new_layer_color : vec3f = material.albedo;
     var result_color : vec3f = new_layer_color;
 
-    var blending_color : bool = false;
-
-    if(false) {
+    if(color_blend_op == CBM_MULTIPLY) {
         result_color = multiply(base_color, new_layer_color);
     }
-    else if(true) {
+    else if(color_blend_op == CBM_SCREEN) {
         result_color = screen(base_color, new_layer_color);
     }
-    else if(false) {
+    else if(color_blend_op == CBM_DARKEN) {
         result_color = darken(base_color, new_layer_color);
     }
-    else if(false) {
+    else if(color_blend_op == CBM_LIGHTEN) {
         result_color = lighten(base_color, new_layer_color);
     }
-    else if(false) {
+    else if(color_blend_op == CBM_ADDITIVE) {
         result_color = additive(base_color, new_layer_color);
     }
-    else if(false) {
+    else if(color_blend_op == CBM_MIX) {
         result_color = mix(base_color, new_layer_color, 0.5);
     }
 
-    if(blending_color) {
+    if(color_blend_op > 0u) {
         // Since we add too many edits in smear, we need to force blending colors
         // to be more realistic..
         result_color = mix(base_color, result_color, 0.5);
@@ -412,7 +409,7 @@ fn map_thickness( t : f32, v_max : f32 ) -> f32
     return select( 0.0, max(t * v_max * 0.375, 0.003), t > 0.0);
 }
 
-fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters : vec4f, current_surface : Surface, stroke_material : Material, edit : Edit) -> Surface
+fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters : vec4f, color_blend_op : u32, current_surface : Surface, stroke_material : Material, edit : Edit) -> Surface
 {
     var pSurface : Surface;
 
@@ -522,7 +519,7 @@ fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters
             break;
         }
         case OP_PAINT: {
-            pSurface = opPaint(current_surface, pSurface, stroke_material);
+            pSurface = opPaint(current_surface, pSurface, stroke_material, color_blend_op);
             break;
         }
         case OP_SMOOTH_UNION: {

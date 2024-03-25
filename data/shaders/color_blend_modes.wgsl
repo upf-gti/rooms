@@ -1,3 +1,12 @@
+
+const CBM_REPLACE	= 0;
+const CBM_MIX       = 1;
+const CBM_ADDITIVE  = 2;
+const CBM_MULTIPLY  = 3;
+const CBM_SCREEN    = 4;
+const CBM_DARKEN    = 5;
+const CBM_LIGHTEN   = 6;
+
 // https://www.shadertoy.com/view/XdS3RW
 // from @ben
 

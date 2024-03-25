@@ -964,20 +964,13 @@ void SculptEditor::init_ui()
             }
 
             {
-                ui::ButtonSubmenu2D* mat_list_submenu = new ui::ButtonSubmenu2D("materials", "data/textures/material_samples.png");
-
-                mat_list_submenu->add_child(new ui::TextureButton2D("save_material", "data/textures/submenu_mark.png"));
-                mat_list_submenu->add_child(new ui::TextureButton2D("pick_material", "data/textures/pick_material.png", ui::ALLOW_TOGGLE));
-
-                {
-                    ui::ItemGroup2D* g_material_samples = new ui::ItemGroup2D("g_material_samples");
-                    g_material_samples->add_child(new ui::TextureButton2D("aluminium", "data/textures/material_samples.png", ui::UNIQUE_SELECTION));
-                    g_material_samples->add_child(new ui::TextureButton2D("charcoal", "data/textures/material_samples.png", ui::UNIQUE_SELECTION));
-                    g_material_samples->add_child(new ui::TextureButton2D("rusted_iron", "data/textures/material_samples.png", ui::UNIQUE_SELECTION));
-                    mat_list_submenu->add_child(g_material_samples);
-                }
-
-                material_submenu->add_child(mat_list_submenu);
+                ui::ButtonSelector2D* color_blending_selector = new ui::ButtonSelector2D("color_blending", "data/textures/x.png");
+                color_blending_selector->add_child(new ui::TextureButton2D("replace", "data/textures/y.png", ui::UNIQUE_SELECTION));
+                color_blending_selector->add_child(new ui::TextureButton2D("mix", "data/textures/y.png", ui::UNIQUE_SELECTION));
+                color_blending_selector->add_child(new ui::TextureButton2D("additive", "data/textures/y.png", ui::UNIQUE_SELECTION));
+                color_blending_selector->add_child(new ui::TextureButton2D("multiply", "data/textures/y.png", ui::UNIQUE_SELECTION));
+                color_blending_selector->add_child(new ui::TextureButton2D("screen", "data/textures/y.png", ui::UNIQUE_SELECTION));
+                material_submenu->add_child(color_blending_selector);
             }
 
             {
@@ -1000,6 +993,27 @@ void SculptEditor::init_ui()
                 }
 
                 material_submenu->add_child(material_editor_submenu);
+            }
+
+            {
+                ui::ButtonSubmenu2D* mat_list_submenu = new ui::ButtonSubmenu2D("materials", "data/textures/material_samples.png");
+
+                mat_list_submenu->add_child(new ui::TextureButton2D("save_material", "data/textures/submenu_mark.png"));
+                mat_list_submenu->add_child(new ui::TextureButton2D("pick_material", "data/textures/pick_material.png", ui::ALLOW_TOGGLE));
+
+                {
+                    ui::ButtonSelector2D* g_material_samples = new ui::ButtonSelector2D("g_material_samples", "data/textures/material_samples.png");
+                    g_material_samples->add_child(new ui::TextureButton2D("aluminium", "data/textures/material_samples.png", ui::UNIQUE_SELECTION));
+                    g_material_samples->add_child(new ui::TextureButton2D("charcoal", "data/textures/material_samples.png", ui::UNIQUE_SELECTION));
+                    g_material_samples->add_child(new ui::TextureButton2D("rusted_iron", "data/textures/material_samples.png", ui::UNIQUE_SELECTION));
+                    mat_list_submenu->add_child(g_material_samples);
+                }
+
+                material_submenu->add_child(mat_list_submenu);
+            }
+
+            {
+                material_submenu->add_child(new ui::TextureButton2D("shuffle_material", "data/textures/shuffle.png"));
             }
 
             main_panel_2d->add_child(material_submenu);
@@ -1031,10 +1045,10 @@ void SculptEditor::init_ui()
             {
                 ui::ButtonSubmenu2D* mirror_submenu = new ui::ButtonSubmenu2D("mirror", "data/textures/mirror.png");
                 mirror_submenu->add_child(new ui::TextureButton2D("mirror_toggle", "data/textures/mirror.png", ui::ALLOW_TOGGLE));
-                ui::ItemGroup2D* g_mirror = new ui::ItemGroup2D("g_mirror");
-                g_mirror->add_child(new ui::TextureButton2D("mirror_translation", "data/textures/mirror.png", ui::UNIQUE_SELECTION | ui::SELECTED));
-                g_mirror->add_child(new ui::TextureButton2D("mirror_rotation", "data/textures/mirror.png", ui::UNIQUE_SELECTION));
-                g_mirror->add_child(new ui::TextureButton2D("mirror_both", "data/textures/mirror.png", ui::UNIQUE_SELECTION));
+                ui::ComboButtons2D* g_mirror = new ui::ComboButtons2D("g_mirror");
+                g_mirror->add_child(new ui::TextureButton2D("mirror_translation", "data/textures/translation_gizmo.png", ui::SELECTED));
+                g_mirror->add_child(new ui::TextureButton2D("mirror_rotation", "data/textures/rotation_gizmo.png"));
+                g_mirror->add_child(new ui::TextureButton2D("mirror_both", "data/textures/transform_gizmo.png"));
                 mirror_submenu->add_child(g_mirror);
                 g_utilities->add_child(mirror_submenu);
             }
@@ -1045,10 +1059,10 @@ void SculptEditor::init_ui()
             {
                 ui::ButtonSubmenu2D* lock_axis_submenu = new ui::ButtonSubmenu2D("lock_axis", "data/textures/lock_axis.png");
                 lock_axis_submenu->add_child(new ui::TextureButton2D("lock_axis_toggle", "data/textures/lock_axis.png", ui::ALLOW_TOGGLE));
-                ui::ItemGroup2D* g_lock_axis = new ui::ItemGroup2D("g_lock_axis");
-                g_lock_axis->add_child(new ui::TextureButton2D("lock_axis_x", "data/textures/x.png", ui::UNIQUE_SELECTION));
-                g_lock_axis->add_child(new ui::TextureButton2D("lock_axis_y", "data/textures/y.png", ui::UNIQUE_SELECTION));
-                g_lock_axis->add_child(new ui::TextureButton2D("lock_axis_z", "data/textures/z.png", ui::UNIQUE_SELECTION | ui::SELECTED));
+                ui::ComboButtons2D* g_lock_axis = new ui::ComboButtons2D("g_lock_axis");
+                g_lock_axis->add_child(new ui::TextureButton2D("lock_axis_x", "data/textures/x.png"));
+                g_lock_axis->add_child(new ui::TextureButton2D("lock_axis_y", "data/textures/y.png"));
+                g_lock_axis->add_child(new ui::TextureButton2D("lock_axis_z", "data/textures/z.png", ui::SELECTED));
                 lock_axis_submenu->add_child(g_lock_axis);
                 g_utilities->add_child(lock_axis_submenu);
             }
@@ -1060,99 +1074,120 @@ void SculptEditor::init_ui()
 
 void SculptEditor::bind_events()
 {
-    // Set events
+    Node::bind("sculpt", [&](const std::string& signal, void* button) { enable_tool(SCULPT); });
+    Node::bind("paint", [&](const std::string& signal, void* button) { enable_tool(PAINT); });
+
+    Node::bind("sphere", [&](const std::string& signal, void* button) {  set_primitive(SD_SPHERE); });
+    Node::bind("cube", [&](const std::string& signal, void* button) { set_primitive(SD_BOX); });
+    Node::bind("cone", [&](const std::string& signal, void* button) { set_primitive(SD_CONE); });
+    Node::bind("capsule", [&](const std::string& signal, void* button) { set_primitive(SD_CAPSULE); });
+    Node::bind("cylinder", [&](const std::string& signal, void* button) { set_primitive(SD_CYLINDER); });
+    Node::bind("torus", [&](const std::string& signal, void* button) { set_primitive(SD_TORUS); });
+    Node::bind("bezier", [&](const std::string& signal, void* button) { set_primitive(SD_BEZIER); });
+
+    Node::bind("onion", [&](const std::string& signal, void* button) { toggle_onion_modifier(); });
+    Node::bind("onion_value", [&](const std::string& signal, float value) { set_onion_modifier(value); });
+    Node::bind("capped", [&](const std::string& signal, void* button) { toggle_capped_modifier(); });
+    Node::bind("cap_value", [&](const std::string& signal, float value) { set_cap_modifier(value); });
+
+    Node::bind("mirror_toggle", [&](const std::string& signal, void* button) { use_mirror = !use_mirror; });
+    Node::bind("mirror_translation", [&](const std::string& signal, void* button) { mirror_gizmo.set_mode(eGizmoType::POSITION_GIZMO); });
+    Node::bind("mirror_rotation", [&](const std::string& signal, void* button) { mirror_gizmo.set_mode(eGizmoType::ROTATION_GIZMO); });
+    Node::bind("mirror_both", [&](const std::string& signal, void* button) { mirror_gizmo.set_mode(eGizmoType::POSITION_ROTATION_GIZMO); });
+    Node::bind("snap_to_surface", [&](const std::string& signal, void* button) { snap_to_surface = !snap_to_surface; });
+    Node::bind("snap_to_grid", [&](const std::string& signal, void* button) { snap_to_grid = !snap_to_grid; });
+    Node::bind("lock_axis_toggle", [&](const std::string& signal, void* button) { axis_lock = !axis_lock; });
+    Node::bind("lock_axis_x", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_X; });
+    Node::bind("lock_axis_y", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_Y; });
+    Node::bind("lock_axis_z", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_Z; });
+
+    Node::bind("roughness", [&](const std::string& signal, float value) { stroke_parameters.set_material_roughness(value); });
+    Node::bind("metallic", [&](const std::string& signal, float value) { stroke_parameters.set_material_metallic(value); });
+    Node::bind("noise_intensity", [&](const std::string& signal, float value) { stroke_parameters.set_material_noise(value); });
+    Node::bind("noise_frequency", [&](const std::string& signal, float value) { stroke_parameters.set_material_noise(-1.0f, value); });
+    Node::bind("noise_octaves", [&](const std::string& signal, float value) { stroke_parameters.set_material_noise(-1.0f, -1.0f, static_cast<int>(value)); });
+    Node::bind("noise_color_picker", [&](const std::string& signal, Color color) { stroke_parameters.set_material_noise_color(color); });
+
+    Node::bind("color_picker", [&](const std::string& signal, Color color) { stroke_parameters.set_material_color(color); });
+    Node::bind("pick_material", [&](const std::string& signal, void* button) { is_picking_material = !is_picking_material; });
+
+    // Bind colors callback...
+
+    for (auto it : Node2D::all_widgets)
     {
-        Node::bind("sculpt", [&](const std::string& signal, void* button) { enable_tool(SCULPT); });
-        Node::bind("paint", [&](const std::string& signal, void* button) { enable_tool(PAINT); });
+        ui::Button2D* child = dynamic_cast<ui::Button2D*>(it.second);
+        if (!child || !child->is_color_button) continue;
+        Node::bind(child->signal, [&](const std::string& signal, void* button) {
+            const Color& color = (reinterpret_cast<ui::Button2D*>(button))->color;
+            stroke_parameters.set_material_color(color);
+        });
+    }
 
-        Node::bind("sphere", [&](const std::string& signal, void* button) {  set_primitive(SD_SPHERE); });
-        Node::bind("cube", [&](const std::string& signal, void* button) { set_primitive(SD_BOX); });
-        Node::bind("cone", [&](const std::string& signal, void* button) { set_primitive(SD_CONE); });
-        Node::bind("capsule", [&](const std::string& signal, void* button) { set_primitive(SD_CAPSULE); });
-        Node::bind("cylinder", [&](const std::string& signal, void* button) { set_primitive(SD_CYLINDER); });
-        Node::bind("torus", [&](const std::string& signal, void* button) { set_primitive(SD_TORUS); });
-        Node::bind("bezier", [&](const std::string& signal, void* button) { set_primitive(SD_BEZIER); });
+    // Bind recent color buttons...
 
-        Node::bind("onion", [&](const std::string& signal, void* button) { toggle_onion_modifier(); });
-        Node::bind("onion_value", [&](const std::string& signal, float value) { set_onion_modifier(value); });
-        Node::bind("capped", [&](const std::string& signal, void* button) { toggle_capped_modifier(); });
-        Node::bind("cap_value", [&](const std::string& signal, float value) { set_cap_modifier(value); });
-
-        Node::bind("mirror_toggle", [&](const std::string& signal, void* button) { use_mirror = !use_mirror; });
-        Node::bind("mirror_translation", [&](const std::string& signal, void* button) { mirror_gizmo.set_mode(eGizmoType::POSITION_GIZMO); });
-        Node::bind("mirror_rotation", [&](const std::string& signal, void* button) { mirror_gizmo.set_mode(eGizmoType::ROTATION_GIZMO); });
-        Node::bind("mirror_both", [&](const std::string& signal, void* button) { mirror_gizmo.set_mode(eGizmoType::POSITION_ROTATION_GIZMO); });
-        Node::bind("snap_to_surface", [&](const std::string& signal, void* button) { snap_to_surface = !snap_to_surface; });
-        Node::bind("snap_to_grid", [&](const std::string& signal, void* button) { snap_to_grid = !snap_to_grid; });
-        Node::bind("lock_axis_toggle", [&](const std::string& signal, void* button) { axis_lock = !axis_lock; });
-        Node::bind("lock_axis_x", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_X; });
-        Node::bind("lock_axis_y", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_Y; });
-        Node::bind("lock_axis_z", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_Z; });
-
-        Node::bind("roughness", [&](const std::string& signal, float value) { stroke_parameters.set_material_roughness(value); });
-        Node::bind("metallic", [&](const std::string& signal, float value) { stroke_parameters.set_material_metallic(value); });
-        Node::bind("noise_intensity", [&](const std::string& signal, float value) { stroke_parameters.set_material_noise(value); });
-        Node::bind("noise_frequency", [&](const std::string& signal, float value) { stroke_parameters.set_material_noise(-1.0f, value); });
-        Node::bind("noise_octaves", [&](const std::string& signal, float value) { stroke_parameters.set_material_noise(-1.0f, -1.0f, static_cast<int>(value)); });
-        Node::bind("noise_color_picker", [&](const std::string& signal, Color color) { stroke_parameters.set_material_noise_color(color); });
-
-        Node::bind("color_picker", [&](const std::string& signal, Color color) { stroke_parameters.set_material_color(color); });
-        Node::bind("pick_material", [&](const std::string& signal, void* button) { is_picking_material = !is_picking_material; });
-
-        // Bind colors callback...
-
-        for (auto it : Node2D::all_widgets)
+    Node2D* recent_group = Node2D::get_widget_from_name("recent_colors");
+    if (recent_group) {
+        max_recent_colors = recent_group->get_children().size();
+        for (size_t i = 0; i < max_recent_colors; ++i)
         {
-            ui::Button2D* child = dynamic_cast<ui::Button2D*>(it.second);
-            if (!child || !child->is_color_button) continue;
+            ui::Button2D* child = static_cast<ui::Button2D*>(recent_group->get_children()[i]);
             Node::bind(child->signal, [&](const std::string& signal, void* button) {
                 const Color& color = (reinterpret_cast<ui::Button2D*>(button))->color;
                 stroke_parameters.set_material_color(color);
             });
         }
+    }
+    else {
+        spdlog::error("Cannot find recent_colors button group!");
+    }
 
-        // Bind recent color buttons...
+    // Bind material samples callback...
 
-        Node2D* recent_group = Node2D::get_widget_from_name("recent_colors");
-        if (recent_group) {
-            max_recent_colors = recent_group->get_children().size();
-            for (size_t i = 0; i < max_recent_colors; ++i)
+    Node2D* samples_group = Node2D::get_widget_from_name("g_material_samples");
+    if (samples_group) {
+        for (size_t i = 0; i < samples_group->get_children().size(); ++i)
+        {
+            ui::Button2D* child = static_cast<ui::Button2D*>(samples_group->get_children()[i]);
+            Node::bind(child->signal, [&](const std::string& signal, void* button) {
+                update_stroke_from_material(signal);
+            });
+        }
+    }
+    else {
+        spdlog::error("Cannot find material_samples button group!");
+    }
+
+    Node::bind("save_material", [&](const std::string& signal, void* button) {
+        generate_material_from_stroke(button);
+    });
+
+    Node::bind("shuffle_material", [&](const std::string& signal, void* button) {
+        generate_random_material();
+    });
+
+    // Bind color blendind operations for painting
+    {
+        Node2D* color_blending_modes = Node2D::get_widget_from_name("color_blending");
+        if (color_blending_modes) {
+            for (size_t i = 0; i < color_blending_modes->get_children().size(); ++i)
             {
-                ui::Button2D* child = static_cast<ui::Button2D*>(recent_group->get_children()[i]);
-                Node::bind(child->signal, [&](const std::string& signal, void* button) {
-                    const Color& color = (reinterpret_cast<ui::Button2D*>(button))->color;
-                    stroke_parameters.set_material_color(color);
+                ui::Button2D* child = static_cast<ui::Button2D*>(color_blending_modes->get_children()[i]);
+                Node::bind(child->signal, [&, index = i](const std::string& signal, void* button) {
+                    stroke_parameters.set_color_blend_operation(static_cast<ColorBlendingOp>(index));
                 });
             }
         }
         else {
-            spdlog::error("Cannot find recent_colors button group!");
+            spdlog::error("Cannot find color_blending_modes selector!");
         }
-
-        // Bind material samples callback...
-
-        Node2D* samples_group = Node2D::get_widget_from_name("g_material_samples");
-        if (samples_group) {
-            for (size_t i = 0; i < samples_group->get_children().size(); ++i)
-            {
-                ui::Button2D* child = static_cast<ui::Button2D*>(samples_group->get_children()[i]);
-                Node::bind(child->signal, [&](const std::string& signal, void* button) {
-                    update_stroke_from_material(signal);
-                });
-            }
-        }
-        else {
-            spdlog::error("Cannot find material_samples button group!");
-        }
-
-        Node::bind("save_material", [&](const std::string& signal, void* button) {
-            generate_material_from_stroke(button);
-        });
     }
 
     // Bind Controller buttons
     {
-        Node::bind(XR_BUTTON_B, [&]() { stamp_enabled = !stamp_enabled; controller_labels[HAND_RIGHT].secondary_button_label->set_text(stamp_enabled ? "Switch to Smear" : "Switch to Stamp"); });
+        Node::bind(XR_BUTTON_B, [&]() {
+            stamp_enabled = !stamp_enabled;
+            controller_labels[HAND_RIGHT].secondary_button_label->set_text(stamp_enabled ? "Switch to Smear" : "Switch to Stamp");
+        });
     }
 }
 
@@ -1207,7 +1242,7 @@ void SculptEditor::generate_material_from_stroke(void* button)
     }
 
     ui::Button2D* b = reinterpret_cast<ui::Button2D*>(button);
-    ui::ItemGroup2D* mat_samples = static_cast<ui::ItemGroup2D*>(Node2D::get_widget_from_name("g_material_samples"));
+    ui::ButtonSelector2D* mat_samples = static_cast<ui::ButtonSelector2D*>(Node2D::get_widget_from_name("g_material_samples"));
     assert(mat_samples);
 
     std::string name = "new_material_" + std::to_string(last_generated_material_uid++);
@@ -1229,6 +1264,19 @@ void SculptEditor::generate_material_from_stroke(void* button)
     Node::bind(name, [&](const std::string& signal, void* button) {
         update_stroke_from_material(signal);
     });
+}
+
+void SculptEditor::generate_random_material()
+{
+    // Set all data
+    stroke_parameters.set_material_color(Color(random_f(), random_f(), random_f(), 1.0f));
+    stroke_parameters.set_material_roughness(random_f());
+    stroke_parameters.set_material_metallic(random_f());
+
+    // Don't apply noise by now..
+    stroke_parameters.set_material_noise();
+
+    update_gui_from_stroke_material(stroke_parameters.get_material());
 }
 
 void SculptEditor::update_gui_from_stroke_material(const StrokeMaterial& mat)

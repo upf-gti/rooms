@@ -42,11 +42,25 @@ struct FragmentOutput {
 fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     var dummy = camera_data.eye;
+    let combo_index = ui_data.num_group_items;
 
     // Mask button shape
     var uvs = in.uv;
-    var dist : f32 = distance(uvs, vec2f(0.5));
     var button_radius : f32 = 0.42;
+    if(combo_index == 1.0) {
+        if(uvs.x > 0.5) {
+            uvs.x = 0.5;
+        }
+    }
+    else if(combo_index == 2.0) {
+        uvs.x = 0.5;
+    }
+    else if(combo_index == 3.0) {
+        if(uvs.x < 0.5) {
+            uvs.x = 0.5;
+        }
+    }
+    var dist : f32 = distance(uvs, vec2f(0.5));
     var max_radius : f32 = 0.5;
 
     var out: FragmentOutput;
@@ -59,17 +73,18 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     var selected_color = COLOR_HIGHLIGHT_DARK;
     var highlight_color = COLOR_SECONDARY;
-    var back_color = vec3f(0.01);
+    var back_color = vec3f(0.02);
+    var icon_color = back_color;
     var gradient_factor = pow(uvs.y, 2.5);
 
     if(ui_data.is_button_disabled > 0.0) {
-        back_color = pow(vec3f(0.41, 0.38, 0.44), vec3f(2.2));
+        icon_color = pow(vec3f(0.41, 0.38, 0.44), vec3f(2.2));
     }
 
     // Assign basic color
     var lum = color.r * 0.3 + color.g * 0.59 + color.b * 0.11;
     var final_color = vec3f( 1.0 - smoothstep(0.15, 0.4, lum) );
-    final_color = max(final_color, back_color);
+    final_color = max(final_color, icon_color);
 
     var is_color_button = ui_data.is_color_button > 0.0;
     var keep_colors = (ui_data.keep_rgb + ui_data.is_color_button) > 0.0;
@@ -86,8 +101,8 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     if( ui_data.is_selected > 0.0 ) {
         if( !keep_colors ) {
-            var sel_color = mix( COLOR_TERCIARY, COLOR_HIGHLIGHT_LIGHT, pow(uvs.x + uvs.y, 3.0) );
-            back_color = select( sel_color, COLOR_SECONDARY, ui_data.is_hovered > 0.0 );
+            var sel_color = mix( COLOR_TERCIARY, COLOR_HIGHLIGHT_LIGHT, pow(uvs.x + uvs.y, 2.0) );
+            icon_color = select( sel_color, sel_color + COLOR_TERCIARY * 0.5, ui_data.is_hovered > 0.0 );
             final_color = smoothstep(vec3f(0.25), vec3f(0.45), color.rgb) * 0.5;
         }
     } 
@@ -99,27 +114,23 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
             button_radius = 0.37;
             max_radius = 0.42;
         } else {
-            back_color = vec3f(0.15);
+            icon_color = vec3f(0.15);
         }
     }
 
-    final_color = (back_color + final_color * highlight_color) * color.a;
-
-    // Process selection
-    var outline_color_selected = mix( COLOR_TERCIARY, COLOR_HIGHLIGHT_LIGHT, gradient_factor );
-    final_color = mix(outline_color_selected, final_color, 1.0 - step(0.46 + (1.0 - ui_data.is_selected), dist));
+    final_color = mix(back_color, icon_color + final_color * highlight_color, color.a);
 
     var shadow : f32 = smoothstep(button_radius, max_radius, dist);
     
-    if(dist > button_radius && ui_data.is_color_button == 0.0) {
-        final_color = vec3f(0.01);
+    if(dist > button_radius && !is_color_button) {
+        final_color = back_color;
     }
 
     if (GAMMA_CORRECTION == 1) {
         final_color = pow(final_color, vec3f(1.0 / 2.2));
     }
 
-    out.color = vec4f(final_color,  1.0 - shadow);
+    out.color = vec4f(final_color, 1.0 - shadow);
 
     return out;
 }

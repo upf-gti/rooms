@@ -119,7 +119,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
             material.roughness = mix(stroke.material.roughness, 1.0, noise_value * 1.5);
             material.metalness = mix(stroke.material.metallic, 0.25, noise_value * 1.5);
 
-            curr_surface = evaluate_edit(pos, stroke.primitive, stroke.operation, stroke.parameters, curr_surface, material, edit);
+            curr_surface = evaluate_edit(pos, stroke.primitive, stroke.operation, stroke.parameters, stroke.color_blend_op, curr_surface, material, edit);
         }
 
 

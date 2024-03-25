@@ -43,6 +43,7 @@ class SculptEditor {
     void add_pbr_material_data(const std::string& name, const Color& base_color, float roughness, float metallic,
         float noise_intensity = 0.0f, const Color& noise_color = colors::RUST, float noise_frequency = 20.0f, int noise_octaves = 8);
     void generate_material_from_stroke(void* button);
+    void generate_random_material();
     void update_stroke_from_material(const std::string& name);
     void update_gui_from_stroke_material(const StrokeMaterial& mat);
     void pick_material();

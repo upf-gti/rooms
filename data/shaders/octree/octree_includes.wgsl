@@ -68,8 +68,9 @@ struct Stroke {
     edit_count      : u32,
     primitive       : u32,
     operation       : u32,
+    dummy           : vec3f,
+    color_blend_op  : u32,
     parameters      : vec4f,
-    dummy           : vec4f,
     material        : StrokeMaterial,   // 48 bytes
     padding         : Edit,             // Padding of (48 * 3) bytes
     padding1        : Edit,
