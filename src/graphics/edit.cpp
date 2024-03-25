@@ -69,6 +69,12 @@ void StrokeParameters::set_parameters(const glm::vec4& parameters)
     dirty = true;
 }
 
+void StrokeParameters::set_color_blend_operation(ColorBlendingOp op)
+{
+    this->color_blend_op = op;
+    dirty = true;
+}
+
 void StrokeParameters::set_smooth_factor(const float smooth_factor)
 {
     parameters.w = smooth_factor;
@@ -219,6 +225,7 @@ void Stroke::get_AABB_intersecting_stroke(const AABB intersection_area,
     resulting_stroke.edit_count = 0u;
     resulting_stroke.primitive = primitive;
     resulting_stroke.operation = operation;
+    resulting_stroke.color_blending_op = color_blending_op;
     resulting_stroke.parameters = parameters;
     resulting_stroke.material = material;
     resulting_stroke.stroke_id = stroke_id;
