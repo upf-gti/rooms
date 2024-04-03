@@ -260,10 +260,11 @@ fn soft_min(a : f32, b : f32, k : f32) -> vec2f
 }
 
 // From iqulzes and Dreams
-fn sminPoly(a : f32, b : f32, k : f32) -> vec2f {
-    let h : f32 = max(k - abs(a - b), 0.0) / k;
+fn sminQuadratic(a : f32, b : f32, k : f32) -> vec2f {
+    let norm_k : f32 = k * 4.0;
+    let h : f32 = max(norm_k - abs(a - b), 0.0) / norm_k;
     let m : f32 = h*h;
-    let s : f32 = m*k*(1.0/4.0);
+    let s : f32 = m*norm_k*(1.0/4.0);
 
     if (a < b) {
         return vec2f(a - s, m);
@@ -274,8 +275,8 @@ fn sminPoly(a : f32, b : f32, k : f32) -> vec2f {
 
 fn opSmoothUnion( s1 : Surface, s2 : Surface, k : f32 ) -> Surface
 {
-    let smin : vec2f = soft_min(s2.distance, s1.distance, k);
-    //let smin : vec2f = sminPoly(s2.distance, s1.distance, k);
+    //let smin : vec2f = soft_min(s2.distance, s1.distance, k);
+    let smin : vec2f = sminQuadratic(s2.distance, s1.distance, k);
     var sf : Surface;
     sf.distance = smin.x;
     sf.material = Material_mix(s2.material, s1.material, smin.y);

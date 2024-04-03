@@ -74,12 +74,12 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     // If the MSb is setted we load the previous data of brick
     // if not, we set it for the next iteration
     if ((FILLED_BRICK_FLAG & brick_pointer) == FILLED_BRICK_FLAG) {
-        let sample : vec4f = textureLoad(write_sdf, texture_coordinates);
-        sSurface.distance = sample.r;
-        let raw_color : vec4<u32> = textureLoad(write_material_sdf, texture_coordinates);
+        // let sample : vec4f = textureLoad(write_sdf, texture_coordinates);
+        // sSurface.distance = sample.r;
+        // let raw_color : vec4<u32> = textureLoad(write_material_sdf, texture_coordinates);
 
-        let material : Material = unpack_material(u32(raw_color.r));
-        sSurface.material = material;
+        // let material : Material = unpack_material(u32(raw_color.r));
+        // sSurface.material = material;
     } 
     else if ((INTERIOR_BRICK_FLAG & brick_pointer) == INTERIOR_BRICK_FLAG) {
         sSurface.distance = -100.0;

@@ -423,10 +423,11 @@ fn isoft_min(a : vec2f, b : vec2f, r : f32) -> vec2f
     return isub_vecs(imin(a, b), imul_float_vec(0.25 / r, imul_vec2_vec2(e, e))); 
 }
 
-fn isoft_min_poly(a : vec2f, b : vec2f, k : f32) -> vec2f {
-    let h : vec2f = imul_float_vec(1.0 / k, imax(k + ineg(iabs(isub_vecs(a, b))), vec2f(0.0)));
+fn isoft_min_quadratic(a : vec2f, b : vec2f, k : f32) -> vec2f {
+    let norm_k : f32 = k * 4.0;
+    let h : vec2f = imul_float_vec(1.0 / norm_k, imax(norm_k + ineg(iabs(isub_vecs(a, b))), vec2f(0.0)));
     let m : vec2f = ipow2_vec(h);
-    let s : vec2f = imul_float_vec(k * 0.25, m);
+    let s : vec2f = imul_float_vec(norm_k * 0.25, m);
 
     return vec2f( iselect( isub_vecs(b, s), isub_vecs(a, s), ilessthan(a, b)));
 }
@@ -438,7 +439,7 @@ fn opUnionInterval( s1 : vec2f, s2 : vec2f ) -> vec2f
  
 fn opSmoothUnionInterval( s1 : vec2f, s2 : vec2f, k : f32 ) -> vec2f
 {
-    return isoft_min(s2, s1, k);
+    return isoft_min_quadratic(s2, s1, k);
 }
 
 fn opSmoothSubtractionInterval( s1 : vec2f, s2 : vec2f, k : f32 ) -> vec2f

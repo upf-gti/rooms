@@ -61,7 +61,7 @@ class StrokeParameters {
 
     sdPrimitive     primitive = SD_SPHERE;
     sdOperation     operation = OP_UNION;
-    glm::vec4       parameters = { 0.f, -1.f, 0.f, 0.02f };
+    glm::vec4       parameters = { 0.f, -1.f, 0.f, 0.001f };
     StrokeMaterial  material = {};
 
     bool dirty      = false;

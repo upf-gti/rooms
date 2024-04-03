@@ -22,7 +22,7 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
     bool is_openxr_available = RoomsRenderer::instance->get_openxr_available();
 
-    octree_depth = static_cast<uint8_t>(7);
+    octree_depth = static_cast<uint8_t>(OCTREE_DEPTH);
 
     // total size considering leaves and intermediate levels
     octree_total_size = (pow(8, octree_depth + 1) - 1) / 7;
