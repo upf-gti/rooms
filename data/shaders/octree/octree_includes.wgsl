@@ -70,17 +70,16 @@ struct Stroke {
     primitive       : u32,
     operation       : u32,
     parameters      : vec4f,
-    dummy           : vec4f,
+    dummy      : vec4f,
     material        : StrokeMaterial,   // 48 bytes
-    padding         : Edit,             // Padding of (48 * 3) bytes
-    padding1        : Edit,
-    padding2        : Edit,
     edits           : array<Edit, MAX_EDITS_PER_EVALUATION>
 };
 
 struct StrokeHistory {
     count : u32,
-    padd : vec3f,
+    pad0:u32,
+    pad1:u32,
+    pad2:u32,
     strokes : array<Stroke, STROKE_HISTORY_MAX_SIZE>
 };
 

@@ -132,14 +132,13 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     let is_evaluating_preview : bool = !is_reevaluation && ((octree.evaluation_mode & EVALUATE_PREVIEW_STROKE_FLAG) == EVALUATE_PREVIEW_STROKE_FLAG);
     
     // Select the input stroke, or the preview stroke, depending on the mode
+    // TODO(Juan): fix the preview
     var current_stroke : Stroke = stroke;
-    current_stroke = preview_data.preview_stroke;
     //  if (is_evaluating_preview) {
          
     // } else {
          
     //  }
-     current_stroke = stroke;
 
     let is_smooth_paint : bool = current_stroke.operation == OP_SMOOTH_PAINT;
     let is_paint : bool = current_stroke.operation == OP_PAINT; 
@@ -173,6 +172,25 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     let y_range : vec2f = vec2f(octant_center.y - level_half_size, octant_center.y + level_half_size);
     let z_range : vec2f = vec2f(octant_center.z - level_half_size, octant_center.z + level_half_size);
 
+    // TODO(Juan): solve aligment issue with strokes of the history stroke_influence_list
+
+    // Evaluating the edit context
+    for (var j : u32 = 0; j < stroke_history.count; j++) {
+        current_stroke = stroke_history.strokes[j];
+        for (var i : u32 = 0; i < current_stroke.edit_count; i++) {
+            var current_edit : Edit = current_stroke.edits[i];
+            var edit_interval : vec2f;
+
+            surface_interval = eval_edit_interval(x_range, y_range, z_range, current_stroke.primitive, current_stroke.operation, current_stroke.parameters, surface_interval, current_edit, &edit_interval);
+
+            //current_edit.dimensions += vec4f(current_stroke.parameters.w, 0.0, 0.0, 0.0);  
+
+            //current_stroke_interval = eval_edit_interval(x_range, y_range, z_range, current_stroke.primitive, current_stroke.operation, current_stroke.parameters, current_stroke_interval, current_edit, &edit_interval);
+        }
+    }
+
+    current_stroke = stroke;
+
     // Check the edits in the parent, and fill its own list with the edits that affect this child
     for (var i : u32 = 0; i < current_stroke.edit_count; i++) {
         // Accessing a packed indexed edit in the culling list:
@@ -192,9 +210,9 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
         surface_interval = eval_edit_interval(x_range, y_range, z_range, current_stroke.primitive, current_stroke.operation, current_stroke.parameters, surface_interval, current_edit, &edit_interval);
 
-        current_edit.dimensions += vec4f(current_stroke.parameters.w, 0.0, 0.0, 0.0);  
+        //current_edit.dimensions += vec4f(current_stroke.parameters.w, 0.0, 0.0, 0.0);  
 
-        current_stroke_interval = eval_edit_interval(x_range, y_range, z_range, current_stroke.primitive, OP_UNION, current_stroke.parameters, current_stroke_interval, current_edit, &edit_interval);
+        //current_stroke_interval = eval_edit_interval(x_range, y_range, z_range, current_stroke.primitive, current_stroke.operation, current_stroke.parameters, current_stroke_interval, current_edit, &edit_interval);
     }
 
     let global_sculpture_inside : bool = surface_interval.y < 0.0;
@@ -212,12 +230,9 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         octree.data[octree_index].octant_center_distance = surface_interval;
     }
     
-    //edit_culling_data.edit_culling_count[octree_index] = 0u;
-
-    
     if (level < OCTREE_DEPTH) {
         // Broad culling using only the incomming stroke
-        if (current_stroke_interval.x < 0.0) {
+        if (surface_interval.x < 0.0) {
             // Subdivide
             // Increase the number of children from the current level
             let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 8);
@@ -228,29 +243,38 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             }
     }
     } else {
-        // Last level, more coarse culling
-        let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 1);
-        let brick_spot_id = atomicSub(&octree_proxy_data.atlas_empty_bricks_counter, 1u) - 1u;
-                    let instance_index : u32 = octree_proxy_data.atlas_empty_bricks_buffer[brick_spot_id];
-                    octree_proxy_data.instance_data[instance_index].position = octant_center;
-                    octree_proxy_data.instance_data[instance_index].atlas_tile_index = instance_index;
-                    octree_proxy_data.instance_data[instance_index].octree_parent_id = octree_index;
-                    octree_proxy_data.instance_data[instance_index].in_use = BRICK_IN_USE_FLAG;
+        if (surface_interval.x < 0.0) {
+            //if (global_sculpture_in_surface) {
+                // Last level, more coarse culling
+                let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 1);
+                let brick_spot_id = atomicSub(&octree_proxy_data.atlas_empty_bricks_counter, 1u) - 1u;
+                let instance_index : u32 = octree_proxy_data.atlas_empty_bricks_buffer[brick_spot_id];
+                octree_proxy_data.instance_data[instance_index].position = octant_center;
+                octree_proxy_data.instance_data[instance_index].atlas_tile_index = instance_index;
+                octree_proxy_data.instance_data[instance_index].octree_parent_id = octree_index;
+                octree_proxy_data.instance_data[instance_index].in_use = BRICK_IN_USE_FLAG;
 
-                    // If it was interior, we mark it as such
-                    // TODO: This cannot happen now right??
-                    if (is_interior_brick) {
-                        octree.data[octree_index].tile_pointer = instance_index | INTERIOR_BRICK_FLAG;
-                        octree.data[octree_index].octant_center_distance = vec2f(-10000.0, -10000.0);
-                    } else {
-                        octree.data[octree_index].tile_pointer = instance_index;
-                    }
-                    octant_usage_write[prev_counter] = octree_index;
-
+                // If it was interior, we mark it as such
+                // TODO: This cannot happen now right??
+                if (is_interior_brick) {
+                    octree.data[octree_index].tile_pointer = instance_index | INTERIOR_BRICK_FLAG;
+                    octree.data[octree_index].octant_center_distance = vec2f(-10000.0, -10000.0);
+                } else {
+                    octree.data[octree_index].tile_pointer = instance_index;
                 }
+                octant_usage_write[prev_counter] = octree_index;
+            // } else {
+            //     octree.data[octree_index].tile_pointer = INTERIOR_BRICK_FLAG;
+            //     octree.data[octree_index].octant_center_distance = vec2f(-10000.0, -10000.0);
+            // }
+            
+        }
+        
+    }
                 
-    
-     let z : u32 =  stroke_history.count;
+    // TODO(Juan): para el buffer usage, quitar al terminar
+    let z : u32 =  stroke_history.count;
     let v : u32 =  octree_proxy_data.instance_data[0].in_use;
     let j : u32 = indirect_brick_removal.indirect_padding.x;
+    let p : u32 = preview_data.vertex_count;
 }

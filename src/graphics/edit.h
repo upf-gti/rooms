@@ -61,7 +61,7 @@ class StrokeParameters {
 
     sdPrimitive     primitive = SD_SPHERE;
     sdOperation     operation = OP_UNION;
-    glm::vec4       parameters = { 0.f, -1.f, 0.f, 0.002f };
+    glm::vec4       parameters = { 0.f, -1.f, 0.f, 0.02f };
     StrokeMaterial  material = {};
 
     bool dirty      = false;
@@ -95,14 +95,8 @@ struct Stroke {
     sdOperation operation;
     glm::vec4	parameters = { 0.f, -1.f, 0.f, 0.f };
     glm::vec4	_dummy_;
-
     // 48 bytes
     StrokeMaterial material;
-
-    // Padding of 48 * 3 bytes
-    Edit    padding; 
-    Edit    padding1;
-    Edit    padding2;
 
     Edit    edits[MAX_EDITS_PER_EVALUATION] = {};
 

@@ -15,7 +15,7 @@
 #define SDF_RESOLUTION 400
 #define SCULPT_MAX_SIZE 1 // meters
 #define PREVIEW_PROXY_BRICKS_COUNT 4000u
-#define STROKE_HISTORY_MAX_SIZE 402u
+#define STROKE_HISTORY_MAX_SIZE 64u
 
 class MeshInstance3D;
 
@@ -154,9 +154,12 @@ class RaymarchingRenderer {
     } ray_info;
 
     struct sStrokeInfluence {
-        uint32_t stroke_count;
-        glm::vec3 pad;
+        uint32_t stroke_count = 0u;
+        uint32_t pad_1 = UINT32_MAX; // TODO(Juan): aligment issues when using vec3
+        uint32_t pad_0 = 0u;
+        uint32_t pad_2 = UINT32_MAX;
         Stroke strokes[STROKE_HISTORY_MAX_SIZE];
+        glm::vec4 padd; // TODO(Juan): HACK esto no deveria ser necesario
     } stroke_influence_list;
 
     RayIntersectionInfo ray_intersection_info;

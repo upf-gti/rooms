@@ -7,7 +7,7 @@
 @group(0) @binding(2) var<storage, read_write> octree : Octree;
 @group(0) @binding(3) var write_sdf: texture_storage_3d<r32float, read_write>;
 @group(0) @binding(5) var<storage, read_write> octree_proxy_data: OctreeProxyInstances;
-@group(0) @binding(6) var<storage, read_write> edit_culling_data: EditCullingData;
+@group(0) @binding(6) var<storage, read> stroke_history : StrokeHistory; 
 @group(0) @binding(7) var<storage, read_write> indirect_brick_removal : IndirectBrickRemoval;
 @group(0) @binding(8) var write_material_sdf: texture_storage_3d<r32uint, read_write>;
 
@@ -92,7 +92,22 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     result_surface.distance = 0.0;
 
 
-        var curr_surface : Surface = sSurface;
+    var curr_surface : Surface = sSurface;
+    let pos = octant_center + pixel_offset;
+
+        // Evaluating the edit context
+    for (var j : u32 = 0; j < stroke_history.count; j++) {
+        var current_stroke = stroke_history.strokes[j];
+        for (var i : u32 = 0; i < current_stroke.edit_count; i++) {
+            var current_edit : Edit = current_stroke.edits[i];
+            var edit_interval : vec2f;
+
+            curr_surface = evaluate_edit(pos, current_stroke.primitive, current_stroke.operation, current_stroke.parameters, curr_surface, material, current_edit);
+            //current_edit.dimensions += vec4f(current_stroke.parameters.w, 0.0, 0.0, 0.0);  
+
+            //current_stroke_interval = eval_edit_interval(x_range, y_range, z_range, current_stroke.primitive, current_stroke.operation, current_stroke.parameters, current_stroke_interval, current_edit, &edit_interval);
+        }
+    }
 
         // Traverse the according edits and evaluate them in the brick
         for (var i : u32 = 0; i < stroke.edit_count; i++) {
@@ -101,7 +116,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
             // let packed_index : u32 = 3 - (i % 4);
             // let current_unpacked_edit_idx : u32 = (current_packed_edit_idx & (0xFFu << (packed_index * 8u))) >> (packed_index * 8u);
             let edit = stroke.edits[i];
-            let pos = octant_center + pixel_offset;
+            
 
             // // Rust example.. ??
 
@@ -130,11 +145,11 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     }
 
     // Heatmap Edit debugging
-    let interpolant : f32 = (f32( edit_culling_data.edit_culling_count[parent_octree_index] ) / f32(5)) * (M_PI / 2.0);
-    var heatmap_color : vec3f;
-    heatmap_color.r = sin(interpolant);
-    heatmap_color.g = sin(interpolant * 2.0);
-    heatmap_color.b = cos(interpolant);
+    // let interpolant : f32 = (f32( edit_culling_data.edit_culling_count[parent_octree_index] ) / f32(5)) * (M_PI / 2.0);
+    // var heatmap_color : vec3f;
+    // heatmap_color.r = sin(interpolant);
+    // heatmap_color.g = sin(interpolant * 2.0);
+    // heatmap_color.b = cos(interpolant);
 
     // Duplicate the texture Store, becuase then we have a branch depeding on an uniform!
     textureStore(write_sdf, texture_coordinates, vec4f(result_surface.distance));
@@ -143,6 +158,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     //textureStore(write_sdf, texture_coordinates, vec4f(debug_surf.x, debug_surf.y, debug_surf.z, result_surface.distance));
     // Hack, for buffer usage
     octant_usage_write[0] = 0;
+    let edit_count : u32 = stroke_history.count;
 
     workgroupBarrier();
 

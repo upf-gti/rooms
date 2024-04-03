@@ -768,7 +768,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         octree_edit_culling_data.buffer_size = edit_culling_data_size;
 
         // Stroke history
-        size_t stroke_history_size = sizeof(glm::vec4) + sizeof(Stroke) * STROKE_HISTORY_MAX_SIZE;
+        size_t stroke_history_size = sizeof(sStrokeInfluence);
         octree_stroke_history.data = webgpu_context->create_buffer(stroke_history_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "stroke_history");
         octree_stroke_history.binding = 6;
         octree_stroke_history.buffer_size = stroke_history_size;
@@ -786,7 +786,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
 
 
         std::vector<Uniform*> uniforms = { &octree_uniform, &compute_merge_data_uniform,
-                                           &octree_proxy_instance_buffer, & octree_stroke_history, &octree_indirect_brick_removal_buffer };
+                                           &octree_proxy_instance_buffer, &octree_stroke_history, &octree_indirect_brick_removal_buffer };
 
         compute_octree_evaluate_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_evaluate_shader, 0);
     }
