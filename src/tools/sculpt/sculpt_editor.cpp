@@ -6,6 +6,7 @@
 #include "framework/nodes/ui.h"
 #include "framework/input.h"
 #include "framework/nodes/viewport_3d.h"
+#include "framework/scene/parse_gltf.h"
 
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/renderer_storage.h"
@@ -127,6 +128,11 @@ void SculptEditor::initialize()
             RoomsEngine::entities.push_back(right_hand_ui_3D);
         }
     }
+
+    std::vector<Node3D*> entities;
+    parse_gltf("data/meshes/controllers/meta_quest_controllers.glb", entities);
+    controller_mesh_left = static_cast<MeshInstance3D*>(entities[0]);
+    controller_mesh_right = static_cast<MeshInstance3D*>(entities[1]);
 
     // Load ui and Bind callbacks
     bind_events();
@@ -410,12 +416,15 @@ void SculptEditor::update(float delta_time)
         if (Renderer::instance->get_openxr_available())
         {
             glm::mat4x4 pose = Input::get_controller_pose(HAND_RIGHT);
-            pose = glm::rotate(pose, glm::radians(-110.f), glm::vec3(1.0f, 0.0f, 0.0f));
+            pose = glm::rotate(pose, glm::radians(-50.f), glm::vec3(1.0f, 0.0f, 0.0f));
+            controller_mesh_right->set_model(pose);
+            pose = glm::rotate(pose, glm::radians(-60.f), glm::vec3(1.0f, 0.0f, 0.0f));
             right_hand_ui_3D->set_model(pose);
 
             pose = Input::get_controller_pose(HAND_LEFT);
-            pose = glm::rotate(pose, glm::radians(-110.f), glm::vec3(1.0f, 0.0f, 0.0f));
-
+            pose = glm::rotate(pose, glm::radians(-50.f), glm::vec3(1.0f, 0.0f, 0.0f));
+            controller_mesh_left->set_model(pose);
+            pose = glm::rotate(pose, glm::radians(-60.f), glm::vec3(1.0f, 0.0f, 0.0f));
             left_hand_ui_3D->set_model(pose);
         }
     }
@@ -658,6 +667,12 @@ void SculptEditor::render()
 
     if (!main_panel_3d) {
         main_panel_2d->render();
+    }
+
+    if (controller_mesh_right)
+    {
+        controller_mesh_right->render();
+        controller_mesh_left->render();
     }
 }
 

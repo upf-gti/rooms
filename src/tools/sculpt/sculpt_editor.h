@@ -158,6 +158,10 @@ class SculptEditor {
     };
 
     ControllerLabels controller_labels[2];
+
+    // Meta quest controller meshes
+    MeshInstance3D* controller_mesh_left = nullptr;
+    MeshInstance3D* controller_mesh_right = nullptr;
     
     // Main pannel UI
     ui::HContainer2D* main_panel_2d = nullptr;
