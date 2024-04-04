@@ -12,28 +12,6 @@ fn Diffuse(albedo : vec3f) -> vec3f
     return albedo / PI;
 }
 
-fn DistributionGGX(N : vec3f, H : vec3f, roughness : f32) -> f32
-{
-    var a : f32 = roughness * roughness;
-    var a2 : f32 = a * a;
-    var NdotH : f32 = max(dot(N, H), 0.0);
-    var NdotH2 : f32 = NdotH * NdotH;
-
-    var nom : f32   = a2;
-    var denom : f32 = (NdotH2 * (a2 - 1.0) + 1.0);
-    denom = PI * denom * denom;
-
-    return nom / denom;
-}
-
-fn DistributionGGX2(N : vec3f, H : vec3f, roughness : f32) -> f32
-{
-    var NoH : f32 = clamp(dot(N, H), 0.0, 1.0);
-    var a : f32 = NoH * roughness;
-    var k : f32 = roughness / (1.0 - NoH * NoH + a * a);
-    return k * k * (1.0 / PI);
-}
-
 fn GeometrySchlickGGX(NdotV : f32, roughness : f32) -> f32
 {
     var r : f32 = (roughness + 1.0);
@@ -77,53 +55,28 @@ fn D_GGX(NdotH : f32, roughness : f32) -> f32
     return k * k * (1.0 / PI);
 }
 
-fn generateTBN(normal : vec3f) -> mat3x3<f32>
-{
-    var bitangent : vec3f = vec3f(0.0, 1.0, 0.0);
+fn DistributionGGX(NdotH : f32, roughness4 : f32) -> f32 {
+	let NdotH2 : f32 = NdotH * NdotH;
+	var denom : f32 = (NdotH2 * (roughness4 - 1.0) + 1.0);
+	denom = PI * denom * denom;
 
-    let NdotUp : f32 = dot(normal, vec3f(0.0, 1.0, 0.0));
-    let epsilon : f32 = 0.0000001;
-    if ((1.0 - abs(NdotUp)) <= epsilon)
-    {
-        // Sampling +Y or -Y, so we need a more robust bitangent.
-        if (NdotUp > 0.0)
-        {
-            bitangent = vec3f(0.0, 0.0, 1.0);
-        }
-        else
-        {
-            bitangent = vec3f(0.0, 0.0, -1.0);
-        }
-    }
-
-    let tangent : vec3f = normalize(cross(bitangent, normal));
-    bitangent = cross(normal, tangent);
-
-    return mat3x3<f32>(tangent, bitangent, normal);
+	return roughness4 / denom;
 }
 
 // https://github.com/KhronosGroup/glTF-Sample-Viewer/blob/main/source/shaders/ibl_filtering.frag#L217
-fn importance_sample_GGX(Xi : vec2f, N : vec3f, roughness : f32) -> vec4f
-{
-    let a : f32 = roughness * roughness;
-	
-    let cos_theta : f32 = clamp(sqrt((1.0 - Xi.y) / (1.0 + (a*a - 1.0) * Xi.y)), 0.0, 1.0);
-    let sin_theta : f32 = sqrt(1.0 - cos_theta * cos_theta);
+fn importance_sample_GGX(Xi : vec2f, roughness4 : f32) -> vec3f
+{	
     let phi : f32 = 2.0 * PI * Xi.x;
+    let cos_theta : f32 = clamp(sqrt((1.0 - Xi.y) / (1.0 + (roughness4 - 1.0) * Xi.y)), 0.0, 1.0);
+    let sin_theta : f32 = sqrt(1.0 - cos_theta * cos_theta);
 
-    let pdf : f32 = D_GGX(cos_theta, a) / 4.0;
-
-    let local_space_direction : vec3f = normalize(vec3(
+    let H : vec3f = vec3f(
         sin_theta * cos(phi), 
         sin_theta * sin(phi), 
         cos_theta
-    ));
+    );
 
-    let TBN : mat3x3<f32> = generateTBN(N);
-
-    let direction : vec3f = TBN * local_space_direction;
-	
-    return vec4f(direction, pdf);
+    return H;
 }
 
 fn RadicalInverse_VdC(bits_in : u32) -> f32
