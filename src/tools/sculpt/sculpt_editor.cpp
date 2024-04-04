@@ -94,41 +94,6 @@ void SculptEditor::initialize()
 
     init_ui();
 
-    if (Renderer::instance->get_openxr_available()) {
-        main_panel_3d = new Viewport3D(main_panel_2d);
-        RoomsEngine::entities.push_back(main_panel_3d);
-    }
-
-    // Load controller UI labels
-    if (Renderer::instance->get_openxr_available())
-    {
-        // Left hand
-        {
-            left_hand_container = new ui::VContainer2D("left_controller_root", { 0.0f, 0.f });
-
-            controller_labels[HAND_LEFT].secondary_button_label = new ui::ImageLabel2D("Change to Substract", "data/textures/buttons/y.png", 39.0f);
-            left_hand_container->add_child(controller_labels[HAND_LEFT].secondary_button_label);
-            /*controller_labels[HAND_LEFT].main_button_label = new ui::ImageLabel2D("Show UI", "data/textures/buttons/x.png", 30.0f);
-            left_hand_container->add_child(controller_labels[HAND_LEFT].main_button_label);*/
-
-            left_hand_ui_3D = new Viewport3D(left_hand_container);
-            RoomsEngine::entities.push_back(left_hand_ui_3D);
-        }
-
-        // Right hand
-        {
-            right_hand_container = new ui::VContainer2D("right_controller_root", { 0.0f, 0.f });
-
-            controller_labels[HAND_RIGHT].secondary_button_label = new ui::ImageLabel2D("Change to Stamp", "data/textures/buttons/b.png", 30.0f);
-            right_hand_container->add_child(controller_labels[HAND_RIGHT].secondary_button_label);
-            controller_labels[HAND_RIGHT].main_button_label = new ui::ImageLabel2D("Click on the UI", "data/textures/buttons/a.png", 30.0f);
-            right_hand_container->add_child(controller_labels[HAND_RIGHT].main_button_label);
-
-            right_hand_ui_3D = new Viewport3D(right_hand_container);
-            RoomsEngine::entities.push_back(right_hand_ui_3D);
-        }
-    }
-
     std::vector<Node3D*> entities;
     parse_gltf("data/meshes/controllers/meta_quest_controllers.glb", entities);
     controller_mesh_left = static_cast<MeshInstance3D*>(entities[0]);
@@ -669,7 +634,7 @@ void SculptEditor::render()
         main_panel_2d->render();
     }
 
-    if (controller_mesh_right)
+    if (renderer->get_openxr_available())
     {
         controller_mesh_right->render();
         controller_mesh_left->render();
@@ -867,7 +832,7 @@ bool SculptEditor::is_rotation_being_used()
 
 void SculptEditor::init_ui()
 {
-    main_panel_2d = new ui::HContainer2D("root", { 12.0f, 400.f });
+    main_panel_2d = new ui::HContainer2D("root", { 48.0f, 64.f });
 
     {
         {
@@ -1083,6 +1048,41 @@ void SculptEditor::init_ui()
             }
 
             main_panel_2d->add_child(g_utilities);
+        }
+    }
+
+    if (Renderer::instance->get_openxr_available()) {
+        main_panel_3d = new Viewport3D(main_panel_2d);
+        RoomsEngine::entities.push_back(main_panel_3d);
+    }
+
+    // Load controller UI labels
+    if (Renderer::instance->get_openxr_available())
+    {
+        // Left hand
+        {
+            left_hand_container = new ui::VContainer2D("left_controller_root", { 0.0f, 0.f });
+
+            controller_labels[HAND_LEFT].secondary_button_label = new ui::ImageLabel2D("Change to Substract", "data/textures/buttons/y.png", 39.0f);
+            left_hand_container->add_child(controller_labels[HAND_LEFT].secondary_button_label);
+            /*controller_labels[HAND_LEFT].main_button_label = new ui::ImageLabel2D("Show UI", "data/textures/buttons/x.png", 30.0f);
+            left_hand_container->add_child(controller_labels[HAND_LEFT].main_button_label);*/
+
+            left_hand_ui_3D = new Viewport3D(left_hand_container);
+            RoomsEngine::entities.push_back(left_hand_ui_3D);
+        }
+
+        // Right hand
+        {
+            right_hand_container = new ui::VContainer2D("right_controller_root", { 0.0f, 0.f });
+
+            controller_labels[HAND_RIGHT].secondary_button_label = new ui::ImageLabel2D("Change to Stamp", "data/textures/buttons/b.png", 30.0f);
+            right_hand_container->add_child(controller_labels[HAND_RIGHT].secondary_button_label);
+            controller_labels[HAND_RIGHT].main_button_label = new ui::ImageLabel2D("Click on the UI", "data/textures/buttons/a.png", 30.0f);
+            right_hand_container->add_child(controller_labels[HAND_RIGHT].main_button_label);
+
+            right_hand_ui_3D = new Viewport3D(right_hand_container);
+            RoomsEngine::entities.push_back(right_hand_ui_3D);
         }
     }
 }
