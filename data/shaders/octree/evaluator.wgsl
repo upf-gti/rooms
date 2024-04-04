@@ -161,7 +161,27 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     let y_range : vec2f = vec2f(octant_center.y - level_half_size, octant_center.y + level_half_size);
     let z_range : vec2f = vec2f(octant_center.z - level_half_size, octant_center.z + level_half_size);
 
-    surface_interval = octree.data[octree_index].octant_center_distance;
+    // For adition you can just use the intervals stored on the octree
+    // however, for smooth substraction there can be precision issues
+    // in the form of some bricks disappearing, and that can be solved by
+    // recomputing the context
+    if (current_stroke.operation == OP_SMOOTH_SUBSTRACTION) {
+        // Evaluating the edit context
+        for (var j : u32 = 0; j < stroke_history.count; j++) {
+            current_stroke = stroke_history.strokes[j];
+            for (var i : u32 = 0; i < current_stroke.edit_count; i++) {
+                var current_edit : Edit = current_stroke.edits[i];
+                var edit_interval : vec2f;
+
+                surface_interval = eval_edit_interval(x_range, y_range, z_range, current_stroke.primitive, current_stroke.operation, current_stroke.parameters, surface_interval, current_edit, &edit_interval);
+            }
+        }
+    } else {
+        surface_interval = octree.data[octree_index].octant_center_distance;
+    }
+
+
+    current_stroke = stroke;
 
     // Check the edits in the parent, and fill its own list with the edits that affect this child
     for (var i : u32 = 0; i < current_stroke.edit_count; i++) {
@@ -198,7 +218,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     // In order to compensate the lack of precision of the interval 
     // on smaller brick sizes, reduce the decision margin on treating the
     // current brick as a surface, by the margin of the smooth factor
-    let MARGIN_Y : f32 = max(0.0, f32(OCTREE_DEPTH) - 6.0) * SMOOTH_FACTOR;
+    let MARGIN_Y : f32 = SMOOTH_FACTOR;
 
     if (!is_evaluating_preview) {
         octree.data[octree_index].octant_center_distance = surface_interval;
@@ -226,6 +246,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                     indirect_brick_removal.brick_removal_buffer[brick_to_delete_idx] = instance_index;
                     octree_proxy_data.instance_data[instance_index].in_use = 0u;
                     octree.data[octree_index].tile_pointer = 0u;
+                    octree.data[octree_index].octant_center_distance = vec2f(10000.0, 10000.0);
                 } else {
                     octree.data[octree_index].tile_pointer = INTERIOR_BRICK_FLAG;
                     octree.data[octree_index].octant_center_distance = vec2f(-10000.0, -10000.0);
@@ -251,6 +272,19 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 }
                 
                 octant_usage_write[prev_counter] = octree_index;
+            }
+        } else if (current_stroke.operation == OP_SMOOTH_SUBSTRACTION) {
+            if (is_current_brick_filled) {
+                    // If its inside the new_edits, and the brick is filled, we delete it
+                    let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
+                    let instance_index : u32 = octree.data[octree_index].tile_pointer & OCTREE_TILE_INDEX_MASK;
+                    indirect_brick_removal.brick_removal_buffer[brick_to_delete_idx] = instance_index;
+                    octree_proxy_data.instance_data[instance_index].in_use = 0u;
+                    octree.data[octree_index].tile_pointer = 0u;
+                    octree.data[octree_index].octant_center_distance = vec2f(10000.0, 10000.0);
+            } else {
+                octree.data[octree_index].tile_pointer = 0u;
+                octree.data[octree_index].octant_center_distance = vec2f(10000.0, 10000.0);
             }
         }
         

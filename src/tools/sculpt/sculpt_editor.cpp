@@ -52,10 +52,10 @@ void SculptEditor::initialize()
     // Initialize default primitive states
     {
         primitive_default_states[SD_SPHERE]     = { glm::vec4(0.02f, 0.0f, 0.0f, 0.0f) };
-        primitive_default_states[SD_BOX]        = { glm::vec4(0.02f, 0.02f, 0.02f, 0.0f) };
-        primitive_default_states[SD_CONE]       = { glm::vec4(0.05f, 0.0f, 0.0f, 0.03f) };
-        primitive_default_states[SD_CYLINDER]   = { glm::vec4(0.05f, 0.0f, 0.0f, 0.03f) };
-        primitive_default_states[SD_CAPSULE]    = { glm::vec4(0.05f, 0.0f, 0.0f, 0.03f) };
+        primitive_default_states[SD_BOX]        = { glm::vec4(0.02f, 0.02f, 0.02f, 0.0f) * 3.0f };
+        primitive_default_states[SD_CONE]       = { glm::vec4(0.05f, 0.0f, 0.0f, 0.03f) * 3.0f };
+        primitive_default_states[SD_CYLINDER]   = { glm::vec4(0.05f, 0.0f, 0.0f, 0.03f) * 3.0f };
+        primitive_default_states[SD_CAPSULE]    = { glm::vec4(0.05f, 0.0f, 0.0f, 0.03f) * 3.0f };
         primitive_default_states[SD_TORUS]      = { glm::vec4(0.03f, 0.0f, 0.0f, 0.01f) };
         primitive_default_states[SD_BEZIER]     = { glm::vec4(0.0) };
     }
@@ -290,6 +290,11 @@ void SculptEditor::initialize()
             }
 
             main_panel_2d->add_child(material_submenu);
+        }
+
+        {
+            ui::TextureButton2D* addition_toggle = new ui::TextureButton2D("addition_toggle", "data/textures/snap_to_surface.png", ui::ALLOW_TOGGLE);
+            main_panel_2d->add_child(addition_toggle);
         }
 
         {
@@ -1096,6 +1101,14 @@ void SculptEditor::bind_events()
         Node::bind("onion_value", [&](const std::string& signal, float value) { set_onion_modifier(value); });
         Node::bind("capped", [&](const std::string& signal, void* button) { toggle_capped_modifier(); });
         Node::bind("cap_value", [&](const std::string& signal, float value) { set_cap_modifier(value); });
+
+        Node::bind("addition_toggle", [&](const std::string& signal, void* button) {
+            if (stroke_parameters.get_operation() == OP_SMOOTH_UNION) {
+                stroke_parameters.set_operation(OP_SMOOTH_SUBSTRACTION);
+            } else {
+                stroke_parameters.set_operation(OP_SMOOTH_UNION);
+            }
+        });
 
         Node::bind("mirror_toggle", [&](const std::string& signal, void* button) { use_mirror = !use_mirror; });
         Node::bind("mirror_translation", [&](const std::string& signal, void* button) { mirror_gizmo.set_mode(eGizmoType::POSITION_GIZMO); });
