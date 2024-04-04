@@ -17,7 +17,7 @@ struct CubeMapUVL {
     layer: u32,
 }
 
-const SAMPLE_COUNT = 256u;
+const SAMPLE_COUNT = 1024u;
 
 // https://github.com/KhronosGroup/glTF-Sample-Viewer/blob/main/source/shaders/ibl_filtering.frag#L257
 // Mipmap Filtered Samples (GPU Gems 3, 20.4)
@@ -60,6 +60,11 @@ fn directionFromCubeMapUVL(uvl: CubeMapUVL) -> vec3f {
             return vec3f(0.0); // should not happen
         }
     }
+}
+
+fn luma(color : vec3f) -> f32
+{
+    return dot(color, vec3f(0.299, 0.587, 0.114));
 }
 
 // https://github.com/eliemichel/LearnWebGPU-Code/blob/step222/resources/compute-shader.wgsl#L448
