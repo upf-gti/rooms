@@ -72,7 +72,9 @@
 
     TODO:
      - Redo edit culling with interval arithmetic.
-     - Union operation interior brick check
+     - Redo preview
+     - Re-test reevaluation
+     - Add back the constants for the ifs
 */
 
 fn is_inside_AABB(point : vec3f, aabb_min : vec3f, aabb_max : vec3f) -> bool {
@@ -139,19 +141,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     // } else {
          
     //  }
-
-    let is_smooth_paint : bool = current_stroke.operation == OP_SMOOTH_PAINT;
-    let is_paint : bool = current_stroke.operation == OP_PAINT; 
-    
-    let is_union : bool = current_stroke.operation == OP_UNION;
-    let is_smooth_union : bool = current_stroke.operation == OP_SMOOTH_UNION;
-    let is_any_union : bool = is_union || is_smooth_union;
-
-    let is_substract : bool = current_stroke.operation == OP_SUBSTRACTION;
-    let is_smooth_substract : bool = current_stroke.operation == OP_SMOOTH_SUBSTRACTION;
-    let is_any_substract : bool = is_substract || is_smooth_substract;
-
-    let is_any_smooth : bool = is_smooth_substract || is_smooth_paint || is_smooth_union;
     
     let octant_min : vec3f = octant_center - vec3f(level_half_size);
     let octant_max : vec3f = octant_center + vec3f(level_half_size);
@@ -159,7 +148,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     let is_in_reevaluation_zone : bool = intersection_AABB_AABB(merge_data.reevaluation_AABB_min, merge_data.reevaluation_AABB_max, octant_min, octant_max);
 
     var current_stroke_interval : vec2f = vec2f(10000.0, 10000.0);
-    var surface_interval = vec2f(10000.0, 10000.0); // (octree.data[octree_index].octant_center_distance);
+    var surface_interval = vec2f(10000.0, 10000.0);
     var edit_counter : u32 = 0;
 
     var new_packed_edit_idx : u32 = 0;
@@ -172,18 +161,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     let y_range : vec2f = vec2f(octant_center.y - level_half_size, octant_center.y + level_half_size);
     let z_range : vec2f = vec2f(octant_center.z - level_half_size, octant_center.z + level_half_size);
 
-    // Evaluating the edit context
-    for (var j : u32 = 0; j < stroke_history.count; j++) {
-        current_stroke = stroke_history.strokes[j];
-        for (var i : u32 = 0; i < current_stroke.edit_count; i++) {
-            var current_edit : Edit = current_stroke.edits[i];
-            var edit_interval : vec2f;
-
-            surface_interval = eval_edit_interval(x_range, y_range, z_range, current_stroke.primitive, current_stroke.operation, current_stroke.parameters, surface_interval, current_edit, &edit_interval);
-        }
-    }
-
-    current_stroke = stroke;
+    surface_interval = octree.data[octree_index].octant_center_distance;
 
     // Check the edits in the parent, and fill its own list with the edits that affect this child
     for (var i : u32 = 0; i < current_stroke.edit_count; i++) {
@@ -204,15 +182,23 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
         surface_interval = eval_edit_interval(x_range, y_range, z_range, current_stroke.primitive, current_stroke.operation, current_stroke.parameters, surface_interval, current_edit, &edit_interval);
 
-        current_edit.dimensions += vec4f(SMOOTH_FACTOR);  
-
-        current_stroke_interval = eval_edit_interval(x_range, y_range, z_range, current_stroke.primitive, OP_UNION, current_stroke.parameters, current_stroke_interval, current_edit, &edit_interval);
+        if (level < OCTREE_DEPTH) {
+            current_edit.dimensions += vec4f(SMOOTH_FACTOR);  
+            current_stroke_interval = eval_edit_interval(x_range, y_range, z_range, current_stroke.primitive, OP_UNION, current_stroke.parameters, current_stroke_interval, current_edit, &edit_interval);
+        }
     }
 
     let is_current_brick_filled : bool = (octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG;
     let is_interior_brick : bool = (octree.data[octree_index].tile_pointer & INTERIOR_BRICK_FLAG) == INTERIOR_BRICK_FLAG;
 
+    // Do not evaluate all the bricks, only the ones whose distance interval has changed
     var needs_eval : bool = abs(length(octree.data[octree_index].octant_center_distance - surface_interval)) > 0.0001;
+
+    // THE ONLY HACK
+    // In order to compensate the lack of precision of the interval 
+    // on smaller brick sizes, reduce the decision margin on treating the
+    // current brick as a surface, by the margin of the smooth factor
+    let MARGIN_Y : f32 = max(0.0, f32(OCTREE_DEPTH) - 6.0) * SMOOTH_FACTOR;
 
     if (!is_evaluating_preview) {
         octree.data[octree_index].octant_center_distance = surface_interval;
@@ -232,7 +218,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         }
     } else {
          if (surface_interval.x < 0.0) {
-            if (surface_interval.y < -0.0) { // For fixigin lack of precision on smooth operations
+            if (surface_interval.y < -MARGIN_Y) { // For fixigin lack of precision on smooth operations
                 if (is_current_brick_filled) {
                     // If its inside the new_edits, and the brick is filled, we delete it
                     let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
@@ -262,8 +248,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                     } else {
                         octree.data[octree_index].tile_pointer = instance_index;
                     }
-
-                    //octree.data[octree_index].tile_pointer = instance_index;
                 }
                 
                 octant_usage_write[prev_counter] = octree_index;
