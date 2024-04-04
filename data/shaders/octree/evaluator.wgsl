@@ -200,11 +200,11 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         var current_edit : Edit = current_stroke.edits[i];
         var edit_interval : vec2f;
 
-        surface_interval = eval_edit_interval(x_range, y_range, z_range, current_stroke.primitive, current_stroke.operation, current_stroke.parameters, surface_interval, current_edit, &edit_interval);
-
         if (level < OCTREE_DEPTH) {
             current_edit.dimensions += vec4f(SMOOTH_FACTOR);  
             current_stroke_interval = eval_edit_interval(x_range, y_range, z_range, current_stroke.primitive, OP_UNION, current_stroke.parameters, current_stroke_interval, current_edit, &edit_interval);
+        } else {
+            surface_interval = eval_edit_interval(x_range, y_range, z_range, current_stroke.primitive, current_stroke.operation, current_stroke.parameters, surface_interval, current_edit, &edit_interval);
         }
     }
 

@@ -309,9 +309,11 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
     // Compute the list of edits that influence teh current one
     std::vector<Stroke> influence_edits;
 
+    uint32_t stroke_edit_count = 0u;
     AABB strokes_aabb;
     for (uint16_t i = 0u; i < strokes.size(); i++) {
         strokes_aabb = merge_aabbs(strokes_aabb, strokes[i].get_world_AABB());
+        stroke_edit_count += strokes[i].edit_count;
     }
 
     // Increase 1 texel the bounding box, in order to not exclude bricks
@@ -320,14 +322,22 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
     // Get the strokes that are on the region of the undo
     stroke_influence_list.stroke_count = 0u;
      Stroke intersection_stroke;
+     uint32_t reevaluate_edit_count = 0u;
     for (uint32_t i = 0u; i < stroke_history.size(); i++) {
         stroke_history[i].get_AABB_intersecting_stroke(strokes_aabb, intersection_stroke);
 
         if (intersection_stroke.edit_count > 0u) {
+            reevaluate_edit_count += intersection_stroke.edit_count;
             stroke_influence_list.strokes[stroke_influence_list.stroke_count++] = intersection_stroke;
         }
     }
 
+    current_stroke.get_AABB_intersecting_stroke(strokes_aabb, intersection_stroke);
+    if (intersection_stroke.edit_count > 0u) {
+        reevaluate_edit_count += intersection_stroke.edit_count;
+        stroke_influence_list.strokes[stroke_influence_list.stroke_count++] = intersection_stroke;
+    }
+    spdlog::info("Stroke count {}, stroke edit count: {}, context size {}, total edit count: {}", strokes.size(), stroke_edit_count, stroke_influence_list.stroke_count, reevaluate_edit_count);
     // Can be done once
     {
 
