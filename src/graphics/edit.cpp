@@ -160,8 +160,6 @@ AABB Stroke::get_edit_world_AABB(const uint8_t edit_index) const
 
     glm::vec3 pure_edit_half_size = get_edit_world_half_size(edit_index);
 
-    // TODO: Add smooth margin
-
     glm::quat edit_rotation = { 0.0, 0.0, 0.0, 1.0 };
 
     const Edit& edit = edits[edit_index];
@@ -196,7 +194,7 @@ AABB Stroke::get_edit_world_AABB(const uint8_t edit_index) const
         rotated_min_size.z = glm::min(rotated_min_size.z, axis[i].z);
     }
 
-    const glm::vec3 edit_half_size = (rotated_max_size - rotated_min_size) / 2.0f;
+    const glm::vec3 edit_half_size = (rotated_max_size - rotated_min_size);
 
     return { aabb_center, edit_half_size };
 }
