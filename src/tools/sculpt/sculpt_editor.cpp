@@ -95,7 +95,8 @@ void SculptEditor::initialize()
     init_ui();
 
     std::vector<Node3D*> entities;
-    parse_gltf("data/meshes/controllers/meta_quest_controllers.glb", entities);
+    parse_gltf("data/meshes/controllers/left_controller.glb", entities);
+    parse_gltf("data/meshes/controllers/right_controller.glb", entities);
     controller_mesh_left = static_cast<MeshInstance3D*>(entities[0]);
     controller_mesh_right = static_cast<MeshInstance3D*>(entities[1]);
 
@@ -381,15 +382,17 @@ void SculptEditor::update(float delta_time)
         if (Renderer::instance->get_openxr_available())
         {
             glm::mat4x4 pose = Input::get_controller_pose(HAND_RIGHT);
-            pose = glm::rotate(pose, glm::radians(-50.f), glm::vec3(1.0f, 0.0f, 0.0f));
+            //pose = glm::rotate(pose, glm::radians(-50.f), glm::vec3(1.0f, 0.0f, 0.0f));
             controller_mesh_right->set_model(pose);
-            pose = glm::rotate(pose, glm::radians(-60.f), glm::vec3(1.0f, 0.0f, 0.0f));
+            pose = glm::rotate(pose, glm::radians(-120.f), glm::vec3(1.0f, 0.0f, 0.0f));
+            pose = glm::translate(pose, glm::vec3(0.02f, 0.0f, 0.02f));
             right_hand_ui_3D->set_model(pose);
 
             pose = Input::get_controller_pose(HAND_LEFT);
-            pose = glm::rotate(pose, glm::radians(-50.f), glm::vec3(1.0f, 0.0f, 0.0f));
+            //pose = glm::rotate(pose, glm::radians(0.f), glm::vec3(1.0f, 0.0f, 0.0f));
             controller_mesh_left->set_model(pose);
-            pose = glm::rotate(pose, glm::radians(-60.f), glm::vec3(1.0f, 0.0f, 0.0f));
+            pose = glm::rotate(pose, glm::radians(-120.f), glm::vec3(1.0f, 0.0f, 0.0f));
+            pose = glm::translate(pose, glm::vec3(0.02f, 0.0f, 0.02f));
             left_hand_ui_3D->set_model(pose);
         }
     }
