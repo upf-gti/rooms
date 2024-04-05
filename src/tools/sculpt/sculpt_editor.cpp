@@ -52,10 +52,10 @@ void SculptEditor::initialize()
     // Initialize default primitive states
     {
         primitive_default_states[SD_SPHERE]     = { glm::vec4(0.02f, 0.0f, 0.0f, 0.0f) };
-        primitive_default_states[SD_BOX]        = { glm::vec4(0.02f, 0.02f, 0.02f, 0.0f) * 3.0f };
-        primitive_default_states[SD_CONE]       = { glm::vec4(0.05f, 0.0f, 0.0f, 0.03f) * 3.0f };
-        primitive_default_states[SD_CYLINDER]   = { glm::vec4(0.05f, 0.0f, 0.0f, 0.03f) * 3.0f };
-        primitive_default_states[SD_CAPSULE]    = { glm::vec4(0.05f, 0.0f, 0.0f, 0.03f) * 3.0f };
+        primitive_default_states[SD_BOX]        = { glm::vec4(0.02f, 0.02f, 0.02f, 0.0f) * 5.0f };
+        primitive_default_states[SD_CONE]       = { glm::vec4(0.05f, 0.0f, 0.0f, 0.03f) * 5.0f };
+        primitive_default_states[SD_CYLINDER]   = { glm::vec4(0.05f, 0.0f, 0.0f, 0.03f) * 5.0f };
+        primitive_default_states[SD_CAPSULE]    = { glm::vec4(0.05f, 0.0f, 0.0f, 0.03f) * 5.0f };
         primitive_default_states[SD_TORUS]      = { glm::vec4(0.03f, 0.0f, 0.0f, 0.01f) };
         primitive_default_states[SD_BEZIER]     = { glm::vec4(0.0) };
     }
@@ -736,6 +736,11 @@ void SculptEditor::update(float delta_time)
     // Push to the renderer the edits and the previews
     renderer->push_preview_edit_list(preview_tmp_edits);
     renderer->push_edit_list(new_edits);
+
+   /* for (uint8_t i = 0; i < 5 && new_edits.size() > 0; i++) {
+        edit_to_add.position = glm::vec3(glm::vec3(0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1)));
+        renderer->push_edit(edit_to_add);
+    }*/
 
     was_tool_used = is_tool_used;
 }

@@ -402,106 +402,106 @@ fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters
             }
             break;
         }
-        case SD_BOX: {
-            onion_thickness = map_thickness( onion_thickness, size.x );
-            size_param = (size_param / 0.1) * size.x; // Make Rounding depend on the side length
+        // case SD_BOX: {
+        //     onion_thickness = map_thickness( onion_thickness, size.x );
+        //     size_param = (size_param / 0.1) * size.x; // Make Rounding depend on the side length
 
-            // Compensate onion size (Substract from box radius bc onion will add it later...)
-            size -= onion_thickness;
-            size -= size_param;
-            size_param -= onion_thickness;
+        //     // Compensate onion size (Substract from box radius bc onion will add it later...)
+        //     size -= onion_thickness;
+        //     size -= size_param;
+        //     size_param -= onion_thickness;
 
-            pSurface = sdBox(position, edit.position, edit.rotation, size, size_param, stroke_material);
-            break;
-        }
-        case SD_CAPSULE: {
-            onion_thickness = map_thickness( onion_thickness, size_param );
-            size_param -= onion_thickness; // Compensate onion size
-            var height = radius; // ...
-            pSurface = sdCapsule(position, edit.position, edit.position - vec3f(0.0, 0.0, height), edit.rotation, size_param, stroke_material);
-            break;
-        }
-        case SD_CONE: {
-            onion_thickness = map_thickness( onion_thickness, 0.01 );
-            radius = max(radius * (1.0 - cap_value), 0.0025);
-            var dims = vec2f(size_param, size_param * cap_value);
-            pSurface = sdCone(position, edit.position, radius, edit.rotation, dims, stroke_material);
-            break;
-        }
-        // case SD_PYRAMID: {
-        //     pSurface = sdPyramid(position, edit.position, edit.rotation, radius, size_param, edit_color);
+        //     pSurface = sdBox(position, edit.position, edit.rotation, size, size_param, stroke_material);
         //     break;
         // }
-        case SD_CYLINDER: {
-            onion_thickness = map_thickness( onion_thickness, size_param );
-            size_param -= onion_thickness; // Compensate onion size
-            pSurface = sdCylinder(position, edit.position, edit.rotation, size_param, radius, 0.0, stroke_material);
-            break;
-        }
-        case SD_TORUS: {
-            onion_thickness = map_thickness( onion_thickness, size_param );
-            size_param -= onion_thickness; // Compensate onion size
-            size_param = clamp( size_param, 0.0001, radius );
-            if(cap_value > 0.0) {
-                var an = M_PI * (1.0 - cap_value);
-                var angles = vec2f(sin(an), cos(an));
-                pSurface = sdCappedTorus(position, edit.position, vec2f(radius, size_param), edit.rotation, angles, stroke_material);
-            } else {
-                pSurface = sdTorus(position, edit.position, vec2f(radius, size_param), edit.rotation, stroke_material);
-            }
-            break;
-        }
-        case SD_BEZIER: {
-            var curve_thickness : f32 = 0.01;
-            pSurface = sdQuadraticBezier(position, edit.position, edit.position + vec3f(0.1, 0.2, 0.0), edit.position + vec3f(0.2, 0.0, 0.0), curve_thickness, edit.rotation, stroke_material);
-            break;
-        }
+        // case SD_CAPSULE: {
+        //     onion_thickness = map_thickness( onion_thickness, size_param );
+        //     size_param -= onion_thickness; // Compensate onion size
+        //     var height = radius; // ...
+        //     pSurface = sdCapsule(position, edit.position, edit.position - vec3f(0.0, 0.0, height), edit.rotation, size_param, stroke_material);
+        //     break;
+        // }
+        // case SD_CONE: {
+        //     onion_thickness = map_thickness( onion_thickness, 0.01 );
+        //     radius = max(radius * (1.0 - cap_value), 0.0025);
+        //     var dims = vec2f(size_param, size_param * cap_value);
+        //     pSurface = sdCone(position, edit.position, radius, edit.rotation, dims, stroke_material);
+        //     break;
+        // }
+        // // case SD_PYRAMID: {
+        // //     pSurface = sdPyramid(position, edit.position, edit.rotation, radius, size_param, edit_color);
+        // //     break;
+        // // }
+        // case SD_CYLINDER: {
+        //     onion_thickness = map_thickness( onion_thickness, size_param );
+        //     size_param -= onion_thickness; // Compensate onion size
+        //     pSurface = sdCylinder(position, edit.position, edit.rotation, size_param, radius, 0.0, stroke_material);
+        //     break;
+        // }
+        // case SD_TORUS: {
+        //     onion_thickness = map_thickness( onion_thickness, size_param );
+        //     size_param -= onion_thickness; // Compensate onion size
+        //     size_param = clamp( size_param, 0.0001, radius );
+        //     if(cap_value > 0.0) {
+        //         var an = M_PI * (1.0 - cap_value);
+        //         var angles = vec2f(sin(an), cos(an));
+        //         pSurface = sdCappedTorus(position, edit.position, vec2f(radius, size_param), edit.rotation, angles, stroke_material);
+        //     } else {
+        //         pSurface = sdTorus(position, edit.position, vec2f(radius, size_param), edit.rotation, stroke_material);
+        //     }
+        //     break;
+        // }
+        // case SD_BEZIER: {
+        //     var curve_thickness : f32 = 0.01;
+        //     pSurface = sdQuadraticBezier(position, edit.position, edit.position + vec3f(0.1, 0.2, 0.0), edit.position + vec3f(0.2, 0.0, 0.0), curve_thickness, edit.rotation, stroke_material);
+        //     break;
+        // }
         default: {
             break;
         }
     }
 
-    // Shape edition ...
-    if( do_onion && (operation == OP_UNION || operation == OP_SMOOTH_UNION) )
-    {
-        pSurface = opOnion(pSurface, onion_thickness);
-    }
+    // // Shape edition ...
+    // if( do_onion && (operation == OP_UNION || operation == OP_SMOOTH_UNION) )
+    // {
+    //     pSurface = opOnion(pSurface, onion_thickness);
+    // }
 
     pSurface.material = stroke_material;
 
     switch (operation) {
-        case OP_UNION: {
-            pSurface = opUnion(current_surface, pSurface);
-            break;
-        }
-        case OP_SUBSTRACTION:{
-            pSurface = opSubtraction(current_surface, pSurface);
-            break;
-        }
-        case OP_INTERSECTION: {
-            pSurface = opIntersection(current_surface, pSurface);
-            break;
-        }
-        case OP_PAINT: {
-            pSurface = opPaint(current_surface, pSurface, stroke_material);
-            break;
-        }
+        // case OP_UNION: {
+        //     pSurface = opUnion(current_surface, pSurface);
+        //     break;
+        // }
+        // case OP_SUBSTRACTION:{
+        //     pSurface = opSubtraction(current_surface, pSurface);
+        //     break;
+        // }
+        // case OP_INTERSECTION: {
+        //     pSurface = opIntersection(current_surface, pSurface);
+        //     break;
+        // }
+        // case OP_PAINT: {
+        //     pSurface = opPaint(current_surface, pSurface, stroke_material);
+        //     break;
+        // }
         case OP_SMOOTH_UNION: {
             pSurface = opSmoothUnion(current_surface, pSurface, smooth_factor);
             break;
         }
-        case OP_SMOOTH_SUBSTRACTION: {
-            pSurface = opSmoothSubtraction(current_surface, pSurface, smooth_factor);
-            break;
-        }
-        case OP_SMOOTH_INTERSECTION: {
-            pSurface = opSmoothIntersection(current_surface, pSurface, smooth_factor);
-            break;
-        }
-        case OP_SMOOTH_PAINT: {
-            pSurface = opSmoothPaint(current_surface, pSurface, stroke_material, smooth_factor);
-            break;
-        }
+        // case OP_SMOOTH_SUBSTRACTION: {
+        //     pSurface = opSmoothSubtraction(current_surface, pSurface, smooth_factor);
+        //     break;
+        // }
+        // case OP_SMOOTH_INTERSECTION: {
+        //     pSurface = opSmoothIntersection(current_surface, pSurface, smooth_factor);
+        //     break;
+        // }
+        // case OP_SMOOTH_PAINT: {
+        //     pSurface = opSmoothPaint(current_surface, pSurface, stroke_material, smooth_factor);
+        //     break;
+        // }
         default: {
             break;
         }

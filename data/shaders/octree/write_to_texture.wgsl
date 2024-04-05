@@ -73,15 +73,16 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
     // If the MSb is setted we load the previous data of brick
     // if not, we set it for the next iteration
-    if ((FILLED_BRICK_FLAG & brick_pointer) == FILLED_BRICK_FLAG) {
-        // let sample : vec4f = textureLoad(write_sdf, texture_coordinates);
-        // sSurface.distance = sample.r;
-        // let raw_color : vec4<u32> = textureLoad(write_material_sdf, texture_coordinates);
+    // if ((FILLED_BRICK_FLAG & brick_pointer) == FILLED_BRICK_FLAG) {
+    //     // let sample : vec4f = textureLoad(write_sdf, texture_coordinates);
+    //     // sSurface.distance = sample.r;
+    //     // let raw_color : vec4<u32> = textureLoad(write_material_sdf, texture_coordinates);
 
-        // let material : Material = unpack_material(u32(raw_color.r));
-        // sSurface.material = material;
-    } 
-    else if ((INTERIOR_BRICK_FLAG & brick_pointer) == INTERIOR_BRICK_FLAG) {
+    //     // let material : Material = unpack_material(u32(raw_color.r));
+    //     // sSurface.material = material;
+    // } 
+    // else 
+    if ((INTERIOR_BRICK_FLAG & brick_pointer) == INTERIOR_BRICK_FLAG) {
         sSurface.distance = -100.0;
     }
 
@@ -100,7 +101,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
         var current_stroke = stroke_history.strokes[j];
         for (var i : u32 = 0; i < current_stroke.edit_count; i++) {
             var current_edit : Edit = current_stroke.edits[i];
-            var edit_interval : vec2f;
 
             curr_surface = evaluate_edit(pos, current_stroke.primitive, current_stroke.operation, current_stroke.parameters, curr_surface, material, current_edit);
             //current_edit.dimensions += vec4f(current_stroke.parameters.w, 0.0, 0.0, 0.0);  

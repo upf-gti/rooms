@@ -50,7 +50,7 @@ struct Edit {
     dummy0     : f32,
     dimensions : vec4f,
     rotation   : vec4f,
-    //padding : vec4f
+    padding : vec4f
 };
 
 struct StrokeMaterial {
@@ -71,6 +71,7 @@ struct Stroke {
     operation       : u32,
     parameters      : vec4f,
     dummy      : vec4f,
+    dummy1      : vec4f,
     material        : StrokeMaterial,   // 48 bytes
     edits           : array<Edit, MAX_EDITS_PER_EVALUATION>
 };
@@ -80,6 +81,9 @@ struct StrokeHistory {
     pad0:u32,
     pad1:u32,
     pad2:u32,
+    pad12: vec4f,
+    pad22: vec4f,
+    pad32: vec4f,
     strokes : array<Stroke, STROKE_HISTORY_MAX_SIZE>
 };
 
