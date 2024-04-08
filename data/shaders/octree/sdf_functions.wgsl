@@ -373,6 +373,151 @@ fn map_thickness( t : f32, v_max : f32 ) -> f32
     return select( 0.0, max(t * v_max * 0.375, 0.003), t > 0.0);
 }
 
+// TODO(Juan): Onion
+// SPHERE SDFS ================
+fn eval_stroke_sphere_substraction( position : vec3f, parameters : vec4f, current_surface : Surface, stroke_index : u32) -> Surface {
+    var result_surface : Surface = current_surface;
+    var tmp_surface : Surface;
+    let smooth_factor : f32 = parameters.w;
+
+    let curr_stroke = &(stroke_history.strokes[stroke_index]);
+    let edit_array = &(*curr_stroke.edits);
+    let edit_count : u32 = (*curr_stroke).edit_count;
+    let stroke_material = (*curr_stroke).material;
+
+    for(var i : u32 = 0u; i < edit_count; i++) {
+        let curr_edit : Edit = edit[i];
+        let radius : f32 = curr_edit.dimensions.x;
+        tmp_surface = sdSphere(position, curr_edit.position, radius, stroke_material);
+        result_surface = opSmoothSubtraction(tmp_surface, result_surface, smooth_factor);
+    }
+    
+    return result_surface;
+}
+
+fn eval_stroke_sphere_union( position : vec3f, parameters : vec4f, current_surface : Surface, stroke_index : u32) -> Surface {
+    var result_surface : Surface = current_surface;
+    var tmp_surface : Surface;
+    let smooth_factor : f32 = parameters.w;
+
+    let curr_stroke = &(stroke_history.strokes[stroke_index]);
+    let edit_array = &(*curr_stroke.edits);
+    let edit_count : u32 = (*curr_stroke).edit_count;
+    let stroke_material = (*curr_stroke).material;
+
+    for(var i : u32 = 0u; i < edit_count; i++) {
+        let curr_edit : Edit = edit[i];
+        let radius : f32 = curr_edit.dimensions.x;
+        tmp_surface = sdSphere(position, curr_edit.position, radius, stroke_material);
+        result_surface = opSmoothUnion(tmp_surface, result_surface, smooth_factor);
+    }
+    
+    return result_surface;
+}
+
+// BOX SDFS ================
+fn eval_stroke_box_substract( position : vec3f, parameters : vec4f, current_surface : Surface, stroke_index : u32) -> Surface {
+    var result_surface : Surface = current_surface;
+    var tmp_surface : Surface;
+    
+    let smooth_factor : f32 = parameters.w;
+
+    let curr_stroke = &(stroke_history.strokes[stroke_index]);
+    let edit_array = &(*curr_stroke.edits);
+    let edit_count : u32 = (*curr_stroke).edit_count;
+    let stroke_material = (*curr_stroke).material;
+
+    for(var i : u32 = 0u; i < edit_count; i++) {
+        let curr_edit : Edit = edit[i];
+        let radius : f32 = curr_edit.dimensions.x;
+        var size : vec3f = curr_edit.dimensions.xyz;
+        let size_param = (edit.dimensions.w / 0.1) * size.x; // Make Rounding depend on the side length
+        size -= size_param;
+
+        tmp_surface = sdBox(position, curr_edit.position, curr_edit.rotation, size, size_param, stroke_material);
+        result_surface = opSmoothSubtraction(tmp_surface, result_surface, smooth_factor);
+    }
+
+    return result_surface;
+}
+
+fn eval_stroke_box_union( position : vec3f, parameters : vec4f, current_surface : Surface, stroke_index : u32) -> Surface {
+    var result_surface : Surface = current_surface;
+    var tmp_surface : Surface;
+    
+    let smooth_factor : f32 = parameters.w;
+
+    let curr_stroke = &(stroke_history.strokes[stroke_index]);
+    let edit_array = &(*curr_stroke.edits);
+    let edit_count : u32 = (*curr_stroke).edit_count;
+    let stroke_material = (*curr_stroke).material;
+
+    for(var i : u32 = 0u; i < edit_count; i++) {
+        let curr_edit : Edit = edit[i];
+        let radius : f32 = curr_edit.dimensions.x;
+        var size : vec3f = curr_edit.dimensions.xyz;
+        let size_param = (edit.dimensions.w / 0.1) * size.x; // Make Rounding depend on the side length
+        size -= size_param;
+
+        tmp_surface = sdBox(position, curr_edit.position, curr_edit.rotation, size, size_param, stroke_material);
+        result_surface = opSmoothUnion(tmp_surface, result_surface, smooth_factor);
+    }
+
+    return result_surface;
+}
+
+
+// CONE SDFS ================
+fn eval_stroke_cone_substract( position : vec3f, parameters : vec4f, current_surface : Surface, stroke_index : u32) -> Surface {
+    var result_surface : Surface = current_surface;
+    var tmp_surface : Surface;
+    
+    let smooth_factor : f32 = parameters.w;
+    let cap_value : f32 = parameters.y;
+
+    let curr_stroke = &(stroke_history.strokes[stroke_index]);
+    let edit_array = &(*curr_stroke.edits);
+    let edit_count : u32 = (*curr_stroke).edit_count;
+    let stroke_material = (*curr_stroke).material;
+
+    for(var i : u32 = 0u; i < edit_count; i++) {
+        let curr_edit : Edit = edit[i];
+        let radius : f32 = max(curr_edit.dimensions.x * (1.0 - cap_value), 0.0025);;
+        let dims = vec2f(size_param, size_param * cap_value);
+        size -= size_param;
+
+        tmp_surface = sdCone(position, curr_edit.position, radius, curr_edit.rotation, dims, stroke_material);
+        result_surface = opSmoothSubstraction(tmp_surface, result_surface, smooth_factor);
+    }
+
+    return result_surface;
+}
+
+fn eval_stroke_cone_union( position : vec3f, parameters : vec4f, current_surface : Surface, stroke_index : u32) -> Surface {
+    var result_surface : Surface = current_surface;
+    var tmp_surface : Surface;
+    
+    let smooth_factor : f32 = parameters.w;
+    let cap_value : f32 = parameters.y;
+
+    let curr_stroke = &(stroke_history.strokes[stroke_index]);
+    let edit_array = &(*curr_stroke.edits);
+    let edit_count : u32 = (*curr_stroke).edit_count;
+    let stroke_material = (*curr_stroke).material;
+
+    for(var i : u32 = 0u; i < edit_count; i++) {
+        let curr_edit : Edit = edit[i];
+        let radius : f32 = max(curr_edit.dimensions.x * (1.0 - cap_value), 0.0025);;
+        let dims = vec2f(size_param, size_param * cap_value);
+        size -= size_param;
+
+        tmp_surface = sdCone(position, curr_edit.position, radius, curr_edit.rotation, dims, stroke_material);
+        result_surface = opSmoothUnion(tmp_surface, result_surface, smooth_factor);
+    }
+
+    return result_surface;
+}
+
 fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters : vec4f, current_surface : Surface, stroke_material : Material, edit : Edit) -> Surface
 {
     var pSurface : Surface;
