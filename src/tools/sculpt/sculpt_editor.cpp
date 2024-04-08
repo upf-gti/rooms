@@ -28,6 +28,8 @@ void SculptEditor::initialize()
     mirror_mesh->scale(glm::vec3(0.25f));
 
     Material mirror_material;
+    mirror_material.priority = 0;
+    mirror_material.transparency_type = ALPHA_BLEND;
     mirror_material.diffuse_texture = RendererStorage::get_texture("data/textures/mirror_quad_texture.png");
     mirror_material.shader = RendererStorage::get_shader("data/shaders/mesh_texture.wgsl", mirror_material);
 
@@ -40,6 +42,7 @@ void SculptEditor::initialize()
     floor_grid_mesh->scale(glm::vec3(10.f));
 
     Material grid_material;
+    grid_material.priority = 100;
     grid_material.transparency_type = ALPHA_BLEND;
     grid_material.shader = RendererStorage::get_shader("data/shaders/mesh_grid.wgsl", grid_material);
 
