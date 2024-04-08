@@ -43,7 +43,7 @@ fn fs_main(in: SkyboxVertexOutput) -> FragmentOutput {
     var view = normalize(in.world_position - camera_data.eye);
 
     var out: FragmentOutput;
-    var final_color : vec3f = textureSampleLevel(irradiance_texture, sampler_clamp, in.vertex_position, 0.0).rgb;
+    var final_color : vec3f = textureSampleLevel(irradiance_texture, sampler_clamp, in.vertex_position, 1.0).rgb;
     
     final_color = tonemap_khronos_pbr_neutral(final_color);
 
