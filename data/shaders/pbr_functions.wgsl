@@ -28,7 +28,12 @@ fn V_SmithGGXCorrelated(NoV : f32, NoL : f32, roughness : f32) -> f32
     let a2 : f32 = pow(roughness, 4.0);
     let GGXV : f32 = NoL * sqrt(NoV * NoV * (1.0 - a2) + a2);
     let GGXL : f32 = NoV * sqrt(NoL * NoL * (1.0 - a2) + a2);
-    return 0.5 / (GGXV + GGXL);
+    let GGX : f32 = GGXV + GGXL;
+    if(GGX > 0.0)
+    {
+        return 0.5 / GGX;
+    }
+    return 0.0;
 }
 
 fn GeometrySmith(N : vec3f, V : vec3f, L : vec3f, roughness : f32) -> f32
@@ -95,19 +100,41 @@ fn Hammersley(i : u32, N : u32) -> vec2f
     return vec2f(f32(i)/ f32(N), RadicalInverse_VdC(i));
 }  
 
-fn fresnelSchlick(n_dot_v : f32, F0 : vec3f) -> vec3f
+fn F_Schlick(f0 : vec3f, f90 : vec3f, VdotH : f32) -> vec3f
 {
-    return F0 + (vec3f(1.0) - F0) * pow(clamp(1.0 - n_dot_v, 0.0, 1.0), 5.0);
+    return f0 + (f90 - f0) * pow(clamp(1.0 - VdotH, 0.0, 1.0), 5.0);
 }
 
-fn Fresnel_Schlick( specular_color : vec3f, h : vec3f, v : vec3f) -> vec3f
-{
-    return (specular_color + (1.0 - specular_color) * pow((1.0 - saturate(dot(v, h))), 5.0));
-}
+// fn fresnelSchlick(n_dot_v : f32, F0 : vec3f) -> vec3f
+// {
+//     return F0 + (vec3f(1.0) - F0) * pow(clamp(1.0 - n_dot_v, 0.0, 1.0), 5.0);
+// }
+
+// fn Fresnel_Schlick( specular_color : vec3f, h : vec3f, v : vec3f) -> vec3f
+// {
+//     return (specular_color + (1.0 - specular_color) * pow((1.0 - saturate(dot(v, h))), 5.0));
+// }
 
 fn FresnelSchlickRoughness(n_dot_v : f32, F0 : vec3f, roughness : f32) -> vec3f
 {
     return F0 + (max(vec3f(1.0 - roughness), F0) - F0) * pow(1.0 - n_dot_v, 5.0);
+}
+
+//  https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#acknowledgments AppendixB
+fn BRDF_specularGGX(f0 : vec3f, f90 : vec3f, alpha_roughness : f32, specular_weight : f32, VdotH : f32, NdotL : f32, NdotV : f32, NdotH : f32) -> vec3f
+{
+    let F : vec3f = F_Schlick(f0, f90, VdotH);
+    let Vis : f32 = V_SmithGGXCorrelated(NdotV, NdotL, alpha_roughness);
+    let D : f32 = D_GGX(NdotH, alpha_roughness);
+
+    return specular_weight * F * Vis * D;
+}
+
+//https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#acknowledgments AppendixB
+fn BRDF_lambertian(f0 : vec3f, f90 : vec3f, diffuse_color : vec3f, specular_weight : f32, VdotH : f32) -> vec3f
+{
+    // see https://seblagarde.wordpress.com/2012/01/08/pi-or-not-to-pi-in-game-lighting-equation/
+    return (1.0 - specular_weight * F_Schlick(f0, f90, VdotH)) * (diffuse_color / PI);
 }
 
 // http://www.thetenthplanet.de/archives/1180

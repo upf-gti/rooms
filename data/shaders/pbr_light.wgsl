@@ -1,6 +1,27 @@
 
 // Lights
 
+const LIGHT_DIRECTIONAL = 0;
+const LIGHT_OMNI        = 1;
+const LIGHT_SPOT        = 2;
+
+struct Light
+{
+    position : vec3f,
+    ltype : u32,
+
+    color : vec3f,
+    intensity : f32,
+
+    direction : vec3f,
+    range : f32,
+
+    // spots
+    inner_cone_cos : f32,
+    outer_cone_cos : f32,
+    dummy: vec2f
+};
+
 struct LitMaterial
 {
     pos : vec3f,
@@ -8,7 +29,9 @@ struct LitMaterial
     albedo : vec3f,
     emissive : vec3f,
     f0 : vec3f,
+    f90 : vec3f,
     c_diff : vec3f,
+    specular_weight: f32,
     metallic : f32,
     roughness : f32,
     ao : f32,
@@ -16,41 +39,106 @@ struct LitMaterial
     reflected_dir : vec3f
 };
 
-// fn get_direct_light( m : LitMaterial, shadow_factor : vec3f, attenuation : f32) -> vec3f
-// {
-//     var N : vec3f = normalize(m.normal);
-//     var V : vec3f = normalize(m.view_dir);
+// debug
+const LIGHT_COUNT = 1;
 
-//     var F0 : vec3f = m.specular_color;
+// https://github.com/KhronosGroup/glTF/blob/master/extensions/2.0/Khronos/KHR_lights_punctual/README.md#range-property
+fn get_range_attenuation(range : f32, dist : f32) -> f32
+{
+    if (range <= 0.0)
+    {
+        // negative range means unlimited
+        return 1.0 / pow(dist, 2.0);
+    }
+    return max(min(1.0 - pow(dist / range, 4.0), 1.0), 0.0) / pow(dist, 2.0);
+}
 
-//     // hardcoded!!
-//     let light_position = vec3f(0.2, 0.5, 1.0);
-//     let light_color = vec3f(1.0);
-//     let light_intensity = 5.0;
+// https://github.com/KhronosGroup/glTF/blob/master/extensions/2.0/Khronos/KHR_lights_punctual/README.md#inner-and-outer-cone-angles
+fn get_spot_attenuation(point_to_light : vec3f, spot_direction : vec3f, outer_cone_cos : f32, inner_cone_cos : f32) -> f32
+{
+    let actual_cos : f32 = dot(normalize(spot_direction), normalize(-point_to_light));
+    if (actual_cos > outer_cone_cos)
+    {
+        if (actual_cos < inner_cone_cos)
+        {
+            let angular_attenuation : f32 = (actual_cos - outer_cone_cos) / (inner_cone_cos - outer_cone_cos);
+            return angular_attenuation * angular_attenuation;
+        }
+        return 1.0;
+    }
+    return 0.0;
+}
 
-//     // calculate light radiance
-//     var L : vec3f = normalize(light_position - m.pos);
-//     var H : vec3f = normalize(V + L);
-//     var radiance : vec3f = light_color * light_intensity * attenuation * shadow_factor;
+fn get_light_intensity(light : Light, point_to_light : vec3f) -> vec3f
+{
+    var range_attenuation : f32 = 1.0;
+    var spot_attenuation : f32 = 1.0;
 
-//     // Cook-Torrance BRDF
-//     var NDF : f32 = DistributionGGX2(N, H, m.roughness);
-//     var G : f32 = GeometrySmith(N, V, L, m.roughness);
-//     var F : vec3f = fresnelSchlick(max(dot(H, V), 0.0), F0);
+    if (light.ltype != LIGHT_DIRECTIONAL) {
 
-//     var numerator : vec3f  = NDF * G * F;
-//     var denominator : f32 = 4 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001; // + 0.0001 to prevent divide by zero
-//     var specular : vec3f = numerator / denominator;
+        range_attenuation = get_range_attenuation(light.range, length(point_to_light));
 
-//     var k_s : vec3f = F;
-//     var k_d : vec3f = vec3f(1.0) - k_s;
+        if (light.ltype == LIGHT_SPOT) {
+            spot_attenuation = get_spot_attenuation(point_to_light, light.direction, light.outer_cone_cos, light.inner_cone_cos);
+        }
+    }
 
-//     var NdotL : f32 = max(dot(N, L), 0.0);
+    return range_attenuation * spot_attenuation * light.intensity * light.color;
+}
 
-//     var final_color : vec3f = ((k_d * Diffuse(m.diffuse_color)) + specular) * radiance * NdotL;
+fn get_direct_light( m : LitMaterial ) -> vec3f
+{
+    var f_diffuse : vec3f = vec3f(0.0);
+    var f_specular : vec3f = vec3f(0.0);
 
-//     return final_color;
-// }
+    var n : vec3f = normalize(m.normal);
+    var v : vec3f = normalize(m.view_dir);
+
+    for (var i : u32 = 0; i < LIGHT_COUNT; i++)
+    {
+        var light : Light;// = scene_lights[i];
+
+        // debug
+        light.ltype = LIGHT_OMNI;
+        light.position = vec3f(0.2, 0.5, 1.0);
+        light.direction = vec3f(0.2, 0.5, 0.6);
+        light.color = vec3f(0.0, 0.0, 1.0);
+        light.intensity = 1.0;
+        light.range = 5;
+        //
+
+        var point_to_light : vec3f;
+
+        if ( light.ltype == LIGHT_DIRECTIONAL ) {
+            point_to_light = -light.direction;
+        }
+        else {
+            point_to_light = light.position - m.pos;
+        }
+
+        // BSTF
+        let l : vec3f = normalize(point_to_light);   // Direction from surface point to light
+        let h : vec3f = normalize(l + v);          // Direction of the vector between l and v, called halfway vector
+
+        let NdotL : f32 = clamp(dot(n, l), 0.0, 1.0);
+        let NdotV : f32 = clamp(dot(n, v), 0.0, 1.0);
+        let NdotH : f32 = clamp(dot(n, h), 0.0, 1.0);
+        let LdotH : f32 = clamp(dot(l, h), 0.0, 1.0);
+        let VdotH : f32 = clamp(dot(v, h), 0.0, 1.0);
+
+        if (NdotL > 0.0 || NdotV > 0.0)
+        {
+            // Calculation of analytical light
+            // https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#acknowledgments AppendixB
+
+            let intensity : vec3f = get_light_intensity(light, point_to_light);
+            f_diffuse += intensity * NdotL * BRDF_lambertian(m.f0, m.f90, m.c_diff, m.specular_weight, VdotH);
+            f_specular += intensity * NdotL * BRDF_specularGGX(m.f0, m.f90, m.roughness * m.roughness, m.specular_weight, VdotH, NdotL, NdotV, NdotH);
+        }
+    }
+
+    return f_diffuse + f_specular;
+}
 
 // https://github.com/KhronosGroup/glTF-Sample-Viewer/blob/main/source/Renderer/shaders/ibl.glsl
 fn get_indirect_light( m : LitMaterial ) -> vec3f
