@@ -737,10 +737,10 @@ void SculptEditor::update(float delta_time)
     renderer->push_preview_edit_list(preview_tmp_edits);
     renderer->push_edit_list(new_edits);
 
-    for (uint8_t i = 0; i < 60 && new_edits.size() > 0; i++) {
+   /* for (uint8_t i = 0; i < 60 && new_edits.size() > 0; i++) {
         edit_to_add.position = glm::vec3(glm::vec3(0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1)));
         renderer->push_edit(edit_to_add);
-    }
+    }*/
 
     was_tool_used = is_tool_used;
 }
