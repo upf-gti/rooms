@@ -4,6 +4,10 @@
 @group(0) @binding(6) var<storage, read_write> proxy_box_indirect : OctreeProxyIndirect;
 @group(0) @binding(8) var<storage, read_write> indirect_brick_removal : IndirectBrickRemoval;
 
+/**
+    Cuando despues de hacer varios undo, y llegas al final, este shader se encarga de limpiar el octree
+    y vaciar los bricks que queden, para dejarlo todo como al arrancar el editor.
+*/
 
 @compute @workgroup_size(8, 8, 8)
 fn compute(@builtin(workgroup_id) id: vec3<u32>, @builtin(local_invocation_index) local_id: u32)

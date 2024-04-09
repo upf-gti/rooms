@@ -17,6 +17,18 @@
 @group(3) @binding(0) var<storage, read_write> preview_data : PreviewData;
 
 /*
+    Este shader es el responsable de subdividir el espacio, para una evaluacion mas eficaz de SDFs.
+    La estructra de subdivision es de forma de octree y la idea es ir suprimiendo zonas que no tienen superficie (dentro o fuera de la SDF).
+    La subdivision se hace usando arithmetica de intervalos, y este shader se ejecutara una vez por cada "piso" de
+    octree, hasta llegar a el tamano minimo de los "bricks" en la escena y mandara a escribir en el atlas 3D
+    solo las areas que contengan superfice de la SDF.
+    Al ser el encargado de determinar los bricks de la superficie, este shader se encarga de crear bricks y sus instancias,
+    y tambien de marcarlos para ser borrados posteriormente.
+
+    Tambien se usa para calcular el preview, subdividiendo de manera normal, pero se salta el paso del write_to_texture,
+    ya que es algo que cambia frame a frame. Simplemente se rellenan las posiciones de las instancias de los bricks de preview
+    y se marcan que bricks de nuestra superficie estan interactuando con el preview.
+    
     Octree Octant indexing
         - 3 bits per each layer, describes 8 octants.
         - With a u32 up to 10 layers -> This gives us indexing in an octree with 1024^3 leaves (10 layers).
@@ -185,18 +197,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
     // Check the edits in the parent, and fill its own list with the edits that affect this child
     for (var i : u32 = 0; i < current_stroke.edit_count; i++) {
-        // Accessing a packed indexed edit in the culling list:
-
-        // Get the word index and the word: word_idx = idx / 4
-        // let current_packed_edit_idx : u32 = edit_culling_data.edit_culling_lists[i / 4 + parent_octree_index * PACKED_LIST_SIZE];
-        // //Get the in-word index (inverted for endianess coherency)
-        // let packed_index : u32 = 3 - (i % 4);
-
-        // // Bit-sift for getting the 8 bits that indicate the in-word index:
-        // //   First, move a 8 bit mask so it coincides with the 8 bits that we want
-        // //   then apply the mask, and swift the result so the 8 bits are at the start of the word -> unpacked index & profit
-        // let current_unpacked_edit_idx : u32 = (current_packed_edit_idx & (0xFFu << (packed_index * 8u))) >> (packed_index * 8u);
-
         var current_edit : Edit = current_stroke.edits[i];
         var edit_interval : vec2f;
 

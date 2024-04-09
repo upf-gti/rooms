@@ -3,6 +3,12 @@
 @group(0) @binding(2) var<storage, read_write> octree : Octree;
 @group(0) @binding(5) var<storage, read_write> octree_proxy_data : OctreeProxyInstances;
 
+/**
+    Este shader se encarga de recorrer todas las render instances de los bricks de
+    superficie y quitar la flag de que tiene preview, para que se renove en la siguiente
+    pasada del evaluador para el preview.
+*/
+
 @compute @workgroup_size(8u, 8u, 8u)
 fn compute(@builtin(workgroup_id) id: vec3<u32>, @builtin(local_invocation_index) local_id: u32)
 {

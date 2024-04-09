@@ -18,10 +18,25 @@
 
 var<workgroup> used_pixels : atomic<u32>;
 
+/**
+    Este shader se ejecuta despues de la ultima pasada del evaluador, y su funcion es evaluar y escribir en el
+    Atlas 3D la SDF, para que pueda ser renderizada mas eficientemente.
+    Este shader utiliza llamadas de work group de tamano de 10x10x10, ya que cada hilo escribe un texel
+    en el Atlas.
+    En cada hilo, evaluamos primero el "contexto" del stroke actual (que es todos los edits a su alrededor que 
+    pueden influir) para luego evaular el stroke actual. Esto es importante para que la evaluacion Smooth 
+    influencie correctamente a las SDFs de alrededor y las del entorno influyan a la nueva SDF.
+    Este shader escribe a las 2 texturas del Atlas, a la que almacena distancias y la que almacena materiales.
+    
+    Despues de evaluar todos los threads, el shader cuenta cuantos texeles se han escrito dentro o fuera
+    de la superficie, y si el resultado es o todos (1000 texeles) o ninguno (0 texeles), el brick no tiene
+    superficeie y se marca para su borrado. Esto puede pasar por problemas de precision de los intervalos
+    del evaluador.
+*/
+
 fn intersection_AABB_AABB(b1_min : vec3f, b1_max : vec3f, b2_min : vec3f, b2_max : vec3f) -> bool {
     return (b1_min.x <= b2_max.x && b1_min.y <= b2_max.y && b1_min.z <= b2_max.z) && (b1_max.x >= b2_min.x && b1_max.y >= b2_min.y && b1_max.z >= b2_min.z);
 }
-
 
 const delta_pos_world = array<vec3f, 9>(
     vec3f(PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER),

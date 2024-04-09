@@ -541,7 +541,7 @@ fn eval_stroke_cone_union( position : vec3f, current_surface : Surface, curr_str
     return result_surface;
 }
 
-// CONE SDFS ================
+// CAPSULE SDFS ================
 fn eval_stroke_capsule_substraction( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>) -> Surface {
     var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
