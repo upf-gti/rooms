@@ -71,17 +71,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     material.roughness = stroke.material.roughness;
     material.metalness = stroke.material.metallic;
 
-    // If the MSb is setted we load the previous data of brick
-    // if not, we set it for the next iteration
-    // if ((FILLED_BRICK_FLAG & brick_pointer) == FILLED_BRICK_FLAG) {
-    //     // let sample : vec4f = textureLoad(write_sdf, texture_coordinates);
-    //     // sSurface.distance = sample.r;
-    //     // let raw_color : vec4<u32> = textureLoad(write_material_sdf, texture_coordinates);
-
-    //     // let material : Material = unpack_material(u32(raw_color.r));
-    //     // sSurface.material = material;
-    // } 
-    // else 
     if ((INTERIOR_BRICK_FLAG & brick_pointer) == INTERIOR_BRICK_FLAG) {
         sSurface.distance = -100.0;
     }
@@ -96,47 +85,13 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     var curr_surface : Surface = sSurface;
     let pos = octant_center + pixel_offset;
 
-        // Evaluating the edit context
+    // Evaluating the edit context
     for (var j : u32 = 0; j < stroke_history.count; j++) {
-        var current_stroke = stroke_history.strokes[j];
-        for (var i : u32 = 0; i < current_stroke.edit_count; i++) {
-            var current_edit : Edit = current_stroke.edits[i];
-
-            curr_surface = evaluate_edit(pos, current_stroke.primitive, current_stroke.operation, current_stroke.parameters, curr_surface, material, current_edit);
-            //current_edit.dimensions += vec4f(current_stroke.parameters.w, 0.0, 0.0, 0.0);  
-
-            //current_stroke_interval = eval_edit_interval(x_range, y_range, z_range, current_stroke.primitive, current_stroke.operation, current_stroke.parameters, current_stroke_interval, current_edit, &edit_interval);
-        }
+        curr_surface = evaluate_edit_2(pos, &(stroke_history.strokes[j]), curr_surface);
     }
 
-        // Traverse the according edits and evaluate them in the brick
-        for (var i : u32 = 0; i < stroke.edit_count; i++) {
-            // Get the packed indices
-            // let current_packed_edit_idx : u32 = edit_culling_data.edit_culling_lists[i / 4 + parent_octree_index * PACKED_LIST_SIZE];
-            // let packed_index : u32 = 3 - (i % 4);
-            // let current_unpacked_edit_idx : u32 = (current_packed_edit_idx & (0xFFu << (packed_index * 8u))) >> (packed_index * 8u);
-            let edit = stroke.edits[i];
-            
-
-            // // Rust example.. ??
-
-            // let stroke_color : vec3f = stroke.material.color.xyz;
-            
-            // let noise_color : vec3f = stroke.material.noise_color.xyz;
-            // let noise_intensity : f32 = stroke.material.noise_params.x;
-            // let noise_freq : f32 = stroke.material.noise_params.y;
-            // let noise_octaves : u32 = u32(stroke.material.noise_params.z);
-
-            // var noise_value = fbm( pos, vec3f(0.0), noise_freq, noise_intensity, noise_octaves );
-            // noise_value = clamp(noise_value, 0.0, 1.0);
-
-            material.albedo = stroke.material.color.xyz;
-            material.roughness = stroke.material.roughness;
-            material.metalness = stroke.material.metallic;
-
-            curr_surface = evaluate_edit(pos, stroke.primitive, stroke.operation, stroke.parameters, curr_surface, material, edit);
-        }
-
+    // Evaluate current stroke
+    curr_surface = evaluate_edit_2(pos, &(stroke), curr_surface);
 
     result_surface = curr_surface;
 

@@ -22,6 +22,13 @@ const OP_SMOOTH_SUBSTRACTION    = 5;
 const OP_SMOOTH_INTERSECTION    = 6;
 const OP_SMOOTH_PAINT           = 7;
 
+const SD_SPHERE_SMOOTH_OP_SUBSTRACTION = SD_SPHERE | (OP_SMOOTH_SUBSTRACTION<<4);
+const SD_SPHERE_SMOOTH_OP_UNION = SD_SPHERE | (OP_SMOOTH_UNION << 4);
+const SD_CONE_SMOOTH_OP_SUBSTRACTION = SD_CONE | (OP_SMOOTH_SUBSTRACTION << 4);
+const SD_CONE_SMOOTH_OP_UNION = SD_CONE | (OP_SMOOTH_UNION << 4);
+const SD_BOX_SMOOTH_OP_SUBSTRACTION = SD_BOX | (OP_SMOOTH_SUBSTRACTION << 4);
+const SD_BOX_SMOOTH_OP_UNION = SD_BOX | (OP_SMOOTH_UNION << 4);
+
 // Data containers
 struct Material {
     albedo      : vec3f,
@@ -34,7 +41,7 @@ struct Surface {
     distance    : f32
 };
 
-// Material operation functions
+// Material operation storages
 fn Material_mult_by(m : Material, v : f32) -> Material {
     return Material(m.albedo * v, m.roughness * v, m.metalness * v);
 }
@@ -374,41 +381,47 @@ fn map_thickness( t : f32, v_max : f32 ) -> f32
 }
 
 // TODO(Juan): Onion
+// TODO(Juan): Unify materials
 // SPHERE SDFS ================
-fn eval_stroke_sphere_substraction( position : vec3f, parameters : vec4f, current_surface : Surface, stroke_index : u32) -> Surface {
+fn eval_stroke_sphere_substraction( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>) -> Surface {
     var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
-    let smooth_factor : f32 = parameters.w;
 
-    let curr_stroke = &(stroke_history.strokes[stroke_index]);
-    let edit_array = &(*curr_stroke.edits);
+    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
     let edit_count : u32 = (*curr_stroke).edit_count;
     let stroke_material = (*curr_stroke).material;
+    let parameters : vec4f = (*curr_stroke).parameters;
+
+    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+
+    let smooth_factor : f32 = parameters.w;
 
     for(var i : u32 = 0u; i < edit_count; i++) {
-        let curr_edit : Edit = edit[i];
+        let curr_edit : Edit = edit_array[i];
         let radius : f32 = curr_edit.dimensions.x;
-        tmp_surface = sdSphere(position, curr_edit.position, radius, stroke_material);
+        tmp_surface = sdSphere(position, curr_edit.position, radius, material);
         result_surface = opSmoothSubtraction(tmp_surface, result_surface, smooth_factor);
     }
     
     return result_surface;
 }
 
-fn eval_stroke_sphere_union( position : vec3f, parameters : vec4f, current_surface : Surface, stroke_index : u32) -> Surface {
+fn eval_stroke_sphere_union( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>) -> Surface {
     var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
-    let smooth_factor : f32 = parameters.w;
 
-    let curr_stroke = &(stroke_history.strokes[stroke_index]);
-    let edit_array = &(*curr_stroke.edits);
+    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
     let edit_count : u32 = (*curr_stroke).edit_count;
     let stroke_material = (*curr_stroke).material;
+    let parameters : vec4f = (*curr_stroke).parameters;
+
+    let smooth_factor : f32 = parameters.w;
+    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
 
     for(var i : u32 = 0u; i < edit_count; i++) {
-        let curr_edit : Edit = edit[i];
+        let curr_edit : Edit = edit_array[i];
         let radius : f32 = curr_edit.dimensions.x;
-        tmp_surface = sdSphere(position, curr_edit.position, radius, stroke_material);
+        tmp_surface = sdSphere(position, curr_edit.position, radius, material);
         result_surface = opSmoothUnion(tmp_surface, result_surface, smooth_factor);
     }
     
@@ -416,50 +429,52 @@ fn eval_stroke_sphere_union( position : vec3f, parameters : vec4f, current_surfa
 }
 
 // BOX SDFS ================
-fn eval_stroke_box_substract( position : vec3f, parameters : vec4f, current_surface : Surface, stroke_index : u32) -> Surface {
+fn eval_stroke_box_substraction( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>) -> Surface {
     var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
     
-    let smooth_factor : f32 = parameters.w;
-
-    let curr_stroke = &(stroke_history.strokes[stroke_index]);
-    let edit_array = &(*curr_stroke.edits);
+    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
     let edit_count : u32 = (*curr_stroke).edit_count;
     let stroke_material = (*curr_stroke).material;
+    let parameters : vec4f = (*curr_stroke).parameters;
+
+    let smooth_factor : f32 = parameters.w;
+    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
 
     for(var i : u32 = 0u; i < edit_count; i++) {
-        let curr_edit : Edit = edit[i];
+        let curr_edit : Edit = edit_array[i];
         let radius : f32 = curr_edit.dimensions.x;
         var size : vec3f = curr_edit.dimensions.xyz;
-        let size_param = (edit.dimensions.w / 0.1) * size.x; // Make Rounding depend on the side length
+        let size_param = (curr_edit.dimensions.w / 0.1) * size.x; // Make Rounding depend on the side length
         size -= size_param;
 
-        tmp_surface = sdBox(position, curr_edit.position, curr_edit.rotation, size, size_param, stroke_material);
+        tmp_surface = sdBox(position, curr_edit.position, curr_edit.rotation, size, size_param, material);
         result_surface = opSmoothSubtraction(tmp_surface, result_surface, smooth_factor);
     }
 
     return result_surface;
 }
 
-fn eval_stroke_box_union( position : vec3f, parameters : vec4f, current_surface : Surface, stroke_index : u32) -> Surface {
+fn eval_stroke_box_union( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>) -> Surface {
     var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
     
-    let smooth_factor : f32 = parameters.w;
-
-    let curr_stroke = &(stroke_history.strokes[stroke_index]);
-    let edit_array = &(*curr_stroke.edits);
+    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
     let edit_count : u32 = (*curr_stroke).edit_count;
     let stroke_material = (*curr_stroke).material;
+    let parameters : vec4f = (*curr_stroke).parameters;
+
+    let smooth_factor : f32 = parameters.w;
+    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
 
     for(var i : u32 = 0u; i < edit_count; i++) {
-        let curr_edit : Edit = edit[i];
+        let curr_edit : Edit = edit_array[i];
         let radius : f32 = curr_edit.dimensions.x;
         var size : vec3f = curr_edit.dimensions.xyz;
-        let size_param = (edit.dimensions.w / 0.1) * size.x; // Make Rounding depend on the side length
+        let size_param = (curr_edit.dimensions.w / 0.1) * size.x; // Make Rounding depend on the side length
         size -= size_param;
 
-        tmp_surface = sdBox(position, curr_edit.position, curr_edit.rotation, size, size_param, stroke_material);
+        tmp_surface = sdBox(position, curr_edit.position, curr_edit.rotation, size, size_param, material);
         result_surface = opSmoothUnion(tmp_surface, result_surface, smooth_factor);
     }
 
@@ -468,51 +483,92 @@ fn eval_stroke_box_union( position : vec3f, parameters : vec4f, current_surface 
 
 
 // CONE SDFS ================
-fn eval_stroke_cone_substract( position : vec3f, parameters : vec4f, current_surface : Surface, stroke_index : u32) -> Surface {
+fn eval_stroke_cone_substraction( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>) -> Surface {
     var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
-    
-    let smooth_factor : f32 = parameters.w;
-    let cap_value : f32 = parameters.y;
 
-    let curr_stroke = &(stroke_history.strokes[stroke_index]);
-    let edit_array = &(*curr_stroke.edits);
+    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
     let edit_count : u32 = (*curr_stroke).edit_count;
     let stroke_material = (*curr_stroke).material;
+    let parameters : vec4f = (*curr_stroke).parameters;
+
+    let smooth_factor : f32 = parameters.w;
+    let cap_value : f32 = parameters.y;
+    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
 
     for(var i : u32 = 0u; i < edit_count; i++) {
-        let curr_edit : Edit = edit[i];
-        let radius : f32 = max(curr_edit.dimensions.x * (1.0 - cap_value), 0.0025);;
+        let curr_edit : Edit = edit_array[i];
+        let radius : f32 = max(curr_edit.dimensions.x * (1.0 - cap_value), 0.0025);
+        let size_param : f32 = curr_edit.dimensions.w;
         let dims = vec2f(size_param, size_param * cap_value);
-        size -= size_param;
 
-        tmp_surface = sdCone(position, curr_edit.position, radius, curr_edit.rotation, dims, stroke_material);
-        result_surface = opSmoothSubstraction(tmp_surface, result_surface, smooth_factor);
+        tmp_surface = sdCone(position, curr_edit.position, radius, curr_edit.rotation, dims, material);
+        result_surface = opSmoothSubtraction(tmp_surface, result_surface, smooth_factor);
     }
 
     return result_surface;
 }
 
-fn eval_stroke_cone_union( position : vec3f, parameters : vec4f, current_surface : Surface, stroke_index : u32) -> Surface {
+fn eval_stroke_cone_union( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>) -> Surface {
     var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
+
+    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
+    let edit_count : u32 = (*curr_stroke).edit_count;
+    let stroke_material  = (*curr_stroke).material;
+    let parameters : vec4f = (*curr_stroke).parameters;
     
     let smooth_factor : f32 = parameters.w;
     let cap_value : f32 = parameters.y;
-
-    let curr_stroke = &(stroke_history.strokes[stroke_index]);
-    let edit_array = &(*curr_stroke.edits);
-    let edit_count : u32 = (*curr_stroke).edit_count;
-    let stroke_material = (*curr_stroke).material;
+    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
 
     for(var i : u32 = 0u; i < edit_count; i++) {
-        let curr_edit : Edit = edit[i];
-        let radius : f32 = max(curr_edit.dimensions.x * (1.0 - cap_value), 0.0025);;
+        let curr_edit : Edit = edit_array[i];
+        let radius : f32 = max(curr_edit.dimensions.x * (1.0 - cap_value), 0.0025);
+        let size_param : f32 = curr_edit.dimensions.w;
         let dims = vec2f(size_param, size_param * cap_value);
-        size -= size_param;
 
-        tmp_surface = sdCone(position, curr_edit.position, radius, curr_edit.rotation, dims, stroke_material);
+        tmp_surface = sdCone(position, curr_edit.position, radius, curr_edit.rotation, dims, material);
         result_surface = opSmoothUnion(tmp_surface, result_surface, smooth_factor);
+    }
+
+    return result_surface;
+}
+
+fn evaluate_edit_2( position: vec3f, stroke: ptr<storage, Stroke, read>, current_surface : Surface) -> Surface {
+    let stroke_operation : u32 = (*stroke).operation;
+    let stroke_primitive : u32 = (*stroke).primitive;
+
+    let curr_stroke_code : u32 = stroke_primitive | (stroke_operation << 4u);
+
+    var result_surface : Surface = current_surface;
+
+    switch(curr_stroke_code) {
+        case SD_SPHERE_SMOOTH_OP_UNION: {
+            result_surface = eval_stroke_sphere_union(position, result_surface, stroke);
+            break;
+        }
+        case SD_SPHERE_SMOOTH_OP_SUBSTRACTION:{
+            result_surface = eval_stroke_sphere_substraction(position, result_surface, stroke);
+            break;
+        }
+        case SD_BOX_SMOOTH_OP_UNION: {
+            result_surface = eval_stroke_box_union(position, result_surface, stroke);
+            break;
+        }
+        case SD_BOX_SMOOTH_OP_SUBSTRACTION: {
+            result_surface = eval_stroke_box_substraction(position, result_surface, stroke);
+            break;
+        }
+        case SD_CONE_SMOOTH_OP_UNION: {
+            result_surface = eval_stroke_cone_union(position, result_surface, stroke);
+            break;
+        }
+        case SD_CONE_SMOOTH_OP_SUBSTRACTION: {
+            result_surface = eval_stroke_cone_substraction(position, result_surface, stroke);
+            break;
+        }
+        default: {}
     }
 
     return result_surface;
