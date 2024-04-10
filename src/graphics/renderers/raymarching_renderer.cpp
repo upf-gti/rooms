@@ -76,23 +76,15 @@ void RaymarchingRenderer::update(float delta_time)
     //}
 
 #ifndef DISABLE_RAYMARCHER
-    if (Input::is_mouse_pressed(GLFW_MOUSE_BUTTON_RIGHT)) {
+    if (Input::is_mouse_pressed(GLFW_MOUSE_BUTTON_RIGHT))
+    {
         RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
         WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
 
         Camera* camera = rooms_renderer->get_camera();
-        const glm::mat4x4& view_projection_inv = glm::inverse(camera->get_view_projection());
+        glm::vec3 ray_dir = camera->screen_to_ray(Input::get_mouse_position());
 
-        glm::vec2 mouse_pos = Input::get_mouse_position();
-        glm::vec3 mouse_pos_ndc;
-        mouse_pos_ndc.x = (mouse_pos.x / webgpu_context->render_width) * 2.0f - 1.0f;
-        mouse_pos_ndc.y = -((mouse_pos.y / webgpu_context->render_height) * 2.0f - 1.0f);
-        mouse_pos_ndc.z = 1.0f;
-
-        glm::vec4 ray_dir = view_projection_inv * glm::vec4(mouse_pos_ndc, 1.0f);
-        ray_dir /= ray_dir.w;
-
-        octree_ray_intersect(camera->get_eye(), glm::normalize(glm::vec3(ray_dir)));
+        octree_ray_intersect(camera->get_eye(), glm::normalize(ray_dir));
     }
 #endif
 
