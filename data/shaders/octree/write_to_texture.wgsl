@@ -34,21 +34,21 @@ var<workgroup> used_pixels : atomic<u32>;
     del evaluador.
 */
 
-fn intersection_AABB_AABB(b1_min : vec3f, b1_max : vec3f, b2_min : vec3f, b2_max : vec3f) -> bool {
-    return (b1_min.x <= b2_max.x && b1_min.y <= b2_max.y && b1_min.z <= b2_max.z) && (b1_max.x >= b2_min.x && b1_max.y >= b2_min.y && b1_max.z >= b2_min.z);
-}
+// fn intersection_AABB_AABB(b1_min : vec3f, b1_max : vec3f, b2_min : vec3f, b2_max : vec3f) -> bool {
+//     return (b1_min.x <= b2_max.x && b1_min.y <= b2_max.y && b1_min.z <= b2_max.z) && (b1_max.x >= b2_min.x && b1_max.y >= b2_min.y && b1_max.z >= b2_min.z);
+// }
 
-const delta_pos_world = array<vec3f, 9>(
-    vec3f(PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER),
-    vec3f(PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER, -PIXEL_WORLD_SIZE_QUARTER),
-    vec3f(PIXEL_WORLD_SIZE_QUARTER, -PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER),
-    vec3f(PIXEL_WORLD_SIZE_QUARTER, -PIXEL_WORLD_SIZE_QUARTER, -PIXEL_WORLD_SIZE_QUARTER),
-    vec3f(-PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER),
-    vec3f(-PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER, -PIXEL_WORLD_SIZE_QUARTER),
-    vec3f(-PIXEL_WORLD_SIZE_QUARTER, -PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER),
-    vec3f(-PIXEL_WORLD_SIZE_QUARTER, -PIXEL_WORLD_SIZE_QUARTER, -PIXEL_WORLD_SIZE_QUARTER),
-    vec3f(0.0, 0.0, 0.0),
-);
+// const delta_pos_world = array<vec3f, 9>(
+//     vec3f(PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER),
+//     vec3f(PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER, -PIXEL_WORLD_SIZE_QUARTER),
+//     vec3f(PIXEL_WORLD_SIZE_QUARTER, -PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER),
+//     vec3f(PIXEL_WORLD_SIZE_QUARTER, -PIXEL_WORLD_SIZE_QUARTER, -PIXEL_WORLD_SIZE_QUARTER),
+//     vec3f(-PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER),
+//     vec3f(-PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER, -PIXEL_WORLD_SIZE_QUARTER),
+//     vec3f(-PIXEL_WORLD_SIZE_QUARTER, -PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER),
+//     vec3f(-PIXEL_WORLD_SIZE_QUARTER, -PIXEL_WORLD_SIZE_QUARTER, -PIXEL_WORLD_SIZE_QUARTER),
+//     vec3f(0.0, 0.0, 0.0),
+// );
 
 @compute @workgroup_size(10,10,10)
 fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation_id) local_id: vec3<u32>)
@@ -59,25 +59,22 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     let brick_pointer : u32 = octree.data[octree_leaf_id].tile_pointer;
 
     // Get the brick index, without the MSb that signals if it has an already initialized brick
+    // 3	 v_and_b32_e32	 v0, 0x3ff, v0	 814	 0.01	 85 clk	 
     let brick_index : u32 = brick_pointer & OCTREE_TILE_INDEX_MASK;
 
     let proxy_data : ProxyInstanceData = octree_proxy_data.instance_data[brick_index];
+    let local_id_vec : vec3f = vec3f(local_id);
 
-    let voxel_world_coords : vec3f = proxy_data.position + (10.0 / vec3f(local_id) - 5.0) * PIXEL_WORLD_SIZE;
+    let voxel_world_coords : vec3f = proxy_data.position + (10.0 / local_id_vec - 5.0) * PIXEL_WORLD_SIZE;
 
     // Get the 3D atlas coords of the brick, with a stride of 10 (the size of the brick)
     let atlas_tile_coordinate : vec3u = 10 * vec3u(proxy_data.atlas_tile_index % BRICK_COUNT,
                                                   (proxy_data.atlas_tile_index / BRICK_COUNT) % BRICK_COUNT,
                                                    proxy_data.atlas_tile_index / (BRICK_COUNT * BRICK_COUNT));
-
-    let level : u32 = atomicLoad(&octree.current_level);
     
-    let parent_octree_index : u32 =  proxy_data.octree_parent_id;
     let octant_center : vec3f = proxy_data.position;
 
     var sSurface : Surface;
-    sSurface.distance = 10000.0;
-    var debug_surf : vec3f = vec3f(0.0);
 
     let texture_coordinates : vec3u = atlas_tile_coordinate + local_id;
 
@@ -86,12 +83,14 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     material.roughness = stroke.material.roughness;
     material.metalness = stroke.material.metallic;
 
+    // wtt: BBF0_0 17
     if ((INTERIOR_BRICK_FLAG & brick_pointer) == INTERIOR_BRICK_FLAG) {
         sSurface.distance = -100.0;
+    } else {
+        sSurface.distance = 10000.0;
     }
-
     // Offset for a 10 pixel wide brick
-    let pixel_offset : vec3f = (vec3f(local_id) - 4.5) * PIXEL_WORLD_SIZE;
+    let pixel_offset : vec3f = (local_id_vec - 4.5) * PIXEL_WORLD_SIZE;
 
     var result_surface : Surface;
     result_surface.distance = 0.0;
@@ -110,22 +109,15 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
     result_surface = curr_surface;
 
+    //wtt: 1563
     if (result_surface.distance < MIN_HIT_DIST) {
         atomicAdd(&used_pixels, 1);
     }
-
-    // Heatmap Edit debugging
-    // let interpolant : f32 = (f32( edit_culling_data.edit_culling_count[parent_octree_index] ) / f32(5)) * (M_PI / 2.0);
-    // var heatmap_color : vec3f;
-    // heatmap_color.r = sin(interpolant);
-    // heatmap_color.g = sin(interpolant * 2.0);
-    // heatmap_color.b = cos(interpolant);
 
     // Duplicate the texture Store, becuase then we have a branch depeding on an uniform!
     textureStore(write_sdf, texture_coordinates, vec4f(result_surface.distance));
     textureStore(write_material_sdf, texture_coordinates, vec4<u32>((pack_material(result_surface.material))));
     
-    //textureStore(write_sdf, texture_coordinates, vec4f(debug_surf.x, debug_surf.y, debug_surf.z, result_surface.distance));
     // Hack, for buffer usage
     octant_usage_write[0] = 0;
     let edit_count : u32 = stroke_history.count;

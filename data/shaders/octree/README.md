@@ -11,8 +11,11 @@ Write_to_texture:
     Lo usyo seria subsanar el uso del VALU
         Hay varias instrucciona dentro del primer branch del shader 'v_cvt_f32_u32_e32'
         que cuestan mas de 20,000 clocks de GPU, seguramente porque estan saturando el VALU
-        Esta instruccion convierte un u32 en f32 y lo guarda en un resgitor de vector (forma de vector creo)
-
+        Esta instruccion convierte un u32 en f32 y lo guarda en un resgitor de vector
+        Los registros de vector son aquellos que guardan informacion distinta para 
+        cada wavefont. Los resigstros escalares (SALU) son de datos uniformes entre
+        todos los wavefronts
+        https://llvm.org/docs/AMDGPUOperandSyntax.html
 
     Nsight
         SM Occupany esta sufriendo
