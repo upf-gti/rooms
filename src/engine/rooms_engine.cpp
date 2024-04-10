@@ -2,6 +2,7 @@
 #include "framework/nodes/environment_3d.h"
 #include "framework/nodes/viewport_3d.h"
 #include "framework/nodes/omni_light_3d.h"
+#include "framework/nodes/spot_light_3d.h"
 #include "framework/input.h"
 #include "framework/scene/parse_scene.h"
 #include "framework/scene/parse_gltf.h"
@@ -34,7 +35,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 
     //import_scene();
 
-    OmniLight3D* omni_light = new OmniLight3D();
+    /*OmniLight3D* omni_light = new OmniLight3D();
     omni_light->set_name("omni_light");
     omni_light->set_translation({ 1.0f, 1.f, 0.0f });
     omni_light->set_color({ 1.0f, 1.0f, 1.0f });
@@ -43,6 +44,18 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 
     entities.push_back(omni_light);
     RoomsRenderer::instance->add_light(omni_light);
+    */
+
+    SpotLight3D* spot_light = new SpotLight3D();
+    spot_light->set_name("spot_light");
+    spot_light->set_translation({ 0.0f, 1.f, 0.0f });
+    spot_light->rotate(glm::radians(-90.f), { 1.f, 0.0f, 0.f });
+    spot_light->set_color({ 1.0f, 1.0f, 1.0f });
+    spot_light->set_intensity(1.0f);
+    spot_light->set_range(5.0f);
+
+    entities.push_back(spot_light);
+    RoomsRenderer::instance->add_light(spot_light);
 
 	return error;
 }
