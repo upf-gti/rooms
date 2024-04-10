@@ -46,6 +46,7 @@
 @group(3) @binding(0) var irradiance_texture: texture_cube<f32>;
 @group(3) @binding(1) var brdf_lut_texture: texture_2d<f32>;
 @group(3) @binding(2) var sampler_clamp: sampler;
+@group(3) @binding(3) var<uniform> lights : array<Light, MAX_LIGHTS>;
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
@@ -138,7 +139,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     var final_color : vec3f = vec3f(0.0);
     final_color += get_indirect_light(m);
-    // final_color += get_direct_light(m);
+    final_color += get_direct_light(m);
     final_color += m.emissive;
 
     final_color = tonemap_khronos_pbr_neutral(final_color);

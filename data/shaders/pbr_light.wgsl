@@ -1,9 +1,12 @@
 
 // Lights
 
-const LIGHT_DIRECTIONAL = 0;
-const LIGHT_OMNI        = 1;
-const LIGHT_SPOT        = 2;
+const LIGHT_UNDEFINED   = 0;
+const LIGHT_DIRECTIONAL = 1;
+const LIGHT_OMNI        = 2;
+const LIGHT_SPOT        = 3;
+
+const MAX_LIGHTS        = 1;
 
 struct Light
 {
@@ -17,9 +20,9 @@ struct Light
     range : f32,
 
     // spots
+    dummy: vec2f,
     inner_cone_cos : f32,
-    outer_cone_cos : f32,
-    dummy: vec2f
+    outer_cone_cos : f32
 };
 
 struct LitMaterial
@@ -39,13 +42,10 @@ struct LitMaterial
     reflected_dir : vec3f
 };
 
-// debug
-const LIGHT_COUNT = 1;
-
 // https://github.com/KhronosGroup/glTF/blob/master/extensions/2.0/Khronos/KHR_lights_punctual/README.md#range-property
 fn get_range_attenuation(range : f32, dist : f32) -> f32
 {
-    if (range <= 0.0)
+    if (range < 0.0)
     {
         // negative range means unlimited
         return 1.0 / pow(dist, 2.0);
@@ -86,6 +86,9 @@ fn get_light_intensity(light : Light, point_to_light : vec3f) -> vec3f
     return range_attenuation * spot_attenuation * light.intensity * light.color;
 }
 
+// debug
+const LIGHT_COUNT = 1;
+
 fn get_direct_light( m : LitMaterial ) -> vec3f
 {
     var f_diffuse : vec3f = vec3f(0.0);
@@ -96,16 +99,7 @@ fn get_direct_light( m : LitMaterial ) -> vec3f
 
     for (var i : u32 = 0; i < LIGHT_COUNT; i++)
     {
-        var light : Light;// = scene_lights[i];
-
-        // debug
-        light.ltype = LIGHT_OMNI;
-        light.position = vec3f(0.2, 0.5, 1.0);
-        light.direction = vec3f(0.2, 0.5, 0.6);
-        light.color = vec3f(0.0, 0.0, 1.0);
-        light.intensity = 1.0;
-        light.range = 5;
-        //
+        var light : Light = lights[i];
 
         var point_to_light : vec3f;
 

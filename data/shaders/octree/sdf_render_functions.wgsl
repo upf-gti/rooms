@@ -49,7 +49,7 @@ fn apply_light(toEye : vec3f, position : vec3f, position_world : vec3f, normal_i
 
     var final_color : vec3f = vec3f(0.0);
     final_color += get_indirect_light(m);
-    // final_color += get_direct_light(m);
+    final_color += get_direct_light(m);
     final_color += m.emissive;
 
     return tonemap_khronos_pbr_neutral(final_color);
