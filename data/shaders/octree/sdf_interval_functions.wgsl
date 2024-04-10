@@ -678,6 +678,151 @@ fn bezier_interval( p : mat3x3f, start : vec3f, cp : vec3f, end : vec3f, thickne
     return isub_vec_float(ilength(x), thickness);
 }
 
+
+// COMPOUND SDF FUNCTIONS
+fn eval_interval_stroke_sphere_substraction( position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>) -> vec2f {
+    var result_surface : vec2f = current_surface;
+    var tmp_surface : vec2f;
+
+    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
+    let edit_count : u32 = (*curr_stroke).edit_count;
+    let parameters : vec4f = (*curr_stroke).parameters;
+
+    let smooth_factor : f32 = parameters.w;
+
+    for(var i : u32 = 0u; i < edit_count; i++) {
+        let curr_edit : Edit = edit_array[i];
+        let radius : f32 = curr_edit.dimensions.x;
+        tmp_surface = sphere_interval(position, curr_edit.position, radius);
+        result_surface = opSmoothSubtractionInterval(tmp_surface, result_surface, smooth_factor);
+    }
+    
+    return result_surface;
+}
+
+fn eval_interval_stroke_sphere_union( position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>,  dimension_margin : vec4f) -> vec2f {
+    var result_surface : vec2f = current_surface;
+    var tmp_surface : vec2f;
+
+    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
+    let edit_count : u32 = (*curr_stroke).edit_count;
+    let parameters : vec4f = (*curr_stroke).parameters;
+
+    let smooth_factor : f32 = parameters.w;
+
+    for(var i : u32 = 0u; i < edit_count; i++) {
+        let curr_edit : Edit = edit_array[i];
+        let radius : f32 = curr_edit.dimensions.x + dimension_margin.x;
+        tmp_surface = sphere_interval(position, curr_edit.position, radius);
+        result_surface = opSmoothUnionInterval(tmp_surface, result_surface, smooth_factor);
+    }
+    
+    return result_surface;
+}
+
+
+// BOX SDFS ================
+fn eval_interval_stroke_box_substraction(position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>) -> vec2f {
+    var result_surface : vec2f = current_surface;
+    var tmp_surface : vec2f;
+    
+    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
+    let edit_count : u32 = (*curr_stroke).edit_count;
+    let parameters : vec4f = (*curr_stroke).parameters;
+
+    let smooth_factor : f32 = parameters.w;
+
+    for(var i : u32 = 0u; i < edit_count; i++) {
+        let curr_edit : Edit = edit_array[i];
+        var size : vec3f = curr_edit.dimensions.xyz;
+        let size_param = (curr_edit.dimensions.w / 0.1) * size.x; // Make Rounding depend on the side length
+        size -= size_param;
+
+        tmp_surface = box_interval(position, curr_edit.position, curr_edit.rotation, size, size_param);
+        result_surface = opSmoothSubtractionInterval(tmp_surface, result_surface, smooth_factor);
+    }
+
+    return result_surface;
+}
+
+fn eval_interval_stroke_box_union(position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>, dimension_margin : vec4f) -> vec2f {
+    var result_surface : vec2f = current_surface;
+    var tmp_surface : vec2f;
+    
+    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
+    let edit_count : u32 = (*curr_stroke).edit_count;
+    let parameters : vec4f = (*curr_stroke).parameters;
+
+    let smooth_factor : f32 = parameters.w;
+
+    for(var i : u32 = 0u; i < edit_count; i++) {
+        let curr_edit : Edit = edit_array[i];
+        var size : vec3f = curr_edit.dimensions.xyz + dimension_margin.xyz;
+        let size_param = (curr_edit.dimensions.w / 0.1) * size.x; // Make Rounding depend on the side length
+        size -= size_param;
+
+        tmp_surface = box_interval(position, curr_edit.position, curr_edit.rotation, size, size_param);
+        result_surface = opSmoothUnionInterval(tmp_surface, result_surface, smooth_factor);
+    }
+
+    return result_surface;
+}
+
+
+fn evaluate_stroke_interval_2( position: mat3x3f, stroke: ptr<storage, Stroke, read>, current_surface : vec2f) -> vec2f {
+    let stroke_operation : u32 = (*stroke).operation;
+    let stroke_primitive : u32 = (*stroke).primitive;
+
+    let curr_stroke_code : u32 = stroke_primitive | (stroke_operation << 4u);
+
+    var result_surface : vec2f = current_surface;
+
+    switch(curr_stroke_code) {
+        case SD_SPHERE_SMOOTH_OP_UNION: {
+            result_surface = eval_interval_stroke_sphere_union(position, result_surface, stroke, vec4f(0.0));
+            break;
+        }
+        case SD_SPHERE_SMOOTH_OP_SUBSTRACTION:{
+            result_surface = eval_interval_stroke_sphere_substraction(position, result_surface, stroke);
+            break;
+        }
+        case SD_BOX_SMOOTH_OP_UNION: {
+            result_surface = eval_interval_stroke_box_union(position, result_surface, stroke, vec4f(0.0));
+            break;
+        }
+        case SD_BOX_SMOOTH_OP_SUBSTRACTION: {
+            result_surface = eval_interval_stroke_box_substraction(position, result_surface, stroke);
+            break;
+        }
+        default: {}
+    }
+
+    return result_surface;
+}
+
+fn evaluate_stroke_interval_force_union( position: mat3x3f, stroke: ptr<storage, Stroke, read>, current_surface : vec2f) -> vec2f {
+    let stroke_primitive : u32 = (*stroke).primitive;
+    let SMOOTH_FACTOR : f32 = (*stroke).parameters.w;
+
+    let dimensions_extra : vec4f = vec4f(SMOOTH_FACTOR);
+
+    var result_surface : vec2f = current_surface;
+
+    switch(stroke_primitive) {
+        case SD_SPHERE: {
+            result_surface = eval_interval_stroke_sphere_union(position, result_surface, stroke, dimensions_extra);
+            break;
+        }
+        case SD_BOX: {
+            result_surface = eval_interval_stroke_box_union(position, result_surface, stroke, dimensions_extra);
+            break;
+        }
+        default: {}
+    }
+
+    return result_surface;
+}
+
 fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f,  primitive : u32, operation : u32, edit_parameters : vec4f, current_interval : vec2f, edit : Edit, resulting_interval : ptr<function, vec2f>) -> vec2f
 {
     var pSurface : vec2f;

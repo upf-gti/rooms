@@ -130,6 +130,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     var octant_center : vec3f = vec3f(0.0);
     var level_half_size : f32 = 0.5 * SCULPT_MAX_SIZE;
 
+    //TODO(Juan): this could be LUT
     // Compute the center and the half size of the current octree, in the current level, via iterating the octree index
     for (var i : u32 = 1; i <= level; i++) {
         level_half_size = SCULPT_MAX_SIZE / pow(2.0, f32(i + 1));
@@ -147,7 +148,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     
     // Select the input stroke, or the preview stroke, depending on the mode
     // TODO(Juan): fix the preview
-    var current_stroke : Stroke = stroke;
     //  if (is_evaluating_preview) {
          
     // } else {
@@ -172,40 +172,21 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     let x_range : vec2f = vec2f(octant_center.x - level_half_size, octant_center.x + level_half_size);
     let y_range : vec2f = vec2f(octant_center.y - level_half_size, octant_center.y + level_half_size);
     let z_range : vec2f = vec2f(octant_center.z - level_half_size, octant_center.z + level_half_size);
+    let current_subdivision_interval = iavec3_vecs(x_range, y_range, z_range);
 
     // For adition you can just use the intervals stored on the octree
     // however, for smooth substraction there can be precision issues
     // in the form of some bricks disappearing, and that can be solved by
     // recomputing the context
-    if (current_stroke.operation == OP_SMOOTH_SUBSTRACTION) {
-        // Evaluating the edit context
-        for (var j : u32 = 0; j < stroke_history.count; j++) {
-            current_stroke = stroke_history.strokes[j];
-            for (var i : u32 = 0; i < current_stroke.edit_count; i++) {
-                var current_edit : Edit = current_stroke.edits[i];
-                var edit_interval : vec2f;
-
-                surface_interval = eval_edit_interval(x_range, y_range, z_range, current_stroke.primitive, current_stroke.operation, current_stroke.parameters, surface_interval, current_edit, &edit_interval);
-            }
-        }
-    } else {
-        surface_interval = octree.data[octree_index].octant_center_distance;
+    for (var j : u32 = 0; j < stroke_history.count; j++) {
+        surface_interval = evaluate_stroke_interval_2(current_subdivision_interval, &(stroke_history.strokes[j]), surface_interval);
     }
 
-
-    current_stroke = stroke;
-
     // Check the edits in the parent, and fill its own list with the edits that affect this child
-    for (var i : u32 = 0; i < current_stroke.edit_count; i++) {
-        var current_edit : Edit = current_stroke.edits[i];
-        var edit_interval : vec2f;
-
-        if (level < OCTREE_DEPTH) {
-            current_edit.dimensions += vec4f(SMOOTH_FACTOR);  
-            current_stroke_interval = eval_edit_interval(x_range, y_range, z_range, current_stroke.primitive, OP_UNION, current_stroke.parameters, current_stroke_interval, current_edit, &edit_interval);
-        } else {
-            surface_interval = eval_edit_interval(x_range, y_range, z_range, current_stroke.primitive, current_stroke.operation, current_stroke.parameters, surface_interval, current_edit, &edit_interval);
-        }
+    if (level < OCTREE_DEPTH) {
+        current_stroke_interval = evaluate_stroke_interval_force_union(current_subdivision_interval, &(stroke), current_stroke_interval);
+    } else {
+        surface_interval = evaluate_stroke_interval_2(current_subdivision_interval, &(stroke), surface_interval);
     }
 
     let is_current_brick_filled : bool = (octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG;
@@ -273,7 +254,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 
                 octant_usage_write[prev_counter] = octree_index;
             }
-        } else if (current_stroke.operation == OP_SMOOTH_SUBSTRACTION) {
+        } else if (stroke.operation == OP_SMOOTH_SUBSTRACTION) {
             if (is_current_brick_filled) {
                     // If its inside the new_edits, and the brick is filled, we delete it
                     let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);

@@ -22,6 +22,8 @@
 @compute @workgroup_size(1, 1, 1)
 fn compute(@builtin(workgroup_id) group_id: vec3u) 
 {
+    let tmp = edit_culling_data.edit_culling_lists[0];
+    let tmp2 = stroke.edit_count;
     // Clean the structs for the preview
     if ((octree.evaluation_mode & EVALUATE_PREVIEW_STROKE_FLAG) == EVALUATE_PREVIEW_STROKE_FLAG) {
         atomicStore(&preview_data.instance_count, 0u);
@@ -36,6 +38,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3u)
 
         let rounded_size : u32 = preview_data.preview_stroke.edit_count + (4 - preview_data.preview_stroke.edit_count % 4);
 
+
+        
         // for (var i : u32 = 0; i < rounded_size; i += 4) {
 
         //     var packed_value : u32 = 0;
