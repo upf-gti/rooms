@@ -1,5 +1,5 @@
 const DERIVATIVE_STEP = 0.5 / SDF_RESOLUTION;
-const MAX_ITERATIONS = 60;
+const MAX_ITERATIONS = 15;
 
 // https://community.khronos.org/t/ray-vs-aabb-exit-point-knowing-entry-point/66307/3
 fn ray_AABB_intersection_distance(ray_origin : vec3f,
