@@ -100,6 +100,7 @@ struct FragmentOutput {
 @group(3) @binding(1) var brdf_lut_texture: texture_2d<f32>;
 @group(3) @binding(2) var sampler_clamp: sampler;
 @group(3) @binding(3) var<uniform> lights : array<Light, MAX_LIGHTS>;
+@group(3) @binding(4) var<uniform> num_lights : u32;
 
 fn sample_material_raw(pos : vec3u) -> Material {
     let sample : u32 = textureLoad(read_material_sdf, pos, 0).r;

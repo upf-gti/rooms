@@ -56,7 +56,6 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     spot_light->set_range(5.0f);
 
     entities.push_back(spot_light);
-    RoomsRenderer::instance->add_light(spot_light);
 
 	return error;
 }
@@ -93,6 +92,29 @@ void RoomsEngine::render()
 #ifndef __EMSCRIPTEN__
     render_gui();
 #endif
+
+    // Get visible lights
+    {
+        for (auto entity : entities)
+        {
+            Light3D* light_node = dynamic_cast<Light3D*>(entity);
+
+            if (!light_node)
+            {
+                continue;
+            }
+            if (light_node->get_intensity() < 0.001f)
+            {
+                continue;
+            }
+            if (light_node->get_type() != LIGHT_DIRECTIONAL && light_node->get_range() == 0.0f)
+            {
+                continue;
+            }
+
+            RoomsRenderer::instance->add_light(light_node);
+        }
+    }
     
 	for (auto entity : entities) {
 		entity->render();
@@ -101,9 +123,14 @@ void RoomsEngine::render()
     sculpt_editor->render();
 
     {
-        static glm::mat4x4 test_model = glm::mat4x4(1.0f);
+        static glm::mat4x4 test_model = entities[1]->get_model();
         Camera* camera = RoomsRenderer::instance->get_camera();
-        gizmo.render(camera->get_view(), camera->get_projection(), test_model);
+        bool changed = gizmo.render(camera->get_view(), camera->get_projection(), test_model);
+
+        if (changed)
+        {
+            entities[1]->set_model(test_model);
+        }
     }
 
     Engine::render();

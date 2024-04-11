@@ -1,12 +1,12 @@
 
 // Lights
 
+#define MAX_LIGHTS
+
 const LIGHT_UNDEFINED   = 0;
 const LIGHT_DIRECTIONAL = 1;
 const LIGHT_OMNI        = 2;
 const LIGHT_SPOT        = 3;
-
-const MAX_LIGHTS        = 1;
 
 struct Light
 {
@@ -56,17 +56,27 @@ fn get_range_attenuation(range : f32, dist : f32) -> f32
 // https://github.com/KhronosGroup/glTF/blob/master/extensions/2.0/Khronos/KHR_lights_punctual/README.md#inner-and-outer-cone-angles
 fn get_spot_attenuation(point_to_light : vec3f, spot_direction : vec3f, outer_cone_cos : f32, inner_cone_cos : f32) -> f32
 {
-    let actual_cos : f32 = dot(normalize(spot_direction), normalize(-point_to_light));
-    if (actual_cos > outer_cone_cos)
-    {
-        if (actual_cos < inner_cone_cos)
-        {
-            let angular_attenuation : f32 = (actual_cos - outer_cone_cos) / (inner_cone_cos - outer_cone_cos);
-            return angular_attenuation * angular_attenuation;
-        }
-        return 1.0;
-    }
-    return 0.0;
+    // These two values can be calculated on the CPU and passed into the shader
+    let light_angle_scale : f32 = 1.0 / max(0.001, inner_cone_cos - outer_cone_cos);
+    let light_angle_offset : f32 = -outer_cone_cos * light_angle_scale;
+
+    let cd : f32 = dot(-normalize(spot_direction), normalize(point_to_light));
+    var angular_attenuation : f32 = clamp(cd * light_angle_scale + light_angle_offset, 0.0, 1.0);
+    angular_attenuation *= angular_attenuation;
+
+    return angular_attenuation;
+
+    // let actual_cos : f32 = dot(normalize(-spot_direction), normalize(point_to_light));
+    // if (actual_cos > outer_cone_cos)
+    // {
+    //     if (actual_cos < inner_cone_cos)
+    //     {
+    //         let angular_attenuation : f32 = (actual_cos - outer_cone_cos) / (inner_cone_cos - outer_cone_cos);
+    //         return angular_attenuation * angular_attenuation;
+    //     }
+    //     return 1.0;
+    // }
+    // return 0.0;
 }
 
 fn get_light_intensity(light : Light, point_to_light : vec3f) -> vec3f
@@ -86,9 +96,6 @@ fn get_light_intensity(light : Light, point_to_light : vec3f) -> vec3f
     return range_attenuation * spot_attenuation * light.intensity * light.color;
 }
 
-// debug
-const LIGHT_COUNT = 1;
-
 fn get_direct_light( m : LitMaterial ) -> vec3f
 {
     var f_diffuse : vec3f = vec3f(0.0);
@@ -97,8 +104,14 @@ fn get_direct_light( m : LitMaterial ) -> vec3f
     var n : vec3f = normalize(m.normal);
     var v : vec3f = normalize(m.view_dir);
 
-    for (var i : u32 = 0; i < LIGHT_COUNT; i++)
+    let NdotV : f32 = clamp(dot(n, v), 0.0, 1.0);
+
+    for (var i : u32 = 0; i < MAX_LIGHTS; i++)
     {
+        if(i >= num_lights) {
+            break;
+        }
+
         var light : Light = lights[i];
 
         var point_to_light : vec3f;
@@ -115,7 +128,6 @@ fn get_direct_light( m : LitMaterial ) -> vec3f
         let h : vec3f = normalize(l + v);          // Direction of the vector between l and v, called halfway vector
 
         let NdotL : f32 = clamp(dot(n, l), 0.0, 1.0);
-        let NdotV : f32 = clamp(dot(n, v), 0.0, 1.0);
         let NdotH : f32 = clamp(dot(n, h), 0.0, 1.0);
         let LdotH : f32 = clamp(dot(l, h), 0.0, 1.0);
         let VdotH : f32 = clamp(dot(v, h), 0.0, 1.0);
