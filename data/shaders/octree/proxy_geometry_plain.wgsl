@@ -274,10 +274,10 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
         depth += distance * step(MIN_HIT_DIST, distance);
         depth = min(depth, max_distance);
         
-        position_in_atlas = ray_origin_in_atlas_space + ray_dir * depth;
-        distance = sample_sdf_atlas(position_in_atlas);
-        depth += distance * step(MIN_HIT_DIST, distance);
-        depth = min(depth, max_distance);
+        // position_in_atlas = ray_origin_in_atlas_space + ray_dir * depth;
+        // distance = sample_sdf_atlas(position_in_atlas);
+        // depth += distance * step(MIN_HIT_DIST, distance);
+        // depth = min(depth, max_distance);
 
 		if (distance < MIN_HIT_DIST) {
             exit = 1u;
@@ -299,14 +299,14 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
         last_found_surface_distance = distance;
 
         let material : Material = sample_material_atlas(position_in_atlas);
-        // let interpolant : f32 = (f32( i ) / f32(MAX_ITERATIONS)) * (M_PI / 2.0);
-        // var heatmap_color : vec3f;
-        // heatmap_color.r = sin(interpolant);
-        // heatmap_color.g = sin(interpolant * 2.0);
-        // heatmap_color.b = cos(interpolant);
-        // return vec4f(heatmap_color, depth);
+        let interpolant : f32 = (f32( i ) / f32(MAX_ITERATIONS)) * (M_PI / 2.0);
+        var heatmap_color : vec3f;
+        heatmap_color.r = sin(interpolant);
+        heatmap_color.g = sin(interpolant * 2.0);
+        heatmap_color.b = cos(interpolant);
+        return vec4f(heatmap_color, depth);
         //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
-		return vec4f(apply_light(-ray_dir, position_in_world, position_in_world, normal, lightPos + lightOffset, material), depth);
+		//return vec4f(apply_light(-ray_dir, position_in_world, position_in_world, normal, lightPos + lightOffset, material), depth);
         //return vec4f(normal, depth);
         //return vec4f(material.albedo, depth);
         //return vec4f(normal, depth);

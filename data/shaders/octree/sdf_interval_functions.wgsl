@@ -444,7 +444,7 @@ fn opSmoothUnionInterval( s1 : vec2f, s2 : vec2f, k : f32 ) -> vec2f
 
 fn opSmoothSubtractionInterval( s1 : vec2f, s2 : vec2f, k : f32 ) -> vec2f
 {
-    return ineg(isoft_min(s2, ineg(s1), k));
+    return ineg(isoft_min_quadratic(s2, ineg(s1), k));
 }
 
 fn opSubtractionInterval( s1 : vec2f, s2 : vec2f ) -> vec2f

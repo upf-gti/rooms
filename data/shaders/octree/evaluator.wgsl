@@ -87,6 +87,7 @@
      - Redo preview
      - Re-test reevaluation
      - Add back the constants for the ifs
+     - Interval lack of precission
 */
 
 fn is_inside_AABB(point : vec3f, aabb_min : vec3f, aabb_max : vec3f) -> bool {
@@ -219,7 +220,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         }
     } else {
          if (surface_interval.x < 0.0) {
-            if (surface_interval.y < -MARGIN_Y) { // For fixigin lack of precision on smooth operations
+            if (surface_interval.y < 0.0) { // For fixigin lack of precision on smooth operations
                 if (is_current_brick_filled) {
                     // If its inside the new_edits, and the brick is filled, we delete it
                     let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
