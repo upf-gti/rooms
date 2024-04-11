@@ -3,8 +3,7 @@
 #include "graphics/edit.h"
 #include "framework/nodes/ui.h"
 #include "framework/nodes/text.h"
-#include "framework/ui/transform_gizmo.h"
-
+#include "framework/ui/gizmo_3d.h"
 
 #include <map>
 
@@ -74,33 +73,33 @@ class SculptEditor {
     void toggle_capped_modifier();
     void toggle_onion_modifier();
 
-    bool mustRenderMeshPreviewOutline();
+    bool must_render_mesh_preview_outline();
 
-    bool canSnapToSurface();
+    bool can_snap_to_surface();
 
-    bool modifiers_dirty    = false;
-    bool dimensions_dirty   = true;
-    bool stamp_enabled      = false;
-    bool rotation_started   = false;
-    bool snap_to_surface    = false;
-    bool is_picking_material = false;
-    bool was_material_picked = false;
+    bool dimensions_dirty       = true;
+    bool modifiers_dirty        = false;
+    bool stamp_enabled          = false;
+    bool rotation_started       = false;
+    bool snap_to_surface        = false;
+    bool is_picking_material    = false;
+    bool was_material_picked    = false;
 
-    glm::vec3	sculpt_start_position;
-    glm::vec3	edit_position_world;
-    glm::vec3	initial_hand_translation = {};
-    glm::vec3	translation_diff = {};
+    glm::vec3 sculpt_start_position = {};
+    glm::vec3 edit_position_world = {};
+    glm::vec3 initial_hand_translation = {};
+    glm::vec3 translation_diff = {};
 
-    glm::vec3   prev_controller_pos;
-    glm::vec3   controller_velocity;
-    glm::vec3   controller_acceleration;
+    glm::vec3 prev_controller_pos = {};
+    glm::vec3 controller_velocity = {};
+    glm::vec3 controller_acceleration = {};
 
-    glm::quat	initial_hand_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
-    glm::quat	rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
-    glm::quat	sculpt_rotation = { 0.0, 0.0, 0.0, 1.0 };
-    glm::quat	edit_rotation_world;
+    glm::quat initial_hand_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
+    glm::quat rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
+    glm::quat sculpt_rotation = { 0.0, 0.0, 0.0, 1.0 };
+    glm::quat edit_rotation_world = {};
 
-    float       hand2edit_distance = 0.2f;
+    float     hand2edit_distance = 0.2f;
 
     /*
     *	Modifiers
@@ -123,7 +122,7 @@ class SculptEditor {
     };
 
     bool axis_lock = false;
-    TransformGizmo axis_lock_gizmo = {};
+    Gizmo3D axis_lock_gizmo = {};
     uint8_t axis_lock_mode = AXIS_LOCK_Z;
     glm::vec3 axis_lock_position = glm::vec3(0.f);
 
@@ -136,7 +135,7 @@ class SculptEditor {
 
     bool use_mirror = false;
 
-    TransformGizmo mirror_gizmo = {};
+    Gizmo3D mirror_gizmo = {};
     MeshInstance3D* mirror_mesh = nullptr;
 
     glm::vec3 mirror_origin = glm::vec3(0.f);
@@ -167,7 +166,7 @@ class SculptEditor {
     ui::HContainer2D* main_panel_2d = nullptr;
     Viewport3D* main_panel_3d = nullptr;
 
-    size_t                max_recent_colors;
+    size_t                max_recent_colors = 0;
     std::vector<Color>    recent_colors;
 
     void init_ui();
@@ -175,8 +174,8 @@ class SculptEditor {
     void add_recent_color(const Color& color);
 
     // Stamp slide
-    glm::vec3 edit_position_stamp;
-    glm::vec3 edit_origin_stamp;
+    glm::vec3 edit_position_stamp = {};
+    glm::vec3 edit_origin_stamp = {};
     glm::quat edit_rotation_stamp = { 0.0f, 0.0f, 0.0f, 1.0f };
 
     // Editor
@@ -196,6 +195,7 @@ class SculptEditor {
     void scene_update_rotation();
 
 public:
+
     SculptEditor() {};
     void initialize();
     void clean();

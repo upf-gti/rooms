@@ -1,6 +1,8 @@
 #pragma once
 
 #include "engine.h"
+#include "framework/ui/gizmo_2d.h"
+
 #include <vector>
 
 class Node;
@@ -8,10 +10,13 @@ class Node3D;
 class Environment3D;
 class SculptEditor;
 
-class RoomsEngine : public Engine {
+class RoomsEngine : public Engine
+{
     Environment3D* skybox = nullptr;
 
-    SculptEditor *sculpt_editor;
+    SculptEditor* sculpt_editor;
+
+    Gizmo2D gizmo;
 
     bool export_scene();
     bool import_scene();

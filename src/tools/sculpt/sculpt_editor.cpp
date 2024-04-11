@@ -172,7 +172,7 @@ bool SculptEditor::edit_update(float delta_time)
     }
 
     // Snap surface
-    if (canSnapToSurface()) {
+    if (can_snap_to_surface()) {
 
         auto callback = [&](glm::vec3 center) {
             edit_to_add.position = texture3d_to_world(center);
@@ -597,7 +597,7 @@ void SculptEditor::render()
         update_edit_preview(edit_to_add.dimensions);
 
         // Render something to be able to cull faces later...
-        if (!mustRenderMeshPreviewOutline()) {
+        if (!must_render_mesh_preview_outline()) {
                 mesh_preview->render();
         }
         else
@@ -681,12 +681,12 @@ void SculptEditor::render_gui()
         stroke_parameters.set_dirty(true);
 }
 
-bool SculptEditor::canSnapToSurface()
+bool SculptEditor::can_snap_to_surface()
 {
     return snap_to_surface && (stamp_enabled || current_tool == PAINT);
 }
 
-bool SculptEditor::mustRenderMeshPreviewOutline()
+bool SculptEditor::must_render_mesh_preview_outline()
 {
     return stroke_parameters.get_operation() == OP_UNION || stroke_parameters.get_operation() == OP_SMOOTH_UNION;
 }
@@ -700,7 +700,7 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
         // Expand a little bit the edges
         glm::vec4 grow_dims = dims;
 
-        if (!mustRenderMeshPreviewOutline()) {
+        if (!must_render_mesh_preview_outline()) {
             grow_dims.x = std::max(grow_dims.x - 0.002f, 0.001f);
         }
 

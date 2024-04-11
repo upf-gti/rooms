@@ -12,6 +12,7 @@
 #include "spdlog/spdlog.h"
 #include "imgui.h"
 #include "framework/utils/tinyfiledialogs.h"
+#include "framework/utils/ImGuizmo.h"
 
 #include <fstream>
 
@@ -92,7 +93,6 @@ void RoomsEngine::render()
 #ifndef __EMSCRIPTEN__
     render_gui();
 #endif
-
     
 	for (auto entity : entities) {
 		entity->render();
@@ -100,7 +100,13 @@ void RoomsEngine::render()
 
     sculpt_editor->render();
 
-	Engine::render();
+    {
+        static glm::mat4x4 test_model = glm::mat4x4(1.0f);
+        Camera* camera = RoomsRenderer::instance->get_camera();
+        gizmo.render(camera->get_view(), camera->get_projection(), test_model);
+    }
+
+    Engine::render();
 }
 
 bool RoomsEngine::export_scene()
