@@ -424,12 +424,14 @@ fn isoft_min(a : vec2f, b : vec2f, r : f32) -> vec2f
 }
 
 fn isoft_min_quadratic(a : vec2f, b : vec2f, k : f32) -> vec2f {
-    let norm_k : f32 = k * 4.0;
+    let norm_k : f32 = k;
+    //  h = (1.0/k) * (max(k -abs(a-b), 0.0))
     let h : vec2f = imul_float_vec(1.0 / norm_k, imax(norm_k + ineg(iabs(isub_vecs(a, b))), vec2f(0.0)));
     let m : vec2f = ipow2_vec(h);
     let s : vec2f = imul_float_vec(norm_k * 0.25, m);
 
-    return vec2f( iselect( isub_vecs(b, s), isub_vecs(a, s), ilessthan(a, b)));
+    return isub_vecs(imin(a,b), s);
+    //return vec2f( iselect( isub_vecs(b, s), isub_vecs(a, s), ilessthan(a, b)));
 }
 
 fn opUnionInterval( s1 : vec2f, s2 : vec2f ) -> vec2f
