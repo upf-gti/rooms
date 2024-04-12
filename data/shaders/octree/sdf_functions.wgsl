@@ -277,7 +277,7 @@ fn sminQuadratic(a : f32, b : f32, k : f32) -> vec2f {
     let norm_k : f32 = k;
     let h : f32 = max(norm_k - abs(a - b), 0.0) / norm_k;
     let m : f32 = h*h;
-    let s : f32 = m*norm_k*(1.0/4.0);
+    let s : f32 = m*norm_k * 0.25;
 
     if (a < b) {
         return vec2f(a - s, m);

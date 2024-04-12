@@ -184,31 +184,20 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     }
 
     // Check the edits in the parent, and fill its own list with the edits that affect this child
-    if (level < OCTREE_DEPTH) {
-        current_stroke_interval = evaluate_stroke_interval_force_union(current_subdivision_interval, &(stroke), current_stroke_interval);
-    } else {
-        surface_interval = evaluate_stroke_interval_2(current_subdivision_interval, &(stroke), surface_interval);
-    }
+    surface_interval = evaluate_stroke_interval_2(current_subdivision_interval, &(stroke), surface_interval);
 
     let is_current_brick_filled : bool = (octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG;
     let is_interior_brick : bool = (octree.data[octree_index].tile_pointer & INTERIOR_BRICK_FLAG) == INTERIOR_BRICK_FLAG;
 
     // Do not evaluate all the bricks, only the ones whose distance interval has changed
-    var needs_eval : bool = abs(length(octree.data[octree_index].octant_center_distance - surface_interval)) > 0.0001;
-
-    // THE ONLY HACK
-    // In order to compensate the lack of precision of the interval 
-    // on smaller brick sizes, reduce the decision margin on treating the
-    // current brick as a surface, by the margin of the smooth factor
-    let MARGIN_Y : f32 = SMOOTH_FACTOR;
-
-    if (!is_evaluating_preview) {
-        octree.data[octree_index].octant_center_distance = surface_interval;
-    }
+    let interval_diff = octree.data[octree_index].octant_center_distance - surface_interval;
+    var min_needs_eval : bool = abs(interval_diff.x) == 0.000;
+    var max_needs_eval : bool = abs(interval_diff.y) > 0.000;
+    octree.data[octree_index].octant_center_distance = surface_interval;
     
     if (level < OCTREE_DEPTH) {
         // Broad culling using only the incomming stroke
-        if (current_stroke_interval.x < 0.0) {
+        if (surface_interval.x < 0.0) {
             // Subdivide
             // Increase the number of children from the current level
             let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 8);
@@ -219,21 +208,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             }
         }
     } else {
-         if (surface_interval.x < 0.0) {
-            if (surface_interval.y < 0.0) { // For fixigin lack of precision on smooth operations
-                if (is_current_brick_filled) {
-                    // If its inside the new_edits, and the brick is filled, we delete it
-                    let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
-                    let instance_index : u32 = octree.data[octree_index].tile_pointer & OCTREE_TILE_INDEX_MASK;
-                    indirect_brick_removal.brick_removal_buffer[brick_to_delete_idx] = instance_index;
-                    octree_proxy_data.instance_data[instance_index].in_use = 0u;
-                    octree.data[octree_index].tile_pointer = 0u;
-                    octree.data[octree_index].octant_center_distance = vec2f(10000.0, 10000.0);
-                } else {
-                    octree.data[octree_index].tile_pointer = INTERIOR_BRICK_FLAG;
-                    octree.data[octree_index].octant_center_distance = vec2f(-10000.0, -10000.0);
-                }
-            } else if (needs_eval) {
+         if (surface_interval.x < 0.0 && surface_interval.y > 0.0) {
+            {
                 let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 1);
 
                 if (!is_current_brick_filled) {
@@ -254,19 +230,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 }
                 
                 octant_usage_write[prev_counter] = octree_index;
-            }
-        } else if (stroke.operation == OP_SMOOTH_SUBSTRACTION) {
-            if (is_current_brick_filled) {
-                    // If its inside the new_edits, and the brick is filled, we delete it
-                    let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
-                    let instance_index : u32 = octree.data[octree_index].tile_pointer & OCTREE_TILE_INDEX_MASK;
-                    indirect_brick_removal.brick_removal_buffer[brick_to_delete_idx] = instance_index;
-                    octree_proxy_data.instance_data[instance_index].in_use = 0u;
-                    octree.data[octree_index].tile_pointer = 0u;
-                    octree.data[octree_index].octant_center_distance = vec2f(10000.0, 10000.0);
-            } else {
-                octree.data[octree_index].tile_pointer = 0u;
-                octree.data[octree_index].octant_center_distance = vec2f(10000.0, 10000.0);
             }
         }
         
