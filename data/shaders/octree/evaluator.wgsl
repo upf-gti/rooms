@@ -164,8 +164,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     var surface_interval = vec2f(10000.0, 10000.0);
     var edit_counter : u32 = 0;
 
-    var new_packed_edit_idx : u32 = 0;
-
     let SMOOTH_FACTOR : f32 = stroke.parameters.w;
 
 
@@ -185,6 +183,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
     // Check the edits in the parent, and fill its own list with the edits that affect this child
     surface_interval = evaluate_stroke_interval_2(current_subdivision_interval, &(stroke), surface_interval);
+    current_stroke_interval = evaluate_stroke_interval_2(current_subdivision_interval, &(stroke), current_stroke_interval);
 
     let is_current_brick_filled : bool = (octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG;
     let is_interior_brick : bool = (octree.data[octree_index].tile_pointer & INTERIOR_BRICK_FLAG) == INTERIOR_BRICK_FLAG;
@@ -197,7 +196,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     
     if (level < OCTREE_DEPTH) {
         // Broad culling using only the incomming stroke
-        if (surface_interval.x < 0.0) {
+        if (current_stroke_interval.x < 0.0) {
             // Subdivide
             // Increase the number of children from the current level
             let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 8);

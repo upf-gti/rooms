@@ -60,6 +60,13 @@ fn iadd_mats(a : mat3x3f, b : mat3x3f) -> mat3x3f
 		a[2].xy + b[2].xy);
 }
 
+fn iadd_mat_float(a : mat3x3f, b : f32) -> mat3x3f {
+    return iavec3_vecs(
+		a[0].xy + b,
+		a[1].xy + b,
+		a[2].xy + b);
+}
+
 fn iadd_vec_mat(a : vec3f, b : mat3x3f) -> mat3x3f
 {
 	return iavec3_vecs(
@@ -424,7 +431,7 @@ fn isoft_min(a : vec2f, b : vec2f, r : f32) -> vec2f
 }
 
 fn isoft_min_quadratic(a : vec2f, b : vec2f, k : f32) -> vec2f {
-    let norm_k : f32 = k;
+    let norm_k : f32 = k * 4.0;
     //  h = (1.0/k) * (max(k -abs(a-b), 0.0))
     let h : vec2f = imul_float_vec(1.0 / norm_k, imax(norm_k + ineg(iabs(isub_vecs(a, b))), vec2f(0.0)));
     let m : vec2f = ipow2_vec(h);
@@ -499,7 +506,7 @@ fn isign_vec2(v : vec2f) -> vec2f
 fn sphere_interval(p : mat3x3f, edit_pos : vec3f, r : f32) -> vec2f
 {
 	// x^2 + y^2 + z^2 - r^2
-	return isub_vecs(ilensq(isub_mat_vec(p, edit_pos)), vec2f(r*r));
+	return isub_vec_float(ilength(isub_mat_vec(p, edit_pos)), r);
 }
 
 fn cut_sphere_interval(p : mat3x3f, edit_pos : vec3f, rotation : vec4f, r : f32, h : f32) -> vec2f
@@ -539,11 +546,11 @@ fn box_interval(p : mat3x3f, edit_pos : vec3f, rotation : vec4f, size : vec3f, r
     // Move edit
     let interval_translated : mat3x3f = irotate_point_quat(isub_mat_vec(p, edit_pos), rotation);
 
-    let interval_translated_sized : mat3x3f = isub_mat_vec(iabs_mats(interval_translated), size);
+    let interval_translated_sized : mat3x3f = iadd_mat_float( isub_mat_vec(iabs_mats(interval_translated), size), r);
 
     var i_distance : vec2f = ilength(imax_mats(interval_translated_sized, mat_zero_interval));
     var max_on_all_axis : vec2f = imax(interval_translated_sized[0].xy, imax(interval_translated_sized[1].xy, interval_translated_sized[2].xy));
-    var i_dist2 : vec2f =  isub_vecs(imin(max_on_all_axis , vec2f(0.0, 0.0)), vec2f(r, r));
+    var i_dist2 : vec2f = isub_vecs(imin(max_on_all_axis , vec2f(0.0, 0.0)), vec2f(r, r));
 
     return iadd_vecs(i_distance, i_dist2);
 }
@@ -696,7 +703,7 @@ fn eval_interval_stroke_sphere_substraction( position : mat3x3f, current_surface
         let curr_edit : Edit = edit_array[i];
         let radius : f32 = curr_edit.dimensions.x;
         tmp_surface = sphere_interval(position, curr_edit.position, radius);
-        result_surface = opSmoothSubtractionInterval(tmp_surface, result_surface, smooth_factor);
+        result_surface = opSmoothSubtractionInterval(result_surface, tmp_surface, smooth_factor);
     }
     
     return result_surface;
@@ -716,7 +723,7 @@ fn eval_interval_stroke_sphere_union( position : mat3x3f, current_surface : vec2
         let curr_edit : Edit = edit_array[i];
         let radius : f32 = curr_edit.dimensions.x + dimension_margin.x;
         tmp_surface = sphere_interval(position, curr_edit.position, radius);
-        result_surface = opSmoothUnionInterval(tmp_surface, result_surface, smooth_factor);
+        result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
     }
     
     return result_surface;
@@ -741,7 +748,7 @@ fn eval_interval_stroke_box_substraction(position : mat3x3f, current_surface : v
         size -= size_param;
 
         tmp_surface = box_interval(position, curr_edit.position, curr_edit.rotation, size, size_param);
-        result_surface = opSmoothSubtractionInterval(tmp_surface, result_surface, smooth_factor);
+        result_surface = opSmoothSubtractionInterval(result_surface, tmp_surface, smooth_factor);
     }
 
     return result_surface;
@@ -764,7 +771,7 @@ fn eval_interval_stroke_box_union(position : mat3x3f, current_surface : vec2f, c
         size -= size_param;
 
         tmp_surface = box_interval(position, curr_edit.position, curr_edit.rotation, size, size_param);
-        result_surface = opSmoothUnionInterval(tmp_surface, result_surface, smooth_factor);
+        result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
     }
 
     return result_surface;

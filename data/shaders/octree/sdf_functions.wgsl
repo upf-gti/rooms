@@ -106,10 +106,10 @@ fn sdBox( p : vec3f, c : vec3f, rotation : vec4f, s : vec3f, r : f32, material :
 {
     var sf : Surface;
 
-    let pos : vec3f = rotate_point_quat(p - c, rotation);
+    let pos : vec3f = rotate_point_quat(p - c, rotation) - r;
 
     let q : vec3f = abs(pos) - s;
-    sf.distance = length(max(q, vec3f(0.0))) + min(max(q.x, max(q.y, q.z)), 0.0) - r;
+    sf.distance = length(max(q, vec3f(0.0))) + min(max(q.x, max(q.y, q.z)), 0.0) + r;
     sf.material = material;
     return sf;
 }
@@ -274,7 +274,7 @@ fn soft_min(a : f32, b : f32, k : f32) -> vec2f
 
 // From iqulzes and Dreams
 fn sminQuadratic(a : f32, b : f32, k : f32) -> vec2f {
-    let norm_k : f32 = k;
+    let norm_k : f32 = k * 4.0;
     let h : f32 = max(norm_k - abs(a - b), 0.0) / norm_k;
     let m : f32 = h*h;
     let s : f32 = m*norm_k * 0.25;
@@ -406,7 +406,7 @@ fn eval_stroke_sphere_substraction( position : vec3f, current_surface : Surface,
         let curr_edit : Edit = edit_array[i];
         let radius : f32 = curr_edit.dimensions.x;
         tmp_surface = sdSphere(position, curr_edit.position, radius, material);
-        result_surface = opSmoothSubtraction(tmp_surface, result_surface, smooth_factor);
+        result_surface = opSmoothSubtraction(result_surface, tmp_surface, smooth_factor);
     }
     
     return result_surface;
@@ -428,7 +428,7 @@ fn eval_stroke_sphere_union( position : vec3f, current_surface : Surface, curr_s
         let curr_edit : Edit = edit_array[i];
         let radius : f32 = curr_edit.dimensions.x;
         tmp_surface = sdSphere(position, curr_edit.position, radius, material);
-        result_surface = opSmoothUnion(tmp_surface, result_surface, smooth_factor);
+        result_surface = opSmoothUnion(result_surface, tmp_surface, smooth_factor);
     }
     
     return result_surface;
@@ -455,7 +455,7 @@ fn eval_stroke_box_substraction( position : vec3f, current_surface : Surface, cu
         size -= size_param;
 
         tmp_surface = sdBox(position, curr_edit.position, curr_edit.rotation, size, size_param, material);
-        result_surface = opSmoothSubtraction(tmp_surface, result_surface, smooth_factor);
+        result_surface = opSmoothSubtraction(result_surface, tmp_surface, smooth_factor);
     }
 
     return result_surface;
@@ -481,7 +481,7 @@ fn eval_stroke_box_union( position : vec3f, current_surface : Surface, curr_stro
         size -= size_param;
 
         tmp_surface = sdBox(position, curr_edit.position, curr_edit.rotation, size, size_param, material);
-        result_surface = opSmoothUnion(tmp_surface, result_surface, smooth_factor);
+        result_surface = opSmoothUnion(result_surface, tmp_surface, smooth_factor);
     }
 
     return result_surface;
@@ -509,7 +509,7 @@ fn eval_stroke_cone_substraction( position : vec3f, current_surface : Surface, c
         let dims = vec2f(size_param, size_param * cap_value);
 
         tmp_surface = sdCone(position, curr_edit.position, radius, curr_edit.rotation, dims, material);
-        result_surface = opSmoothSubtraction(tmp_surface, result_surface, smooth_factor);
+        result_surface = opSmoothSubtraction(result_surface, tmp_surface, smooth_factor);
     }
 
     return result_surface;
@@ -535,7 +535,7 @@ fn eval_stroke_cone_union( position : vec3f, current_surface : Surface, curr_str
         let dims = vec2f(size_param, size_param * cap_value);
 
         tmp_surface = sdCone(position, curr_edit.position, radius, curr_edit.rotation, dims, material);
-        result_surface = opSmoothUnion(tmp_surface, result_surface, smooth_factor);
+        result_surface = opSmoothUnion(result_surface, tmp_surface, smooth_factor);
     }
 
     return result_surface;
@@ -561,7 +561,7 @@ fn eval_stroke_capsule_substraction( position : vec3f, current_surface : Surface
         let size_param : f32 = curr_edit.dimensions.w;
 
         tmp_surface = sdCapsule(position, curr_edit.position, curr_edit.position - vec3f(0.0, 0.0, height), curr_edit.rotation, size_param, material);
-        result_surface = opSmoothUnion(tmp_surface, result_surface, smooth_factor);
+        result_surface = opSmoothUnion(result_surface, tmp_surface, smooth_factor);
     }
 
     return result_surface;
@@ -586,7 +586,7 @@ fn eval_stroke_capsule_union( position : vec3f, current_surface : Surface, curr_
         let size_param : f32 = curr_edit.dimensions.w;
 
         tmp_surface = sdCapsule(position, curr_edit.position, curr_edit.position - vec3f(0.0, 0.0, height), curr_edit.rotation, size_param, material);
-        result_surface = opSmoothUnion(tmp_surface, result_surface, smooth_factor);
+        result_surface = opSmoothUnion(result_surface, tmp_surface, smooth_factor);
     }
 
     return result_surface;
