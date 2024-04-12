@@ -296,9 +296,9 @@ fn icross_mats(a : mat3x3f, b : mat3x3f) -> mat3x3f
 fn icross_vec_mat(a : vec3f, b : mat3x3f) -> mat3x3f
 {
 	return iavec3_vecs(
-        isub_vecs(imul_float_vec(a.y, b[2].xy), imul_vec_float(b[1].xy, a.z)),
-        isub_vecs(imul_float_vec(a.z, b[0].xy), imul_vec_float(b[2].xy, a.x)),
-        isub_vecs(imul_float_vec(a.x, b[1].xy), imul_vec_float(b[0].xy, a.y))
+        isub_vecs(imul_float_vec(a.y, b[2].xy), imul_float_vec(a.z, b[1].xy)),
+        isub_vecs(imul_float_vec(a.z, b[0].xy), imul_float_vec(a.x, b[2].xy)),
+        isub_vecs(imul_float_vec(a.x, b[1].xy), imul_float_vec(a.y, b[0].xy))
     );
 }
 
@@ -503,10 +503,10 @@ fn isign_vec2(v : vec2f) -> vec2f
 
 // Primitives
 
-fn sphere_interval(p : mat3x3f, edit_pos : vec3f, r : f32) -> vec2f
+fn sphere_interval(p : mat3x3f, edit_pos : vec3f, rotation : vec4f, r : f32) -> vec2f
 {
-	// x^2 + y^2 + z^2 - r^2
-	return isub_vec_float(ilength(isub_mat_vec(p, edit_pos)), r);
+	let pos : mat3x3f = irotate_point_quat(isub_mat_vec(p, edit_pos), rotation);
+	return isub_vec_float(ilength(pos), r);
 }
 
 fn cut_sphere_interval(p : mat3x3f, edit_pos : vec3f, rotation : vec4f, r : f32, h : f32) -> vec2f
@@ -702,7 +702,7 @@ fn eval_interval_stroke_sphere_substraction( position : mat3x3f, current_surface
     for(var i : u32 = 0u; i < edit_count; i++) {
         let curr_edit : Edit = edit_array[i];
         let radius : f32 = curr_edit.dimensions.x;
-        tmp_surface = sphere_interval(position, curr_edit.position, radius);
+        tmp_surface = sphere_interval(position, curr_edit.position,curr_edit.rotation, radius);
         result_surface = opSmoothSubtractionInterval(result_surface, tmp_surface, smooth_factor);
     }
     
@@ -722,7 +722,7 @@ fn eval_interval_stroke_sphere_union( position : mat3x3f, current_surface : vec2
     for(var i : u32 = 0u; i < edit_count; i++) {
         let curr_edit : Edit = edit_array[i];
         let radius : f32 = curr_edit.dimensions.x + dimension_margin.x;
-        tmp_surface = sphere_interval(position, curr_edit.position, radius);
+        tmp_surface = sphere_interval(position, curr_edit.position,curr_edit.rotation, radius);
         result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
     }
     
@@ -744,7 +744,7 @@ fn eval_interval_stroke_box_substraction(position : mat3x3f, current_surface : v
     for(var i : u32 = 0u; i < edit_count; i++) {
         let curr_edit : Edit = edit_array[i];
         var size : vec3f = curr_edit.dimensions.xyz;
-        let size_param = (curr_edit.dimensions.w / 0.1) * size.x; // Make Rounding depend on the side length
+        let size_param = 0.0;//(curr_edit.dimensions.w / 0.1) * size.x; // Make Rounding depend on the side length
         size -= size_param;
 
         tmp_surface = box_interval(position, curr_edit.position, curr_edit.rotation, size, size_param);
@@ -849,121 +849,121 @@ fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f,  primitive : u32, 
 
     let smooth_factor : f32 = edit_parameters.w;
 
-    switch (primitive) {
-        case SD_SPHERE: {
-            onion_thickness = map_thickness( onion_thickness, radius );
-            radius -= onion_thickness; // Compensate onion size
-            if(cap_value > 0.0) { 
-                cap_value = cap_value * 2.0 - 1.0;
-                pSurface = cut_sphere_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.rotation, radius, radius * cap_value * 0.999);
-            } else {
-                pSurface = sphere_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, radius);
-            }
-            break;
-        }
-        case SD_BOX: {
-            onion_thickness = map_thickness( onion_thickness, size.x );
-            size_param = (size_param / 0.1) * size.x; // Make Rounding depend on the side length
+    // switch (primitive) {
+    //     case SD_SPHERE: {
+    //         onion_thickness = map_thickness( onion_thickness, radius );
+    //         radius -= onion_thickness; // Compensate onion size
+    //         if(cap_value > 0.0) { 
+    //             cap_value = cap_value * 2.0 - 1.0;
+    //             pSurface = cut_sphere_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.rotation, radius, radius * cap_value * 0.999);
+    //         } else {
+    //             pSurface = sphere_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, radius);
+    //         }
+    //         break;
+    //     }
+    //     case SD_BOX: {
+    //         onion_thickness = map_thickness( onion_thickness, size.x );
+    //         size_param = (size_param / 0.1) * size.x; // Make Rounding depend on the side length
 
-            // Compensate onion size (Substract from box radius bc onion will add it later...)
-            size -= onion_thickness;
-            size -= size_param;
-            size_param -= onion_thickness;
+    //         // Compensate onion size (Substract from box radius bc onion will add it later...)
+    //         size -= onion_thickness;
+    //         size -= size_param;
+    //         size_param -= onion_thickness;
 
-            pSurface = box_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.rotation, size, size_param);
-            break;
-        }
-        case SD_CAPSULE: {
-            onion_thickness = map_thickness( onion_thickness, size_param );
-            size_param -= onion_thickness; // Compensate onion size
-            pSurface = capsule_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.rotation, size_param, radius);
-            break;
-        }
-        case SD_CONE: {
-            // onion_thickness = map_thickness( onion_thickness, 0.01 );
-            radius = max(radius * (1.0 - cap_value), 0.0025);
-            var dims = vec2f(size_param, size_param * cap_value);
-            pSurface = cone_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.rotation, dims, radius);
-            break;
-        }
-        // case SD_PYRAMID: {
-        //     pSurface = sdPyramid(position, edit.position, edit.rotation, radius, size_param, edit.color);
-        //     break;
-        // }
-        case SD_CYLINDER: {
-            //onion_thickness = map_thickness( onion_thickness, size_param );
-            //size_param -= onion_thickness; // Compensate onion size
-            pSurface = cylinder_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.rotation, size_param, radius);
-            break;
-        }
-        case SD_TORUS: {
-            onion_thickness = map_thickness( onion_thickness, size_param );
-            size_param -= onion_thickness; // Compensate onion size
-            size_param = clamp( size_param, 0.0001, radius );
-            if(cap_value > 0.0) {
-                var an = M_PI * (1.0 - cap_value);
-                var angles = vec2f(sin(an), cos(an));
-                pSurface = capped_torus_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, vec2f(radius, size_param), edit.rotation, angles);
-            } else {
-                pSurface = torus_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, vec2f(radius, size_param), edit.rotation);
-            }
-            break;
-        }
-        case SD_BEZIER: {
-            var curve_thickness : f32 = 0.01;
-            pSurface = bezier_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.position + vec3f(0.1, 0.2, 0.0), edit.position + vec3f(0.2, 0.0, 0.0), curve_thickness, edit.rotation);
-            break;
-        }
-        default: {
-            break;
-        }
-    }
+    //         pSurface = box_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.rotation, size, size_param);
+    //         break;
+    //     }
+    //     case SD_CAPSULE: {
+    //         onion_thickness = map_thickness( onion_thickness, size_param );
+    //         size_param -= onion_thickness; // Compensate onion size
+    //         pSurface = capsule_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.rotation, size_param, radius);
+    //         break;
+    //     }
+    //     case SD_CONE: {
+    //         // onion_thickness = map_thickness( onion_thickness, 0.01 );
+    //         radius = max(radius * (1.0 - cap_value), 0.0025);
+    //         var dims = vec2f(size_param, size_param * cap_value);
+    //         pSurface = cone_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.rotation, dims, radius);
+    //         break;
+    //     }
+    //     // case SD_PYRAMID: {
+    //     //     pSurface = sdPyramid(position, edit.position, edit.rotation, radius, size_param, edit.color);
+    //     //     break;
+    //     // }
+    //     case SD_CYLINDER: {
+    //         //onion_thickness = map_thickness( onion_thickness, size_param );
+    //         //size_param -= onion_thickness; // Compensate onion size
+    //         pSurface = cylinder_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.rotation, size_param, radius);
+    //         break;
+    //     }
+    //     case SD_TORUS: {
+    //         onion_thickness = map_thickness( onion_thickness, size_param );
+    //         size_param -= onion_thickness; // Compensate onion size
+    //         size_param = clamp( size_param, 0.0001, radius );
+    //         if(cap_value > 0.0) {
+    //             var an = M_PI * (1.0 - cap_value);
+    //             var angles = vec2f(sin(an), cos(an));
+    //             pSurface = capped_torus_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, vec2f(radius, size_param), edit.rotation, angles);
+    //         } else {
+    //             pSurface = torus_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, vec2f(radius, size_param), edit.rotation);
+    //         }
+    //         break;
+    //     }
+    //     case SD_BEZIER: {
+    //         var curve_thickness : f32 = 0.01;
+    //         pSurface = bezier_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.position + vec3f(0.1, 0.2, 0.0), edit.position + vec3f(0.2, 0.0, 0.0), curve_thickness, edit.rotation);
+    //         break;
+    //     }
+    //     default: {
+    //         break;
+    //     }
+    // }
 
-    *resulting_interval = pSurface;
+    // *resulting_interval = pSurface;
 
-    // Shape edition ...
-    if( do_onion && (operation == OP_UNION || operation == OP_SMOOTH_UNION) )
-    {
-        // pSurface = opOnion(pSurface, onion_thickness);
-    }
+    // // Shape edition ...
+    // if( do_onion && (operation == OP_UNION || operation == OP_SMOOTH_UNION) )
+    // {
+    //     // pSurface = opOnion(pSurface, onion_thickness);
+    // }
 
-    switch (operation) {
-        case OP_UNION: {
-            pSurface = opUnionInterval(current_interval, pSurface);
-            break;
-        }
-        case OP_SUBSTRACTION:{
-            pSurface = opSubtractionInterval(current_interval, pSurface);
-            break;
-        }
-        case OP_INTERSECTION: {
-            // pSurface = opIntersection(current_interval, pSurface);
-            break;
-        }
-        case OP_PAINT: {
-            // pSurface = opPaint(current_interval, pSurface, edit.color);
-            break;
-        }
-        case OP_SMOOTH_UNION: {
-            pSurface = opSmoothUnionInterval(current_interval, pSurface, smooth_factor);
-            break;
-        }
-        case OP_SMOOTH_SUBSTRACTION: {
-            pSurface = opSmoothSubtractionInterval(current_interval, pSurface, smooth_factor);
-            break;
-        }
-        case OP_SMOOTH_INTERSECTION: {
-            // pSurface = opSmoothIntersection(current_interval, pSurface, SMOOTH_FACTOR);
-            break;
-        }
-        case OP_SMOOTH_PAINT: {
-            // pSurface = opSmoothPaint(current_interval, pSurface, edit.color, SMOOTH_FACTOR);
-            break;
-        }
-        default: {
-            break;
-        }
-    }
+    // switch (operation) {
+    //     case OP_UNION: {
+    //         pSurface = opUnionInterval(current_interval, pSurface);
+    //         break;
+    //     }
+    //     case OP_SUBSTRACTION:{
+    //         pSurface = opSubtractionInterval(current_interval, pSurface);
+    //         break;
+    //     }
+    //     case OP_INTERSECTION: {
+    //         // pSurface = opIntersection(current_interval, pSurface);
+    //         break;
+    //     }
+    //     case OP_PAINT: {
+    //         // pSurface = opPaint(current_interval, pSurface, edit.color);
+    //         break;
+    //     }
+    //     case OP_SMOOTH_UNION: {
+    //         pSurface = opSmoothUnionInterval(current_interval, pSurface, smooth_factor);
+    //         break;
+    //     }
+    //     case OP_SMOOTH_SUBSTRACTION: {
+    //         pSurface = opSmoothSubtractionInterval(current_interval, pSurface, smooth_factor);
+    //         break;
+    //     }
+    //     case OP_SMOOTH_INTERSECTION: {
+    //         // pSurface = opSmoothIntersection(current_interval, pSurface, SMOOTH_FACTOR);
+    //         break;
+    //     }
+    //     case OP_SMOOTH_PAINT: {
+    //         // pSurface = opSmoothPaint(current_interval, pSurface, edit.color, SMOOTH_FACTOR);
+    //         break;
+    //     }
+    //     default: {
+    //         break;
+    //     }
+    // }
 
     return pSurface;
 }

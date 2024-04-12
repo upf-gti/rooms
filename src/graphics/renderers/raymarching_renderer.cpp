@@ -337,7 +337,7 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
         reevaluate_edit_count += intersection_stroke.edit_count;
         stroke_influence_list.strokes[stroke_influence_list.stroke_count++] = intersection_stroke;
     }
-    spdlog::info("Stroke count {}, stroke edit count: {}, context size {}, total edit count: {}, avg edits per context {}", strokes.size(), stroke_edit_count, stroke_influence_list.stroke_count, reevaluate_edit_count, reevaluate_edit_count / stroke_influence_list.stroke_count);;
+    spdlog::info("Stroke count {}, stroke edit count: {}, context size {}, total edit count: {}, avg edits per context {}", strokes.size(), stroke_edit_count, stroke_influence_list.stroke_count, reevaluate_edit_count, reevaluate_edit_count / (stroke_influence_list.stroke_count + 0.0001f));
     // Can be done once
     {
 
