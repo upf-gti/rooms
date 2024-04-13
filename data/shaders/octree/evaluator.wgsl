@@ -196,7 +196,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     
     if (level < OCTREE_DEPTH) {
         // Broad culling using only the incomming stroke
-        if (current_stroke_interval.x < 0.0) {
+        // TODO: intersection with history strokes AABB?
+        if (surface_interval.x < 0.0) {
             // Subdivide
             // Increase the number of children from the current level
             let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 8);

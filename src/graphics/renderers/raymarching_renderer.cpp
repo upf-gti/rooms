@@ -332,11 +332,11 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
         }
     }
 
-    current_stroke.get_AABB_intersecting_stroke(strokes_aabb, intersection_stroke);
-    if (intersection_stroke.edit_count > 0u) {
-        reevaluate_edit_count += intersection_stroke.edit_count;
-        stroke_influence_list.strokes[stroke_influence_list.stroke_count++] = intersection_stroke;
-    }
+    //current_stroke.get_AABB_intersecting_stroke(strokes_aabb, intersection_stroke);
+    //if (intersection_stroke.edit_count > 0u) {
+    //    reevaluate_edit_count += intersection_stroke.edit_count;
+    //    stroke_influence_list.strokes[stroke_influence_list.stroke_count++] = intersection_stroke;
+    //}
     spdlog::info("Stroke count {}, stroke edit count: {}, context size {}, total edit count: {}, avg edits per context {}", strokes.size(), stroke_edit_count, stroke_influence_list.stroke_count, reevaluate_edit_count, reevaluate_edit_count / (stroke_influence_list.stroke_count + 0.0001f));
     // Can be done once
     {
@@ -345,7 +345,7 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
             webgpu_context->update_buffer(std::get<WGPUBuffer>(compute_stroke_buffer_uniform.data), 0, strokes.data(), sizeof(Stroke) * strokes.size());
         }
         else {
-            Stroke stroke;
+            Stroke stroke = {};
             webgpu_context->update_buffer(std::get<WGPUBuffer>(compute_stroke_buffer_uniform.data), 0, &stroke, sizeof(Stroke));
         }
 
