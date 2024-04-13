@@ -24,6 +24,7 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
 
     octree_depth = static_cast<uint8_t>(OCTREE_DEPTH);
 
+
     // total size considering leaves and intermediate levels
     octree_total_size = (pow(8, octree_depth + 1) - 1) / 7;
 
@@ -77,23 +78,15 @@ void RaymarchingRenderer::update(float delta_time)
     //}
 
 #ifndef DISABLE_RAYMARCHER
-    if (Input::is_mouse_pressed(GLFW_MOUSE_BUTTON_RIGHT)) {
+    if (Input::is_mouse_pressed(GLFW_MOUSE_BUTTON_RIGHT))
+    {
         RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
         WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
 
         Camera* camera = rooms_renderer->get_camera();
-        const glm::mat4x4& view_projection_inv = glm::inverse(camera->get_view_projection());
+        glm::vec3 ray_dir = camera->screen_to_ray(Input::get_mouse_position());
 
-        glm::vec2 mouse_pos = Input::get_mouse_position();
-        glm::vec3 mouse_pos_ndc;
-        mouse_pos_ndc.x = (mouse_pos.x / webgpu_context->render_width) * 2.0f - 1.0f;
-        mouse_pos_ndc.y = -((mouse_pos.y / webgpu_context->render_height) * 2.0f - 1.0f);
-        mouse_pos_ndc.z = 1.0f;
-
-        glm::vec4 ray_dir = view_projection_inv * glm::vec4(mouse_pos_ndc, 1.0f);
-        ray_dir /= ray_dir.w;
-
-        octree_ray_intersect(camera->get_eye(), glm::normalize(glm::vec3(ray_dir)));
+        octree_ray_intersect(camera->get_eye(), glm::normalize(ray_dir));
     }
 #endif
 
@@ -129,6 +122,7 @@ void RaymarchingRenderer::change_stroke(const StrokeParameters& params, const ui
     new_stroke.stroke_id = current_stroke.stroke_id + index_increment;
     new_stroke.primitive = params.get_primitive();
     new_stroke.operation = params.get_operation();
+    new_stroke.color_blending_op = params.get_color_blending_operation();
     new_stroke.parameters = params.get_parameters();
     new_stroke.material = params.get_material();
     new_stroke.edit_count = 0u;
@@ -635,7 +629,7 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
         wgpuRenderPassEncoderSetBindGroup(render_pass, 0, render_proxy_geometry_bind_group, 0, nullptr);
         wgpuRenderPassEncoderSetBindGroup(render_pass, 1, render_camera_bind_group, 0, nullptr);
         wgpuRenderPassEncoderSetBindGroup(render_pass, 2, sculpt_data_bind_proxy_group, 0, nullptr);
-        wgpuRenderPassEncoderSetBindGroup(render_pass, 3, Renderer::instance->get_ibl_bind_group(), 0, nullptr);
+        wgpuRenderPassEncoderSetBindGroup(render_pass, 3, Renderer::instance->get_lighting_bind_group(), 0, nullptr);
 
         // Set vertex buffer while encoding the render pass
         wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, surface->get_vertex_buffer(), 0, surface->get_byte_size());
@@ -659,7 +653,7 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
         wgpuRenderPassEncoderSetBindGroup(render_pass, 0, render_preview_proxy_geometry_bind_group, 0, nullptr);
         wgpuRenderPassEncoderSetBindGroup(render_pass, 1, render_preview_camera_bind_group, 0, nullptr);
         wgpuRenderPassEncoderSetBindGroup(render_pass, 2, sculpt_data_bind_preview_group, 0, nullptr);
-        wgpuRenderPassEncoderSetBindGroup(render_pass, 3, Renderer::instance->get_ibl_bind_group(), 0, nullptr);
+        wgpuRenderPassEncoderSetBindGroup(render_pass, 3, Renderer::instance->get_lighting_bind_group(), 0, nullptr);
 
         // Set vertex buffer while encoding the render pass
         wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, surface->get_vertex_buffer(), 0, surface->get_byte_size());
@@ -713,7 +707,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         static_cast<WGPUTextureUsage>(WGPUTextureUsage_TextureBinding | WGPUTextureUsage_StorageBinding | WGPUTextureUsage_CopySrc),
         1, 1, nullptr);
 
-    sdf_texture_uniform.data = sdf_texture.get_view();
+    sdf_texture_uniform.data = sdf_texture.get_view(WGPUTextureViewDimension_3D);
     sdf_texture_uniform.binding = 3;
 
     sdf_material_texture.create(
@@ -723,7 +717,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         static_cast<WGPUTextureUsage>(WGPUTextureUsage_TextureBinding | WGPUTextureUsage_StorageBinding | WGPUTextureUsage_CopySrc),
         1, 1, nullptr);
 
-    sdf_material_texture_uniform.data = sdf_material_texture.get_view();
+    sdf_material_texture_uniform.data = sdf_material_texture.get_view(WGPUTextureViewDimension_3D);
     sdf_material_texture_uniform.binding = 8; // TODO: set as 4
 
     // Size of penultimate level

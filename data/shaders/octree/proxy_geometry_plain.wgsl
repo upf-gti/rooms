@@ -99,6 +99,8 @@ struct FragmentOutput {
 @group(3) @binding(0) var irradiance_texture: texture_cube<f32>;
 @group(3) @binding(1) var brdf_lut_texture: texture_2d<f32>;
 @group(3) @binding(2) var sampler_clamp: sampler;
+@group(3) @binding(3) var<uniform> lights : array<Light, MAX_LIGHTS>;
+@group(3) @binding(4) var<uniform> num_lights : u32;
 
 fn sample_material_raw(pos : vec3u) -> Material {
     let sample : u32 = textureLoad(read_material_sdf, pos, 0).r;
@@ -156,7 +158,7 @@ fn sample_sdf_with_preview(sculpt_position : vec3f, atlas_position : vec3f) -> S
     surface.material = interpolate_material(atlas_position * SDF_RESOLUTION);
     
     for(var i : u32 = 0u; i < preview_data.preview_stroke.edit_count; i++) {
-        surface = evaluate_edit(sculpt_position, preview_data.preview_stroke.primitive, preview_data.preview_stroke.operation, preview_data.preview_stroke.parameters, surface, material, preview_data.preview_stroke.edits[i]);
+        surface = evaluate_edit(sculpt_position, preview_data.preview_stroke.primitive, preview_data.preview_stroke.operation, preview_data.preview_stroke.parameters, preview_data.preview_stroke.color_blend_op, surface, material, preview_data.preview_stroke.edits[i]);
         surface.distance = surface.distance / 2.0; 
     }
     
@@ -171,7 +173,7 @@ fn sample_sdf_with_preview_without_material(sculpt_position : vec3f, atlas_posit
     surface.distance = sample_sdf_atlas(atlas_position);
     
     for(var i : u32 = 0u; i < preview_data.preview_stroke.edit_count; i++) {
-        surface = evaluate_edit(sculpt_position, preview_data.preview_stroke.primitive, preview_data.preview_stroke.operation, preview_data.preview_stroke.parameters, surface, material, preview_data.preview_stroke.edits[i]);
+        surface = evaluate_edit(sculpt_position, preview_data.preview_stroke.primitive, preview_data.preview_stroke.operation, preview_data.preview_stroke.parameters, preview_data.preview_stroke.color_blend_op, surface, material, preview_data.preview_stroke.edits[i]);
     }
     
     return surface.distance;

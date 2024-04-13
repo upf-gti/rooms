@@ -7,6 +7,7 @@
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
 
 @group(2) @binding(0) var texture: texture_2d<f32>;
+@group(2) @binding(1) var<uniform> albedo: vec4f;
 @group(2) @binding(7) var texture_sampler : sampler;
 
 @vertex
@@ -19,7 +20,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     out.world_position = world_position.xyz;
     out.position = camera_data.view_projection * world_position;
     out.uv = in.uv; // forward to the fragment shader
-    out.color = in.color * instance_data.color.rgb;
+    out.color = vec4(in.color, 1.0) * albedo;
     out.normal = in.normal;
     return out;
 }
@@ -47,7 +48,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var out: FragmentOutput;
 
     var bgColor : vec4f = vec4f(0.0, 0.0, 0.0, 0.0);
-    var fgColor : vec4f = vec4f(in.color, 1.0);
+    var fgColor : vec4f = in.color;
 
     var msd : vec3f = textureSample(texture, texture_sampler, in.uv).rgb;
     var sd : f32 = median(msd.r, msd.g, msd.b);

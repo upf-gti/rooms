@@ -17,12 +17,14 @@ fn integrate_BRDF(NdotV : f32, roughness : f32) -> vec2f
     var A : f32 = 0.0;
     var B : f32 = 0.0;
 
+    let roughness2 : f32 = roughness * roughness;
+    let roughness4 : f32 = roughness2 * roughness2;
+
     for(var i : u32 = 0u; i < SAMPLE_COUNT; i = i + 1u)
     {
         let Xi : vec2f = Hammersley(i, SAMPLE_COUNT);
 
-        let importance_sample : vec4f = importance_sample_GGX(Xi, N, roughness);
-        let H : vec3f = importance_sample.xyz;
+        let H : vec3f = importance_sample_GGX(Xi, roughness4);
 
         let L : vec3f = normalize(reflect(-V, H));
 

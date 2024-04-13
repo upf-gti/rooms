@@ -46,6 +46,8 @@
 @group(3) @binding(0) var irradiance_texture: texture_cube<f32>;
 @group(3) @binding(1) var brdf_lut_texture: texture_2d<f32>;
 @group(3) @binding(2) var sampler_clamp: sampler;
+@group(3) @binding(3) var<uniform> lights : array<Light, MAX_LIGHTS>;
+@group(3) @binding(4) var<uniform> num_lights : u32;
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
@@ -57,7 +59,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     out.world_position = world_position.xyz;
     out.position = camera_data.view_projection * world_position;
     out.uv = in.uv; // forward to the fragment shader
-    out.color = in.color * instance_data.color.rgb;
+    out.color = vec4(in.color, 1.0) * albedo;
     out.normal = (instance_data.model * vec4f(in.normal, 0.0)).xyz;
     return out;
 }
@@ -80,11 +82,11 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
 #ifdef ALBEDO_TEXTURE
     let albedo_texture : vec4f = textureSample(albedo_texture, sampler_2d, in.uv);
-    m.albedo = albedo_texture.rgb * in.color * albedo.rgb;
-    alpha = albedo_texture.a * albedo.a;
+    m.albedo = albedo_texture.rgb * in.color.rgb;
+    alpha = albedo_texture.a * in.color.a;
 #else
-    m.albedo = in.color * albedo.rgb;
-    alpha = albedo.a;
+    m.albedo = in.color.rgb;
+    alpha = in.color.a;
 #endif
 
 #ifdef ALPHA_MASK
@@ -118,6 +120,8 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     m.roughness = max(m.roughness, 0.04);
     m.c_diff = mix(m.albedo, vec3f(0.0), m.metallic);
     m.f0 = mix(vec3f(0.04), m.albedo, m.metallic);
+    m.f90 = vec3f(1.0);
+    m.specular_weight = 1.0;
 
     // Vectors
 
@@ -134,14 +138,12 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     m.reflected_dir = normalize(reflect(-m.view_dir, m.normal));
 
-    // var distance : f32 = length(light_position - m.pos);
-    // var attenuation : f32 = pow(1.0 - saturate(distance/light_max_radius), 1.5);
     var final_color : vec3f = vec3f(0.0);
-    // final_color += get_direct_light(m, vec3f(1.0), 1.0);
-
+    final_color += get_indirect_light(m);
+    final_color += get_direct_light(m);
     final_color += m.emissive;
 
-    final_color += tonemap_filmic(get_indirect_light(m), 1.0);
+    final_color = tonemap_khronos_pbr_neutral(final_color);
 
     if (GAMMA_CORRECTION == 1) {
         final_color = pow(final_color, vec3(1.0 / 2.2));

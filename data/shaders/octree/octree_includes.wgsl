@@ -70,8 +70,9 @@ struct Stroke {
     primitive       : u32,
     operation       : u32,
     parameters      : vec4f,
-    dummy      : vec4f,
-    dummy1      : vec4f,
+    dummy           : vec3f,
+    color_blend_op  : u32,
+    dummy1          : vec4f,
     material        : StrokeMaterial,   // 48 bytes
     edits           : array<Edit, MAX_EDITS_PER_EVALUATION>
 };

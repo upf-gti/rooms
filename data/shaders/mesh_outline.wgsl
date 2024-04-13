@@ -1,7 +1,10 @@
 #include mesh_includes.wgsl
 
+#define GAMMA_CORRECTION
+
 @group(0) @binding(0) var<storage, read> mesh_data : InstanceData;
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
+@group(2) @binding(1) var<uniform> albedo: vec4f;
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
@@ -10,7 +13,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 
     var out: VertexOutput;
     out.uv = in.uv; // forward to the fragment shader
-    out.color = in.color * instance_data.color.rgb;
+    out.color = vec4(in.color, 1.0) * albedo;
     out.normal = (instance_data.model * vec4f(in.normal, 0.0)).xyz;
 
     var grow_pos = in.position + normalize(in.normal) * 0.0015;
@@ -28,11 +31,15 @@ struct FragmentOutput {
 @fragment
 fn fs_main(in: VertexOutput) -> FragmentOutput {
 
+    var out: FragmentOutput;
     var dummy = camera_data.eye;
 
-    var out: FragmentOutput;
+    var final_color : vec3f = in.color.rgb;
 
-    out.color = vec4f(pow(in.color, vec3f(2.2)), 1.0); // Color
+    if (GAMMA_CORRECTION == 1) {
+        final_color = pow(final_color, vec3f(1.0 / 2.2));
+    }
 
+    out.color = vec4(final_color, in.color.a);
     return out;
 }

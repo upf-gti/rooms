@@ -4,6 +4,8 @@
 
 @group(1) @binding(0) var<uniform> camera_data : CameraData;
 
+@group(2) @binding(1) var<uniform> albedo: vec4f;
+
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
 
@@ -14,7 +16,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     out.world_position = world_position.xyz;
     out.position = camera_data.view_projection * world_position;
     out.uv = in.uv; // forward to the fragment shader
-    out.color = in.color * instance_data.color.rgb;
+    out.color = vec4(in.color, 1.0) * albedo;
     out.normal = in.normal;
     return out;
 }

@@ -15,14 +15,12 @@ struct VertexOutput {
     @builtin(position) position: vec4f,
     @location(0) uv: vec2f,
     @location(1) normal: vec3f,
-    @location(2) color: vec3f,
+    @location(2) color: vec4f,
     @location(3) world_position: vec3f,
 };
 
 struct RenderMeshData {
-    model  : mat4x4f,
-    rotation : mat4x4f,
-    color  : vec4f,
+    model  : mat4x4f
 };
 
 struct InstanceData {

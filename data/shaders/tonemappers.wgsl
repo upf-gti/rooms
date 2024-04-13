@@ -35,3 +35,27 @@ fn tonemap_filmic(color : vec3f, white : f32) -> vec3f
 
 	return color_tonemapped / white_tonemapped;
 }
+
+fn tonemap_khronos_pbr_neutral( color : vec3f ) -> vec3f
+{
+    var final_color : vec3f = color;
+
+    let startCompression : f32 = 0.8 - 0.04;
+    let desaturation : f32 = 0.15;
+
+    let x : f32 = min(final_color.r, min(final_color.g, final_color.b));
+    let offset : f32 = select(0.04,  x - 6.25 * x * x, x < 0.08);
+    final_color -= offset;
+
+    let peak : f32 = max(final_color.r, max(final_color.g, final_color.b));
+    if (peak < startCompression) {
+        return final_color;
+    }
+
+    let d : f32 = 1. - startCompression;
+    let newPeak : f32 = 1. - d * d / (peak + d - startCompression);
+    final_color *= newPeak / peak;
+
+    let g : f32 = 1. - 1. / (desaturation * (peak - newPeak) + 1.);
+    return mix(final_color, vec3(1, 1, 1), g);
+}

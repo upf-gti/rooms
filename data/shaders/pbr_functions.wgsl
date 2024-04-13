@@ -12,28 +12,6 @@ fn Diffuse(albedo : vec3f) -> vec3f
     return albedo / PI;
 }
 
-fn DistributionGGX(N : vec3f, H : vec3f, roughness : f32) -> f32
-{
-    var a : f32 = roughness * roughness;
-    var a2 : f32 = a * a;
-    var NdotH : f32 = max(dot(N, H), 0.0);
-    var NdotH2 : f32 = NdotH * NdotH;
-
-    var nom : f32   = a2;
-    var denom : f32 = (NdotH2 * (a2 - 1.0) + 1.0);
-    denom = PI * denom * denom;
-
-    return nom / denom;
-}
-
-fn DistributionGGX2(N : vec3f, H : vec3f, roughness : f32) -> f32
-{
-    var NoH : f32 = clamp(dot(N, H), 0.0, 1.0);
-    var a : f32 = NoH * roughness;
-    var k : f32 = roughness / (1.0 - NoH * NoH + a * a);
-    return k * k * (1.0 / PI);
-}
-
 fn GeometrySchlickGGX(NdotV : f32, roughness : f32) -> f32
 {
     var r : f32 = (roughness + 1.0);
@@ -50,7 +28,12 @@ fn V_SmithGGXCorrelated(NoV : f32, NoL : f32, roughness : f32) -> f32
     let a2 : f32 = pow(roughness, 4.0);
     let GGXV : f32 = NoL * sqrt(NoV * NoV * (1.0 - a2) + a2);
     let GGXL : f32 = NoV * sqrt(NoL * NoL * (1.0 - a2) + a2);
-    return 0.5 / (GGXV + GGXL);
+    let GGX : f32 = GGXV + GGXL;
+    if(GGX > 0.0)
+    {
+        return 0.5 / GGX;
+    }
+    return 0.0;
 }
 
 fn GeometrySmith(N : vec3f, V : vec3f, L : vec3f, roughness : f32) -> f32
@@ -77,53 +60,28 @@ fn D_GGX(NdotH : f32, roughness : f32) -> f32
     return k * k * (1.0 / PI);
 }
 
-fn generateTBN(normal : vec3f) -> mat3x3<f32>
-{
-    var bitangent : vec3f = vec3f(0.0, 1.0, 0.0);
+fn DistributionGGX(NdotH : f32, roughness4 : f32) -> f32 {
+	let NdotH2 : f32 = NdotH * NdotH;
+	var denom : f32 = (NdotH2 * (roughness4 - 1.0) + 1.0);
+	denom = PI * denom * denom;
 
-    let NdotUp : f32 = dot(normal, vec3f(0.0, 1.0, 0.0));
-    let epsilon : f32 = 0.0000001;
-    if ((1.0 - abs(NdotUp)) <= epsilon)
-    {
-        // Sampling +Y or -Y, so we need a more robust bitangent.
-        if (NdotUp > 0.0)
-        {
-            bitangent = vec3f(0.0, 0.0, 1.0);
-        }
-        else
-        {
-            bitangent = vec3f(0.0, 0.0, -1.0);
-        }
-    }
-
-    let tangent : vec3f = normalize(cross(bitangent, normal));
-    bitangent = cross(normal, tangent);
-
-    return mat3x3<f32>(tangent, bitangent, normal);
+	return roughness4 / denom;
 }
 
 // https://github.com/KhronosGroup/glTF-Sample-Viewer/blob/main/source/shaders/ibl_filtering.frag#L217
-fn importance_sample_GGX(Xi : vec2f, N : vec3f, roughness : f32) -> vec4f
-{
-    let a : f32 = roughness * roughness;
-	
-    let cos_theta : f32 = sqrt((1.0 - Xi.y) / (1.0 + (a*a - 1.0) * Xi.y));
-    let sin_theta : f32 = sqrt(1.0 - cos_theta * cos_theta);
+fn importance_sample_GGX(Xi : vec2f, roughness4 : f32) -> vec3f
+{	
     let phi : f32 = 2.0 * PI * Xi.x;
+    let cos_theta : f32 = clamp(sqrt((1.0 - Xi.y) / (1.0 + (roughness4 - 1.0) * Xi.y)), 0.0, 1.0);
+    let sin_theta : f32 = sqrt(1.0 - cos_theta * cos_theta);
 
-    let pdf : f32 = D_GGX(cos_theta, a) / 4.0;
-
-    let local_space_direction : vec3f = normalize(vec3(
+    let H : vec3f = vec3f(
         sin_theta * cos(phi), 
         sin_theta * sin(phi), 
         cos_theta
-    ));
+    );
 
-    let TBN : mat3x3<f32> = generateTBN(N);
-
-    let direction : vec3f = TBN * local_space_direction;
-	
-    return vec4f(direction, pdf);
+    return H;
 }
 
 fn RadicalInverse_VdC(bits_in : u32) -> f32
@@ -142,19 +100,41 @@ fn Hammersley(i : u32, N : u32) -> vec2f
     return vec2f(f32(i)/ f32(N), RadicalInverse_VdC(i));
 }  
 
-fn fresnelSchlick(n_dot_v : f32, F0 : vec3f) -> vec3f
+fn F_Schlick(f0 : vec3f, f90 : vec3f, VdotH : f32) -> vec3f
 {
-    return F0 + (vec3f(1.0) - F0) * pow(clamp(1.0 - n_dot_v, 0.0, 1.0), 5.0);
+    return f0 + (f90 - f0) * pow(clamp(1.0 - VdotH, 0.0, 1.0), 5.0);
 }
 
-fn Fresnel_Schlick( specular_color : vec3f, h : vec3f, v : vec3f) -> vec3f
-{
-    return (specular_color + (1.0 - specular_color) * pow((1.0 - saturate(dot(v, h))), 5.0));
-}
+// fn fresnelSchlick(n_dot_v : f32, F0 : vec3f) -> vec3f
+// {
+//     return F0 + (vec3f(1.0) - F0) * pow(clamp(1.0 - n_dot_v, 0.0, 1.0), 5.0);
+// }
+
+// fn Fresnel_Schlick( specular_color : vec3f, h : vec3f, v : vec3f) -> vec3f
+// {
+//     return (specular_color + (1.0 - specular_color) * pow((1.0 - saturate(dot(v, h))), 5.0));
+// }
 
 fn FresnelSchlickRoughness(n_dot_v : f32, F0 : vec3f, roughness : f32) -> vec3f
 {
     return F0 + (max(vec3f(1.0 - roughness), F0) - F0) * pow(1.0 - n_dot_v, 5.0);
+}
+
+//  https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#acknowledgments AppendixB
+fn BRDF_specularGGX(f0 : vec3f, f90 : vec3f, alpha_roughness : f32, specular_weight : f32, VdotH : f32, NdotL : f32, NdotV : f32, NdotH : f32) -> vec3f
+{
+    let F : vec3f = F_Schlick(f0, f90, VdotH);
+    let Vis : f32 = V_SmithGGXCorrelated(NdotV, NdotL, alpha_roughness);
+    let D : f32 = D_GGX(NdotH, alpha_roughness);
+
+    return specular_weight * F * Vis * D;
+}
+
+//https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#acknowledgments AppendixB
+fn BRDF_lambertian(f0 : vec3f, f90 : vec3f, diffuse_color : vec3f, specular_weight : f32, VdotH : f32) -> vec3f
+{
+    // see https://seblagarde.wordpress.com/2012/01/08/pi-or-not-to-pi-in-game-lighting-equation/
+    return (1.0 - specular_weight * F_Schlick(f0, f90, VdotH)) * (diffuse_color / PI);
 }
 
 // http://www.thetenthplanet.de/archives/1180

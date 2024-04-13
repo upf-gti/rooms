@@ -1,6 +1,8 @@
 #include "rooms_engine.h"
 #include "framework/nodes/environment_3d.h"
 #include "framework/nodes/viewport_3d.h"
+#include "framework/nodes/omni_light_3d.h"
+#include "framework/nodes/spot_light_3d.h"
 #include "framework/input.h"
 #include "framework/scene/parse_scene.h"
 #include "framework/scene/parse_gltf.h"
@@ -10,6 +12,7 @@
 #include "spdlog/spdlog.h"
 #include "imgui.h"
 #include "framework/utils/tinyfiledialogs.h"
+#include "framework/utils/ImGuizmo.h"
 
 #include <fstream>
 
@@ -33,7 +36,26 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 
     //import_scene();
 
+    /*OmniLight3D* omni_light = new OmniLight3D();
+    omni_light->set_name("omni_light");
+    omni_light->set_translation({ 1.0f, 1.f, 0.0f });
+    omni_light->set_color({ 1.0f, 1.0f, 1.0f });
+    omni_light->set_intensity(1.0f);
+    omni_light->set_range(5.0f);
 
+    entities.push_back(omni_light);
+    RoomsRenderer::instance->add_light(omni_light);
+    */
+
+    SpotLight3D* spot_light = new SpotLight3D();
+    spot_light->set_name("spot_light");
+    spot_light->set_translation({ 0.0f, 1.f, 0.0f });
+    spot_light->rotate(glm::radians(-90.f), { 1.f, 0.0f, 0.f });
+    spot_light->set_color({ 1.0f, 1.0f, 1.0f });
+    spot_light->set_intensity(1.0f);
+    spot_light->set_range(5.0f);
+
+    entities.push_back(spot_light);
 
 	return error;
 }
@@ -71,6 +93,28 @@ void RoomsEngine::render()
     render_gui();
 #endif
 
+    // Get visible lights
+    {
+        for (auto entity : entities)
+        {
+            Light3D* light_node = dynamic_cast<Light3D*>(entity);
+
+            if (!light_node)
+            {
+                continue;
+            }
+            if (light_node->get_intensity() < 0.001f)
+            {
+                continue;
+            }
+            if (light_node->get_type() != LIGHT_DIRECTIONAL && light_node->get_range() == 0.0f)
+            {
+                continue;
+            }
+
+            RoomsRenderer::instance->add_light(light_node);
+        }
+    }
     
 	for (auto entity : entities) {
 		entity->render();
@@ -78,7 +122,18 @@ void RoomsEngine::render()
 
     sculpt_editor->render();
 
-	Engine::render();
+    {
+        static glm::mat4x4 test_model = entities[1]->get_model();
+        Camera* camera = RoomsRenderer::instance->get_camera();
+        bool changed = gizmo.render(camera->get_view(), camera->get_projection(), test_model);
+
+        if (changed)
+        {
+            entities[1]->set_model(test_model);
+        }
+    }
+
+    Engine::render();
 }
 
 bool RoomsEngine::export_scene()
@@ -365,6 +420,8 @@ bool RoomsEngine::show_tree_recursive(Node* entity)
                 ImGui::TreePop();
             }
         }
+
+        entity->render_gui();
 
         std::vector<Node*>::iterator it = children.begin();
 

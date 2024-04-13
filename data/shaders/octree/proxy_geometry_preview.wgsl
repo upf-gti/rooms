@@ -69,6 +69,8 @@ struct FragmentOutput {
 @group(3) @binding(0) var irradiance_texture: texture_cube<f32>;
 @group(3) @binding(1) var brdf_lut_texture: texture_2d<f32>;
 @group(3) @binding(2) var sampler_clamp: sampler;
+@group(3) @binding(3) var<uniform> lights : array<Light, MAX_LIGHTS>;
+@group(3) @binding(4) var<uniform> num_lights : u32;
 
 fn get_material_preview() -> Material {
     var material : Material;
@@ -90,7 +92,7 @@ fn sample_sdf_preview(position : vec3f) -> f32
     }
     
     for(var i : u32 = 0u; i < preview_data.preview_stroke.edit_count; i++) {
-        surface = evaluate_edit(position, preview_data.preview_stroke.primitive, preview_data.preview_stroke.operation, preview_data.preview_stroke.parameters, surface, material, preview_data.preview_stroke.edits[i]);
+        surface = evaluate_edit(position, preview_data.preview_stroke.primitive, preview_data.preview_stroke.operation, preview_data.preview_stroke.parameters, preview_data.preview_stroke.color_blend_op, surface, material, preview_data.preview_stroke.edits[i]);
     }
     return surface.distance;
 }
@@ -181,15 +183,15 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     out.color = vec4f(final_color, 1.0); // Color
     out.depth = ray_result.a;
 
-    if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
-        if (is_inside_brick) {
-            out.color = vec4f(1.0, 0.0, 1.0, 1.0);
-        } else {
-            out.color = vec4f(0.0, 0.0, 1.0, 1.0);
-        }
+    // if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
+    //     if (is_inside_brick) {
+    //         out.color = vec4f(1.0, 0.0, 1.0, 1.0);
+    //     } else {
+    //         out.color = vec4f(0.0, 0.0, 1.0, 1.0);
+    //     }
         
-        out.depth = in.position.z;
-    }
+    //     out.depth = in.position.z;
+    // }
 
     // out.color = vec4f(1.0, 0.0, 0.0, 1.0); // Color
     // out.depth = 0.0;

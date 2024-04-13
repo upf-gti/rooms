@@ -1,3 +1,4 @@
+#include ../color_blend_modes.wgsl
 
 // SD Primitives
 
@@ -128,15 +129,15 @@ fn sdCapsule( p : vec3f, a : vec3f, b : vec3f, rotation : vec4f, r : f32, materi
 }
 
 // t: (base radius, top radius)
-fn sdCone( p : vec3f, a : vec3f, h : f32, rotation : vec4f, t : vec2f, material : Material) -> Surface
+fn sdCone( p : vec3f, a : vec3f, h : f32, t : vec2f, rotation : vec4f, material : Material) -> Surface
 {
     var sf : Surface;
-    var r2 = t.x;
-    var r1 = t.y;
+    var r1 = t.x;
+    var r2 = t.y;
     var height = h * 0.5;
 
-    let pos : vec3f = rotate_point_quat(p - a, rotation) + vec3f(0.0, 0.0, height);
-    let q = vec2f( length(pos.xy), pos.z );
+    let pos : vec3f = rotate_point_quat(p - a, rotation) - vec3f(0.0, height, 0.0);
+    let q = vec2f( length(pos.xz), pos.y );
     let k1 = vec2f(r2, height);
     let k2 = vec2f(r2-r1, 2.0 * height);
     let ca = vec2f(q.x - min(q.x, select(r2, r1, q.y<0.0)), abs(q.y) - height);
@@ -206,7 +207,7 @@ fn sdCappedTorus( p : vec3f, c : vec3f, t : vec2f, rotation : vec4f, sc : vec2f,
     let ra = t.x;
     let rb = t.y;
     pos.x = abs(pos.x);
-    var k = select(length(pos.xy), dot(pos.xy,sc), sc.y*pos.x > sc.x*pos.y);
+    var k = select(length(pos.xz), dot(pos.xz,sc), sc.y*pos.x > sc.x*pos.z);
 
     sf.distance = sqrt( dot(pos,pos) + ra*ra - 2.0*ra*k ) - rb;
     sf.material = material;
@@ -335,10 +336,45 @@ fn opIntersection( s1 : Surface, s2 : Surface ) -> Surface
     return s;
 }
 
-fn opPaint( s1 : Surface, s2 : Surface, material : Material ) -> Surface
+fn opPaint( s1 : Surface, s2 : Surface, material : Material, color_blend_op : u32 ) -> Surface
 {
     var sColorInter : Surface = opIntersection(s1, s2);
-    sColorInter.material = material;
+    var new_mat : Material;
+
+    var base_color : vec3f = s1.material.albedo;
+    var new_layer_color : vec3f = material.albedo;
+    var result_color : vec3f = new_layer_color;
+
+    if(color_blend_op == CBM_MULTIPLY) {
+        result_color = multiply(base_color, new_layer_color);
+    }
+    else if(color_blend_op == CBM_SCREEN) {
+        result_color = screen(base_color, new_layer_color);
+    }
+    else if(color_blend_op == CBM_DARKEN) {
+        result_color = darken(base_color, new_layer_color);
+    }
+    else if(color_blend_op == CBM_LIGHTEN) {
+        result_color = lighten(base_color, new_layer_color);
+    }
+    else if(color_blend_op == CBM_ADDITIVE) {
+        result_color = additive(base_color, new_layer_color);
+    }
+    else if(color_blend_op == CBM_MIX) {
+        result_color = mix(base_color, new_layer_color, 0.5);
+    }
+
+    if(color_blend_op > 0u) {
+        // Since we add too many edits in smear, we need to force blending colors
+        // to be more realistic..
+        result_color = mix(base_color, result_color, 0.5);
+    }
+
+    new_mat.albedo = clamp(result_color, vec3f(0.0), vec3f(1.0));
+    new_mat.roughness = material.roughness;
+    new_mat.metalness = material.metalness;
+
+    sColorInter.material = new_mat;
     return opUnion(s1, sColorInter);
 }
 
@@ -508,7 +544,7 @@ fn eval_stroke_cone_substraction( position : vec3f, current_surface : Surface, c
         let size_param : f32 = curr_edit.dimensions.w;
         let dims = vec2f(size_param, size_param * cap_value);
 
-        tmp_surface = sdCone(position, curr_edit.position, radius, curr_edit.rotation, dims, material);
+        tmp_surface = sdCone(position, curr_edit.position, radius, dims, curr_edit.rotation, material);
         result_surface = opSmoothSubtraction(result_surface, tmp_surface, smooth_factor);
     }
 
@@ -534,7 +570,7 @@ fn eval_stroke_cone_union( position : vec3f, current_surface : Surface, curr_str
         let size_param : f32 = curr_edit.dimensions.w;
         let dims = vec2f(size_param, size_param * cap_value);
 
-        tmp_surface = sdCone(position, curr_edit.position, radius, curr_edit.rotation, dims, material);
+        tmp_surface = sdCone(position, curr_edit.position, radius, dims, curr_edit.rotation, material);
         result_surface = opSmoothUnion(result_surface, tmp_surface, smooth_factor);
     }
 
@@ -631,7 +667,7 @@ fn evaluate_edit_2( position: vec3f, stroke: ptr<storage, Stroke, read>, current
     return result_surface;
 }
 
-fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters : vec4f, current_surface : Surface, stroke_material : Material, edit : Edit) -> Surface
+fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters : vec4f, color_blend_op : u32, current_surface : Surface, stroke_material : Material, edit : Edit) -> Surface
 {
     var pSurface : Surface;
 
@@ -641,7 +677,7 @@ fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters
     var size_param : f32 = edit.dimensions.w;
 
     // 0 no cap ... 1 fully capped
-    var cap_value : f32 = parameters.y;
+    var cap_value : f32 = clamp(parameters.y, 0.0, 0.99);
 
     var onion_thickness : f32 = parameters.x;
     let do_onion = onion_thickness > 0.0;
@@ -650,11 +686,12 @@ fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters
 
     switch (primitive) {
         case SD_SPHERE: {
-            onion_thickness = map_thickness( onion_thickness, radius );
-            radius -= onion_thickness; // Compensate onion size
+            // onion_thickness = map_thickness( onion_thickness, radius );
+            //radius -= onion_thickness; // Compensate onion size
+            cap_value = clamp(cap_value, 0.0, 0.9);
             if(cap_value > 0.0) { 
                 cap_value = cap_value * 2.0 - 1.0;
-                pSurface = sdCutSphere(position, edit.position, edit.rotation, radius, radius * cap_value * 0.999, stroke_material);
+                pSurface = sdCutSphere(position, edit.position, edit.rotation, radius, radius * cap_value, stroke_material);
             } else {
                 pSurface = sdSphere(position, edit.position, radius, stroke_material);
             }
