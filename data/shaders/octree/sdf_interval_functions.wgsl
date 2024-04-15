@@ -327,18 +327,108 @@ fn icross_vec_mat(a : vec3f, b : mat3x3f) -> mat3x3f
     );
 }
 
-fn irotate_point_quat(position : mat3x3f, rotation : vec4f) -> mat3x3f
+fn icross_mat_vec(a : mat3x3f, b : vec3f) -> mat3x3f
 {
-    let crosses : mat3x3f = icross_vec_mat(rotation.xyz, iadd_mats(icross_vec_mat(rotation.xyz, position), imul_float_mat(rotation.w, position)));
-    let position_rotated : mat3x3f = iadd_mats(position, imul_float_mat(2.0, crosses));
+	return iavec3_vecs(
+        isub_vecs(imul_float_vec(b.z, a[1].xy), imul_float_vec(b.y, a[2].xy)),
+        isub_vecs(imul_float_vec(b.x, a[2].xy), imul_float_vec(b.z, a[0].xy)),
+        isub_vecs(imul_float_vec(b.y, a[0].xy), imul_float_vec(b.x, a[1].xy))
+    );
+}
+fn iacos(x : vec2f) -> vec2f {
+    if (x.y < -1.0) {
+        return vec2f(10000.0, 10000.0);
+    }
 
-    return position_rotated;
+    if (x.x <= -1.0) {
+        if (x.y < 1.0) {
+            return vec2f(x.y, M_PI);
+        }
+
+        return vec2f(0.0, M_PI);
+    }
+
+    if (x.y < 1.0) {
+        return vec2f(acos(x.y), acos(x.x));
+    }
+
+    if (x.x < 1.0) {
+        return vec2f(0.0, acos(x.x));
+    }
+
+    if (x.x == 1.0) {
+        return vec2f(0.0);
+    }
+
+    return vec2f(10000.0, 10000.0);
+}
+
+fn isin(a : vec2f) -> vec2f {
+    var u : f32 = M_PI * round(a.x / M_PI) + M_PI * 1.5;
+
+    if (u < a.y) {
+        return vec2f(-1.0, 1.0);
+    }
+
+    u -= M_PI;
+    let s = vec2f(sin(a.x), sin(a.y));
+    let r = vec2f(min(s.x, s.y), max(s.x, s.y));
+
+    if (u < a.y) {
+        let s = sin(u);
+        return vec2f(min(r.x, s), max(r.y, s));
+    }
+
+    return vec2f(r.x, r.y);
+}
+
+// Implementing quaternion ops with https://github.com/mbanani/novelviewpoints/blob/eca4f41c9481c0639126b60a05d19b953dda4520/novelviewpoints/util/rotation.py#L65
+// as ref
+// TODO(Juan) pach the rotation interval
+fn iquat_mult(q1 : vec4f, q2_pos : mat3x3, q2_w : vec2f) {
+    let q_w : vec2f = isub_vecs(isub_vecs(imul_float_vec(q1.w, q2_w), imul_float_vec(q1.x, q2_pos[0].xy)), isub_vecs(imul_float_vec(q1.y, q2_pos[1].xy), imul_float_vec(q1.z, q2_pos[2].xy)));
+    let q_x : vec2f = iadd_vecs(iadd_vecs(imul_float_vec(q1.w, q2_pos[0].xy), imul_float_vec(q1.x, q2_w)), isub_vecs(imul_float_vec(q1.y, q2_pos[2].xy), imul_float_vec(q1.z, q2_pos[1].xy)));
+    let q_y : vec2f = iadd_vecs(iadd_vecs(isub_vecs(imul_float_vec(q1.w, q2_pos[1].xy), imul_float_vec(q1.x, q2_pos[2].xy)), imul_float_vec(q1.y, q2_w)), imul_float_vec(q1.z, q2_pos[0].xy));
+    let q_z : vec2f = iadd_vecs(iadd_vecs(imul_float_vec(q1.w, q2_pos[2].xy), isub_vecs(imul_float_vec(q1.x, q2_pos[1].xy), imul_float_vec(q1.y, q2_pos[0].xy))), imul_float_vec(q1.z * q2_w));
 }
 
 fn idot(a : mat3x3f, b : mat3x3f) -> vec2f
 {
 	let c : mat3x3f = imul_mats(a,b);
 	return c[0].xy + c[1].xy + c[2].xy;
+}
+
+// fn iangle(l : vec3f, r : mat3x3f) -> vec2f {
+//     let sqMagL : f32 = l.x * l.x + l.y * l.y + l.z * l.z;
+//     let sqMagR : vec2f = ipow2_vec(r[0].xy) + ipow2_vec(r[1].xy ) + ipow2_vec(r[2].xy);
+//     if (sqMagL < 0.00001) { // || sqMagR < VEC3_EPSILON
+//         return vec2f(0.0, 0.0);
+//     }
+//     let isqMagL : vec2f = vec2f(sqMagL, sqMagL);
+//     let il = iavec3_vec(l);
+//     let dot : vec2f = idot(il, r);
+//     let len : vec2f = imul_vecs(isqrt(isqMagL), isqrt(sqMagR));
+//     return iacos(idiv_vecs(dot, len)); //rad
+// }
+
+// fn icross_trig_vec_mat(a : vec3f, b : mat3x3f) -> mat3x3f {
+//     let ab_angle : vec2f = iangle(a, b);
+//     let ab_lengths : vec2f = imul_vecs(ilength(iavec3_vec(a)), ilength(b));
+//     let ab_len_sin_angle : vec2f = imul_vecs(ab_lengths, isin(ab_angle));
+
+//     let n_b = icross_mats(iavec3_vec(a), b);
+//     let n_b_len_inv = idiv_vecs(vec2f(1.0, 1.0), ilength(n_b));
+//     let n = imul_vec2_mat(n_b_len_inv, n_b);
+
+//     return imul_vec2_mat(ab_len_sin_angle, n);
+// }
+
+fn irotate_point_quat(position : mat3x3f, rotation : vec4f) -> mat3x3f
+{
+    let crosses : mat3x3f = icross_mats(iavec3_vec(rotation.xyz), iadd_mats(icross_mats(iavec3_vec(rotation.xyz), position), imul_float_mat(rotation.w, position)));
+    let position_rotated : mat3x3f = iadd_mats(position, imul_float_mat(2.0, crosses));
+
+    return position_rotated;
 }
 
 fn icontains(a : vec2f, v : f32) -> bool

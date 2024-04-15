@@ -333,7 +333,7 @@ bool SculptEditor::edit_update(float delta_time)
                 glm::vec3 euler_angles(random_f() * 90, random_f() * 90, random_f() * 90);
                 edit_to_add.dimensions = glm::vec4(0.05f, 0.05f, 0.05f, 0.0f) * 1.0f;
                 //edit_to_add.dimensions = (edit_to_add.operation == OP_SUBSTRACTION) ? 3.0f * glm::vec4(0.2f, 0.2f, 0.2f, 0.2f) : glm::vec4(0.2f, 0.2f, 0.2f, 0.2f);
-                //edit_to_add.rotation = glm::inverse(glm::quat(euler_angles));
+                edit_to_add.rotation = glm::inverse(glm::quat(euler_angles));
                 // Stroke
                 //stroke_parameters.set_color(glm::vec4(0.1f, 0.1f, 0.1f, 1.f));
                 //stroke_parameters.set_primitive((random_f() > 0.25f) ? ((random_f() > 0.5f) ? SD_SPHERE : SD_CYLINDER) : SD_BOX);
