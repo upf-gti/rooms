@@ -229,11 +229,6 @@ fn ipow2_mat(v : mat3x3f) -> mat3x3f
 		ipow2_vec(v[2].xy));
 }
 
-fn isign(a : vec2f) -> vec2f
-{
-    return vec2f(sign(a.x), sign(a.y));
-}
-
 fn imin(a : vec2f, b : vec2f) -> vec2f
 {
 	return vec2f(min(a.x,b.x),min(a.y,b.y));
@@ -382,15 +377,35 @@ fn isin(a : vec2f) -> vec2f {
     return vec2f(r.x, r.y);
 }
 
+fn isign(x : vec2f) -> vec2f {
+    return vec2f(sign(x.x), sign(x.y));
+}
+
+fn inorm_quat(q : mat4x4f) -> mat4x4f {
+    let s : vec2f = isign(q[3].xy);
+    return mat4x4(vec4f(imul_vecs(s, q[0].xy), 0.0, 0.0), vec4f(imul_vecs(s, q[1].xy), 0.0, 0.0), vec4f(imul_vecs(s, q[2].xy), 0.0, 0.0), vec4f(imul_vecs(s, q[3].xy), 0.0, 0.0));
+}
+
 // Implementing quaternion ops with https://github.com/mbanani/novelviewpoints/blob/eca4f41c9481c0639126b60a05d19b953dda4520/novelviewpoints/util/rotation.py#L65
 // as ref
 // TODO(Juan) pach the rotation interval
-fn iquat_mult(q1 : vec4f, q2_pos : mat3x3, q2_w : vec2f) {
-    let q_w : vec2f = isub_vecs(isub_vecs(imul_float_vec(q1.w, q2_w), imul_float_vec(q1.x, q2_pos[0].xy)), isub_vecs(imul_float_vec(q1.y, q2_pos[1].xy), imul_float_vec(q1.z, q2_pos[2].xy)));
-    let q_x : vec2f = iadd_vecs(iadd_vecs(imul_float_vec(q1.w, q2_pos[0].xy), imul_float_vec(q1.x, q2_w)), isub_vecs(imul_float_vec(q1.y, q2_pos[2].xy), imul_float_vec(q1.z, q2_pos[1].xy)));
-    let q_y : vec2f = iadd_vecs(iadd_vecs(isub_vecs(imul_float_vec(q1.w, q2_pos[1].xy), imul_float_vec(q1.x, q2_pos[2].xy)), imul_float_vec(q1.y, q2_w)), imul_float_vec(q1.z, q2_pos[0].xy));
-    let q_z : vec2f = iadd_vecs(iadd_vecs(imul_float_vec(q1.w, q2_pos[2].xy), isub_vecs(imul_float_vec(q1.x, q2_pos[1].xy), imul_float_vec(q1.y, q2_pos[0].xy))), imul_float_vec(q1.z * q2_w));
-}
+// fn iquat_mult_quat_interv(q1 : vec4f, q2 : mat4x4f) -> mat4x4f {
+//     let q_w : vec2f = isub_vecs(isub_vecs(imul_float_vec(q1.w, q2[3].xy), imul_float_vec(q1.x, q2[0].xy)), isub_vecs(imul_float_vec(q1.y, q2[1].xy), imul_float_vec(q1.z, q2[2].xy)));
+//     let q_x : vec2f = iadd_vecs(iadd_vecs(imul_float_vec(q1.w, q2[0].xy), imul_float_vec(q1.x, q2[3].xy)), isub_vecs(imul_float_vec(q1.y, q2[2].xy), imul_float_vec(q1.z, q2[1].xy)));
+//     let q_y : vec2f = iadd_vecs(iadd_vecs(isub_vecs(imul_float_vec(q1.w, q2[1].xy), imul_float_vec(q1.x, q2[2].xy)), imul_float_vec(q1.y, q2[3].xy)), imul_float_vec(q1.z, q2[0].xy));
+//     let q_z : vec2f = iadd_vecs(iadd_vecs(imul_float_vec(q1.w, q2[2].xy), isub_vecs(imul_float_vec(q1.x, q2[1].xy), imul_float_vec(q1.y, q2[0].xy))), imul_float_vec(q1.z, q2[3].xy));
+
+//     return inorm_quat(mat4x4f(vec4f(q_x, 0.0, 0.0), vec4f(q_y, 0.0, 0.0), vec4f(q_z, 0.0, 0.0), vec4f(q_w, 0.0, 0.0)));
+// }
+
+// fn iquat_mult_interv_quat(q1 : mat4x4f, q2 : vec4f) -> mat4x4f {
+//     let q_w : vec2f = isub_vecs(isub_vecs(imul_float_vec(q2.w, q1[3].xy), imul_float_vec(q2.x, q1[0].xy)), isub_vecs(imul_float_vec(q2.y, q1[1].xy), imul_float_vec(q2.z, q1[2].xy)));
+//     let q_x : vec2f = iadd_vecs(iadd_vecs(imul_float_vec(q2.w, q1[0].xy), imul_float_vec(q2.x, q1[3].xy)), isub_vecs(imul_float_vec(q2.y, q1[2].xy), imul_float_vec(q2.z, q1[1].xy)));
+//     let q_y : vec2f = iadd_vecs(iadd_vecs(isub_vecs(imul_float_vec(q2.w, q1[1].xy), imul_float_vec(q2.x, q1[2].xy)), imul_float_vec(q2.y, q1[3].xy)), imul_float_vec(q2.z, q1[0].xy));
+//     let q_z : vec2f = iadd_vecs(iadd_vecs(imul_float_vec(q2.w, q1[2].xy), isub_vecs(imul_float_vec(q2.x, q1[1].xy), imul_float_vec(q2.y, q1[0].xy))), imul_float_vec(q2.z, q1[3].xy));
+
+//     return inorm_quat(mat4x4f(vec4f(q_x, 0.0, 0.0), vec4f(q_y, 0.0, 0.0), vec4f(q_z, 0.0, 0.0), vec4f(q_w, 0.0, 0.0)));
+// }
 
 fn idot(a : mat3x3f, b : mat3x3f) -> vec2f
 {
@@ -423,12 +438,54 @@ fn idot(a : mat3x3f, b : mat3x3f) -> vec2f
 //     return imul_vec2_mat(ab_len_sin_angle, n);
 // }
 
+struct iMat {
+    b_x : mat3x3f,
+    b_y : mat3x3f
+};
+
+fn imat_mul(m1_x : mat3x3f, m1_y : mat3x3f, m2_x : mat3x3f, m2_y : mat3x3f) -> iMat {
+    var res_x : mat3x3f = mat3x3f();
+    var res_y : mat3x3f = mat3x3f();
+    for(var i : u32 = 0; i < 3; i++) {
+        for(var j : u32 = 0; j < 3; j++) {
+            var tmp : vec2f = vec2f(0.0); 
+            for(var k : u32 = 0; k < 3; j++) {
+                tmp = iadd_vecs(tmp, imul_vecs(vec2f(m1_x[i][k], m1_y[i][k]), vec2f(m2_x[k][j], m2_y[k][j])));
+            }
+
+            res_x[i][j] = tmp.x;
+            res_y[i][j] = tmp.y;
+        }
+    }
+
+    return iMat(res_x, res_y);
+}
+
+fn imat_mul_vec(m1_x : mat3x3f, m1_y : mat3x3f, p : mat3x3f) -> mat3x3f {
+    var res : mat3x3f = mat3x3f();
+    for(var i : u32 = 0; i < 3; i++) {
+        var tmp : vec2f = vec2f(0.0); 
+        for(var j : u32 = 0; j < 3; j++) {
+           tmp = iadd_vecs(tmp, imul_float_vec(m1_x[i][j], p[j].xy));
+        }
+        res[i] = vec3f(tmp.xy, 0.0);
+    }
+
+    return res;
+}
+
 fn irotate_point_quat(position : mat3x3f, rotation : vec4f) -> mat3x3f
 {
-    let crosses : mat3x3f = icross_mats(iavec3_vec(rotation.xyz), iadd_mats(icross_mats(iavec3_vec(rotation.xyz), position), imul_float_mat(rotation.w, position)));
-    let position_rotated : mat3x3f = iadd_mats(position, imul_float_mat(2.0, crosses));
+    let rot_mat : mat3x3f = quat_to_mat3(rotation);
 
-    return position_rotated;
+    return imat_mul_vec(rot_mat, rot_mat, position);
+    // let q_pos : mat4x4f = mat4x4(vec4f(position[0].xyz, 0.0), vec4f(position[1].xyz, 0.0), vec4f(position[2].xyz, 0.0), vec4f(0.0));
+    // let pr_h : mat4x4f = iquat_mult_interv_quat(iquat_mult_quat_interv(rotation, q_pos), quat_conj(rotation));
+    // return mat3x3f(pr_h[0].xyz, pr_h[1].xyz, pr_h[2].xyz);
+    // let crosses : mat3x3f = icross_mats(iavec3_vec(rotation.xyz), iadd_mats(icross_mats(iavec3_vec(rotation.xyz), position), imul_float_mat(rotation.w, position)));
+    // let position_rotated : mat3x3f = iadd_mats(position, imul_float_mat(2.0, crosses));
+
+    // return position_rotated;
 }
 
 fn icontains(a : vec2f, v : f32) -> bool

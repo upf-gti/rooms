@@ -1,10 +1,6 @@
 const M_PI = 3.14159265359;
 const M_PI_INV = 1.0 / 3.14159265359;
 
-// fn hamiltonian_product(q1 : vec4f, q2 : vec4f) -> vec4f {
-//     var q : vec4f;
-// }
-
 fn quat_mult(q1 : vec4f, q2 : vec4f) -> vec4f
 {
     return vec4f(
@@ -24,13 +20,24 @@ fn quat_inverse(q : vec4f) -> vec4f
     return conj / (q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w);
 }
 
+fn quat_to_mat3(q : vec4f) -> mat3x3f {
+    let n = 1.0 / (sqrt(q.x*q.x + q.y*q.y + q.z*q.z + q.w*q.w));
+    let qw = q.w * n;
+    let qx = q.x * n;
+    let qy = q.y * n;
+    let qz = q.z * n;
+
+    return mat3x3f(
+    1.0 - 2.0*qy*qy - 2.0*qz*qz, 2.0*qx*qy - 2.0*qz*qw, 2.0*qx*qz + 2.0*qy*qw,
+    2.0*qx*qy + 2.0*qz*qw, 1.0 - 2.0*qx*qx - 2.0*qz*qz, 2.0*qy*qz - 2.0*qx*qw,
+    2.0*qx*qz - 2.0*qy*qw, 2.0*qy*qz + 2.0*qx*qw, 1.0 - 2.0*qx*qx - 2.0*qy*qy);
+}
+
+
 fn rotate_point_quat(position : vec3f, rotation : vec4f) -> vec3f
 {
-    // q_pos = quat(position)
-    // pr_h = hamilton(hamilton(rot, q_pos), conj(rot))
-    // return pr_h.xyz
-    let q_pos : vec4f = vec4f(position.x, position.y, position.z, 0.0);
-    let pr_h = quat_mult(quat_mult(rotation, q_pos), quat_conj(rotation));
-    return pr_h.xyz;
-    //return position + 2.0 * cross(rotation.xyz, cross(rotation.xyz, position) + rotation.w * position);
+    // let q_pos : vec4f = vec4f(position.x, position.y, position.z, 0.0);
+    // let pr_h = quat_mult(quat_mult(rotation, q_pos), quat_conj(rotation));
+    // return pr_h.xyz;
+    return position + 2.0 * cross(rotation.xyz, cross(rotation.xyz, position) + rotation.w * position);
 }
