@@ -115,15 +115,14 @@ fn sdBox( p : vec3f, c : vec3f, rotation : vec4f, s : vec3f, r : f32, material :
     return sf;
 }
 
-fn sdCapsule( p : vec3f, a : vec3f, b : vec3f, rotation : vec4f, r : f32, material : Material) -> Surface
+fn sdCapsule(p : vec3f, c : vec3f, rotation : vec4f, radius : f32, height : f32, material : Material) -> Surface
 {
     var sf : Surface;
-    let posA : vec3f = rotate_point_quat(p - a, rotation);
+    let pa : vec3f = rotate_point_quat(p - c, rotation);
+    let ba : vec3f = (c - vec3f(0.0, 0.0, height)) - c;
 
-    let pa : vec3f = posA;
-    let ba : vec3f = b - a;
     let h : f32 = clamp(dot(pa,ba) / dot(ba, ba), 0.0, 1.0);
-    sf.distance = length(pa-ba*h) - r;
+    sf.distance = length(pa-ba*h) - radius;
     sf.material = material;
     return sf;
 }
@@ -596,7 +595,7 @@ fn eval_stroke_capsule_substraction( position : vec3f, current_surface : Surface
         let height : f32 = curr_edit.dimensions.x;
         let size_param : f32 = curr_edit.dimensions.w;
 
-        tmp_surface = sdCapsule(position, curr_edit.position, curr_edit.position - vec3f(0.0, 0.0, height), curr_edit.rotation, size_param, material);
+        tmp_surface = sdCapsule(position, curr_edit.position, curr_edit.rotation, size_param, height, material);
         result_surface = opSmoothUnion(result_surface, tmp_surface, smooth_factor);
     }
 
@@ -621,7 +620,8 @@ fn eval_stroke_capsule_union( position : vec3f, current_surface : Surface, curr_
         let height : f32 = curr_edit.dimensions.x;
         let size_param : f32 = curr_edit.dimensions.w;
 
-        tmp_surface = sdCapsule(position, curr_edit.position, curr_edit.position - vec3f(0.0, 0.0, height), curr_edit.rotation, size_param, material);
+        tmp_surface = sdCapsule(position, curr_edit.position, curr_edit.rotation, size_param, height, material);
+        //tmp_surface = sdCapsule(position, curr_edit.position, curr_edit.rotation, 0.005, 0.02, material);
         result_surface = opSmoothUnion(result_surface, tmp_surface, smooth_factor);
     }
 
@@ -659,6 +659,14 @@ fn evaluate_edit_2( position: vec3f, stroke: ptr<storage, Stroke, read>, current
         }
         case SD_CONE_SMOOTH_OP_SUBSTRACTION: {
             result_surface = eval_stroke_cone_substraction(position, result_surface, stroke);
+            break;
+        }
+        case SD_CAPSULE_SMOOTH_OP_UNION: {
+            result_surface = eval_stroke_capsule_union(position, result_surface, stroke);
+            break;
+        }
+        case SD_CAPSULE_SMOOTH_OP_SUBSTRACTION: {
+            result_surface = eval_stroke_capsule_substraction(position, result_surface, stroke);
             break;
         }
         default: {}

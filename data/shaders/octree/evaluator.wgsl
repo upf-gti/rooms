@@ -178,12 +178,12 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     // in the form of some bricks disappearing, and that can be solved by
     // recomputing the context
     for (var j : u32 = 0; j < stroke_history.count; j++) {
-        surface_interval = evaluate_stroke_interval_2(current_subdivision_interval, &(stroke_history.strokes[j]), surface_interval);
+        surface_interval = evaluate_stroke_interval_2(current_subdivision_interval, &(stroke_history.strokes[j]), surface_interval, octant_center, level_half_size);
     }
 
     // Check the edits in the parent, and fill its own list with the edits that affect this child
-    surface_interval = evaluate_stroke_interval_2(current_subdivision_interval, &(stroke), surface_interval);
-    current_stroke_interval = evaluate_stroke_interval_2(current_subdivision_interval, &(stroke), current_stroke_interval);
+    surface_interval = evaluate_stroke_interval_2(current_subdivision_interval, &(stroke), surface_interval, octant_center, level_half_size);
+    current_stroke_interval = evaluate_stroke_interval_2(current_subdivision_interval, &(stroke), current_stroke_interval, octant_center, level_half_size);
 
     let is_current_brick_filled : bool = (octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG;
     let is_interior_brick : bool = (octree.data[octree_index].tile_pointer & INTERIOR_BRICK_FLAG) == INTERIOR_BRICK_FLAG;
@@ -208,7 +208,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             }
         }
     } else {
-         if (surface_interval.x < 0.0 && surface_interval.y > 0.0) {
+         if (surface_interval.x <= 0.0 && surface_interval.y >= 0.0) {
             {
                 let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 1);
 
