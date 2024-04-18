@@ -484,17 +484,17 @@ fn icross_cross(r : vec4f, p : mat3x3f) -> mat3x3f {
 
 fn irotate_point_quat(position : mat3x3f, rotation : vec4f) -> mat3x3f
 {
-    // let rot_mat : mat3x3f = quat_to_mat3(rotation);
+    let rot_mat : mat3x3f = quat_to_mat3(rotation);
 
-    // return imat_mul_vec(rot_mat, position);
+    return imat_mul_vec(rot_mat, position);
     // let q_pos : mat4x4f = mat4x4(vec4f(position[0].xyz, 0.0), vec4f(position[1].xyz, 0.0), vec4f(position[2].xyz, 0.0), vec4f(0.0));
     // let pr_h : mat4x4f = iquat_mult_interv_quat(iquat_mult_quat_interv(rotation, q_pos), quat_conj(rotation));
     // return mat3x3f(pr_h[0].xyz, pr_h[1].xyz, pr_h[2].xyz);
     //icross_cross(rotation, position);// 
-    let crosses : mat3x3f = icross_mats(iavec3_vec(rotation.xyz), iadd_mats(icross_mats(iavec3_vec(rotation.xyz), position), imul_float_mat(rotation.w, position)));
-    let position_rotated : mat3x3f = iadd_mats(position, imul_float_mat(2.0, crosses));
+    // let crosses : mat3x3f = icross_mats(iavec3_vec(rotation.xyz), iadd_mats(icross_mats(iavec3_vec(rotation.xyz), position), imul_float_mat(rotation.w, position)));
+    // let position_rotated : mat3x3f = iadd_mats(position, imul_float_mat(2.0, crosses));
 
-    return position_rotated;
+    // return position_rotated;
 }
 
 fn icontains(a : vec2f, v : f32) -> bool
@@ -666,7 +666,8 @@ fn sphere_interval(p : mat3x3f, edit_pos : vec3f, rotation : vec4f, r : f32) -> 
 	//let pos : mat3x3f = isub_mat_vec(p, edit_pos);//irotate_point_quat(, rotation);
     let pos : mat3x3f = irotate_point_quat(isub_mat_vec(p, edit_pos), rotation);
 
-	return isub_vec_float(ilength(p), r);
+	//return isub_vec_float(ilength(p), r);
+    return isub_vec_float(ilength(pos), r);
 }
 
 fn cut_sphere_interval(p : mat3x3f, edit_pos : vec3f, rotation : vec4f, r : f32, h : f32) -> vec2f
@@ -885,34 +886,6 @@ fn eval_interval_stroke_sphere_substraction( position : mat3x3f, current_surface
     return result_surface;
 }
 
-fn eval_interval_stroke_sphere_union2( position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>,  dimension_margin : vec4f, center : vec3f, half_size : f32) -> vec2f {
-    var result_surface : vec2f = current_surface;
-    var tmp_surface : vec2f;
-
-    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
-    let edit_count : u32 = (*curr_stroke).edit_count;
-    let parameters : vec4f = (*curr_stroke).parameters;
-
-    let smooth_factor : f32 = parameters.w;
-
-    // for(var i : u32 = 0u; i < edit_count; i++) {
-    //     let curr_edit : Edit = edit_array[i];
-    //     let radius : f32 = curr_edit.dimensions.x + dimension_margin.x;
-
-    //     let pos : vec3f = rotate_point_quat(center, curr_edit.rotation);
-    //     // Base evaluation range
-    //     let p0 : vec3f = center + vec3f(half_size, half_size, half_size);
-    //     // let p0 : vec3f = center + vec3f(half_size, half_size, half_size);
-    //     // let p0 : vec3f = center + vec3f(half_size, half_size, half_size);
-    //     // let p0 : vec3f = center + vec3f(half_size, half_size, half_size);
-    //     // let p0 : vec3f = center + vec3f(half_size, half_size, half_size);
-    //     tmp_surface = sphere_interval(pos_int_rot, curr_edit.position, curr_edit.rotation, radius);
-    //     result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
-    // }
-    
-    return result_surface;
-}
-
 fn eval_interval_stroke_sphere_union( position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>,  dimension_margin : vec4f, center : vec3f, half_size : f32) -> vec2f {
     var result_surface : vec2f = current_surface;
     var tmp_surface : vec2f;
@@ -934,7 +907,7 @@ fn eval_interval_stroke_sphere_union( position : mat3x3f, current_surface : vec2
         let z_range : vec2f = vec2f(pos.z - half_size, pos.z + half_size);
         let pos_int_rot = iavec3_vecs(x_range, y_range, z_range);
 
-        tmp_surface = sphere_interval(pos_int_rot, curr_edit.position, curr_edit.rotation, radius);
+        tmp_surface = sphere_interval(position, curr_edit.position, curr_edit.rotation, radius);
         result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
     }
     

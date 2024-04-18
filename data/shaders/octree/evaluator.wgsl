@@ -88,6 +88,8 @@
      - Re-test reevaluation
      - Add back the constants for the ifs
      - Interval lack of precission
+    // TODO(Juan): fix the preview
+
 */
 
 fn is_inside_AABB(point : vec3f, aabb_min : vec3f, aabb_max : vec3f) -> bool {
@@ -148,7 +150,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     let is_evaluating_preview : bool = !is_reevaluation && ((octree.evaluation_mode & EVALUATE_PREVIEW_STROKE_FLAG) == EVALUATE_PREVIEW_STROKE_FLAG);
     
     // Select the input stroke, or the preview stroke, depending on the mode
-    // TODO(Juan): fix the preview
     //  if (is_evaluating_preview) {
          
     // } else {
@@ -166,7 +167,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
     let SMOOTH_FACTOR : f32 = stroke.parameters.w;
 
-
     // Base evaluation range
     let x_range : vec2f = vec2f(octant_center.x - level_half_size, octant_center.x + level_half_size);
     let y_range : vec2f = vec2f(octant_center.y - level_half_size, octant_center.y + level_half_size);
@@ -177,6 +177,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     // however, for smooth substraction there can be precision issues
     // in the form of some bricks disappearing, and that can be solved by
     // recomputing the context
+    var subdivide : bool = false;
     for (var j : u32 = 0; j < stroke_history.count; j++) {
         surface_interval = evaluate_stroke_interval_2(current_subdivision_interval, &(stroke_history.strokes[j]), surface_interval, octant_center, level_half_size);
     }
@@ -184,6 +185,38 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     // Check the edits in the parent, and fill its own list with the edits that affect this child
     surface_interval = evaluate_stroke_interval_2(current_subdivision_interval, &(stroke), surface_interval, octant_center, level_half_size);
     current_stroke_interval = evaluate_stroke_interval_2(current_subdivision_interval, &(stroke), current_stroke_interval, octant_center, level_half_size);
+
+    // Pseudo subdivide!
+    // Re-compute the strokes for the octants of the last level, and check the interval on those
+    // Since the interval are smaller, the wrapping effect is lessend, and you add a brick if
+    // at least one of this interval subdivisions is true.
+    // Do this in all the dispatches, or just the last level??
+    if (level == OCTREE_DEPTH) {
+        for (var i : u32 = 0; i < 8 && !subdivide; i++) {
+            let sub_octant_id = octant_id | (i << (3 * level));
+
+            let sub_level_half_size = SCULPT_MAX_SIZE / pow(2.0, f32((level+1) + 1));
+
+            let sub_octant_center = octant_center + sub_level_half_size * OCTREE_CHILD_OFFSET_LUT[(sub_octant_id >> (3 * ((level+1) - 1))) & 0x7];
+
+            let x_range : vec2f = vec2f(sub_octant_center.x - sub_level_half_size, sub_octant_center.x + sub_level_half_size);
+            let y_range : vec2f = vec2f(sub_octant_center.y - sub_level_half_size, sub_octant_center.y + sub_level_half_size);
+            let z_range : vec2f = vec2f(sub_octant_center.z - sub_level_half_size, sub_octant_center.z + sub_level_half_size);
+            let current_sub_interval = iavec3_vecs(x_range, y_range, z_range);
+
+            var surf_interval : vec2f = vec2f(10000.0, 10000.0);
+            for (var j : u32 = 0; j < stroke_history.count; j++) {
+                surf_interval = evaluate_stroke_interval_2(current_sub_interval, &(stroke_history.strokes[j]), surf_interval, octant_center, level_half_size);
+            }
+
+            // Check the edits in the parent, and fill its own list with the edits that affect this child
+            surf_interval = evaluate_stroke_interval_2(current_sub_interval, &(stroke), surf_interval, sub_octant_center, sub_level_half_size);
+
+            if (surf_interval.x <= 0.0 && surf_interval.y >= 0.0 && !subdivide) {
+                subdivide = true;
+            }
+        }
+    }
 
     let is_current_brick_filled : bool = (octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG;
     let is_interior_brick : bool = (octree.data[octree_index].tile_pointer & INTERIOR_BRICK_FLAG) == INTERIOR_BRICK_FLAG;
@@ -207,7 +240,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 octant_usage_write[prev_counter + i] = octant_id | (i << (3 * level));
             }
         }
-    } else {
+    } else if (subdivide) {
          if (surface_interval.x <= 0.0 && surface_interval.y >= 0.0) {
             {
                 let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 1);
