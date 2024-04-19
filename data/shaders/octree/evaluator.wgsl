@@ -226,10 +226,18 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         surface_interval = evaluate_stroke_interval_2(current_subdivision_interval, &(stroke_history.strokes[j]), surface_interval, octant_center, level_half_size);
     }
 
+    var margin : vec4f = vec4f(0.0);
+    if (level == OCTREE_DEPTH) {
+        current_stroke_interval = surface_interval;
+    } else {
+        // Twice the smooth factor since it is the top influencing margin 
+        // as a way to subdivide to the bottom level. It is not used
+        // for sending the work to the write to texture!!
+        margin = vec4f(SMOOTH_FACTOR * 2.0);
+    }
     // Check the edits in the parent, and fill its own list with the edits that affect this child
     surface_interval = evaluate_stroke_interval_2(current_subdivision_interval, &(stroke), surface_interval, octant_center, level_half_size);
     // The magin is twice the smooth factor if there are two strokes with this smooth factor, they will act on eachotehr
-    var margin : vec4f = vec4f(SMOOTH_FACTOR * 2.0);
     current_stroke_interval = evaluate_stroke_interval_force_union(current_subdivision_interval, &(stroke), current_stroke_interval, margin);
 
     // Pseudo subdivide!
@@ -284,11 +292,21 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             }
         }
     } else if (subdivide) {
+        // in order to detect where the smooth factor is influencing  with the "goops"
+        // we evaluate the whole history and the store 2 diferent results, one with the 
+        // substraction, and another using it as adition. Then, we compare the two intervals,
+        // in order to find the goops (where the current stroke is taking affect)
         if (stroke.operation == OP_SMOOTH_SUBSTRACTION) {
-            if (current_stroke_interval.y < SMOOTH_FACTOR) {
-                brick_remove_or_mark_as_inside(octree_index, is_current_brick_filled);
-            } else if (surface_interval.x < 0.0 && current_stroke_interval.x < 0.0) {
-                brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
+            if ((current_stroke_interval.x < 0.0)) {
+                if (surface_interval.x < 0.0) {
+                    if (surface_interval.y < 0.0) {
+                        brick_remove_or_mark_as_inside(octree_index, is_current_brick_filled);
+                    } else {
+                        brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
+                    }  
+                } else if (is_current_brick_filled) {
+                    brick_remove(octree_index);
+                }
             }
         } else if (stroke.operation == OP_SMOOTH_UNION) {
             if (surface_interval.x < 0.0 && surface_interval.y > 0.0) {

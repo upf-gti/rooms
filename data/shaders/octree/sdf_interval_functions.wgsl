@@ -1106,15 +1106,15 @@ fn evaluate_stroke_interval_force_union( position: mat3x3f, stroke: ptr<storage,
 
     switch(stroke_primitive) {
         case SD_SPHERE: {
-            result_surface = eval_interval_stroke_sphere_union(position, result_surface, stroke, margin);
+            result_surface = eval_interval_stroke_sphere_smooth_union(position, result_surface, stroke, margin);
             break;
         }
         case SD_BOX: {
-            result_surface = eval_interval_stroke_box_union(position, result_surface, stroke, margin);
+            result_surface = eval_interval_stroke_box_smooth_union(position, result_surface, stroke, margin);
             break;
         }
         case SD_CAPSULE: {
-            result_surface = eval_interval_stroke_capsule_union(position, result_surface, stroke, margin);
+            result_surface = eval_interval_stroke_capsule_smooth_union(position, result_surface, stroke, margin);
             break;
         }
         default: {}
