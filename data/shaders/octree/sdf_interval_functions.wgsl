@@ -616,7 +616,7 @@ fn opUnionInterval( s1 : vec2f, s2 : vec2f ) -> vec2f
  
 fn opSmoothUnionInterval( s1 : vec2f, s2 : vec2f, k : f32 ) -> vec2f
 {
-    return isoft_min_quadratic(s2, s1, k);
+    return isoft_min_quadratic(s1, s2, k);
 }
 
 fn opSmoothSubtractionInterval( s1 : vec2f, s2 : vec2f, k : f32 ) -> vec2f
@@ -1099,25 +1099,22 @@ fn evaluate_stroke_interval_2( position: mat3x3f, stroke: ptr<storage, Stroke, r
     return result_surface;
 }
 
-fn evaluate_stroke_interval_force_union( position: mat3x3f, stroke: ptr<storage, Stroke, read>, current_surface : vec2f) -> vec2f {
+fn evaluate_stroke_interval_force_union( position: mat3x3f, stroke: ptr<storage, Stroke, read>, current_surface : vec2f, margin : vec4f) -> vec2f {
     let stroke_primitive : u32 = (*stroke).primitive;
-    let SMOOTH_FACTOR : f32 = (*stroke).parameters.w;
-
-    let dimensions_extra : vec4f = vec4f(SMOOTH_FACTOR * 1.1);
 
     var result_surface : vec2f = current_surface;
 
     switch(stroke_primitive) {
         case SD_SPHERE: {
-            result_surface = eval_interval_stroke_sphere_union(position, result_surface, stroke, dimensions_extra);
+            result_surface = eval_interval_stroke_sphere_union(position, result_surface, stroke, margin);
             break;
         }
         case SD_BOX: {
-            result_surface = eval_interval_stroke_box_union(position, result_surface, stroke, dimensions_extra);
+            result_surface = eval_interval_stroke_box_union(position, result_surface, stroke, margin);
             break;
         }
         case SD_CAPSULE: {
-            result_surface = eval_interval_stroke_capsule_union(position, result_surface, stroke, dimensions_extra);
+            result_surface = eval_interval_stroke_capsule_union(position, result_surface, stroke, margin);
             break;
         }
         default: {}
