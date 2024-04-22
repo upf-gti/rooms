@@ -43,6 +43,11 @@
 @group(2) @binding(8) var<uniform> alpha_cutoff: f32;
 #endif
 
+#ifdef USE_SKINNING
+@group(2) @binding(10) var<storage, read> animated_matrices: array<mat4x4f>;
+@group(2) @binding(11) var<storage, read> inv_bind_matrices: array<mat4x4f>;
+#endif
+
 @group(3) @binding(0) var irradiance_texture: texture_cube<f32>;
 @group(3) @binding(1) var brdf_lut_texture: texture_2d<f32>;
 @group(3) @binding(2) var sampler_clamp: sampler;
@@ -51,16 +56,29 @@
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
+    
+    var position = vec4f(in.position, 1.0);
+    var normals = vec4f(in.normal, 0.0);
+
+#ifdef USE_SKINNING
+    var skin : mat4x4f = (animated_matrices[in.joints.x] * inv_bind_matrices[in.joints.x]) * in.weights.x;
+    skin += (animated_matrices[in.joints.y] * inv_bind_matrices[in.joints.y]) * in.weights.y;
+    skin += (animated_matrices[in.joints.z] * inv_bind_matrices[in.joints.z]) * in.weights.z;
+    skin += (animated_matrices[in.joints.w] * inv_bind_matrices[in.joints.w]) * in.weights.w;
+    position = skin * position;
+    normals = skin * normals;
+#endif
 
     let instance_data : RenderMeshData = mesh_data.data[in.instance_id];
 
     var out: VertexOutput;
-    var world_position = instance_data.model * vec4f(in.position, 1.0);
+    var world_position = instance_data.model * position;
     out.world_position = world_position.xyz;
     out.position = camera_data.view_projection * world_position;
     out.uv = in.uv; // forward to the fragment shader
-    out.color = vec4(in.color, 1.0) * albedo;
-    out.normal = (instance_data.model * vec4f(in.normal, 0.0)).xyz;
+    out.color = vec4f(in.color, 1.0) * albedo;
+    out.normal = (instance_data.model * normals).xyz;
+    
     return out;
 }
 
