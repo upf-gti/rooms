@@ -3,11 +3,11 @@
 ![logo](./data/images/logo_light.png#gh-dark-mode-only)
 ![logo](./data/images/logo_dark.png#gh-light-mode-only)
 
-## An innovative XR experience creation tool
+## An XR experience creation tool
 
 **Rooms** is a platform for creating 3D content for XR experiences directly in XR-enabled hardware. XR interactive experiences require significant levels of expertise to curate across all stages of production and delivery. Rooms targets democratising the content creation process by lowering the barrier of entry for creating 3D assets to import into novel XR experiences. 
 
-Through VR headsets, users could have the possibility to create full XR experiences involving 3D sculpted assets, 3D animations and scripted element behaviours. Inside a future online community, every asset (from 3D models to scripts; generated using an XR visual scripting editor) could be exported and re-used in other experiences. 
+Through VR headsets, users could have the possibility to create full XR experiences involving 3D sculpted assets, 3D animations and scripted element behaviours.
 
 <p align="center" width="100%">
     <img width="50%" src="./data/images/demo_capture.png"> 
@@ -16,8 +16,6 @@ Through VR headsets, users could have the possibility to create full XR experien
 ## Current status
 
 Rooms is currently in the development stages. 
-
-While it already offers some remarkable features, we're diligently working on more functionalities that will be introduced in the near future. Your experience with Rooms is set to become even more versatile and user-friendly as we continue refining and expanding its capabilities.
 
 ### Roadmap
 
