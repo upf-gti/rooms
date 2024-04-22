@@ -16,6 +16,7 @@
 #include "spdlog/spdlog.h"
 #include "imgui.h"
 #include <glm/gtx/quaternion.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 uint8_t SculptEditor::last_generated_material_uid = 0;
 
@@ -234,7 +235,7 @@ bool SculptEditor::edit_update(float delta_time)
         }
         else {
             // Only stretch the edit when the acceleration of the hand exceds a threshold
-            is_stretching_edit = glm::length(glm::abs(controller_velocity)) > 0.20f;
+            is_stretching_edit = glm::length(glm::abs(controller_position_data.controller_velocity)) > 0.20f;
         }
         
     }
@@ -356,6 +357,25 @@ bool SculptEditor::edit_update(float delta_time)
     edit_position_world = edit_to_add.position;
     edit_rotation_world = edit_to_add.rotation;
 
+    // Add edit based on controller movement
+    spdlog::info("Dist: {}", glm::length(controller_position_data.prev_edit_position - edit_position_world), glm::length(controller_position_data.controller_velocity), glm::length(controller_position_data.controller_acceleration));
+
+
+    //if (glm::length(controller_position_data.controller_velocity) < 0.1f && glm::length(controller_position_data.controller_acceleration) < 10.1f) {
+    if (was_tool_pressed && is_tool_used) {
+        if (glm::length(controller_position_data.prev_edit_position - edit_position_world) < (edit_to_add.dimensions.x / 2.0f) + stroke_parameters.get_smooth_factor() * 2.0f) {
+            is_tool_used = false;
+        } else {
+            controller_position_data.prev_edit_position = edit_position_world;
+        }
+    }
+    else {
+        controller_position_data.prev_edit_position = edit_position_world;
+    }
+
+    //if (is_tool_used) {
+       
+    //}
 
     //edit_to_add.position = glm::vec3(0.0f);
     return is_tool_used;
@@ -408,12 +428,11 @@ void SculptEditor::update(float delta_time)
     // Update controller speed & acceleration
     {
         const glm::vec3 curr_controller_pos = Input::get_controller_position(HAND_RIGHT);
-        const glm::vec3 curr_controller_velocity = (curr_controller_pos - prev_controller_pos) / delta_time;
-        controller_acceleration = (curr_controller_velocity - controller_velocity) / delta_time;
-        controller_velocity = curr_controller_velocity;
-        prev_controller_pos = curr_controller_pos;
-
-        //spdlog::info("{}", glm::length(glm::abs(controller_acceleration)));
+        controller_position_data.controller_frame_distance = curr_controller_pos - controller_position_data.prev_controller_pos;
+        const glm::vec3 curr_controller_velocity = (controller_position_data.controller_frame_distance) / delta_time;
+        controller_position_data.controller_acceleration = (curr_controller_velocity - controller_position_data.controller_velocity) / delta_time;
+        controller_position_data.controller_velocity = curr_controller_velocity;
+        controller_position_data.prev_controller_pos = curr_controller_pos;
     }
 
     bool is_tool_used = edit_update(delta_time);

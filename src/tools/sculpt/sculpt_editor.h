@@ -90,9 +90,13 @@ class SculptEditor {
     glm::vec3 initial_hand_translation = {};
     glm::vec3 translation_diff = {};
 
-    glm::vec3 prev_controller_pos = {};
-    glm::vec3 controller_velocity = {};
-    glm::vec3 controller_acceleration = {};
+    struct {
+        glm::vec3 prev_controller_pos = {};
+        glm::vec3 controller_velocity = {};
+        glm::vec3 controller_acceleration = {};
+        glm::vec3 controller_frame_distance = {};
+        glm::vec3 prev_edit_position = {};
+    } controller_position_data;
 
     glm::quat initial_hand_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
     glm::quat rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
