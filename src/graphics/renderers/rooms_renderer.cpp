@@ -464,7 +464,7 @@ void RoomsRenderer::init_mirror_pipeline()
         swapchain_bind_groups.push_back(webgpu_context.create_bind_group(uniforms, mirror_shader, 0));
     }
 
-    mirror_pipeline.create_render(mirror_shader, color_target, { .depth_read = false });
+    mirror_pipeline.create_render(mirror_shader, color_target, { .depth_read = false, .depth_write = false });
 }
 
 #endif

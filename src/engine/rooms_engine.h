@@ -19,7 +19,7 @@ class RoomsEngine : public Engine
     Gizmo2D gizmo;
 
     bool export_scene();
-    bool import_scene();
+    //bool import_scene();
 
     void render_gui();
     bool show_tree_recursive(Node* entity);

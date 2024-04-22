@@ -187,102 +187,102 @@ bool RoomsEngine::export_scene()
 
     return true;
 }
-
-bool RoomsEngine::import_scene()
-{
-    std::ifstream file("data/exports/myscene.txt");
-
-    if (!file.is_open())
-        return false;
-
-    std::string line = "";
-
-    // Write scene info
-    RoomsRenderer* renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
-    RaymarchingRenderer* rmr = renderer->get_raymarching_renderer();
-
-    // Num strokes
-    std::getline(file, line);
-    uint32_t num_strokes = std::stoi(line.substr(1));
-
-    uint32_t num_edits = 0;
-
-    // Starting sculpt position
-    std::getline(file, line);
-    glm::vec3 position = load_vec3(line.substr(1));
-    rmr->set_sculpt_start_position(position);
-    sculpt_editor->set_sculpt_started(true);
-
-    Stroke current_stroke;
-
-    // Parse edits
-    while (std::getline(file, line))
-    {
-        std::string t = line.substr(1);
-        auto tokens = tokenize(t);
-
-        if (tokens[0] == "stroke")
-        {
-            // Push last stroke
-            if (current_stroke.edit_count > 0) {
-                rmr->push_stroke(current_stroke);
-            }
-
-            current_stroke.stroke_id = static_cast<uint32_t>(std::stoi(tokens[1]));
-            current_stroke.primitive = static_cast<sdPrimitive>(std::stoi(tokens[2]));
-            current_stroke.operation = static_cast<sdOperation>(std::stoi(tokens[3]));
-
-            std::getline(file, line);
-            current_stroke.parameters = load_vec4(line);
-        }
-        else if (tokens[0] == "stroke-material")
-        {
-            StrokeMaterial mat;
-
-            // Roughness, metallic, emissive
-            std::getline(file, line);
-            glm::vec3 pbr_data = load_vec3(line);
-            mat.roughness = pbr_data.x;
-            mat.metallic = pbr_data.y;
-            mat.emissive = pbr_data.z;
-
-            // Color + noise parameters
-            std::getline(file, line);
-            mat.color = load_vec4(line);
-            std::getline(file, line);
-            mat.noise_params = load_vec4(line);
-            std::getline(file, line);
-            mat.noise_color = load_vec4(line);
-
-            current_stroke.material = mat;
-        }
-        else if (tokens[0] == "stroke-edits")
-        {
-            uint32_t edit_count = std::stoi(tokens[1]);
-            current_stroke.edit_count = edit_count;
-
-            for (size_t i = 0; i < edit_count; ++i)
-            {
-                std::getline(file, line);
-                current_stroke.edits[i].parse_string(line);
-                num_edits++;
-            }
-        }
-    }
-
-    file.close();
-
-    // Push current (and last) stroke data
-    if (current_stroke.edit_count > 0) {
-        rmr->push_stroke(current_stroke);
-    }
-
-    rmr->compute_octree();
-
-    spdlog::info("Scene imported! ({} edits)", num_edits);
-    
-    return true;
-}
+//
+//bool RoomsEngine::import_scene()
+//{
+//    std::ifstream file("data/exports/myscene.txt");
+//
+//    if (!file.is_open())
+//        return false;
+//
+//    std::string line = "";
+//
+//    // Write scene info
+//    RoomsRenderer* renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
+//    RaymarchingRenderer* rmr = renderer->get_raymarching_renderer();
+//
+//    // Num strokes
+//    std::getline(file, line);
+//    uint32_t num_strokes = std::stoi(line.substr(1));
+//
+//    uint32_t num_edits = 0;
+//
+//    // Starting sculpt position
+//    std::getline(file, line);
+//    glm::vec3 position = load_vec3(line.substr(1));
+//    rmr->set_sculpt_start_position(position);
+//    sculpt_editor->set_sculpt_started(true);
+//
+//    Stroke current_stroke;
+//
+//    // Parse edits
+//    while (std::getline(file, line))
+//    {
+//        std::string t = line.substr(1);
+//        auto tokens = tokenize(t);
+//
+//        if (tokens[0] == "stroke")
+//        {
+//            // Push last stroke
+//            if (current_stroke.edit_count > 0) {
+//                rmr->push_stroke(current_stroke);
+//            }
+//
+//            current_stroke.stroke_id = static_cast<uint32_t>(std::stoi(tokens[1]));
+//            current_stroke.primitive = static_cast<sdPrimitive>(std::stoi(tokens[2]));
+//            current_stroke.operation = static_cast<sdOperation>(std::stoi(tokens[3]));
+//
+//            std::getline(file, line);
+//            current_stroke.parameters = load_vec4(line);
+//        }
+//        else if (tokens[0] == "stroke-material")
+//        {
+//            StrokeMaterial mat;
+//
+//            // Roughness, metallic, emissive
+//            std::getline(file, line);
+//            glm::vec3 pbr_data = load_vec3(line);
+//            mat.roughness = pbr_data.x;
+//            mat.metallic = pbr_data.y;
+//            mat.emissive = pbr_data.z;
+//
+//            // Color + noise parameters
+//            std::getline(file, line);
+//            mat.color = load_vec4(line);
+//            std::getline(file, line);
+//            mat.noise_params = load_vec4(line);
+//            std::getline(file, line);
+//            mat.noise_color = load_vec4(line);
+//
+//            current_stroke.material = mat;
+//        }
+//        else if (tokens[0] == "stroke-edits")
+//        {
+//            uint32_t edit_count = std::stoi(tokens[1]);
+//            current_stroke.edit_count = edit_count;
+//
+//            for (size_t i = 0; i < edit_count; ++i)
+//            {
+//                std::getline(file, line);
+//                current_stroke.edits[i].parse_string(line);
+//                num_edits++;
+//            }
+//        }
+//    }
+//
+//    file.close();
+//
+//    // Push current (and last) stroke data
+//    if (current_stroke.edit_count > 0) {
+//        rmr->push_stroke(current_stroke);
+//    }
+//
+//    rmr->compute_octree();
+//
+//    spdlog::info("Scene imported! ({} edits)", num_edits);
+//    
+//    return true;
+//}
 
 void RoomsEngine::render_gui()
 {

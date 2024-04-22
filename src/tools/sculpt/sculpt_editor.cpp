@@ -330,7 +330,7 @@ bool SculptEditor::edit_update(float delta_time)
             if (current_tool == SCULPT && is_tool_being_used(stamp_enabled)) {
 
                 edit_to_add.position = glm::vec3(glm::vec3(0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1)));
-                glm::vec3 euler_angles(glm::pi<float>() * 0.25, 0.0, 0.0);
+                glm::vec3 euler_angles(glm::pi<float>() * random_f(), glm::pi<float>()* random_f(), glm::pi<float>()* random_f());
                 edit_to_add.dimensions = glm::vec4(0.05f, 0.05f, 0.05f, 0.0f) * 1.0f;
                 //edit_to_add.dimensions = (edit_to_add.operation == OP_SUBSTRACTION) ? 3.0f * glm::vec4(0.2f, 0.2f, 0.2f, 0.2f) : glm::vec4(0.2f, 0.2f, 0.2f, 0.2f);
                 edit_to_add.rotation = glm::normalize(glm::inverse(glm::normalize(glm::quat(euler_angles))));
@@ -446,7 +446,7 @@ void SculptEditor::update(float delta_time)
     }
 
     scene_update_rotation();
-
+     
     // Edit & Stroke submission
     {
         if (use_mirror) {

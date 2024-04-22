@@ -310,8 +310,8 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
         // heatmap_color.b = cos(interpolant);
         // return vec4f(heatmap_color, depth);
         //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
-		return vec4f(apply_light(-ray_dir, position_in_world, position_in_world, normal, lightPos + lightOffset, material), depth);
-        //return vec4f(normal, depth);
+		//return vec4f(apply_light(-ray_dir, position_in_world, position_in_world, normal, lightPos + lightOffset, material), depth);
+        return vec4f(normal, depth);
         //return vec4f(material.albedo, depth);
         //return vec4f(normal, depth);
         //return vec4f(vec3f(material.albedo), depth);
