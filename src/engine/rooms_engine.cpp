@@ -6,13 +6,14 @@
 #include "framework/input.h"
 #include "framework/scene/parse_scene.h"
 #include "framework/scene/parse_gltf.h"
+#include "framework/utils/tinyfiledialogs.h"
+
 #include "graphics/renderers/rooms_renderer.h"
+
 #include "tools/sculpt/sculpt_editor.h"
 
 #include "spdlog/spdlog.h"
 #include "imgui.h"
-#include "framework/utils/tinyfiledialogs.h"
-#include "framework/utils/ImGuizmo.h"
 
 #include <fstream>
 
@@ -22,9 +23,12 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 {
     int error = Engine::initialize(renderer, window, use_glfw, use_mirror_screen);
 
-    sculpt_editor = new SculptEditor;
+    // Sculpting
+    {
+        sculpt_editor = new SculptEditor();
+        sculpt_editor->initialize();
+    }
 
-    sculpt_editor->initialize();
 
     skybox = new Environment3D();
 
@@ -122,16 +126,6 @@ void RoomsEngine::render()
 
     sculpt_editor->render();
 
-    {
-        static glm::mat4x4 test_model = entities[1]->get_model();
-        Camera* camera = RoomsRenderer::instance->get_camera();
-        bool changed = gizmo.render(camera->get_view(), camera->get_projection(), test_model);
-
-        if (changed)
-        {
-            entities[1]->set_model(test_model);
-        }
-    }
 
     Engine::render();
 }
@@ -288,7 +282,7 @@ void RoomsEngine::render_gui()
 {
     bool active = true;
 
-    ImGui::SetNextWindowSize({ 300, 400 });
+    // ImGui::SetNextWindowSize({ 300, 400 });
     ImGui::Begin("Debug panel", &active, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoFocusOnAppearing);
 
     if (ImGui::BeginMenuBar())
@@ -393,7 +387,7 @@ bool RoomsEngine::show_tree_recursive(Node* entity)
 
     ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
 
-    if (!entity_mesh && children.empty() || (entity_mesh && children.empty() && entity_mesh->get_surfaces().empty())) {
+    if ((entity_mesh && children.empty() && entity_mesh->get_surfaces().empty())) {
         flags |= ImGuiTreeNodeFlags_Leaf;
     }
 

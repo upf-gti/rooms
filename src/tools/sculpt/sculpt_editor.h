@@ -197,6 +197,7 @@ class SculptEditor {
 public:
 
     SculptEditor() {};
+
     void initialize();
     void clean();
 
