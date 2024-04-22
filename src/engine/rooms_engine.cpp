@@ -1,4 +1,5 @@
 #include "rooms_engine.h"
+
 #include "framework/nodes/environment_3d.h"
 #include "framework/nodes/viewport_3d.h"
 #include "framework/nodes/omni_light_3d.h"
@@ -11,6 +12,7 @@
 #include "graphics/renderers/rooms_renderer.h"
 
 #include "tools/sculpt/sculpt_editor.h"
+#include "tools/animation/animation_module.h"
 
 #include "spdlog/spdlog.h"
 #include "imgui.h"
@@ -29,6 +31,11 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
         sculpt_editor->initialize();
     }
 
+    // Animation
+    {
+        animation_module = new AnimationModule();
+        animation_module->initialize();
+    }
 
     skybox = new Environment3D();
 
@@ -84,6 +91,7 @@ void RoomsEngine::update(float delta_time)
     }
 
     sculpt_editor->update(delta_time);
+    animation_module->update(delta_time);
 
     if (Input::was_key_pressed(GLFW_KEY_E))
     {
@@ -126,6 +134,7 @@ void RoomsEngine::render()
 
     sculpt_editor->render();
 
+    animation_module->render();
 
     Engine::render();
 }
@@ -345,6 +354,11 @@ void RoomsEngine::render_gui()
         if (ImGui::BeginTabItem("Sculpt Editor"))
         {
             sculpt_editor->render_gui();
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem("Animation Module"))
+        {
+            animation_module->render_gui();
             ImGui::EndTabItem();
         }
         if (ImGui::BeginTabItem("Debugger"))

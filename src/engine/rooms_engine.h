@@ -7,14 +7,17 @@
 class Node;
 class Node3D;
 class Environment3D;
+
+class Module;
 class SculptEditor;
+class AnimationModule;
 
 class RoomsEngine : public Engine
 {
     Environment3D* skybox = nullptr;
 
-    SculptEditor* sculpt_editor;
-
+    SculptEditor* sculpt_editor = nullptr;
+    AnimationModule* animation_module = nullptr;
 
     bool export_scene();
     bool import_scene();
