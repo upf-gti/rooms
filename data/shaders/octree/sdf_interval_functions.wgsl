@@ -487,10 +487,25 @@ fn idot_mat(v1 : mat3x3f, v2 : mat3x3f) -> vec2f {
 
 // Primitives
 
-fn sphere_interval(p : mat3x3f, edit_pos : vec3f, r : f32) -> vec2f
+fn sphere_interval(p: mat3x3f, edit_pos : vec3f, r : f32, rotation : vec4f) -> vec2f
 {
+    var s : vec3f = vec3f(r * 2.0);
+    var l : vec2f = vec2f(2.0);
+
+    let pp : mat3x3f = isub_mat_vec3(p, edit_pos);
+
+    var pds_x : vec2f = round(idiv_vecs(pp[0].xy, s.xx));
+    var pds_y : vec2f = round(idiv_vecs(pp[1].xy, s.yy));
+    var pds_z : vec2f = round(idiv_vecs(pp[2].xy, s.zz));
+
+    var q_x : vec2f = isub_vecs(pp[0].xy, imul_float_vec(s.x, clamp(pds_x,-l,l)));
+    var q_y : vec2f = isub_vecs(pp[1].xy, imul_float_vec(s.y, clamp(pds_y,-l,l)));
+    var q_z : vec2f = isub_vecs(pp[2].xy, imul_float_vec(s.z, clamp(pds_z,-l,l)));
+
+    var q : mat3x3f = iavec3_vecs(q_x, q_y, q_z);
+
 	// x^2 + y^2 + z^2 - r^2
-	return isub_vecs(ilensq(isub_mat_vec3(p, edit_pos)), vec2f(r*r));
+	return isub_vec_float(ilength(q), r);
 }
 
 fn cut_sphere_interval(p : mat3x3f, edit_pos : vec3f, rotation : vec4f, r : f32, h : f32) -> vec2f
@@ -713,7 +728,7 @@ fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f,  primitive : u32, 
                 cap_value = cap_value * 2.0 - 1.0;
                 pSurface = cut_sphere_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.rotation, radius, radius * cap_value);
             } else {
-                pSurface = sphere_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, radius);
+                pSurface = sphere_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, radius, edit.rotation);
             }
             break;
         }

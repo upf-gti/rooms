@@ -61,8 +61,14 @@ fn sdPlane( p : vec3f, c : vec3f, n : vec3f, h : f32, material : Material) -> Su
 
 fn sdSphere( p : vec3f, c : vec3f, r : f32, material : Material) -> Surface
 {
+    var pp : vec3f = p - c;
+
+    var s : vec3f = vec3(r * 2.0);
+    var l : vec3f = vec3(2.0);
+    var q : vec3f = pp - s * clamp(round(pp/s),-l,l);
+
     var sf : Surface;
-    sf.distance = length(p - c) - r;
+    sf.distance = length(q) - r;
     sf.material = material;
     return sf;
 }
