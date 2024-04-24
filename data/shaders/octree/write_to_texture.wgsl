@@ -122,6 +122,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     octant_usage_write[0] = 0;
     let edit_count : u32 = stroke_history.count;
 
+    // TODO(Juan): I dont like this for the SM occupany...
     workgroupBarrier();
 
     if (local_id.x == 0 && local_id.y == 0 && local_id.z == 0) {

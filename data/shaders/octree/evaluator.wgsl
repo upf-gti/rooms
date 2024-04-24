@@ -28,6 +28,29 @@
     Tambien se usa para calcular el preview, subdividiendo de manera normal, pero se salta el paso del write_to_texture,
     ya que es algo que cambia frame a frame. Simplemente se rellenan las posiciones de las instancias de los bricks de preview
     y se marcan que bricks de nuestra superficie estan interactuando con el preview.
+
+    La subdivision del octree se hace primero usando una evaluacion de los primitivivos del stroke a evualuar como si fuesen union, 
+    con dimensiones incrementadas por el SMOOTH_MARGIN. Esto es para asegurar que al llegar al ultimo nivel de toda la superficie
+    que ocuparia el stroke (y la superficie de la escultura sobre la que influencia), incluso si tenemos varios falsos positivos.
+
+    En la ultima capa de la evaluacion hacemos una pseudo-subdivision y evaluacion de los strokes (usando la funcion y params tal y como
+    vienen de CPU), usando intervalos mas pequeños, para evitar el wrapping effect que peuden tener las transformaciones de rotacion
+    en intervalos. Esto hace que con intervalos mas pequeños el margen de imprecision que anade esta rotacion sea menor, y sea mas fiable
+    para detectar falsos positivos en la subdivision.
+
+    Una vez hemos pasado esa primera prueba para saber si hay superficie o no, pasamos a evaluar los intervalos. Cuando evaluas smooth SDF,
+    con un smooth amrgin alto, el goop o la distorsion que se genera entre 2 cuerpos ocurre dentro de un margen de 2 veces el radio del smooth margin.
+    Si bien, podemos pasar todos los bricks del radio a el write_to_texture, serian muchos falsos positivos y una perdida significativa de rendimiento.
+    En el caso de smooth adition, no presenta muchos problemas, ya que simplemente mirando los bounds del intervalos podemos ver si esta en un brick o no,
+    con cierta precision (el wrappinge ffect y formulaciones de intervalos, puede incrementar los margenes, lo cual casi siempre introducira falsos
+    positivos).
+    Pero en la substraccion smooth es mas dificil. Ya que la substraccion no tiene por si misma ninguna distancia, solo se puede medir sobre una
+    superficie que ya existe y ver su cambio. Previamente, para solucionarlo lo tratabamos como una operacion de adicion sin smooth, y mirabamos 
+    la influencia sobre los bricks en funcion de los margenes que esto nos da. Pero con las sdf smooth, esta informacion no es suficiente, ya 
+    que por como afecta a las superficies de alrededor esto no es factible por si solo. La solucion es evaluar sobre los intervalos de la escultura Y
+    usando una evaluacion smooth union sobre los mismos intervalos y comparandolos. Viendo la diferencia entre ellos podemos ver sobre que bricks la 
+    smooth union ha actuado, y solo dentro del margen del stroke que se quiere procesar.
+    TODO(Juan) NOTA: esto es posible que se pueda hacer SOLO comparando la diferencia de antes y despues aplicar el smooth substraction
     
     Octree Octant indexing
         - 3 bits per each layer, describes 8 octants.
@@ -176,7 +199,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     var octant_center : vec3f = vec3f(0.0);
     var level_half_size : f32 = 0.5 * SCULPT_MAX_SIZE;
 
-    //TODO(Juan): this could be LUT
+    //TODO(Juan): this could be LUT, but is it worthy at the expense of BIG SHADER
     // Compute the center and the half size of the current octree, in the current level, via iterating the octree index
     for (var i : u32 = 1; i <= level; i++) {
         level_half_size = SCULPT_MAX_SIZE / pow(2.0, f32(i + 1));
@@ -193,11 +216,12 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     let is_evaluating_preview : bool = !is_reevaluation && ((octree.evaluation_mode & EVALUATE_PREVIEW_STROKE_FLAG) == EVALUATE_PREVIEW_STROKE_FLAG);
     
     // Select the input stroke, or the preview stroke, depending on the mode
-    //  if (is_evaluating_preview) {
-         
-    // } else {
-         
-    //  }
+    var current_stroke : Stroke;
+    if (is_evaluating_preview) {
+        current_stroke = preview_data.preview_stroke;
+    } else {
+        current_stroke = stroke;
+    }
     
     let octant_min : vec3f = octant_center - vec3f(level_half_size);
     let octant_max : vec3f = octant_center + vec3f(level_half_size);
@@ -208,7 +232,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     var surface_interval = vec2f(10000.0, 10000.0);
     var edit_counter : u32 = 0;
 
-    let SMOOTH_FACTOR : f32 = stroke.parameters.w;
+    let SMOOTH_FACTOR : f32 = current_stroke.parameters.w;
 
     // Base evaluation range
     let x_range : vec2f = vec2f(octant_center.x - level_half_size, octant_center.x + level_half_size);
@@ -222,101 +246,226 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     // recomputing the context
 
     var subdivide : bool = false;
-    for (var j : u32 = 0; j < stroke_history.count; j++) {
-        surface_interval = evaluate_stroke_interval_2(current_subdivision_interval, &(stroke_history.strokes[j]), surface_interval, octant_center, level_half_size);
-    }
-
     var margin : vec4f = vec4f(0.0);
-    if (level == OCTREE_DEPTH) {
-        current_stroke_interval = surface_interval;
-    } else {
-        // Twice the smooth factor since it is the top influencing margin 
-        // as a way to subdivide to the bottom level. It is not used
-        // for sending the work to the write to texture!!
-        margin = vec4f(SMOOTH_FACTOR * 2.0);
-    }
-    // Check the edits in the parent, and fill its own list with the edits that affect this child
-    surface_interval = evaluate_stroke_interval_2(current_subdivision_interval, &(stroke), surface_interval, octant_center, level_half_size);
-    // The magin is twice the smooth factor if there are two strokes with this smooth factor, they will act on eachotehr
-    current_stroke_interval = evaluate_stroke_interval_force_union(current_subdivision_interval, &(stroke), current_stroke_interval, margin);
 
-    // Pseudo subdivide!
-    // Re-compute the strokes for the octants of the last level, and check the interval on those
-    // Since the interval are smaller, the wrapping effect is lessend, and you add a brick if
-    // at least one of this interval subdivisions is true.
-    // Do this in all the dispatches, or just the last level??
-    if (level == OCTREE_DEPTH) {
-        for (var i : u32 = 0; i < 8 && !subdivide; i++) {
-            let sub_octant_id = octant_id | (i << (3 * level));
-
-            let sub_level_half_size = SCULPT_MAX_SIZE / pow(2.0, f32((level+1) + 1));
-
-            let sub_octant_center = octant_center + sub_level_half_size * OCTREE_CHILD_OFFSET_LUT[(sub_octant_id >> (3 * ((level+1) - 1))) & 0x7];
-
-            let x_range : vec2f = vec2f(sub_octant_center.x - sub_level_half_size, sub_octant_center.x + sub_level_half_size);
-            let y_range : vec2f = vec2f(sub_octant_center.y - sub_level_half_size, sub_octant_center.y + sub_level_half_size);
-            let z_range : vec2f = vec2f(sub_octant_center.z - sub_level_half_size, sub_octant_center.z + sub_level_half_size);
-            let current_sub_interval = iavec3_vecs(x_range, y_range, z_range);
-
-            var surf_interval : vec2f = vec2f(10000.0, 10000.0);
+    // NOTE: Code duplication due WGSL's rigid Pointer use & constraints
+    if (!is_evaluating_preview) {
+        // =====================================================
+        // =====================================================
+        //    _____ _             _          ______          _ 
+        //   / ____| |           | |        |  ____|        | |
+        //  | (___ | |_ _ __ ___ | | _____  | |____   ____ _| |
+        //   \___ \| __| '__/ _ \| |/ / _ \ |  __\ \ / / _` | |
+        //   ____) | |_| | | (_) |   <  __/ | |___\ V / (_| | |
+        //  |_____/ \__|_|  \___/|_|\_\___| |______\_/ \__,_|_|
+        // =====================================================
+        // =====================================================
+                                                    
+        if (level == OCTREE_DEPTH) {
+            // Compute the context of the current stroke,
             for (var j : u32 = 0; j < stroke_history.count; j++) {
-                surf_interval = evaluate_stroke_interval_2(current_sub_interval, &(stroke_history.strokes[j]), surf_interval, octant_center, level_half_size);
+                surface_interval = evaluate_stroke_interval_2(current_subdivision_interval, &(stroke_history.strokes[j]), surface_interval, octant_center, level_half_size);
             }
 
-            // Check the edits in the parent, and fill its own list with the edits that affect this child
-            surf_interval = evaluate_stroke_interval_2(current_sub_interval, &(stroke), surf_interval, sub_octant_center, sub_level_half_size);
+            current_stroke_interval = surface_interval;
 
-            if (surf_interval.x <= 0.0 && surf_interval.y >= 0.0 && !subdivide) {
-                subdivide = true;
-            }
+            surface_interval = evaluate_stroke_interval_2(current_subdivision_interval,  &(stroke), surface_interval, octant_center, level_half_size);
+        } else {
+            // Twice the smooth factor since it is the top influencing margin 
+            // as a way to subdivide to the bottom level. It is not used
+            // for sending the work to the write to texture!!
+            margin = vec4f(SMOOTH_FACTOR * 2.0);
         }
-    }
+        // Check the edits in the parent, and fill its own list with the edits that affect this child
+        // The magin is twice the smooth factor if there are two strokes with this smooth factor, they will act on eachotehr
+        current_stroke_interval = evaluate_stroke_interval_force_union(current_subdivision_interval,  &(stroke), current_stroke_interval, margin);
 
-    let is_current_brick_filled : bool = (octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG;
-    let is_interior_brick : bool = (octree.data[octree_index].tile_pointer & INTERIOR_BRICK_FLAG) == INTERIOR_BRICK_FLAG;
+        // Pseudo subdivide!
+        // Re-compute the strokes for the octants of the last level, and check the interval on those
+        // Since the interval are smaller, the wrapping effect is lessend, and you add a brick if
+        // at least one of this interval subdivisions is true.
+        if (level == OCTREE_DEPTH) {
+            for (var i : u32 = 0; i < 8 && !subdivide; i++) {
+                let sub_octant_id = octant_id | (i << (3 * level));
 
-    // Do not evaluate all the bricks, only the ones whose distance interval has changed
-    octree.data[octree_index].octant_center_distance = surface_interval;
-    
-    if (level < OCTREE_DEPTH) {
-        // Broad culling using only the incomming stroke
-        // TODO: intersection with history strokes AABB?
-        if (current_stroke_interval.x < 0.0) {
-            // Subdivide
-            // Increase the number of children from the current level
-            let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 8);
+                let sub_level_half_size = SCULPT_MAX_SIZE / pow(2.0, f32((level+1) + 1));
 
-            // Add to the index the childres's octant id, and save it for the next pass
-            for (var i : u32 = 0; i < 8; i++) {
-                octant_usage_write[prev_counter + i] = octant_id | (i << (3 * level));
-            }
-        }
-    } else if (subdivide) {
-        // in order to detect where the smooth factor is influencing  with the "goops"
-        // we evaluate the whole history and the store 2 diferent results, one with the 
-        // substraction, and another using it as adition. Then, we compare the two intervals,
-        // in order to find the goops (where the current stroke is taking affect)
-        if (stroke.operation == OP_SMOOTH_SUBSTRACTION) {
-            if ((current_stroke_interval.x < 0.0)) {
-                if (surface_interval.x < 0.0) {
-                    if (surface_interval.y < 0.0) {
-                        brick_remove_or_mark_as_inside(octree_index, is_current_brick_filled);
-                    } else {
-                        brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
-                    }  
-                } else if (is_current_brick_filled) {
-                    brick_remove(octree_index);
+                let sub_octant_center = octant_center + sub_level_half_size * OCTREE_CHILD_OFFSET_LUT[(sub_octant_id >> (3 * ((level+1) - 1))) & 0x7];
+
+                let x_range : vec2f = vec2f(sub_octant_center.x - sub_level_half_size, sub_octant_center.x + sub_level_half_size);
+                let y_range : vec2f = vec2f(sub_octant_center.y - sub_level_half_size, sub_octant_center.y + sub_level_half_size);
+                let z_range : vec2f = vec2f(sub_octant_center.z - sub_level_half_size, sub_octant_center.z + sub_level_half_size);
+                let current_sub_interval = iavec3_vecs(x_range, y_range, z_range);
+
+                var surf_interval : vec2f = vec2f(10000.0, 10000.0);
+                for (var j : u32 = 0; j < stroke_history.count; j++) {
+                    surf_interval = evaluate_stroke_interval_2(current_sub_interval, &(stroke_history.strokes[j]), surf_interval, octant_center, level_half_size);
+                }
+
+                // Check the edits in the parent, and fill its own list with the edits that affect this child
+                surf_interval = evaluate_stroke_interval_2(current_sub_interval, &(stroke), surf_interval, sub_octant_center, sub_level_half_size);
+
+                if (surf_interval.x <= 0.0 && surf_interval.y >= 0.0 && !subdivide) {
+                    subdivide = true;
                 }
             }
-        } else if (stroke.operation == OP_SMOOTH_UNION) {
-            if (surface_interval.x < 0.0 && surface_interval.y > 0.0) {
-               brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
-            } else if (surface_interval.y < 0.0) {
-                brick_remove_or_mark_as_inside(octree_index, is_current_brick_filled);
+        }
+
+        let is_current_brick_filled : bool = (octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG;
+        let is_interior_brick : bool = (octree.data[octree_index].tile_pointer & INTERIOR_BRICK_FLAG) == INTERIOR_BRICK_FLAG;
+
+        // Do not evaluate all the bricks, only the ones whose distance interval has changed
+        octree.data[octree_index].octant_center_distance = surface_interval;
+        
+        if (level < OCTREE_DEPTH) {
+            // Broad culling using only the incomming stroke
+            // TODO: intersection with history strokes AABB?
+            if (current_stroke_interval.x < 0.0) {
+                // Subdivide
+                // Increase the number of children from the current level
+                let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 8);
+
+                // Add to the index the childres's octant id, and save it for the next pass
+                for (var i : u32 = 0; i < 8; i++) {
+                    octant_usage_write[prev_counter + i] = octant_id | (i << (3 * level));
+                }
             }
-        } 
-    } else if (is_current_brick_filled) {
-        brick_remove(octree_index);
+        } else if (subdivide) {
+            // in order to detect where the smooth factor is influencing  with the "goops"
+            // we evaluate the whole history and the store 2 diferent results, one with the 
+            // substraction, and another using it as adition. Then, we compare the two intervals,
+            // in order to find the goops (where the current stroke is taking affect)
+            if (stroke.operation == OP_SMOOTH_SUBSTRACTION) {
+                if ((current_stroke_interval.x < 0.0)) {
+                    if (surface_interval.x < 0.0) {
+                        if (surface_interval.y < 0.0) {
+                            brick_remove_or_mark_as_inside(octree_index, is_current_brick_filled);
+                        } else {
+                            brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
+                        }  
+                    } else if (is_current_brick_filled) {
+                        brick_remove(octree_index);
+                    }
+                }
+            } else if (stroke.operation == OP_SMOOTH_UNION) {
+                if (surface_interval.x < 0.0 && surface_interval.y > 0.0) {
+                brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
+                } else if (surface_interval.y < 0.0) {
+                    brick_remove_or_mark_as_inside(octree_index, is_current_brick_filled);
+                }
+            } 
+        } else if (is_current_brick_filled) {
+            brick_remove(octree_index);
+        }
+    } else {
+        // ============================================================
+        // ============================================================
+        //   _____                _                 ______          _   
+        // |  __ \              (_)               |  ____|        | |  
+        // | |__) | __ _____   ___  _____      __ | |____   ____ _| |  
+        // |  ___/ '__/ _ \ \ / / |/ _ \ \ /\ / / |  __\ \ / / _` | |  
+        // | |   | | |  __/\ V /| |  __/\ V  V /  | |___\ V / (_| | |_ 
+        // |_|   |_|  \___| \_/ |_|\___| \_/\_/   |______\_/ \__,_|_(_)
+        // =============================================================
+        // =============================================================
+                                                             
+        // if (level == OCTREE_DEPTH) {
+        //     // Compute the context of the current stroke,
+        //     for (var j : u32 = 0; j < stroke_history.count; j++) {
+        //         surface_interval = evaluate_stroke_interval_2(current_subdivision_interval, &(stroke_history.strokes[j]), surface_interval, octant_center, level_half_size);
+        //     }
+
+        //     current_stroke_interval = surface_interval;
+
+        //     surface_interval = evaluate_stroke_interval_2(current_subdivision_interval, &(preview_data.preview_stroke), surface_interval, octant_center, level_half_size);
+        // } else {
+        //     // Twice the smooth factor since it is the top influencing margin 
+        //     // as a way to subdivide to the bottom level. It is not used
+        //     // for sending the work to the write to texture!!
+        //     margin = vec4f(SMOOTH_FACTOR * 2.0);
+        // }
+        // // Check the edits in the parent, and fill its own list with the edits that affect this child
+        // // The magin is twice the smooth factor if there are two strokes with this smooth factor, they will act on eachotehr
+        // current_stroke_interval = evaluate_stroke_interval_force_union(current_subdivision_interval, &(preview_data.preview_stroke), current_stroke_interval, margin);
+
+        // // Pseudo subdivide!
+        // // Re-compute the strokes for the octants of the last level, and check the interval on those
+        // // Since the interval are smaller, the wrapping effect is lessend, and you add a brick if
+        // // at least one of this interval subdivisions is true.
+        // // TODO: How much does it penalizes perf removing this on the preview evaluation?
+        // // if (level == OCTREE_DEPTH) {
+        // //     for (var i : u32 = 0; i < 8 && !subdivide; i++) {
+        // //         let sub_octant_id = octant_id | (i << (3 * level));
+
+        // //         let sub_level_half_size = SCULPT_MAX_SIZE / pow(2.0, f32((level+1) + 1));
+
+        // //         let sub_octant_center = octant_center + sub_level_half_size * OCTREE_CHILD_OFFSET_LUT[(sub_octant_id >> (3 * ((level+1) - 1))) & 0x7];
+
+        // //         let x_range : vec2f = vec2f(sub_octant_center.x - sub_level_half_size, sub_octant_center.x + sub_level_half_size);
+        // //         let y_range : vec2f = vec2f(sub_octant_center.y - sub_level_half_size, sub_octant_center.y + sub_level_half_size);
+        // //         let z_range : vec2f = vec2f(sub_octant_center.z - sub_level_half_size, sub_octant_center.z + sub_level_half_size);
+        // //         let current_sub_interval = iavec3_vecs(x_range, y_range, z_range);
+
+        // //         var surf_interval : vec2f = vec2f(10000.0, 10000.0);
+        // //         for (var j : u32 = 0; j < stroke_history.count; j++) {
+        // //             surf_interval = evaluate_stroke_interval_2(current_sub_interval, &(stroke_history.strokes[j]), surf_interval, octant_center, level_half_size);
+        // //         }
+
+        // //         // Check the edits in the parent, and fill its own list with the edits that affect this child
+        // //         surf_interval = evaluate_stroke_interval_2(current_sub_interval, &(preview_data.preview_stroke), surf_interval, sub_octant_center, sub_level_half_size);
+
+        // //         if (surf_interval.x <= 0.0 && surf_interval.y >= 0.0 && !subdivide) {
+        // //             subdivide = true;
+        // //         }
+        // //     }
+        // // }
+
+        // let is_current_brick_filled : bool = (octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG;
+        // let is_interior_brick : bool = (octree.data[octree_index].tile_pointer & INTERIOR_BRICK_FLAG) == INTERIOR_BRICK_FLAG;
+
+        // // Do not evaluate all the bricks, only the ones whose distance interval has changed
+        // octree.data[octree_index].octant_center_distance = surface_interval;
+        
+        // if (level < OCTREE_DEPTH) {
+        //     // Broad culling using only the incomming stroke
+        //     // TODO: intersection with history strokes AABB?
+        //     if (current_stroke_interval.x < 0.0) {
+        //         // Subdivide
+        //         // Increase the number of children from the current level
+        //         let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 8);
+
+        //         // Add to the index the childres's octant id, and save it for the next pass
+        //         for (var i : u32 = 0; i < 8; i++) {
+        //             octant_usage_write[prev_counter + i] = octant_id | (i << (3 * level));
+        //         }
+        //     }
+        // } else if (subdivide) {
+        //     // in order to detect where the smooth factor is influencing  with the "goops"
+        //     // we evaluate the whole history and the store 2 diferent results, one with the 
+        //     // substraction, and another using it as adition. Then, we compare the two intervals,
+        //     // in order to find the goops (where the current stroke is taking affect)
+        //     if (preview_data.preview_stroke.operation == OP_SMOOTH_SUBSTRACTION) {
+        //         if ((current_stroke_interval.x < 0.0)) {
+        //             if (surface_interval.x < 0.0) {
+        //                 if (surface_interval.y < 0.0) {
+        //                     brick_remove_or_mark_as_inside(octree_index, is_current_brick_filled);
+        //                 } else {
+        //                     brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
+        //                 }  
+        //             } else if (is_current_brick_filled) {
+        //                 brick_remove(octree_index);
+        //             }
+        //         }
+        //     } else if (preview_data.preview_stroke.operation == OP_SMOOTH_UNION) {
+        //         if (surface_interval.x < 0.0 && surface_interval.y > 0.0) {
+        //         brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
+        //         } else if (surface_interval.y < 0.0) {
+        //             brick_remove_or_mark_as_inside(octree_index, is_current_brick_filled);
+        //         }
+        //     } 
+        // } else if (is_current_brick_filled) {
+        //     brick_remove(octree_index);
+        // }                                                 
     }
                 
     // TODO(Juan): para el buffer usage, quitar al terminar
