@@ -16,7 +16,7 @@
 #define SDF_RESOLUTION 400
 #define SCULPT_MAX_SIZE 1 // meters
 #define PREVIEW_PROXY_BRICKS_COUNT 4000u
-#define STROKE_HISTORY_MAX_SIZE 64u
+#define STROKE_HISTORY_MAX_SIZE 1000u
 
 class MeshInstance3D;
 

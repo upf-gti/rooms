@@ -358,12 +358,13 @@ bool SculptEditor::edit_update(float delta_time)
     edit_rotation_world = edit_to_add.rotation;
 
     // Add edit based on controller movement
-    spdlog::info("Dist: {}", glm::length(controller_position_data.prev_edit_position - edit_position_world), glm::length(controller_position_data.controller_velocity), glm::length(controller_position_data.controller_acceleration));
+    //spdlog::info("Dist: {}", glm::length(controller_position_data.prev_edit_position - edit_position_world), glm::length(controller_position_data.controller_velocity), glm::length(controller_position_data.controller_acceleration));
 
 
     //if (glm::length(controller_position_data.controller_velocity) < 0.1f && glm::length(controller_position_data.controller_acceleration) < 10.1f) {
+    // TODO(Juan): Check rotation?
     if (was_tool_pressed && is_tool_used) {
-        if (glm::length(controller_position_data.prev_edit_position - edit_position_world) < (edit_to_add.dimensions.x / 2.0f) + stroke_parameters.get_smooth_factor() * 2.0f) {
+        if (glm::length(controller_position_data.prev_edit_position - edit_position_world) < (edit_to_add.dimensions.x / 2.0f) + stroke_parameters.get_smooth_factor()) {
             is_tool_used = false;
         } else {
             controller_position_data.prev_edit_position = edit_position_world;
@@ -373,11 +374,6 @@ bool SculptEditor::edit_update(float delta_time)
         controller_position_data.prev_edit_position = edit_position_world;
     }
 
-    //if (is_tool_used) {
-       
-    //}
-
-    //edit_to_add.position = glm::vec3(0.0f);
     return is_tool_used;
 }
 
