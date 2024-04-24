@@ -280,9 +280,9 @@ fn sminQuadratic(a : f32, b : f32, k : f32) -> vec2f {
     let s : f32 = m*norm_k * 0.25;
 
     if (a < b) {
-        return vec2f(a - s, m/4.0);
+        return vec2f(a - s, m * 0.5);
     } else {
-        return vec2f(b - s, 1.0 - (m/4.0));
+        return vec2f(b - s, 1.0 - (m * 0.5));
     }
 }
 
