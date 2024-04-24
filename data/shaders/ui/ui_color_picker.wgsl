@@ -29,55 +29,55 @@ struct FragmentOutput {
     @location(0) color: vec4f
 }
 
-fn modulo_euclidean(a: f32, b: f32) -> f32
+// from @lingel at https://www.shadertoy.com/view/3tj3R1
+
+const EPSILON : f32 = 0.01;
+const PI : f32 = 3.14159265359;
+
+fn hsv2rgb( hsv : vec3f ) -> vec3f
 {
-	var m = a % b;
-	if (m < 0.0) {
-		if (b < 0.0) {
-			m -= b;
-		} else {
-			m += b;
-		}
-	}
-	return m;
+    var c : vec3f = hsv;
+    c.x /= 360.0;
+    var K : vec4f = vec4f(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    var p : vec3f = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+    return c.z * mix(K.xxx, clamp(p - K.xxx,vec3f(0.0),vec3f(1.0)), c.y);
 }
 
-fn modulo_euclidean_vec3( v : vec3f, m: f32) -> vec3f
+fn get_ring_color( uvs : vec2f ) -> vec3f
 {
-	return vec3f(
-        modulo_euclidean(v.x, m),
-        modulo_euclidean(v.y, m),
-        modulo_euclidean(v.z, m)
-    );
+    let xiangxian : f32 = floor(1.0 - uvs.y );
+    let radian : f32 = xiangxian * 2.0 * PI + atan2(uvs.y,uvs.x);
+    let degree : f32 = radian/(2.0*PI)*360.0;
+    let hsv = vec3(degree,1.0,1.0);
+    return hsv2rgb(hsv);
 }
 
-fn hsv2rgb_smooth( c : vec3f ) -> vec3f
+fn position2sv(p : vec2f, v1 : vec2f, v2 : vec2f, v3 : vec2f) -> vec2f
 {
-    var m = modulo_euclidean_vec3(c.x * 6.0 + vec3f(0.0, 4.0, 2.0), 6.0);
-    var rgb = clamp( abs(m - 3.0) - 1.0, vec3f(0.0), vec3f(1.0) );
-
-	rgb = rgb * rgb * (3.0 - 2.0 * rgb); // cubic smoothing
-
-	return mix(vec3(1.0),mix( vec3(1.0), rgb, c.y), c.z);
+    var baseS : vec2f = v1 - v3;
+    var baseV : vec2f = baseS * 0.5 - (v2 - v3);
+    var baseO : vec2f = v3 - baseV;
+    var pp : vec2f = p - baseO;
+    var s : f32 = dot(pp, baseS) / pow(length(baseS), 2.0);
+    var v : f32 = dot(pp, baseV) / pow(length(baseV), 2.0);
+    s -= 0.5;
+    s /= v;
+    s += 0.5;
+    return clamp(vec2f(s, v), vec2f(0.0), vec2f(1.0));
 }
 
-fn getColor( uvs : vec2f ) -> vec3f
+fn draw_triangle( uv : vec2f, v1 : vec2f, v2 : vec2f, v3 : vec2f, H : f32 ) -> vec3f
 {
-    let pi = 3.14159265359;
+    return hsv2rgb(vec3f(H, position2sv(uv,v1,v2,v3)));
+}
 
-    var p = uvs;
-    
-    var r = pi / 2.0;
-
-    p *= mat2x2f(cos(r),sin(r),-sin(r), cos(r));
-
-    var polar = vec2f(atan2(p.y, p.x), length(p));
-    
-    var percent = (polar.x + pi) / (2.0 * pi);
-    
-    var hsv = vec3f(percent, 1., polar.y);
-    
-    return hsv2rgb_smooth(hsv);
+fn calculate_triangle_weight(p : vec2f, v1 : vec2f, v2 : vec2f, v3 : vec2f) -> vec3f
+{
+    var weight : vec3f;
+    weight.x = ((v2.y-v3.y)*(p.x-v3.x)+(v3.x-v2.x)*(p.y-v3.y)) / ((v2.y-v3.y)*(v1.x-v3.x)+(v3.x-v2.x)*(v1.y-v3.y));
+    weight.y = ((v3.y-v1.y)*(p.x-v3.x)+(v1.x-v3.x)*(p.y-v3.y)) / ((v2.y-v3.y)*(v1.x-v3.x)+(v3.x-v2.x)*(v1.y-v3.y));
+    weight.z = 1.0 - weight.x - weight.y;
+    return weight;
 }
 
 @fragment
@@ -87,12 +87,55 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     // Mask button shape
     var dist : f32 = distance(in.uv, vec2f(0.5));
-    var button_radius : f32 = 0.42;
+    var button_radius : f32 = 0.44;
 
     var out: FragmentOutput;
 
-    var current_color = pow(ui_data.picker_color.rgb * ui_data.picker_color.a, vec3f(2.2));
-    var final_color = pow(getColor(in.uv * 2 - 1), vec3f(2.2));
+    var uvs : vec2f = in.uv * 2.0 - 1.0;
+    uvs.y *= -1.0;
+
+    var current_color = ui_data.picker_color.rgb * ui_data.picker_color.a;
+    var final_color : vec3f = current_color;
+
+    // Ring alpha
+    let exterior_radius : f32 = 1.0;
+    let thickness : f32 = 0.3;
+    let interior_radius : f32 = exterior_radius - thickness;
+
+    let position_radius : f32 = length(uvs);
+    let interior_mask : f32 = smoothstep(interior_radius, interior_radius + EPSILON, position_radius);
+    let outerior_mask : f32 = smoothstep(exterior_radius, exterior_radius - EPSILON, position_radius);
+    var alpha = min(interior_mask, outerior_mask);  
+
+    final_color = mix(final_color, get_ring_color(uvs), alpha);
+
+    var v1 : vec2f = vec2f(0.0);
+    var v2 : vec2f = vec2f(0.0);
+    var v3 : vec2f = vec2f(0.0);
+
+    let degree : f32 = 90.0;
+
+    // Compute points
+    let r : f32 = PI / 180.0;
+    var radian : f32 = degree * r;
+    v1.x = cos(radian) * interior_radius;
+    v1.y = sin(radian) * interior_radius;
+    radian += 120.0 * r;
+    v2.x = cos(radian) * interior_radius;
+    v2.y = sin(radian) * interior_radius;
+    radian += 120.0 * r;
+    v3.x = cos(radian) * interior_radius;
+    v3.y = sin(radian) * interior_radius;
+
+    // Triangle alpha
+    var weight : vec3f = calculate_triangle_weight(uvs, v1, v2, v3);
+
+    alpha = min(min(weight.x, weight.y), weight.z);
+    alpha = smoothstep(-EPSILON * 0.5, EPSILON * 0.5, alpha);
+
+    final_color = mix(final_color, draw_triangle(uvs, v1, v2, v3, degree), alpha);
+
+    final_color = pow(final_color, vec3f(2.2));
 
     if(dist > button_radius) {
         final_color = vec3f(0.1);
