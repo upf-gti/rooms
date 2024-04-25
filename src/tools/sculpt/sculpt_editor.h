@@ -35,6 +35,8 @@ class SculptEditor {
 
     eTool current_tool = eTool::NONE;
 
+    bool ui_edit_to_add = false;
+
     static uint8_t last_generated_material_uid;
     uint8_t num_generated_materials = 0u;
 

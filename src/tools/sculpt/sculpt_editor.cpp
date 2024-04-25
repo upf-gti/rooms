@@ -129,6 +129,9 @@ void SculptEditor::clean()
 
 bool SculptEditor::is_tool_being_used(bool stamp_enabled)
 {
+    if (ui_edit_to_add) {
+        return true;
+    }
 #ifdef XR_SUPPORT
     bool is_currently_pressed = Input::get_trigger_value(HAND_RIGHT) > 0.5f;
     is_released = is_tool_pressed && !is_currently_pressed;
@@ -374,6 +377,8 @@ bool SculptEditor::edit_update(float delta_time)
         controller_position_data.prev_edit_position = edit_position_world;
     }
 
+    //(Juan): for the ui toggle (to remove!)
+    ui_edit_to_add = false;
     return is_tool_used;
 }
 
@@ -1030,6 +1035,8 @@ void SculptEditor::init_ui()
         {
             ui::TextureButton2D* addition_toggle = new ui::TextureButton2D("addition_toggle", "data/textures/snap_to_surface.png", ui::ALLOW_TOGGLE);
             main_panel_2d->add_child(addition_toggle);
+            ui::TextureButton2D* add_edit_button = new ui::TextureButton2D("add_edit_button", "data/textures/shape_editor.png", ui::UNIQUE_SELECTION);
+            main_panel_2d->add_child(add_edit_button);
         }
 
         {
@@ -1145,6 +1152,10 @@ void SculptEditor::bind_events()
         else {
             stroke_parameters.set_operation(OP_SMOOTH_UNION);
         }
+    });
+
+    Node::bind("add_edit_button", [&](const std::string& signal, void* button) {
+        ui_edit_to_add = true;
     });
 
     Node::bind("mirror_toggle", [&](const std::string& signal, void* button) { use_mirror = !use_mirror; });
