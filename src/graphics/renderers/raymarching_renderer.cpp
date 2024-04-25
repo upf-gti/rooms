@@ -323,7 +323,7 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
         max_smooth_margin = glm::max(strokes[i].parameters.w, max_smooth_margin);
     }
 
-    strokes_aabb.half_size += max_smooth_margin * 2.0f;
+    //strokes_aabb.half_size += max_smooth_margin * 2.0f;
 
     // Increase 1 texel the bounding box, in order to not exclude bricks
     // In the brick border
@@ -341,7 +341,7 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
         }
     }
 
-    strokes_aabb.half_size -= max_smooth_margin * 2.0f;
+    //strokes_aabb.half_size -= max_smooth_margin * 2.0f;
 
     compute_merge_data.reevaluation_AABB_min = strokes_aabb.center - strokes_aabb.half_size;
     compute_merge_data.reevaluation_AABB_max = strokes_aabb.center + strokes_aabb.half_size;

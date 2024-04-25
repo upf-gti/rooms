@@ -6,11 +6,11 @@
 #include ../noise.wgsl
 
 @group(0) @binding(2) var<storage, read_write> octree : Octree;
-@group(0) @binding(3) var write_sdf: texture_storage_3d<r32float, read_write>;
+@group(0) @binding(3) var write_sdf: texture_storage_3d<r32float, write>;
 @group(0) @binding(5) var<storage, read_write> octree_proxy_data: OctreeProxyInstances;
 @group(0) @binding(6) var<storage, read> stroke_history : StrokeHistory; 
 @group(0) @binding(7) var<storage, read_write> indirect_brick_removal : IndirectBrickRemoval;
-@group(0) @binding(8) var write_material_sdf: texture_storage_3d<r32uint, read_write>;
+@group(0) @binding(8) var write_material_sdf: texture_storage_3d<r32uint, write>;
 
 #dynamic @group(1) @binding(0) var<storage, read> stroke : Stroke;
 
