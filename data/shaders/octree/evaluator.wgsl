@@ -238,6 +238,9 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     let x_range : vec2f = vec2f(octant_center.x - level_half_size, octant_center.x + level_half_size);
     let y_range : vec2f = vec2f(octant_center.y - level_half_size, octant_center.y + level_half_size);
     let z_range : vec2f = vec2f(octant_center.z - level_half_size, octant_center.z + level_half_size);
+    let eval_aabb_min : vec3f = vec3f(octant_center - level_half_size);
+    let eval_aabb_max : vec3f = vec3f(octant_center + level_half_size);
+
     let current_subdivision_interval = iavec3_vecs(x_range, y_range, z_range);
 
     // For adition you can just use the intervals stored on the octree
@@ -276,10 +279,12 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             // for sending the work to the write to texture!!
             margin = vec4f(SMOOTH_FACTOR * 2.0);
         }
+        //margin = vec4f(SMOOTH_FACTOR * 2.0);
         // Check the edits in the parent, and fill its own list with the edits that affect this child
         // The magin is twice the smooth factor if there are two strokes with this smooth factor, they will act on eachotehr
-        current_stroke_interval = evaluate_stroke_interval_force_union(current_subdivision_interval,  &(stroke), current_stroke_interval, margin);
-
+        //if ((stroke.operation == OP_SMOOTH_SUBSTRACTION && level == OCTREE_DEPTH) || level < OCTREE_DEPTH) {
+            current_stroke_interval = evaluate_stroke_interval_force_union(current_subdivision_interval,  &(stroke), current_stroke_interval, margin);
+        //}
         // Pseudo subdivide!
         // Re-compute the strokes for the octants of the last level, and check the interval on those
         // Since the interval are smaller, the wrapping effect is lessend, and you add a brick if
@@ -319,8 +324,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         
         if (level < OCTREE_DEPTH) {
             // Broad culling using only the incomming stroke
-            // TODO: intersection with history strokes AABB?
-            if (current_stroke_interval.x < 0.0) {
+            // TODO: intersection with current edit AABB?
+            if (intersection_AABB_AABB(eval_aabb_min, eval_aabb_max, merge_data.reevaluation_AABB_min, merge_data.reevaluation_AABB_max)) {
                 // Subdivide
                 // Increase the number of children from the current level
                 let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 8);
@@ -348,10 +353,12 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                     }
                 }
             } else if (stroke.operation == OP_SMOOTH_UNION) {
-                if (surface_interval.x < 0.0 && surface_interval.y > 0.0) {
-                brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
-                } else if (surface_interval.y < 0.0) {
-                    brick_remove_or_mark_as_inside(octree_index, is_current_brick_filled);
+                if (current_stroke_interval.x < 0.0) {
+                    if (surface_interval.x < 0.0 && surface_interval.y > 0.0) {
+                        brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
+                    } else if (surface_interval.y < 0.0) {
+                        brick_remove_or_mark_as_inside(octree_index, is_current_brick_filled);
+                    }
                 }
             } 
         } else if (is_current_brick_filled) {

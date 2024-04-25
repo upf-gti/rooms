@@ -43,7 +43,18 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
     initialize_stroke();
 
 #endif
+    
 
+    AABB_mesh = parse_mesh("data/meshes/cube/aabb_cube.obj");
+
+
+    Material AABB_material = (AABB_mesh->get_surface(0)->get_material());
+    //AABB_material.priority = 10;
+    AABB_material.transparency_type = ALPHA_BLEND;
+    AABB_material.shader = RendererStorage::get_shader("data/shaders/AABB_shader.wgsl", AABB_material);
+    //AABB_material.diffuse_texture = RendererStorage::get_texture("data/meshes/cube/cube_AABB.png");
+    AABB_mesh->set_surface_material_override(AABB_mesh->get_surface(0), AABB_material);
+    
     return 0;
 }
 
@@ -305,10 +316,14 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
 
     uint32_t stroke_edit_count = 0u;
     AABB strokes_aabb;
+    float max_smooth_margin = 0.0f;
     for (uint16_t i = 0u; i < strokes.size(); i++) {
         strokes_aabb = merge_aabbs(strokes_aabb, strokes[i].get_world_AABB());
         stroke_edit_count += strokes[i].edit_count;
+        max_smooth_margin = glm::max(strokes[i].parameters.w, max_smooth_margin);
     }
+
+    strokes_aabb.half_size += max_smooth_margin * 2.0f;
 
     // Increase 1 texel the bounding box, in order to not exclude bricks
     // In the brick border
@@ -325,6 +340,15 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
             stroke_influence_list.strokes[stroke_influence_list.stroke_count++] = intersection_stroke;
         }
     }
+
+    strokes_aabb.half_size -= max_smooth_margin * 2.0f;
+
+    compute_merge_data.reevaluation_AABB_min = strokes_aabb.center - strokes_aabb.half_size;
+    compute_merge_data.reevaluation_AABB_max = strokes_aabb.center + strokes_aabb.half_size;
+
+    AABB_mesh->set_translation(compute_merge_data.reevaluation_AABB_min + get_sculpt_start_position());
+    AABB_mesh->scale(strokes_aabb.half_size * 2.0f);
+
 
     // TODO(Juan): Tak account on thes hdaer when tehre are multiple strokes in the evaluator, to add each one to the prev history
     
@@ -602,6 +626,8 @@ void RaymarchingRenderer::compute_octree()
     wgpuCommandBufferRelease(commands);
     wgpuComputePassEncoderRelease(compute_pass);
     wgpuCommandEncoderRelease(command_encoder);
+
+    AABB_mesh->render();
 
     if (is_going_to_evaluate) {
         RenderdocCapture::end_capture_frame();

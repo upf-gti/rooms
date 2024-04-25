@@ -1,5 +1,6 @@
 #include ../math.wgsl
 #include sdf_functions.wgsl
+#include sdf_utils.wgsl
 #include octree_includes.wgsl
 #include material_packing.wgsl
 #include ../noise.wgsl

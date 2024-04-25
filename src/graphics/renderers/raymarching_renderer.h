@@ -236,6 +236,9 @@ class RaymarchingRenderer {
     bool needs_undo = false;
     bool needs_redo = false;
 
+    // DEBUG
+    MeshInstance3D *AABB_mesh;
+
 public:
 
     RaymarchingRenderer();
