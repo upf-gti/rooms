@@ -33,8 +33,41 @@ struct FragmentOutput {
 
 const EPSILON : f32 = 0.01;
 const PI : f32 = 3.14159265359;
+const OUTLINECOLOR : vec4f = vec4f(0.3, 0.3, 0.3, 0.9);
+const OUTLINEWIDTH : f32 = 0.08;
 
-fn hsv2rgb( hsv : vec3f ) -> vec3f
+fn rgb_to_hsv( rgb : vec3f ) -> vec3f
+{
+    let h_scale : f32 = 60.0;
+    let Cmax : f32 = max(max(rgb.x,rgb.y),rgb.z);
+    let Cmin : f32 = min(min(rgb.x,rgb.y),rgb.z);
+    let delta : f32 = Cmax - Cmin;
+
+    var H : f32 = 0.0;
+    var S : f32 = 0.0;
+
+    if(delta != 0.0)
+    {
+        if(Cmax == rgb.r) {
+           H = (rgb.g - rgb.b) / delta;
+        } else if (Cmax == rgb.g) {
+           H = (rgb.b - rgb.r) / delta + 2.0;
+        } else if(Cmax == rgb.b) {
+           H = (rgb.r - rgb.g) / delta + 4.0;
+        }
+    }
+
+    if(Cmax != 0.0)
+    {
+        S = delta / Cmax;
+    }
+
+    H *= h_scale;
+
+    return vec3f(H, S, Cmax);
+}
+
+fn hsv_to_rgb( hsv : vec3f ) -> vec3f
 {
     var c : vec3f = hsv;
     c.x /= 360.0;
@@ -49,35 +82,94 @@ fn get_ring_color( uvs : vec2f ) -> vec3f
     let radian : f32 = xiangxian * 2.0 * PI + atan2(uvs.y,uvs.x);
     let degree : f32 = radian/(2.0*PI)*360.0;
     let hsv = vec3(degree,1.0,1.0);
-    return hsv2rgb(hsv);
+    return hsv_to_rgb(hsv);
 }
 
-fn position2sv(p : vec2f, v1 : vec2f, v2 : vec2f, v3 : vec2f) -> vec2f
+fn hsv_to_position( hsv : vec3f, v1 : vec2f, v2 : vec2f, v3 : vec2f ) -> vec2f
 {
-    var baseS : vec2f = v1 - v3;
-    var baseV : vec2f = baseS * 0.5 - (v2 - v3);
-    var baseO : vec2f = v3 - baseV;
-    var pp : vec2f = p - baseO;
-    var s : f32 = dot(pp, baseS) / pow(length(baseS), 2.0);
-    var v : f32 = dot(pp, baseV) / pow(length(baseV), 2.0);
+    let base_s : vec2f = v1 - v3;
+    let base_v : vec2f = base_s * 0.5 - (v2 - v3);
+    let base_o : vec2f = v3 - base_v;
+    var S : f32 = hsv.g;
+    let V = hsv.b;
+    S -= 0.5;
+    S *= V;
+    S += 0.5;
+    return base_o + base_s * S + base_v * V;
+}
+
+fn position_to_sv( p : vec2f, v1 : vec2f, v2 : vec2f, v3 : vec2f ) -> vec2f
+{
+    var base_s : vec2f = v1 - v3;
+    var base_v : vec2f = base_s * 0.5 - (v2 - v3);
+    var base_o : vec2f = v3 - base_v;
+    var pp : vec2f = p - base_o;
+    var s : f32 = dot(pp, base_s) / pow(length(base_s), 2.0);
+    var v : f32 = dot(pp, base_v) / pow(length(base_v), 2.0);
     s -= 0.5;
     s /= v;
     s += 0.5;
     return clamp(vec2f(s, v), vec2f(0.0), vec2f(1.0));
 }
 
-fn draw_triangle( uv : vec2f, v1 : vec2f, v2 : vec2f, v3 : vec2f, H : f32 ) -> vec3f
+fn draw_triangle( uv : vec2f, v1 : vec2f, v2 : vec2f, v3 : vec2f, H : f32, radius : f32 ) -> vec4f
 {
-    return hsv2rgb(vec3f(H, position2sv(uv,v1,v2,v3)));
+    var triangle_color : vec3f = hsv_to_rgb(vec3f(H, position_to_sv(uv, v1, v2, v3)));
+
+    // Triangle alpha
+
+    let v1_offset : vec2f = v1 * 1.125;
+    let v2_offset : vec2f = v2 * 1.125;
+    let v3_offset : vec2f = v3 * 1.125;
+
+    var weight : vec3f = calculate_triangle_weight(uv, v1_offset, v2_offset, v3_offset);
+    var alpha : f32 = min(min(weight.x, weight.y), weight.z);
+    alpha = smoothstep(-EPSILON * 0.5, EPSILON * 0.5, alpha);
+
+    // Draw outlines
+
+    let line1 : vec4f = draw_line(uv, v1_offset, v2_offset, OUTLINECOLOR, OUTLINEWIDTH);
+    let line2 : vec4f = draw_line(uv, v2_offset, v3_offset, OUTLINECOLOR, OUTLINEWIDTH);
+    let line3 : vec4f = draw_line(uv, v1_offset, v3_offset, OUTLINECOLOR, OUTLINEWIDTH);
+
+    triangle_color = mix(triangle_color, line1.rgb, line1.a);
+    triangle_color = mix(triangle_color, line2.rgb, line2.a);
+    triangle_color = mix(triangle_color, line3.rgb, line3.a);
+
+    return vec4f(triangle_color, alpha);
 }
 
-fn calculate_triangle_weight(p : vec2f, v1 : vec2f, v2 : vec2f, v3 : vec2f) -> vec3f
+fn calculate_triangle_weight( p : vec2f, v1 : vec2f, v2 : vec2f, v3 : vec2f ) -> vec3f
 {
     var weight : vec3f;
     weight.x = ((v2.y-v3.y)*(p.x-v3.x)+(v3.x-v2.x)*(p.y-v3.y)) / ((v2.y-v3.y)*(v1.x-v3.x)+(v3.x-v2.x)*(v1.y-v3.y));
     weight.y = ((v3.y-v1.y)*(p.x-v3.x)+(v1.x-v3.x)*(p.y-v3.y)) / ((v2.y-v3.y)*(v1.x-v3.x)+(v3.x-v2.x)*(v1.y-v3.y));
     weight.z = 1.0 - weight.x - weight.y;
     return weight;
+}
+
+fn draw_line( uv : vec2f, p1 : vec2f, p2 : vec2f, color : vec4f, thickness : f32 ) -> vec4f
+{
+    var final_color : vec4f = color;
+    let t = thickness * 0.5;
+    var dir = p2 - p1;
+    let line_length : f32 = length(dir);
+    dir = normalize(dir);
+    let to_uv : vec2f = uv - p1;
+    let project_length : f32 = dot(dir, to_uv);
+    var p2_line_distance : f32 = length(to_uv-dir*project_length);
+    p2_line_distance = smoothstep(t + EPSILON, t, p2_line_distance);
+    var p2_end_distance : f32 = select(project_length-line_length, abs(project_length), project_length <= 0.0);
+    p2_end_distance = smoothstep(t, t - EPSILON * 0.5, p2_end_distance);
+    final_color = vec4f(final_color.xyz * mix(p2_line_distance, 0.0, 0.01), final_color.a);
+    final_color.a *= min(p2_line_distance, p2_end_distance);
+    return final_color;
+}
+
+fn draw_point( uv : vec2f, p : vec2f, s : f32) -> vec4f
+{
+    let alpha : f32 = smoothstep(0.015,0.002, abs(length(uv - p) - s));
+    return vec4(vec3(1.0), alpha);
 }
 
 @fragment
@@ -87,67 +179,69 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     // Mask button shape
     var dist : f32 = distance(in.uv, vec2f(0.5));
-    var button_radius : f32 = 0.44;
+    var button_radius : f32 = 0.475;
 
     var out: FragmentOutput;
 
     var uvs : vec2f = in.uv * 2.0 - 1.0;
     uvs.y *= -1.0;
 
-    var current_color = ui_data.picker_color.rgb * ui_data.picker_color.a;
-    var final_color : vec3f = current_color;
+    var current_color = ui_data.picker_color.rgb;
+    let degree = current_color.r;
+    var final_color : vec3f = hsv_to_rgb(current_color);
 
-    // Ring alpha
     let exterior_radius : f32 = 1.0;
-    let thickness : f32 = 0.3;
+    let thickness : f32 = 0.25;
     let interior_radius : f32 = exterior_radius - thickness;
 
+    // Ring alpha
     let position_radius : f32 = length(uvs);
     let interior_mask : f32 = smoothstep(interior_radius, interior_radius + EPSILON, position_radius);
     let outerior_mask : f32 = smoothstep(exterior_radius, exterior_radius - EPSILON, position_radius);
     var alpha = min(interior_mask, outerior_mask);  
 
+    // Add ring
     final_color = mix(final_color, get_ring_color(uvs), alpha);
 
-    var v1 : vec2f = vec2f(0.0);
-    var v2 : vec2f = vec2f(0.0);
-    var v3 : vec2f = vec2f(0.0);
-
-    let degree : f32 = 90.0;
-
     // Compute points
-    let r : f32 = PI / 180.0;
-    var radian : f32 = degree * r;
-    v1.x = cos(radian) * interior_radius;
-    v1.y = sin(radian) * interior_radius;
-    radian += 120.0 * r;
-    v2.x = cos(radian) * interior_radius;
-    v2.y = sin(radian) * interior_radius;
-    radian += 120.0 * r;
-    v3.x = cos(radian) * interior_radius;
-    v3.y = sin(radian) * interior_radius;
+    let DEG2RAD : f32 = PI / 180.0;
+    var angle : f32 = degree * DEG2RAD; // Use 90.0 in "degree" to skip rotation of the triangle
+    let v1 : vec2f = vec2f(cos(angle), sin(angle)) * (interior_radius - OUTLINEWIDTH);
+    angle += 120.0 * DEG2RAD;
+    let v2 : vec2f = vec2f(cos(angle), sin(angle)) * (interior_radius - OUTLINEWIDTH);
+    angle += 120.0 * DEG2RAD;
+    let v3 : vec2f = vec2f(cos(angle), sin(angle)) * (interior_radius - OUTLINEWIDTH);
 
-    // Triangle alpha
-    var weight : vec3f = calculate_triangle_weight(uvs, v1, v2, v3);
+    // Add triangle
+    let triangle_color : vec4f = draw_triangle(uvs, v1, v2, v3, degree, interior_radius);
+    final_color = mix(final_color, triangle_color.rgb, triangle_color.a);
 
-    alpha = min(min(weight.x, weight.y), weight.z);
-    alpha = smoothstep(-EPSILON * 0.5, EPSILON * 0.5, alpha);
+    // Add HUE line marker
+    let v1_offset = v1 * 1.125;
+    let line_color : vec4f = draw_line(uvs, v1_offset + normalize(v1_offset) * EPSILON * 0.5, v1_offset + normalize(v1_offset) * (thickness - EPSILON * 0.5), OUTLINECOLOR, 0.025);
+    final_color = mix(final_color, line_color.rgb, line_color.a);
 
-    final_color = mix(final_color, draw_triangle(uvs, v1, v2, v3, degree), alpha);
+    // Add HS point marker
+    let point_color : vec4f = draw_point(uvs, hsv_to_position(current_color, v1, v2, v3), 0.025);
+    final_color = mix(final_color, point_color.rgb, point_color.a);
+
+    // outer ring line
+    final_color = mix(final_color, OUTLINECOLOR.rgb, smoothstep(button_radius - EPSILON, button_radius, dist));
+
+    // inner ring line
+    let tmp_interior_mask : f32 = smoothstep(interior_radius - 0.05, interior_radius - 0.05 + EPSILON, position_radius);
+    var inner_outline_mask : f32 = (1.0 - interior_mask) - (1.0 - tmp_interior_mask);
+    final_color = mix(final_color, OUTLINECOLOR.rgb, inner_outline_mask);
 
     final_color = pow(final_color, vec3f(2.2));
-
-    if(dist > button_radius) {
-        final_color = vec3f(0.1);
-    }
 
     if (GAMMA_CORRECTION == 1) {
         final_color = pow(final_color, vec3f(1.0 / 2.2));
     }
+    
+    var shadow : f32 = clamp(1.0 - smoothstep(0.49, 0.5, dist), 0.0, 1.0);
 
-    var shadow : f32 = smoothstep(button_radius, 0.5, dist);
-
-    out.color = vec4f(final_color, 1.0 - shadow);
+    out.color = vec4f(final_color, shadow);
 
     return out;
 }
