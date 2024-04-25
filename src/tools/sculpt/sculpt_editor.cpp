@@ -44,6 +44,7 @@ void SculptEditor::initialize()
     Material grid_material;
     grid_material.priority = 100;
     grid_material.transparency_type = ALPHA_BLEND;
+    grid_material.cull_type = CULL_NONE;
     grid_material.shader = RendererStorage::get_shader("data/shaders/mesh_grid.wgsl", grid_material);
 
     floor_grid_mesh->set_surface_material_override(mirror_mesh->get_surface(0), grid_material);
