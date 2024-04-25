@@ -1,9 +1,16 @@
 #pragma once
 
 #include "includes.h"
-#include "framework/utils/utils.h"
+
 #include "framework/colors.h"
 #include "framework/aabb.h"
+
+#include "glm/vec2.hpp"
+#include "glm/vec3.hpp"
+#include "glm/vec4.hpp"
+#include <glm/gtc/quaternion.hpp>
+
+#include <string>
 
 #define MAX_EDITS_PER_EVALUATION 64
 

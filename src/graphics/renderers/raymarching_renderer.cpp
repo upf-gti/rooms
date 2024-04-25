@@ -4,6 +4,8 @@
 #include "framework/scene/parse_scene.h"
 #include "framework/utils/intersections.h"
 #include "framework/nodes/mesh_instance_3d.h"
+#include "graphics/shader.h"
+#include "graphics/renderer_storage.h"
 
 #include <algorithm>
 #include <numeric>
@@ -514,7 +516,7 @@ void RaymarchingRenderer::compute_octree()
     const bool is_going_to_evaluate = needs_undo || needs_redo || (in_frame_stroke.edit_count > 0 || to_compute_stroke_buffer.size() > 0);
 
     if (is_going_to_evaluate) {
-        RenderdocCapture::start_capture_frame();
+        //RenderdocCapture::start_capture_frame();
     }
 
     // Initialize a command encoder
@@ -569,7 +571,7 @@ void RaymarchingRenderer::compute_octree()
     wgpuCommandEncoderRelease(command_encoder);
 
     if (is_going_to_evaluate) {
-        RenderdocCapture::end_capture_frame();
+        //RenderdocCapture::end_capture_frame();
     }
 
     needs_undo = false, needs_redo = false;

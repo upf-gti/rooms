@@ -1,5 +1,4 @@
-
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.16)
 
 set(ROOMS_DIR_ROOT        ${CMAKE_CURRENT_SOURCE_DIR})
 set(ROOMS_DIR_SOURCES     "${ROOMS_DIR_ROOT}/src")
@@ -12,6 +11,11 @@ if (NOT EXISTS ${CMAKE_BINARY_DIR}/CMakeCache.txt)
 endif()
 
 project(rooms LANGUAGES C CXX)
+
+# Enable multicore compile on VS solution
+if(MSVC)
+  add_definitions(/MP)
+endif()
 
 add_definitions(-D_SILENCE_STDEXT_ARR_ITERS_DEPRECATION_WARNING)
 
@@ -107,8 +111,4 @@ target_link_libraries(${PROJECT_NAME} webgpuEngine)
 # vulkan
 include_directories(${Vulkan_INCLUDE_DIR})
 
-# Enable multicore compile on VS solution
-if(MSVC)
-  add_definitions(/MP)
-endif()
 

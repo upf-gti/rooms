@@ -1,7 +1,10 @@
 #include "edit.h"
-#include <sstream>
-#include "spdlog/spdlog.h"
+
 #include "framework/utils/intersections.h"
+#include "framework/utils/math_utils.h"
+
+#include <sstream>
+#include <vector>
 
 std::ostream& operator<<(std::ostream& os, const Edit& edit)
 {

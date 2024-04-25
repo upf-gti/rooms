@@ -1,12 +1,12 @@
 #include "rooms_engine.h"
 #include "framework/nodes/environment_3d.h"
 #include "framework/nodes/viewport_3d.h"
-#include "framework/nodes/omni_light_3d.h"
 #include "framework/nodes/spot_light_3d.h"
 #include "framework/input.h"
 #include "framework/scene/parse_scene.h"
 #include "framework/scene/parse_gltf.h"
 #include "framework/utils/tinyfiledialogs.h"
+#include "framework/utils/utils.h"
 
 #include "graphics/renderers/rooms_renderer.h"
 
