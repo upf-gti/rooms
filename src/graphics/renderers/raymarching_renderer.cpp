@@ -70,11 +70,11 @@ void RaymarchingRenderer::clean()
 #endif
 }
 
-void RaymarchingRenderer::update(float delta_time)
+void RaymarchingRenderer::update_sculpt(WGPUCommandEncoder command_encoder)
 {
-    updated_time += delta_time;
+    //updated_time += delta_time;
     //for (;updated_time >= 0.0166f; updated_time -= 0.0166f) {
-        compute_octree();
+    compute_octree(command_encoder);
     //}
 
 #ifndef DISABLE_RAYMARCHER
@@ -89,11 +89,6 @@ void RaymarchingRenderer::update(float delta_time)
         octree_ray_intersect(camera->get_eye(), glm::normalize(ray_dir));
     }
 #endif
-
-}
-
-void RaymarchingRenderer::render()
-{
 
 }
 
@@ -507,7 +502,7 @@ void RaymarchingRenderer::compute_undo(WGPUComputePassEncoder compute_pass)
      }
 }
 
-void RaymarchingRenderer::compute_octree()
+void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
 {
     if (!compute_octree_evaluate_shader || !compute_octree_evaluate_shader->is_loaded()) return;
 
@@ -518,10 +513,6 @@ void RaymarchingRenderer::compute_octree()
     if (is_going_to_evaluate) {
         //RenderdocCapture::start_capture_frame();
     }
-
-    // Initialize a command encoder
-    WGPUCommandEncoderDescriptor encoder_desc = {};
-    WGPUCommandEncoder command_encoder = wgpuDeviceCreateCommandEncoder(webgpu_context->device, &encoder_desc);
 
     // Create the octree renderpass
     WGPUComputePassDescriptor compute_pass_desc = {};
@@ -557,18 +548,7 @@ void RaymarchingRenderer::compute_octree()
 
     // Finalize compute_raymarching pass
     wgpuComputePassEncoderEnd(compute_pass);
-
-    WGPUCommandBufferDescriptor cmd_buff_descriptor = {};
-    cmd_buff_descriptor.nextInChain = NULL;
-    cmd_buff_descriptor.label = "Compute Octree Command Buffer";
-
-    // Encode and submit the GPU commands
-    WGPUCommandBuffer commands = wgpuCommandEncoderFinish(command_encoder, &cmd_buff_descriptor);
-    wgpuQueueSubmit(webgpu_context->device_queue, 1, &commands);
-
-    wgpuCommandBufferRelease(commands);
     wgpuComputePassEncoderRelease(compute_pass);
-    wgpuCommandEncoderRelease(command_encoder);
 
     if (is_going_to_evaluate) {
         //RenderdocCapture::end_capture_frame();

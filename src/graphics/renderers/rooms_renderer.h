@@ -26,6 +26,8 @@ class RoomsRenderer : public Renderer {
     Uniform camera_2d_uniform;
     Uniform linear_sampler_uniform;
 
+    WGPUCommandEncoder global_command_encoder;
+
     struct sCameraData {
         glm::mat4x4 mvp;
         glm::vec3 eye;
@@ -35,7 +37,7 @@ class RoomsRenderer : public Renderer {
     sCameraData camera_data;
     sCameraData camera_2d_data;
 
-    void render_screen();
+    void render_screen(WGPUTextureView swapchain_view);
 
     // Render meshes with material color
     WGPUBindGroup render_bind_group_camera = nullptr;
