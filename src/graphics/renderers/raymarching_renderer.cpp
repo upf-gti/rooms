@@ -611,7 +611,7 @@ void RaymarchingRenderer::compute_octree()
     bool is_openxr_available = RoomsRenderer::instance->get_openxr_available();
 
     //if (is_openxr_available) {
-        //compute_preview_edit(compute_pass);
+        compute_preview_edit(compute_pass);
     //}
 
     // Finalize compute_raymarching pass
