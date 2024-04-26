@@ -69,9 +69,6 @@ class SculptEditor {
     void set_onion_modifier(float value);
     void set_cap_modifier(float value);
 
-    void toggle_capped_modifier();
-    void toggle_onion_modifier();
-
     bool must_render_mesh_preview_outline();
 
     bool can_snap_to_surface();
@@ -106,10 +103,7 @@ class SculptEditor {
 
     // Shape Editor
 
-    bool onion_enabled = false;
     float onion_thickness = 0.0f;
-
-    bool capped_enabled = false;
     float capped_value = -1.0f; // -1..1 no cap..fully capped
 
     // Axis lock

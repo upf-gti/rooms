@@ -67,7 +67,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     let back_color = in.color.rgb;
     let degree = ui_data.picker_color.r;
-    var final_color : vec3f = mix(COLOR_HIGHLIGHT_LIGHT, COLOR_TERCIARY, uvs.x * uvs.y);
+    var final_color : vec3f = mix(COLOR_TERCIARY, COLOR_HIGHLIGHT_LIGHT, uvs.y);
 
     let triangle_size : f32 = 0.1;
 
@@ -91,11 +91,10 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
         alpha_offset = triangle.a;
     }
 
-    if(dist > button_radius) {
-        final_color *= 0.5;
-    }
-    else {
-        shadow = 1.0 - smoothstep(0.2, 0.5, dist) - alpha_offset;
+    final_color = mix(final_color, vec3f(0.05), smoothstep(button_radius - EPSILON, button_radius, dist));
+
+    if(dist < button_radius) {
+        shadow = 1.0 - smoothstep(0.125, 0.3, dist) - alpha_offset;
     }
 
     if (GAMMA_CORRECTION == 1) {
