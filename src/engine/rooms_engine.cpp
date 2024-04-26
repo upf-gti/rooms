@@ -1,18 +1,19 @@
 #include "rooms_engine.h"
 #include "framework/nodes/environment_3d.h"
 #include "framework/nodes/viewport_3d.h"
-#include "framework/nodes/omni_light_3d.h"
 #include "framework/nodes/spot_light_3d.h"
 #include "framework/input.h"
 #include "framework/scene/parse_scene.h"
 #include "framework/scene/parse_gltf.h"
+#include "framework/utils/tinyfiledialogs.h"
+#include "framework/utils/utils.h"
+
 #include "graphics/renderers/rooms_renderer.h"
+
 #include "tools/sculpt/sculpt_editor.h"
 
 #include "spdlog/spdlog.h"
 #include "imgui.h"
-#include "framework/utils/tinyfiledialogs.h"
-#include "framework/utils/ImGuizmo.h"
 
 #include <fstream>
 
@@ -22,13 +23,31 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 {
     int error = Engine::initialize(renderer, window, use_glfw, use_mirror_screen);
 
-    sculpt_editor = new SculptEditor;
-
-    sculpt_editor->initialize();
+    // Sculpting
+    {
+        sculpt_editor = new SculptEditor();
+        sculpt_editor->initialize();
+    }
 
     skybox = new Environment3D();
 
     entities.push_back(skybox);
+
+    MeshInstance3D* floor_grid_mesh = new MeshInstance3D();
+    floor_grid_mesh->add_surface(RendererStorage::get_surface("quad"));
+    floor_grid_mesh->set_translation(glm::vec3(0.0f));
+    floor_grid_mesh->rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    floor_grid_mesh->scale(glm::vec3(10.f));
+
+    Material grid_material;
+    grid_material.priority = 100;
+    grid_material.transparency_type = ALPHA_BLEND;
+    grid_material.cull_type = CULL_NONE;
+    grid_material.shader = RendererStorage::get_shader("data/shaders/mesh_grid.wgsl", grid_material);
+
+    floor_grid_mesh->set_surface_material_override(floor_grid_mesh->get_surface(0), grid_material);
+
+    entities.push_back(floor_grid_mesh);
 
     //if (parse_scene("data/gltf_tests/Sponza/Sponza.gltf", entities)) {
     //    //Renderer::instance->get_camera()->look_at_entity(entities.back());
@@ -66,7 +85,9 @@ void RoomsEngine::clean()
 
     Node2D::clean();
 
-    sculpt_editor->clean();
+    if (sculpt_editor) {
+        sculpt_editor->clean();
+    }
 }
 
 void RoomsEngine::update(float delta_time)
@@ -79,7 +100,9 @@ void RoomsEngine::update(float delta_time)
         entity->update(delta_time);
     }
 
-    sculpt_editor->update(delta_time);
+    if (sculpt_editor) {
+        sculpt_editor->update(delta_time);
+    }
 
     if (Input::was_key_pressed(GLFW_KEY_E))
     {
@@ -120,17 +143,8 @@ void RoomsEngine::render()
 		entity->render();
 	}
 
-    sculpt_editor->render();
-
-    {
-        static glm::mat4x4 test_model = entities[1]->get_model();
-        Camera* camera = RoomsRenderer::instance->get_camera();
-        bool changed = gizmo.render(camera->get_view(), camera->get_projection(), test_model);
-
-        if (changed)
-        {
-            entities[1]->set_model(test_model);
-        }
+    if (sculpt_editor) {
+        sculpt_editor->render();
     }
 
     Engine::render();
@@ -288,7 +302,7 @@ void RoomsEngine::render_gui()
 {
     bool active = true;
 
-    ImGui::SetNextWindowSize({ 300, 400 });
+    // ImGui::SetNextWindowSize({ 300, 400 });
     ImGui::Begin("Debug panel", &active, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoFocusOnAppearing);
 
     if (ImGui::BeginMenuBar())
@@ -393,7 +407,7 @@ bool RoomsEngine::show_tree_recursive(Node* entity)
 
     ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
 
-    if (!entity_mesh && children.empty() || (entity_mesh && children.empty() && entity_mesh->get_surfaces().empty())) {
+    if ((entity_mesh && children.empty() && entity_mesh->get_surfaces().empty())) {
         flags |= ImGuiTreeNodeFlags_Leaf;
     }
 

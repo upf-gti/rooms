@@ -28,7 +28,6 @@ struct PrimitiveState {
 class SculptEditor {
 
     RoomsRenderer*  renderer = nullptr;
-    MeshInstance3D* floor_grid_mesh = nullptr;
 
     bool sculpt_started = false;
     bool was_tool_used = false;
@@ -203,6 +202,7 @@ class SculptEditor {
 public:
 
     SculptEditor() {};
+
     void initialize();
     void clean();
 

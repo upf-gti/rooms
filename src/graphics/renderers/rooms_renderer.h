@@ -5,6 +5,7 @@
 #include "graphics/renderer.h"
 #include "graphics/edit.h"
 #include "graphics/texture.h"
+#include "graphics/surface.h"
 
 #include "raymarching_renderer.h"
 
@@ -63,6 +64,7 @@ class RoomsRenderer : public Renderer {
 public:
 
     RoomsRenderer();
+    ~RoomsRenderer();
 
     int initialize(GLFWwindow* window, bool use_mirror_screen = false) override;
     void clean() override;

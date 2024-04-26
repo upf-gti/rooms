@@ -1,28 +1,5 @@
 const PI = 3.14159265359;
 
-// Gloss = 1 - rough*rough
-fn Specular_F_Roughness(specular_color : vec3f, gloss : f32, h : vec3f, v : vec3f) -> vec3f
-{
-  // Sclick using roughness to attenuate fresnel.
-  return (specular_color + (max(vec3f(gloss), specular_color) - specular_color) * pow((1.0 - saturate(dot(v, h))), 5.0));
-}
-
-fn Diffuse(albedo : vec3f) -> vec3f
-{
-    return albedo / PI;
-}
-
-fn GeometrySchlickGGX(NdotV : f32, roughness : f32) -> f32
-{
-    var r : f32 = (roughness + 1.0);
-    var k : f32 = (r * r) / 8.0;
-
-    var nom : f32   = NdotV;
-    var denom : f32 = NdotV * (1.0 - k) + k;
-
-    return nom / denom;
-}
-
 fn V_SmithGGXCorrelated(NoV : f32, NoL : f32, roughness : f32) -> f32
 {
     let a2 : f32 = pow(roughness, 4.0);
@@ -34,23 +11,6 @@ fn V_SmithGGXCorrelated(NoV : f32, NoL : f32, roughness : f32) -> f32
         return 0.5 / GGX;
     }
     return 0.0;
-}
-
-fn GeometrySmith(N : vec3f, V : vec3f, L : vec3f, roughness : f32) -> f32
-{
-    var NdotV : f32 = max(dot(N, V), 0.0);
-    var NdotL : f32 = max(dot(N, L), 0.0);
-    var ggx2 : f32 = GeometrySchlickGGX(NdotV, roughness);
-    var ggx1 : f32 = GeometrySchlickGGX(NdotL, roughness);
-    return ggx1 * ggx2;
-}
-
-fn GDFG(NoV : f32, NoL : f32, a : f32) -> f32
-{
-    let a2 : f32 = a * a;
-    let GGXL : f32 = NoV * sqrt((-NoL * a2 + NoL) * NoL + a2);
-    let GGXV : f32 = NoL * sqrt((-NoV * a2 + NoV) * NoV + a2);
-    return (2.0 * NoL) / (GGXV + GGXL);
 }
 
 fn D_GGX(NdotH : f32, roughness : f32) -> f32
@@ -104,16 +64,6 @@ fn F_Schlick(f0 : vec3f, f90 : vec3f, VdotH : f32) -> vec3f
 {
     return f0 + (f90 - f0) * pow(clamp(1.0 - VdotH, 0.0, 1.0), 5.0);
 }
-
-// fn fresnelSchlick(n_dot_v : f32, F0 : vec3f) -> vec3f
-// {
-//     return F0 + (vec3f(1.0) - F0) * pow(clamp(1.0 - n_dot_v, 0.0, 1.0), 5.0);
-// }
-
-// fn Fresnel_Schlick( specular_color : vec3f, h : vec3f, v : vec3f) -> vec3f
-// {
-//     return (specular_color + (1.0 - specular_color) * pow((1.0 - saturate(dot(v, h))), 5.0));
-// }
 
 fn FresnelSchlickRoughness(n_dot_v : f32, F0 : vec3f, roughness : f32) -> vec3f
 {

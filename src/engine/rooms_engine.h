@@ -1,7 +1,6 @@
 #pragma once
 
 #include "engine.h"
-#include "framework/ui/gizmo_2d.h"
 
 #include <vector>
 
@@ -16,15 +15,15 @@ class RoomsEngine : public Engine
 
     SculptEditor* sculpt_editor;
 
-    Gizmo2D gizmo;
 
     bool export_scene();
     //bool import_scene();
 
     void render_gui();
-    bool show_tree_recursive(Node* entity);
 
 public:
+
+    static std::vector<Node3D*> entities;
 
 	int initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen) override;
     void clean() override;
@@ -32,5 +31,5 @@ public:
 	void update(float delta_time) override;
 	void render() override;
 
-    static std::vector<Node3D*> entities;
+    bool show_tree_recursive(Node* entity);
 };
