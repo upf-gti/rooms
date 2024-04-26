@@ -1,4 +1,4 @@
-#include ui_palette.wgsl
+#include ui_utils.wgsl
 #include ../mesh_includes.wgsl
 
 #define GAMMA_CORRECTION

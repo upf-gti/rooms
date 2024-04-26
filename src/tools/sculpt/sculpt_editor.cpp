@@ -350,7 +350,6 @@ void SculptEditor::update(float delta_time)
     // Update UI
     {
         if (main_panel_3d) {
-            main_panel_3d->set_active(Input::is_button_pressed(XR_BUTTON_X));
             glm::mat4x4 pose = Input::get_controller_pose(HAND_LEFT, POSE_AIM);
             pose = glm::rotate(pose, glm::radians(-45.f), glm::vec3(1.0f, 0.0f, 0.0f));
             main_panel_3d->set_model(pose);
@@ -1039,6 +1038,7 @@ void SculptEditor::init_ui()
 
     if (Renderer::instance->get_openxr_available()) {
         main_panel_3d = new Viewport3D(main_panel_2d);
+        main_panel_3d->set_active(true);
         RoomsEngine::entities.push_back(main_panel_3d);
     }
 
