@@ -228,10 +228,9 @@ public:
     int initialize(bool use_mirror_screen);
     void clean();
 
-    void update(float delta_time);
-    void render();
+    void update_sculpt(WGPUCommandEncoder command_encoder);
 
-    void compute_octree();
+    void compute_octree(WGPUCommandEncoder command_encoder);
     void render_raymarching_proxy(WGPURenderPassEncoder render_pass);
 
     inline void redo() {

@@ -291,7 +291,7 @@ bool RoomsEngine::import_scene()
         rmr->push_stroke(current_stroke);
     }
 
-    rmr->compute_octree();
+    //rmr->compute_octree();
 
     spdlog::info("Scene imported! ({} edits)", num_edits);
     

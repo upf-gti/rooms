@@ -87,6 +87,10 @@ void RoomsRenderer::clean()
 
 void RoomsRenderer::update(float delta_time)
 {
+    // Create the command encoder
+    WGPUCommandEncoderDescriptor encoder_desc = {};
+    global_command_encoder = wgpuDeviceCreateCommandEncoder(webgpu_context->device, &encoder_desc);
+
 #if defined(XR_SUPPORT)
     if (is_openxr_available) {
         xr_context->update();
@@ -102,15 +106,17 @@ void RoomsRenderer::update(float delta_time)
         camera->update(delta_time);
     }
 
-    raymarching_renderer.update(delta_time);
+    raymarching_renderer.update_sculpt(global_command_encoder);
 }
 
 void RoomsRenderer::render()
 {
+    WGPUTextureView swapchain_view = wgpuSwapChainGetCurrentTextureView(webgpu_context->screen_swapchain);
+
     prepare_instancing();
 
     if (!is_openxr_available) {
-        render_screen();
+        render_screen(swapchain_view);
     }
 
 #if defined(XR_SUPPORT)
@@ -123,10 +129,29 @@ void RoomsRenderer::render()
     }
 #endif
 
+    WGPUCommandBufferDescriptor cmd_buff_descriptor = {};
+    cmd_buff_descriptor.nextInChain = NULL;
+    cmd_buff_descriptor.label = "Command buffer";
+
+    WGPUCommandBuffer commands = wgpuCommandEncoderFinish(global_command_encoder, &cmd_buff_descriptor);
+
+    wgpuQueueSubmit(webgpu_context->device_queue, 1, &commands);
+
+    wgpuCommandBufferRelease(commands);
+    wgpuCommandEncoderRelease(global_command_encoder);
+
+    wgpuTextureViewRelease(swapchain_view);
+
+#ifndef __EMSCRIPTEN__
+    if (!is_openxr_available || use_mirror_screen) {
+        wgpuSwapChainPresent(webgpu_context->screen_swapchain);
+    }
+#endif
+
     clear_renderables();
 }
 
-void RoomsRenderer::render_screen()
+void RoomsRenderer::render_screen(WGPUTextureView swapchain_view)
 {
     // Update main 3d camera
 
@@ -144,15 +169,9 @@ void RoomsRenderer::render_screen()
 
     wgpuQueueWriteBuffer(webgpu_context->device_queue, std::get<WGPUBuffer>(camera_2d_uniform.data), 0, &camera_2d_data, sizeof(sCameraData));
 
-    WGPUTextureView swapchain_view = wgpuSwapChainGetCurrentTextureView(webgpu_context->screen_swapchain);
-
     ImGui::Render();
 
     {
-        // Create the command encoder
-        WGPUCommandEncoderDescriptor encoder_desc = {};
-        WGPUCommandEncoder command_encoder = wgpuDeviceCreateCommandEncoder(webgpu_context->device, &encoder_desc);
-
         // Prepare the color attachment
         WGPURenderPassColorAttachment render_pass_color_attachment = {};
         if (msaa_count > 1) {
@@ -188,7 +207,7 @@ void RoomsRenderer::render_screen()
         render_pass_descr.depthStencilAttachment = &render_pass_depth_attachment;
 
         // Create & fill the render pass (encoder)
-        WGPURenderPassEncoder render_pass = wgpuCommandEncoderBeginRenderPass(command_encoder, &render_pass_descr);
+        WGPURenderPassEncoder render_pass = wgpuCommandEncoderBeginRenderPass(global_command_encoder, &render_pass_descr);
 
         render_opaque(render_pass, render_bind_group_camera);
 
@@ -219,31 +238,14 @@ void RoomsRenderer::render_screen()
             render_pass_desc.colorAttachments = &color_attachments;
             render_pass_desc.depthStencilAttachment = nullptr;
 
-            WGPURenderPassEncoder pass = wgpuCommandEncoderBeginRenderPass(command_encoder, &render_pass_desc);
+            WGPURenderPassEncoder pass = wgpuCommandEncoderBeginRenderPass(global_command_encoder, &render_pass_desc);
 
             ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), pass);
 
             wgpuRenderPassEncoderEnd(pass);
             wgpuRenderPassEncoderRelease(pass);
         }
-
-        WGPUCommandBufferDescriptor cmd_buff_descriptor = {};
-        cmd_buff_descriptor.nextInChain = NULL;
-        cmd_buff_descriptor.label = "Command buffer";
-
-        WGPUCommandBuffer commands = wgpuCommandEncoderFinish(command_encoder, &cmd_buff_descriptor);
-
-        wgpuQueueSubmit(webgpu_context->device_queue, 1, &commands);
-
-        wgpuCommandBufferRelease(commands);
-        wgpuCommandEncoderRelease(command_encoder);
     }
-
-    wgpuTextureViewRelease(swapchain_view);
-
-#ifndef __EMSCRIPTEN__
-    wgpuSwapChainPresent(webgpu_context->screen_swapchain);
-#endif
 }
 
 #if defined(XR_SUPPORT)
@@ -265,10 +267,6 @@ void RoomsRenderer::render_xr()
         wgpuQueueWriteBuffer(webgpu_context->device_queue, std::get<WGPUBuffer>(camera_uniform.data), 0, &camera_data, sizeof(sCameraData));
 
         {
-            // Create the command encoder
-            WGPUCommandEncoderDescriptor encoder_desc = {};
-            WGPUCommandEncoder command_encoder = wgpuDeviceCreateCommandEncoder(webgpu_context->device, &encoder_desc);
-
             // Prepare the color attachment
             WGPURenderPassColorAttachment render_pass_color_attachment = {};
             render_pass_color_attachment.view = swapchainData.images[swapchainData.image_index].textureView;
@@ -306,7 +304,7 @@ void RoomsRenderer::render_xr()
             render_pass_descr.depthStencilAttachment = &render_pass_depth_attachment;
 
             // Create & fill the render pass (encoder)
-            WGPURenderPassEncoder render_pass = wgpuCommandEncoderBeginRenderPass(command_encoder, &render_pass_descr);
+            WGPURenderPassEncoder render_pass = wgpuCommandEncoderBeginRenderPass(global_command_encoder, &render_pass_descr);
 
             render_opaque(render_pass, render_bind_group_camera);
 
@@ -322,17 +320,6 @@ void RoomsRenderer::render_xr()
             wgpuRenderPassEncoderEnd(render_pass);
 
             wgpuRenderPassEncoderRelease(render_pass);
-
-            WGPUCommandBufferDescriptor cmd_buff_descriptor = {};
-            cmd_buff_descriptor.nextInChain = NULL;
-            cmd_buff_descriptor.label = "Command buffer";
-
-            WGPUCommandBuffer commands = wgpuCommandEncoderFinish(command_encoder, &cmd_buff_descriptor);
-
-            wgpuQueueSubmit(webgpu_context->device_queue, 1, &commands);
-
-            wgpuCommandBufferRelease(commands);
-            wgpuCommandEncoderRelease(command_encoder);
         }
 
 
