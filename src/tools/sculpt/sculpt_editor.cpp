@@ -660,6 +660,17 @@ void SculptEditor::render_gui()
         stroke_parameters.set_dirty(true);
 }
 
+void SculptEditor::toggle_stamp()
+{
+    stamp_enabled = !stamp_enabled;
+
+    auto label = controller_labels[HAND_RIGHT].secondary_button_label;
+
+    if (label) {
+        label->set_text(stamp_enabled ? "Switch to Smear" : "Switch to Stamp");
+    }
+}
+
 bool SculptEditor::can_snap_to_surface()
 {
     return snap_to_surface && (stamp_enabled || current_tool == PAINT);
@@ -750,6 +761,11 @@ void SculptEditor::set_primitive(sdPrimitive primitive)
     }
 }
 
+void SculptEditor::set_operation(sdOperation operation)
+{
+    stroke_parameters.set_operation(operation);
+}
+
 void SculptEditor::set_onion_modifier(float value)
 {
     onion_thickness = glm::clamp(value, 0.0f, 1.0f);
@@ -828,9 +844,32 @@ void SculptEditor::init_ui()
     {
         ui::ItemGroup2D* g_editors = new ui::ItemGroup2D("g_editors");
 
+        // Sculpt editor
         {
             ui::ButtonSubmenu2D* sculpt_editor_submenu = new ui::ButtonSubmenu2D("sculpt_editor", "data/textures/shape_editor.png");
 
+            // Operations and sculpt mode
+            {
+                // Add, substract, intersection
+                ui::ComboButtons2D* combo_edit_operation = new ui::ComboButtons2D("combo_edit_operation");
+                combo_edit_operation->add_child(new ui::TextureButton2D("add", "data/textures/sphere.png", ui::SELECTED));
+                combo_edit_operation->add_child(new ui::TextureButton2D("substract", "data/textures/sphere.png"));
+                //combo_edit_operation->add_child(new ui::TextureButton2D("intersect", "data/textures/sphere.png"));
+                sculpt_editor_submenu->add_child(combo_edit_operation);
+
+                // Smear, stamp
+                sculpt_editor_submenu->add_child(new ui::TextureButton2D("sculpt_mode", "data/textures/x.png", ui::ALLOW_TOGGLE));
+            }
+
+            // Edit sizes
+            {
+                ui::ItemGroup2D* g_edit_sizes = new ui::ItemGroup2D("g_edit_sizes");
+                g_edit_sizes->add_child(new ui::Slider2D("main_size", "data/textures/x.png", edit_to_add.dimensions.x, ui::SliderMode::VERTICAL));
+                g_edit_sizes->add_child(new ui::Slider2D("sec_size", "data/textures/y.png", edit_to_add.dimensions.w, ui::SliderMode::VERTICAL));
+                sculpt_editor_submenu->add_child(g_edit_sizes);
+            }
+
+            // Edit modifiers
             {
                 ui::ItemGroup2D* g_edit_modifiers = new ui::ItemGroup2D("g_edit_modifiers");
                 g_edit_modifiers->add_child(new ui::Slider2D("onion_value", "data/textures/onion.png", 0.0f, ui::SliderMode::VERTICAL));
@@ -841,13 +880,62 @@ void SculptEditor::init_ui()
             g_editors->add_child(sculpt_editor_submenu);
         }
 
+        // Material editor
         {
             ui::ButtonSubmenu2D* material_editor_submenu = new ui::ButtonSubmenu2D("material_editor", "data/textures/material_editor.png");
+
+            // Shading properties
+            {
+                ui::ButtonSubmenu2D* shading_submenu = new ui::ButtonSubmenu2D("shading", "data/textures/shading.png");
+
+                {
+                    ui::ItemGroup2D* g_edit_pbr = new ui::ItemGroup2D("g_edit_pbr");
+                    g_edit_pbr->add_child(new ui::Slider2D("roughness", 0.7f));
+                    g_edit_pbr->add_child(new ui::Slider2D("metallic", 0.2f));
+                    shading_submenu->add_child(g_edit_pbr);
+                }
+
+                /*{
+                    ui::ItemGroup2D* g_edit_pattern = new ui::ItemGroup2D("g_edit_pattern");
+                    g_edit_pattern->add_child(new ui::Slider2D("noise_intensity", 0.0f, ui::SliderMode::VERTICAL, 0.0f, 10.0f));
+                    g_edit_pattern->add_child(new ui::Slider2D("noise_frequency", 20.0f, ui::SliderMode::VERTICAL, 0.0f, 50.0f));
+                    g_edit_pattern->add_child(new ui::Slider2D("noise_octaves", 8.0f, ui::SliderMode::VERTICAL, 0.0f, 16.0f, 1.0f));
+                    g_edit_pattern->add_child(new ui::ColorPicker2D("noise_color_picker", colors::WHITE));
+                    material_editor_submenu->add_child(g_edit_pattern);
+                }*/
+
+                material_editor_submenu->add_child(shading_submenu);
+            }
+
+            // Shuffle
+            {
+                material_editor_submenu->add_child(new ui::TextureButton2D("shuffle_material", "data/textures/shuffle.png"));
+            }
+
+            // Materials: add, pick, defaults
+            {
+                ui::ItemGroup2D* g_saved_materials = new ui::ItemGroup2D("g_saved_materials");
+
+                g_saved_materials->add_child(new ui::TextureButton2D("save_material", "data/textures/submenu_mark.png"));
+                g_saved_materials->add_child(new ui::TextureButton2D("pick_material", "data/textures/pick_material.png", ui::ALLOW_TOGGLE));
+
+                {
+                    ui::ButtonSelector2D* mat_samples_selector = new ui::ButtonSelector2D("material_samples", "data/textures/material_samples.png");
+                    mat_samples_selector->add_child(new ui::TextureButton2D("aluminium", "data/textures/material_samples.png", ui::UNIQUE_SELECTION));
+                    mat_samples_selector->add_child(new ui::TextureButton2D("charcoal", "data/textures/material_samples.png", ui::UNIQUE_SELECTION));
+                    mat_samples_selector->add_child(new ui::TextureButton2D("rusted_iron", "data/textures/material_samples.png", ui::UNIQUE_SELECTION));
+                    g_saved_materials->add_child(mat_samples_selector);
+                }
+
+                material_editor_submenu->add_child(g_saved_materials);
+            }
+
             g_editors->add_child(material_editor_submenu);
         }
 
+        // Brush editor
         {
-            ui::ButtonSubmenu2D* brush_editor_submenu = new ui::ButtonSubmenu2D("brush_editor", "data/textures/z.png");
+            ui::ButtonSubmenu2D* brush_editor_submenu = new ui::ButtonSubmenu2D("brush_editor", "data/textures/z.png", ui::DISABLED);
 
             {
                 ui::ButtonSelector2D* color_blend_selector = new ui::ButtonSelector2D("color_blend", "data/textures/x.png");
@@ -870,6 +958,7 @@ void SculptEditor::init_ui()
         ui::ButtonSubmenu2D* guides_submenu = new ui::ButtonSubmenu2D("guides", "data/textures/mirror.png");
         ui::ItemGroup2D* g_guides = new ui::ItemGroup2D("g_guides");
 
+        // Mirror
         {
             ui::ButtonSubmenu2D* mirror_submenu = new ui::ButtonSubmenu2D("mirror", "data/textures/mirror.png");
             mirror_submenu->add_child(new ui::TextureButton2D("mirror_toggle", "data/textures/mirror.png", ui::ALLOW_TOGGLE));
@@ -881,9 +970,11 @@ void SculptEditor::init_ui()
             g_guides->add_child(mirror_submenu);
         }
 
+        // Snap to surface, grid
         g_guides->add_child(new ui::TextureButton2D("snap_to_surface", "data/textures/snap_to_surface.png", ui::ALLOW_TOGGLE));
         g_guides->add_child(new ui::TextureButton2D("snap_to_grid", "data/textures/snap_to_grid.png", ui::ALLOW_TOGGLE));
 
+        // Snap to axis
         {
             ui::ButtonSubmenu2D* lock_axis_submenu = new ui::ButtonSubmenu2D("lock_axis", "data/textures/lock_axis.png");
             lock_axis_submenu->add_child(new ui::TextureButton2D("lock_axis_toggle", "data/textures/lock_axis.png", ui::ALLOW_TOGGLE));
@@ -912,9 +1003,6 @@ void SculptEditor::init_ui()
         second_row->add_child(new ui::TextureButton2D("undo", "data/textures/x.png"));
         second_row->add_child(new ui::TextureButton2D("redo", "data/textures/y.png"));
     }
-
-    //{
-    //    ui::ButtonSubmenu2D* material_submenu = new ui::ButtonSubmenu2D("material", "data/textures/material.png");
 
     //    {
     //        ui::ButtonSubmenu2D* colors_submenu = new ui::ButtonSubmenu2D("colors", "data/textures/colors.png");
@@ -996,54 +1084,6 @@ void SculptEditor::init_ui()
     //        material_submenu->add_child(colors_submenu);
     //    }
 
-    //    
-
-    //    {
-    //        ui::ButtonSubmenu2D* material_editor_submenu = new ui::ButtonSubmenu2D("material_editor", "data/textures/material_editor.png");
-
-    //        {
-    //            ui::ItemGroup2D* g_edit_pbr = new ui::ItemGroup2D("g_edit_pbr");
-    //            g_edit_pbr->add_child(new ui::Slider2D("roughness", 0.7f));
-    //            g_edit_pbr->add_child(new ui::Slider2D("metallic", 0.2f));
-    //            material_editor_submenu->add_child(g_edit_pbr);
-    //        }
-
-    //        {
-    //            ui::ItemGroup2D* g_edit_pattern = new ui::ItemGroup2D("g_edit_pattern");
-    //            g_edit_pattern->add_child(new ui::Slider2D("noise_intensity", 0.0f, ui::SliderMode::VERTICAL, 0.0f, 10.0f));
-    //            g_edit_pattern->add_child(new ui::Slider2D("noise_frequency", 20.0f, ui::SliderMode::VERTICAL, 0.0f, 50.0f));
-    //            g_edit_pattern->add_child(new ui::Slider2D("noise_octaves", 8.0f, ui::SliderMode::VERTICAL, 0.0f, 16.0f, 1.0f));
-    //            g_edit_pattern->add_child(new ui::ColorPicker2D("noise_color_picker", colors::WHITE));
-    //            material_editor_submenu->add_child(g_edit_pattern);
-    //        }
-
-    //        material_submenu->add_child(material_editor_submenu);
-    //    }
-
-    //    {
-    //        ui::ButtonSubmenu2D* mat_list_submenu = new ui::ButtonSubmenu2D("materials", "data/textures/material_samples.png");
-
-    //        mat_list_submenu->add_child(new ui::TextureButton2D("save_material", "data/textures/submenu_mark.png"));
-    //        mat_list_submenu->add_child(new ui::TextureButton2D("pick_material", "data/textures/pick_material.png", ui::ALLOW_TOGGLE));
-
-    //        {
-    //            ui::ButtonSelector2D* g_material_samples = new ui::ButtonSelector2D("g_material_samples", "data/textures/material_samples.png");
-    //            g_material_samples->add_child(new ui::TextureButton2D("aluminium", "data/textures/material_samples.png", ui::UNIQUE_SELECTION));
-    //            g_material_samples->add_child(new ui::TextureButton2D("charcoal", "data/textures/material_samples.png", ui::UNIQUE_SELECTION));
-    //            g_material_samples->add_child(new ui::TextureButton2D("rusted_iron", "data/textures/material_samples.png", ui::UNIQUE_SELECTION));
-    //            mat_list_submenu->add_child(g_material_samples);
-    //        }
-
-    //        material_submenu->add_child(mat_list_submenu);
-    //    }
-
-    //    {
-    //        material_submenu->add_child(new ui::TextureButton2D("shuffle_material", "data/textures/shuffle.png"));
-    //    }
-
-    //    main_panel_2d->add_child(material_submenu);
-    //}
-
     if (Renderer::instance->get_openxr_available()) {
         main_panel_3d = new Viewport3D(main_panel_2d);
         main_panel_3d->set_active(true);
@@ -1093,6 +1133,14 @@ void SculptEditor::bind_events()
     Node::bind("cylinder", [&](const std::string& signal, void* button) { set_primitive(SD_CYLINDER); });
     Node::bind("torus", [&](const std::string& signal, void* button) { set_primitive(SD_TORUS); });
     Node::bind("bezier", [&](const std::string& signal, void* button) { set_primitive(SD_BEZIER); });
+
+    /*Node::bind("main_size", [&](const std::string& signal, float value) { set_edit_size(value); });
+    Node::bind("sec_size", [&](const std::string& signal, float value) { set_edit_size(value); });*/
+
+    Node::bind("sculpt_mode", [&](const std::string& signal, void* button) { toggle_stamp(); });
+
+    Node::bind("add", [&](const std::string& signal, void* button) { set_operation(OP_UNION); });
+    Node::bind("substract", [&](const std::string& signal, void* button) { set_operation(OP_SUBSTRACTION); });
 
     Node::bind("onion_value", [&](const std::string& signal, float value) { set_onion_modifier(value); });
     Node::bind("cap_value", [&](const std::string& signal, float value) { set_cap_modifier(value); });
@@ -1150,7 +1198,7 @@ void SculptEditor::bind_events()
 
     // Bind material samples callback...
 
-    Node2D* samples_group = Node2D::get_widget_from_name("g_material_samples");
+    Node2D* samples_group = Node2D::get_widget_from_name("material_samples");
     if (samples_group) {
         for (size_t i = 0; i < samples_group->get_children().size(); ++i)
         {
@@ -1174,7 +1222,7 @@ void SculptEditor::bind_events()
 
     // Bind color blendind operations for painting
     {
-        Node2D* color_blending_modes = Node2D::get_widget_from_name("color_blending");
+        Node2D* color_blending_modes = Node2D::get_widget_from_name("color_blend");
         if (color_blending_modes) {
             for (size_t i = 0; i < color_blending_modes->get_children().size(); ++i)
             {
@@ -1191,10 +1239,7 @@ void SculptEditor::bind_events()
 
     // Bind Controller buttons
     {
-        Node::bind(XR_BUTTON_B, [&]() {
-            stamp_enabled = !stamp_enabled;
-            controller_labels[HAND_RIGHT].secondary_button_label->set_text(stamp_enabled ? "Switch to Smear" : "Switch to Stamp");
-        });
+        Node::bind(XR_BUTTON_B, [&]() { toggle_stamp(); });
     }
 }
 
@@ -1249,7 +1294,7 @@ void SculptEditor::generate_material_from_stroke(void* button)
     }
 
     ui::Button2D* b = reinterpret_cast<ui::Button2D*>(button);
-    ui::ButtonSelector2D* mat_samples = static_cast<ui::ButtonSelector2D*>(Node2D::get_widget_from_name("g_material_samples"));
+    ui::ButtonSelector2D* mat_samples = static_cast<ui::ButtonSelector2D*>(Node2D::get_widget_from_name("material_samples"));
     assert(mat_samples);
 
     std::string name = "new_material_" + std::to_string(last_generated_material_uid++);

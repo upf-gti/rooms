@@ -64,6 +64,8 @@ class SculptEditor {
     MeshInstance3D* mesh_preview_outline = nullptr;
 
     void set_primitive(sdPrimitive primitive);
+    void set_operation(sdOperation operation);
+
     void update_edit_preview(const glm::vec4& dims);
 
     void set_onion_modifier(float value);
@@ -72,6 +74,8 @@ class SculptEditor {
     bool must_render_mesh_preview_outline();
 
     bool can_snap_to_surface();
+
+    void toggle_stamp();
 
     bool dimensions_dirty       = true;
     bool modifiers_dirty        = false;
