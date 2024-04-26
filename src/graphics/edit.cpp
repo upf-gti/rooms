@@ -3,6 +3,7 @@
 #include "framework/utils/intersections.h"
 #include "framework/utils/math_utils.h"
 
+#include <cfloat>
 #include <sstream>
 #include <vector>
 

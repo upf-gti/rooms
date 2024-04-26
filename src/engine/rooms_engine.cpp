@@ -29,10 +29,25 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
         sculpt_editor->initialize();
     }
 
-
     skybox = new Environment3D();
 
     entities.push_back(skybox);
+
+    MeshInstance3D* floor_grid_mesh = new MeshInstance3D();
+    floor_grid_mesh->add_surface(RendererStorage::get_surface("quad"));
+    floor_grid_mesh->set_translation(glm::vec3(0.0f));
+    floor_grid_mesh->rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    floor_grid_mesh->scale(glm::vec3(10.f));
+
+    Material grid_material;
+    grid_material.priority = 100;
+    grid_material.transparency_type = ALPHA_BLEND;
+    grid_material.cull_type = CULL_NONE;
+    grid_material.shader = RendererStorage::get_shader("data/shaders/mesh_grid.wgsl", grid_material);
+
+    floor_grid_mesh->set_surface_material_override(floor_grid_mesh->get_surface(0), grid_material);
+
+    entities.push_back(floor_grid_mesh);
 
     //if (parse_scene("data/gltf_tests/Sponza/Sponza.gltf", entities)) {
     //    //Renderer::instance->get_camera()->look_at_entity(entities.back());
@@ -70,7 +85,9 @@ void RoomsEngine::clean()
 
     Node2D::clean();
 
-    sculpt_editor->clean();
+    if (sculpt_editor) {
+        sculpt_editor->clean();
+    }
 }
 
 void RoomsEngine::update(float delta_time)
@@ -83,7 +100,9 @@ void RoomsEngine::update(float delta_time)
         entity->update(delta_time);
     }
 
-    sculpt_editor->update(delta_time);
+    if (sculpt_editor) {
+        sculpt_editor->update(delta_time);
+    }
 
     if (Input::was_key_pressed(GLFW_KEY_E))
     {
@@ -124,8 +143,9 @@ void RoomsEngine::render()
 		entity->render();
 	}
 
-    sculpt_editor->render();
-
+    if (sculpt_editor) {
+        sculpt_editor->render();
+    }
 
     Engine::render();
 }

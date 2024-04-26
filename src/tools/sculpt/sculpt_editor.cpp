@@ -34,20 +34,6 @@ void SculptEditor::initialize()
 
     mirror_mesh->set_surface_material_override(mirror_mesh->get_surface(0), mirror_material);
 
-    floor_grid_mesh = new MeshInstance3D();
-    floor_grid_mesh->add_surface(RendererStorage::get_surface("quad"));
-    floor_grid_mesh->set_translation(glm::vec3(0.0f));
-    floor_grid_mesh->rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-    floor_grid_mesh->scale(glm::vec3(10.f));
-
-    Material grid_material;
-    grid_material.priority = 100;
-    grid_material.transparency_type = ALPHA_BLEND;
-    grid_material.cull_type = CULL_NONE;
-    grid_material.shader = RendererStorage::get_shader("data/shaders/mesh_grid.wgsl", grid_material);
-
-    floor_grid_mesh->set_surface_material_override(mirror_mesh->get_surface(0), grid_material);
-
     axis_lock_gizmo.initialize(POSITION_GIZMO, sculpt_start_position);
     mirror_gizmo.initialize(POSITION_GIZMO, sculpt_start_position);
     mirror_origin = sculpt_start_position;
@@ -115,10 +101,6 @@ void SculptEditor::clean()
 {
     if (mirror_mesh) {
         delete mirror_mesh;
-    }
-
-    if (floor_grid_mesh) {
-        delete floor_grid_mesh;
     }
 
     // TODO
@@ -633,8 +615,6 @@ void SculptEditor::render()
         mirror_mesh->rotate(mirror_rotation);
         mirror_mesh->render();
     }
-
-    floor_grid_mesh->render();
 
     if (!main_panel_3d) {
         main_panel_2d->render();
