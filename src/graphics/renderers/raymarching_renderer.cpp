@@ -790,10 +790,11 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         delete[] atlas_indices;
 
         // Edit culling lists per octree node buffer and culling count per octree node layer
-        uint32_t edit_culling_data_size = octree_total_size * MAX_EDITS_PER_EVALUATION * sizeof(uint32_t) / 4 + octree_total_size * sizeof(uint32_t);
-        octree_edit_culling_data.data = webgpu_context->create_buffer(edit_culling_data_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "edit_culling_data");
-        octree_edit_culling_data.binding = 6;
-        octree_edit_culling_data.buffer_size = edit_culling_data_size;
+        //// TODO remove or restores
+        //uint32_t edit_culling_data_size = sizeof(uint32_t) * 2; //octree_total_size* MAX_EDITS_PER_EVALUATION * sizeof(uint32_t) / 4 + octree_total_size * sizeof(uint32_t);
+        //octree_edit_culling_data.data = webgpu_context->create_buffer(edit_culling_data_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "edit_culling_data");
+        //octree_edit_culling_data.binding = 6;
+        //octree_edit_culling_data.buffer_size = edit_culling_data_size;
 
         // Stroke history
         size_t stroke_history_size = sizeof(sStrokeInfluence);
@@ -933,7 +934,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         octree_new_uniform.binding = 4;
 
         std::vector<Uniform*> uniforms = { &octree_indirect_buffer, &octant_usage_initialization_uniform[0], &octant_usage_initialization_uniform[1],
-                                           &octree_edit_culling_data, &octree_indirect_brick_removal_buffer, &octree_new_uniform };
+                                           &octree_indirect_brick_removal_buffer, &octree_new_uniform };
 
         compute_octree_initialization_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_initialization_shader, 0);
     }
