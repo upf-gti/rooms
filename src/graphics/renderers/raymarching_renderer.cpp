@@ -557,7 +557,7 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
     needs_undo = false, needs_redo = false;
 }
 
-void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_pass)
+void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_pass, uint32_t camera_buffer_stride)
 {
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
 
@@ -572,7 +572,7 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
 
         // Set bind groups
         wgpuRenderPassEncoderSetBindGroup(render_pass, 0, render_proxy_geometry_bind_group, 0, nullptr);
-        wgpuRenderPassEncoderSetBindGroup(render_pass, 1, render_camera_bind_group, 0, nullptr);
+        wgpuRenderPassEncoderSetBindGroup(render_pass, 1, render_camera_bind_group, 1, &camera_buffer_stride);
         wgpuRenderPassEncoderSetBindGroup(render_pass, 2, sculpt_data_bind_proxy_group, 0, nullptr);
         wgpuRenderPassEncoderSetBindGroup(render_pass, 3, Renderer::instance->get_lighting_bind_group(), 0, nullptr);
 
@@ -596,7 +596,7 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
 
         // Set bind groups
         wgpuRenderPassEncoderSetBindGroup(render_pass, 0, render_preview_proxy_geometry_bind_group, 0, nullptr);
-        wgpuRenderPassEncoderSetBindGroup(render_pass, 1, render_preview_camera_bind_group, 0, nullptr);
+        wgpuRenderPassEncoderSetBindGroup(render_pass, 1, render_preview_camera_bind_group, 1, &camera_buffer_stride);
         wgpuRenderPassEncoderSetBindGroup(render_pass, 2, sculpt_data_bind_preview_group, 0, nullptr);
         wgpuRenderPassEncoderSetBindGroup(render_pass, 3, Renderer::instance->get_lighting_bind_group(), 0, nullptr);
 
@@ -617,11 +617,6 @@ void RaymarchingRenderer::set_sculpt_rotation(const glm::quat& rotation)
 {
     sculpt_data.sculpt_rotation = glm::inverse(rotation);
     sculpt_data.sculpt_inv_rotation = rotation;
-}
-
-void RaymarchingRenderer::set_camera_eye(const glm::vec3& eye_pos) {
-    WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
-    wgpuQueueWriteBuffer(webgpu_context->device_queue, std::get<WGPUBuffer>(proxy_geometry_eye_position.data), 0,&eye_pos , sizeof(eye_pos));
 }
 
 void RaymarchingRenderer::init_compute_octree_pipeline()
@@ -882,15 +877,15 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
     render_proxy_shader = RendererStorage::get_shader("data/shaders/octree/proxy_geometry_plain.wgsl");
 
     {
-        proxy_geometry_eye_position.data = webgpu_context->create_buffer(sizeof(glm::vec3), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "proxy geometry eye position");
-        proxy_geometry_eye_position.binding = 1;
-        proxy_geometry_eye_position.buffer_size = sizeof(glm::vec3);
-
         RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
 
         camera_uniform = rooms_renderer->get_current_camera_uniform();
 
-        std::vector<Uniform*> uniforms = { &linear_sampler_uniform, &sdf_texture_uniform, &octree_proxy_instance_buffer, &proxy_geometry_eye_position, &octree_brick_copy_buffer, &sdf_material_texture_uniform };
+        prev_stroke_uniform_2.data = preview_stroke_uniform.data;
+        prev_stroke_uniform_2.binding = 1u;
+        prev_stroke_uniform_2.buffer_size = preview_stroke_uniform.buffer_size;
+
+        std::vector<Uniform*> uniforms = { &linear_sampler_uniform, &sdf_texture_uniform, &octree_proxy_instance_buffer, &octree_brick_copy_buffer, &sdf_material_texture_uniform, &prev_stroke_uniform_2 };
 
         render_proxy_geometry_bind_group = webgpu_context->create_bind_group(uniforms, render_proxy_shader, 0);
         uniforms = { camera_uniform };
@@ -902,11 +897,7 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
         sculpt_data_uniform.binding = 0;
         sculpt_data_uniform.buffer_size = sizeof(sSculptData);
 
-        prev_stroke_uniform_2.data = preview_stroke_uniform.data;
-        prev_stroke_uniform_2.binding = 1u;
-        prev_stroke_uniform_2.buffer_size = preview_stroke_uniform.buffer_size;
-
-        std::vector<Uniform*> uniforms = { &sculpt_data_uniform, &prev_stroke_uniform_2, &ray_intersection_info_uniform };
+        std::vector<Uniform*> uniforms = { &sculpt_data_uniform, &ray_intersection_info_uniform };
         sculpt_data_bind_proxy_group = webgpu_context->create_bind_group(uniforms, render_proxy_shader, 2);
     }
 
@@ -923,14 +914,14 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
     // Proxy for Preview
     render_preview_proxy_shader = RendererStorage::get_shader("data/shaders/octree/proxy_geometry_preview.wgsl");
     {
-        std::vector<Uniform*> uniforms = { &proxy_geometry_eye_position };
+        std::vector<Uniform*> uniforms = { &prev_stroke_uniform_2 };
 
         render_preview_proxy_geometry_bind_group = webgpu_context->create_bind_group(uniforms, render_preview_proxy_shader, 0);
 
         uniforms = { camera_uniform };
         render_preview_camera_bind_group = webgpu_context->create_bind_group(uniforms, render_preview_proxy_shader, 1);
 
-        uniforms = { &sculpt_data_uniform, &prev_stroke_uniform_2 };
+        uniforms = { &sculpt_data_uniform };
         sculpt_data_bind_preview_group = webgpu_context->create_bind_group(uniforms, render_preview_proxy_shader, 2);
     }
 

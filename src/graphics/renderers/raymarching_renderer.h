@@ -98,7 +98,6 @@ class RaymarchingRenderer {
     Uniform         octree_indirect_brick_removal_buffer;
     Uniform         octree_indirect_brick_removal_buffer_biding_2;
     Uniform         octree_brick_copy_buffer;
-    Uniform         proxy_geometry_eye_position;
     WGPUBindGroup   render_camera_bind_group = nullptr;
 
 
@@ -231,7 +230,7 @@ public:
     void update_sculpt(WGPUCommandEncoder command_encoder);
 
     void compute_octree(WGPUCommandEncoder command_encoder);
-    void render_raymarching_proxy(WGPURenderPassEncoder render_pass);
+    void render_raymarching_proxy(WGPURenderPassEncoder render_pass, uint32_t camera_buffer_stride = 0);
 
     inline void redo() {
         needs_redo = true;
@@ -242,7 +241,6 @@ public:
 
     void set_sculpt_start_position(const glm::vec3& position);
     void set_sculpt_rotation(const glm::quat& rotation);
-    void set_camera_eye(const glm::vec3& eye_pos);
 
     void octree_ray_intersect(const glm::vec3& ray_origin, const glm::vec3& ray_dir, std::function<void(glm::vec3)> callback = nullptr);
 

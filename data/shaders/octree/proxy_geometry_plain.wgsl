@@ -32,15 +32,18 @@ struct VertexOutput {
 
 struct CameraData {
     view_projection : mat4x4f,
+    eye_position : vec3f,
+    dummy : f32
 };
 
 @group(0) @binding(0) var<storage, read> brick_copy_buffer : array<u32>;
+@group(0) @binding(1) var<storage, read> preview_data : PreviewDataReadonly;
 @group(0) @binding(3) var read_sdf: texture_3d<f32>;
 @group(0) @binding(4) var texture_sampler : sampler;
 @group(0) @binding(5) var<storage, read> octree_proxy_data: OctreeProxyInstancesNonAtomic;
 @group(0) @binding(8) var read_material_sdf: texture_3d<u32>;
 
-@group(1) @binding(0) var<uniform> camera_data : CameraData;
+#dynamic @group(1) @binding(0) var<uniform> camera_data : CameraData;
 
 @group(2) @binding(3) var<storage, read> ray_intersection_info: RayIntersectionInfo;
 
@@ -93,10 +96,7 @@ struct FragmentOutput {
     @builtin(frag_depth) depth: f32
 }
 
-@group(0) @binding(1) var<uniform> eye_position : vec3f;
-
 @group(2) @binding(0) var<uniform> sculpt_data : SculptData;
-@group(2) @binding(1) var<storage, read> preview_data : PreviewDataReadonly;
 
 @group(3) @binding(0) var irradiance_texture: texture_cube<f32>;
 @group(3) @binding(1) var brdf_lut_texture: texture_2d<f32>;
@@ -324,7 +324,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var out: FragmentOutput;
 
     // From world to sculpt: make it relative to the sculpt center, and un-apply the rotation.
-    var eye_atlas_pos : vec3f = rotate_point_quat(eye_position - sculpt_data.sculpt_start_position, quat_conj(sculpt_data.sculpt_rotation));
+    var eye_atlas_pos : vec3f = rotate_point_quat(camera_data.eye_position - sculpt_data.sculpt_start_position, quat_conj(sculpt_data.sculpt_rotation));
     // Get the sculpt space position relative to the current brick
     eye_atlas_pos -= in.brick_center_in_sculpt_space;
     // Atlas and sculpt space are aligned, the only difference is a change of scale, depednign on brick size. Now the coordinates are Atlas-brick relative
@@ -333,7 +333,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     eye_atlas_pos += in.atlas_tile_coordinate + vec3f(5.0 / SDF_RESOLUTION); 
     let ray_dir_atlas : vec3f = normalize(in.in_atlas_pos - eye_atlas_pos);
 
-    let ray_dir_world : vec3f = normalize(in.vertex_in_world_space.xyz - eye_position);
+    let ray_dir_world : vec3f = normalize(in.vertex_in_world_space.xyz - camera_data.eye_position);
     let ray_dir_sculpt : vec3f = rotate_point_quat(ray_dir_world, quat_conj(sculpt_data.sculpt_rotation));
     // ray dir in atlas coords :((
     

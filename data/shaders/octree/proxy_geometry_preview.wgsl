@@ -29,11 +29,13 @@ struct VertexOutput {
 
 struct CameraData {
     view_projection : mat4x4f,
+    eye_position : vec3f,
+    dummy : f32
 };
 
-@group(0) @binding(1) var<uniform> eye_position : vec3f;
+@group(0) @binding(1) var<storage, read> preview_data : PreviewDataReadonly;
 
-@group(1) @binding(0) var<uniform> camera_data : CameraData;
+#dynamic @group(1) @binding(0) var<uniform> camera_data : CameraData;
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
@@ -66,7 +68,6 @@ struct FragmentOutput {
 }
 
 @group(2) @binding(0) var<uniform> sculpt_data : SculptData;
-@group(2) @binding(1) var<storage, read> preview_data : PreviewDataReadonly;
 
 @group(3) @binding(0) var irradiance_texture: texture_cube<f32>;
 @group(3) @binding(1) var brdf_lut_texture: texture_2d<f32>;
@@ -167,7 +168,7 @@ var<private> is_inside_brick : bool;
 fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     var out: FragmentOutput;
-    let ray_dir_world : vec3f = normalize(in.vertex_in_world_space.xyz - eye_position);
+    let ray_dir_world : vec3f = normalize(in.vertex_in_world_space.xyz - camera_data.eye_position);
     let ray_dir_sculpt : vec3f = rotate_point_quat(ray_dir_world, quat_conj(sculpt_data.sculpt_rotation));
 
     let raymarch_distance : f32 = ray_AABB_intersection_distance(in.vertex_in_sculpt_space.xyz, ray_dir_sculpt, in.voxel_center_sculpt_space, vec3f(BRICK_WORLD_SIZE));

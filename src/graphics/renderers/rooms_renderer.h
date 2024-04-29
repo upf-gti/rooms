@@ -26,6 +26,8 @@ class RoomsRenderer : public Renderer {
     Uniform camera_2d_uniform;
     Uniform linear_sampler_uniform;
 
+    uint32_t camera_buffer_stride = 0;
+
     WGPUCommandEncoder global_command_encoder;
 
     struct sCameraData {
@@ -51,7 +53,7 @@ class RoomsRenderer : public Renderer {
 
     // For the XR mirror screen
 #if defined(USE_MIRROR_WINDOW)
-    void render_mirror();
+    void render_mirror(WGPUTextureView swapchain_view);
     void init_mirror_pipeline();
 
     Pipeline mirror_pipeline;
