@@ -1,11 +1,11 @@
-#include ui_palette.wgsl
+#include ui_utils.wgsl
 #include ../mesh_includes.wgsl
 
 #define GAMMA_CORRECTION
 
 @group(0) @binding(0) var<storage, read> mesh_data : InstanceData;
 
-@group(1) @binding(0) var<uniform> camera_data : CameraData;
+#dynamic @group(1) @binding(0) var<uniform> camera_data : CameraData;
 
 #ifdef ALBEDO_TEXTURE
 @group(2) @binding(0) var albedo_texture: texture_2d<f32>;
@@ -71,14 +71,16 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var color : vec4f = vec4f(1.0);
 #endif
 
-    var selected_color = COLOR_HIGHLIGHT_DARK;
-    var highlight_color = COLOR_SECONDARY;
-    var back_color = vec3f(0.02);
-    var icon_color = back_color;
-    var gradient_factor = pow(uvs.y, 2.5);
+    var selected_color : vec3f = COLOR_HIGHLIGHT_DARK;
+    var highlight_color : vec3f = COLOR_SECONDARY;
+    var back_color : vec3f = vec3f(0.02);
+    var icon_color : vec3f = back_color;
+
+    var gradient_factor : f32 = pow(uvs.y, 2.5);
 
     if(ui_data.is_button_disabled > 0.0) {
-        icon_color = pow(vec3f(0.41, 0.38, 0.44), vec3f(2.2));
+        icon_color = vec3f(0.22, 0.12, 0.08);
+        back_color = vec3f(0.1);
     }
 
     // Assign basic color

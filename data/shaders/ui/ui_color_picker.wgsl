@@ -1,10 +1,11 @@
 #include ../mesh_includes.wgsl
+#include ui_utils.wgsl
 
 #define GAMMA_CORRECTION
 
 @group(0) @binding(0) var<storage, read> mesh_data : InstanceData;
 
-@group(1) @binding(0) var<uniform> camera_data : CameraData;
+#dynamic @group(1) @binding(0) var<uniform> camera_data : CameraData;
 
 @group(2) @binding(1) var<uniform> albedo: vec4f;
 
@@ -31,8 +32,6 @@ struct FragmentOutput {
 
 // from @lingel at https://www.shadertoy.com/view/3tj3R1
 
-const EPSILON : f32 = 0.01;
-const PI : f32 = 3.14159265359;
 const OUTLINECOLOR : vec4f = vec4f(0.3, 0.3, 0.3, 0.9);
 const OUTLINEWIDTH : f32 = 0.08;
 
@@ -112,9 +111,9 @@ fn position_to_sv( p : vec2f, v1 : vec2f, v2 : vec2f, v3 : vec2f ) -> vec2f
     return clamp(vec2f(s, v), vec2f(0.0), vec2f(1.0));
 }
 
-fn draw_triangle( uv : vec2f, v1 : vec2f, v2 : vec2f, v3 : vec2f, H : f32, radius : f32 ) -> vec4f
+fn draw_triangle( uv : vec2f, v1 : vec2f, v2 : vec2f, v3 : vec2f, color : vec3f ) -> vec4f
 {
-    var triangle_color : vec3f = hsv_to_rgb(vec3f(H, position_to_sv(uv, v1, v2, v3)));
+    var triangle_color : vec3f = color;
 
     // Triangle alpha
 
@@ -137,39 +136,6 @@ fn draw_triangle( uv : vec2f, v1 : vec2f, v2 : vec2f, v3 : vec2f, H : f32, radiu
     triangle_color = mix(triangle_color, line3.rgb, line3.a);
 
     return vec4f(triangle_color, alpha);
-}
-
-fn calculate_triangle_weight( p : vec2f, v1 : vec2f, v2 : vec2f, v3 : vec2f ) -> vec3f
-{
-    var weight : vec3f;
-    weight.x = ((v2.y-v3.y)*(p.x-v3.x)+(v3.x-v2.x)*(p.y-v3.y)) / ((v2.y-v3.y)*(v1.x-v3.x)+(v3.x-v2.x)*(v1.y-v3.y));
-    weight.y = ((v3.y-v1.y)*(p.x-v3.x)+(v1.x-v3.x)*(p.y-v3.y)) / ((v2.y-v3.y)*(v1.x-v3.x)+(v3.x-v2.x)*(v1.y-v3.y));
-    weight.z = 1.0 - weight.x - weight.y;
-    return weight;
-}
-
-fn draw_line( uv : vec2f, p1 : vec2f, p2 : vec2f, color : vec4f, thickness : f32 ) -> vec4f
-{
-    var final_color : vec4f = color;
-    let t = thickness * 0.5;
-    var dir = p2 - p1;
-    let line_length : f32 = length(dir);
-    dir = normalize(dir);
-    let to_uv : vec2f = uv - p1;
-    let project_length : f32 = dot(dir, to_uv);
-    var p2_line_distance : f32 = length(to_uv-dir*project_length);
-    p2_line_distance = smoothstep(t + EPSILON, t, p2_line_distance);
-    var p2_end_distance : f32 = select(project_length-line_length, abs(project_length), project_length <= 0.0);
-    p2_end_distance = smoothstep(t, t - EPSILON * 0.5, p2_end_distance);
-    final_color = vec4f(final_color.xyz * mix(p2_line_distance, 0.0, 0.01), final_color.a);
-    final_color.a *= min(p2_line_distance, p2_end_distance);
-    return final_color;
-}
-
-fn draw_point( uv : vec2f, p : vec2f, s : f32) -> vec4f
-{
-    let alpha : f32 = smoothstep(0.015,0.002, abs(length(uv - p) - s));
-    return vec4(vec3(1.0), alpha);
 }
 
 @fragment
@@ -213,7 +179,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     let v3 : vec2f = vec2f(cos(angle), sin(angle)) * (interior_radius - OUTLINEWIDTH);
 
     // Add triangle
-    let triangle_color : vec4f = draw_triangle(uvs, v1, v2, v3, degree, interior_radius);
+    let triangle_color : vec4f = draw_triangle(uvs, v1, v2, v3, hsv_to_rgb(vec3f(degree, position_to_sv(uvs, v1, v2, v3))));
     final_color = mix(final_color, triangle_color.rgb, triangle_color.a);
 
     // Add HUE line marker

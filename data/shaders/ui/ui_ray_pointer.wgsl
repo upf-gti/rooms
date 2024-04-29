@@ -1,11 +1,11 @@
-#include ui_palette.wgsl
+#include ui_utils.wgsl
 #include ../mesh_includes.wgsl
 
 #define GAMMA_CORRECTION
 
 @group(0) @binding(0) var<storage, read> mesh_data : InstanceData;
 
-@group(1) @binding(0) var<uniform> camera_data : CameraData;
+#dynamic @group(1) @binding(0) var<uniform> camera_data : CameraData;
 
 @group(2) @binding(1) var<uniform> albedo: vec4f;
 

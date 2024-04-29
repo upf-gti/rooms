@@ -1,13 +1,21 @@
-#include ui_palette.wgsl
+#include ui_utils.wgsl
 #include ../mesh_includes.wgsl
 
 #define GAMMA_CORRECTION
 
 @group(0) @binding(0) var<storage, read> mesh_data : InstanceData;
 
-@group(1) @binding(0) var<uniform> camera_data : CameraData;
+#dynamic @group(1) @binding(0) var<uniform> camera_data : CameraData;
+
+#ifdef ALBEDO_TEXTURE
+@group(2) @binding(0) var albedo_texture: texture_2d<f32>;
+#endif
 
 @group(2) @binding(1) var<uniform> albedo: vec4f;
+
+#ifdef USE_SAMPLER
+@group(2) @binding(7) var texture_sampler : sampler;
+#endif
 
 @group(3) @binding(0) var<uniform> ui_data : UIData;
 
@@ -30,10 +38,6 @@ struct FragmentOutput {
     @location(0) color: vec4f
 }
 
-fn remap_range(oldValue : f32, oldMin: f32, oldMax : f32, newMin : f32, newMax : f32) -> f32 {
-    return (((oldValue - oldMin) * (newMax - newMin)) / (oldMax - oldMin)) + newMin;
-}
-
 @fragment
 fn fs_main(in: VertexOutput) -> FragmentOutput {
 
@@ -49,6 +53,11 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var dist = distance(uvs_mask, sd);
     var button_radius : f32 = 0.42;
     
+#ifdef ALBEDO_TEXTURE
+    var tex_color : vec4f = textureSample(albedo_texture, texture_sampler, in.uv);
+#else
+    var tex_color : vec4f = vec4f(0.0);
+#endif
 
     var out: FragmentOutput;
 
@@ -64,13 +73,20 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
         mesh_color *= 1.5;
     }
 
-    var grad = smoothstep((value / max_value), 1.0, axis / value);
-    grad = pow(grad, 12.0);
-    mesh_color += grad * 0.5;
+    let percent : f32 = value / max_value;
+    let max_percent : f32 = axis / max_value;
+
+    // texture
+    let alpha : f32 = 1.0 - smoothstep(0.95, tex_color.a, 0.0);
+
+    var grad = smoothstep(percent - 0.05, percent, max_percent);
+    grad -= smoothstep(percent, percent + 0.05, max_percent);
+    mesh_color += grad;
+    mesh_color = mix(mesh_color, tex_color.rgb, alpha);
 
     let back_color = vec3f(0.02);
-    var final_color = select( mesh_color, back_color, axis > (value / max_value) );
-
+    var final_color : vec3f = select( mesh_color, back_color + tex_color.rgb * 0.3 * alpha, axis > percent );
+    
     var shadow : f32 = smoothstep(button_radius, 0.5, dist);
     
     if (GAMMA_CORRECTION == 1) {
@@ -78,5 +94,6 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     }
 
     out.color = vec4f(final_color, 1.0 - shadow);
+
     return out;
 }

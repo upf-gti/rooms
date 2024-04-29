@@ -23,6 +23,10 @@ class RoomsRenderer : public Renderer {
     Uniform camera_2d_uniform;
     Uniform linear_sampler_uniform;
 
+    uint32_t camera_buffer_stride = 0;
+
+    WGPUCommandEncoder global_command_encoder;
+
     struct sCameraData {
         glm::mat4x4 mvp;
         glm::vec3 eye;
@@ -32,7 +36,7 @@ class RoomsRenderer : public Renderer {
     sCameraData camera_data;
     sCameraData camera_2d_data;
 
-    void render_screen();
+    void render_screen(WGPUTextureView swapchain_view);
 
     // Render meshes with material color
     WGPUBindGroup render_bind_group_camera = nullptr;
@@ -46,7 +50,7 @@ class RoomsRenderer : public Renderer {
 
     // For the XR mirror screen
 #if defined(USE_MIRROR_WINDOW)
-    void render_mirror();
+    void render_mirror(WGPUTextureView swapchain_view);
     void init_mirror_pipeline();
 
     Pipeline mirror_pipeline;
