@@ -147,6 +147,9 @@ void RoomsRenderer::render()
     if (!is_openxr_available) {
         wgpuTextureViewRelease(swapchain_view);
     }
+    else {
+        xr_context->end_frame();
+    }
 
 #ifndef __EMSCRIPTEN__
     if (!is_openxr_available || use_mirror_screen) {
@@ -327,8 +330,6 @@ void RoomsRenderer::render_xr()
 
         xr_context->release_swapchain(i);
     }
-
-    xr_context->end_frame();
 }
 #endif
 
