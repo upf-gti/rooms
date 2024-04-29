@@ -7,9 +7,9 @@
 
 @group(0) @binding(2) var<storage, read_write> octree : Octree;
 @group(0) @binding(3) var write_sdf: texture_storage_3d<r32float, write>;
-@group(0) @binding(5) var<storage, read_write> octree_proxy_data: OctreeProxyInstances;
+@group(0) @binding(5) var<storage, read_write> brick_buffers: BrickBuffers;
 @group(0) @binding(6) var<storage, read> stroke_history : StrokeHistory; 
-@group(0) @binding(7) var<storage, read_write> indirect_brick_removal : IndirectBrickRemoval;
+@group(0) @binding(7) var<storage, read_write> indirect_buffers : IndirectBuffers;
 @group(0) @binding(8) var write_material_sdf: texture_storage_3d<r32uint, write>;
 
 #dynamic @group(1) @binding(0) var<storage, read> stroke : Stroke;
@@ -35,22 +35,6 @@ var<workgroup> used_pixels : atomic<u32>;
     del evaluador.
 */
 
-// fn intersection_AABB_AABB(b1_min : vec3f, b1_max : vec3f, b2_min : vec3f, b2_max : vec3f) -> bool {
-//     return (b1_min.x <= b2_max.x && b1_min.y <= b2_max.y && b1_min.z <= b2_max.z) && (b1_max.x >= b2_min.x && b1_max.y >= b2_min.y && b1_max.z >= b2_min.z);
-// }
-
-// const delta_pos_world = array<vec3f, 9>(
-//     vec3f(PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER),
-//     vec3f(PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER, -PIXEL_WORLD_SIZE_QUARTER),
-//     vec3f(PIXEL_WORLD_SIZE_QUARTER, -PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER),
-//     vec3f(PIXEL_WORLD_SIZE_QUARTER, -PIXEL_WORLD_SIZE_QUARTER, -PIXEL_WORLD_SIZE_QUARTER),
-//     vec3f(-PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER),
-//     vec3f(-PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER, -PIXEL_WORLD_SIZE_QUARTER),
-//     vec3f(-PIXEL_WORLD_SIZE_QUARTER, -PIXEL_WORLD_SIZE_QUARTER, PIXEL_WORLD_SIZE_QUARTER),
-//     vec3f(-PIXEL_WORLD_SIZE_QUARTER, -PIXEL_WORLD_SIZE_QUARTER, -PIXEL_WORLD_SIZE_QUARTER),
-//     vec3f(0.0, 0.0, 0.0),
-// );
-
 @compute @workgroup_size(10,10,10)
 fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation_id) local_id: vec3<u32>)
 {
@@ -63,7 +47,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     // 3	 v_and_b32_e32	 v0, 0x3ff, v0	 814	 0.01	 85 clk	 
     let brick_index : u32 = brick_pointer & OCTREE_TILE_INDEX_MASK;
 
-    let proxy_data : ProxyInstanceData = octree_proxy_data.instance_data[brick_index];
+    let proxy_data : ProxyInstanceData = brick_buffers.brick_instance_data[brick_index];
     let local_id_vec : vec3f = vec3f(local_id);
 
     let voxel_world_coords : vec3f = proxy_data.position + (10.0 / local_id_vec - 5.0) * PIXEL_WORLD_SIZE;
@@ -131,10 +115,10 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
         let filled_pixel_count : u32 = atomicLoad(&used_pixels);
         if (filled_pixel_count == 0u || filled_pixel_count == 1000u) {
             
-            octree_proxy_data.instance_data[brick_index].in_use = 0;
+            brick_buffers.brick_instance_data[brick_index].in_use = 0;
             // Add the brick to the indirect
-            let brick_to_delete_idx = atomicAdd(&indirect_brick_removal.brick_removal_counter, 1u);
-            indirect_brick_removal.brick_removal_buffer[brick_to_delete_idx] = brick_index;
+            let brick_to_delete_idx = atomicAdd(&indirect_buffers.brick_removal_counter, 1u);
+            brick_buffers.brick_removal_buffer[brick_to_delete_idx] = brick_index;
 
             octree.data[octree_leaf_id].octant_center_distance = vec2f(10000.0, 10000.0);
             octree.data[octree_leaf_id].tile_pointer = 0u;

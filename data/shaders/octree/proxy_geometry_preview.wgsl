@@ -33,14 +33,12 @@ struct CameraData {
     dummy : f32
 };
 
-@group(0) @binding(1) var<storage, read> preview_data : PreviewDataReadonly;
-
-#dynamic @group(1) @binding(0) var<uniform> camera_data : CameraData;
+#dynamic @group(0) @binding(0) var<uniform> camera_data : CameraData;
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
 
-    let instance_data : ProxyInstanceData = preview_data.instance_data[in.instance_id];
+    let instance_data : ProxyInstanceData = brick_buffers.preview_instance_data[in.instance_id];
 
     var vertex_in_sculpt_space : vec3f = in.position * BRICK_WORLD_SIZE * 0.5 + instance_data.position;
     var vertex_in_world_space : vec3f = rotate_point_quat(vertex_in_sculpt_space, sculpt_data.sculpt_rotation);
@@ -67,19 +65,21 @@ struct FragmentOutput {
     @builtin(frag_depth) depth: f32
 }
 
-@group(2) @binding(0) var<uniform> sculpt_data : SculptData;
+@group(1) @binding(0) var<uniform> sculpt_data : SculptData;
+@group(1) @binding(1) var<storage, read> preview_stroke : Stroke;
+@group(1) @binding(5) var<storage, read> brick_buffers: BrickBuffers_ReadOnly;
 
-@group(3) @binding(0) var irradiance_texture: texture_cube<f32>;
-@group(3) @binding(1) var brdf_lut_texture: texture_2d<f32>;
-@group(3) @binding(2) var sampler_clamp: sampler;
-@group(3) @binding(3) var<uniform> lights : array<Light, MAX_LIGHTS>;
-@group(3) @binding(4) var<uniform> num_lights : u32;
+@group(2) @binding(0) var irradiance_texture: texture_cube<f32>;
+@group(2) @binding(1) var brdf_lut_texture: texture_2d<f32>;
+@group(2) @binding(2) var sampler_clamp: sampler;
+@group(2) @binding(3) var<uniform> lights : array<Light, MAX_LIGHTS>;
+@group(2) @binding(4) var<uniform> num_lights : u32;
 
 fn get_material_preview() -> Material {
     var material : Material;
-    material.albedo = preview_data.preview_stroke.material.color.xyz;
-    material.roughness = preview_data.preview_stroke.material.roughness;
-    material.metalness = preview_data.preview_stroke.material.metallic;
+    material.albedo = preview_stroke.material.color.xyz;
+    material.roughness = preview_stroke.material.roughness;
+    material.metalness = preview_stroke.material.metallic;
     return material;
 }
 
@@ -94,8 +94,8 @@ fn sample_sdf_preview(position : vec3f) -> f32
         surface.distance = 10000.0;
     }
     
-    for(var i : u32 = 0u; i < preview_data.preview_stroke.edit_count; i++) {
-        surface = evaluate_edit(position, preview_data.preview_stroke.primitive, preview_data.preview_stroke.operation, preview_data.preview_stroke.parameters, preview_data.preview_stroke.color_blend_op, surface, material, preview_data.preview_stroke.edits[i]);
+    for(var i : u32 = 0u; i < preview_stroke.edit_count; i++) {
+        surface = evaluate_edit(position, preview_stroke.primitive, preview_stroke.operation, preview_stroke.parameters, preview_stroke.color_blend_op, surface, material, preview_stroke.edits[i]);
     }
     return surface.distance;
 }
@@ -186,15 +186,15 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     out.color = vec4f(final_color, 1.0); // Color
     out.depth = ray_result.a;
 
-    // if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
-    //     if (is_inside_brick) {
-    //         out.color = vec4f(1.0, 0.0, 1.0, 1.0);
-    //     } else {
-    //         out.color = vec4f(0.0, 0.0, 1.0, 1.0);
-    //     }
+    if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
+        if (is_inside_brick) {
+            out.color = vec4f(1.0, 0.0, 1.0, 1.0);
+        } else {
+            out.color = vec4f(0.0, 0.0, 1.0, 1.0);
+        }
         
-    //     out.depth = in.position.z;
-    // }
+        out.depth = in.position.z;
+    }
 
     // out.color = vec4f(1.0, 0.0, 0.0, 1.0); // Color
     // out.depth = 0.0;

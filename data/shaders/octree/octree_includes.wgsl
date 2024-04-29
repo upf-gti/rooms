@@ -6,6 +6,7 @@
 #define PREVIEW_PROXY_BRICKS_COUNT
 #define WORLD_SPACE_SCALE
 #define STROKE_HISTORY_MAX_SIZE
+#define BRICK_REMOVAL_COUNT
 
 const SCULPT_TO_ATLAS_CONVERSION_FACTOR = (WORLD_SPACE_SCALE / SDF_RESOLUTION)  / (SCULPT_MAX_SIZE);
 const PIXEL_WORLD_SIZE = SCULPT_MAX_SIZE / WORLD_SPACE_SCALE;
@@ -62,6 +63,7 @@ struct StrokeMaterial {
     noise_color     : vec4f
 };
 
+//TODO(Juan): revisit the padding, and avoid using vec2/3/4 as padding
 struct Stroke {
     stroke_id       : u32,
     edit_count      : u32,
@@ -100,30 +102,6 @@ struct Octree {
     data : array<OctreeNode>
 };
 
-struct PreviewData {
-    // Indirect buffer for dispatch
-    vertex_count : u32,
-    instance_count : atomic<u32>,
-    first_vertex : u32,
-    firt_instance: u32,
-    // The stroke for the preview
-    preview_stroke : Stroke,
-    // Instance data storage, for rendering
-    instance_data: array<ProxyInstanceData, PREVIEW_PROXY_BRICKS_COUNT>
-};
-
-struct PreviewDataReadonly {
-    // Indirect buffer for dispatch
-    vertex_count : u32,
-    instance_count : u32,
-    first_vertex : u32,
-    firt_instance: u32,
-    // The stroke for the preview
-    preview_stroke : Stroke,
-    // Instance data storage, for rendering
-    instance_data: array<ProxyInstanceData, PREVIEW_PROXY_BRICKS_COUNT>
-};
-
 struct MergeData {
     reevaluation_AABB_min : vec3f,
     reevaluate            : u32,
@@ -139,36 +117,79 @@ struct ProxyInstanceData {
     padding : vec2u
 };
 
-struct IndirectBrickRemoval {
+
+struct IndirectBuffers {
+    // For proxy brick dispatch
+    brick_vertex_count : u32,
+    brick_instance_count : atomic<u32>,
+    brick_first_vertex : u32,
+    brick_first_instance: u32,
+     // For proxy preview dispatch
+    preview_vertex_count : u32,
+    preview_instance_count : atomic<u32>,
+    preview_first_vertex : u32,
+    preview_first_instance: u32,
+    // For brick removal dispatch
     brick_removal_counter : atomic<u32>,
-    indirect_padding : vec3<u32>,
-    brick_removal_buffer : array<u32>
+    brick_removal_padding1 : u32,
+    brick_removal_padding2 : u32,
+    brick_removal_padding3 : u32,
+    // Evaluator subdivision indirect dispatch
+    evaluator_subdivision_counter : u32,
+    evaluator_subdivision_padding0 : u32,
+    evaluator_subdivision_padding1 : u32,
+    evaluator_subdivision_padding2 : u32
 };
 
-struct IndirectBrickRemoval_ReadOnly {
+struct IndirectBuffers_ReadOnly {
+    // For proxy brick dispatch
+    brick_vertex_count : u32,
+    brick_instance_count : u32,
+    brick_first_vertex : u32,
+    brick_first_instance: u32,
+     // For proxy preview dispatch
+    preview_vertex_count : u32,
+    preview_instance_count : u32,
+    preview_first_vertex : u32,
+    preview_first_instance: u32,
+    // For brick removal dispatch
     brick_removal_counter : u32,
-    indirect_padding : vec3<u32>,
-    brick_removal_buffer : array<u32>
+    brick_removal_padding1 : u32,
+    brick_removal_padding2 : u32,
+    brick_removal_padding3 : u32,
+    // Evaluator subdivision indirect dispatch
+    evaluator_subdivision_counter : u32,
+    evaluator_subdivision_padding0 : u32,
+    evaluator_subdivision_padding1 : u32,
+    evaluator_subdivision_padding2 : u32
 };
 
-struct OctreeProxyInstances {
+struct BrickBuffers {
     atlas_empty_bricks_counter : atomic<u32>,
+    atlas_padding0 : u32,
+    atlas_padding1 : u32,
+    atlas_padding2 : u32,
     atlas_empty_bricks_buffer : array<u32, TOTAL_BRICK_COUNT>,
-    instance_data: array<ProxyInstanceData>
+
+    brick_removal_buffer : array<u32, BRICK_REMOVAL_COUNT>,
+
+    brick_instance_data : array<ProxyInstanceData, BRICK_REMOVAL_COUNT>,
+
+    preview_instance_data : array<ProxyInstanceData, PREVIEW_PROXY_BRICKS_COUNT>
 };
 
-struct OctreeProxyInstancesNonAtomic {
+struct BrickBuffers_ReadOnly {
     atlas_empty_bricks_counter : u32,
-    atlas_empty_bricks_buffer : array<u32, TOTAL_BRICK_COUNT>,
-    instance_data: array<ProxyInstanceData>
-};
+    atlas_padding0 : u32,
+    atlas_padding1 : u32,
+    atlas_padding2 : u32,
+    atlas_empty_bricks_buffer : array<u32, BRICK_REMOVAL_COUNT>,
 
-struct OctreeProxyIndirect {
-    // Sculpt
-    vertex_count : u32,
-    instance_count : atomic<u32>,
-    first_vertex : u32,
-    firt_instance: u32
+    brick_removal_buffer : array<u32, BRICK_REMOVAL_COUNT>,
+
+    brick_instance_data : array<ProxyInstanceData, TOTAL_BRICK_COUNT>,
+
+    preview_instance_data : array<ProxyInstanceData, PREVIEW_PROXY_BRICKS_COUNT>
 };
 
 struct SculptData {

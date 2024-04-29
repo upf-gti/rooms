@@ -1,7 +1,7 @@
 #include octree_includes.wgsl
 
 @group(0) @binding(2) var<storage, read_write> octree : Octree;
-@group(0) @binding(5) var<storage, read_write> octree_proxy_data : OctreeProxyInstances;
+@group(0) @binding(5) var<storage, read_write> brick_buffers: BrickBuffers;
 
 /**
     Este shader se encarga de recorrer todas las render instances de los bricks de
@@ -14,7 +14,7 @@ fn compute(@builtin(workgroup_id) id: vec3<u32>, @builtin(local_invocation_index
 {
     let current_instance_index : u32 = (id.x) * (8u * 8u * 8u) + local_id;
 
-    octree_proxy_data.instance_data[current_instance_index].in_use &= ~BRICK_HAS_PREVIEW_FLAG;
+    brick_buffers.brick_instance_data[current_instance_index].in_use &= ~BRICK_HAS_PREVIEW_FLAG;
 
     workgroupBarrier();
 
