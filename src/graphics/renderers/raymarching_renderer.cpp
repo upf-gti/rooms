@@ -14,8 +14,6 @@
 
 #include "framework/input.h"
 
-#include "graphics/debug/renderdoc_capture.h"
-
 RaymarchingRenderer::RaymarchingRenderer()
 {
     

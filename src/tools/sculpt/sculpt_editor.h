@@ -187,7 +187,6 @@ class SculptEditor {
     bool was_tool_pressed = false;
     bool is_stretching_edit = false;
 
-    bool is_tool_being_used(bool stamp_enabled);
     bool edit_update(float delta_time);
     void mirror_current_edits(float delta_time);
     void apply_mirror_position(glm::vec3& position);
@@ -210,6 +209,8 @@ public:
 
     void enable_tool(eTool tool);
     void set_sculpt_started(bool value);
+
+    bool is_tool_being_used(bool stamp_enabled);
 
     void add_preview_edit_list(std::vector<Edit>& new_edit_lists) {
         for (Edit& edit : new_edit_lists) {

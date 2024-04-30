@@ -92,16 +92,16 @@ void RoomsEngine::clean()
 
 void RoomsEngine::update(float delta_time)
 {
+    if (sculpt_editor) {
+        sculpt_editor->update(delta_time);
+    }
+
     Engine::update(delta_time);
 
     Node::check_controller_signals();
 
     for (auto entity : entities) {
         entity->update(delta_time);
-    }
-
-    if (sculpt_editor) {
-        sculpt_editor->update(delta_time);
     }
 
     if (Input::was_key_pressed(GLFW_KEY_E))
