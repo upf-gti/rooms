@@ -417,7 +417,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         if (level < OCTREE_DEPTH) {
             // Broad culling using only the incomming stroke
             // TODO: intersection with current edit AABB?
-            if (intersection_AABB_AABB(eval_aabb_min, eval_aabb_max, merge_data.reevaluation_AABB_min, merge_data.reevaluation_AABB_max)) {
+            if (current_stroke_interval.x < 0.0) {
                 // Subdivide
                 // Increase the number of children from the current level
                 let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 8);

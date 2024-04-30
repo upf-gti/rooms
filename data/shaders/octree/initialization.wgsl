@@ -22,26 +22,19 @@ fn compute(@builtin(workgroup_id) group_id: vec3u)
     //let tmp = edit_culling_data.edit_culling_lists[0];
     let tmp2 = stroke.edit_count;
     // Clean the structs for the preview
+
+    octant_usage_write_0[0] = 0;
+    octant_usage_write_1[0] = 0;
+
+    atomicStore(&octree.current_level, 0);
+    atomicStore(&octree.atomic_counter, 0);
+
     if ((octree.evaluation_mode & EVALUATE_PREVIEW_STROKE_FLAG) == EVALUATE_PREVIEW_STROKE_FLAG) {
         brick_buffers.preview_instance_counter = 0u;
-
-        octant_usage_write_0[0] = 0;
-        octant_usage_write_1[0] = 0;
-
-        atomicStore(&octree.current_level, 0);
-        atomicStore(&octree.atomic_counter, 0);
-
-    } else {
-        octant_usage_write_0[0] = 0;
-        octant_usage_write_1[0] = 0;
-
-        atomicStore(&octree.current_level, 0);
-        atomicStore(&octree.atomic_counter, 0);
-
-        indirect_buffers.brick_removal_counter = 0u;
-
-        //indirect_buffers.indirect_padding = vec3u(1, 1, 1);
+        indirect_buffers.preview_instance_count = 0u;
     }
 
     indirect_buffers.evaluator_subdivision_counter = 1u;
+    indirect_buffers.brick_removal_counter = 0u;
+    brick_buffers.brick_removal_counter = 0u;
 }

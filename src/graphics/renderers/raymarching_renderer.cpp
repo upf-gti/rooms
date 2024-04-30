@@ -376,9 +376,6 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
         // Update uniform buffer
         webgpu_context->update_buffer(std::get<WGPUBuffer>(compute_merge_data_uniform.data), 0, &(compute_merge_data), sizeof(sMergeData));
 
-        uint32_t default_value = 0u;
-        webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_indirect_buffer_struct.data), sizeof(uint32_t), &default_value, sizeof(uint32_t) * 12u);
-
         uint32_t reevaluate_aabb = is_undo ? CLEAN_BEFORE_EVAL : 0;
         webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_uniform.data), sizeof(uint32_t) * 3, &reevaluate_aabb, sizeof(uint32_t));
     }
@@ -610,6 +607,10 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
     compute_pass_desc.timestampWrites = nullptr;
     WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
 
+    // If there is no need for an evaluation, then set the preview evaluation as default
+    uint32_t set_as_preview = EVALUATE_PREVIEW_STROKE;
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_uniform.data), sizeof(uint32_t) * 3u, &set_as_preview, sizeof(uint32_t));
+
     // First, compute undo - redo or perform a merge of an stroke, or prepare for just a preview
     if (needs_undo) { // Undo or redo
         spdlog::info("Undo");
@@ -639,10 +640,6 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
 
         in_frame_stroke.edit_count = 0u;
         to_compute_stroke_buffer.clear();
-    } else { // Prepare for just a preview
-        // If there is no need for an evaluation, then set the preview evaluation as default
-        uint32_t set_as_preview = (needs_undo || needs_redo) ? (CLEAN_BEFORE_EVAL | EVALUATE_PREVIEW_STROKE) : EVALUATE_PREVIEW_STROKE;
-        //webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_uniform.data), sizeof(uint32_t) * 3u, &set_as_preview, sizeof(uint32_t));
     }
 
     bool is_openxr_available = RoomsRenderer::instance->get_openxr_available();
@@ -673,6 +670,10 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
 {
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
 
+#ifndef NDEBUG
+        wgpuRenderPassEncoderPushDebugGroup(render_pass, "Render sculpt proxy geometry");
+#endif
+
     // Render Sculpt's Proxy geometry
     {
         render_proxy_geometry_pipeline.set(render_pass);
@@ -692,9 +693,14 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
         wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, surface->get_vertex_buffer(), 0, surface->get_byte_size());
 
         // Submit indirect drawcalls
-        wgpuRenderPassEncoderDrawIndirect(render_pass, std::get<WGPUBuffer>(octree_indirect_buffer_struct.data), sizeof(uint32_t)*4u);
+        wgpuRenderPassEncoderDrawIndirect(render_pass, std::get<WGPUBuffer>(octree_indirect_buffer_struct.data), 0u);
     }
 
+
+#ifndef NDEBUG
+    wgpuRenderPassEncoderPopDebugGroup(render_pass);
+    wgpuRenderPassEncoderPushDebugGroup(render_pass, "Render preview proxy geometry");
+#endif
     // Render Preview proxy geometry
     {
         render_preview_proxy_geometry_pipeline.set(render_pass);
@@ -717,6 +723,10 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
         // Submit indirect drawcalls
         wgpuRenderPassEncoderDrawIndirect(render_pass, std::get<WGPUBuffer>(octree_indirect_buffer_struct.data), sizeof(uint32_t) * 4u);
     }
+
+#ifndef NDEBUG
+    wgpuRenderPassEncoderPopDebugGroup(render_pass);
+#endif
 }
 
 void RaymarchingRenderer::set_sculpt_start_position(const glm::vec3& position)
