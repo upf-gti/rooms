@@ -38,6 +38,10 @@ struct FragmentOutput {
     @location(0) color: vec4f
 }
 
+fn remap_range(oldValue : f32, oldMin: f32, oldMax : f32, newMin : f32, newMax : f32) -> f32 {
+    return (((oldValue - oldMin) * (newMax - newMin)) / (oldMax - oldMin)) + newMin;
+}
+
 @fragment
 fn fs_main(in: VertexOutput) -> FragmentOutput {
 
@@ -63,6 +67,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     let value = ui_data.slider_value;
     let max_value = ui_data.slider_max;
+    let min_value = ui_data.slider_min;
 
     // add gradient at the end to simulate the slider thumb
     var axis = select( in.uv.x, uvs_mask.y, ui_data.num_group_items == 1.0 );
@@ -73,14 +78,13 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
         mesh_color *= 1.5;
     }
 
-    let percent : f32 = value / max_value;
-    let max_percent : f32 = axis / max_value;
+    let percent : f32 = remap_range(value, min_value, max_value, 0.0, 1.0);
 
     // texture
     let alpha : f32 = 1.0 - smoothstep(0.95, tex_color.a, 0.0);
 
-    var grad = smoothstep(percent - 0.05, percent, max_percent);
-    grad -= smoothstep(percent, percent + 0.05, max_percent);
+    var grad = smoothstep(percent - 0.05, percent, axis);
+    grad -= smoothstep(percent, percent + 0.05, axis);
     mesh_color += grad;
     mesh_color = mix(mesh_color, tex_color.rgb, alpha);
 

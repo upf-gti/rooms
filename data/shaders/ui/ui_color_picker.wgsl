@@ -32,7 +32,6 @@ struct FragmentOutput {
 
 // from @lingel at https://www.shadertoy.com/view/3tj3R1
 
-const OUTLINECOLOR : vec4f = vec4f(0.3, 0.3, 0.3, 0.9);
 const OUTLINEWIDTH : f32 = 0.08;
 
 fn rgb_to_hsv( rgb : vec3f ) -> vec3f
