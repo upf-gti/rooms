@@ -766,6 +766,24 @@ void SculptEditor::set_operation(sdOperation operation)
     stroke_parameters.set_operation(operation);
 }
 
+void SculptEditor::set_edit_size(float main, float secondary)
+{
+    // Update primitive main size
+    if (main >= 0.0f) {
+        edit_to_add.dimensions = glm::vec4(glm::vec3(main), edit_to_add.dimensions.w);
+    }
+
+    // Update primitive specific size
+    else if (secondary >= 0.0f) {
+        edit_to_add.dimensions.w = secondary;
+    }
+
+    // Update in primitive state
+    primitive_default_states[stroke_parameters.get_primitive()].dimensions = edit_to_add.dimensions;
+
+    dimensions_dirty = true;
+}
+
 void SculptEditor::set_onion_modifier(float value)
 {
     onion_thickness = glm::clamp(value, 0.0f, 1.0f);
@@ -885,14 +903,14 @@ void SculptEditor::init_ui()
                 shape_editor_submenu->add_child(combo_edit_operation);
 
                 // Smear, stamp
-                shape_editor_submenu->add_child(new ui::TextureButton2D("sculpt_mode", "data/textures/x.png", ui::ALLOW_TOGGLE));
+                shape_editor_submenu->add_child(new ui::TextureButton2D("use_stamp", "data/textures/x.png", ui::ALLOW_TOGGLE));
             }
 
             // Edit sizes
             {
                 ui::ItemGroup2D* g_edit_sizes = new ui::ItemGroup2D("g_edit_sizes");
-                g_edit_sizes->add_child(new ui::Slider2D("main_size", "data/textures/x.png", edit_to_add.dimensions.x, ui::SliderMode::VERTICAL));
-                g_edit_sizes->add_child(new ui::Slider2D("sec_size", "data/textures/y.png", edit_to_add.dimensions.w, ui::SliderMode::VERTICAL));
+                g_edit_sizes->add_child(new ui::Slider2D("main_size", "data/textures/x.png", edit_to_add.dimensions.x, ui::SliderMode::VERTICAL, 0.001f, 0.1f));
+                g_edit_sizes->add_child(new ui::Slider2D("sec_size", "data/textures/y.png", edit_to_add.dimensions.w, ui::SliderMode::VERTICAL, 0.001f, 0.1f));
                 shape_editor_submenu->add_child(g_edit_sizes);
             }
 
@@ -1081,10 +1099,10 @@ void SculptEditor::bind_events()
     Node::bind("torus", [&](const std::string& signal, void* button) { set_primitive(SD_TORUS); });
     Node::bind("bezier", [&](const std::string& signal, void* button) { set_primitive(SD_BEZIER); });
 
-    /*Node::bind("main_size", [&](const std::string& signal, float value) { set_edit_size(value); });
-    Node::bind("sec_size", [&](const std::string& signal, float value) { set_edit_size(value); });*/
+    Node::bind("main_size", [&](const std::string& signal, float value) { set_edit_size(value); });
+    Node::bind("sec_size", [&](const std::string& signal, float value) { set_edit_size(-1.0f, value); });
 
-    Node::bind("sculpt_mode", [&](const std::string& signal, void* button) { toggle_stamp(); });
+    Node::bind("use_stamp", [&](const std::string& signal, void* button) { toggle_stamp(); });
 
     Node::bind("add", [&](const std::string& signal, void* button) { set_operation(OP_UNION); });
     Node::bind("substract", [&](const std::string& signal, void* button) { set_operation(OP_SUBSTRACTION); });

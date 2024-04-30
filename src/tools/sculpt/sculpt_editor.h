@@ -66,6 +66,8 @@ class SculptEditor {
     void set_primitive(sdPrimitive primitive);
     void set_operation(sdOperation operation);
 
+    void set_edit_size(float main = -1.0f, float secondary = -1.0f);
+
     void update_edit_preview(const glm::vec4& dims);
 
     void set_onion_modifier(float value);
