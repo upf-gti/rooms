@@ -9,7 +9,6 @@
 @group(0) @binding(3) var write_sdf: texture_storage_3d<r32float, write>;
 @group(0) @binding(5) var<storage, read_write> brick_buffers: BrickBuffers;
 @group(0) @binding(6) var<storage, read> stroke_history : StrokeHistory; 
-@group(0) @binding(7) var<storage, read_write> indirect_buffers : IndirectBuffers;
 @group(0) @binding(8) var write_material_sdf: texture_storage_3d<r32uint, write>;
 
 #dynamic @group(1) @binding(0) var<storage, read> stroke : Stroke;
@@ -117,7 +116,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
             
             brick_buffers.brick_instance_data[brick_index].in_use = 0;
             // Add the brick to the indirect
-            let brick_to_delete_idx = atomicAdd(&indirect_buffers.brick_removal_counter, 1u);
+            let brick_to_delete_idx = atomicAdd(&brick_buffers.brick_removal_counter, 1u);
             brick_buffers.brick_removal_buffer[brick_to_delete_idx] = brick_index;
 
             octree.data[octree_leaf_id].octant_center_distance = vec2f(10000.0, 10000.0);

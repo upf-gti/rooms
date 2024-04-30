@@ -166,9 +166,10 @@ struct IndirectBuffers_ReadOnly {
 
 struct BrickBuffers {
     atlas_empty_bricks_counter : atomic<u32>,
-    atlas_padding0 : u32,
-    atlas_padding1 : u32,
-    atlas_padding2 : u32,
+    brick_instance_counter : atomic<u32>,
+    brick_removal_counter : atomic<u32>,
+    preview_instance_counter : atomic<u32>,
+
     atlas_empty_bricks_buffer : array<u32, TOTAL_BRICK_COUNT>,
 
     brick_removal_buffer : array<u32, BRICK_REMOVAL_COUNT>,
@@ -180,14 +181,15 @@ struct BrickBuffers {
 
 struct BrickBuffers_ReadOnly {
     atlas_empty_bricks_counter : u32,
-    atlas_padding0 : u32,
-    atlas_padding1 : u32,
-    atlas_padding2 : u32,
-    atlas_empty_bricks_buffer : array<u32, BRICK_REMOVAL_COUNT>,
+    brick_instance_counter : u32,
+    brick_removal_counter : u32,
+    preview_instance_counter : u32,
+    
+    atlas_empty_bricks_buffer : array<u32, TOTAL_BRICK_COUNT>,
 
     brick_removal_buffer : array<u32, BRICK_REMOVAL_COUNT>,
 
-    brick_instance_data : array<ProxyInstanceData, TOTAL_BRICK_COUNT>,
+    brick_instance_data : array<ProxyInstanceData, BRICK_REMOVAL_COUNT>,
 
     preview_instance_data : array<ProxyInstanceData, PREVIEW_PROXY_BRICKS_COUNT>
 };
