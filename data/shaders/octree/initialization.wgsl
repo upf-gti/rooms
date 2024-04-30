@@ -26,15 +26,19 @@ fn compute(@builtin(workgroup_id) group_id: vec3u)
     octant_usage_write_0[0] = 0;
     octant_usage_write_1[0] = 0;
 
+    // TODO(Juan): Noe snecessairo ahora estos atomicstroe sustituir por store normal
     atomicStore(&octree.current_level, 0);
     atomicStore(&octree.atomic_counter, 0);
 
     if ((octree.evaluation_mode & EVALUATE_PREVIEW_STROKE_FLAG) == EVALUATE_PREVIEW_STROKE_FLAG) {
         brick_buffers.preview_instance_counter = 0u;
         indirect_buffers.preview_instance_count = 0u;
+    } else {
+        indirect_buffers.brick_removal_counter = 0u;
+        brick_buffers.brick_removal_counter = 0u;
+        indirect_buffers.brick_instance_count = 0u;
+        brick_buffers.brick_instance_counter = 0u;
     }
 
     indirect_buffers.evaluator_subdivision_counter = 1u;
-    indirect_buffers.brick_removal_counter = 0u;
-    brick_buffers.brick_removal_counter = 0u;
 }

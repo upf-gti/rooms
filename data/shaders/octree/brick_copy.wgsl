@@ -22,8 +22,5 @@ fn compute(@builtin(workgroup_id) id: vec3<u32>, @builtin(local_invocation_index
     if ((current_instance_in_use_flag & BRICK_IN_USE_FLAG) == BRICK_IN_USE_FLAG) {
         let prev_value : u32 = atomicAdd(&brick_buffers.brick_instance_counter, 1u);
         brick_copy_buffer[prev_value] = current_instance_index;
-    // } else if ((current_instance.in_use & BRICK_HAS_PREVIEW_FLAG) == BRICK_HAS_PREVIEW_FLAG) {
-    //     let prev_value : u32 = atomicAdd(&preview_proxy_data.instance_count, 1u);
-    //     brick_copy_buffer[prev_value] = current_instance_index;
     }
 }

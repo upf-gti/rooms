@@ -159,10 +159,11 @@ fn brick_create_or_reevaluate(octree_index : u32, is_current_brick_filled : bool
         brick_buffers.brick_instance_data[instance_index].in_use = BRICK_IN_USE_FLAG;
 
         if (is_interior_brick) {
-            octree.data[octree_index].tile_pointer = instance_index | INTERIOR_BRICK_FLAG;
+            // TODO(Juan): remove this brick
+            octree.data[octree_index].tile_pointer = INTERIOR_BRICK_FLAG;
             octree.data[octree_index].octant_center_distance = vec2f(-10000.0, -10000.0);
         } else {
-            octree.data[octree_index].tile_pointer = instance_index;
+            octree.data[octree_index].tile_pointer = instance_index | FILLED_BRICK_FLAG;
         }
     }
                 
@@ -334,7 +335,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         if (level < OCTREE_DEPTH) {
             // Broad culling using only the incomming stroke
             // TODO: intersection with current edit AABB?
-            if (intersection_AABB_AABB(eval_aabb_min, eval_aabb_max, merge_data.reevaluation_AABB_min, merge_data.reevaluation_AABB_max)) {
+            if (current_stroke_interval.x < 0.0 && intersection_AABB_AABB(eval_aabb_min, eval_aabb_max, merge_data.reevaluation_AABB_min, merge_data.reevaluation_AABB_max)) {
                 // Subdivide
                 // Increase the number of children from the current level
                 let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 8);

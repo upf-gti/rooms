@@ -25,10 +25,10 @@ fn compute(@builtin(global_invocation_id) id: vec3<u32>)
 
     // Update the indirect buffer
     indirect_buffers.evaluator_subdivision_counter = num_dispatches;
+    indirect_buffers.brick_instance_count = brick_buffers.brick_instance_counter;
+    indirect_buffers.brick_removal_counter = brick_buffers.brick_removal_counter;
 
     if (level == OCTREE_DEPTH) {
-        indirect_buffers.brick_instance_count = brick_buffers.brick_instance_counter;
-        indirect_buffers.brick_removal_counter = brick_buffers.brick_removal_counter;
         // If we evaluated the preview in the prev subdivision pass, we set it back.
         if ((octree.evaluation_mode & EVALUATE_PREVIEW_STROKE_FLAG) == EVALUATE_PREVIEW_STROKE_FLAG) {
             octree.evaluation_mode = 0;

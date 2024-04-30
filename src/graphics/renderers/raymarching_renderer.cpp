@@ -375,9 +375,6 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
 
         // Update uniform buffer
         webgpu_context->update_buffer(std::get<WGPUBuffer>(compute_merge_data_uniform.data), 0, &(compute_merge_data), sizeof(sMergeData));
-
-        uint32_t reevaluate_aabb = is_undo ? CLEAN_BEFORE_EVAL : 0;
-        webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_uniform.data), sizeof(uint32_t) * 3, &reevaluate_aabb, sizeof(uint32_t));
     }
 
     // New element, not undo nor redo...
@@ -612,26 +609,39 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
     webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_uniform.data), sizeof(uint32_t) * 3u, &set_as_preview, sizeof(uint32_t));
 
     // First, compute undo - redo or perform a merge of an stroke, or prepare for just a preview
-    if (needs_undo) { // Undo or redo
-        spdlog::info("Undo");
-#ifndef NDEBUG
-        wgpuComputePassEncoderPushDebugGroup(compute_pass, "Undo evaluation");
-#endif
-        compute_undo(compute_pass);
-#ifndef NDEBUG
-        wgpuComputePassEncoderPopDebugGroup(compute_pass);
-#endif
-    } else if (needs_redo) {
-        spdlog::info("Redo");
-#ifndef NDEBUG
-        wgpuComputePassEncoderPushDebugGroup(compute_pass, "Redu evaluation");
-#endif
-        compute_redo(compute_pass);
+//    if (needs_undo) { // Undo or redo
+//        spdlog::info("Undo");
+//#ifndef NDEBUG
+//        wgpuComputePassEncoderPushDebugGroup(compute_pass, "Undo evaluation");
+//#endif
+//        compute_undo(compute_pass);
+//#ifndef NDEBUG
+//        wgpuComputePassEncoderPopDebugGroup(compute_pass);
+//#endif
+//    } else if (needs_redo) {
+//        spdlog::info("Redo");
+//#ifndef NDEBUG
+//        wgpuComputePassEncoderPushDebugGroup(compute_pass, "Redu evaluation");
+//#endif
+//        compute_redo(compute_pass);
+//
+//#ifndef NDEBUG
+//        wgpuComputePassEncoderPopDebugGroup(compute_pass);
+//#endif
 
+    bool is_openxr_available = RoomsRenderer::instance->get_openxr_available();
+
+    //if (is_openxr_available) {
 #ifndef NDEBUG
-        wgpuComputePassEncoderPopDebugGroup(compute_pass);
+    wgpuComputePassEncoderPushDebugGroup(compute_pass, "Preview evaluation");
 #endif
-    } else if (in_frame_stroke.edit_count > 0 || to_compute_stroke_buffer.size() > 0) { // Merge
+    compute_preview_edit(compute_pass);
+#ifndef NDEBUG
+    wgpuComputePassEncoderPopDebugGroup(compute_pass);
+#endif
+    //}
+
+    if (in_frame_stroke.edit_count > 0 || to_compute_stroke_buffer.size() > 0) { // Merge
 
         to_compute_stroke_buffer.push_back(in_frame_stroke);
 
@@ -641,18 +651,6 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
         in_frame_stroke.edit_count = 0u;
         to_compute_stroke_buffer.clear();
     }
-
-    bool is_openxr_available = RoomsRenderer::instance->get_openxr_available();
-
-    //if (is_openxr_available) {
-#ifndef NDEBUG
-    wgpuComputePassEncoderPushDebugGroup(compute_pass, "Preview evaluation");
-#endif
-        compute_preview_edit(compute_pass);
-#ifndef NDEBUG
-        wgpuComputePassEncoderPopDebugGroup(compute_pass);
-#endif
-    //}
 
     // Finalize compute_raymarching pass
     wgpuComputePassEncoderEnd(compute_pass);
@@ -886,7 +884,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
 
     {
         // Brick unmarking bindgroup
-        std::vector<Uniform*> uniforms = { &octree_brick_buffers, &octree_uniform };
+        std::vector<Uniform*> uniforms = { &octree_brick_buffers };
 
         compute_octree_brick_unmark_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_brick_unmark_shader, 0);
     }
