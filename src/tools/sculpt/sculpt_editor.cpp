@@ -1131,6 +1131,9 @@ void SculptEditor::bind_events()
     Node::bind("color_picker", [&](const std::string& signal, Color color) { stroke_parameters.set_material_color(color); });
     Node::bind("pick_material", [&](const std::string& signal, void* button) { is_picking_material = !is_picking_material; });
 
+    Node::bind("undo", [&](const std::string& signal, void* button) { renderer->undo(); });
+    Node::bind("redo", [&](const std::string& signal, void* button) { renderer->redo(); });
+
     // Bind colors callback...
 
     for (auto it : Node2D::all_widgets)
