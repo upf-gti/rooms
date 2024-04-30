@@ -782,17 +782,20 @@ void SculptEditor::enable_tool(eTool tool)
 {
     current_tool = tool;
 
+    Node2D* brush_editor_submenu = Node2D::get_widget_from_name("brush_editor");
+    assert(brush_editor_submenu);
+
     switch (tool)
     {
     case SCULPT:
-        // helper_gui.change_list_layout("sculpt");
         stroke_parameters.set_operation(OP_UNION);
         hand2edit_distance = 0.0f;
+        static_cast<ui::ButtonSubmenu2D*>(brush_editor_submenu)->set_disabled(true);
         break;
     case PAINT:
-        // helper_gui.change_list_layout("paint");
         stroke_parameters.set_operation(OP_PAINT);
         hand2edit_distance = 0.1f;
+        static_cast<ui::ButtonSubmenu2D*>(brush_editor_submenu)->set_disabled(false);
         break;
     default:
         break;
@@ -814,7 +817,31 @@ void SculptEditor::init_ui()
     // Color picker...
 
     {
-        main_panel_2d->add_child(new ui::ColorPicker2D("color_picker", stroke_parameters.get_material().color));
+        ui::ColorPicker2D* color_picker = new ui::ColorPicker2D("color_picker", stroke_parameters.get_material().color);
+
+        // Add recent colors around the picker
+        {
+            size_t child_count = 5;
+            float sample_size = 36.0f;
+            float full_size = color_picker->get_size().x + sample_size;
+            float radius = full_size * 0.515f;
+
+            glm::vec2 center = glm::vec2((-color_picker->get_size().x + sample_size) * 0.5f);
+
+            // set_translation(center);
+
+            for (size_t i = 0; i < child_count; ++i)
+            {
+                // float angle = pi + pi * i / (float)(child_count - 1);
+                float angle = pi + pi_2 * i / (float)(child_count - 1);
+                glm::vec2 translation = glm::vec2(radius * cos(angle), radius * sin(angle)) - center;
+                ui::Button2D* child = new ui::Button2D("recent_color_" + std::to_string(i), colors::WHITE, 0, translation, glm::vec2(sample_size));
+                child->set_translation(translation);
+                color_picker->add_child(child);
+            }
+        }
+
+        main_panel_2d->add_child(color_picker);
     }
 
     ui::VContainer2D* vertical_container = new ui::VContainer2D("vertical_container", { 0.0f, 0.0f });
@@ -840,13 +867,13 @@ void SculptEditor::init_ui()
         first_row->add_child(prim_selector);
     }
 
-    // ** Sculpt, Brush, Material Editors **
+    // ** Shape, Brush, Material Editors **
     {
         ui::ItemGroup2D* g_editors = new ui::ItemGroup2D("g_editors");
 
-        // Sculpt editor
+        // Shape editor
         {
-            ui::ButtonSubmenu2D* sculpt_editor_submenu = new ui::ButtonSubmenu2D("sculpt_editor", "data/textures/shape_editor.png");
+            ui::ButtonSubmenu2D* shape_editor_submenu = new ui::ButtonSubmenu2D("shape_editor", "data/textures/shape_editor.png");
 
             // Operations and sculpt mode
             {
@@ -855,10 +882,10 @@ void SculptEditor::init_ui()
                 combo_edit_operation->add_child(new ui::TextureButton2D("add", "data/textures/sphere.png", ui::SELECTED));
                 combo_edit_operation->add_child(new ui::TextureButton2D("substract", "data/textures/sphere.png"));
                 //combo_edit_operation->add_child(new ui::TextureButton2D("intersect", "data/textures/sphere.png"));
-                sculpt_editor_submenu->add_child(combo_edit_operation);
+                shape_editor_submenu->add_child(combo_edit_operation);
 
                 // Smear, stamp
-                sculpt_editor_submenu->add_child(new ui::TextureButton2D("sculpt_mode", "data/textures/x.png", ui::ALLOW_TOGGLE));
+                shape_editor_submenu->add_child(new ui::TextureButton2D("sculpt_mode", "data/textures/x.png", ui::ALLOW_TOGGLE));
             }
 
             // Edit sizes
@@ -866,7 +893,7 @@ void SculptEditor::init_ui()
                 ui::ItemGroup2D* g_edit_sizes = new ui::ItemGroup2D("g_edit_sizes");
                 g_edit_sizes->add_child(new ui::Slider2D("main_size", "data/textures/x.png", edit_to_add.dimensions.x, ui::SliderMode::VERTICAL));
                 g_edit_sizes->add_child(new ui::Slider2D("sec_size", "data/textures/y.png", edit_to_add.dimensions.w, ui::SliderMode::VERTICAL));
-                sculpt_editor_submenu->add_child(g_edit_sizes);
+                shape_editor_submenu->add_child(g_edit_sizes);
             }
 
             // Edit modifiers
@@ -874,10 +901,10 @@ void SculptEditor::init_ui()
                 ui::ItemGroup2D* g_edit_modifiers = new ui::ItemGroup2D("g_edit_modifiers");
                 g_edit_modifiers->add_child(new ui::Slider2D("onion_value", "data/textures/onion.png", 0.0f, ui::SliderMode::VERTICAL));
                 g_edit_modifiers->add_child(new ui::Slider2D("cap_value", "data/textures/capped.png", 0.0f, ui::SliderMode::VERTICAL));
-                sculpt_editor_submenu->add_child(g_edit_modifiers);
+                shape_editor_submenu->add_child(g_edit_modifiers);
             }
 
-            g_editors->add_child(sculpt_editor_submenu);
+            g_editors->add_child(shape_editor_submenu);
         }
 
         // Material editor
@@ -1004,86 +1031,6 @@ void SculptEditor::init_ui()
         second_row->add_child(new ui::TextureButton2D("redo", "data/textures/y.png"));
     }
 
-    //    {
-    //        ui::ButtonSubmenu2D* colors_submenu = new ui::ButtonSubmenu2D("colors", "data/textures/colors.png");
-
-    //        {
-    //            ui::ItemGroup2D* g_colors = new ui::ItemGroup2D("g_colors");
-
-    //            // Color palette 1
-    //            {
-    //                ui::ButtonSelector2D* palette_1_submenu = new ui::ButtonSelector2D("color_template_palette_1", "data/textures/colors_template_1.png", ui::KEEP_RGB);
-    //                Color colors[4] = { Color(0.2f, 0.21f, 0.77f, 1.0f), Color(0.41f, 0.57f, 0.79f, 1.0f), Color(0.41f, 0.76f, 0.79f, 1.0f), Color(0.64f, 0.9f, 0.93f, 1.0f) };
-    //                for (size_t i = 0; i < 4; i++) {
-    //                    palette_1_submenu->add_child(new ui::Button2D("colors_t1_" + std::to_string(i), colors[i], ui::KEEP_RGB));
-    //                }
-    //                g_colors->add_child(palette_1_submenu);
-    //            }
-
-    //            // Color palette 2
-    //            {
-    //                ui::ButtonSelector2D* palette_2_submenu = new ui::ButtonSelector2D("color_template_palette_2", "data/textures/colors_template_2.png", ui::KEEP_RGB);
-    //                Color colors[4] = { Color(0.36f, 0.61f, 0.35f, 1.0f), Color(0.51f, 0.8f, 0.49f, 1.0f), Color(0.68f, 0.84f, 0.05f, 1.0f), Color(0.71f, 0.96f, 0.49f, 1.0f) };
-    //                for (size_t i = 0; i < 4; i++) {
-    //                    palette_2_submenu->add_child(new ui::Button2D("colors_t2_" + std::to_string(i), colors[i], ui::KEEP_RGB));
-    //                }
-    //                g_colors->add_child(palette_2_submenu);
-    //            }
-
-    //            // Color palette 3
-    //            {
-    //                ui::ButtonSelector2D* palette_3_submenu = new ui::ButtonSelector2D("color_template_palette_3", "data/textures/colors_template_3.png", ui::KEEP_RGB);
-    //                Color colors[4] = { Color(0.94f, 0.77f, 0.44f, 1.0f), Color(0.96f, 0.67f, 0.09f, 1.0f), Color(0.98f, 0.9f, 0.08f, 1.0f), Color(0.94f, 0.92f, 0.7f, 1.0f) };
-    //                for (size_t i = 0; i < 4; i++) {
-    //                    palette_3_submenu->add_child(new ui::Button2D("colors_t3_" + std::to_string(i), colors[i], ui::KEEP_RGB));
-    //                }
-    //                g_colors->add_child(palette_3_submenu);
-    //            }
-
-    //            // Color palette 4
-    //            {
-    //                ui::ButtonSelector2D* palette_4_submenu = new ui::ButtonSelector2D("color_template_palette_4", "data/textures/colors_template_4.png", ui::KEEP_RGB);
-    //                Color colors[4] = { Color(0.58f, 0.12f, 0.12f, 1.0f), Color(0.83f, 0.09f, 0.09f, 1.0f), Color(0.88f, 0.42f, 0.42f, 1.0f), Color(0.90f, 0.71f, 0.71f, 1.0f) };
-    //                for (size_t i = 0; i < 4; i++) {
-    //                    palette_4_submenu->add_child(new ui::Button2D("colors_t4_" + std::to_string(i), colors[i], ui::KEEP_RGB));
-    //                }
-    //                g_colors->add_child(palette_4_submenu);
-    //            }
-
-    //            // Color palette 5
-    //            {
-    //                ui::ButtonSelector2D* palette_5_submenu = new ui::ButtonSelector2D("color_template_palette_5", "data/textures/colors_template_5.png", ui::KEEP_RGB);
-    //                Color colors[4] = { Color(0.65f, 0.02f, 0.83f, 1.0f), Color(0.8f, 0.49f, 0.89f, 1.0f), Color(0.95f, 0.12f, 0.85f, 1.0f), Color(0.95f, 0.62f, 0.91f, 1.0f) };
-    //                for (size_t i = 0; i < 4; i++) {
-    //                    palette_5_submenu->add_child(new ui::Button2D("colors_t5_" + std::to_string(i), colors[i], ui::KEEP_RGB));
-    //                }
-    //                g_colors->add_child(palette_5_submenu);
-    //            }
-
-    //            // Color palette 6
-    //            {
-    //                ui::ButtonSelector2D* palette_6_submenu = new ui::ButtonSelector2D("color_template_palette_6", "data/textures/colors_template_6.png", ui::KEEP_RGB);
-    //                Color colors[4] = { Color(0.f, 0.f, 0.f, 1.0f), Color(0.33f, 0.33f, 0.33f, 1.0f), Color(0.66f, 0.66f, 0.66f, 1.0f), Color(1.0f, 1.0f, 1.0f, 1.0f) };
-    //                for (size_t i = 0; i < 4; i++) {
-    //                    palette_6_submenu->add_child(new ui::Button2D("colors_t6_" + std::to_string(i), colors[i], ui::KEEP_RGB));
-    //                }
-    //                g_colors->add_child(palette_6_submenu);
-    //            }
-
-    //            {
-    //                ui::ButtonSelector2D* recent_colors_submenu = new ui::ButtonSelector2D("recent_colors", "data/textures/recent_colors.png", ui::KEEP_RGB);
-    //                for (size_t i = 0; i < 5; i++) {
-    //                    recent_colors_submenu->add_child(new ui::Button2D("recent_color_" + std::to_string(i), colors::WHITE, ui::KEEP_RGB));
-    //                }
-    //                g_colors->add_child(recent_colors_submenu);
-    //            }
-
-    //            colors_submenu->add_child(g_colors);
-    //        }
-
-    //        material_submenu->add_child(colors_submenu);
-    //    }
-
     if (Renderer::instance->get_openxr_available()) {
         main_panel_3d = new Viewport3D(main_panel_2d);
         main_panel_3d->set_active(true);
@@ -1180,12 +1127,14 @@ void SculptEditor::bind_events()
 
     // Bind recent color buttons...
 
-    Node2D* recent_group = Node2D::get_widget_from_name("recent_colors");
-    if (recent_group) {
-        max_recent_colors = recent_group->get_children().size();
+    Node2D* color_picker = Node2D::get_widget_from_name("color_picker");
+    max_recent_colors = color_picker->get_children().size();
+
+    if (max_recent_colors > 0) {
+
         for (size_t i = 0; i < max_recent_colors; ++i)
         {
-            ui::Button2D* child = static_cast<ui::Button2D*>(recent_group->get_children()[i]);
+            ui::Button2D* child = static_cast<ui::Button2D*>(color_picker->get_children()[i]);
             Node::bind(child->signal, [&](const std::string& signal, void* button) {
                 const Color& color = (reinterpret_cast<ui::Button2D*>(button))->color;
                 stroke_parameters.set_material_color(color);
@@ -1193,7 +1142,7 @@ void SculptEditor::bind_events()
         }
     }
     else {
-        spdlog::error("Cannot find recent_colors button group!");
+        spdlog::error("No recent_colors added!");
     }
 
     // Bind material samples callback...
@@ -1261,15 +1210,13 @@ void SculptEditor::add_recent_color(const Color& color)
         recent_colors.pop_back();
     }
 
-    Node2D* recent_group = Node2D::get_widget_from_name("recent_colors");
-    if (!recent_group) {
-        return;
-    }
+    Node2D* color_picker = Node2D::get_widget_from_name("color_picker");
+    assert(color_picker);
 
-    assert(recent_colors.size() <= recent_group->get_children().size());
+    assert(recent_colors.size() <= color_picker->get_children().size());
     for (uint8_t i = 0; i < recent_colors.size(); ++i)
     {
-        ui::Button2D* child = static_cast<ui::Button2D*>(recent_group->get_children()[i]);
+        ui::Button2D* child = static_cast<ui::Button2D*>(color_picker->get_children()[i]);
         child->set_color(recent_colors[i]);
     }
 }

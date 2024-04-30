@@ -88,42 +88,47 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var final_color = vec3f( 1.0 - smoothstep(0.15, 0.4, lum) );
     final_color = max(final_color, icon_color);
 
-    var is_color_button = ui_data.is_color_button > 0.0;
-    var keep_colors = (ui_data.keep_rgb + ui_data.is_color_button) > 0.0;
+    var is_color_button : bool = ui_data.is_color_button > 0.0;
+    var keep_colors : bool = (ui_data.keep_rgb + ui_data.is_color_button) > 0.0;
+    var is_selected : bool = ui_data.is_selected > 0.0;
+    var is_hovered : bool = ui_data.is_hovered > 0.0;
 
     if(keep_colors) {
         final_color = color.rgb * in.color.rgb;
+        final_color = pow(final_color, vec3f(1.0/2.2));
         highlight_color = vec3f(1.0);
-
-        if(is_color_button) {
-            button_radius = 0.4;
-            max_radius = 0.45;
-        }
     }
 
-    if( ui_data.is_selected > 0.0 ) {
+    if(is_selected) {
         if( !keep_colors ) {
             var sel_color = mix( COLOR_TERCIARY, COLOR_HIGHLIGHT_LIGHT, pow(uvs.x + uvs.y, 2.0) );
-            icon_color = select( sel_color, sel_color + COLOR_TERCIARY * 0.5, ui_data.is_hovered > 0.0 );
+            icon_color = select( sel_color, sel_color + COLOR_TERCIARY * 0.5, is_hovered );
             final_color = smoothstep(vec3f(0.25), vec3f(0.45), color.rgb) * 0.5;
         }
     } 
     // not selected but hovered
-    else if( ui_data.is_hovered > 0.0 ) {
-        if( !keep_colors ) {
-            highlight_color = mix( COLOR_TERCIARY, COLOR_HIGHLIGHT_LIGHT, gradient_factor );
-        } else if( is_color_button ) {
-            button_radius = 0.37;
-            max_radius = 0.42;
-        } else {
-            icon_color = vec3f(0.15);
-        }
+    else if(is_hovered && !keep_colors) {
+        highlight_color = mix( COLOR_TERCIARY, COLOR_HIGHLIGHT_LIGHT, gradient_factor );
+    }
+
+    if(keep_colors && is_hovered) {
+        icon_color = vec3f(0.15);
+        final_color += vec3f(0.1);
     }
 
     final_color = mix(back_color, icon_color + final_color * highlight_color, color.a);
 
     var shadow : f32 = smoothstep(button_radius, max_radius, dist);
     
+    if(is_color_button) {
+        final_color = mix(final_color, vec3f(0.3), smoothstep(button_radius - 0.04, button_radius, dist));
+
+        final_color = mix(final_color, final_color * 0.1, (uvs.x * uvs.y) * 0.65);
+
+        final_color = pow(final_color, vec3f(2.2));
+        shadow = smoothstep(max_radius - 0.04, max_radius, dist);
+    }
+
     if(dist > button_radius && !is_color_button) {
         final_color = back_color;
     }

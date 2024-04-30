@@ -195,7 +195,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     final_color = mix(final_color, OUTLINECOLOR.rgb, smoothstep(button_radius - EPSILON, button_radius, dist));
 
     // inner ring line
-    let tmp_interior_mask : f32 = smoothstep(interior_radius - 0.05, interior_radius - 0.05 + EPSILON, position_radius);
+    let tmp_interior_mask : f32 = smoothstep(interior_radius - 0.06, interior_radius - 0.06 + EPSILON, position_radius);
     var inner_outline_mask : f32 = (1.0 - interior_mask) - (1.0 - tmp_interior_mask);
     final_color = mix(final_color, OUTLINECOLOR.rgb, inner_outline_mask);
 
