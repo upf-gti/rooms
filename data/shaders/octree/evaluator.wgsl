@@ -330,11 +330,17 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
         // Do not evaluate all the bricks, only the ones whose distance interval has changed
         octree.data[octree_index].octant_center_distance = surface_interval;
+
         
         if (level < OCTREE_DEPTH) {
+            if ((octree.evaluation_mode & UNDO_EVAL_FLAG) == UNDO_EVAL_FLAG) {
+                subdivide = intersection_AABB_AABB(eval_aabb_min, eval_aabb_max, merge_data.reevaluation_AABB_min, merge_data.reevaluation_AABB_max);
+            } else {
+                subdivide = current_stroke_interval.x < 0.0 && intersection_AABB_AABB(eval_aabb_min, eval_aabb_max, merge_data.reevaluation_AABB_min, merge_data.reevaluation_AABB_max);
+            }
             // Broad culling using only the incomming stroke
             // TODO: intersection with current edit AABB?
-            if (current_stroke_interval.x < 0.0 && intersection_AABB_AABB(eval_aabb_min, eval_aabb_max, merge_data.reevaluation_AABB_min, merge_data.reevaluation_AABB_max)) {
+            if (subdivide) {
                 // Subdivide
                 // Increase the number of children from the current level
                 let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 8);

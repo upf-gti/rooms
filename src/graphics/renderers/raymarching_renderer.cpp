@@ -314,28 +314,68 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
 {
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
 
-    // Compute the list of edits that influence teh current one
-    std::vector<Stroke> influence_edits;
+    const Stroke* strokes_to_evaluate = nullptr;
+    uint32_t stroke_count_to_evaluate = 0u;
 
     uint32_t stroke_edit_count = 0u;
     AABB strokes_aabb;
     float max_smooth_margin = 0.0f;
-    for (uint16_t i = 0u; i < strokes.size(); i++) {
-        strokes_aabb = merge_aabbs(strokes_aabb, strokes[i].get_world_AABB());
-        stroke_edit_count += strokes[i].edit_count;
-        max_smooth_margin = glm::max(strokes[i].parameters.w, max_smooth_margin);
+    uint32_t last_history_index = stroke_history.size();
+
+    if (!is_undo && !is_redo) {
+        for (uint16_t i = 0u; i < strokes.size(); i++) {
+            strokes_aabb = merge_aabbs(strokes_aabb, strokes[i].get_world_AABB());
+            stroke_edit_count += strokes[i].edit_count;
+            max_smooth_margin = glm::max(strokes[i].parameters.w, max_smooth_margin);
+        }
+
+        strokes_to_evaluate = strokes.data();
+        stroke_count_to_evaluate = strokes.size();
+    } else {
+        if (is_undo) {
+            if (stroke_history.size() > 1u) {
+                last_history_index--;
+                Stroke& prev = stroke_history[last_history_index];
+                strokes_aabb = merge_aabbs(strokes_aabb, prev.get_world_AABB());
+                stroke_edit_count += prev.edit_count;
+                max_smooth_margin = glm::max(prev.parameters.w, max_smooth_margin);
+
+                /*uint32_t stroke_id = prev.stroke_id;
+                for (uint32_t i = stroke_history.size()-2u; i <= 0u ; i++) {
+                    Stroke& old_stroke = stroke_history[i];
+
+                    if (old_stroke.stroke_id != stroke_id) {
+                        break;
+                    }
+
+                    last_history_index--;
+                    strokes_aabb = merge_aabbs(strokes_aabb, old_stroke.get_world_AABB());
+                    stroke_edit_count += old_stroke.edit_count;
+                    max_smooth_margin = glm::max(old_stroke.parameters.w, max_smooth_margin);
+                }*/
+                strokes_to_evaluate = &stroke_history[last_history_index - 1u];
+                stroke_count_to_evaluate = 1u;
+            } else {
+                // In the case of only one stroke, submit a substraction edit on the same places as the prev stroke
+                Stroke& prev = stroke_history[0u];
+                prev.operation = OP_SMOOTH_SUBSTRACTION;
+                strokes_aabb = merge_aabbs(strokes_aabb, prev.get_world_AABB());
+                stroke_edit_count += prev.edit_count;
+                max_smooth_margin = glm::max(prev.parameters.w, max_smooth_margin);
+                
+                strokes_to_evaluate = &prev;
+                stroke_count_to_evaluate = 1u;
+                last_history_index = 0u;
+            }
+        }
+
     }
-
-    //strokes_aabb.half_size += max_smooth_margin * 2.0f;
-
-    // Increase 1 texel the bounding box, in order to not exclude bricks
-    // In the brick border
-
+    
     // Get the strokes that are on the region of the undo
     stroke_influence_list.stroke_count = 0u;
-     Stroke intersection_stroke;
-     uint32_t reevaluate_edit_count = 0u;
-    for (uint32_t i = 0u; i < stroke_history.size(); i++) {
+    Stroke intersection_stroke;
+    uint32_t reevaluate_edit_count = 0u;
+    for (uint32_t i = 0u; i < last_history_index; i++) {
         stroke_history[i].get_AABB_intersecting_stroke(strokes_aabb, intersection_stroke);
 
         if (intersection_stroke.edit_count > 0u) {
@@ -343,8 +383,6 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
             stroke_influence_list.strokes[stroke_influence_list.stroke_count++] = intersection_stroke;
         }
     }
-
-    //strokes_aabb.half_size -= max_smooth_margin * 2.0f;
 
     compute_merge_data.reevaluation_AABB_min = strokes_aabb.center - strokes_aabb.half_size;
     compute_merge_data.reevaluation_AABB_max = strokes_aabb.center + strokes_aabb.half_size;
@@ -359,12 +397,12 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
     wgpuComputePassEncoderPushDebugGroup(compute_pass, "Stroke Evaluation");
 #endif
     
-    spdlog::info("Stroke count {}, stroke edit count: {}, context size {}, total edit count: {}, avg edits per context {}", strokes.size(), stroke_edit_count, stroke_influence_list.stroke_count, reevaluate_edit_count, reevaluate_edit_count / (stroke_influence_list.stroke_count + 0.0001f));
+    spdlog::info("Stroke count {}, stroke edit count: {}, context size {}, total edit count: {}, avg edits per context {}", stroke_count_to_evaluate, stroke_edit_count, stroke_influence_list.stroke_count, reevaluate_edit_count, reevaluate_edit_count / (stroke_influence_list.stroke_count + 0.0001f));
     // Can be done once
     {
 
-        if (!strokes.empty()) {
-            webgpu_context->update_buffer(std::get<WGPUBuffer>(compute_stroke_buffer_uniform.data), 0, strokes.data(), sizeof(Stroke) * strokes.size());
+        if (stroke_count_to_evaluate > 0u) {
+            webgpu_context->update_buffer(std::get<WGPUBuffer>(compute_stroke_buffer_uniform.data), 0, strokes_to_evaluate, sizeof(Stroke) * stroke_count_to_evaluate);
         }
         else {
             Stroke stroke = {};
@@ -469,6 +507,11 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
 #ifndef NDEBUG
     wgpuComputePassEncoderPopDebugGroup(compute_pass);
 #endif
+
+    uint32_t history_diff = stroke_history.size() - last_history_index;
+    for (uint32_t i = 0u; i < history_diff; i++) {
+        stroke_history.pop_back();
+    }
 }
 
 void RaymarchingRenderer::compute_redo(WGPUComputePassEncoder compute_pass)
@@ -525,7 +568,17 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
 
     bool is_openxr_available = RoomsRenderer::instance->get_openxr_available();
 
-    if (in_frame_stroke.edit_count > 0 || to_compute_stroke_buffer.size() > 0) { // Merge
+    if (needs_undo) {
+#ifndef NDEBUG
+        wgpuComputePassEncoderPushDebugGroup(compute_pass, "Undo evaluation");
+#endif
+        uint32_t set_as_preview = 0x01u;
+        webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_uniform.data), sizeof(uint32_t) * 3u, &set_as_preview, sizeof(uint32_t));
+        evaluate_strokes(compute_pass, to_compute_stroke_buffer, true);
+#ifndef NDEBUG
+        wgpuComputePassEncoderPopDebugGroup(compute_pass);
+#endif
+    } else if (in_frame_stroke.edit_count > 0 || to_compute_stroke_buffer.size() > 0) { // Merge
 
         to_compute_stroke_buffer.push_back(in_frame_stroke);
 
