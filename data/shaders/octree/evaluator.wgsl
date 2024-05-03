@@ -230,7 +230,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     // Note: the preview evaluation only happens at the end of the frame, so it must wait for
     //       any reevaluation and evaluation
     // TODO(Juan): fix undo redo reeval
-    //let is_reevaluation : bool = (octree.evaluation_mode & STROKE_CLEAN_BEFORE_EVAL_FLAG) == STROKE_CLEAN_BEFORE_EVAL_FLAG;
     let is_evaluating_preview : bool = ((octree.evaluation_mode & EVALUATE_PREVIEW_STROKE_FLAG) == EVALUATE_PREVIEW_STROKE_FLAG);
         
     let octant_min : vec3f = octant_center - vec3f(level_half_size);
@@ -429,28 +428,16 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 }
             }
         } else {
-            if (preview_stroke.operation == OP_SMOOTH_SUBSTRACTION) {
-                // if ((current_stroke_interval.x < 0.0)) {
-                //     if (surface_interval.x < 0.0) {
-                //         if (surface_interval.y < 0.0) {
-                //             brick_mark_as_preview(octree_index, is_current_brick_filled);
-                //         } else {
-                //             //brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
-                //         }  
-                //     } else if (is_current_brick_filled) {
-                //         brick_mark_as_preview(octree_index);
-                //     }
-                // }
-            } else if (preview_stroke.operation == OP_SMOOTH_UNION) {
-                if (current_stroke_interval.x < 0.0) {
-                    if (surface_interval.x < 0.0 && surface_interval.y > 0.0) {
+            if (preview_stroke.operation == OP_SMOOTH_UNION) {
+                //if (current_stroke_interval.x < 0.0) {
+                    if (surface_interval.x < 0.0) {
                         if (is_current_brick_filled) {
                             brick_mark_as_preview(octree_index);
-                        } else {
+                        } else if (current_stroke_interval.y > 0.0) {
                             preview_brick_create(octree_index, octant_center);
                         }
                     }
-                }
+                //}
             } 
         }
     }

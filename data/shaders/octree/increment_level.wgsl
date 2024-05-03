@@ -31,7 +31,11 @@ fn compute(@builtin(global_invocation_id) id: vec3<u32>)
     if (level == OCTREE_DEPTH) {
         // If we evaluated the preview in the prev subdivision pass, we set it back.
         if ((octree.evaluation_mode & EVALUATE_PREVIEW_STROKE_FLAG) == EVALUATE_PREVIEW_STROKE_FLAG) {
-            octree.evaluation_mode = 0;
+            
+            indirect_buffers.preview_instance_count = brick_buffers.preview_instance_counter;
+        } else {
+            octree.evaluation_mode = EVALUATE_PREVIEW_STROKE_FLAG;
+           // octree.evaluation_mode = EVALUATE_PREVIEW_STROKE_FLAG;
             indirect_buffers.preview_instance_count = brick_buffers.preview_instance_counter;
         }
     }

@@ -503,88 +503,7 @@ void RaymarchingRenderer::compute_undo(WGPUComputePassEncoder compute_pass)
         return;
     }
 
-    uint32_t last_stroke_id = stroke_history.back().stroke_id;
-
-    int united_stroke_idx;
-    for (united_stroke_idx = stroke_history.size() - 1; united_stroke_idx >= 0; --united_stroke_idx) {
-        // if stroke changes
-        if (stroke_history[united_stroke_idx].stroke_id != last_stroke_id) {
-            break;
-        }
-    }
-
-    if (united_stroke_idx == -1) {
-        // Reset octree
-        WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
-
-        stroke_redo_history.insert(stroke_redo_history.begin(), stroke_history.begin() + (united_stroke_idx + 1), stroke_history.end());
-
-        stroke_history.clear();
-
-        compute_octree_cleaning_pipeline.set(compute_pass);
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_clean_octree_bind_group, 0, nullptr);
-        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, ceil(octree_total_size / (8.0 * 8.0 * 8.0)), 1,1);
-
-        // Clean the texture atlas bricks dispatch
-        compute_octree_brick_removal_pipeline.set(compute_pass);
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_indirect_brick_removal_bind_group, 0, nullptr);
-        wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(octree_indirect_buffer_struct.data), sizeof(uint32_t) * 8u);
-
-        //compute_octree_brick_copy_pipeline.set(compute_pass);
-        //wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_brick_copy_bind_group, 0, nullptr);
-        //wgpuComputePassEncoderDispatchWorkgroups(compute_pass, octree_total_size / (8u * 8u * 8u), 1, 1);
-    }
-    else {
-
-        AABB deleted_strokes_aabb;
-        for (int i = united_stroke_idx + 1; i < stroke_history.size(); ++i) {
-            deleted_strokes_aabb = merge_aabbs(deleted_strokes_aabb, stroke_history[i].get_world_AABB());
-        }
-
-        //Adjust AABB to evaluation grid size (discretize to brick size)
-        glm::vec3 deleted_stroke_min = deleted_strokes_aabb.center - deleted_strokes_aabb.half_size;
-        glm::vec3 deleted_stroke_max = deleted_strokes_aabb.center + deleted_strokes_aabb.half_size;
-
-        const float texel_size = SCULPT_MAX_SIZE / powf(2.0, octree_depth + 3);
-        const float brick_size = 8.0f * texel_size;
-
-        // Round upwards and downwards the max and min, in order to wrap arround brick size
-        deleted_stroke_min = glm::floor(deleted_stroke_min / brick_size) * brick_size;
-        deleted_stroke_max = glm::ceil(deleted_stroke_max / brick_size) * brick_size;
-
-        deleted_strokes_aabb.half_size = (deleted_stroke_max - deleted_stroke_min) / 2.0f;
-        deleted_strokes_aabb.center = deleted_stroke_min + deleted_strokes_aabb.half_size;
-
-        // get strokes with same id and add into the redo history
-        stroke_redo_history.insert(stroke_redo_history.begin(), stroke_history.begin() + (united_stroke_idx + 1), stroke_history.end());
-
-        stroke_history.erase(stroke_history.begin() + (united_stroke_idx + 1), stroke_history.end());
-
-        std::vector<Stroke> strokes_to_recompute;
-
-        // Increase 1 texel the bounding box, in order to not exclude bricks
-        // In the brick border
-        deleted_strokes_aabb.half_size += 1.0 * texel_size;
-
-        // Get the strokes that are on the region of the undo
-        for (uint32_t i = 0u; i < stroke_history.size(); i++) {
-            Stroke intersection_stroke;
-
-            stroke_history[i].get_AABB_intersecting_stroke(deleted_strokes_aabb, intersection_stroke);
-
-            if (intersection_stroke.edit_count > 0u) {
-                strokes_to_recompute.push_back(intersection_stroke);
-            }
-        }
-
-        // Reduce the size in a texel, for possible precission issues
-        deleted_strokes_aabb.half_size -= 2.0 * texel_size;
-
-        compute_merge_data.reevaluation_AABB_min = deleted_strokes_aabb.center - deleted_strokes_aabb.half_size;
-        compute_merge_data.reevaluation_AABB_max = deleted_strokes_aabb.center + deleted_strokes_aabb.half_size;
-
-        evaluate_strokes(compute_pass, strokes_to_recompute, true);
-     }
+    
 }
 
 void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
@@ -604,32 +523,20 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
     compute_pass_desc.timestampWrites = nullptr;
     WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
 
-    // If there is no need for an evaluation, then set the preview evaluation as default
-    uint32_t set_as_preview = EVALUATE_PREVIEW_STROKE;
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_uniform.data), sizeof(uint32_t) * 3u, &set_as_preview, sizeof(uint32_t));
-
-    // First, compute undo - redo or perform a merge of an stroke, or prepare for just a preview
-//    if (needs_undo) { // Undo or redo
-//        spdlog::info("Undo");
-//#ifndef NDEBUG
-//        wgpuComputePassEncoderPushDebugGroup(compute_pass, "Undo evaluation");
-//#endif
-//        compute_undo(compute_pass);
-//#ifndef NDEBUG
-//        wgpuComputePassEncoderPopDebugGroup(compute_pass);
-//#endif
-//    } else if (needs_redo) {
-//        spdlog::info("Redo");
-//#ifndef NDEBUG
-//        wgpuComputePassEncoderPushDebugGroup(compute_pass, "Redu evaluation");
-//#endif
-//        compute_redo(compute_pass);
-//
-//#ifndef NDEBUG
-//        wgpuComputePassEncoderPopDebugGroup(compute_pass);
-//#endif
-
     bool is_openxr_available = RoomsRenderer::instance->get_openxr_available();
+
+    if (in_frame_stroke.edit_count > 0 || to_compute_stroke_buffer.size() > 0) { // Merge
+
+        to_compute_stroke_buffer.push_back(in_frame_stroke);
+
+        spdlog::info("Evaluate stroke");
+        uint32_t set_as_preview = 0u;
+        webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_uniform.data), sizeof(uint32_t) * 3u, &set_as_preview, sizeof(uint32_t));
+        evaluate_strokes(compute_pass, to_compute_stroke_buffer);
+
+        in_frame_stroke.edit_count = 0u;
+        to_compute_stroke_buffer.clear();
+    }
 
     //if (is_openxr_available) {
 #ifndef NDEBUG
@@ -640,17 +547,6 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
     wgpuComputePassEncoderPopDebugGroup(compute_pass);
 #endif
     //}
-
-    if (in_frame_stroke.edit_count > 0 || to_compute_stroke_buffer.size() > 0) { // Merge
-
-        to_compute_stroke_buffer.push_back(in_frame_stroke);
-
-        spdlog::info("Evaluate stroke");
-        evaluate_strokes(compute_pass, to_compute_stroke_buffer);
-
-        in_frame_stroke.edit_count = 0u;
-        to_compute_stroke_buffer.clear();
-    }
 
     // Finalize compute_raymarching pass
     wgpuComputePassEncoderEnd(compute_pass);
