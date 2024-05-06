@@ -204,7 +204,7 @@ AABB Stroke::get_edit_world_AABB(const uint8_t edit_index) const
         rotated_min_size.z = glm::min(rotated_min_size.z, axis[i].z);
     }
 
-    const glm::vec3 edit_half_size = (rotated_max_size - rotated_min_size);
+    const glm::vec3 edit_half_size = (rotated_max_size - rotated_min_size) * 0.5f;
 
     return { aabb_center, edit_half_size };
 }

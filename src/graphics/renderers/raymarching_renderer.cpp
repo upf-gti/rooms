@@ -310,7 +310,7 @@ void RaymarchingRenderer::compute_preview_edit(WGPUComputePassEncoder compute_pa
     preview_stroke.edit_count = 0u;
 };
 
-void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, const std::vector<Stroke> strokes, bool is_undo, bool is_redo)
+void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, const std::vector<Stroke>& strokes, bool is_undo, bool is_redo)
 {
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
 
@@ -334,27 +334,30 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
     } else {
         if (is_undo) {
             if (stroke_history.size() > 1u) {
-                last_history_index--;
-                Stroke& prev = stroke_history[last_history_index];
-                strokes_aabb = merge_aabbs(strokes_aabb, prev.get_world_AABB());
-                stroke_edit_count += prev.edit_count;
-                max_smooth_margin = glm::max(prev.parameters.w, max_smooth_margin);
+                
+                uint32_t last_stroke_id = stroke_history.back().stroke_id;
+                Stroke& to_undo = stroke_history.back();
 
-                /*uint32_t stroke_id = prev.stroke_id;
-                for (uint32_t i = stroke_history.size()-2u; i <= 0u ; i++) {
-                    Stroke& old_stroke = stroke_history[i];
+                strokes_aabb = merge_aabbs(strokes_aabb, to_undo.get_world_AABB());
+                max_smooth_margin = glm::max(to_undo.parameters.w, max_smooth_margin);
 
-                    if (old_stroke.stroke_id != stroke_id) {
+                uint32_t united_stroke_idx = 0u, stroke_count = 0u;
+                for (united_stroke_idx = stroke_history.size() - 2u; united_stroke_idx >= 0u; --united_stroke_idx, stroke_count++) {
+                    Stroke& prev = stroke_history[united_stroke_idx];
+                        
+                    // if stroke changes
+                    if (prev.stroke_id != last_stroke_id) {
                         break;
                     }
 
-                    last_history_index--;
-                    strokes_aabb = merge_aabbs(strokes_aabb, old_stroke.get_world_AABB());
-                    stroke_edit_count += old_stroke.edit_count;
-                    max_smooth_margin = glm::max(old_stroke.parameters.w, max_smooth_margin);
-                }*/
-                strokes_to_evaluate = &stroke_history[last_history_index - 1u];
+                    strokes_aabb = merge_aabbs(strokes_aabb, prev.get_world_AABB());
+                    stroke_edit_count += prev.edit_count;
+                    max_smooth_margin = glm::max(prev.parameters.w, max_smooth_margin);
+                }
+
+                strokes_to_evaluate = &(stroke_history.data()[united_stroke_idx]);
                 stroke_count_to_evaluate = 1u;
+                last_history_index = stroke_history.size() -2u;
             } else {
                 // In the case of only one stroke, submit a substraction edit on the same places as the prev stroke
                 Stroke& prev = stroke_history[0u];
@@ -368,7 +371,6 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
                 last_history_index = 0u;
             }
         }
-
     }
     
     // Get the strokes that are on the region of the undo
@@ -387,7 +389,7 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
     compute_merge_data.reevaluation_AABB_min = strokes_aabb.center - strokes_aabb.half_size;
     compute_merge_data.reevaluation_AABB_max = strokes_aabb.center + strokes_aabb.half_size;
 
-    AABB_mesh->set_translation(compute_merge_data.reevaluation_AABB_min + get_sculpt_start_position());
+    AABB_mesh->set_translation(strokes_aabb.center + get_sculpt_start_position());
     AABB_mesh->scale(strokes_aabb.half_size * 2.0f);
 
 
@@ -568,7 +570,7 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
 
     bool is_openxr_available = RoomsRenderer::instance->get_openxr_available();
 
-    if (needs_undo) {
+    if (needs_undo && stroke_history.size() > 0u) {
 #ifndef NDEBUG
         wgpuComputePassEncoderPushDebugGroup(compute_pass, "Undo evaluation");
 #endif
@@ -605,7 +607,7 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
     wgpuComputePassEncoderEnd(compute_pass);
     wgpuComputePassEncoderRelease(compute_pass);
 
-    //AABB_mesh->render();
+    AABB_mesh->render();
 
     if (is_going_to_evaluate) {
         //RenderdocCapture::end_capture_frame();

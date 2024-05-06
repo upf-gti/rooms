@@ -231,7 +231,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     //       any reevaluation and evaluation
     // TODO(Juan): fix undo redo reeval
     let is_evaluating_preview : bool = ((octree.evaluation_mode & EVALUATE_PREVIEW_STROKE_FLAG) == EVALUATE_PREVIEW_STROKE_FLAG);
-        
+    let is_evaluating_undo : bool = (octree.evaluation_mode & UNDO_EVAL_FLAG) == UNDO_EVAL_FLAG;
+
     let octant_min : vec3f = octant_center - vec3f(level_half_size);
     let octant_max : vec3f = octant_center + vec3f(level_half_size);
 
@@ -291,9 +292,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         //margin = vec4f(SMOOTH_FACTOR * 2.0);
         // Check the edits in the parent, and fill its own list with the edits that affect this child
         // The magin is twice the smooth factor if there are two strokes with this smooth factor, they will act on eachotehr
-        //if ((stroke.operation == OP_SMOOTH_SUBSTRACTION && level == OCTREE_DEPTH) || level < OCTREE_DEPTH) {
-            current_stroke_interval = evaluate_stroke_interval_force_union(current_subdivision_interval,  &(stroke), current_stroke_interval, margin);
-        //}
+        current_stroke_interval = evaluate_stroke_interval_force_union(current_subdivision_interval,  &(stroke), current_stroke_interval, margin);
         // Pseudo subdivide!
         // Re-compute the strokes for the octants of the last level, and check the interval on those
         // Since the interval are smaller, the wrapping effect is lessend, and you add a brick if
@@ -333,7 +332,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
         
         if (level < OCTREE_DEPTH) {
-            if ((octree.evaluation_mode & UNDO_EVAL_FLAG) == UNDO_EVAL_FLAG) {
+            if (is_evaluating_undo) {
                 subdivide = intersection_AABB_AABB(eval_aabb_min, eval_aabb_max, merge_data.reevaluation_AABB_min, merge_data.reevaluation_AABB_max);
             } else {
                 subdivide = current_stroke_interval.x < 0.0 && intersection_AABB_AABB(eval_aabb_min, eval_aabb_max, merge_data.reevaluation_AABB_min, merge_data.reevaluation_AABB_max);

@@ -422,10 +422,12 @@ void SculptEditor::update(float delta_time)
     // Interaction input
     {
         if (Input::was_key_pressed(GLFW_KEY_U) || Input::was_grab_pressed(HAND_LEFT)) {
+            renderer->toogle_frame_debug();
             renderer->undo();
         }
 
         if (Input::was_key_pressed(GLFW_KEY_R) || Input::was_grab_pressed(HAND_RIGHT)) {
+            renderer->toogle_frame_debug();
             renderer->redo();
         }
     }
@@ -475,6 +477,7 @@ void SculptEditor::update(float delta_time)
     }
 
     // Set the edit as the preview
+    //edit_to_add.dimensions.x *= 4.0f;
     preview_tmp_edits.push_back(edit_to_add);
 
     // Mirror functionality
