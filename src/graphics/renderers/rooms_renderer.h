@@ -31,6 +31,9 @@ class RoomsRenderer : public Renderer {
         glm::mat4x4 mvp;
         glm::vec3 eye;
         float dummy;
+
+        glm::vec3 right_controller_position;
+        float dummy2;
     };
 
     sCameraData camera_data;

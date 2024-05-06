@@ -1,6 +1,10 @@
 #include "rooms_renderer.h"
-#include "framework/camera/camera_2d.h"
 #include "graphics/debug/renderdoc_capture.h"
+#include "graphics/shader.h"
+#include "graphics/renderer_storage.h"
+
+#include "framework/camera/camera_2d.h"
+#include "framework/input.h"
 
 #ifdef XR_SUPPORT
 #include "xr/openxr_context.h"
@@ -8,8 +12,6 @@
 #endif
 
 #include "spdlog/spdlog.h"
-#include "graphics/shader.h"
-#include "graphics/renderer_storage.h"
 
 #include "backends/imgui_impl_wgpu.h"
 
@@ -177,7 +179,9 @@ void RoomsRenderer::render_screen(WGPUTextureView swapchain_view)
 
     camera_data.eye = camera->get_eye();
     camera_data.mvp = camera->get_view_projection();
-    camera_data.dummy = 0.f;
+
+    // Use camera position as controller position
+    camera_data.right_controller_position = camera_data.eye;
 
     wgpuQueueWriteBuffer(webgpu_context->device_queue, std::get<WGPUBuffer>(camera_uniform.data), 0, &camera_data, sizeof(sCameraData));
 
@@ -185,7 +189,6 @@ void RoomsRenderer::render_screen(WGPUTextureView swapchain_view)
 
     camera_2d_data.eye = camera_2d->get_eye();
     camera_2d_data.mvp = camera_2d->get_view_projection();
-    camera_2d_data.dummy = 0.f;
 
     wgpuQueueWriteBuffer(webgpu_context->device_queue, std::get<WGPUBuffer>(camera_2d_uniform.data), 0, &camera_2d_data, sizeof(sCameraData));
 
@@ -281,7 +284,8 @@ void RoomsRenderer::render_xr()
 
         camera_data.eye = xr_context->per_view_data[i].position;
         camera_data.mvp = xr_context->per_view_data[i].view_projection_matrix;
-        camera_data.dummy = 0.f;
+
+        camera_data.right_controller_position = Input::get_controller_position(HAND_RIGHT);
 
         wgpuQueueWriteBuffer(webgpu_context->device_queue, std::get<WGPUBuffer>(camera_uniform.data), i * camera_buffer_stride, &camera_data, sizeof(sCameraData));
 

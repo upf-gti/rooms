@@ -6,6 +6,7 @@
 #include "framework/input.h"
 #include "framework/nodes/viewport_3d.h"
 #include "framework/scene/parse_gltf.h"
+#include "framework/scene/parse_scene.h"
 
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/renderer_storage.h"
@@ -38,6 +39,21 @@ void SculptEditor::initialize()
     axis_lock_gizmo.initialize(POSITION_GIZMO, sculpt_start_position);
     mirror_gizmo.initialize(POSITION_GIZMO, sculpt_start_position);
     mirror_origin = sculpt_start_position;
+
+    // Sculpt area box
+    {
+        sculpt_area_box = parse_mesh("data/meshes/cube.obj");
+
+        Material sculpt_area_box_material;
+        sculpt_area_box_material.priority = 0;
+        sculpt_area_box_material.transparency_type = ALPHA_BLEND;
+        sculpt_area_box_material.cull_type = CULL_FRONT;
+        sculpt_area_box_material.diffuse_texture = RendererStorage::get_texture("data/textures/grid_texture.png");
+        sculpt_area_box_material.color = colors::RED;
+        sculpt_area_box_material.shader = RendererStorage::get_shader("data/shaders/sculpt_box_area.wgsl", sculpt_area_box_material);
+
+        sculpt_area_box->set_surface_material_override(sculpt_area_box->get_surface(0), sculpt_area_box_material);
+    }
 
     // Initialize default primitive states
     {
@@ -102,6 +118,10 @@ void SculptEditor::clean()
 {
     if (mirror_mesh) {
         delete mirror_mesh;
+    }
+
+    if (sculpt_area_box) {
+        delete sculpt_area_box;
     }
 
     // TODO
@@ -602,7 +622,6 @@ void SculptEditor::scene_update_rotation()
         edit_to_add.position = world_to_texture3d(edit_to_add.position);
         edit_to_add.rotation *= (glm::conjugate(sculpt_rotation) * rotation_diff);
     }
-
 }
 
 void SculptEditor::render()
@@ -658,6 +677,12 @@ void SculptEditor::render()
         controller_mesh_right->render();
         controller_mesh_left->render();
     }
+
+    // Render always or only XR?
+    sculpt_area_box->set_translation(sculpt_start_position + translation_diff);
+    sculpt_area_box->scale(glm::vec3(SCULPT_MAX_SIZE * 0.5f));
+    sculpt_area_box->rotate(glm::inverse(sculpt_rotation * rotation_diff));
+    sculpt_area_box->render();
 }
 
 // =====================

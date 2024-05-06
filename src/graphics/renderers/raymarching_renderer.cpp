@@ -54,9 +54,7 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
 
 #endif
     
-
     AABB_mesh = parse_mesh("data/meshes/cube/aabb_cube.obj");
-
 
     Material AABB_material = (AABB_mesh->get_surface(0)->get_material());
     //AABB_material.priority = 10;

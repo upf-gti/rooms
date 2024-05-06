@@ -32,7 +32,9 @@ struct InstanceData {
 struct CameraData {
     view_projection : mat4x4f,
     eye : vec3f,
-    dummy : f32
+    dummy : f32,
+    right_controller_position : vec3f,
+    dummy2 : f32
 };
 
 struct UIData {

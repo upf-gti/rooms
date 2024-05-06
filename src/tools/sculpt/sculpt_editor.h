@@ -29,6 +29,8 @@ class SculptEditor {
 
     RoomsRenderer*  renderer = nullptr;
 
+    MeshInstance3D* sculpt_area_box = nullptr;
+
     bool sculpt_started = false;
     bool was_tool_used = false;
 
