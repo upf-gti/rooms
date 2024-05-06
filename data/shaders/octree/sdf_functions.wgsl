@@ -23,6 +23,19 @@ const OP_SMOOTH_SUBSTRACTION    = 5;
 const OP_SMOOTH_INTERSECTION    = 6;
 const OP_SMOOTH_PAINT           = 7;
 
+const SD_SPHERE_SMOOTH_OP_SUBSTRACTION = SD_SPHERE | (OP_SMOOTH_SUBSTRACTION<<4);
+const SD_SPHERE_SMOOTH_OP_UNION = SD_SPHERE | (OP_SMOOTH_UNION << 4);
+const SD_CONE_SMOOTH_OP_SUBSTRACTION = SD_CONE | (OP_SMOOTH_SUBSTRACTION << 4);
+const SD_CONE_SMOOTH_OP_UNION = SD_CONE | (OP_SMOOTH_UNION << 4);
+const SD_BOX_SMOOTH_OP_SUBSTRACTION = SD_BOX | (OP_SMOOTH_SUBSTRACTION << 4);
+const SD_BOX_SMOOTH_OP_UNION = SD_BOX | (OP_SMOOTH_UNION << 4);
+const SD_CYLINDER_SMOOTH_OP_SUBSTRACTION = SD_CYLINDER | (OP_SMOOTH_SUBSTRACTION << 4);
+const SD_CYLINDER_SMOOTH_OP_UNION = SD_CYLINDER | (OP_SMOOTH_UNION << 4);
+const SD_CAPSULE_SMOOTH_OP_SUBSTRACTION = SD_CAPSULE | (OP_SMOOTH_SUBSTRACTION << 4);
+const SD_CAPSULE_SMOOTH_OP_UNION = SD_CAPSULE | (OP_SMOOTH_UNION << 4);
+const SD_TORUS_SMOOTH_OP_SUBSTRACTION = SD_TORUS | (OP_SMOOTH_SUBSTRACTION << 4);
+const SD_TORUS_SMOOTH_OP_UNION = SD_TORUS | (OP_SMOOTH_UNION << 4);
+
 // Data containers
 struct Material {
     albedo      : vec3f,
@@ -35,7 +48,7 @@ struct Surface {
     distance    : f32
 };
 
-// Material operation functions
+// Material operation storages
 fn Material_mult_by(m : Material, v : f32) -> Material {
     return Material(m.albedo * v, m.roughness * v, m.metalness * v);
 }
@@ -94,24 +107,22 @@ fn sdBox( p : vec3f, c : vec3f, rotation : vec4f, s : vec3f, r : f32, material :
 {
     var sf : Surface;
 
-    let pos : vec3f = rotate_point_quat(p - c, rotation);
+    let pos : vec3f = rotate_point_quat(p - c, rotation) - r;
 
     let q : vec3f = abs(pos) - s;
-    sf.distance = length(max(q, vec3f(0.0))) + min(max(q.x, max(q.y, q.z)), 0.0) - r;
+    sf.distance = length(max(q, vec3f(0.0))) + min(max(q.x, max(q.y, q.z)), 0.0) + r;
     sf.material = material;
     return sf;
 }
 
-fn sdCapsule( p : vec3f, a : vec3f, height: f32, rotation : vec4f, r : f32, material : Material) -> Surface
+fn sdCapsule(p : vec3f, c : vec3f, rotation : vec4f, radius : f32, height : f32, material : Material) -> Surface
 {
     var sf : Surface;
-    let posA : vec3f = rotate_point_quat(p - a, rotation);
-    let b : vec3f = a + vec3f(0.0, height, 0.0);
+    let pa : vec3f = rotate_point_quat(p - c, rotation);
+    let ba : vec3f = (c - vec3f(0.0, 0.0, height)) - c;
 
-    let pa : vec3f = posA;
-    let ba : vec3f = b - a;
     let h : f32 = clamp(dot(pa,ba) / dot(ba, ba), 0.0, 1.0);
-    sf.distance = length(pa-ba*h) - r;
+    sf.distance = length(pa-ba*h) - radius;
     sf.material = material;
     return sf;
 }
@@ -257,27 +268,28 @@ fn sminN( a : f32, b : f32, k : f32, n : f32 ) -> vec2f
 fn soft_min(a : f32, b : f32, k : f32) -> vec2f 
 { 
     let h : f32 = max(k - abs(a - b), 0) / k; 
-    let m : f32 = h * h * h * 0.5;
+    let m : f32 = h * h * 0.5;
     return vec2f(min(a, b) - h * h * k * 0.25, select(1.0 - m, m, a < b)); 
 }
 
 // From iqulzes and Dreams
-fn sminPoly(a : f32, b : f32, k : f32) -> vec2f {
-    let h : f32 = max(k - abs(a - b), 0.0) / k;
+fn sminQuadratic(a : f32, b : f32, k : f32) -> vec2f {
+    let norm_k : f32 = k;// * 4.0;
+    let h : f32 = max(norm_k - abs(a - b), 0.0) / norm_k;
     let m : f32 = h*h;
-    let s : f32 = m*k*(1.0/4.0);
+    let s : f32 = m*norm_k * 0.25;
 
     if (a < b) {
-        return vec2f(a - s, m);
+        return vec2f(a - s, m *0.5);
     } else {
-        return vec2f(b - s, 1.0 - m);
+        return vec2f(b - s, 1.0 - (m * 0.5));
     }
 }
 
 fn opSmoothUnion( s1 : Surface, s2 : Surface, k : f32 ) -> Surface
 {
-    let smin : vec2f = soft_min(s2.distance, s1.distance, k);
-    //let smin : vec2f = sminPoly(s2.distance, s1.distance, k);
+    //let smin : vec2f = soft_min(s2.distance, s1.distance, k);
+    let smin : vec2f = sminQuadratic(s2.distance, s1.distance, k);
     var sf : Surface;
     sf.distance = smin.x;
     sf.material = Material_mix(s2.material, s1.material, smin.y);
@@ -367,7 +379,7 @@ fn opPaint( s1 : Surface, s2 : Surface, material : Material, color_blend_op : u3
 
 fn opSmoothSubtraction( s1 : Surface, s2 : Surface, k : f32 ) -> Surface
 {
-    let smin : vec2f = soft_min(s2.distance, -s1.distance, k);
+    let smin : vec2f = sminQuadratic(s2.distance, -s1.distance, k);
     var s : Surface;
     s.distance = -smin.x;
     s.material = s2.material;
@@ -409,6 +421,260 @@ fn map_thickness( t : f32, v_max : f32 ) -> f32
     return select( 0.0, max(t * v_max * 0.375, 0.003), t > 0.0);
 }
 
+// TODO(Juan): Onion
+// TODO(Juan): Unify materials
+// SPHERE SDFS ================
+fn eval_stroke_sphere_substraction( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>) -> Surface {
+    var result_surface : Surface = current_surface;
+    var tmp_surface : Surface;
+
+    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
+    let edit_count : u32 = (*curr_stroke).edit_count;
+    let stroke_material = (*curr_stroke).material;
+    let parameters : vec4f = (*curr_stroke).parameters;
+
+    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+
+    let smooth_factor : f32 = parameters.w;
+
+    for(var i : u32 = 0u; i < edit_count; i++) {
+        let curr_edit : Edit = edit_array[i];
+        let radius : f32 = curr_edit.dimensions.x;
+        tmp_surface = sdSphere(position, curr_edit.position, radius, material);
+        result_surface = opSmoothSubtraction(result_surface, tmp_surface, smooth_factor);
+    }
+    
+    return result_surface;
+}
+
+fn eval_stroke_sphere_union( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>) -> Surface {
+    var result_surface : Surface = current_surface;
+    var tmp_surface : Surface;
+
+    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
+    let edit_count : u32 = (*curr_stroke).edit_count;
+    let stroke_material = (*curr_stroke).material;
+    let parameters : vec4f = (*curr_stroke).parameters;
+
+    let smooth_factor : f32 = parameters.w;
+    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+
+    for(var i : u32 = 0u; i < edit_count; i++) {
+        let curr_edit : Edit = edit_array[i];
+        let radius : f32 = curr_edit.dimensions.x;
+        tmp_surface = sdSphere(position, curr_edit.position, radius, material);
+        result_surface = opSmoothUnion(result_surface, tmp_surface, smooth_factor);
+    }
+    
+    return result_surface;
+}
+
+// BOX SDFS ================
+fn eval_stroke_box_substraction( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>) -> Surface {
+    var result_surface : Surface = current_surface;
+    var tmp_surface : Surface;
+    
+    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
+    let edit_count : u32 = (*curr_stroke).edit_count;
+    let stroke_material = (*curr_stroke).material;
+    let parameters : vec4f = (*curr_stroke).parameters;
+
+    let smooth_factor : f32 = parameters.w;
+    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+
+    for(var i : u32 = 0u; i < edit_count; i++) {
+        let curr_edit : Edit = edit_array[i];
+        let radius : f32 = curr_edit.dimensions.x;
+        var size : vec3f = curr_edit.dimensions.xyz;
+        let size_param = (curr_edit.dimensions.w / 0.1) * size.x; // Make Rounding depend on the side length
+        size -= size_param;
+
+        tmp_surface = sdBox(position, curr_edit.position, curr_edit.rotation, size, size_param, material);
+        result_surface = opSmoothSubtraction(result_surface, tmp_surface, smooth_factor);
+    }
+
+    return result_surface;
+}
+
+fn eval_stroke_box_union( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>) -> Surface {
+    var result_surface : Surface = current_surface;
+    var tmp_surface : Surface;
+    
+    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
+    let edit_count : u32 = (*curr_stroke).edit_count;
+    let stroke_material = (*curr_stroke).material;
+    let parameters : vec4f = (*curr_stroke).parameters;
+
+    let smooth_factor : f32 = parameters.w;
+    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+
+    for(var i : u32 = 0u; i < edit_count; i++) {
+        let curr_edit : Edit = edit_array[i];
+        let radius : f32 = curr_edit.dimensions.x;
+        var size : vec3f = curr_edit.dimensions.xyz;
+        let size_param = (curr_edit.dimensions.w / 0.1) * size.x; // Make Rounding depend on the side length
+        size -= size_param;
+
+        tmp_surface = sdBox(position, curr_edit.position, curr_edit.rotation, size, size_param, material);
+        result_surface = opSmoothUnion(result_surface, tmp_surface, smooth_factor);
+    }
+
+    return result_surface;
+}
+
+
+// CONE SDFS ================
+fn eval_stroke_cone_substraction( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>) -> Surface {
+    var result_surface : Surface = current_surface;
+    var tmp_surface : Surface;
+
+    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
+    let edit_count : u32 = (*curr_stroke).edit_count;
+    let stroke_material = (*curr_stroke).material;
+    let parameters : vec4f = (*curr_stroke).parameters;
+
+    let smooth_factor : f32 = parameters.w;
+    let cap_value : f32 = parameters.y;
+    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+
+    for(var i : u32 = 0u; i < edit_count; i++) {
+        let curr_edit : Edit = edit_array[i];
+        let radius : f32 = max(curr_edit.dimensions.x * (1.0 - cap_value), 0.0025);
+        let size_param : f32 = curr_edit.dimensions.w;
+        let dims = vec2f(size_param, size_param * cap_value);
+
+        tmp_surface = sdCone(position, curr_edit.position, radius, dims, curr_edit.rotation, material);
+        result_surface = opSmoothSubtraction(result_surface, tmp_surface, smooth_factor);
+    }
+
+    return result_surface;
+}
+
+fn eval_stroke_cone_union( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>) -> Surface {
+    var result_surface : Surface = current_surface;
+    var tmp_surface : Surface;
+
+    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
+    let edit_count : u32 = (*curr_stroke).edit_count;
+    let stroke_material  = (*curr_stroke).material;
+    let parameters : vec4f = (*curr_stroke).parameters;
+    
+    let smooth_factor : f32 = parameters.w;
+    let cap_value : f32 = parameters.y;
+    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+
+    for(var i : u32 = 0u; i < edit_count; i++) {
+        let curr_edit : Edit = edit_array[i];
+        let radius : f32 = max(curr_edit.dimensions.x * (1.0 - cap_value), 0.0025);
+        let size_param : f32 = curr_edit.dimensions.w;
+        let dims = vec2f(size_param, size_param * cap_value);
+
+        tmp_surface = sdCone(position, curr_edit.position, radius, dims, curr_edit.rotation, material);
+        result_surface = opSmoothUnion(result_surface, tmp_surface, smooth_factor);
+    }
+
+    return result_surface;
+}
+
+// CAPSULE SDFS ================
+fn eval_stroke_capsule_substraction( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>) -> Surface {
+    var result_surface : Surface = current_surface;
+    var tmp_surface : Surface;
+
+    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
+    let edit_count : u32 = (*curr_stroke).edit_count;
+    let stroke_material = (*curr_stroke).material;
+    let parameters : vec4f = (*curr_stroke).parameters;
+
+    let smooth_factor : f32 = parameters.w;
+    let cap_value : f32 = parameters.y;
+    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+
+    for(var i : u32 = 0u; i < edit_count; i++) {
+        let curr_edit : Edit = edit_array[i];
+        let height : f32 = curr_edit.dimensions.x;
+        let size_param : f32 = curr_edit.dimensions.w;
+
+        tmp_surface = sdCapsule(position, curr_edit.position, curr_edit.rotation, size_param, height, material);
+        result_surface = opSmoothUnion(result_surface, tmp_surface, smooth_factor);
+    }
+
+    return result_surface;
+}
+
+fn eval_stroke_capsule_union( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>) -> Surface {
+    var result_surface : Surface = current_surface;
+    var tmp_surface : Surface;
+
+    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
+    let edit_count : u32 = (*curr_stroke).edit_count;
+    let stroke_material  = (*curr_stroke).material;
+    let parameters : vec4f = (*curr_stroke).parameters;
+    
+    let smooth_factor : f32 = parameters.w;
+    let cap_value : f32 = parameters.y;
+    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+
+    for(var i : u32 = 0u; i < edit_count; i++) {
+        let curr_edit : Edit = edit_array[i];
+        let height : f32 = curr_edit.dimensions.x;
+        let size_param : f32 = curr_edit.dimensions.w;
+
+        tmp_surface = sdCapsule(position, curr_edit.position, curr_edit.rotation, size_param, height, material);
+        //tmp_surface = sdCapsule(position, curr_edit.position, curr_edit.rotation, 0.005, 0.02, material);
+        result_surface = opSmoothUnion(result_surface, tmp_surface, smooth_factor);
+    }
+
+    return result_surface;
+}
+
+fn evaluate_edit_2( position: vec3f, stroke: ptr<storage, Stroke, read>, current_surface : Surface) -> Surface {
+    let stroke_operation : u32 = (*stroke).operation;
+    let stroke_primitive : u32 = (*stroke).primitive;
+
+    let curr_stroke_code : u32 = stroke_primitive | (stroke_operation << 4u);
+
+    var result_surface : Surface = current_surface;
+
+    switch(curr_stroke_code) {
+        case SD_SPHERE_SMOOTH_OP_UNION: {
+            result_surface = eval_stroke_sphere_union(position, result_surface, stroke);
+            break;
+        }
+        case SD_SPHERE_SMOOTH_OP_SUBSTRACTION:{
+            result_surface = eval_stroke_sphere_substraction(position, result_surface, stroke);
+            break;
+        }
+        case SD_BOX_SMOOTH_OP_UNION: {
+            result_surface = eval_stroke_box_union(position, result_surface, stroke);
+            break;
+        }
+        case SD_BOX_SMOOTH_OP_SUBSTRACTION: {
+            result_surface = eval_stroke_box_substraction(position, result_surface, stroke);
+            break;
+        }
+        case SD_CONE_SMOOTH_OP_UNION: {
+            result_surface = eval_stroke_cone_union(position, result_surface, stroke);
+            break;
+        }
+        case SD_CONE_SMOOTH_OP_SUBSTRACTION: {
+            result_surface = eval_stroke_cone_substraction(position, result_surface, stroke);
+            break;
+        }
+        case SD_CAPSULE_SMOOTH_OP_UNION: {
+            result_surface = eval_stroke_capsule_union(position, result_surface, stroke);
+            break;
+        }
+        case SD_CAPSULE_SMOOTH_OP_SUBSTRACTION: {
+            result_surface = eval_stroke_capsule_substraction(position, result_surface, stroke);
+            break;
+        }
+        default: {}
+    }
+
+    return result_surface;
+}
+
 fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters : vec4f, color_blend_op : u32, current_surface : Surface, stroke_material : Material, edit : Edit) -> Surface
 {
     var pSurface : Surface;
@@ -439,105 +705,106 @@ fn evaluate_edit( position : vec3f, primitive : u32, operation : u32, parameters
             }
             break;
         }
-        case SD_BOX: {
-            onion_thickness = map_thickness( onion_thickness, size.x );
-            size_param = (size_param / 0.1) * size.x; // Make Rounding depend on the side length
+        // case SD_BOX: {
+        //     onion_thickness = map_thickness( onion_thickness, size.x );
+        //     size_param = (size_param / 0.1) * size.x; // Make Rounding depend on the side length
 
-            // Compensate onion size (Substract from box radius bc onion will add it later...)
-            size -= onion_thickness;
-            size -= size_param;
-            size_param -= onion_thickness;
+        //     // Compensate onion size (Substract from box radius bc onion will add it later...)
+        //     size -= onion_thickness;
+        //     size -= size_param;
+        //     size_param -= onion_thickness;
 
-            pSurface = sdBox(position, edit.position, edit.rotation, size, size_param, stroke_material);
-            break;
-        }
-        case SD_CAPSULE: {
-            onion_thickness = map_thickness( onion_thickness, size_param );
-            size_param -= onion_thickness; // Compensate onion size
-            pSurface = sdCapsule(position, edit.position, radius, edit.rotation, size_param, stroke_material);
-            break;
-        }
-        case SD_CONE: {
-            // onion_thickness = map_thickness( onion_thickness, 0.01 );
-            radius = max(radius * (1.0 - cap_value), 0.0025);
-            var dims = vec2f(size_param, size_param * cap_value);
-            pSurface = sdCone(position, edit.position, radius, dims, edit.rotation, stroke_material);
-            break;
-        }
-        // case SD_PYRAMID: {
-        //     pSurface = sdPyramid(position, edit.position, edit.rotation, radius, size_param, edit_color);
+        //     pSurface = sdBox(position, edit.position, edit.rotation, size, size_param, stroke_material);
         //     break;
         // }
-        case SD_CYLINDER: {
-            onion_thickness = map_thickness( onion_thickness, size_param );
-            size_param -= onion_thickness; // Compensate onion size
-            pSurface = sdCylinder(position, edit.position, edit.rotation, size_param, radius, 0.0, stroke_material);
-            break;
-        }
-        case SD_TORUS: {
-            // onion_thickness = map_thickness( onion_thickness, size_param );
-            // size_param -= onion_thickness; // Compensate onion size
-            size_param = clamp( size_param, 0.0001, radius );
-            if(cap_value > 0.0) {
-                var an = M_PI * (1.0 - cap_value);
-                var angles = vec2f(sin(an), cos(an));
-                pSurface = sdCappedTorus(position, edit.position, vec2f(radius, size_param), edit.rotation, angles, stroke_material);
-            } else {
-                pSurface = sdTorus(position, edit.position, vec2f(radius, size_param), edit.rotation, stroke_material);
-            }
-            break;
-        }
-        case SD_BEZIER: {
-            var curve_thickness : f32 = 0.01;
-            pSurface = sdQuadraticBezier(position, edit.position, edit.position + vec3f(0.1, 0.2, 0.0), edit.position + vec3f(0.2, 0.0, 0.0), curve_thickness, edit.rotation, stroke_material);
-            break;
-        }
+        // case SD_CAPSULE: {
+        //     onion_thickness = map_thickness( onion_thickness, size_param );
+        //     size_param -= onion_thickness; // Compensate onion size
+        //     var height = radius; // ...
+        //     pSurface = sdCapsule(position, edit.position, edit.position - vec3f(0.0, 0.0, height), edit.rotation, size_param, stroke_material);
+        //     break;
+        // }
+        // case SD_CONE: {
+        //     onion_thickness = map_thickness( onion_thickness, 0.01 );
+        //     radius = max(radius * (1.0 - cap_value), 0.0025);
+        //     var dims = vec2f(size_param, size_param * cap_value);
+        //     pSurface = sdCone(position, edit.position, radius, edit.rotation, dims, stroke_material);
+        //     break;
+        // }
+        // // case SD_PYRAMID: {
+        // //     pSurface = sdPyramid(position, edit.position, edit.rotation, radius, size_param, edit_color);
+        // //     break;
+        // // }
+        // case SD_CYLINDER: {
+        //     onion_thickness = map_thickness( onion_thickness, size_param );
+        //     size_param -= onion_thickness; // Compensate onion size
+        //     pSurface = sdCylinder(position, edit.position, edit.rotation, size_param, radius, 0.0, stroke_material);
+        //     break;
+        // }
+        // case SD_TORUS: {
+        //     onion_thickness = map_thickness( onion_thickness, size_param );
+        //     size_param -= onion_thickness; // Compensate onion size
+        //     size_param = clamp( size_param, 0.0001, radius );
+        //     if(cap_value > 0.0) {
+        //         var an = M_PI * (1.0 - cap_value);
+        //         var angles = vec2f(sin(an), cos(an));
+        //         pSurface = sdCappedTorus(position, edit.position, vec2f(radius, size_param), edit.rotation, angles, stroke_material);
+        //     } else {
+        //         pSurface = sdTorus(position, edit.position, vec2f(radius, size_param), edit.rotation, stroke_material);
+        //     }
+        //     break;
+        // }
+        // case SD_BEZIER: {
+        //     var curve_thickness : f32 = 0.01;
+        //     pSurface = sdQuadraticBezier(position, edit.position, edit.position + vec3f(0.1, 0.2, 0.0), edit.position + vec3f(0.2, 0.0, 0.0), curve_thickness, edit.rotation, stroke_material);
+        //     break;
+        // }
         default: {
             break;
         }
     }
 
-    // Shape edition ...
-    if( do_onion && (operation == OP_UNION || operation == OP_SMOOTH_UNION) )
-    {
-        // pSurface = opOnion(pSurface, onion_thickness);
-    }
+    // // Shape edition ...
+    // if( do_onion && (operation == OP_UNION || operation == OP_SMOOTH_UNION) )
+    // {
+    //     pSurface = opOnion(pSurface, onion_thickness);
+    // }
 
     pSurface.material = stroke_material;
 
     switch (operation) {
-        case OP_UNION: {
-            pSurface = opUnion(current_surface, pSurface);
-            break;
-        }
-        case OP_SUBSTRACTION:{
-            pSurface = opSubtraction(current_surface, pSurface);
-            break;
-        }
-        case OP_INTERSECTION: {
-            pSurface = opIntersection(current_surface, pSurface);
-            break;
-        }
-        case OP_PAINT: {
-            pSurface = opPaint(current_surface, pSurface, stroke_material, color_blend_op);
-            break;
-        }
+        // case OP_UNION: {
+        //     pSurface = opUnion(current_surface, pSurface);
+        //     break;
+        // }
+        // case OP_SUBSTRACTION:{
+        //     pSurface = opSubtraction(current_surface, pSurface);
+        //     break;
+        // }
+        // case OP_INTERSECTION: {
+        //     pSurface = opIntersection(current_surface, pSurface);
+        //     break;
+        // }
+        // case OP_PAINT: {
+        //     pSurface = opPaint(current_surface, pSurface, stroke_material);
+        //     break;
+        // }
         case OP_SMOOTH_UNION: {
             pSurface = opSmoothUnion(current_surface, pSurface, smooth_factor);
             break;
         }
-        case OP_SMOOTH_SUBSTRACTION: {
-            pSurface = opSmoothSubtraction(current_surface, pSurface, smooth_factor);
-            break;
-        }
-        case OP_SMOOTH_INTERSECTION: {
-            pSurface = opSmoothIntersection(current_surface, pSurface, smooth_factor);
-            break;
-        }
-        case OP_SMOOTH_PAINT: {
-            pSurface = opSmoothPaint(current_surface, pSurface, stroke_material, smooth_factor);
-            break;
-        }
+        // case OP_SMOOTH_SUBSTRACTION: {
+        //     pSurface = opSmoothSubtraction(current_surface, pSurface, smooth_factor);
+        //     break;
+        // }
+        // case OP_SMOOTH_INTERSECTION: {
+        //     pSurface = opSmoothIntersection(current_surface, pSurface, smooth_factor);
+        //     break;
+        // }
+        // case OP_SMOOTH_PAINT: {
+        //     pSurface = opSmoothPaint(current_surface, pSurface, stroke_material, smooth_factor);
+        //     break;
+        // }
         default: {
             break;
         }

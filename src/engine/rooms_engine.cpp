@@ -92,16 +92,16 @@ void RoomsEngine::clean()
 
 void RoomsEngine::update(float delta_time)
 {
+    if (sculpt_editor) {
+        sculpt_editor->update(delta_time);
+    }
+
     Engine::update(delta_time);
 
     Node::check_controller_signals();
 
     for (auto entity : entities) {
         entity->update(delta_time);
-    }
-
-    if (sculpt_editor) {
-        sculpt_editor->update(delta_time);
     }
 
     if (Input::was_key_pressed(GLFW_KEY_E))
@@ -138,7 +138,7 @@ void RoomsEngine::render()
             RoomsRenderer::instance->add_light(light_node);
         }
     }
-    
+
 	for (auto entity : entities) {
 		entity->render();
 	}
@@ -294,7 +294,7 @@ bool RoomsEngine::import_scene()
     //rmr->compute_octree();
 
     spdlog::info("Scene imported! ({} edits)", num_edits);
-    
+
     return true;
 }
 
@@ -357,7 +357,7 @@ void RoomsEngine::render_gui()
                         it++;
                     }
                 }
-                
+
                 ImGui::TreePop();
             }
             ImGui::EndTabItem();

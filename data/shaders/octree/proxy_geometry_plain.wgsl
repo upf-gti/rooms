@@ -37,10 +37,10 @@ struct CameraData {
 };
 
 @group(0) @binding(0) var<storage, read> brick_copy_buffer : array<u32>;
-@group(0) @binding(1) var<storage, read> preview_data : PreviewDataReadonly;
+@group(0) @binding(1) var<storage, read> preview_stroke : Stroke;
 @group(0) @binding(3) var read_sdf: texture_3d<f32>;
 @group(0) @binding(4) var texture_sampler : sampler;
-@group(0) @binding(5) var<storage, read> octree_proxy_data: OctreeProxyInstancesNonAtomic;
+@group(0) @binding(5) var<storage, read> brick_buffers: BrickBuffers_ReadOnly;
 @group(0) @binding(8) var read_material_sdf: texture_3d<u32>;
 
 #dynamic @group(1) @binding(0) var<uniform> camera_data : CameraData;
@@ -51,7 +51,7 @@ struct CameraData {
 fn vs_main(in: VertexInput) -> VertexOutput {
 
     let instance_index : u32 = brick_copy_buffer[in.instance_id];
-    let instance_data : ProxyInstanceData = octree_proxy_data.instance_data[instance_index];
+    let instance_data : ProxyInstanceData = brick_buffers.brick_instance_data[instance_index];
 
     let tile_pointer : u32 = ray_intersection_info.tile_pointer;
 
@@ -151,16 +151,16 @@ fn sample_sdf_atlas(atlas_position : vec3f) -> f32
 fn sample_sdf_with_preview(sculpt_position : vec3f, atlas_position : vec3f) -> Surface
 {
     var material : Material;
-    material.albedo = preview_data.preview_stroke.material.color.xyz;
-    material.roughness = preview_data.preview_stroke.material.roughness;
-    material.metalness = preview_data.preview_stroke.material.metallic;
+    material.albedo = preview_stroke.material.color.xyz;
+    material.roughness = preview_stroke.material.roughness;
+    material.metalness = preview_stroke.material.metallic;
 
     var surface : Surface;
     surface.distance = sample_sdf_atlas(atlas_position);
     surface.material = interpolate_material(atlas_position * SDF_RESOLUTION);
     
-    for(var i : u32 = 0u; i < preview_data.preview_stroke.edit_count; i++) {
-        surface = evaluate_edit(sculpt_position, preview_data.preview_stroke.primitive, preview_data.preview_stroke.operation, preview_data.preview_stroke.parameters, preview_data.preview_stroke.color_blend_op, surface, material, preview_data.preview_stroke.edits[i]);
+    for(var i : u32 = 0u; i < preview_stroke.edit_count; i++) {
+        surface = evaluate_edit(sculpt_position, preview_stroke.primitive, preview_stroke.operation, preview_stroke.parameters, preview_stroke.color_blend_op, surface, material, preview_stroke.edits[i]);
         surface.distance = surface.distance / 2.0; 
     }
     
@@ -174,8 +174,8 @@ fn sample_sdf_with_preview_without_material(sculpt_position : vec3f, atlas_posit
     var surface : Surface;
     surface.distance = sample_sdf_atlas(atlas_position);
     
-    for(var i : u32 = 0u; i < preview_data.preview_stroke.edit_count; i++) {
-        surface = evaluate_edit(sculpt_position, preview_data.preview_stroke.primitive, preview_data.preview_stroke.operation, preview_data.preview_stroke.parameters, preview_data.preview_stroke.color_blend_op, surface, material, preview_data.preview_stroke.edits[i]);
+    for(var i : u32 = 0u; i < preview_stroke.edit_count; i++) {
+        surface = evaluate_edit(sculpt_position, preview_stroke.primitive, preview_stroke.operation, preview_stroke.parameters, preview_stroke.color_blend_op, surface, material, preview_stroke.edits[i]);
     }
     
     return surface.distance;
@@ -274,18 +274,22 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
 	for (i = 0; depth < max_distance && i < MAX_ITERATIONS; i++)
     {
 		position_in_atlas = ray_origin_in_atlas_space + ray_dir * depth;
-
         distance = sample_sdf_atlas(position_in_atlas);
+        depth += distance * step(MIN_HIT_DIST, distance);
+        depth = min(depth, max_distance);
+        
+        // position_in_atlas = ray_origin_in_atlas_space + ray_dir * depth;
+        // distance = sample_sdf_atlas(position_in_atlas);
+        // depth += distance * step(MIN_HIT_DIST, distance);
+        // depth = min(depth, max_distance);
 
 		if (distance < MIN_HIT_DIST) {
             exit = 1u;
             break;
 		} 
-
-        depth += distance;
 	}
 
-    if (exit == 1u) {
+    if (exit == 1u ) {
         // From atlas position, to sculpt, to world
         let position_in_sculpt : vec3f = ray_origin_in_sculpt_space + ray_dir * (depth / SCULPT_TO_ATLAS_CONVERSION_FACTOR);
         let position_in_world : vec3f = rotate_point_quat(position_in_sculpt, (sculpt_data.sculpt_rotation)) + sculpt_data.sculpt_start_position;
@@ -299,9 +303,15 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
         last_found_surface_distance = distance;
 
         let material : Material = sample_material_atlas(position_in_atlas);
+        // let interpolant : f32 = (f32( i ) / f32(MAX_ITERATIONS)) * (M_PI / 2.0);
+        // var heatmap_color : vec3f;
+        // heatmap_color.r = sin(interpolant);
+        // heatmap_color.g = sin(interpolant * 2.0);
+        // heatmap_color.b = cos(interpolant);
+        // return vec4f(heatmap_color, depth);
         //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
 		return vec4f(apply_light(-ray_dir, position_in_world, position_in_world, normal, lightPos + lightOffset, material), depth);
-        //return vec4f(normal, depth);
+        //sreturn vec4f(normal, depth);
         //return vec4f(material.albedo, depth);
         //return vec4f(normal, depth);
         //return vec4f(vec3f(material.albedo), depth);

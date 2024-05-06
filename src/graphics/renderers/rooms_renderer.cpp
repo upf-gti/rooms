@@ -1,5 +1,6 @@
 #include "rooms_renderer.h"
 #include "framework/camera/camera_2d.h"
+#include "graphics/debug/renderdoc_capture.h"
 
 #ifdef XR_SUPPORT
 #include "xr/openxr_context.h"
@@ -25,6 +26,8 @@ RoomsRenderer::~RoomsRenderer()
 int RoomsRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
 {
     Renderer::initialize(window, use_mirror_screen);
+
+    size_t s = sizeof(Stroke) * 400;
 
     Shader::set_custom_define("SDF_RESOLUTION", SDF_RESOLUTION);
     Shader::set_custom_define("SCULPT_MAX_SIZE", SCULPT_MAX_SIZE);
@@ -87,15 +90,18 @@ void RoomsRenderer::clean()
 
 void RoomsRenderer::update(float delta_time)
 {
-    // Create the command encoder
-    WGPUCommandEncoderDescriptor encoder_desc = {};
-    global_command_encoder = wgpuDeviceCreateCommandEncoder(webgpu_context->device, &encoder_desc);
-
 #if defined(XR_SUPPORT)
     if (is_openxr_available) {
         xr_context->update();
     }
 #endif
+
+    if (debug_this_frame) {
+        RenderdocCapture::start_capture_frame();
+    }
+    // Create the command encoder
+    WGPUCommandEncoderDescriptor encoder_desc = {};
+    global_command_encoder = wgpuDeviceCreateCommandEncoder(webgpu_context->device, &encoder_desc);
 
     if (!is_openxr_available) {
         const auto& io = ImGui::GetIO();
@@ -143,6 +149,11 @@ void RoomsRenderer::render()
 
     wgpuCommandBufferRelease(commands);
     wgpuCommandEncoderRelease(global_command_encoder);
+
+    if (debug_this_frame) {
+        RenderdocCapture::end_capture_frame();
+        debug_this_frame = false;
+    }
 
     if (!is_openxr_available) {
         wgpuTextureViewRelease(swapchain_view);

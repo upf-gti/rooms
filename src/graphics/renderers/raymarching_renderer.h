@@ -10,11 +10,14 @@
 
 #include <list>
 
+#define OCTREE_DEPTH 6
+#define BRICK_SIZE 10u
 #define SSAA_SDF_WRITE_TO_TEXTURE false
 #define PREVIEW_EDITS_MAX 128
 #define SDF_RESOLUTION 400
 #define SCULPT_MAX_SIZE 1 // meters
 #define PREVIEW_PROXY_BRICKS_COUNT 4000u
+#define STROKE_HISTORY_MAX_SIZE 1000u
 
 class MeshInstance3D;
 
@@ -54,6 +57,10 @@ class RaymarchingRenderer {
     Texture         sdf_material_texture;
     Uniform         sdf_material_texture_uniform;
 
+    // Octree parameters
+    uint32_t        max_brick_count = 0u;
+    uint32_t        empty_brick_and_removal_buffer_count = 0u;
+
     // Octree creation
     Pipeline        compute_octree_evaluate_pipeline;
     Pipeline        compute_octree_increment_level_pipeline;
@@ -90,13 +97,12 @@ class RaymarchingRenderer {
     uint8_t         octree_depth = 0;
     uint32_t        octants_max_size = 0;
     uint32_t        octree_total_size = 0;
-    Uniform         octree_indirect_buffer;
+    Uniform         octree_indirect_buffer_struct;
+    Uniform         octree_indirect_buffer_struct_2;
     Uniform         octree_state;
-    Uniform         octree_proxy_instance_buffer;
-    Uniform         octree_proxy_indirect_buffer;
-    Uniform         octree_edit_culling_data;
-    Uniform         octree_indirect_brick_removal_buffer;
-    Uniform         octree_indirect_brick_removal_buffer_biding_2;
+    Uniform         octree_brick_buffers;
+    Uniform         octree_preview_stroke;
+    Uniform         octree_stroke_history;
     Uniform         octree_brick_copy_buffer;
     WGPUBindGroup   render_camera_bind_group = nullptr;
 
@@ -150,6 +156,18 @@ class RaymarchingRenderer {
         float dummy1;
     } ray_info;
 
+    struct sStrokeInfluence {
+        uint32_t stroke_count = 0u;
+        uint32_t pad_1 = UINT32_MAX; // TODO(Juan): aligment issues when using vec3
+        uint32_t pad_0 = 0u;
+        uint32_t pad_2 = UINT32_MAX;
+        glm::vec4 pad1;
+        glm::vec4 pad2;
+        glm::vec4 pad3;
+        Stroke strokes[STROKE_HISTORY_MAX_SIZE];
+        glm::vec4 padd; // TODO(Juan): HACK esto no deveria ser necesario
+    } stroke_influence_list;
+
     RayIntersectionInfo ray_intersection_info;
 
     Stroke current_stroke = {};
@@ -175,33 +193,26 @@ class RaymarchingRenderer {
         uint32_t padding[3];
     };
 
-    struct PreviewData {
-        uint32_t vertex_count = 0u;
-        uint32_t instance_count = 0u;
-        uint32_t first_vertex = 0u;
-        uint32_t first_instance = 0u;
-
-        Stroke   preview_stroke = {
-            .edit_count = 1u,
-            .primitive = SD_SPHERE,
-            .operation = OP_UNION,
-            .color_blending_op = COLOR_OP_REPLACE,
-            .edits = {
-                {
-                    .position = {0.00f, 0.10f, 0.0f},
-                    .dimensions = {0.050f, 0.01f, 0.01f,0.01f}
-                },
-                {
-                    .position = {0.00f, 0.00f, 0.0f},
-                    .dimensions = {0.050f, 0.01f, 0.01f,0.01f}
-                },
-                {
-                    .position = {0.00f, -0.150f, 0.0f},
-                    .dimensions = {0.10f, 0.01f, 0.01f,0.01f}
-                }
-            },
-        };
-    } preview_data;
+    Stroke   preview_stroke = {
+             .edit_count = 1u,
+             .primitive = SD_SPHERE,
+             .operation = OP_UNION,
+             .color_blending_op = COLOR_OP_REPLACE,
+             .edits = {
+                 {
+                     .position = {0.00f, 0.10f, 0.0f},
+                     .dimensions = {0.050f, 0.01f, 0.01f,0.01f}
+                 },
+                 {
+                     .position = {0.00f, 0.00f, 0.0f},
+                     .dimensions = {0.050f, 0.01f, 0.01f,0.01f}
+                 },
+                 {
+                     .position = {0.00f, -0.150f, 0.0f},
+                     .dimensions = {0.10f, 0.01f, 0.01f,0.01f}
+                 }
+             },
+    };
 
     // Timestepping counters
     float updated_time = 0.0f;
@@ -210,7 +221,7 @@ class RaymarchingRenderer {
     void init_raymarching_proxy_pipeline();
     void init_octree_ray_intersection_pipeline();
 
-    void evaluate_strokes(WGPUComputePassEncoder compute_pass, const std::vector<Stroke> strokes, bool is_undo = false, bool is_redo = false);
+    void evaluate_strokes(WGPUComputePassEncoder compute_pass, const std::vector<Stroke>& strokes, bool is_undo = false, bool is_redo = false);
 
     void compute_preview_edit(WGPUComputePassEncoder compute_pass);
 
@@ -219,6 +230,9 @@ class RaymarchingRenderer {
 
     bool needs_undo = false;
     bool needs_redo = false;
+
+    // DEBUG
+    MeshInstance3D *AABB_mesh;
 
 public:
 
@@ -247,8 +261,8 @@ public:
     const RayIntersectionInfo& get_ray_intersection_info() const;
 
     void set_preview_edit(const Edit& preview) {
-        preview_data.preview_stroke.edits[0] = preview;
-        preview_data.preview_stroke.edit_count = 1u;
+        preview_stroke.edits[0] = preview;
+        preview_stroke.edit_count = 1u;
     }
 
     /*

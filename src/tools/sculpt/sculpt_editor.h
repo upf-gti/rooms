@@ -34,6 +34,8 @@ class SculptEditor {
 
     eTool current_tool = eTool::NONE;
 
+    bool ui_edit_to_add = false;
+
     static uint8_t last_generated_material_uid;
     uint8_t num_generated_materials = 0u;
 
@@ -92,9 +94,13 @@ class SculptEditor {
     glm::vec3 initial_hand_translation = {};
     glm::vec3 translation_diff = {};
 
-    glm::vec3 prev_controller_pos = {};
-    glm::vec3 controller_velocity = {};
-    glm::vec3 controller_acceleration = {};
+    struct {
+        glm::vec3 prev_controller_pos = {};
+        glm::vec3 controller_velocity = {};
+        glm::vec3 controller_acceleration = {};
+        glm::vec3 controller_frame_distance = {};
+        glm::vec3 prev_edit_position = {};
+    } controller_position_data;
 
     glm::quat initial_hand_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
     glm::quat rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -183,7 +189,6 @@ class SculptEditor {
     bool was_tool_pressed = false;
     bool is_stretching_edit = false;
 
-    bool is_tool_being_used(bool stamp_enabled);
     bool edit_update(float delta_time);
     void mirror_current_edits(float delta_time);
     void apply_mirror_position(glm::vec3& position);
@@ -206,6 +211,8 @@ public:
 
     void enable_tool(eTool tool);
     void set_sculpt_started(bool value);
+
+    bool is_tool_being_used(bool stamp_enabled);
 
     void add_preview_edit_list(std::vector<Edit>& new_edit_lists) {
         for (Edit& edit : new_edit_lists) {

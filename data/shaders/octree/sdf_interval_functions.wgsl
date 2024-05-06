@@ -36,7 +36,14 @@ fn iadd_mats(a : mat3x3f, b : mat3x3f) -> mat3x3f
 		a[2].xy + b[2].xy);
 }
 
-fn iadd_vec3_mat(a : vec3f, b : mat3x3f) -> mat3x3f
+fn iadd_mat_float(a : mat3x3f, b : f32) -> mat3x3f {
+    return iavec3_vecs(
+		a[0].xy + b,
+		a[1].xy + b,
+		a[2].xy + b);
+}
+
+fn iadd_vec_mat(a : vec3f, b : mat3x3f) -> mat3x3f
 {
 	return iavec3_vecs(
 		a.xx + b[0].xy,
@@ -62,6 +69,14 @@ fn isub_mats(a : mat3x3f, b : mat3x3f) -> mat3x3f
 		a[0].xy - b[0].yx,
 		a[1].xy - b[1].yx,
 		a[2].xy - b[2].yx);
+}
+
+fn isub_mat_vec(a : mat3x3f, b : vec3f) -> mat3x3f
+{
+	return iavec3_vecs(
+		a[0].xy - b.xx,
+		a[1].xy - b.yy,
+		a[2].xy - b.zz);
 }
 
 fn isub_mat_vec3(a : mat3x3f, b : vec3f) -> mat3x3f
@@ -214,11 +229,6 @@ fn ipow2_mat(v : mat3x3f) -> mat3x3f
 		ipow2_vec(v[2].xy));
 }
 
-fn isign(a : vec2f) -> vec2f
-{
-    return vec2f(sign(a.x), sign(a.y));
-}
-
 fn imin(a : vec2f, b : vec2f) -> vec2f
 {
 	return vec2f(min(a.x,b.x),min(a.y,b.y));
@@ -306,24 +316,185 @@ fn icross_mats(a : mat3x3f, b : mat3x3f) -> mat3x3f
 fn icross_vec_mat(a : vec3f, b : mat3x3f) -> mat3x3f
 {
 	return iavec3_vecs(
-        isub_vecs(imul_float_vec(a.y, b[2].xy), imul_vec_float(b[1].xy, a.z)),
-        isub_vecs(imul_float_vec(a.z, b[0].xy), imul_vec_float(b[2].xy, a.x)),
-        isub_vecs(imul_float_vec(a.x, b[1].xy), imul_vec_float(b[0].xy, a.y))
+        isub_vecs(imul_float_vec(a.y, b[2].xy), imul_float_vec(a.z, b[1].xy)),
+        isub_vecs(imul_float_vec(a.z, b[0].xy), imul_float_vec(a.x, b[2].xy)),
+        isub_vecs(imul_float_vec(a.x, b[1].xy), imul_float_vec(a.y, b[0].xy))
     );
 }
 
-fn irotate_point_quat(position : mat3x3f, rotation : vec4f) -> mat3x3f
+fn icross_mat_vec(a : mat3x3f, b : vec3f) -> mat3x3f
 {
-    let crosses : mat3x3f = icross_vec_mat(rotation.xyz, iadd_mats(icross_vec_mat(rotation.xyz, position), imul_float_mat(rotation.w, position)));
-    let position_rotated : mat3x3f = iadd_mats(position, imul_float_mat(2.0, crosses));
-
-    return position_rotated;
+	return iavec3_vecs(
+        isub_vecs(imul_float_vec(b.z, a[1].xy), imul_float_vec(b.y, a[2].xy)),
+        isub_vecs(imul_float_vec(b.x, a[2].xy), imul_float_vec(b.z, a[0].xy)),
+        isub_vecs(imul_float_vec(b.y, a[0].xy), imul_float_vec(b.x, a[1].xy))
+    );
 }
+fn iacos(x : vec2f) -> vec2f {
+    if (x.y < -1.0) {
+        return vec2f(10000.0, 10000.0);
+    }
+
+    if (x.x <= -1.0) {
+        if (x.y < 1.0) {
+            return vec2f(x.y, M_PI);
+        }
+
+        return vec2f(0.0, M_PI);
+    }
+
+    if (x.y < 1.0) {
+        return vec2f(acos(x.y), acos(x.x));
+    }
+
+    if (x.x < 1.0) {
+        return vec2f(0.0, acos(x.x));
+    }
+
+    if (x.x == 1.0) {
+        return vec2f(0.0);
+    }
+
+    return vec2f(10000.0, 10000.0);
+}
+
+fn isin(a : vec2f) -> vec2f {
+    var u : f32 = M_PI * round(a.x / M_PI) + M_PI * 1.5;
+
+    if (u < a.y) {
+        return vec2f(-1.0, 1.0);
+    }
+
+    u -= M_PI;
+    let s = vec2f(sin(a.x), sin(a.y));
+    let r = vec2f(min(s.x, s.y), max(s.x, s.y));
+
+    if (u < a.y) {
+        let s = sin(u);
+        return vec2f(min(r.x, s), max(r.y, s));
+    }
+
+    return vec2f(r.x, r.y);
+}
+
+fn isign(x : vec2f) -> vec2f {
+    return vec2f(sign(x.x), sign(x.y));
+}
+
+fn inorm_quat(q : mat4x4f) -> mat4x4f {
+    let s : vec2f = isign(q[3].xy);
+    return mat4x4(vec4f(imul_vecs(s, q[0].xy), 0.0, 0.0), vec4f(imul_vecs(s, q[1].xy), 0.0, 0.0), vec4f(imul_vecs(s, q[2].xy), 0.0, 0.0), vec4f(imul_vecs(s, q[3].xy), 0.0, 0.0));
+}
+
+// Implementing quaternion ops with https://github.com/mbanani/novelviewpoints/blob/eca4f41c9481c0639126b60a05d19b953dda4520/novelviewpoints/util/rotation.py#L65
+// as ref
+// TODO(Juan) pach the rotation interval
+// fn iquat_mult_quat_interv(q1 : vec4f, q2 : mat4x4f) -> mat4x4f {
+//     let q_w : vec2f = isub_vecs(isub_vecs(imul_float_vec(q1.w, q2[3].xy), imul_float_vec(q1.x, q2[0].xy)), isub_vecs(imul_float_vec(q1.y, q2[1].xy), imul_float_vec(q1.z, q2[2].xy)));
+//     let q_x : vec2f = iadd_vecs(iadd_vecs(imul_float_vec(q1.w, q2[0].xy), imul_float_vec(q1.x, q2[3].xy)), isub_vecs(imul_float_vec(q1.y, q2[2].xy), imul_float_vec(q1.z, q2[1].xy)));
+//     let q_y : vec2f = iadd_vecs(iadd_vecs(isub_vecs(imul_float_vec(q1.w, q2[1].xy), imul_float_vec(q1.x, q2[2].xy)), imul_float_vec(q1.y, q2[3].xy)), imul_float_vec(q1.z, q2[0].xy));
+//     let q_z : vec2f = iadd_vecs(iadd_vecs(imul_float_vec(q1.w, q2[2].xy), isub_vecs(imul_float_vec(q1.x, q2[1].xy), imul_float_vec(q1.y, q2[0].xy))), imul_float_vec(q1.z, q2[3].xy));
+
+//     return inorm_quat(mat4x4f(vec4f(q_x, 0.0, 0.0), vec4f(q_y, 0.0, 0.0), vec4f(q_z, 0.0, 0.0), vec4f(q_w, 0.0, 0.0)));
+// }
+
+// fn iquat_mult_interv_quat(q1 : mat4x4f, q2 : vec4f) -> mat4x4f {
+//     let q_w : vec2f = isub_vecs(isub_vecs(imul_float_vec(q2.w, q1[3].xy), imul_float_vec(q2.x, q1[0].xy)), isub_vecs(imul_float_vec(q2.y, q1[1].xy), imul_float_vec(q2.z, q1[2].xy)));
+//     let q_x : vec2f = iadd_vecs(iadd_vecs(imul_float_vec(q2.w, q1[0].xy), imul_float_vec(q2.x, q1[3].xy)), isub_vecs(imul_float_vec(q2.y, q1[2].xy), imul_float_vec(q2.z, q1[1].xy)));
+//     let q_y : vec2f = iadd_vecs(iadd_vecs(isub_vecs(imul_float_vec(q2.w, q1[1].xy), imul_float_vec(q2.x, q1[2].xy)), imul_float_vec(q2.y, q1[3].xy)), imul_float_vec(q2.z, q1[0].xy));
+//     let q_z : vec2f = iadd_vecs(iadd_vecs(imul_float_vec(q2.w, q1[2].xy), isub_vecs(imul_float_vec(q2.x, q1[1].xy), imul_float_vec(q2.y, q1[0].xy))), imul_float_vec(q2.z, q1[3].xy));
+
+//     return inorm_quat(mat4x4f(vec4f(q_x, 0.0, 0.0), vec4f(q_y, 0.0, 0.0), vec4f(q_z, 0.0, 0.0), vec4f(q_w, 0.0, 0.0)));
+// }
 
 fn idot(a : mat3x3f, b : mat3x3f) -> vec2f
 {
 	let c : mat3x3f = imul_mats(a,b);
 	return c[0].xy + c[1].xy + c[2].xy;
+}
+
+// fn iangle(l : vec3f, r : mat3x3f) -> vec2f {
+//     let sqMagL : f32 = l.x * l.x + l.y * l.y + l.z * l.z;
+//     let sqMagR : vec2f = ipow2_vec(r[0].xy) + ipow2_vec(r[1].xy ) + ipow2_vec(r[2].xy);
+//     if (sqMagL < 0.00001) { // || sqMagR < VEC3_EPSILON
+//         return vec2f(0.0, 0.0);
+//     }
+//     let isqMagL : vec2f = vec2f(sqMagL, sqMagL);
+//     let il = iavec3_vec(l);
+//     let dot : vec2f = idot(il, r);
+//     let len : vec2f = imul_vecs(isqrt(isqMagL), isqrt(sqMagR));
+//     return iacos(idiv_vecs(dot, len)); //rad
+// }
+
+// fn icross_trig_vec_mat(a : vec3f, b : mat3x3f) -> mat3x3f {
+//     let ab_angle : vec2f = iangle(a, b);
+//     let ab_lengths : vec2f = imul_vecs(ilength(iavec3_vec(a)), ilength(b));
+//     let ab_len_sin_angle : vec2f = imul_vecs(ab_lengths, isin(ab_angle));
+
+//     let n_b = icross_mats(iavec3_vec(a), b);
+//     let n_b_len_inv = idiv_vecs(vec2f(1.0, 1.0), ilength(n_b));
+//     let n = imul_vec2_mat(n_b_len_inv, n_b);
+
+//     return imul_vec2_mat(ab_len_sin_angle, n);
+// }
+
+struct iMat {
+    b_x : mat3x3f,
+    b_y : mat3x3f
+};
+
+fn imat_mul(m1_x : mat3x3f, m1_y : mat3x3f, m2_x : mat3x3f, m2_y : mat3x3f) -> iMat {
+    var res_x : mat3x3f = mat3x3f();
+    var res_y : mat3x3f = mat3x3f();
+    for(var i : u32 = 0; i < 3; i++) {
+        for(var j : u32 = 0; j < 3; j++) {
+            var tmp : vec2f = vec2f(0.0); 
+            for(var k : u32 = 0; k < 3; j++) {
+                tmp = iadd_vecs(tmp, imul_vecs(vec2f(m1_x[i][k], m1_y[i][k]), vec2f(m2_x[k][j], m2_y[k][j])));
+            }
+
+            res_x[i][j] = tmp.x;
+            res_y[i][j] = tmp.y;
+        }
+    }
+
+    return iMat(res_x, res_y);
+}
+
+fn imat_mul_vec(m1 : mat3x3f, p : mat3x3f) -> mat3x3f {
+    var res : mat3x3f = mat3x3f();
+    for(var i : u32 = 0; i < 3; i++) {
+        var tmp : vec2f = vec2f(0.0); 
+        for(var j : u32 = 0; j < 3; j++) {
+           tmp = iadd_vecs(tmp, imul_float_vec(m1[i][j], p[j].xy));
+        }
+        res[i] = vec3f(tmp.xy, 0.0);
+    }
+
+    return res;
+}
+
+fn icross_cross(r : vec4f, p : mat3x3f) -> mat3x3f {
+    let x : vec2f = isub_vecs(isub_vecs(iadd_vecs(iadd_vecs(isub_vecs(imul_float_vec(r.y* r.x, p[1].xy), imul_float_vec(r.y*r.y, p[0].xy)), imul_float_vec(r.y*r.w, p[2].xy)), imul_float_vec(r.z*r.x, p[2].xy)),   imul_float_vec(r.z*r.z, p[0].xy)),    imul_float_vec(r.z*r.w, p[1].xy)); 
+    let y : vec2f = iadd_vecs(isub_vecs(iadd_vecs(isub_vecs(iadd_vecs(imul_float_vec(-r.x* r.x, p[1].xy), imul_float_vec(r.x*r.y, p[0].xy)), imul_float_vec(r.x*r.w, p[2].xy)), imul_float_vec(r.z*r.y, p[2].xy)), imul_float_vec(r.z*r.z, p[1].xy)), imul_float_vec(r.z*r.w, p[0].xy)); // este ultimo singo no se
+    let z : vec2f = isub_vecs(iadd_vecs(isub_vecs(iadd_vecs(iadd_vecs(imul_float_vec(-r.x* r.x, p[2].xy), imul_float_vec(r.x*r.z, p[0].xy)), imul_float_vec(r.x*r.w, p[1].xy)), imul_float_vec(r.y*r.y, p[2].xy)), imul_float_vec(r.y*r.z, p[1].xy)),imul_float_vec(r.y*r.w, p[0].xy)); 
+
+    return mat3x3f(vec3f(x.xy, 0.0), vec3f(y.xy, 0.0), vec3(z.xy, 0.0));
+}
+
+fn irotate_point_quat(position : mat3x3f, rotation : vec4f) -> mat3x3f
+{
+    let rot_mat : mat3x3f = quat_to_mat3(rotation);
+
+    return imat_mul_vec(rot_mat, position);
+    // let q_pos : mat4x4f = mat4x4(vec4f(position[0].xyz, 0.0), vec4f(position[1].xyz, 0.0), vec4f(position[2].xyz, 0.0), vec4f(0.0));
+    // let pr_h : mat4x4f = iquat_mult_interv_quat(iquat_mult_quat_interv(rotation, q_pos), quat_conj(rotation));
+    // return mat3x3f(pr_h[0].xyz, pr_h[1].xyz, pr_h[2].xyz);
+    //icross_cross(rotation, position);// 
+    // let crosses : mat3x3f = icross_mats(iavec3_vec(rotation.xyz), iadd_mats(icross_mats(iavec3_vec(rotation.xyz), position), imul_float_mat(rotation.w, position)));
+    // let position_rotated : mat3x3f = iadd_mats(position, imul_float_mat(2.0, crosses));
+
+    // return position_rotated;
 }
 
 fn icontains(a : vec2f, v : f32) -> bool
@@ -427,12 +598,15 @@ fn isoft_min(a : vec2f, b : vec2f, r : f32) -> vec2f
     return isub_vecs(imin(a, b), imul_float_vec(0.25 / r, imul_vecs(e, e)));
 }
 
-fn isoft_min_poly(a : vec2f, b : vec2f, k : f32) -> vec2f {
-    let h : vec2f = imul_float_vec(1.0 / k, imax(k + ineg(iabs(isub_vecs(a, b))), vec2f(0.0)));
+fn isoft_min_quadratic(a : vec2f, b : vec2f, k : f32) -> vec2f {
+    let norm_k : f32 = k;//* 4.0;
+    let h : vec2f = imax(imul_float_vec(1.0 / norm_k, norm_k + ineg(iabs(isub_vecs(a, b)))), vec2f(0.0));
+    //let h : vec2f = imul_float_vec(1.0 / norm_k, imax(norm_k + ineg(iabs(isub_vecs(a, b))), vec2f(0.0)));
     let m : vec2f = ipow2_vec(h);
-    let s : vec2f = imul_float_vec(k * 0.25, m);
+    let s : vec2f = imul_float_vec(norm_k * 0.25, m);
 
-    return vec2f( iselect( isub_vecs(b, s), isub_vecs(a, s), ilessthan(a, b)));
+    return isub_vecs(imin(a,b), s);
+    //return vec2f( iselect( isub_vecs(b, s), isub_vecs(a, s), ilessthan(a, b)));
 }
 
 fn opUnionInterval( s1 : vec2f, s2 : vec2f ) -> vec2f
@@ -442,12 +616,12 @@ fn opUnionInterval( s1 : vec2f, s2 : vec2f ) -> vec2f
  
 fn opSmoothUnionInterval( s1 : vec2f, s2 : vec2f, k : f32 ) -> vec2f
 {
-    return isoft_min(s2, s1, k);
+    return isoft_min_quadratic(s1, s2, k);
 }
 
 fn opSmoothSubtractionInterval( s1 : vec2f, s2 : vec2f, k : f32 ) -> vec2f
 {
-    return ineg(isoft_min(s2, ineg(s1), k));
+    return ineg(isoft_min_quadratic(s2, ineg(s1), k));
 }
 
 fn opSubtractionInterval( s1 : vec2f, s2 : vec2f ) -> vec2f
@@ -487,10 +661,13 @@ fn idot_mat(v1 : mat3x3f, v2 : mat3x3f) -> vec2f {
 
 // Primitives
 
-fn sphere_interval(p : mat3x3f, edit_pos : vec3f, r : f32) -> vec2f
+fn sphere_interval(p : mat3x3f, edit_pos : vec3f, rotation : vec4f, r : f32) -> vec2f
 {
-	// x^2 + y^2 + z^2 - r^2
-	return isub_vecs(ilensq(isub_mat_vec3(p, edit_pos)), vec2f(r*r));
+	//let pos : mat3x3f = isub_mat_vec(p, edit_pos);//irotate_point_quat(, rotation);
+    let pos : mat3x3f = irotate_point_quat(isub_mat_vec(p, edit_pos), rotation);
+
+	//return isub_vec_float(ilength(p), r);
+    return isub_vec_float(ilength(pos), r);
 }
 
 fn cut_sphere_interval(p : mat3x3f, edit_pos : vec3f, rotation : vec4f, r : f32, h : f32) -> vec2f
@@ -537,11 +714,11 @@ fn box_interval(p : mat3x3f, edit_pos : vec3f, rotation : vec4f, size : vec3f, r
     // Move edit
     let interval_translated : mat3x3f = irotate_point_quat(isub_mat_vec3(p, edit_pos), rotation);
 
-    let interval_translated_sized : mat3x3f = isub_mat_vec3(iabs_mats(interval_translated), size);
+    let interval_translated_sized : mat3x3f = iadd_mat_float( isub_mat_vec(iabs_mats(interval_translated), size), r);
 
     var i_distance : vec2f = ilength(imax_mats(interval_translated_sized, mat_zero_interval));
     var max_on_all_axis : vec2f = imax(interval_translated_sized[0].xy, imax(interval_translated_sized[1].xy, interval_translated_sized[2].xy));
-    var i_dist2 : vec2f =  isub_vecs(imin(max_on_all_axis , vec2f(0.0, 0.0)), vec2f(r, r));
+    var i_dist2 : vec2f = isub_vecs(imin(max_on_all_axis , vec2f(0.0, 0.0)), vec2f(r, r));
 
     return iadd_vecs(i_distance, i_dist2);
 }
@@ -551,7 +728,7 @@ fn capsule_interval( p : mat3x3f, c : vec3f, rotation : vec4f, radius : f32, hei
     let a : mat3x3f = iavec3_vec(c);
     var pa : mat3x3f = irotate_point_quat(isub_mat_vec3(p, c), rotation);
 
-    let b : mat3x3f = iavec3_vec(c + vec3f(0.0, height, 0.0));
+    let b : mat3x3f = iavec3_vec(c - vec3f(0.0, 0.0, height));
     var ba : mat3x3f = isub_mats(b, a);
 
     var h : vec2f = iclamp(idiv_vecs(idot_mat(pa, ba), idot_mat(ba, ba)), 0.0, 1.0);
@@ -687,139 +864,397 @@ fn bezier_interval( p : mat3x3f, start : vec3f, cp : vec3f, end : vec3f, thickne
     return isub_vec_float(ilength(x), thickness);
 }
 
-fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f,  primitive : u32, operation : u32, edit_parameters : vec4f, current_interval : vec2f, edit : Edit, resulting_interval : ptr<function, vec2f>) -> vec2f
-{
-    var pSurface : vec2f;
 
-    // Center in texture (position 0,0,0 is just in the middle)
-    var size : vec3f = edit.dimensions.xyz;
-    var radius : f32 = edit.dimensions.x;
-    var size_param : f32 = edit.dimensions.w;
+// COMPOUND SDF FUNCTIONS
+fn eval_interval_stroke_sphere_substraction( position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>) -> vec2f {
+    var result_surface : vec2f = current_surface;
+    var tmp_surface : vec2f;
 
-    // 0 no cap ... 1 fully capped
-    var cap_value : f32 = clamp(edit_parameters.y, 0.0, 0.99);
+    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
+    let edit_count : u32 = (*curr_stroke).edit_count;
+    let parameters : vec4f = (*curr_stroke).parameters;
 
-    var onion_thickness : f32 = edit_parameters.x;
-    let do_onion = onion_thickness > 0.0;
+    let smooth_factor : f32 = parameters.w;
 
-    let smooth_factor : f32 = edit_parameters.w;
+    for(var i : u32 = 0u; i < edit_count; i++) {
+        let curr_edit : Edit = edit_array[i];
+        let radius : f32 = curr_edit.dimensions.x;
+        tmp_surface = sphere_interval(position, curr_edit.position,curr_edit.rotation, radius);
+        result_surface = opSmoothSubtractionInterval(result_surface, tmp_surface, smooth_factor);
+    }
+    
+    return result_surface;
+}
 
-    switch (primitive) {
+fn eval_interval_stroke_sphere_union( position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>,  dimension_margin : vec4f) -> vec2f {
+    var result_surface : vec2f = current_surface;
+    var tmp_surface : vec2f;
+
+    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
+    let edit_count : u32 = (*curr_stroke).edit_count;
+    let parameters : vec4f = (*curr_stroke).parameters;
+
+    let smooth_factor : f32 = parameters.w;
+
+    for(var i : u32 = 0u; i < edit_count; i++) {
+        let curr_edit : Edit = edit_array[i];
+        let radius : f32 = curr_edit.dimensions.x + dimension_margin.x;
+
+        tmp_surface = sphere_interval(position, curr_edit.position, curr_edit.rotation, radius);
+        result_surface = opUnionInterval(result_surface, tmp_surface);
+    }
+    
+    return result_surface;
+}
+
+fn eval_interval_stroke_sphere_smooth_union( position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>,  dimension_margin : vec4f) -> vec2f {
+    var result_surface : vec2f = current_surface;
+    var tmp_surface : vec2f;
+
+    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
+    let edit_count : u32 = (*curr_stroke).edit_count;
+    let parameters : vec4f = (*curr_stroke).parameters;
+
+    let smooth_factor : f32 = parameters.w;
+
+    for(var i : u32 = 0u; i < edit_count; i++) {
+        let curr_edit : Edit = edit_array[i];
+        let radius : f32 = curr_edit.dimensions.x + dimension_margin.x;
+
+        tmp_surface = sphere_interval(position, curr_edit.position, curr_edit.rotation, radius);
+        result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
+    }
+    
+    return result_surface;
+}
+
+
+// BOX SDFS ================
+fn eval_interval_stroke_box_substraction(position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>) -> vec2f {
+    var result_surface : vec2f = current_surface;
+    var tmp_surface : vec2f;
+    
+    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
+    let edit_count : u32 = (*curr_stroke).edit_count;
+    let parameters : vec4f = (*curr_stroke).parameters;
+
+    let smooth_factor : f32 = parameters.w;
+
+    for(var i : u32 = 0u; i < edit_count; i++) {
+        let curr_edit : Edit = edit_array[i];
+        var size : vec3f = curr_edit.dimensions.xyz;
+        let size_param = 0.0;//(curr_edit.dimensions.w / 0.1) * size.x; // Make Rounding depend on the side length
+        size -= size_param;
+
+        tmp_surface = box_interval(position, curr_edit.position, curr_edit.rotation, size, size_param);
+        result_surface = opSmoothSubtractionInterval(result_surface, tmp_surface, smooth_factor);
+    }
+
+    return result_surface;
+}
+
+fn eval_interval_stroke_box_smooth_union(position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>, dimension_margin : vec4f) -> vec2f {
+    var result_surface : vec2f = current_surface;
+    var tmp_surface : vec2f;
+    
+    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
+    let edit_count : u32 = (*curr_stroke).edit_count;
+    let parameters : vec4f = (*curr_stroke).parameters;
+
+    let smooth_factor : f32 = parameters.w;
+
+    for(var i : u32 = 0u; i < edit_count; i++) {
+        let curr_edit : Edit = edit_array[i];
+        var size : vec3f = curr_edit.dimensions.xyz + dimension_margin.xyz;
+        let size_param = (curr_edit.dimensions.w / 0.1) * size.x; // Make Rounding depend on the side length
+        size -= size_param;
+
+        tmp_surface = box_interval(position, curr_edit.position, curr_edit.rotation, size, size_param);
+        result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
+    }
+
+    return result_surface;
+}
+
+fn eval_interval_stroke_box_union(position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>, dimension_margin : vec4f) -> vec2f {
+    var result_surface : vec2f = current_surface;
+    var tmp_surface : vec2f;
+    
+    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
+    let edit_count : u32 = (*curr_stroke).edit_count;
+    let parameters : vec4f = (*curr_stroke).parameters;
+
+    let smooth_factor : f32 = parameters.w;
+
+    for(var i : u32 = 0u; i < edit_count; i++) {
+        let curr_edit : Edit = edit_array[i];
+        var size : vec3f = curr_edit.dimensions.xyz + dimension_margin.xyz;
+        let size_param = (curr_edit.dimensions.w / 0.1) * size.x; // Make Rounding depend on the side length
+        size -= size_param;
+
+        tmp_surface = box_interval(position, curr_edit.position, curr_edit.rotation, size, size_param);
+        result_surface = opUnionInterval(result_surface, tmp_surface);
+    }
+
+    return result_surface;
+}
+
+// CAPSULE SDFS ================
+fn eval_interval_stroke_capsule_substraction(position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>) -> vec2f {
+    var result_surface : vec2f = current_surface;
+    var tmp_surface : vec2f;
+    
+    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
+    let edit_count : u32 = (*curr_stroke).edit_count;
+    let parameters : vec4f = (*curr_stroke).parameters;
+
+    let smooth_factor : f32 = parameters.w;
+
+    for(var i : u32 = 0u; i < edit_count; i++) {
+        let curr_edit : Edit = edit_array[i];
+
+        tmp_surface = capsule_interval(position, curr_edit.position, curr_edit.rotation, curr_edit.dimensions.w, curr_edit.dimensions.x);
+        result_surface = opSmoothSubtractionInterval(result_surface, tmp_surface, smooth_factor);
+    }
+
+    return result_surface;
+}
+
+fn eval_interval_stroke_capsule_union(position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>, dimension_margin : vec4f) -> vec2f {
+    var result_surface : vec2f = current_surface;
+    var tmp_surface : vec2f;
+    
+    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
+    let edit_count : u32 = (*curr_stroke).edit_count;
+    let parameters : vec4f = (*curr_stroke).parameters;
+
+    let smooth_factor : f32 = parameters.w;
+
+    for(var i : u32 = 0u; i < edit_count; i++) {
+        let curr_edit : Edit = edit_array[i];
+
+        tmp_surface = capsule_interval(position, curr_edit.position, curr_edit.rotation, curr_edit.dimensions.w, curr_edit.dimensions.x);
+        result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
+    }
+
+    return result_surface;
+}
+
+fn eval_interval_stroke_capsule_smooth_union(position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>, dimension_margin : vec4f) -> vec2f {
+    var result_surface : vec2f = current_surface;
+    var tmp_surface : vec2f;
+    
+    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
+    let edit_count : u32 = (*curr_stroke).edit_count;
+    let parameters : vec4f = (*curr_stroke).parameters;
+
+    let smooth_factor : f32 = parameters.w;
+
+    for(var i : u32 = 0u; i < edit_count; i++) {
+        let curr_edit : Edit = edit_array[i];
+
+        tmp_surface = capsule_interval(position, curr_edit.position, curr_edit.rotation, curr_edit.dimensions.w, curr_edit.dimensions.x);
+        result_surface = opUnionInterval(result_surface, tmp_surface);
+    }
+
+    return result_surface;
+}
+
+fn evaluate_stroke_interval_2( position: mat3x3f, stroke: ptr<storage, Stroke, read>, current_surface : vec2f, center : vec3f, half_size : f32) -> vec2f {
+    let stroke_operation : u32 = (*stroke).operation;
+    let stroke_primitive : u32 = (*stroke).primitive;
+
+    let curr_stroke_code : u32 = stroke_primitive | (stroke_operation << 4u);
+
+    var result_surface : vec2f = current_surface;
+
+    switch(curr_stroke_code) {
+        case SD_SPHERE_SMOOTH_OP_UNION: {
+            result_surface = eval_interval_stroke_sphere_smooth_union(position, result_surface, stroke, vec4f(0.0));
+            break;
+        }
+        case SD_SPHERE_SMOOTH_OP_SUBSTRACTION:{
+            result_surface = eval_interval_stroke_sphere_substraction(position, result_surface, stroke);
+            break;
+        }
+        case SD_BOX_SMOOTH_OP_UNION: {
+            result_surface = eval_interval_stroke_box_smooth_union(position, result_surface, stroke, vec4f(0.0));
+            break;
+        }
+        case SD_BOX_SMOOTH_OP_SUBSTRACTION: {
+            result_surface = eval_interval_stroke_box_substraction(position, result_surface, stroke);
+            break;
+        }
+        case SD_CAPSULE_SMOOTH_OP_UNION: {
+            result_surface = eval_interval_stroke_capsule_smooth_union(position, result_surface, stroke, vec4f(0.0));
+            break;
+        }
+        case SD_CAPSULE_SMOOTH_OP_SUBSTRACTION: {
+            result_surface = eval_interval_stroke_capsule_substraction(position, result_surface, stroke);
+            break;
+        }
+        default: {}
+    }
+
+    return result_surface;
+}
+
+fn evaluate_stroke_interval_force_union( position: mat3x3f, stroke: ptr<storage, Stroke, read>, current_surface : vec2f, margin : vec4f) -> vec2f {
+    let stroke_primitive : u32 = (*stroke).primitive;
+
+    var result_surface : vec2f = current_surface;
+
+    switch(stroke_primitive) {
         case SD_SPHERE: {
-            //onion_thickness = map_thickness( onion_thickness, radius );
-            //radius -= onion_thickness; // Compensate onion size
-            cap_value = clamp(cap_value, 0.0, 0.9);
-            if(cap_value > 0.0) { 
-                cap_value = cap_value * 2.0 - 1.0;
-                pSurface = cut_sphere_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.rotation, radius, radius * cap_value);
-            } else {
-                pSurface = sphere_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, radius);
-            }
+            result_surface = eval_interval_stroke_sphere_smooth_union(position, result_surface, stroke, margin);
             break;
         }
         case SD_BOX: {
-            onion_thickness = map_thickness( onion_thickness, size.x );
-            size_param = (size_param / 0.1) * size.x; // Make Rounding depend on the side length
-
-            // Compensate onion size (Substract from box radius bc onion will add it later...)
-            size -= onion_thickness;
-            size -= size_param;
-            size_param -= onion_thickness;
-
-            pSurface = box_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.rotation, size, size_param);
+            result_surface = eval_interval_stroke_box_smooth_union(position, result_surface, stroke, margin);
             break;
         }
         case SD_CAPSULE: {
-            onion_thickness = map_thickness( onion_thickness, size_param );
-            size_param -= onion_thickness; // Compensate onion size
-            pSurface = capsule_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.rotation, size_param, radius);
+            result_surface = eval_interval_stroke_capsule_smooth_union(position, result_surface, stroke, margin);
             break;
         }
-        case SD_CONE: {
-            // onion_thickness = map_thickness( onion_thickness, 0.01 );
-            radius = max(radius * (1.0 - cap_value), 0.0025);
-            var dims = vec2f(size_param, size_param * cap_value);
-            pSurface = cone_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, radius, dims, edit.rotation);
-            break;
-        }
-        // case SD_PYRAMID: {
-        //     pSurface = sdPyramid(position, edit.position, edit.rotation, radius, size_param, edit.color);
-        //     break;
-        // }
-        case SD_CYLINDER: {
-            //onion_thickness = map_thickness( onion_thickness, size_param );
-            //size_param -= onion_thickness; // Compensate onion size
-            pSurface = cylinder_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.rotation, size_param, radius);
-            break;
-        }
-        case SD_TORUS: {
-            // onion_thickness = map_thickness( onion_thickness, size_param );
-            // size_param -= onion_thickness; // Compensate onion size
-            size_param = clamp( size_param, 0.0001, radius );
-            if(cap_value > 0.0) {
-                var an = M_PI * (1.0 - cap_value);
-                var angles = vec2f(sin(an), cos(an));
-                pSurface = capped_torus_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, vec2f(radius, size_param), edit.rotation, angles);
-            } else {
-                pSurface = torus_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, vec2f(radius, size_param), edit.rotation);
-            }
-            break;
-        }
-        case SD_BEZIER: {
-            var curve_thickness : f32 = 0.01;
-            pSurface = bezier_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.position + vec3f(0.1, 0.2, 0.0), edit.position + vec3f(0.2, 0.0, 0.0), curve_thickness, edit.rotation);
-            break;
-        }
-        default: {
-            break;
-        }
+        default: {}
     }
 
-    *resulting_interval = pSurface;
-
-    // Shape edition ...
-    if( do_onion && (operation == OP_UNION || operation == OP_SMOOTH_UNION) )
-    {
-        // pSurface = opOnion(pSurface, onion_thickness);
-    }
-
-    switch (operation) {
-        case OP_UNION: {
-            pSurface = opUnionInterval(current_interval, pSurface);
-            break;
-        }
-        case OP_SUBSTRACTION:{
-            pSurface = opSubtractionInterval(current_interval, pSurface);
-            break;
-        }
-        case OP_INTERSECTION: {
-            // pSurface = opIntersection(current_interval, pSurface);
-            break;
-        }
-        case OP_PAINT: {
-            // pSurface = opPaint(current_interval, pSurface, edit.color);
-            break;
-        }
-        case OP_SMOOTH_UNION: {
-            pSurface = opSmoothUnionInterval(current_interval, pSurface, smooth_factor);
-            break;
-        }
-        case OP_SMOOTH_SUBSTRACTION: {
-            pSurface = opSmoothSubtractionInterval(current_interval, pSurface, smooth_factor);
-            break;
-        }
-        case OP_SMOOTH_INTERSECTION: {
-            // pSurface = opSmoothIntersection(current_interval, pSurface, SMOOTH_FACTOR);
-            break;
-        }
-        case OP_SMOOTH_PAINT: {
-            // pSurface = opSmoothPaint(current_interval, pSurface, edit.color, SMOOTH_FACTOR);
-            break;
-        }
-        default: {
-            break;
-        }
-    }
-
-    return pSurface;
+    return result_surface;
 }
+
+// fn eval_edit_interval( p_x : vec2f, p_y : vec2f, p_z : vec2f,  primitive : u32, operation : u32, edit_parameters : vec4f, current_interval : vec2f, edit : Edit, resulting_interval : ptr<function, vec2f>) -> vec2f
+// {
+//     var pSurface : vec2f;
+
+//     // Center in texture (position 0,0,0 is just in the middle)
+//     var size : vec3f = edit.dimensions.xyz;
+//     var radius : f32 = edit.dimensions.x;
+//     var size_param : f32 = edit.dimensions.w;
+
+//     // 0 no cap ... 1 fully capped
+//     var cap_value : f32 = clamp(edit_parameters.y, 0.0, 0.99);
+
+//     var onion_thickness : f32 = edit_parameters.x;
+//     let do_onion = onion_thickness > 0.0;
+
+//     let smooth_factor : f32 = edit_parameters.w;
+
+//     // switch (primitive) {
+//     //     case SD_SPHERE: {
+//     //         onion_thickness = map_thickness( onion_thickness, radius );
+//     //         radius -= onion_thickness; // Compensate onion size
+//     //         if(cap_value > 0.0) { 
+//     //             cap_value = cap_value * 2.0 - 1.0;
+//     //             pSurface = cut_sphere_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.rotation, radius, radius * cap_value * 0.999);
+//     //         } else {
+//     //             pSurface = sphere_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, radius);
+//     //         }
+//     //         break;
+//     //     }
+//     //     case SD_BOX: {
+//     //         onion_thickness = map_thickness( onion_thickness, size.x );
+//     //         size_param = (size_param / 0.1) * size.x; // Make Rounding depend on the side length
+
+//     //         // Compensate onion size (Substract from box radius bc onion will add it later...)
+//     //         size -= onion_thickness;
+//     //         size -= size_param;
+//     //         size_param -= onion_thickness;
+
+//     //         pSurface = box_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.rotation, size, size_param);
+//     //         break;
+//     //     }
+//     //     case SD_CAPSULE: {
+//     //         onion_thickness = map_thickness( onion_thickness, size_param );
+//     //         size_param -= onion_thickness; // Compensate onion size
+//     //         pSurface = capsule_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.rotation, size_param, radius);
+//     //         break;
+//     //     }
+//     //     case SD_CONE: {
+//     //         // onion_thickness = map_thickness( onion_thickness, 0.01 );
+//     //         radius = max(radius * (1.0 - cap_value), 0.0025);
+//     //         var dims = vec2f(size_param, size_param * cap_value);
+//     //         pSurface = cone_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.rotation, dims, radius);
+//     //         break;
+//     //     }
+//     //     // case SD_PYRAMID: {
+//     //     //     pSurface = sdPyramid(position, edit.position, edit.rotation, radius, size_param, edit.color);
+//     //     //     break;
+//     //     // }
+//     //     case SD_CYLINDER: {
+//     //         //onion_thickness = map_thickness( onion_thickness, size_param );
+//     //         //size_param -= onion_thickness; // Compensate onion size
+//     //         pSurface = cylinder_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.rotation, size_param, radius);
+//     //         break;
+//     //     }
+//     //     case SD_TORUS: {
+//     //         onion_thickness = map_thickness( onion_thickness, size_param );
+//     //         size_param -= onion_thickness; // Compensate onion size
+//     //         size_param = clamp( size_param, 0.0001, radius );
+//     //         if(cap_value > 0.0) {
+//     //             var an = M_PI * (1.0 - cap_value);
+//     //             var angles = vec2f(sin(an), cos(an));
+//     //             pSurface = capped_torus_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, vec2f(radius, size_param), edit.rotation, angles);
+//     //         } else {
+//     //             pSurface = torus_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, vec2f(radius, size_param), edit.rotation);
+//     //         }
+//     //         break;
+//     //     }
+//     //     case SD_BEZIER: {
+//     //         var curve_thickness : f32 = 0.01;
+//     //         pSurface = bezier_interval(iavec3_vecs(p_x, p_y, p_z), edit.position, edit.position + vec3f(0.1, 0.2, 0.0), edit.position + vec3f(0.2, 0.0, 0.0), curve_thickness, edit.rotation);
+//     //         break;
+//     //     }
+//     //     default: {
+//     //         break;
+//     //     }
+//     // }
+
+//     // *resulting_interval = pSurface;
+
+//     // // Shape edition ...
+//     // if( do_onion && (operation == OP_UNION || operation == OP_SMOOTH_UNION) )
+//     // {
+//     //     // pSurface = opOnion(pSurface, onion_thickness);
+//     // }
+
+//     // switch (operation) {
+//     //     case OP_UNION: {
+//     //         pSurface = opUnionInterval(current_interval, pSurface);
+//     //         break;
+//     //     }
+//     //     case OP_SUBSTRACTION:{
+//     //         pSurface = opSubtractionInterval(current_interval, pSurface);
+//     //         break;
+//     //     }
+//     //     case OP_INTERSECTION: {
+//     //         // pSurface = opIntersection(current_interval, pSurface);
+//     //         break;
+//     //     }
+//     //     case OP_PAINT: {
+//     //         // pSurface = opPaint(current_interval, pSurface, edit.color);
+//     //         break;
+//     //     }
+//     //     case OP_SMOOTH_UNION: {
+//     //         pSurface = opSmoothUnionInterval(current_interval, pSurface, smooth_factor);
+//     //         break;
+//     //     }
+//     //     case OP_SMOOTH_SUBSTRACTION: {
+//     //         pSurface = opSmoothSubtractionInterval(current_interval, pSurface, smooth_factor);
+//     //         break;
+//     //     }
+//     //     case OP_SMOOTH_INTERSECTION: {
+//     //         // pSurface = opSmoothIntersection(current_interval, pSurface, SMOOTH_FACTOR);
+//     //         break;
+//     //     }
+//     //     case OP_SMOOTH_PAINT: {
+//     //         // pSurface = opSmoothPaint(current_interval, pSurface, edit.color, SMOOTH_FACTOR);
+//     //         break;
+//     //     }
+//     //     default: {
+//     //         break;
+//     //     }
+//     // }
+
+//     return pSurface;
+// }
