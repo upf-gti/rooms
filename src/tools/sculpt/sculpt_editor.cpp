@@ -1174,8 +1174,8 @@ void SculptEditor::bind_events()
 
     Node::bind("sculpt_mode", [&](const std::string& signal, void* button) { toggle_stamp(); });
 
-    Node::bind("add", [&](const std::string& signal, void* button) { set_operation(OP_UNION); });
-    Node::bind("substract", [&](const std::string& signal, void* button) { set_operation(OP_SUBSTRACTION); });
+    Node::bind("add", [&](const std::string& signal, void* button) { set_operation(OP_SMOOTH_UNION); });
+    Node::bind("substract", [&](const std::string& signal, void* button) { set_operation(OP_SMOOTH_SUBSTRACTION); });
 
     Node::bind("onion_value", [&](const std::string& signal, float value) { set_onion_modifier(value); });
     Node::bind("cap_value", [&](const std::string& signal, float value) { set_cap_modifier(value); });

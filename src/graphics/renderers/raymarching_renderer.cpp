@@ -607,7 +607,7 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
     wgpuComputePassEncoderEnd(compute_pass);
     wgpuComputePassEncoderRelease(compute_pass);
 
-    AABB_mesh->render();
+    //AABB_mesh->render();
 
     if (is_going_to_evaluate) {
         //RenderdocCapture::end_capture_frame();
