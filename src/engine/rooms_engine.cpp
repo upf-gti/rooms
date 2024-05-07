@@ -10,6 +10,8 @@
 
 #include "graphics/renderers/rooms_renderer.h"
 
+#include "shaders/mesh_grid.wgsl.gen.h"
+
 #include "tools/sculpt/sculpt_editor.h"
 
 #include "spdlog/spdlog.h"
@@ -43,7 +45,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     grid_material.priority = 100;
     grid_material.transparency_type = ALPHA_BLEND;
     grid_material.cull_type = CULL_NONE;
-    grid_material.shader = RendererStorage::get_shader("data/shaders/mesh_grid.wgsl", grid_material);
+    grid_material.shader = RendererStorage::get_shader_from_source(Shaders::mesh_grid::source, Shaders::mesh_grid::path, grid_material);
 
     floor_grid_mesh->set_surface_material_override(floor_grid_mesh->get_surface(0), grid_material);
 

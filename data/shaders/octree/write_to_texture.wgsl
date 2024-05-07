@@ -1,4 +1,4 @@
-#include ../math.wgsl
+#include math.wgsl
 #include sdf_functions.wgsl
 #include octree_includes.wgsl
 #include material_packing.wgsl

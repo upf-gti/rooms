@@ -1,5 +1,5 @@
-#include ../pbr_functions.wgsl
-#include ../pbr_light.wgsl
+#include pbr_functions.wgsl
+#include pbr_light.wgsl
 
 #include sdf_utils.wgsl
 
