@@ -867,13 +867,12 @@ void SculptEditor::enable_tool(eTool tool)
     switch (tool)
     {
     case SCULPT:
-        // helper_gui.change_list_layout("sculpt");
         stroke_parameters.set_operation(OP_SMOOTH_UNION);
         hand2edit_distance = 0.0f;
         static_cast<ui::ButtonSubmenu2D*>(brush_editor_submenu)->set_disabled(true);
         break;
     case PAINT:
-        stroke_parameters.set_operation(OP_PAINT);
+        stroke_parameters.set_operation(OP_SMOOTH_PAINT);
         hand2edit_distance = 0.1f;
         static_cast<ui::ButtonSubmenu2D*>(brush_editor_submenu)->set_disabled(false);
         break;
