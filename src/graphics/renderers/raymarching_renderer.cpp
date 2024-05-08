@@ -319,6 +319,7 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
     AABB strokes_aabb;
     float max_smooth_margin = 0.0f;
     uint32_t last_history_index = stroke_history.size();
+    uint32_t strokes_to_pop = 0u;
 
     if (!is_undo && !is_redo) {
         for (uint16_t i = 0u; i < strokes.size(); i++) {
@@ -338,6 +339,7 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
 
                 strokes_aabb = merge_aabbs(strokes_aabb, to_undo.get_world_AABB());
                 max_smooth_margin = glm::max(to_undo.parameters.w, max_smooth_margin);
+                strokes_to_pop = 1u;
 
                 uint32_t united_stroke_idx = 0u, stroke_count = 0u;
                 for (united_stroke_idx = stroke_history.size() - 2u; united_stroke_idx >= 0u; --united_stroke_idx, stroke_count++) {
@@ -351,11 +353,12 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
                     strokes_aabb = merge_aabbs(strokes_aabb, prev.get_world_AABB());
                     stroke_edit_count += prev.edit_count;
                     max_smooth_margin = glm::max(prev.parameters.w, max_smooth_margin);
+                    strokes_to_pop++;
                 }
 
                 strokes_to_evaluate = &(stroke_history.data()[united_stroke_idx]);
                 stroke_count_to_evaluate = 1u;
-                last_history_index = stroke_history.size() -2u;
+                last_history_index = stroke_history.size() - 2u;
             } else {
                 // In the case of only one stroke, submit a substraction edit on the same places as the prev stroke
                 Stroke& prev = stroke_history[0u];
@@ -367,6 +370,7 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
                 strokes_to_evaluate = &prev;
                 stroke_count_to_evaluate = 1u;
                 last_history_index = 0u;
+                strokes_to_pop = 1u;
             }
         }
     }
@@ -508,8 +512,7 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
     wgpuComputePassEncoderPopDebugGroup(compute_pass);
 #endif
 
-    uint32_t history_diff = stroke_history.size() - last_history_index;
-    for (uint32_t i = 0u; i < history_diff; i++) {
+    for (uint32_t i = 0u; i < strokes_to_pop; i++) {
         stroke_history.pop_back();
     }
 }
@@ -605,7 +608,7 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
     wgpuComputePassEncoderEnd(compute_pass);
     wgpuComputePassEncoderRelease(compute_pass);
 
-    //AABB_mesh->render();
+    AABB_mesh->render();
 
     if (is_going_to_evaluate) {
         //RenderdocCapture::end_capture_frame();
