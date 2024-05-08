@@ -289,7 +289,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             // for sending the work to the write to texture!!
             margin = vec4f(SMOOTH_FACTOR * 2.0);
         }
-        //margin = vec4f(SMOOTH_FACTOR * 2.0);
+
         // Check the edits in the parent, and fill its own list with the edits that affect this child
         // The magin is twice the smooth factor if there are two strokes with this smooth factor, they will act on eachotehr
         current_stroke_interval = evaluate_stroke_interval_force_union(current_subdivision_interval,  &(stroke), current_stroke_interval, margin);
@@ -397,6 +397,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             }
 
             current_stroke_interval = surface_interval;
+            margin = vec4f(SMOOTH_FACTOR);
 
             surface_interval = evaluate_stroke_interval_2(current_subdivision_interval,  &(preview_stroke), surface_interval, octant_center, level_half_size);
         } else {
@@ -405,16 +406,14 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             // for sending the work to the write to texture!!
             margin = vec4f(SMOOTH_FACTOR * 2.0);
         }
-        //margin = vec4f(SMOOTH_FACTOR * 2.0);
+
         // Check the edits in the parent, and fill its own list with the edits that affect this child
         // The magin is twice the smooth factor if there are two strokes with this smooth factor, they will act on eachotehr
-        //if ((stroke.operation == OP_SMOOTH_SUBSTRACTION && level == OCTREE_DEPTH) || level < OCTREE_DEPTH) {
-            current_stroke_interval = evaluate_stroke_interval_force_union(current_subdivision_interval,  &(preview_stroke), current_stroke_interval, margin);
-        //}
+        current_stroke_interval = evaluate_stroke_interval_force_union(current_subdivision_interval,  &(preview_stroke), current_stroke_interval, margin);
+        
         // Pseudo subdivide!
 
         let is_current_brick_filled : bool = (octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG;
-        let is_interior_brick : bool = (octree.data[octree_index].tile_pointer & INTERIOR_BRICK_FLAG) == INTERIOR_BRICK_FLAG;
 
         // Do not evaluate all the bricks, only the ones whose distance interval has changed
         octree.data[octree_index].octant_center_distance = surface_interval;
@@ -434,15 +433,17 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             }
         } else {
             if (preview_stroke.operation == OP_SMOOTH_UNION) {
-                //if (current_stroke_interval.x < 0.0) {
-                    if (current_stroke_interval.x < 0.0) {
-                        if (is_current_brick_filled) {
-                            brick_mark_as_preview(octree_index);
-                        } else if (!is_interior_brick && current_stroke_interval.y > 0.0) {
-                            preview_brick_create(octree_index, octant_center);
+                if (current_stroke_interval.x < 0.0) {
+    
+                        if (surface_interval.y > 0.0) {
+                            if (is_current_brick_filled) {
+                                brick_mark_as_preview(octree_index);
+                            } else if (surface_interval.x < 0.0) {
+                                preview_brick_create(octree_index, octant_center);
+                            }
                         }
-                    }
-                //}
+                    
+                }
             } 
         }
     }
