@@ -1221,6 +1221,10 @@ fn evaluate_stroke_interval_force_union( position: mat3x3f, stroke: ptr<storage,
             result_surface = eval_interval_stroke_capsule_smooth_union(position, result_surface, stroke, margin);
             break;
         }
+        case SD_CONE: {
+            result_surface = eval_interval_stroke_cone_smooth_union(position, result_surface, stroke, margin);
+            break;
+        }
         default: {}
     }
 
