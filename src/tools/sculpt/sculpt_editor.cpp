@@ -134,15 +134,17 @@ bool SculptEditor::is_tool_being_used(bool stamp_enabled)
     if (ui_edit_to_add) {
         return true;
     }
+
 #ifdef XR_SUPPORT
     bool is_currently_pressed = Input::get_trigger_value(HAND_RIGHT) > 0.5f;
     is_released = is_tool_pressed && !is_currently_pressed;
 
-    bool add_edit_with_tool = stamp_enabled ? is_released : Input::get_trigger_value(HAND_RIGHT) > 0.5f;
+    bool add_edit_with_tool = stamp_enabled ? is_released : is_currently_pressed;
 
     // Update the is_pressed
     was_tool_pressed = is_tool_pressed;
     is_tool_pressed = is_currently_pressed;
+
     return Input::was_key_pressed(GLFW_KEY_SPACE) || add_edit_with_tool;
 #else
     return Input::is_key_pressed(GLFW_KEY_SPACE);
@@ -368,7 +370,7 @@ bool SculptEditor::edit_update(float delta_time)
 
     //if (glm::length(controller_position_data.controller_velocity) < 0.1f && glm::length(controller_position_data.controller_acceleration) < 10.1f) {
     // TODO(Juan): Check rotation?
-    if (was_tool_pressed && is_tool_used) {
+    if (!stamp_enabled && was_tool_pressed && is_tool_used) {
         if (glm::length(controller_position_data.prev_edit_position - edit_position_world) < (edit_to_add.dimensions.x / 2.0f) + stroke_parameters.get_smooth_factor()) {
             is_tool_used = false;
         } else {
