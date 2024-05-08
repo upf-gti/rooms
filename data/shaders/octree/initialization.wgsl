@@ -30,9 +30,11 @@ fn compute(@builtin(workgroup_id) group_id: vec3u)
     atomicStore(&octree.current_level, 0);
     atomicStore(&octree.atomic_counter, 0);
 
+    brick_buffers.preview_instance_counter = 0u;
+    indirect_buffers.preview_instance_count = 0u;
+
     if ((octree.evaluation_mode & EVALUATE_PREVIEW_STROKE_FLAG) == EVALUATE_PREVIEW_STROKE_FLAG) {
-        brick_buffers.preview_instance_counter = 0u;
-        indirect_buffers.preview_instance_count = 0u;
+        
     } else {
         indirect_buffers.brick_removal_counter = 0u;
         brick_buffers.brick_removal_counter = 0u;

@@ -182,7 +182,7 @@ fn preview_brick_create(octree_index : u32, octant_center : vec3f) {
 }
 
 fn brick_mark_as_preview(octree_index : u32) {
-    brick_buffers.brick_instance_data[octree_index].in_use |= BRICK_HAS_PREVIEW_FLAG;
+    brick_buffers.brick_instance_data[octree.data[octree_index].tile_pointer & OCTREE_TILE_INDEX_MASK].in_use |= BRICK_HAS_PREVIEW_FLAG;
 }
 
 @compute @workgroup_size(1, 1, 1)
@@ -435,10 +435,10 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         } else {
             if (preview_stroke.operation == OP_SMOOTH_UNION) {
                 //if (current_stroke_interval.x < 0.0) {
-                    if (surface_interval.x < 0.0) {
+                    if (current_stroke_interval.x < 0.0) {
                         if (is_current_brick_filled) {
                             brick_mark_as_preview(octree_index);
-                        } else if (current_stroke_interval.y > 0.0) {
+                        } else if (!is_interior_brick && current_stroke_interval.y > 0.0) {
                             preview_brick_create(octree_index, octant_center);
                         }
                     }
