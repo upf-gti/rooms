@@ -23,11 +23,12 @@ Rooms is currently in the development stages.
 - [x] Flat screen + Desktop VR Rendering Supported
 - [x] 3D SDF Sculpting in VR
 - [x] Sparse SDF Storage and Evaluation solutions
+- [x] GLTF Parsing
 - [x] Physically Based Materials (PBR)
-- [ ] VR Color and Material Sculpt Painting
+- [x] VR Color and Material Sculpt Painting
+- [ ] Skeletal Animation Editing in VR
 - [ ] Experience Generation
 - [ ] Experience Sharing
-- [ ] Skeletal Animation Editing in VR
 - [ ] VR Animation Rigging
 - [ ] Visual Scripting in VR
 - [ ] Collaborative Experience Creation 
@@ -52,9 +53,7 @@ cmake ..
 
 ### Web
 
-
 Download [emscripten](https://emscripten.org/) and follow the installation guide.
-
 
 On Windows you may need to download [ninja](https://ninja-build.org/) and include the folder in your PATH environment variable, then:
 
@@ -74,3 +73,11 @@ python -m http.server
 ```
 
 And access the webpage using a browser with WebGPU support using the link: ``localhost:8000/rooms.html``
+
+## Support
+
+This project is being developed with partial financial support of:
+
+|  MAX-R Project (HORIZON) | Wi-XR Project (PID2021-123995NB-I00) |
+| --- | --- |
+| ![logomaxr](./data/images/logo_maxr_main_sRGB.png#gh-light-mode-only) ![logomaxr](./data/images/logo_maxr_main_sRGB_light.png#gh-dark-mode-only) | ![miciu](./data/images/miciu-cofinanciadoUE-aei.png) |
