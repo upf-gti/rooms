@@ -277,12 +277,12 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         if (level == OCTREE_DEPTH) {
             // Compute the context of the current stroke,
             for (var j : u32 = 0; j < stroke_history.count; j++) {
-                surface_interval = evaluate_stroke_interval_2(current_subdivision_interval, &(stroke_history.strokes[j]), surface_interval, octant_center, level_half_size);
+                surface_interval = evaluate_stroke_interval(current_subdivision_interval, &(stroke_history.strokes[j]), surface_interval, octant_center, level_half_size);
             }
 
             current_stroke_interval = surface_interval;
 
-            surface_interval = evaluate_stroke_interval_2(current_subdivision_interval, &(stroke), surface_interval, octant_center, level_half_size);
+            surface_interval = evaluate_stroke_interval(current_subdivision_interval, &(stroke), surface_interval, octant_center, level_half_size);
         } else {
             // Twice the smooth factor since it is the top influencing margin 
             // as a way to subdivide to the bottom level. It is not used
@@ -312,11 +312,11 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
                 var surf_interval : vec2f = vec2f(10000.0, 10000.0);
                 for (var j : u32 = 0; j < stroke_history.count; j++) {
-                    surf_interval = evaluate_stroke_interval_2(current_sub_interval, &(stroke_history.strokes[j]), surf_interval, octant_center, level_half_size);
+                    surf_interval = evaluate_stroke_interval(current_sub_interval, &(stroke_history.strokes[j]), surf_interval, octant_center, level_half_size);
                 }
 
                 // Check the edits in the parent, and fill its own list with the edits that affect this child
-                surf_interval = evaluate_stroke_interval_2(current_sub_interval, &(stroke), surf_interval, sub_octant_center, sub_level_half_size);
+                surf_interval = evaluate_stroke_interval(current_sub_interval, &(stroke), surf_interval, sub_octant_center, sub_level_half_size);
 
                 if (surf_interval.x <= 0.0 && surf_interval.y >= 0.0 && !subdivide) {
                     subdivide = true;
@@ -393,13 +393,13 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
          if (level == OCTREE_DEPTH) {
             // Compute the context of the current stroke,
             for (var j : u32 = 0; j < stroke_history.count; j++) {
-                surface_interval = evaluate_stroke_interval_2(current_subdivision_interval, &(stroke_history.strokes[j]), surface_interval, octant_center, level_half_size);
+                surface_interval = evaluate_stroke_interval(current_subdivision_interval, &(stroke_history.strokes[j]), surface_interval, octant_center, level_half_size);
             }
 
             current_stroke_interval = surface_interval;
             margin = vec4f(SMOOTH_FACTOR);
 
-            surface_interval = evaluate_stroke_interval_2(current_subdivision_interval,  &(preview_stroke), surface_interval, octant_center, level_half_size);
+            surface_interval = evaluate_stroke_interval(current_subdivision_interval,  &(preview_stroke), surface_interval, octant_center, level_half_size);
         } else {
             // Twice the smooth factor since it is the top influencing margin 
             // as a way to subdivide to the bottom level. It is not used
