@@ -160,7 +160,7 @@ fn sample_sdf_with_preview(sculpt_position : vec3f, atlas_position : vec3f) -> S
     surface.material = interpolate_material(atlas_position * SDF_RESOLUTION);
     
     for(var i : u32 = 0u; i < preview_stroke.edit_count; i++) {
-        surface = evaluate_edit(sculpt_position, preview_stroke.primitive, preview_stroke.operation, preview_stroke.parameters, preview_stroke.color_blend_op, surface, material, preview_stroke.edits[i]);
+        surface = evaluate_single_edit(sculpt_position, preview_stroke.primitive, preview_stroke.operation, preview_stroke.parameters, preview_stroke.color_blend_op, surface, material, preview_stroke.edits[i]);
         surface.distance = surface.distance / 2.0; 
     }
     
@@ -175,7 +175,7 @@ fn sample_sdf_with_preview_without_material(sculpt_position : vec3f, atlas_posit
     surface.distance = sample_sdf_atlas(atlas_position);
     
     for(var i : u32 = 0u; i < preview_stroke.edit_count; i++) {
-        surface = evaluate_edit(sculpt_position, preview_stroke.primitive, preview_stroke.operation, preview_stroke.parameters, preview_stroke.color_blend_op, surface, material, preview_stroke.edits[i]);
+        surface = evaluate_single_edit(sculpt_position, preview_stroke.primitive, preview_stroke.operation, preview_stroke.parameters, preview_stroke.color_blend_op, surface, material, preview_stroke.edits[i]);
     }
     
     return surface.distance;

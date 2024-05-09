@@ -58,10 +58,10 @@ void SculptEditor::initialize()
     // Initialize default primitive states
     {
         primitive_default_states[SD_SPHERE]     = { glm::vec4(0.02f, 0.0f, 0.0f, 0.0f) };
-        primitive_default_states[SD_BOX]        = { glm::vec4(0.02f, 0.02f, 0.02f, 0.0f) * 5.0f };
-        primitive_default_states[SD_CONE]       = { glm::vec4(0.05f, 0.0f, 0.0f, 0.03f) * 5.0f };
-        primitive_default_states[SD_CYLINDER]   = { glm::vec4(0.05f, 0.0f, 0.0f, 0.03f) * 5.0f };
-        primitive_default_states[SD_CAPSULE]    = { glm::vec4(0.05f, 0.0f, 0.0f, 0.03f) };
+        primitive_default_states[SD_BOX]        = { glm::vec4(0.02f, 0.02f, 0.02f, 0.0f) };
+        primitive_default_states[SD_CONE]       = { glm::vec4(0.05f, 0.0f, 0.0f, 0.05f) };
+        primitive_default_states[SD_CYLINDER]   = { glm::vec4(0.03f, 0.0f, 0.0f, 0.05f) };
+        primitive_default_states[SD_CAPSULE]    = { glm::vec4(0.03f, 0.0f, 0.0f, 0.05f) };
         primitive_default_states[SD_TORUS]      = { glm::vec4(0.03f, 0.0f, 0.0f, 0.01f) };
         primitive_default_states[SD_BEZIER]     = { glm::vec4(0.0) };
     }
@@ -769,14 +769,14 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
                 mesh_preview->get_surface(0)->create_box(grow_dims.x, grow_dims.y, grow_dims.z);
             }
             break;
+        case SD_CAPSULE:
+            mesh_preview->get_surface(0)->create_capsule(grow_dims.x, grow_dims.w);
+            break;
         case SD_CONE:
-            mesh_preview->get_surface(0)->create_cone(grow_dims.w, grow_dims.x);
+            mesh_preview->get_surface(0)->create_cone(grow_dims.x, grow_dims.w);
             break;
         case SD_CYLINDER:
-            mesh_preview->get_surface(0)->create_cylinder(grow_dims.w, grow_dims.x * 2.0f);
-            break;
-        case SD_CAPSULE:
-            mesh_preview->get_surface(0)->create_capsule(grow_dims.w, grow_dims.x);
+            mesh_preview->get_surface(0)->create_cylinder(grow_dims.x, grow_dims.w);
             break;
         case SD_TORUS:
             mesh_preview->get_surface(0)->create_torus(grow_dims.x, glm::clamp(grow_dims.w, 0.0001f, grow_dims.x));
