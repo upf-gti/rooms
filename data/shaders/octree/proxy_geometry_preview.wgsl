@@ -95,7 +95,7 @@ fn sample_sdf_preview(position : vec3f) -> f32
     }
     
     for(var i : u32 = 0u; i < preview_stroke.edit_count; i++) {
-        surface = evaluate_edit(position, preview_stroke.primitive, preview_stroke.operation, preview_stroke.parameters, preview_stroke.color_blend_op, surface, material, preview_stroke.edits[i]);
+        surface = evaluate_single_edit(position, preview_stroke.primitive, preview_stroke.operation, preview_stroke.parameters, preview_stroke.color_blend_op, surface, material, preview_stroke.edits[i]);
     }
     return surface.distance;
 }

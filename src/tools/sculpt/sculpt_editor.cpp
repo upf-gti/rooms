@@ -62,10 +62,10 @@ void SculptEditor::initialize()
     // Initialize default primitive states
     {
         primitive_default_states[SD_SPHERE]     = { glm::vec4(0.02f, 0.0f, 0.0f, 0.0f) };
-        primitive_default_states[SD_BOX]        = { glm::vec4(0.02f, 0.02f, 0.02f, 0.0f) * 5.0f };
-        primitive_default_states[SD_CONE]       = { glm::vec4(0.05f, 0.0f, 0.0f, 0.03f) * 5.0f };
-        primitive_default_states[SD_CYLINDER]   = { glm::vec4(0.05f, 0.0f, 0.0f, 0.03f) * 5.0f };
-        primitive_default_states[SD_CAPSULE]    = { glm::vec4(0.05f, 0.0f, 0.0f, 0.03f) };
+        primitive_default_states[SD_BOX]        = { glm::vec4(0.02f, 0.02f, 0.02f, 0.0f) };
+        primitive_default_states[SD_CONE]       = { glm::vec4(0.05f, 0.0f, 0.0f, 0.05f) };
+        primitive_default_states[SD_CYLINDER]   = { glm::vec4(0.03f, 0.0f, 0.0f, 0.05f) };
+        primitive_default_states[SD_CAPSULE]    = { glm::vec4(0.03f, 0.0f, 0.0f, 0.05f) };
         primitive_default_states[SD_TORUS]      = { glm::vec4(0.03f, 0.0f, 0.0f, 0.01f) };
         primitive_default_states[SD_BEZIER]     = { glm::vec4(0.0) };
     }
@@ -138,15 +138,17 @@ bool SculptEditor::is_tool_being_used(bool stamp_enabled)
     if (ui_edit_to_add) {
         return true;
     }
+
 #ifdef XR_SUPPORT
     bool is_currently_pressed = Input::get_trigger_value(HAND_RIGHT) > 0.5f;
     is_released = is_tool_pressed && !is_currently_pressed;
 
-    bool add_edit_with_tool = stamp_enabled ? is_released : Input::get_trigger_value(HAND_RIGHT) > 0.5f;
+    bool add_edit_with_tool = stamp_enabled ? is_released : is_currently_pressed;
 
     // Update the is_pressed
     was_tool_pressed = is_tool_pressed;
     is_tool_pressed = is_currently_pressed;
+
     return Input::was_key_pressed(GLFW_KEY_SPACE) || add_edit_with_tool;
 #else
     return Input::is_key_pressed(GLFW_KEY_SPACE);
@@ -372,7 +374,7 @@ bool SculptEditor::edit_update(float delta_time)
 
     //if (glm::length(controller_position_data.controller_velocity) < 0.1f && glm::length(controller_position_data.controller_acceleration) < 10.1f) {
     // TODO(Juan): Check rotation?
-    if (was_tool_pressed && is_tool_used) {
+    if (!stamp_enabled && was_tool_pressed && is_tool_used) {
         if (glm::length(controller_position_data.prev_edit_position - edit_position_world) < (edit_to_add.dimensions.x / 2.0f) + stroke_parameters.get_smooth_factor()) {
             is_tool_used = false;
         } else {
@@ -483,7 +485,7 @@ void SculptEditor::update(float delta_time)
 
 
         // if any parameter changed or just stopped sculpting change the stroke
-        if (stroke_parameters.is_dirty() || (was_tool_used && !is_tool_used)) {
+        if (stroke_parameters.is_dirty() || (was_tool_pressed && !is_tool_pressed)) {
             renderer->change_stroke(stroke_parameters);
             stroke_parameters.set_dirty(false);
         }
@@ -771,14 +773,14 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
                 mesh_preview->get_surface(0)->create_box(grow_dims.x, grow_dims.y, grow_dims.z);
             }
             break;
+        case SD_CAPSULE:
+            mesh_preview->get_surface(0)->create_capsule(grow_dims.x, grow_dims.w);
+            break;
         case SD_CONE:
-            mesh_preview->get_surface(0)->create_cone(grow_dims.w, grow_dims.x);
+            mesh_preview->get_surface(0)->create_cone(grow_dims.x, grow_dims.w);
             break;
         case SD_CYLINDER:
-            mesh_preview->get_surface(0)->create_cylinder(grow_dims.w, grow_dims.x * 2.0f);
-            break;
-        case SD_CAPSULE:
-            mesh_preview->get_surface(0)->create_capsule(grow_dims.w, grow_dims.x);
+            mesh_preview->get_surface(0)->create_cylinder(grow_dims.x, grow_dims.w);
             break;
         case SD_TORUS:
             mesh_preview->get_surface(0)->create_torus(grow_dims.x, glm::clamp(grow_dims.w, 0.0001f, grow_dims.x));
@@ -869,13 +871,12 @@ void SculptEditor::enable_tool(eTool tool)
     switch (tool)
     {
     case SCULPT:
-        // helper_gui.change_list_layout("sculpt");
         stroke_parameters.set_operation(OP_SMOOTH_UNION);
         hand2edit_distance = 0.0f;
         static_cast<ui::ButtonSubmenu2D*>(brush_editor_submenu)->set_disabled(true);
         break;
     case PAINT:
-        stroke_parameters.set_operation(OP_PAINT);
+        stroke_parameters.set_operation(OP_SMOOTH_PAINT);
         hand2edit_distance = 0.1f;
         static_cast<ui::ButtonSubmenu2D*>(brush_editor_submenu)->set_disabled(false);
         break;

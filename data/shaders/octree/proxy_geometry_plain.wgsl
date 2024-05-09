@@ -160,7 +160,7 @@ fn sample_sdf_with_preview(sculpt_position : vec3f, atlas_position : vec3f) -> S
     surface.material = interpolate_material(atlas_position * SDF_RESOLUTION);
     
     for(var i : u32 = 0u; i < preview_stroke.edit_count; i++) {
-        surface = evaluate_edit(sculpt_position, preview_stroke.primitive, preview_stroke.operation, preview_stroke.parameters, preview_stroke.color_blend_op, surface, material, preview_stroke.edits[i]);
+        surface = evaluate_single_edit(sculpt_position, preview_stroke.primitive, preview_stroke.operation, preview_stroke.parameters, preview_stroke.color_blend_op, surface, material, preview_stroke.edits[i]);
         surface.distance = surface.distance / 2.0; 
     }
     
@@ -175,7 +175,7 @@ fn sample_sdf_with_preview_without_material(sculpt_position : vec3f, atlas_posit
     surface.distance = sample_sdf_atlas(atlas_position);
     
     for(var i : u32 = 0u; i < preview_stroke.edit_count; i++) {
-        surface = evaluate_edit(sculpt_position, preview_stroke.primitive, preview_stroke.operation, preview_stroke.parameters, preview_stroke.color_blend_op, surface, material, preview_stroke.edits[i]);
+        surface = evaluate_single_edit(sculpt_position, preview_stroke.primitive, preview_stroke.operation, preview_stroke.parameters, preview_stroke.color_blend_op, surface, material, preview_stroke.edits[i]);
     }
     
     return surface.distance;
@@ -202,44 +202,59 @@ fn raymarch_with_previews(ray_origin_atlas_space : vec3f, ray_origin_sculpt_spac
     let lightOffset = vec3f(0.0, 0.0, 0.0);
 
 	var depth : f32 = 0.0;
-    var surface : Surface;
     var distance : f32;
 
-    var pos_sculpt_space : vec3f;
-    var pos_atlas_space : vec3f;
+    var surface : Surface;
+    var position_in_atlas : vec3f;
+    var position_in_sculpt : vec3f;
     var i : i32 = 0;
     var exit : u32 = 0u;
 
 	for (i = 0; depth < max_distance && i < MAX_ITERATIONS; i++)
     {
-		pos_sculpt_space = ray_origin_sculpt_space + ray_dir * (depth / SCULPT_TO_ATLAS_CONVERSION_FACTOR);
-        pos_atlas_space = ray_origin_atlas_space + ray_dir * depth ;
-
-        surface = sample_sdf_with_preview(pos_sculpt_space, pos_atlas_space);
+		position_in_atlas = ray_origin_atlas_space + ray_dir * depth;
+        position_in_sculpt = ray_origin_sculpt_space + ray_dir * (depth / SCULPT_TO_ATLAS_CONVERSION_FACTOR);
+        surface = sample_sdf_with_preview(position_in_sculpt, position_in_atlas);
         distance = surface.distance;
+        depth += distance * step(MIN_HIT_DIST, distance);
+        depth = min(depth, max_distance);
+        
+        // position_in_atlas = ray_origin_in_atlas_space + ray_dir * depth;
+        // distance = sample_sdf_atlas(position_in_atlas);
+        // depth += distance * step(MIN_HIT_DIST, distance);
+        // depth = min(depth, max_distance);
 
 		if (distance < MIN_HIT_DIST) {
             exit = 1u;
             break;
 		} 
-
-        depth += distance;
 	}
 
-    if (exit == 1u) {
-        
-        let pos_world : vec3f = rotate_point_quat(pos_sculpt_space, (sculpt_data.sculpt_rotation)) + sculpt_data.sculpt_start_position;
+    if (exit == 1u ) {
+        // From atlas position, to sculpt, to world
+        //position_in_sculpt = ray_origin_atlas_space + ray_dir * (depth / SCULPT_TO_ATLAS_CONVERSION_FACTOR);
+        //position_in_atlas = ray_origin_atlas_space + ray_dir * depth;
+        let position_in_world : vec3f = rotate_point_quat(position_in_sculpt, (sculpt_data.sculpt_rotation)) + sculpt_data.sculpt_start_position;
+
         let epsilon : f32 = 0.000001; // avoids flashing when camera inside sdf
-        let proj_pos : vec4f = view_proj * vec4f(pos_world + ray_dir * epsilon, 1.0);
+        let proj_pos : vec4f = view_proj * vec4f(position_in_world + ray_dir * epsilon, 1.0);
         depth = proj_pos.z / proj_pos.w;
 
-        let normal : vec3f = estimate_normal_with_previews(pos_sculpt_space, pos_atlas_space);
+        let normal : vec3f = estimate_normal_with_previews(position_in_sculpt, position_in_atlas);
 
+        last_found_surface_distance = distance;
+        // let interpolant : f32 = (f32( i ) / f32(MAX_ITERATIONS)) * (M_PI / 2.0);
+        // var heatmap_color : vec3f;
+        // heatmap_color.r = sin(interpolant);
+        // heatmap_color.g = sin(interpolant * 2.0);
+        // heatmap_color.b = cos(interpolant);
+        // return vec4f(heatmap_color, depth);
         //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
-		return vec4f(apply_light(-ray_dir, pos_sculpt_space, pos_world, normal, lightPos + lightOffset, surface.material), depth);
+		return vec4f(apply_light(-ray_dir, position_in_world, position_in_world, normal, lightPos + lightOffset, surface.material), depth);
         //return vec4f(normal, depth);
-        //return vec4f(surface.material.albedo, depth);
-        //return vec4f(vec3f(surface.material.albedo), depth);
+        //return vec4f(material.albedo, depth);
+        //return vec4f(normal, depth);
+        //return vec4f(vec3f(material.albedo), depth);
 	}
 
     // Use a two band spherical harmonic as a skymap
@@ -311,7 +326,7 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
         // return vec4f(heatmap_color, depth);
         //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
 		return vec4f(apply_light(-ray_dir, position_in_world, position_in_world, normal, lightPos + lightOffset, material), depth);
-        //sreturn vec4f(normal, depth);
+        //return vec4f(normal, depth);
         //return vec4f(material.albedo, depth);
         //return vec4f(normal, depth);
         //return vec4f(vec3f(material.albedo), depth);
