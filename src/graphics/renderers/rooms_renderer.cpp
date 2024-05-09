@@ -488,3 +488,16 @@ glm::vec3 RoomsRenderer::get_camera_eye()
 
     return camera->get_eye();
 }
+
+glm::vec3 RoomsRenderer::get_camera_front()
+{
+#if defined(XR_SUPPORT)
+    if (is_openxr_available) {
+        glm::mat4x4 view = xr_context->per_view_data[0].view_matrix; // use left eye
+        return { view[2].x, view[2].y, -view[2].z };
+    }
+#endif
+
+    Camera* camera = get_camera();
+    return glm::normalize(camera->get_center() - camera->get_eye());
+}

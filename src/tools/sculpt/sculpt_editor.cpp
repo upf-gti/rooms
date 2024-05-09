@@ -24,6 +24,8 @@
 
 uint8_t SculptEditor::last_generated_material_uid = 0;
 
+Viewport3D* test_slider_thermometer = nullptr;
+
 void SculptEditor::initialize()
 {
     renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
@@ -136,6 +138,15 @@ void SculptEditor::initialize()
         controller_mesh_left = static_cast<MeshInstance3D*>(entities[0]);
         controller_mesh_right = static_cast<MeshInstance3D*>(entities[1]);
     }
+
+    ui::Container2D* test_root = new ui::VContainer2D("test_root", { 0.0f, 0.0f });
+
+    test_root->add_child(new ui::Slider2D("thermometer", 0.5f, ui::SliderMode::HORIZONTAL, ui::DISABLED));
+
+    test_slider_thermometer = new Viewport3D(test_root);
+    test_slider_thermometer->set_active(true);
+
+    RoomsEngine::entities.push_back(test_slider_thermometer);
 
     enable_tool(SCULPT);
 
@@ -412,6 +423,16 @@ bool SculptEditor::edit_update(float delta_time)
 
 void SculptEditor::update(float delta_time)
 {
+    glm::mat4x4 m(1.0f);
+
+    glm::vec3 eye = renderer->get_camera_eye();
+    glm::vec3 new_pos = eye + renderer->get_camera_front() * 0.5f;
+
+    m = glm::translate(m, new_pos);
+    m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
+
+    test_slider_thermometer->set_model(m);
+
     if (current_tool == NONE) {
         return;
     }
@@ -435,14 +456,12 @@ void SculptEditor::update(float delta_time)
         if (renderer->get_openxr_available())
         {
             glm::mat4x4 pose = Input::get_controller_pose(HAND_RIGHT);
-            //pose = glm::rotate(pose, glm::radians(-50.f), glm::vec3(1.0f, 0.0f, 0.0f));
             controller_mesh_right->set_model(pose);
             pose = glm::rotate(pose, glm::radians(-120.f), glm::vec3(1.0f, 0.0f, 0.0f));
             pose = glm::translate(pose, glm::vec3(0.02f, 0.0f, 0.02f));
             right_hand_ui_3D->set_model(pose);
 
             pose = Input::get_controller_pose(HAND_LEFT);
-            //pose = glm::rotate(pose, glm::radians(0.f), glm::vec3(1.0f, 0.0f, 0.0f));
             controller_mesh_left->set_model(pose);
             pose = glm::rotate(pose, glm::radians(-120.f), glm::vec3(1.0f, 0.0f, 0.0f));
             pose = glm::translate(pose, glm::vec3(0.02f, 0.0f, 0.02f));
@@ -539,6 +558,11 @@ void SculptEditor::update(float delta_time)
     }
 
     was_tool_used = is_tool_used;
+
+    // TEST: TO REMOVE
+    if (was_tool_used) {
+        Node::emit_signal("thermometer@changed", random_f());
+    }
 }
 
 void SculptEditor::apply_mirror_position(glm::vec3& position)
