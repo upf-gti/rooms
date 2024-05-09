@@ -53,9 +53,9 @@ enum ColorBlendingOp : uint32_t {
 struct Edit {
     glm::vec3	position;
     float       dummy0;
-    glm::vec4	dimensions = { 0.05f, 0.05f, 0.05f, 0.05f };
+    glm::vec4	dimensions = { 0.3f, 0.05f, 0.05f, 0.05f };
     glm::quat   rotation = { 0.f, 0.f, 0.f, 1.f };
-    //glm::vec4   padding;
+    glm::vec4   padding;
 
     std::string to_string() const;
     void parse_string(const std::string& str);
@@ -77,11 +77,11 @@ struct StrokeMaterial {
 
 class StrokeParameters {
 
-    sdPrimitive         primitive = SD_SPHERE;
-    sdOperation         operation = OP_UNION;
-    ColorBlendingOp     color_blend_op = COLOR_OP_REPLACE;
-    glm::vec4           parameters = { 0.f, -1.f, 0.f, 0.0f };
-    StrokeMaterial      material = {};
+    sdPrimitive     primitive = SD_SPHERE;
+    sdOperation     operation = OP_UNION;
+    ColorBlendingOp color_blend_op = COLOR_OP_REPLACE;
+    glm::vec4       parameters = { 0.f, -1.f, 0.f, 0.01f };
+    StrokeMaterial  material = {};
 
     bool dirty = false;
 
@@ -98,6 +98,7 @@ public:
     void set_material_noise(float intensity = -1.0f, float frequency = -1.0f, int octaves = -1);
     void set_material_noise_color(const Color& color);
 
+    float get_smooth_factor() const { return parameters.w; }
     sdPrimitive get_primitive() const { return primitive; }
     sdOperation get_operation() const { return operation; }
     ColorBlendingOp get_color_blending_operation() const { return color_blend_op; }
@@ -110,21 +111,17 @@ public:
 };
 
 struct Stroke {
-    uint32_t        stroke_id;
-    uint32_t        edit_count = 0u;
-    sdPrimitive     primitive;
-    sdOperation     operation;
-    glm::vec3	    _dummy_;
+    uint32_t    stroke_id;
+    uint32_t    edit_count = 0u;
+    sdPrimitive primitive;
+    sdOperation operation;
+    glm::vec4	parameters = { 0.f, -1.f, 0.f, 0.f };
+    glm::vec3	_dummy_;
     ColorBlendingOp color_blending_op = ColorBlendingOp::COLOR_OP_REPLACE;
-    glm::vec4	    parameters = { 0.f, -1.f, 0.f, 0.f };
+    glm::vec4	_dummy2_;
 
     // 48 bytes
     StrokeMaterial material;
-
-    // Padding of 48 * 3 bytes
-    Edit    padding; 
-    Edit    padding1;
-    Edit    padding2;
 
     Edit    edits[MAX_EDITS_PER_EVALUATION] = {};
 

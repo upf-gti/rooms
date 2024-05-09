@@ -129,7 +129,7 @@ glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const
     float size_param = edits[edit_index].dimensions.w;
     float radius = edits[edit_index].dimensions.x;
 
-    const glm::vec3 smooth_margin = (operation == OP_SMOOTH_PAINT || operation == OP_SMOOTH_UNION || operation == OP_SMOOTH_SUBSTRACTION) ? glm::vec3(parameters.w) : glm::vec3(0.0f);
+    const glm::vec3 smooth_margin = (operation == OP_SMOOTH_PAINT || operation == OP_SMOOTH_UNION || operation == OP_SMOOTH_SUBSTRACTION) ? glm::vec3(parameters.w * 2.0f) : glm::vec3(0.0f);
 
     switch (primitive) {
     case SD_SPHERE:
@@ -170,8 +170,6 @@ AABB Stroke::get_edit_world_AABB(const uint8_t edit_index) const
 
     glm::vec3 pure_edit_half_size = get_edit_world_half_size(edit_index);
 
-    // TODO: Add smooth margin
-
     glm::quat edit_rotation = { 0.0, 0.0, 0.0, 1.0 };
 
     const Edit& edit = edits[edit_index];
@@ -206,7 +204,7 @@ AABB Stroke::get_edit_world_AABB(const uint8_t edit_index) const
         rotated_min_size.z = glm::min(rotated_min_size.z, axis[i].z);
     }
 
-    const glm::vec3 edit_half_size = (rotated_max_size - rotated_min_size) / 2.0f;
+    const glm::vec3 edit_half_size = (rotated_max_size - rotated_min_size) * 0.5f;
 
     return { aabb_center, edit_half_size };
 }

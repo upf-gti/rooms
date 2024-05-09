@@ -1,5 +1,10 @@
 #include "rooms_renderer.h"
+#include "graphics/debug/renderdoc_capture.h"
+#include "graphics/shader.h"
+#include "graphics/renderer_storage.h"
+
 #include "framework/camera/camera_2d.h"
+#include "framework/input.h"
 
 #ifdef XR_SUPPORT
 #include "xr/openxr_context.h"
@@ -7,6 +12,7 @@
 #endif
 
 #include "spdlog/spdlog.h"
+
 #include "graphics/shader.h"
 #include "graphics/renderer_storage.h"
 #include "shaders/mesh_pbr.wgsl.gen.h"
@@ -27,6 +33,8 @@ RoomsRenderer::~RoomsRenderer()
 int RoomsRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
 {
     Renderer::initialize(window, use_mirror_screen);
+
+    size_t s = sizeof(Stroke) * 400;
 
     Shader::set_custom_define("SDF_RESOLUTION", SDF_RESOLUTION);
     Shader::set_custom_define("SCULPT_MAX_SIZE", SCULPT_MAX_SIZE);
@@ -89,15 +97,18 @@ void RoomsRenderer::clean()
 
 void RoomsRenderer::update(float delta_time)
 {
-    // Create the command encoder
-    WGPUCommandEncoderDescriptor encoder_desc = {};
-    global_command_encoder = wgpuDeviceCreateCommandEncoder(webgpu_context->device, &encoder_desc);
-
 #if defined(XR_SUPPORT)
     if (is_openxr_available) {
         xr_context->update();
     }
 #endif
+
+    if (debug_this_frame) {
+        RenderdocCapture::start_capture_frame();
+    }
+    // Create the command encoder
+    WGPUCommandEncoderDescriptor encoder_desc = {};
+    global_command_encoder = wgpuDeviceCreateCommandEncoder(webgpu_context->device, &encoder_desc);
 
     if (!is_openxr_available) {
         const auto& io = ImGui::GetIO();
@@ -146,6 +157,11 @@ void RoomsRenderer::render()
     wgpuCommandBufferRelease(commands);
     wgpuCommandEncoderRelease(global_command_encoder);
 
+    if (debug_this_frame) {
+        RenderdocCapture::end_capture_frame();
+        debug_this_frame = false;
+    }
+
     if (!is_openxr_available) {
         wgpuTextureViewRelease(swapchain_view);
     }
@@ -168,7 +184,9 @@ void RoomsRenderer::render_screen(WGPUTextureView swapchain_view)
 
     camera_data.eye = camera->get_eye();
     camera_data.mvp = camera->get_view_projection();
-    camera_data.dummy = 0.f;
+
+    // Use camera position as controller position
+    camera_data.right_controller_position = camera_data.eye;
 
     wgpuQueueWriteBuffer(webgpu_context->device_queue, std::get<WGPUBuffer>(camera_uniform.data), 0, &camera_data, sizeof(sCameraData));
 
@@ -176,7 +194,6 @@ void RoomsRenderer::render_screen(WGPUTextureView swapchain_view)
 
     camera_2d_data.eye = camera_2d->get_eye();
     camera_2d_data.mvp = camera_2d->get_view_projection();
-    camera_2d_data.dummy = 0.f;
 
     wgpuQueueWriteBuffer(webgpu_context->device_queue, std::get<WGPUBuffer>(camera_2d_uniform.data), 0, &camera_2d_data, sizeof(sCameraData));
 
@@ -272,7 +289,8 @@ void RoomsRenderer::render_xr()
 
         camera_data.eye = xr_context->per_view_data[i].position;
         camera_data.mvp = xr_context->per_view_data[i].view_projection_matrix;
-        camera_data.dummy = 0.f;
+
+        camera_data.right_controller_position = Input::get_controller_position(HAND_RIGHT);
 
         wgpuQueueWriteBuffer(webgpu_context->device_queue, std::get<WGPUBuffer>(camera_uniform.data), i * camera_buffer_stride, &camera_data, sizeof(sCameraData));
 

@@ -12,9 +12,6 @@
 #include "framework/camera/flyover_camera.h"
 #include "framework/camera/orbit_camera.h"
 
-#ifdef __EMSCRIPTEN__
-#define DISABLE_RAYMARCHER
-#endif
 
 class RoomsRenderer : public Renderer {
 
@@ -34,6 +31,9 @@ class RoomsRenderer : public Renderer {
         glm::mat4x4 mvp;
         glm::vec3 eye;
         float dummy;
+
+        glm::vec3 right_controller_position;
+        float dummy2;
     };
 
     sCameraData camera_data;
@@ -65,6 +65,8 @@ class RoomsRenderer : public Renderer {
 
 #endif // XR_SUPPORT
 
+    bool debug_this_frame = false;
+
 public:
 
     RoomsRenderer();
@@ -85,6 +87,10 @@ public:
     }
 
     RaymarchingRenderer* get_raymarching_renderer() { return &raymarching_renderer; }
+
+    inline void toogle_frame_debug() {
+        debug_this_frame = true;
+    }
 
     /*
     *   Edits

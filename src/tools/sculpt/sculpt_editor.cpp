@@ -6,6 +6,7 @@
 #include "framework/input.h"
 #include "framework/nodes/viewport_3d.h"
 #include "framework/scene/parse_gltf.h"
+#include "framework/scene/parse_scene.h"
 
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/renderer_storage.h"
@@ -19,6 +20,7 @@
 #include "spdlog/spdlog.h"
 #include "imgui.h"
 #include <glm/gtx/quaternion.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 uint8_t SculptEditor::last_generated_material_uid = 0;
 
@@ -42,12 +44,27 @@ void SculptEditor::initialize()
     mirror_gizmo.initialize(POSITION_GIZMO, sculpt_start_position);
     mirror_origin = sculpt_start_position;
 
+    // Sculpt area box
+    {
+        sculpt_area_box = parse_mesh("data/meshes/cube.obj");
+
+        Material sculpt_area_box_material;
+        sculpt_area_box_material.priority = 0;
+        sculpt_area_box_material.transparency_type = ALPHA_BLEND;
+        sculpt_area_box_material.cull_type = CULL_FRONT;
+        sculpt_area_box_material.diffuse_texture = RendererStorage::get_texture("data/textures/grid_texture.png");
+        sculpt_area_box_material.color = colors::RED;
+        sculpt_area_box_material.shader = RendererStorage::get_shader("data/shaders/sculpt_box_area.wgsl", sculpt_area_box_material);
+
+        sculpt_area_box->set_surface_material_override(sculpt_area_box->get_surface(0), sculpt_area_box_material);
+    }
+
     // Initialize default primitive states
     {
         primitive_default_states[SD_SPHERE]     = { glm::vec4(0.02f, 0.0f, 0.0f, 0.0f) };
-        primitive_default_states[SD_BOX]        = { glm::vec4(0.02f, 0.02f, 0.02f, 0.0f) };
-        primitive_default_states[SD_CONE]       = { glm::vec4(0.05f, 0.0f, 0.0f, 0.03f) };
-        primitive_default_states[SD_CYLINDER]   = { glm::vec4(0.05f, 0.0f, 0.0f, 0.03f) };
+        primitive_default_states[SD_BOX]        = { glm::vec4(0.02f, 0.02f, 0.02f, 0.0f) * 5.0f };
+        primitive_default_states[SD_CONE]       = { glm::vec4(0.05f, 0.0f, 0.0f, 0.03f) * 5.0f };
+        primitive_default_states[SD_CYLINDER]   = { glm::vec4(0.05f, 0.0f, 0.0f, 0.03f) * 5.0f };
         primitive_default_states[SD_CAPSULE]    = { glm::vec4(0.05f, 0.0f, 0.0f, 0.03f) };
         primitive_default_states[SD_TORUS]      = { glm::vec4(0.03f, 0.0f, 0.0f, 0.01f) };
         primitive_default_states[SD_BEZIER]     = { glm::vec4(0.0) };
@@ -107,6 +124,10 @@ void SculptEditor::clean()
         delete mirror_mesh;
     }
 
+    if (sculpt_area_box) {
+        delete sculpt_area_box;
+    }
+
     // TODO
     // Clean all UI widgets
     // ...
@@ -114,6 +135,9 @@ void SculptEditor::clean()
 
 bool SculptEditor::is_tool_being_used(bool stamp_enabled)
 {
+    if (ui_edit_to_add) {
+        return true;
+    }
 #ifdef XR_SUPPORT
     bool is_currently_pressed = Input::get_trigger_value(HAND_RIGHT) > 0.5f;
     is_released = is_tool_pressed && !is_currently_pressed;
@@ -171,7 +195,7 @@ bool SculptEditor::edit_update(float delta_time)
 
     // Update edit dimensions
     if (!stamp_enabled || !is_tool_pressed && !is_released) {
-        // Get the data from the primitive default 
+        // Get the data from the primitive default
         edit_to_add.dimensions = primitive_default_states[stroke_parameters.get_primitive()].dimensions;
         float size_multiplier = Input::get_thumbstick_value(HAND_RIGHT).y * delta_time * 0.1f;
         dimensions_dirty |= (fabsf(size_multiplier) > 0.f);
@@ -220,9 +244,9 @@ bool SculptEditor::edit_update(float delta_time)
         }
         else {
             // Only stretch the edit when the acceleration of the hand exceds a threshold
-            is_stretching_edit = glm::length(glm::abs(controller_velocity)) > 0.20f;
+            is_stretching_edit = glm::length(glm::abs(controller_position_data.controller_velocity)) > 0.20f;
         }
-        
+
     }
 
     // Edit modifiers
@@ -316,10 +340,10 @@ bool SculptEditor::edit_update(float delta_time)
             if (current_tool == SCULPT && is_tool_being_used(stamp_enabled)) {
 
                 edit_to_add.position = glm::vec3(glm::vec3(0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1)));
-                glm::vec3 euler_angles(random_f() * 90, random_f() * 90, random_f() * 90);
-                edit_to_add.dimensions = glm::vec4(0.05f, 0.01f, 0.01f, 0.01f) * 1.0f;
+                glm::vec3 euler_angles(glm::pi<float>() * random_f(), glm::pi<float>()* random_f(), glm::pi<float>()* random_f());
+                edit_to_add.dimensions = glm::vec4(0.05f, 0.05f, 0.05f, 0.0f) * 1.0f;
                 //edit_to_add.dimensions = (edit_to_add.operation == OP_SUBSTRACTION) ? 3.0f * glm::vec4(0.2f, 0.2f, 0.2f, 0.2f) : glm::vec4(0.2f, 0.2f, 0.2f, 0.2f);
-                edit_to_add.rotation = glm::inverse(glm::quat(euler_angles));
+                edit_to_add.rotation = glm::normalize(glm::inverse(glm::normalize(glm::quat(euler_angles))));
                 // Stroke
                 //stroke_parameters.set_color(glm::vec4(0.1f, 0.1f, 0.1f, 1.f));
                 //stroke_parameters.set_primitive((random_f() > 0.25f) ? ((random_f() > 0.5f) ? SD_SPHERE : SD_CYLINDER) : SD_BOX);
@@ -342,6 +366,25 @@ bool SculptEditor::edit_update(float delta_time)
     edit_position_world = edit_to_add.position;
     edit_rotation_world = edit_to_add.rotation;
 
+    // Add edit based on controller movement
+    //spdlog::info("Dist: {}", glm::length(controller_position_data.prev_edit_position - edit_position_world), glm::length(controller_position_data.controller_velocity), glm::length(controller_position_data.controller_acceleration));
+
+
+    //if (glm::length(controller_position_data.controller_velocity) < 0.1f && glm::length(controller_position_data.controller_acceleration) < 10.1f) {
+    // TODO(Juan): Check rotation?
+    if (was_tool_pressed && is_tool_used) {
+        if (glm::length(controller_position_data.prev_edit_position - edit_position_world) < (edit_to_add.dimensions.x / 2.0f) + stroke_parameters.get_smooth_factor()) {
+            is_tool_used = false;
+        } else {
+            controller_position_data.prev_edit_position = edit_position_world;
+        }
+    }
+    else {
+        controller_position_data.prev_edit_position = edit_position_world;
+    }
+
+    //(Juan): for the ui toggle (to remove!)
+    ui_edit_to_add = false;
     return is_tool_used;
 }
 
@@ -391,12 +434,11 @@ void SculptEditor::update(float delta_time)
     // Update controller speed & acceleration
     {
         const glm::vec3 curr_controller_pos = Input::get_controller_position(HAND_RIGHT);
-        const glm::vec3 curr_controller_velocity = (curr_controller_pos - prev_controller_pos) / delta_time;
-        controller_acceleration = (curr_controller_velocity - controller_velocity) / delta_time;
-        controller_velocity = curr_controller_velocity;
-        prev_controller_pos = curr_controller_pos;
-
-        //spdlog::info("{}", glm::length(glm::abs(controller_acceleration)));
+        controller_position_data.controller_frame_distance = curr_controller_pos - controller_position_data.prev_controller_pos;
+        const glm::vec3 curr_controller_velocity = (controller_position_data.controller_frame_distance) / delta_time;
+        controller_position_data.controller_acceleration = (curr_controller_velocity - controller_position_data.controller_velocity) / delta_time;
+        controller_position_data.controller_velocity = curr_controller_velocity;
+        controller_position_data.prev_controller_pos = curr_controller_pos;
     }
 
     bool is_tool_used = edit_update(delta_time);
@@ -404,10 +446,12 @@ void SculptEditor::update(float delta_time)
     // Interaction input
     {
         if (Input::was_key_pressed(GLFW_KEY_U) || Input::was_grab_pressed(HAND_LEFT)) {
+            renderer->toogle_frame_debug();
             renderer->undo();
         }
 
         if (Input::was_key_pressed(GLFW_KEY_R) || Input::was_grab_pressed(HAND_RIGHT)) {
+            renderer->toogle_frame_debug();
             renderer->redo();
         }
     }
@@ -436,7 +480,7 @@ void SculptEditor::update(float delta_time)
             is_tool_used &= !(mirror_gizmo.update(mirror_origin, mirror_rotation, edit_position_world, delta_time));
             mirror_normal = glm::normalize(mirror_rotation * glm::vec3(0.f, 0.f, 1.f));
         }
-       
+
 
         // if any parameter changed or just stopped sculpting change the stroke
         if (stroke_parameters.is_dirty() || (was_tool_used && !is_tool_used)) {
@@ -457,6 +501,7 @@ void SculptEditor::update(float delta_time)
     }
 
     // Set the edit as the preview
+    //edit_to_add.dimensions.x *= 4.0f;
     preview_tmp_edits.push_back(edit_to_add);
 
     // Mirror functionality
@@ -467,6 +512,15 @@ void SculptEditor::update(float delta_time)
     // Push to the renderer the edits and the previews
     renderer->push_preview_edit_list(preview_tmp_edits);
     renderer->push_edit_list(new_edits);
+
+    if (is_tool_used) {
+        renderer->toogle_frame_debug();
+    }
+
+    /*for (uint8_t i = 0; i < 60 && new_edits.size() > 0; i++) {
+        edit_to_add.position = glm::vec3(glm::vec3(0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1)));
+        renderer->push_edit(edit_to_add);
+    }*/
 
     was_tool_used = is_tool_used;
 }
@@ -572,7 +626,6 @@ void SculptEditor::scene_update_rotation()
         edit_to_add.position = world_to_texture3d(edit_to_add.position);
         edit_to_add.rotation *= (glm::conjugate(sculpt_rotation) * rotation_diff);
     }
-
 }
 
 void SculptEditor::render()
@@ -628,6 +681,12 @@ void SculptEditor::render()
         controller_mesh_right->render();
         controller_mesh_left->render();
     }
+
+    // Render always or only XR?
+    sculpt_area_box->set_translation(sculpt_start_position + translation_diff);
+    sculpt_area_box->scale(glm::vec3(SCULPT_MAX_SIZE * 0.5f));
+    sculpt_area_box->rotate(glm::inverse(sculpt_rotation * rotation_diff));
+    sculpt_area_box->render();
 }
 
 // =====================
@@ -810,7 +869,8 @@ void SculptEditor::enable_tool(eTool tool)
     switch (tool)
     {
     case SCULPT:
-        stroke_parameters.set_operation(OP_UNION);
+        // helper_gui.change_list_layout("sculpt");
+        stroke_parameters.set_operation(OP_SMOOTH_UNION);
         hand2edit_distance = 0.0f;
         static_cast<ui::ButtonSubmenu2D*>(brush_editor_submenu)->set_disabled(true);
         break;
@@ -984,6 +1044,7 @@ void SculptEditor::init_ui()
 
         // Brush editor
         {
+
             ui::ButtonSubmenu2D* brush_editor_submenu = new ui::ButtonSubmenu2D("brush_editor", "data/textures/z.png", ui::DISABLED);
 
             {
@@ -1108,11 +1169,20 @@ void SculptEditor::bind_events()
 
     Node::bind("use_stamp", [&](const std::string& signal, void* button) { toggle_stamp(); });
 
-    Node::bind("add", [&](const std::string& signal, void* button) { set_operation(OP_UNION); });
-    Node::bind("substract", [&](const std::string& signal, void* button) { set_operation(OP_SUBSTRACTION); });
+    Node::bind("add", [&](const std::string& signal, void* button) { set_operation(OP_SMOOTH_UNION); });
+    Node::bind("substract", [&](const std::string& signal, void* button) { set_operation(OP_SMOOTH_SUBSTRACTION); });
 
     Node::bind("onion_value", [&](const std::string& signal, float value) { set_onion_modifier(value); });
     Node::bind("cap_value", [&](const std::string& signal, float value) { set_cap_modifier(value); });
+
+    Node::bind("addition_toggle", [&](const std::string& signal, void* button) {
+        if (stroke_parameters.get_operation() == OP_SMOOTH_UNION) {
+            stroke_parameters.set_operation(OP_SMOOTH_SUBSTRACTION);
+        }
+        else {
+            stroke_parameters.set_operation(OP_SMOOTH_UNION);
+        }
+    });
 
     Node::bind("mirror_toggle", [&](const std::string& signal, void* button) { use_mirror = !use_mirror; });
     Node::bind("mirror_translation", [&](const std::string& signal, void* button) { mirror_gizmo.set_mode(eGizmoType::POSITION_GIZMO); });
