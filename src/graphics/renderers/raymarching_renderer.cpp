@@ -140,6 +140,7 @@ void RaymarchingRenderer::change_stroke(const StrokeParameters& params, const ui
     new_stroke.material = params.get_material();
     new_stroke.edit_count = 0u;
 
+    spdlog::info("chage stroke");
     if (current_stroke.edit_count > 0u) {
         // Add it to the history
         stroke_history.push_back(current_stroke);
@@ -155,16 +156,15 @@ void RaymarchingRenderer::push_edit(const Edit edit)
 {
     // Check for max edits -> Prolongation of the stroke! (increment is 0)
     if (in_frame_stroke.edit_count == MAX_EDITS_PER_EVALUATION) {
-        to_compute_stroke_buffer.push_back(in_frame_stroke);
-        in_frame_stroke.edit_count = 0;
+        assert(false && "This whould never happen. -Juan");
         //spdlog::info("prolongation");
     }
 
     in_frame_stroke.edits[in_frame_stroke.edit_count++] = edit;
 
-    if (current_stroke.edit_count == MAX_EDITS_PER_EVALUATION) {
+    if (current_stroke.edit_count >= MAX_EDITS_PER_EVALUATION) {
 
-        //spdlog::info("add to history");
+        spdlog::info("add to history");
 
         // Add it to the history
         stroke_history.push_back(current_stroke);
@@ -313,7 +313,9 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
 
     const Stroke* strokes_to_evaluate = nullptr;
+    Stroke intersection_stroke;
     uint32_t stroke_count_to_evaluate = 0u;
+    uint32_t reevaluate_edit_count = 0u;
 
     uint32_t stroke_edit_count = 0u;
     AABB strokes_aabb;
@@ -321,7 +323,20 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
     uint32_t last_history_index = stroke_history.size();
     uint32_t strokes_to_pop = 0u;
 
+    stroke_influence_list.stroke_count = 0u;
+
     if (!is_undo && !is_redo) {
+        // Include the current stroke as context
+        if (current_stroke.edit_count > 0u) {
+            strokes_aabb = merge_aabbs(strokes_aabb, current_stroke.get_world_AABB());
+            stroke_edit_count += current_stroke.edit_count;
+            max_smooth_margin = glm::max(current_stroke.parameters.w, max_smooth_margin);
+
+            reevaluate_edit_count += current_stroke.edit_count;
+            stroke_influence_list.strokes[stroke_influence_list.stroke_count++] = current_stroke;
+            stroke_influence_list.stroke_count = 1u;
+        }
+
         for (uint16_t i = 0u; i < strokes.size(); i++) {
             strokes_aabb = merge_aabbs(strokes_aabb, strokes[i].get_world_AABB());
             stroke_edit_count += strokes[i].edit_count;
@@ -374,11 +389,8 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
             }
         }
     }
-    
+
     // Get the strokes that are on the region of the undo
-    stroke_influence_list.stroke_count = 0u;
-    Stroke intersection_stroke;
-    uint32_t reevaluate_edit_count = 0u;
     for (uint32_t i = 0u; i < last_history_index; i++) {
         stroke_history[i].get_AABB_intersecting_stroke(strokes_aabb, intersection_stroke);
 

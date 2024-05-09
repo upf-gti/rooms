@@ -481,7 +481,7 @@ void SculptEditor::update(float delta_time)
 
 
         // if any parameter changed or just stopped sculpting change the stroke
-        if (stroke_parameters.is_dirty() || (was_tool_used && !is_tool_used)) {
+        if (stroke_parameters.is_dirty() || (was_tool_pressed && !is_tool_pressed)) {
             renderer->change_stroke(stroke_parameters);
             stroke_parameters.set_dirty(false);
         }

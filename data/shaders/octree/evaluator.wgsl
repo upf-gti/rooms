@@ -170,6 +170,11 @@ fn brick_create_or_reevaluate(octree_index : u32, is_current_brick_filled : bool
     octant_usage_write[prev_counter] = octree_index;
 }
 
+fn brick_reevaluate(octree_index : u32) {
+    let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 1);
+    octant_usage_write[prev_counter] = octree_index;
+}
+
 fn preview_brick_create(octree_index : u32, octant_center : vec3f) {
     let preview_brick : u32 = atomicAdd(&brick_buffers.preview_instance_counter, 1u);
     
@@ -374,8 +379,14 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                         brick_remove_or_mark_as_inside(octree_index, is_current_brick_filled);
                     }
                 }
-            } 
-        } else if (is_current_brick_filled) {
+            } else if (stroke.operation == OP_SMOOTH_PAINT) {
+                if (surface_interval.x < 0.0) {
+                    if (is_current_brick_filled) {
+                        brick_reevaluate(octree_index);
+                    }
+                }
+            }
+        } else if (is_current_brick_filled && stroke.operation != OP_SMOOTH_PAINT) {
             brick_remove(octree_index);
         }
     } else {
@@ -432,19 +443,31 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 }
             }
         } else {
-            if (preview_stroke.operation == OP_SMOOTH_UNION) {
-                if (current_stroke_interval.x < 0.0) {
-    
-                        if (surface_interval.y > 0.0) {
-                            if (is_current_brick_filled) {
-                                brick_mark_as_preview(octree_index);
-                            } else if (surface_interval.x < 0.0) {
-                                preview_brick_create(octree_index, octant_center);
-                            }
-                        }
-                    
+            if (stroke.operation == OP_SMOOTH_SUBSTRACTION) {
+                if ((current_stroke_interval.x < 0.0)) {
+                    if (is_current_brick_filled) {
+                        brick_mark_as_preview(octree_index);
+                    } else if (surface_interval.y < 0.0) {
+                        preview_brick_create(octree_index, octant_center);
+                    }
                 }
-            } 
+            } else if (preview_stroke.operation == OP_SMOOTH_UNION) {
+                if (current_stroke_interval.x < 0.0) {
+                    if (surface_interval.y > 0.0) {
+                        if (is_current_brick_filled) {
+                            brick_mark_as_preview(octree_index);
+                        } else if (surface_interval.x < 0.0) {
+                            preview_brick_create(octree_index, octant_center);
+                        }
+                    }
+                }
+            } else if (preview_stroke.operation == OP_SMOOTH_PAINT) {
+                if (current_stroke_interval.x < 0.0) {
+                    if (is_current_brick_filled) {
+                        brick_mark_as_preview(octree_index);
+                    }
+                }
+            }
         }
     }
 }
