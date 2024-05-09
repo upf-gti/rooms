@@ -401,6 +401,8 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
 
         if (intersection_stroke.edit_count > 0u) {
             reevaluate_edit_count += intersection_stroke.edit_count;
+            // Last added edit is duplicated, just don't take it into account
+            intersection_stroke.edit_count--;
             stroke_influence_list.strokes[stroke_influence_list.stroke_count++] = intersection_stroke;
         }
     }
