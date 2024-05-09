@@ -9,12 +9,13 @@ class Node3D;
 class Environment3D;
 class SculptEditor;
 
+#define _DESTROY_(x) if(x) { delete x; }
+
 class RoomsEngine : public Engine
 {
     Environment3D* skybox = nullptr;
 
     SculptEditor* sculpt_editor;
-
 
     bool export_scene();
     bool import_scene();

@@ -102,16 +102,18 @@ void SculptEditor::initialize()
         add_pbr_material_data("rusted_iron", Color(0.531f, 0.512f, 0.496f, 1.0f), 0.0f, 1.0f, 1.0f); // add noise
     }
 
+    // Create UI and bind events
     init_ui();
 
-    std::vector<Node3D*> entities;
-    parse_gltf("data/meshes/controllers/left_controller.glb", entities);
-    parse_gltf("data/meshes/controllers/right_controller.glb", entities);
-    controller_mesh_left = static_cast<MeshInstance3D*>(entities[0]);
-    controller_mesh_right = static_cast<MeshInstance3D*>(entities[1]);
-
-    // Load ui and Bind callbacks
-    bind_events();
+    // Meta Quest Controllers
+    if(renderer->get_openxr_available())
+    {
+        std::vector<Node3D*> entities;
+        parse_gltf("data/meshes/controllers/left_controller.glb", entities);
+        parse_gltf("data/meshes/controllers/right_controller.glb", entities);
+        controller_mesh_left = static_cast<MeshInstance3D*>(entities[0]);
+        controller_mesh_right = static_cast<MeshInstance3D*>(entities[1]);
+    }
 
     enable_tool(SCULPT);
 
@@ -120,13 +122,14 @@ void SculptEditor::initialize()
 
 void SculptEditor::clean()
 {
-    if (mirror_mesh) {
-        delete mirror_mesh;
-    }
-
-    if (sculpt_area_box) {
-        delete sculpt_area_box;
-    }
+    _DESTROY_(mirror_mesh);
+    _DESTROY_(sculpt_area_box);
+    _DESTROY_(mesh_preview);
+    _DESTROY_(mesh_preview_outline);
+    _DESTROY_(controller_mesh_left);
+    _DESTROY_(controller_mesh_right);
+    _DESTROY_(right_hand_ui_3D);
+    _DESTROY_(left_hand_ui_3D);
 
     // TODO
     // Clean all UI widgets
@@ -331,13 +334,8 @@ bool SculptEditor::edit_update(float delta_time)
 
     // Debug sculpting
     {
-        if (Input::is_key_pressed(GLFW_KEY_P))
-        {
-            enable_tool(PAINT);
-        }
-
         // For debugging sculpture without a headset
-        if (!Renderer::instance->get_openxr_available()) {
+        if (!renderer->get_openxr_available()) {
 
             if (current_tool == SCULPT && is_tool_being_used(stamp_enabled)) {
 
@@ -412,7 +410,7 @@ void SculptEditor::update(float delta_time)
         }
 
         // Update controller UI
-        if (Renderer::instance->get_openxr_available())
+        if (renderer->get_openxr_available())
         {
             glm::mat4x4 pose = Input::get_controller_pose(HAND_RIGHT);
             //pose = glm::rotate(pose, glm::radians(-50.f), glm::vec3(1.0f, 0.0f, 0.0f));
@@ -503,7 +501,6 @@ void SculptEditor::update(float delta_time)
     }
 
     // Set the edit as the preview
-    //edit_to_add.dimensions.x *= 4.0f;
     preview_tmp_edits.push_back(edit_to_add);
 
     // Mirror functionality
@@ -518,11 +515,6 @@ void SculptEditor::update(float delta_time)
     if (is_tool_used) {
         renderer->toogle_frame_debug();
     }
-
-    /*for (uint8_t i = 0; i < 60 && new_edits.size() > 0; i++) {
-        edit_to_add.position = glm::vec3(glm::vec3(0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1)));
-        renderer->push_edit(edit_to_add);
-    }*/
 
     was_tool_used = is_tool_used;
 }
@@ -946,7 +938,7 @@ void SculptEditor::init_ui()
         prim_selector->add_child(new ui::TextureButton2D("capsule", "data/textures/capsule.png"));
         prim_selector->add_child(new ui::TextureButton2D("cylinder", "data/textures/cylinder.png"));
         prim_selector->add_child(new ui::TextureButton2D("torus", "data/textures/torus.png"));
-        prim_selector->add_child(new ui::TextureButton2D("bezier", "data/textures/bezier.png"));
+        //prim_selector->add_child(new ui::TextureButton2D("bezier", "data/textures/bezier.png"));
         first_row->add_child(prim_selector);
     }
 
@@ -1115,14 +1107,14 @@ void SculptEditor::init_ui()
         second_row->add_child(new ui::TextureButton2D("redo", "data/textures/y.png"));
     }
 
-    if (Renderer::instance->get_openxr_available()) {
+    if (renderer->get_openxr_available()) {
         main_panel_3d = new Viewport3D(main_panel_2d);
         main_panel_3d->set_active(true);
         RoomsEngine::entities.push_back(main_panel_3d);
     }
 
     // Load controller UI labels
-    if (Renderer::instance->get_openxr_available())
+    if (renderer->get_openxr_available())
     {
         // Left hand
         {
@@ -1150,6 +1142,9 @@ void SculptEditor::init_ui()
             RoomsEngine::entities.push_back(right_hand_ui_3D);
         }
     }
+
+    // Bind callbacks
+    bind_events();
 }
 
 void SculptEditor::bind_events()
@@ -1163,7 +1158,7 @@ void SculptEditor::bind_events()
     Node::bind("capsule", [&](const std::string& signal, void* button) { set_primitive(SD_CAPSULE); });
     Node::bind("cylinder", [&](const std::string& signal, void* button) { set_primitive(SD_CYLINDER); });
     Node::bind("torus", [&](const std::string& signal, void* button) { set_primitive(SD_TORUS); });
-    Node::bind("bezier", [&](const std::string& signal, void* button) { set_primitive(SD_BEZIER); });
+    //Node::bind("bezier", [&](const std::string& signal, void* button) { set_primitive(SD_BEZIER); });
 
     Node::bind("main_size", [&](const std::string& signal, float value) { set_edit_size(value); });
     Node::bind("sec_size", [&](const std::string& signal, float value) { set_edit_size(-1.0f, value); });
@@ -1198,10 +1193,10 @@ void SculptEditor::bind_events()
 
     Node::bind("roughness", [&](const std::string& signal, float value) { stroke_parameters.set_material_roughness(value); });
     Node::bind("metallic", [&](const std::string& signal, float value) { stroke_parameters.set_material_metallic(value); });
-    Node::bind("noise_intensity", [&](const std::string& signal, float value) { stroke_parameters.set_material_noise(value); });
+    /*Node::bind("noise_intensity", [&](const std::string& signal, float value) { stroke_parameters.set_material_noise(value); });
     Node::bind("noise_frequency", [&](const std::string& signal, float value) { stroke_parameters.set_material_noise(-1.0f, value); });
     Node::bind("noise_octaves", [&](const std::string& signal, float value) { stroke_parameters.set_material_noise(-1.0f, -1.0f, static_cast<int>(value)); });
-    Node::bind("noise_color_picker", [&](const std::string& signal, Color color) { stroke_parameters.set_material_noise_color(color); });
+    Node::bind("noise_color_picker", [&](const std::string& signal, Color color) { stroke_parameters.set_material_noise_color(color); });*/
 
     Node::bind("color_picker", [&](const std::string& signal, Color color) { stroke_parameters.set_material_color(color); });
     Node::bind("pick_material", [&](const std::string& signal, void* button) { is_picking_material = !is_picking_material; });
@@ -1369,7 +1364,7 @@ void SculptEditor::generate_random_material()
     stroke_parameters.set_material_metallic(random_f());
 
     // Don't apply noise by now..
-    stroke_parameters.set_material_noise();
+    //stroke_parameters.set_material_noise();
 
     update_gui_from_stroke_material(stroke_parameters.get_material());
 }
@@ -1380,10 +1375,10 @@ void SculptEditor::update_gui_from_stroke_material(const StrokeMaterial& mat)
     Node::emit_signal("color_picker@changed", mat.color);
     Node::emit_signal("roughness@changed", mat.roughness);
     Node::emit_signal("metallic@changed", mat.metallic);
-    Node::emit_signal("noise_intensity@changed", mat.noise_params.x);
+    /*Node::emit_signal("noise_intensity@changed", mat.noise_params.x);
     Node::emit_signal("noise_frequency@changed", mat.noise_params.y);
     Node::emit_signal("noise_octaves@changed", mat.noise_params.z);
-    Node::emit_signal("noise_color_picker@changed", mat.noise_color);
+    Node::emit_signal("noise_color_picker@changed", mat.noise_color);*/
 }
 
 void SculptEditor::update_stroke_from_material(const std::string& name)
@@ -1394,14 +1389,14 @@ void SculptEditor::update_stroke_from_material(const std::string& name)
     stroke_parameters.set_material_color(data.base_color);
     stroke_parameters.set_material_roughness(data.roughness * 1.5f); // this is a hack because hdres don't have too much roughness..
     stroke_parameters.set_material_metallic(data.metallic);
-    stroke_parameters.set_material_noise(data.noise_params.x, data.noise_params.y, static_cast<int>(data.noise_params.z));
+    //stroke_parameters.set_material_noise(data.noise_params.x, data.noise_params.y, static_cast<int>(data.noise_params.z));
 
     update_gui_from_stroke_material(stroke_parameters.get_material());
 }
 
 void SculptEditor::pick_material()
 {
-    if (Renderer::instance->get_openxr_available())
+    if (renderer->get_openxr_available())
     {
         glm::mat4x4 pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
         glm::vec3 ray_dir = get_front(pose);
