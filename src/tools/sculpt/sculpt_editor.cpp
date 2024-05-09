@@ -57,6 +57,28 @@ void SculptEditor::initialize()
         sculpt_area_box_material.shader = RendererStorage::get_shader("data/shaders/sculpt_box_area.wgsl", sculpt_area_box_material);
 
         sculpt_area_box->set_surface_material_override(sculpt_area_box->get_surface(0), sculpt_area_box_material);
+
+        // Create axis reference
+
+        Surface* s = new Surface();
+
+        std::vector<InterleavedData>& vertices = s->get_vertices();
+        vertices.push_back({ glm::vec3(-0.1f,  0.0f,  0.0f)});
+        vertices.push_back({ glm::vec3( 0.1f,  0.0f,  0.0f)});
+        vertices.push_back({ glm::vec3( 0.0f, -0.1f,  0.0f)});
+        vertices.push_back({ glm::vec3( 0.0f,  0.1f,  0.0f)});
+        vertices.push_back({ glm::vec3( 0.0f,  0.0f, -0.1f)});
+        vertices.push_back({ glm::vec3( 0.0f,  0.0f,  0.1f)});
+        s->update_vertex_buffer(vertices);
+
+        Material ref_mat;
+        ref_mat.priority = 0;
+        ref_mat.topology_type = TOPOLOGY_LINE_LIST;
+        ref_mat.transparency_type = ALPHA_BLEND;
+        ref_mat.shader = RendererStorage::get_shader("data/shaders/axis.wgsl", ref_mat);
+
+        sculpt_area_box->set_surface_material_override(s, ref_mat);
+        sculpt_area_box->add_surface(s);
     }
 
     // Initialize default primitive states

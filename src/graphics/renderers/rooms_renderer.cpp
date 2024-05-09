@@ -13,10 +13,9 @@
 
 #include "spdlog/spdlog.h"
 
-#include "graphics/shader.h"
-#include "graphics/renderer_storage.h"
 #include "shaders/mesh_pbr.wgsl.gen.h"
 #include "shaders/mesh_color.wgsl.gen.h"
+#include "shaders/quad_mirror.wgsl.gen.h"
 
 #include "backends/imgui_impl_wgpu.h"
 
@@ -423,7 +422,7 @@ void RoomsRenderer::render_mirror(WGPUTextureView swapchain_view)
 
 void RoomsRenderer::init_mirror_pipeline()
 {
-    mirror_shader = RendererStorage::get_shader("data/shaders/quad_mirror.wgsl");
+    mirror_shader = RendererStorage::get_shader_from_source(shaders::quad_mirror::source, shaders::quad_mirror::path);
 
     quad_surface.create_quad(2.0f, 2.0f);
 
