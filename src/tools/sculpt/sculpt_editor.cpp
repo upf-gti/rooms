@@ -371,7 +371,7 @@ bool SculptEditor::edit_update(float delta_time)
     //if (glm::length(controller_position_data.controller_velocity) < 0.1f && glm::length(controller_position_data.controller_acceleration) < 10.1f) {
     // TODO(Juan): Check rotation?
     if (!stamp_enabled && was_tool_pressed && is_tool_used) {
-        if (glm::length(controller_position_data.prev_edit_position - edit_position_world) < (edit_to_add.dimensions.x / 2.0f) + stroke_parameters.get_smooth_factor()) {
+        if (glm::length(controller_position_data.prev_edit_position - edit_position_world) < (edit_to_add.dimensions.x / 4.0f) + stroke_parameters.get_smooth_factor()) {
             is_tool_used = false;
         } else {
             controller_position_data.prev_edit_position = edit_position_world;
