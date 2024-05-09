@@ -36,7 +36,7 @@ void SculptEditor::initialize()
     mirror_material.priority = 0;
     mirror_material.transparency_type = ALPHA_BLEND;
     mirror_material.diffuse_texture = RendererStorage::get_texture("data/textures/mirror_quad_texture.png");
-    mirror_material.shader = RendererStorage::get_shader_from_source(Shaders::mesh_texture_cube::source, Shaders::mesh_texture_cube::path, mirror_material);
+    mirror_material.shader = RendererStorage::get_shader_from_source(shaders::mesh_texture_cube::source, shaders::mesh_texture_cube::path, mirror_material);
 
     mirror_mesh->set_surface_material_override(mirror_mesh->get_surface(0), mirror_material);
 
@@ -81,7 +81,7 @@ void SculptEditor::initialize()
         Material preview_material;
         preview_material.priority = 1;
         preview_material.transparency_type = ALPHA_BLEND;
-        preview_material.shader = RendererStorage::get_shader_from_source(Shaders::mesh_transparent::source, Shaders::mesh_transparent::path, preview_material);
+        preview_material.shader = RendererStorage::get_shader_from_source(shaders::mesh_transparent::source, shaders::mesh_transparent::path, preview_material);
 
         mesh_preview->set_surface_material_override(sphere_surface, preview_material);
 
@@ -90,7 +90,7 @@ void SculptEditor::initialize()
 
         Material outline_material;
         outline_material.cull_type = CULL_FRONT;
-        outline_material.shader = RendererStorage::get_shader_from_source(Shaders::mesh_outline::source, Shaders::mesh_outline::path, outline_material);
+        outline_material.shader = RendererStorage::get_shader_from_source(shaders::mesh_outline::source, shaders::mesh_outline::path, outline_material);
 
         mesh_preview_outline->set_surface_material_override(sphere_surface, outline_material);
     }

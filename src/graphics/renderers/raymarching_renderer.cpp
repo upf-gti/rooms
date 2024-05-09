@@ -60,8 +60,10 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
 
     Material AABB_material = (AABB_mesh->get_surface(0)->get_material());
     //AABB_material.priority = 10;
+    AABB_material.color = glm::vec4(0.8f, 0.3f, 0.9f, 1.0f);
     AABB_material.transparency_type = ALPHA_BLEND;
-    AABB_material.shader = RendererStorage::get_shader_from_source(Shaders::AABB_shader::source, Shaders::AABB_shader::path, AABB_material);
+    AABB_material.cull_type = CULL_NONE;
+    AABB_material.shader = RendererStorage::get_shader_from_source(shaders::AABB_shader::source, shaders::AABB_shader::path, AABB_material);
     //AABB_material.diffuse_texture = RendererStorage::get_texture("data/meshes/cube/cube_AABB.png");
     AABB_mesh->set_surface_material_override(AABB_mesh->get_surface(0), AABB_material);
     
