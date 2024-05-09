@@ -330,16 +330,6 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
     stroke_influence_list.stroke_count = 0u;
 
     if (!is_undo && !is_redo) {
-        // Include the current stroke as context
-        if (current_stroke.edit_count > 0u) {
-            strokes_aabb = merge_aabbs(strokes_aabb, current_stroke.get_world_AABB());
-            stroke_edit_count += current_stroke.edit_count;
-            max_smooth_margin = glm::max(current_stroke.parameters.w, max_smooth_margin);
-
-            reevaluate_edit_count += current_stroke.edit_count;
-            stroke_influence_list.strokes[stroke_influence_list.stroke_count++] = current_stroke;
-            stroke_influence_list.stroke_count = 1u;
-        }
 
         for (uint16_t i = 0u; i < strokes.size(); i++) {
             strokes_aabb = merge_aabbs(strokes_aabb, strokes[i].get_world_AABB());
@@ -394,6 +384,7 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
         }
     }
 
+    strokes_aabb.half_size += max_smooth_margin;
     // Get the strokes that are on the region of the undo
     for (uint32_t i = 0u; i < last_history_index; i++) {
         stroke_history[i].get_AABB_intersecting_stroke(strokes_aabb, intersection_stroke);
@@ -403,6 +394,17 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
             stroke_influence_list.strokes[stroke_influence_list.stroke_count++] = intersection_stroke;
         }
     }
+
+    // Include the current stroke as context
+    if (current_stroke.edit_count > 0u) {
+        current_stroke.get_AABB_intersecting_stroke(strokes_aabb, intersection_stroke);
+
+        if (intersection_stroke.edit_count > 0u) {
+            reevaluate_edit_count += intersection_stroke.edit_count;
+            stroke_influence_list.strokes[stroke_influence_list.stroke_count++] = intersection_stroke;
+        }
+    }
+    strokes_aabb.half_size -= max_smooth_margin;
 
     compute_merge_data.reevaluation_AABB_min = strokes_aabb.center - strokes_aabb.half_size;
     compute_merge_data.reevaluation_AABB_max = strokes_aabb.center + strokes_aabb.half_size;
