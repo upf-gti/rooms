@@ -288,12 +288,12 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             current_stroke_interval = surface_interval;
 
             surface_interval = evaluate_stroke_interval(current_subdivision_interval, &(stroke), surface_interval, octant_center, level_half_size);
-        }
+        } else {
             // Twice the smooth factor since it is the top influencing margin 
             // as a way to subdivide to the bottom level. It is not used
             // for sending the work to the write to texture!!
             margin = vec4f(SMOOTH_FACTOR * 2.0);
-        
+        }
 
         // Check the edits in the parent, and fill its own list with the edits that affect this child
         // The magin is twice the smooth factor if there are two strokes with this smooth factor, they will act on eachotehr
@@ -323,7 +323,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 // Check the edits in the parent, and fill its own list with the edits that affect this child
                 surf_interval = evaluate_stroke_interval(current_sub_interval, &(stroke), surf_interval, sub_octant_center, sub_level_half_size);
 
-                if (surf_interval.x <= 0.0 && surf_interval.y >= 0.0 && !subdivide) {
+                if (surf_interval.x <= 0.0 && surf_interval.y >= 0.0) {
                     subdivide = true;
                 }
             }

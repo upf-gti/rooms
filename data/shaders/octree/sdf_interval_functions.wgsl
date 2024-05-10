@@ -1262,7 +1262,7 @@ fn evaluate_stroke_interval( position: mat3x3f, stroke: ptr<storage, Stroke, rea
             break;
         }
         case SD_SPHERE_SMOOTH_OP_PAINT: {
-            result_surface = eval_interval_stroke_sphere_paint(position, result_surface, stroke);
+            result_surface = eval_interval_stroke_sphere_smooth_union(position, result_surface, stroke, vec4f(0.0));
             break;
         }
         case SD_BOX_SMOOTH_OP_UNION: {

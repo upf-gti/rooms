@@ -16,6 +16,20 @@
 
 #include "framework/input.h"
 
+
+/*
+    Stroke management and lifecylce
+        The begining and end of a stroke is managed by the scult_editor.
+
+        In order to upload and manage strokes this lifecycle is managed like this
+          1) The sculpt editor starts a new stroke, and sends one or more edits
+          2) The incomming edits are stored in the in_frame_stroke.
+          3) We obtain the context of the surrounding edits to the in_frame_stroke from the stroke_history.
+          4) We send the in_frame_stroke and the context to the compute evaluation pipeline.
+          5) After evaluation the in_frame_stroke, it is stored into the current_stroke, that cotais all the edits of the current stroke, from past frames.
+          6) If there is enought edits in the current_stroke or the sculpt_editor signal it, we store the current_stroke to the stroke_history.
+*/
+
 RaymarchingRenderer::RaymarchingRenderer()
 {
     
@@ -165,17 +179,6 @@ void RaymarchingRenderer::push_edit(const Edit edit)
     }
 
     in_frame_stroke.edits[in_frame_stroke.edit_count++] = edit;
-
-    if (current_stroke.edit_count >= MAX_EDITS_PER_EVALUATION) {
-
-        spdlog::info("add to history");
-
-        // Add it to the history
-        stroke_history.push_back(current_stroke);
-        current_stroke.edit_count = 0;
-    }
-
-    current_stroke.edits[current_stroke.edit_count++] = edit;
 }
 
 void RaymarchingRenderer::push_stroke(const Stroke& new_stroke)
@@ -401,8 +404,6 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
 
         if (intersection_stroke.edit_count > 0u) {
             reevaluate_edit_count += intersection_stroke.edit_count;
-            // Last added edit is duplicated, just don't take it into account
-            intersection_stroke.edit_count--;
             stroke_influence_list.strokes[stroke_influence_list.stroke_count++] = intersection_stroke;
         }
     }
@@ -608,9 +609,21 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
         spdlog::info("Evaluate stroke");
         uint32_t set_as_preview = 0u;
         webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_uniform.data), sizeof(uint32_t) * 3u, &set_as_preview, sizeof(uint32_t));
-        evaluate_strokes(compute_pass, to_compute_stroke_buffer);
+        evaluate_strokes(compute_pass, to_compute_stroke_buffer);        
+
+        // After evaluating the in_frame_stroke, store in the current stroke, and if full, set it to history
+        for (uint32_t i = 0u; i < in_frame_stroke.edit_count; i++) {
+            if (current_stroke.edit_count >= MAX_EDITS_PER_EVALUATION) {
+                // Add it to the history
+                stroke_history.push_back(current_stroke);
+                current_stroke.edit_count = 0;
+            }
+
+            current_stroke.edits[current_stroke.edit_count++] = in_frame_stroke.edits[i];
+        }
 
         in_frame_stroke.edit_count = 0u;
+
         to_compute_stroke_buffer.clear();
     }
 
