@@ -12,6 +12,7 @@
 #include "framework/camera/flyover_camera.h"
 #include "framework/camera/orbit_camera.h"
 
+// #define DISABLE_RAYMARCHER
 
 class RoomsRenderer : public Renderer {
 
@@ -141,4 +142,5 @@ public:
     }
 
     glm::vec3 get_camera_eye();
+    glm::vec3 get_camera_front();
 };
