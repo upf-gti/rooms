@@ -237,6 +237,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     // TODO(Juan): fix undo redo reeval
     let is_evaluating_preview : bool = ((octree.evaluation_mode & EVALUATE_PREVIEW_STROKE_FLAG) == EVALUATE_PREVIEW_STROKE_FLAG);
     let is_evaluating_undo : bool = (octree.evaluation_mode & UNDO_EVAL_FLAG) == UNDO_EVAL_FLAG;
+    let is_smooth_paint : bool = stroke.operation == OP_SMOOTH_PAINT;
 
     let octant_min : vec3f = octant_center - vec3f(level_half_size);
     let octant_max : vec3f = octant_center + vec3f(level_half_size);
@@ -322,10 +323,17 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
                 // Check the edits in the parent, and fill its own list with the edits that affect this child
                 surf_interval = evaluate_stroke_interval(current_sub_interval, &(stroke), surf_interval, sub_octant_center, sub_level_half_size);
-
-                if (surf_interval.x <= 0.0 && surf_interval.y >= 0.0) {
-                    subdivide = true;
+                
+                if (is_smooth_paint) {
+                    if (surf_interval.x <= 0.0) {
+                        subdivide = true;
+                    }
+                } else {
+                    if (surf_interval.x <= 0.0 && surf_interval.y >= 0.0) {
+                        subdivide = true;
+                    }
                 }
+                
             }
         }
 

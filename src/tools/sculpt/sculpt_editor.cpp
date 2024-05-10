@@ -359,7 +359,7 @@ bool SculptEditor::edit_update(float delta_time)
         // For debugging sculpture without a headset
         if (!renderer->get_openxr_available()) {
 
-            if (current_tool == SCULPT && is_tool_being_used(stamp_enabled)) {
+            if (is_tool_being_used(stamp_enabled)) {
 
                 edit_to_add.position = glm::vec3(glm::vec3(0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1)));
                 glm::vec3 euler_angles(glm::pi<float>() * random_f(), glm::pi<float>()* random_f(), glm::pi<float>()* random_f());
