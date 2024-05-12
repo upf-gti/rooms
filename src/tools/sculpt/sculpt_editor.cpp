@@ -139,7 +139,8 @@ void SculptEditor::initialize()
         controller_mesh_right = static_cast<MeshInstance3D*>(entities[1]);
     }
 
-    ui::Container2D* test_root = new ui::VContainer2D("test_root", { 0.0f, 0.0f });
+    ui::VContainer2D* test_root = new ui::VContainer2D("test_root", { 0.0f, 0.0f });
+    test_root->set_centered(true);
 
     test_root->add_child(new ui::Slider2D("thermometer", 0.5f, ui::SliderMode::HORIZONTAL, ui::DISABLED));
 
@@ -770,7 +771,7 @@ void SculptEditor::toggle_stamp()
     auto label = controller_labels[HAND_RIGHT].secondary_button_label;
 
     if (label) {
-        label->set_text(stamp_enabled ? "Switch to Smear" : "Switch to Stamp");
+        label->set_text(stamp_enabled ? "Change to Smear" : "Change to Stamp");
     }
 }
 
@@ -1164,9 +1165,9 @@ void SculptEditor::init_ui()
     {
         // Left hand
         {
-            left_hand_container = new ui::VContainer2D("left_controller_root", { 0.0f, 0.f });
+            left_hand_container = new ui::VContainer2D("left_controller_root", { 0.0f, 0.0f });
 
-            controller_labels[HAND_LEFT].secondary_button_label = new ui::ImageLabel2D("Change to Substract", "data/textures/buttons/y.png", 39.0f);
+            controller_labels[HAND_LEFT].secondary_button_label = new ui::ImageLabel2D("Change to Substract", "data/textures/buttons/y.png", 30.0f);
             left_hand_container->add_child(controller_labels[HAND_LEFT].secondary_button_label);
             /*controller_labels[HAND_LEFT].main_button_label = new ui::ImageLabel2D("Show UI", "data/textures/buttons/x.png", 30.0f);
             left_hand_container->add_child(controller_labels[HAND_LEFT].main_button_label);*/
@@ -1177,7 +1178,7 @@ void SculptEditor::init_ui()
 
         // Right hand
         {
-            right_hand_container = new ui::VContainer2D("right_controller_root", { 0.0f, 0.f });
+            right_hand_container = new ui::VContainer2D("right_controller_root", { 0.0f, 0.0f });
 
             controller_labels[HAND_RIGHT].secondary_button_label = new ui::ImageLabel2D("Change to Stamp", "data/textures/buttons/b.png", 30.0f);
             right_hand_container->add_child(controller_labels[HAND_RIGHT].secondary_button_label);
