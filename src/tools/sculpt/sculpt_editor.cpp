@@ -269,23 +269,31 @@ bool SculptEditor::edit_update(float delta_time)
 
             edit_rotation_stamp = get_quat_between_vec3(stamp_origin_to_hand, glm::vec3(0.0f, -stamp_to_hand_distance, 0.0f)) * twist;
 
-            if (curr_primitive == SD_SPHERE) {
+            switch (curr_primitive)
+            {
+            case SD_SPHERE:
                 edit_to_add.dimensions.x = stamp_to_hand_distance;
-            }
-            else if (curr_primitive == SD_CAPSULE) {
-                edit_to_add.position = edit_origin_stamp;
-                edit_to_add.dimensions.x = stamp_to_hand_distance;
-            }
-            else if (curr_primitive == SD_BOX) {
-                edit_position_stamp = edit_origin_stamp + stamp_to_hand_norm * stamp_to_hand_distance * -0.5f;
+                break;
+            case SD_BOX:
+                edit_position_stamp = edit_origin_stamp - stamp_to_hand_norm * stamp_to_hand_distance * 0.5f;
                 edit_to_add.dimensions.y = stamp_to_hand_distance * 0.5f;
+                break;
+            case SD_CAPSULE:
+                edit_to_add.position = edit_origin_stamp;
+                edit_to_add.dimensions.w = stamp_to_hand_distance;
+                break;
+            case SD_CYLINDER:
+                edit_position_stamp = edit_origin_stamp - stamp_origin_to_hand * stamp_to_hand_distance * 0.5f;
+                edit_to_add.dimensions.w = stamp_to_hand_distance * 0.5f;
+                break;
+            default:
+                break;
             }
         }
         else {
             // Only stretch the edit when the acceleration of the hand exceds a threshold
             is_stretching_edit = glm::length(glm::abs(controller_position_data.controller_velocity)) > 0.20f;
         }
-
     }
 
     // Edit modifiers
@@ -819,7 +827,7 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
             mesh_preview->get_surface(0)->create_cone(grow_dims.x, grow_dims.w);
             break;
         case SD_CYLINDER:
-            mesh_preview->get_surface(0)->create_cylinder(grow_dims.x, grow_dims.w);
+            mesh_preview->get_surface(0)->create_cylinder(grow_dims.x, grow_dims.w * 2.f);
             break;
         case SD_TORUS:
             mesh_preview->get_surface(0)->create_torus(grow_dims.x, glm::clamp(grow_dims.w, 0.0001f, grow_dims.x));
@@ -843,7 +851,7 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
     switch (stroke_parameters.get_primitive())
     {
     case SD_CAPSULE:
-        mesh_preview->translate({ 0.f, dims.x * 0.5, 0.f });
+        mesh_preview->translate({ 0.f, dims.w * 0.5, 0.f });
         break;
     default:
         break;
