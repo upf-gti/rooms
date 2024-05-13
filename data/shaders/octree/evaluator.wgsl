@@ -1,6 +1,6 @@
 #include math.wgsl
-#include sdf_functions.wgsl
 #include octree_includes.wgsl
+#include sdf_commons.wgsl
 #include sdf_interval_functions.wgsl
 
 @group(0) @binding(1) var<uniform> merge_data : MergeData;

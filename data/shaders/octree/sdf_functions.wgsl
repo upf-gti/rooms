@@ -1,43 +1,5 @@
 #include ../color_blend_modes.wgsl
-
-// SD Primitives
-
-const SD_SPHERE         = 0;
-const SD_BOX            = 1;
-const SD_CAPSULE        = 2;
-const SD_CONE           = 3;
-const SD_CYLINDER       = 4;
-const SD_TORUS          = 5;
-const SD_BEZIER         = 6;
-const SD_ELLIPSOID      = 7;
-const SD_PYRAMID        = 8;
-
-// SD Operations
-
-const OP_UNION                  = 0;
-const OP_SUBSTRACTION           = 1;
-const OP_INTERSECTION           = 2;
-const OP_PAINT                  = 3;
-const OP_SMOOTH_UNION           = 4;
-const OP_SMOOTH_SUBSTRACTION    = 5;
-const OP_SMOOTH_INTERSECTION    = 6;
-const OP_SMOOTH_PAINT           = 7;
-
-const SD_SPHERE_SMOOTH_OP_UNION = SD_SPHERE | (OP_SMOOTH_UNION << 4);
-const SD_SPHERE_SMOOTH_OP_SUBSTRACTION = SD_SPHERE | (OP_SMOOTH_SUBSTRACTION << 4);
-const SD_SPHERE_SMOOTH_OP_PAINT = SD_SPHERE | (OP_SMOOTH_PAINT << 4);
-const SD_BOX_SMOOTH_OP_UNION = SD_BOX | (OP_SMOOTH_UNION << 4);
-const SD_BOX_SMOOTH_OP_SUBSTRACTION = SD_BOX | (OP_SMOOTH_SUBSTRACTION << 4);
-const SD_CAPSULE_SMOOTH_OP_UNION = SD_CAPSULE | (OP_SMOOTH_UNION << 4);
-const SD_CAPSULE_SMOOTH_OP_SUBSTRACTION = SD_CAPSULE | (OP_SMOOTH_SUBSTRACTION << 4);
-const SD_CONE_SMOOTH_OP_UNION = SD_CONE | (OP_SMOOTH_UNION << 4);
-const SD_CONE_SMOOTH_OP_SUBSTRACTION = SD_CONE | (OP_SMOOTH_SUBSTRACTION << 4);
-const SD_CYLINDER_SMOOTH_OP_UNION = SD_CYLINDER | (OP_SMOOTH_UNION << 4);
-const SD_CYLINDER_SMOOTH_OP_SUBSTRACTION = SD_CYLINDER | (OP_SMOOTH_SUBSTRACTION << 4);
-const SD_TORUS_SMOOTH_OP_UNION = SD_TORUS | (OP_SMOOTH_UNION << 4);
-const SD_TORUS_SMOOTH_OP_SUBSTRACTION = SD_TORUS | (OP_SMOOTH_SUBSTRACTION << 4);
-const SD_BEZIER_SMOOTH_OP_UNION = SD_BEZIER | (OP_SMOOTH_UNION << 4);
-const SD_BEZIER_SMOOTH_OP_SUBSTRACTION = SD_BEZIER | (OP_SMOOTH_SUBSTRACTION << 4);
+#include sdf_commons.wgsl
 
 // Data containers
 struct Material {
@@ -256,7 +218,7 @@ fn opSmoothPaint( s1 : Surface, s2 : Surface, material : Material, k : f32 ) -> 
 {
     var sColorInter : Surface = opIntersection(s1, s2);
     
-    let smin : vec2f = soft_min(sColorInter.distance, s1.distance, k);
+    let smin : vec2f = sminQuadratic(sColorInter.distance, s1.distance, k);
 
     var s : Surface;
     s.distance = s1.distance;
