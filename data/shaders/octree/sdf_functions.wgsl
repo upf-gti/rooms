@@ -300,7 +300,7 @@ fn sdSphere( p : vec3f, c : vec3f, r : f32, material : Material) -> Surface
     return sf;
 }
 
-fn sdCutSphere( p : vec3f, c : vec3f, rotation : vec4f, r : f32, h : f32, material : Material) -> Surface
+fn sdCutSphere( p : vec3f, c : vec3f, r : f32, h : f32, rotation : vec4f, material : Material) -> Surface
 {
     var sf : Surface;
     // sampling independent computations (only depend on shape)
@@ -399,7 +399,7 @@ ______
 \____/ \___/_/\_\
 */
 
-fn sdBox( p : vec3f, c : vec3f, rotation : vec4f, s : vec3f, r : f32, material : Material) -> Surface
+fn sdBox( p : vec3f, c : vec3f, s : vec3f, r : f32, rotation : vec4f, material : Material) -> Surface
 {
     var sf : Surface;
 
@@ -430,7 +430,7 @@ fn eval_stroke_box_union( position : vec3f, current_surface : Surface, curr_stro
         let size_param = (curr_edit.dimensions.w / 0.1) * size.x; // Make Rounding depend on the side length
         size -= size_param;
 
-        tmp_surface = sdBox(position, curr_edit.position, curr_edit.rotation, size, size_param, material);
+        tmp_surface = sdBox(position, curr_edit.position, size, size_param, curr_edit.rotation, material);
         result_surface = opSmoothUnion(result_surface, tmp_surface, smooth_factor);
     }
 
@@ -456,7 +456,7 @@ fn eval_stroke_box_substraction( position : vec3f, current_surface : Surface, cu
         let size_param = (curr_edit.dimensions.w / 0.1) * size.x; // Make Rounding depend on the side length
         size -= size_param;
 
-        tmp_surface = sdBox(position, curr_edit.position, curr_edit.rotation, size, size_param, material);
+        tmp_surface = sdBox(position, curr_edit.position, size, size_param, curr_edit.rotation, material);
         result_surface = opSmoothSubtraction(result_surface, tmp_surface, smooth_factor);
     }
 
@@ -918,7 +918,7 @@ fn evaluate_single_edit( position : vec3f, primitive : u32, operation : u32, par
             cap_value = clamp(cap_value, 0.0, 0.9);
             if(cap_value > 0.0) { 
                 cap_value = cap_value * 2.0 - 1.0;
-                pSurface = sdCutSphere(position, edit.position, edit.rotation, radius, radius * cap_value, stroke_material);
+                pSurface = sdCutSphere(position, edit.position, radius, radius * cap_value, edit.rotation, stroke_material);
             } else {
                 pSurface = sdSphere(position, edit.position, radius, stroke_material);
             }
@@ -933,7 +933,7 @@ fn evaluate_single_edit( position : vec3f, primitive : u32, operation : u32, par
             size -= size_param;
             size_param -= onion_thickness;
 
-            pSurface = sdBox(position, edit.position, edit.rotation, size, size_param, stroke_material);
+            pSurface = sdBox(position, edit.position, size, size_param, edit.rotation, stroke_material);
             break;
         }
         case SD_CAPSULE: {

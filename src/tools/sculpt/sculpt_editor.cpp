@@ -142,7 +142,7 @@ void SculptEditor::initialize()
     ui::VContainer2D* test_root = new ui::VContainer2D("test_root", { 0.0f, 0.0f });
     test_root->set_centered(true);
 
-    test_root->add_child(new ui::Slider2D("thermometer", 0.5f, ui::SliderMode::HORIZONTAL, ui::DISABLED));
+    test_root->add_child(new ui::Slider2D("thermometer", 0.0f, ui::SliderMode::HORIZONTAL, ui::DISABLED));
 
     test_slider_thermometer = new Viewport3D(test_root);
     test_slider_thermometer->set_active(true);
@@ -573,9 +573,10 @@ void SculptEditor::update(float delta_time)
 
     was_tool_used = is_tool_used;
 
-    // TEST: TO REMOVE
     if (was_tool_used) {
-        Node::emit_signal("thermometer@changed", random_f());
+        renderer->get_raymarching_renderer()->get_brick_usage([](float pct, uint32_t brick_count) {
+            Node::emit_signal("thermometer@changed", pct);
+        });
     }
 }
 

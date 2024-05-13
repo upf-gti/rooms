@@ -61,6 +61,15 @@ class RaymarchingRenderer {
     uint32_t        max_brick_count = 0u;
     uint32_t        empty_brick_and_removal_buffer_count = 0u;
 
+    struct sBrickBuffers_counters {
+        uint32_t atlas_empty_bricks_counter;
+        uint32_t brick_instance_counter;
+        uint32_t brick_removal_counter;
+        uint32_t preview_instance_counter;
+    };
+
+    WGPUBuffer     brick_buffers_counters_read_buffer = nullptr;
+
     // Octree creation
     Pipeline        compute_octree_evaluate_pipeline;
     Pipeline        compute_octree_increment_level_pipeline;
@@ -257,6 +266,8 @@ public:
     void set_sculpt_rotation(const glm::quat& rotation);
 
     void octree_ray_intersect(const glm::vec3& ray_origin, const glm::vec3& ray_dir, std::function<void(glm::vec3)> callback = nullptr);
+
+    void get_brick_usage(std::function<void(float, uint32_t)> callback);
 
     const RayIntersectionInfo& get_ray_intersection_info() const;
 

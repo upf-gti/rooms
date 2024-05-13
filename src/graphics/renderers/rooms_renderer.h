@@ -12,7 +12,7 @@
 #include "framework/camera/flyover_camera.h"
 #include "framework/camera/orbit_camera.h"
 
-// #define DISABLE_RAYMARCHER
+//#define DISABLE_RAYMARCHER
 
 class RoomsRenderer : public Renderer {
 

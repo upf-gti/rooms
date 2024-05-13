@@ -267,6 +267,42 @@ void RaymarchingRenderer::octree_ray_intersect(const glm::vec3& ray_origin, cons
     }
 }
 
+void RaymarchingRenderer::get_brick_usage(std::function<void(float, uint32_t)> callback)
+{
+    struct UserData {
+        WGPUBuffer read_buffer;
+        sBrickBuffers_counters info;
+        bool finished = false;
+    } user_data;
+
+    user_data.read_buffer = brick_buffers_counters_read_buffer;
+
+    wgpuBufferMapAsync(user_data.read_buffer, WGPUMapMode_Read, 0, sizeof(sBrickBuffers_counters), [](WGPUBufferMapAsyncStatus status, void* user_data_ptr) {
+
+        UserData* user_data = static_cast<UserData*>(user_data_ptr);
+
+        if (status == WGPUBufferMapAsyncStatus_Success) {
+            user_data->info = *(const sBrickBuffers_counters*)wgpuBufferGetConstMappedRange(user_data->read_buffer, 0, sizeof(sBrickBuffers_counters));
+            wgpuBufferUnmap(user_data->read_buffer);
+        }
+
+        user_data->finished = true;
+
+        }, &user_data);
+
+    WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
+
+    while (!user_data.finished) {
+        // Checks for ongoing asynchronous operations and call their callbacks if needed
+        webgpu_context->process_events();
+
+        uint32_t brick_count = user_data.info.brick_instance_counter;
+        float pct = brick_count / (float)max_brick_count;
+
+        callback(pct, brick_count);
+    }
+}
+
 void RaymarchingRenderer::compute_preview_edit(WGPUComputePassEncoder compute_pass)
 {
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
@@ -642,6 +678,10 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
     wgpuComputePassEncoderEnd(compute_pass);
     wgpuComputePassEncoderRelease(compute_pass);
 
+    // Copy brick counters to read buffer
+    wgpuCommandEncoderCopyBufferToBuffer(command_encoder, std::get<WGPUBuffer>(octree_brick_buffers.data), 0,
+        brick_buffers_counters_read_buffer, 0, sizeof(sBrickBuffers_counters));
+
     AABB_mesh->render();
 
     if (is_going_to_evaluate) {
@@ -797,9 +837,11 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
             + sizeof(uint32_t) * 4u + max_brick_count * sizeof(ProxyInstanceData)               // Brick counter, padding & instance buffer
             + sizeof(uint32_t) * 4u + PREVIEW_PROXY_BRICKS_COUNT * sizeof(ProxyInstanceData);   // Preview brick counter, padding & instance buffer
         std::vector<uint8_t> default_bytes(struct_size, 0);
-        octree_brick_buffers.data = webgpu_context->create_buffer(struct_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, default_bytes.data(), "brick_buffer_struct");
+        octree_brick_buffers.data = webgpu_context->create_buffer(struct_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_CopySrc | WGPUBufferUsage_Storage, default_bytes.data(), "brick_buffer_struct");
         octree_brick_buffers.binding = 5;
         octree_brick_buffers.buffer_size = struct_size;
+
+        brick_buffers_counters_read_buffer = webgpu_context->create_buffer(sizeof(sBrickBuffers_counters), WGPUBufferUsage_CopyDst | WGPUBufferUsage_MapRead, nullptr, "brick counters read buffer");
 
         // Empty atlas malloc data
         uint32_t* atlas_indices = new uint32_t[octants_max_size + 4u];
