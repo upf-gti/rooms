@@ -158,7 +158,7 @@ void RaymarchingRenderer::change_stroke(const StrokeParameters& params, const ui
     new_stroke.material = params.get_material();
     new_stroke.edit_count = 0u;
 
-    spdlog::info("chage stroke");
+    spdlog::info("Change stroke");
     if (current_stroke.edit_count > 0u) {
         // Add it to the history
         stroke_history.push_back(current_stroke);
@@ -168,6 +168,16 @@ void RaymarchingRenderer::change_stroke(const StrokeParameters& params, const ui
     in_frame_stroke = new_stroke;
 
     preview_stroke = new_stroke;
+}
+
+void RaymarchingRenderer::change_stroke(const uint32_t index_increment) {
+    spdlog::info("Change stroke");
+    if (current_stroke.edit_count > 0u) {
+        // Add it to the history
+        stroke_history.push_back(current_stroke);
+    }
+
+    current_stroke.edit_count = 0u;
 }
 
 void RaymarchingRenderer::push_edit(const Edit edit)
@@ -633,6 +643,9 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
         spdlog::info("Undo last stroke");
         wgpuComputePassEncoderPushDebugGroup(compute_pass, "Undo evaluation");
 #endif
+        if (current_stroke.edit_count > 0u) {
+            change_stroke();
+        }
         uint32_t set_as_preview = 0x01u;
         webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_uniform.data), sizeof(uint32_t) * 3u, &set_as_preview, sizeof(uint32_t));
         evaluate_strokes(compute_pass, to_compute_stroke_buffer, true);

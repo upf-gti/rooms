@@ -558,7 +558,7 @@ void SculptEditor::update(float delta_time)
         mirror_current_edits(delta_time);
     }
 
-    // A hack for flatscreen sculpting
+    // a hack for flatscreen sculpting
     if (!renderer->get_openxr_available() && new_edits.size() > 0u) {
         renderer->change_stroke(stroke_parameters);
     }
