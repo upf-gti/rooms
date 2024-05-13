@@ -11,7 +11,7 @@
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/renderer_storage.h"
 
-#include "shaders/mesh_texture_cube.wgsl.gen.h"
+#include "shaders/mesh_texture.wgsl.gen.h"
 #include "shaders/mesh_transparent.wgsl.gen.h"
 #include "shaders/mesh_outline.wgsl.gen.h"
 
@@ -38,7 +38,7 @@ void SculptEditor::initialize()
     mirror_material.priority = 0;
     mirror_material.transparency_type = ALPHA_BLEND;
     mirror_material.diffuse_texture = RendererStorage::get_texture("data/textures/mirror_quad_texture.png");
-    mirror_material.shader = RendererStorage::get_shader_from_source(shaders::mesh_texture_cube::source, shaders::mesh_texture_cube::path, mirror_material);
+    mirror_material.shader = RendererStorage::get_shader_from_source(shaders::mesh_texture::source, shaders::mesh_texture::path, mirror_material);
 
     mirror_mesh->set_surface_material_override(mirror_mesh->get_surface(0), mirror_material);
 
