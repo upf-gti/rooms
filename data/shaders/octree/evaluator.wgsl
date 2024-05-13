@@ -416,7 +416,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             }
 
             current_stroke_interval = surface_interval;
-            margin = vec4f(SMOOTH_FACTOR);
 
             surface_interval = evaluate_stroke_interval(current_subdivision_interval,  &(preview_stroke), surface_interval, octant_center, level_half_size);
         } else {
@@ -451,7 +450,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 }
             }
         } else {
-            if (stroke.operation == OP_SMOOTH_SUBSTRACTION) {
+            if (preview_stroke.operation == OP_SMOOTH_SUBSTRACTION) {
                 if ((current_stroke_interval.x < 0.0)) {
                     if (is_current_brick_filled) {
                         brick_mark_as_preview(octree_index);

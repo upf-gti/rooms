@@ -594,6 +594,7 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
 
     if (needs_undo && stroke_history.size() > 0u) {
 #ifndef NDEBUG
+        spdlog::info("Undo last stroke");
         wgpuComputePassEncoderPushDebugGroup(compute_pass, "Undo evaluation");
 #endif
         uint32_t set_as_preview = 0x01u;
