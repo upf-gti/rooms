@@ -685,20 +685,20 @@ void SculptEditor::scene_update_rotation()
 
 void SculptEditor::render()
 {
-    if (mesh_preview && renderer->get_openxr_available())
-    {
-        update_edit_preview(edit_to_add.dimensions);
+    //if (mesh_preview && renderer->get_openxr_available())
+    //{
+    //    update_edit_preview(edit_to_add.dimensions);
 
-        // Render something to be able to cull faces later...
-        if (!must_render_mesh_preview_outline()) {
-                mesh_preview->render();
-        }
-        else
-        {
-            mesh_preview_outline->set_model(mesh_preview->get_model());
-            mesh_preview_outline->render();
-        }
-    }
+    //    // Render something to be able to cull faces later...
+    //    if (!must_render_mesh_preview_outline()) {
+    //            mesh_preview->render();
+    //    }
+    //    else
+    //    {
+    //        mesh_preview_outline->set_model(mesh_preview->get_model());
+    //        mesh_preview_outline->render();
+    //    }
+    //}
 
     if (axis_lock) {
         axis_lock_gizmo.render();

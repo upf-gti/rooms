@@ -175,15 +175,15 @@ fn brick_reevaluate(octree_index : u32) {
     octant_usage_write[prev_counter] = octree_index;
 }
 
-fn preview_brick_create(octree_index : u32, octant_center : vec3f) {
+fn preview_brick_create(octree_index : u32, octant_center : vec3f, is_interior_brick : bool) {
     let preview_brick : u32 = atomicAdd(&brick_buffers.preview_instance_counter, 1u);
     
     brick_buffers.preview_instance_data[preview_brick].position = octant_center;
     brick_buffers.preview_instance_data[preview_brick].octree_parent_id = octree_index;
     brick_buffers.preview_instance_data[preview_brick].in_use = 0u;
-    // if (is_interior_brick) {
-    //     brick_buffers.preview_instance_data[preview_brick].in_use = INTERIOR_BRICK_FLAG; 
-    // }
+    if (is_interior_brick) {
+        brick_buffers.preview_instance_data[preview_brick].in_use = INTERIOR_BRICK_FLAG; 
+    }
 }
 
 fn brick_mark_as_preview(octree_index : u32) {
@@ -267,6 +267,9 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     var subdivide : bool = false;
     var margin : vec4f = vec4f(0.0);
 
+    let is_current_brick_filled : bool = (octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG;
+    let is_interior_brick : bool = (octree.data[octree_index].tile_pointer & INTERIOR_BRICK_FLAG) == INTERIOR_BRICK_FLAG;
+
     // NOTE: Code duplication due WGSL's rigid Pointer use & constraints
     if (!is_evaluating_preview) {
         // =====================================================
@@ -337,9 +340,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             }
         }
 
-        let is_current_brick_filled : bool = (octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG;
-        let is_interior_brick : bool = (octree.data[octree_index].tile_pointer & INTERIOR_BRICK_FLAG) == INTERIOR_BRICK_FLAG;
-
         // Do not evaluate all the bricks, only the ones whose distance interval has changed
         octree.data[octree_index].octant_center_distance = surface_interval;
 
@@ -408,16 +408,20 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         // |_|   |_|  \___| \_/ |_|\___| \_/\_/   |______\_/ \__,_|_(_)
         // =============================================================
         // =============================================================
-                                                             
+
+        var surface_with_preview_interval : vec2f;
+
          if (level == OCTREE_DEPTH) {
             // Compute the context of the current stroke,
             for (var j : u32 = 0; j < stroke_history.count; j++) {
                 surface_interval = evaluate_stroke_interval(current_subdivision_interval, &(stroke_history.strokes[j]), surface_interval, octant_center, level_half_size);
             }
 
-            current_stroke_interval = surface_interval;
+            // No bueno
+            //current_stroke_interval = surface_interval;
+            surface_with_preview_interval = surface_interval;
 
-            surface_interval = evaluate_stroke_interval(current_subdivision_interval,  &(preview_stroke), surface_interval, octant_center, level_half_size);
+            surface_with_preview_interval = evaluate_stroke_interval(current_subdivision_interval,  &(preview_stroke), surface_with_preview_interval, octant_center, level_half_size);
         } else {
             // Twice the smooth factor since it is the top influencing margin 
             // as a way to subdivide to the bottom level. It is not used
@@ -430,9 +434,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         current_stroke_interval = evaluate_stroke_interval_force_union(current_subdivision_interval,  &(preview_stroke), current_stroke_interval, margin);
         
         // Pseudo subdivide!
-
-        let is_current_brick_filled : bool = (octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG;
-
         // Do not evaluate all the bricks, only the ones whose distance interval has changed
         octree.data[octree_index].octant_center_distance = surface_interval;
         
@@ -454,8 +455,9 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 if ((current_stroke_interval.x < 0.0)) {
                     if (is_current_brick_filled) {
                         brick_mark_as_preview(octree_index);
-                    } else if (surface_interval.y < 0.0) {
-                        preview_brick_create(octree_index, octant_center);
+                    } else if (current_stroke_interval.y > 0.0 && surface_interval.y < 0.0) {
+                        preview_brick_create(octree_index, octant_center, surface_interval.y < 0.0);
+                        //preview_brick_create(octree_index, octant_center, surface_with_preview_interval.y > 0.0 && surface_with_preview_interval.x < 0.0);
                     }
                 }
             } else if (preview_stroke.operation == OP_SMOOTH_UNION) {
@@ -464,7 +466,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                         if (is_current_brick_filled) {
                             brick_mark_as_preview(octree_index);
                         } else if (surface_interval.x < 0.0) {
-                            preview_brick_create(octree_index, octant_center);
+                            preview_brick_create(octree_index, octant_center, false);
                         }
                     }
                 }
