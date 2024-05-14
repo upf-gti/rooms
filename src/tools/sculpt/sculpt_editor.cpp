@@ -511,7 +511,7 @@ void SculptEditor::update(float delta_time)
     // Undo/Redo open ui stuff
     {
         bool x_pressed = Input::was_button_pressed(XR_BUTTON_X);
-        bool y_pressed = Input::was_button_pressed(XR_BUTTON_X);
+        bool y_pressed = Input::was_button_pressed(XR_BUTTON_Y);
 
         if (!is_shift_left_pressed) {
             if (Input::was_key_pressed(GLFW_KEY_U) || x_pressed) {
@@ -533,7 +533,7 @@ void SculptEditor::update(float delta_time)
 
             // open guides
             if (y_pressed) {
-                Node::emit_signal("guides_submenu", (void*)nullptr);
+                Node::emit_signal("guides", (void*)nullptr);
             }
         }
     }
