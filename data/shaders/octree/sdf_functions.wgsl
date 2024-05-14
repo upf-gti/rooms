@@ -201,7 +201,7 @@ fn opSmoothSubtraction( s1 : Surface, s2 : Surface, k : f32 ) -> Surface
     let smin : vec2f = sminQuadratic(s2.distance, -s1.distance, k);
     var s : Surface;
     s.distance = -smin.x;
-    s.material = s2.material;
+    s.material = Material_mix(s2.material, s1.material, smin.y);
     return s;
 }
 
