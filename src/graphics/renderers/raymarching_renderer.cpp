@@ -389,7 +389,7 @@ const Stroke* RaymarchingRenderer::compute_and_upload_context(const std::vector<
         strokes_to_evaluate = strokes.data();
         stroke_count_to_evaluate = strokes.size();
     } else
-    if (needs_undo) {
+    if (needs_undo && stroke_history.size() > 0u) {
         uint32_t last_stroke_id = 0u;
         uint32_t stroke_count = 0u;
 
@@ -629,7 +629,7 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
 
     const bool needs_evaluation = in_frame_stroke.edit_count > 0 || to_compute_stroke_buffer.size() > 0;
 
-    const Stroke* to_process;
+    const Stroke* to_process = nullptr;
     if (needs_evaluation || needs_undo || needs_redo) {
         to_compute_stroke_buffer.push_back(in_frame_stroke);
         // If undo, redo or normal evaluation, we upload the context of the incomming edits
@@ -642,7 +642,7 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
     }
     
 
-    if (needs_undo && stroke_history.size() > 0u) {
+    if (needs_undo && to_process) {
 
         if (current_stroke.edit_count > 0u) {
             change_stroke();

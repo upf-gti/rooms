@@ -186,7 +186,7 @@ bool SculptEditor::is_tool_being_used(bool stamp_enabled)
     was_tool_pressed = is_tool_pressed;
     is_tool_pressed = is_currently_pressed;
 
-    return Input::was_key_pressed(GLFW_KEY_SPACE) || add_edit_with_tool;
+    return Input::is_key_pressed(GLFW_KEY_SPACE) || add_edit_with_tool;
 #else
     return Input::is_key_pressed(GLFW_KEY_SPACE);
 #endif
@@ -558,10 +558,10 @@ void SculptEditor::update(float delta_time)
         mirror_current_edits(delta_time);
     }
 
-    // a hack for flatscreen sculpting
-    if (!renderer->get_openxr_available() && new_edits.size() > 0u) {
-        renderer->change_stroke(stroke_parameters);
-    }
+    //// a hack for flatscreen sculpting
+    //if (!renderer->get_openxr_available() && new_edits.size() > 0u) {
+    //    renderer->change_stroke(stroke_parameters);
+    //}
 
     // Push to the renderer the edits and the previews
     renderer->push_preview_edit_list(preview_tmp_edits);
