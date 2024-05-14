@@ -11,7 +11,6 @@ enum eTool : uint8_t {
     NONE = 0,
     SCULPT,
     PAINT,
-    SWEEP,
     TOOL_COUNT
 };
 
@@ -190,6 +189,9 @@ class SculptEditor {
     bool is_released = false;
     bool was_tool_pressed = false;
     bool is_stretching_edit = false;
+
+    bool is_shift_left_pressed = false;
+    bool is_shift_right_pressed = false;
 
     bool edit_update(float delta_time);
     void mirror_current_edits(float delta_time);

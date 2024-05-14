@@ -194,6 +194,8 @@ bool SculptEditor::is_tool_being_used(bool stamp_enabled)
 
 bool SculptEditor::edit_update(float delta_time)
 {
+    stamp_enabled = !is_shift_right_pressed;
+
     // Poll action using stamp mode when picking material also mode to detect once
     bool is_tool_used = is_tool_being_used(stamp_enabled || is_picking_material);
 
@@ -234,17 +236,22 @@ bool SculptEditor::edit_update(float delta_time)
 
     // Update edit dimensions
     if (!stamp_enabled || !is_tool_pressed && !is_released) {
+
         // Get the data from the primitive default
         edit_to_add.dimensions = primitive_default_states[stroke_parameters.get_primitive()].dimensions;
         float size_multiplier = Input::get_thumbstick_value(HAND_RIGHT).y * delta_time * 0.1f;
         dimensions_dirty |= (fabsf(size_multiplier) > 0.f);
-        glm::vec3 new_dimensions = glm::clamp(size_multiplier + glm::vec3(edit_to_add.dimensions), 0.001f, 0.1f);
-        edit_to_add.dimensions = glm::vec4(new_dimensions, edit_to_add.dimensions.w);
 
-        // Update primitive specific size
-        size_multiplier = Input::get_thumbstick_value(HAND_LEFT).y * delta_time * 0.1f;
-        edit_to_add.dimensions.w = glm::clamp(size_multiplier + edit_to_add.dimensions.w, 0.001f, 0.1f);
-        dimensions_dirty |= (fabsf(size_multiplier) > 0.f);
+        // Update primitive main size
+        if (!is_shift_right_pressed) {
+            glm::vec3 new_dimensions = glm::clamp(size_multiplier + glm::vec3(edit_to_add.dimensions), 0.001f, 0.1f);
+            edit_to_add.dimensions = glm::vec4(new_dimensions, edit_to_add.dimensions.w);
+        }
+        else {
+            // Update primitive specific size
+            edit_to_add.dimensions.w = glm::clamp(size_multiplier + edit_to_add.dimensions.w, 0.001f, 0.1f);
+            dimensions_dirty |= (fabsf(size_multiplier) > 0.f);
+        }
 
         // Update in primitive state
         primitive_default_states[stroke_parameters.get_primitive()].dimensions = edit_to_add.dimensions;
@@ -338,39 +345,43 @@ bool SculptEditor::edit_update(float delta_time)
 
     // Operation changer for the different tools
     {
-        if (Input::was_button_pressed(XR_BUTTON_Y)) {
-            sdOperation op = stroke_parameters.get_operation();
-            std::string new_label_text = "";
+        if (Input::was_button_pressed(XR_BUTTON_B)) {
 
-            if (current_tool == SCULPT) {
-                switch (op) {
-                case OP_UNION:
-                    op = OP_SUBSTRACTION;
-                    new_label_text = "Change to Addition";
-                    break;
-                case OP_SUBSTRACTION:
-                    op = OP_UNION;
-                    new_label_text = "Change to Substraction";
-                    break;
-                case OP_SMOOTH_UNION:
-                    op = OP_SMOOTH_SUBSTRACTION;
-                    new_label_text = "Change to Smooth Addition";
-                    break;
-                case OP_SMOOTH_SUBSTRACTION:
-                    op = OP_SMOOTH_UNION;
-                    new_label_text = "Change to Smooth Substraction";
-                    break;
-                default:
-                    new_label_text = "@Alex socorro";
-                    break;
+            // Add/Substract toggle
+            if (!is_shift_right_pressed) {
+
+                sdOperation op = stroke_parameters.get_operation();
+                std::string new_label_text = "";
+
+                if (current_tool == SCULPT) {
+                    switch (op) {
+                    case OP_SMOOTH_UNION:
+                        op = OP_SMOOTH_SUBSTRACTION;
+                        new_label_text = "Change to Addition";
+                        break;
+                    case OP_SMOOTH_SUBSTRACTION:
+                        op = OP_SMOOTH_UNION;
+                        new_label_text = "Change to Substraction";
+                        break;
+                    default:
+                        assert(0 && "Use smooth operations!");
+                        break;
+                    }
+
+                    controller_labels[HAND_RIGHT].secondary_button_label->set_text(new_label_text);
+                    stroke_parameters.set_operation(op);
                 }
             }
-            else if (current_tool == PAINT) {
-                op = OP_PAINT ? OP_SMOOTH_PAINT : OP_PAINT;
-                new_label_text = (op == OP_PAINT) ? "Change to Smooth Paint" : "Change to Paint";
+            else {
+
+                // Sculpt/Paint toggle
+                enable_tool(current_tool == PAINT ? SCULPT : PAINT);
             }
-            controller_labels[HAND_LEFT].secondary_button_label->set_text(new_label_text);
-            stroke_parameters.set_operation(op);
+        }
+
+        // Pick material shortcut..
+        if (is_shift_right_pressed && Input::was_button_pressed(XR_BUTTON_A)) {
+            pick_material();
         }
     }
 
@@ -446,6 +457,9 @@ void SculptEditor::update(float delta_time)
         return;
     }
 
+    is_shift_left_pressed = Input::is_grab_pressed(HAND_LEFT);
+    is_shift_right_pressed = Input::is_grab_pressed(HAND_RIGHT);
+
     // Update UI
     {
         if (main_panel_3d) {
@@ -453,6 +467,7 @@ void SculptEditor::update(float delta_time)
             pose = glm::rotate(pose, glm::radians(-45.f), glm::vec3(1.0f, 0.0f, 0.0f));
             main_panel_3d->set_model(pose);
         }
+        // This is only for 2d mode..
         else {
             main_panel_2d->update(delta_time);
 
@@ -493,16 +508,33 @@ void SculptEditor::update(float delta_time)
 
     bool is_tool_used = edit_update(delta_time);
 
-    // Interaction input
+    // Undo/Redo open ui stuff
     {
-        if (Input::was_key_pressed(GLFW_KEY_U) || Input::was_grab_pressed(HAND_LEFT)) {
-            renderer->toogle_frame_debug();
-            renderer->undo();
-        }
+        bool x_pressed = Input::was_button_pressed(XR_BUTTON_X);
+        bool y_pressed = Input::was_button_pressed(XR_BUTTON_X);
 
-        if (Input::was_key_pressed(GLFW_KEY_R) || Input::was_grab_pressed(HAND_RIGHT)) {
-            renderer->toogle_frame_debug();
-            renderer->redo();
+        if (!is_shift_left_pressed) {
+            if (Input::was_key_pressed(GLFW_KEY_U) || x_pressed) {
+                renderer->toogle_frame_debug();
+                renderer->undo();
+            }
+
+            if (Input::was_key_pressed(GLFW_KEY_R) || y_pressed) {
+                renderer->toogle_frame_debug();
+                renderer->redo();
+            }
+        }
+        else {
+            // open pBR
+            if (x_pressed) {
+                Node::emit_signal("material_editor", (void*)this);
+                Node::emit_signal("shading", (void*)this);
+            }
+
+            // open guides
+            if (y_pressed) {
+                Node::emit_signal("guides_submenu", (void*)nullptr);
+            }
         }
     }
 
@@ -927,11 +959,13 @@ void SculptEditor::enable_tool(eTool tool)
         stroke_parameters.set_operation(OP_SMOOTH_UNION);
         hand2edit_distance = 0.0f;
         static_cast<ui::ButtonSubmenu2D*>(brush_editor_submenu)->set_disabled(true);
+        Node::emit_signal("sculpt@pressed", (void*)nullptr);
         break;
     case PAINT:
         stroke_parameters.set_operation(OP_SMOOTH_PAINT);
         hand2edit_distance = 0.1f;
         static_cast<ui::ButtonSubmenu2D*>(brush_editor_submenu)->set_disabled(false);
+        Node::emit_signal("paint@pressed", (void*)nullptr);
         break;
     default:
         break;
@@ -1181,10 +1215,10 @@ void SculptEditor::init_ui()
         {
             left_hand_container = new ui::VContainer2D("left_controller_root", { 0.0f, 0.0f });
 
-            controller_labels[HAND_LEFT].secondary_button_label = new ui::ImageLabel2D("Change to Substract", "data/textures/buttons/y.png", 30.0f);
+            controller_labels[HAND_LEFT].secondary_button_label = new ui::ImageLabel2D("Redo", "data/textures/buttons/y.png", 30.0f);
             left_hand_container->add_child(controller_labels[HAND_LEFT].secondary_button_label);
-            /*controller_labels[HAND_LEFT].main_button_label = new ui::ImageLabel2D("Show UI", "data/textures/buttons/x.png", 30.0f);
-            left_hand_container->add_child(controller_labels[HAND_LEFT].main_button_label);*/
+            controller_labels[HAND_LEFT].main_button_label = new ui::ImageLabel2D("Undo", "data/textures/buttons/x.png", 30.0f);
+            left_hand_container->add_child(controller_labels[HAND_LEFT].main_button_label);
 
             left_hand_ui_3D = new Viewport3D(left_hand_container);
             RoomsEngine::entities.push_back(left_hand_ui_3D);
@@ -1194,9 +1228,9 @@ void SculptEditor::init_ui()
         {
             right_hand_container = new ui::VContainer2D("right_controller_root", { 0.0f, 0.0f });
 
-            controller_labels[HAND_RIGHT].secondary_button_label = new ui::ImageLabel2D("Change to Stamp", "data/textures/buttons/b.png", 30.0f);
+            controller_labels[HAND_RIGHT].secondary_button_label = new ui::ImageLabel2D("Change to Substraction", "data/textures/buttons/b.png", 30.0f);
             right_hand_container->add_child(controller_labels[HAND_RIGHT].secondary_button_label);
-            controller_labels[HAND_RIGHT].main_button_label = new ui::ImageLabel2D("Click on the UI", "data/textures/buttons/a.png", 30.0f);
+            controller_labels[HAND_RIGHT].main_button_label = new ui::ImageLabel2D("UI Select", "data/textures/buttons/a.png", 30.0f);
             right_hand_container->add_child(controller_labels[HAND_RIGHT].main_button_label);
 
             right_hand_ui_3D = new Viewport3D(right_hand_container);
@@ -1336,11 +1370,6 @@ void SculptEditor::bind_events()
         else {
             spdlog::error("Cannot find color_blending_modes selector!");
         }
-    }
-
-    // Bind Controller buttons
-    {
-        Node::bind(XR_BUTTON_B, [&]() { toggle_stamp(); });
     }
 }
 
