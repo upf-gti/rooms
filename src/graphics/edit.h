@@ -111,7 +111,7 @@ public:
 };
 
 struct Stroke {
-    uint32_t    stroke_id;
+    uint32_t    stroke_id = 0u;
     uint32_t    edit_count = 0u;
     sdPrimitive primitive;
     sdOperation operation;

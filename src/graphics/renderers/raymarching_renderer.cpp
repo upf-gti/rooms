@@ -390,45 +390,40 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
         stroke_count_to_evaluate = strokes.size();
     } else {
         if (is_undo) {
-            if (stroke_history.size() > 1u) {
-                
-                uint32_t last_stroke_id = stroke_history.back().stroke_id;
-                Stroke& to_undo = stroke_history.back();
+            uint32_t last_stroke_id = 0u;
+            uint32_t stroke_count = 0u;
 
-                strokes_aabb = merge_aabbs(strokes_aabb, to_undo.get_world_AABB());
-                max_smooth_margin = glm::max(to_undo.parameters.w, max_smooth_margin);
-                strokes_to_pop = 1u;
+            uint32_t united_stroke_idx = 0;
 
-                uint32_t united_stroke_idx = 0u, stroke_count = 0u;
-                for (united_stroke_idx = stroke_history.size() - 2u; united_stroke_idx >= 0u; --united_stroke_idx, stroke_count++) {
-                    Stroke& prev = stroke_history[united_stroke_idx];
-                        
-                    // if stroke changes
-                    if (prev.stroke_id != last_stroke_id) {
-                        break;
-                    }
+            stroke_count_to_evaluate = 1;
 
-                    strokes_aabb = merge_aabbs(strokes_aabb, prev.get_world_AABB());
-                    stroke_edit_count += prev.edit_count;
-                    max_smooth_margin = glm::max(prev.parameters.w, max_smooth_margin);
-                    strokes_to_pop++;
+            for (united_stroke_idx = stroke_history.size(); united_stroke_idx > 0; --united_stroke_idx) {
+                Stroke& prev = stroke_history[united_stroke_idx - 1];
+
+                // if stroke changes
+                if (last_stroke_id != 0u && prev.stroke_id != last_stroke_id) {
+                    break;
                 }
 
-                strokes_to_evaluate = &(stroke_history.data()[united_stroke_idx]);
-                stroke_count_to_evaluate = 1u;
-                last_history_index = stroke_history.size() - 2u;
-            } else {
-                // In the case of only one stroke, submit a substraction edit on the same places as the prev stroke
-                Stroke& prev = stroke_history[0u];
-                prev.operation = OP_SMOOTH_SUBSTRACTION;
                 strokes_aabb = merge_aabbs(strokes_aabb, prev.get_world_AABB());
                 stroke_edit_count += prev.edit_count;
                 max_smooth_margin = glm::max(prev.parameters.w, max_smooth_margin);
-                
+                strokes_to_pop++;
+
+                stroke_count++;
+                last_stroke_id = prev.stroke_id;
+            }
+
+            // In the case of first stroke, submit it as substraction to clear everything
+            if (united_stroke_idx == 0) {
+                Stroke& prev = stroke_history[0];
+                prev.operation = OP_SMOOTH_SUBSTRACTION;
                 strokes_to_evaluate = &prev;
-                stroke_count_to_evaluate = 1u;
-                last_history_index = 0u;
-                strokes_to_pop = 1u;
+                last_history_index = 0;
+            }
+            else {
+                strokes_to_evaluate = &(stroke_history.data()[united_stroke_idx - 1]);
+                last_history_index = united_stroke_idx - 1;
             }
         }
     }
