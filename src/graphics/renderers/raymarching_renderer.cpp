@@ -636,7 +636,7 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
         to_process = compute_and_upload_context(to_compute_stroke_buffer);
     } else {
         // If not, just compute the context of the preview edit, and upload it
-        std::vector<Stroke> preview_array;
+        preview_array.clear();
         preview_array.push_back(preview_stroke);
         to_process = compute_and_upload_context(preview_array);
     }

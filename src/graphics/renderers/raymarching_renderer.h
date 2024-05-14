@@ -185,6 +185,7 @@ class RaymarchingRenderer {
     std::vector<Stroke> to_compute_stroke_buffer;
     std::vector<Stroke> stroke_history;
     std::list<Stroke> stroke_redo_history;
+    std::vector<Stroke> preview_array;
 
     // Preview edits
     //struct sPreviewEditsData {

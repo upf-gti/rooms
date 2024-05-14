@@ -85,7 +85,7 @@ void SculptEditor::initialize()
 
     // Initialize default primitive states
     {
-        primitive_default_states[SD_SPHERE]     = { glm::vec4(0.02f, 0.0f, 0.0f, 0.0f) };
+        primitive_default_states[SD_SPHERE]     = { glm::vec4(0.09f, 0.0f, 0.0f, 0.0f) };
         primitive_default_states[SD_BOX]        = { glm::vec4(0.02f, 0.02f, 0.02f, 0.0f) };
         primitive_default_states[SD_CONE]       = { glm::vec4(0.05f, 0.0f, 0.0f, 0.05f) };
         primitive_default_states[SD_CYLINDER]   = { glm::vec4(0.03f, 0.0f, 0.0f, 0.05f) };
