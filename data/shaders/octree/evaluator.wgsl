@@ -423,30 +423,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         // Check the edits in the parent, and fill its own list with the edits that affect this child
         // The magin is twice the smooth factor if there are two strokes with this smooth factor, they will act on eachotehr
         current_stroke_interval = evaluate_stroke_interval_force_union(current_subdivision_interval,  &(preview_stroke), current_stroke_interval, margin);
+        let preview_stroke_interval = evaluate_stroke_interval_force_union(current_subdivision_interval,  &(preview_stroke), current_stroke_interval, vec4f(0.0));
         
-        // Pseudo subdivide!
-        // Perform subdivision in order to test with better precision
-        if (level == OCTREE_DEPTH && preview_stroke.operation == OP_SMOOTH_SUBSTRACTION) {
-            for (var i : u32 = 0; i < 8 && !subdivide; i++) {
-                let sub_octant_id = octant_id | (i << (3 * level));
-
-                let sub_level_half_size = SCULPT_MAX_SIZE / pow(2.0, f32((level+1) + 1));
-
-                let sub_octant_center = octant_center + sub_level_half_size * OCTREE_CHILD_OFFSET_LUT[(sub_octant_id >> (3 * ((level+1) - 1))) & 0x7];
-
-                let x_range : vec2f = vec2f(sub_octant_center.x - sub_level_half_size, sub_octant_center.x + sub_level_half_size);
-                let y_range : vec2f = vec2f(sub_octant_center.y - sub_level_half_size, sub_octant_center.y + sub_level_half_size);
-                let z_range : vec2f = vec2f(sub_octant_center.z - sub_level_half_size, sub_octant_center.z + sub_level_half_size);
-                let current_sub_interval = iavec3_vecs(x_range, y_range, z_range);
-
-                var surf_interval : vec2f = vec2f(10000.0, 10000.0);
-                for (var j : u32 = 0; j < stroke_history.count; j++) {
-                    surf_interval = evaluate_stroke_interval(current_sub_interval, &(stroke_history.strokes[j]), surf_interval, octant_center, level_half_size);
-                }
-
-                subdivide = surf_interval.y < 0.0;
-            }
-        }
         
         if (level < OCTREE_DEPTH) {
             // Broad culling using only the incomming stroke
@@ -466,8 +444,32 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 if ((current_stroke_interval.x < 0.0)) {
                     if (is_current_brick_filled) {
                         brick_mark_as_preview(octree_index);
-                    } else if (subdivide) {
-                        preview_brick_create(octree_index, octant_center, true);
+                    } else if (preview_stroke_interval.x < 0.0 && surface_with_preview_interval.x < 0.0 && surface_with_preview_interval.y > 0.0) {
+                        // Pseudo subdivide!
+                        // Perform subdivision in order to test with better precision
+                        // The desired test is surface_interval.y < 0.0
+                        for (var i : u32 = 0; i < 8 && !subdivide; i++) {
+                            let sub_octant_id = octant_id | (i << (3 * level));
+
+                            let sub_level_half_size = SCULPT_MAX_SIZE / pow(2.0, f32((level+1) + 1));
+
+                            let sub_octant_center = octant_center + sub_level_half_size * OCTREE_CHILD_OFFSET_LUT[(sub_octant_id >> (3 * ((level+1) - 1))) & 0x7];
+
+                            let x_range : vec2f = vec2f(sub_octant_center.x - sub_level_half_size, sub_octant_center.x + sub_level_half_size);
+                            let y_range : vec2f = vec2f(sub_octant_center.y - sub_level_half_size, sub_octant_center.y + sub_level_half_size);
+                            let z_range : vec2f = vec2f(sub_octant_center.z - sub_level_half_size, sub_octant_center.z + sub_level_half_size);
+                            let current_sub_interval = iavec3_vecs(x_range, y_range, z_range);
+
+                            var surf_interval : vec2f = vec2f(10000.0, 10000.0);
+                            for (var j : u32 = 0; j < stroke_history.count; j++) {
+                                surf_interval = evaluate_stroke_interval(current_sub_interval, &(stroke_history.strokes[j]), surf_interval, octant_center, level_half_size);
+                            }
+
+                            subdivide = surf_interval.y < 0.0;
+                        }
+                        if (subdivide) {
+                            preview_brick_create(octree_index, octant_center, true);
+                        }
                     }
                 }
             } else if (preview_stroke.operation == OP_SMOOTH_UNION) {
