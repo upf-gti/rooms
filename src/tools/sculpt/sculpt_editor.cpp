@@ -1128,15 +1128,15 @@ void SculptEditor::init_ui()
         // Brush editor
         {
 
-            ui::ButtonSubmenu2D* brush_editor_submenu = new ui::ButtonSubmenu2D("brush_editor", "data/textures/z.png", ui::DISABLED);
+            ui::ButtonSubmenu2D* brush_editor_submenu = new ui::ButtonSubmenu2D("brush_editor", "data/textures/brush_editor.png", ui::DISABLED);
 
             {
-                ui::ButtonSelector2D* color_blend_selector = new ui::ButtonSelector2D("color_blend", "data/textures/x.png");
-                color_blend_selector->add_child(new ui::TextureButton2D("replace", "data/textures/y.png"));
-                color_blend_selector->add_child(new ui::TextureButton2D("mix", "data/textures/y.png"));
-                color_blend_selector->add_child(new ui::TextureButton2D("additive", "data/textures/y.png"));
-                color_blend_selector->add_child(new ui::TextureButton2D("multiply", "data/textures/y.png"));
-                color_blend_selector->add_child(new ui::TextureButton2D("screen", "data/textures/y.png"));
+                ui::ButtonSelector2D* color_blend_selector = new ui::ButtonSelector2D("color_blend", "data/textures/color_blend.png");
+                color_blend_selector->add_child(new ui::TextureButton2D("replace", "data/textures/r.png"));
+                color_blend_selector->add_child(new ui::TextureButton2D("mix", "data/textures/x.png"));
+                color_blend_selector->add_child(new ui::TextureButton2D("additive", "data/textures/a.png"));
+                color_blend_selector->add_child(new ui::TextureButton2D("multiply", "data/textures/m.png"));
+                color_blend_selector->add_child(new ui::TextureButton2D("screen", "data/textures/s.png"));
                 brush_editor_submenu->add_child(color_blend_selector);
             }
 
@@ -1194,8 +1194,8 @@ void SculptEditor::init_ui()
 
     // ** Undo/Redo **
     {
-        second_row->add_child(new ui::TextureButton2D("undo", "data/textures/x.png"));
-        //second_row->add_child(new ui::TextureButton2D("redo", "data/textures/y.png"));
+        second_row->add_child(new ui::TextureButton2D("undo", "data/textures/undo.png"));
+        //second_row->add_child(new ui::TextureButton2D("redo", "data/textures/redo.png"));
     }
 
     if (renderer->get_openxr_available()) {
