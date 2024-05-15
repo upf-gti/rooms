@@ -941,8 +941,8 @@ fn eval_interval_stroke_capsule_substraction(position : mat3x3f, current_surface
 
 fn cone_interval(p : mat3x3f, c : vec3f, radius_dims : vec2f, height : f32, rotation : vec4f) -> vec2f
 {
-    var r1 = radius_dims.y;
-    var r2 = radius_dims.x;
+    var r1 = radius_dims.x;
+    var r2 = radius_dims.y;
     var h = height * 0.5;
 
     var offset : mat3x3f = iavec3_vec(vec3f(0.0, h, 0.0));
@@ -964,8 +964,8 @@ fn cone_interval(p : mat3x3f, c : vec3f, radius_dims : vec2f, height : f32, rota
 
     let mk2 : mat3x3f = iavec3_vec(vec3f(k2, 0.0));
 
-    let cb_x = q_x - k1 + k2 * iclamp( idot_mat(m_skq_x, mk2) / idot_mat(mk2, mk2), 0.0, 1.0);
-    let cb_y = q_y - k1 + k2 * iclamp( idot_mat(m_skq_y, mk2) / idot_mat(mk2, mk2), 0.0, 1.0);
+    let cb_x = isub_vecs(q_x, k1) + imul_vecs(k2, iclamp( idiv_vecs(idot_mat(m_skq_x, mk2), idot_mat(mk2, mk2)), 0.0, 1.0));
+    let cb_y = isub_vecs(q_y, k1) + imul_vecs(k2, iclamp( idiv_vecs(idot_mat(m_skq_y, mk2), idot_mat(mk2, mk2)), 0.0, 1.0));
 
     let cond : vec2<bool> = iand(ilessthan(cb_x, vec2f(0.0)), ilessthan(ca_y, vec2f(0.0)));
     let s : vec2f = select(vec2f(1.0), vec2f(-1.0), cond);
