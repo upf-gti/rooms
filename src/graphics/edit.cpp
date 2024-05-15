@@ -126,8 +126,8 @@ void StrokeParameters::set_material_noise_color(const Color& color)
 glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const
 {
     glm::vec3 size = glm::vec3(edits[edit_index].dimensions);
-    float size_param = edits[edit_index].dimensions.w;
     float radius = edits[edit_index].dimensions.x;
+    float height = edits[edit_index].dimensions.w;
 
     const glm::vec3 smooth_margin = (operation == OP_SMOOTH_PAINT || operation == OP_SMOOTH_UNION || operation == OP_SMOOTH_SUBSTRACTION) ? glm::vec3(parameters.w * 2.0f) : glm::vec3(0.0f);
 
@@ -138,13 +138,13 @@ glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const
         return size + smooth_margin;
     // Specific case for capsule!!
     //case SD_CAPSULE:
-    //    return glm::vec3(size_param) + glm::vec3(0.0f, radius / 2.0f, 0.0f);// +smooth_margin;
+    //    return glm::vec3(height) + glm::vec3(0.0f, radius / 2.0f, 0.0f);// +smooth_margin;
     case SD_CONE:
-        return glm::vec3(size_param, radius, size_param) + smooth_margin;
+        return glm::vec3(radius, height, radius) + smooth_margin;
     //case SD_PYRAMID:
         //	return glm::abs(position - size) + radius * 2.0f;
     case SD_CYLINDER:
-        return glm::vec3(size_param, radius, size_param) + smooth_margin;
+        return glm::vec3(radius, height, radius) + smooth_margin;
     case SD_TORUS:
         return glm::abs(size) + radius * 2.0f + smooth_margin;
     /*case SD_BEZIER:
@@ -157,14 +157,17 @@ glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const
 
 AABB Stroke::get_edit_world_AABB(const uint8_t edit_index) const
 {
+    const float smooth_margin = parameters.w * 2.0f;
+    const float radius = edits[edit_index].dimensions.x + smooth_margin;
+    const float height = edits[edit_index].dimensions.w;
+
+    const glm::quat& inv_rotation = glm::inverse(edits[edit_index].rotation);
+
     // Special case for the capsule
     if (primitive == SD_CAPSULE) {
-        const float smooth_margin = parameters.w * 2.0f;
-        const float radius = edits[edit_index].dimensions.x + smooth_margin;
-        const float height = edits[edit_index].dimensions.w;
 
         AABB a1 = { edits[edit_index].position, glm::vec3(radius)};
-        AABB a2 = { edits[edit_index].position + (glm::inverse(edits[edit_index].rotation) * glm::vec3(0.0f, height, 0.0f)), glm::vec3(radius) };
+        AABB a2 = { edits[edit_index].position + (inv_rotation * glm::vec3(0.0f, height, 0.0f)), glm::vec3(radius) };
 
         return merge_aabbs(a1, a2);
     }
@@ -180,6 +183,10 @@ AABB Stroke::get_edit_world_AABB(const uint8_t edit_index) const
     }
 
     glm::vec3 aabb_center = edits[edit_index].position;
+
+    if (primitive == SD_CONE) {
+        aabb_center += (inv_rotation * glm::vec3(0.0f, height * 0.5f, 0.0f));
+    }
 
     // Rotate the AABB (turning it into an OBB) and compute the AABB
     const glm::vec3 axis[8] = { edit_rotation * glm::vec3(pure_edit_half_size.x,  pure_edit_half_size.y,  pure_edit_half_size.z),
