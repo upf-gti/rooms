@@ -229,18 +229,25 @@ bool SculptEditor::edit_update(float delta_time)
 
         // Get the data from the primitive default
         edit_to_add.dimensions = primitive_default_states[stroke_parameters.get_primitive()].dimensions;
-        float size_multiplier = Input::get_thumbstick_value(HAND_RIGHT).y * delta_time * 0.1f;
-        dimensions_dirty |= (fabsf(size_multiplier) > 0.f);
+        float right_size_multiplier = Input::get_thumbstick_value(HAND_RIGHT).y * delta_time * 0.1f;
+        dimensions_dirty |= (fabsf(right_size_multiplier) > 0.f);
 
         // Update primitive main size
         if (!is_shift_right_pressed) {
-            glm::vec3 new_dimensions = glm::clamp(size_multiplier + glm::vec3(edit_to_add.dimensions), 0.001f, 0.1f);
+            glm::vec3 new_dimensions = glm::clamp(right_size_multiplier + glm::vec3(edit_to_add.dimensions), 0.001f, 0.1f);
             edit_to_add.dimensions = glm::vec4(new_dimensions, edit_to_add.dimensions.w);
         }
         else {
             // Update primitive specific size
-            edit_to_add.dimensions.w = glm::clamp(size_multiplier + edit_to_add.dimensions.w, 0.001f, 0.1f);
-            dimensions_dirty |= (fabsf(size_multiplier) > 0.f);
+            edit_to_add.dimensions.w = glm::clamp(right_size_multiplier + edit_to_add.dimensions.w, 0.001f, 0.1f);
+        }
+
+        float left_size_multiplier = Input::get_thumbstick_value(HAND_LEFT).y * delta_time * 0.01f;
+
+        // Change smooth factor
+        if (is_shift_left_pressed) {
+            float current_smooth = stroke_parameters.get_smooth_factor();
+            stroke_parameters.set_smooth_factor(glm::clamp(current_smooth + left_size_multiplier, MIN_SMOOTH_FACTOR, MAX_SMOOTH_FACTOR));
         }
 
         // Update in primitive state
@@ -1210,6 +1217,8 @@ void SculptEditor::init_ui()
         {
             left_hand_container = new ui::VContainer2D("left_controller_root", { 0.0f, 0.0f });
 
+            left_hand_container->add_child(new ui::ImageLabel2D("Round Shape", "data/textures/buttons/l_thumbstick.png", LAYOUT_ANY_NO_SHIFT_L));
+            left_hand_container->add_child(new ui::ImageLabel2D("Smooth", "data/textures/buttons/l_grip_plus_l_thumbstick.png", LAYOUT_ANY_SHIFT_L, double_size));
             left_hand_container->add_child(new ui::ImageLabel2D("Redo", "data/textures/buttons/y.png", LAYOUT_ANY_NO_SHIFT_L));
             left_hand_container->add_child(new ui::ImageLabel2D("Guides", "data/textures/buttons/l_grip_plus_y.png", LAYOUT_ANY_SHIFT_L, double_size));
             left_hand_container->add_child(new ui::ImageLabel2D("Undo", "data/textures/buttons/x.png", LAYOUT_ANY_NO_SHIFT_L));
@@ -1225,7 +1234,7 @@ void SculptEditor::init_ui()
             right_hand_container = new ui::VContainer2D("right_controller_root", { 0.0f, 0.0f });
 
             right_hand_container->add_child(new ui::ImageLabel2D("Main size", "data/textures/buttons/r_thumbstick.png", LAYOUT_ANY_NO_SHIFT_R));
-            right_hand_container->add_child(new ui::ImageLabel2D("Sec size", "data/textures/buttons/r_thumbstick.png", LAYOUT_ANY_SHIFT_R));
+            right_hand_container->add_child(new ui::ImageLabel2D("Sec size", "data/textures/buttons/r_grip_plus_r_thumbstick.png", LAYOUT_ANY_SHIFT_R));
             right_hand_container->add_child(new ui::ImageLabel2D("Add/Substract", "data/textures/buttons/b.png", LAYOUT_SCULPT_NO_SHIFT_R));
             right_hand_container->add_child(new ui::ImageLabel2D("Sculpt/Paint", "data/textures/buttons/r_grip_plus_b.png", LAYOUT_ANY_SHIFT_R, double_size));
             right_hand_container->add_child(new ui::ImageLabel2D("UI Select", "data/textures/buttons/a.png", LAYOUT_ALL));
