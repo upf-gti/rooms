@@ -19,6 +19,9 @@
 #define PREVIEW_PROXY_BRICKS_COUNT 7000u
 #define STROKE_HISTORY_MAX_SIZE 1000u
 
+#define MIN_SMOOTH_FACTOR 0.001f
+#define MAX_SMOOTH_FACTOR 0.01f
+
 class MeshInstance3D;
 
 struct RayIntersectionInfo {

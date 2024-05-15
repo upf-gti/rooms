@@ -229,18 +229,25 @@ bool SculptEditor::edit_update(float delta_time)
 
         // Get the data from the primitive default
         edit_to_add.dimensions = primitive_default_states[stroke_parameters.get_primitive()].dimensions;
-        float size_multiplier = Input::get_thumbstick_value(HAND_RIGHT).y * delta_time * 0.1f;
-        dimensions_dirty |= (fabsf(size_multiplier) > 0.f);
+        float right_size_multiplier = Input::get_thumbstick_value(HAND_RIGHT).y * delta_time * 0.1f;
+        dimensions_dirty |= (fabsf(right_size_multiplier) > 0.f);
 
         // Update primitive main size
         if (!is_shift_right_pressed) {
-            glm::vec3 new_dimensions = glm::clamp(size_multiplier + glm::vec3(edit_to_add.dimensions), 0.001f, 0.1f);
+            glm::vec3 new_dimensions = glm::clamp(right_size_multiplier + glm::vec3(edit_to_add.dimensions), 0.001f, 0.1f);
             edit_to_add.dimensions = glm::vec4(new_dimensions, edit_to_add.dimensions.w);
         }
         else {
             // Update primitive specific size
-            edit_to_add.dimensions.w = glm::clamp(size_multiplier + edit_to_add.dimensions.w, 0.001f, 0.1f);
-            dimensions_dirty |= (fabsf(size_multiplier) > 0.f);
+            edit_to_add.dimensions.w = glm::clamp(right_size_multiplier + edit_to_add.dimensions.w, 0.001f, 0.1f);
+        }
+
+        float left_size_multiplier = Input::get_thumbstick_value(HAND_LEFT).y * delta_time * 0.01f;
+
+        // Change smooth factor
+        if (is_shift_left_pressed) {
+            float current_smooth = stroke_parameters.get_smooth_factor();
+            stroke_parameters.set_smooth_factor(glm::clamp(current_smooth + left_size_multiplier, MIN_SMOOTH_FACTOR, MAX_SMOOTH_FACTOR));
         }
 
         // Update in primitive state
@@ -346,9 +353,11 @@ bool SculptEditor::edit_update(float delta_time)
                     switch (op) {
                     case OP_SMOOTH_UNION:
                         op = OP_SMOOTH_SUBSTRACTION;
+                        Node::emit_signal("substract@pressed", (void*)nullptr);
                         break;
                     case OP_SMOOTH_SUBSTRACTION:
                         op = OP_SMOOTH_UNION;
+                        Node::emit_signal("add@pressed", (void*)nullptr);
                         break;
                     default:
                         assert(0 && "Use smooth operations!");
@@ -961,7 +970,7 @@ void SculptEditor::enable_tool(eTool tool)
         stroke_parameters.set_operation(OP_SMOOTH_UNION);
         hand_to_edit_distance = 0.05f;
         static_cast<ui::ButtonSubmenu2D*>(brush_editor_submenu)->set_disabled(true);
-        Node::emit_signal("sculpt@pressed", (void*)nullptr);
+        Node::emit_signal("add@pressed", (void*)nullptr);
         break;
     case PAINT:
         stroke_parameters.set_operation(OP_SMOOTH_PAINT);
@@ -1044,21 +1053,11 @@ void SculptEditor::init_ui()
         {
             ui::ButtonSubmenu2D* shape_editor_submenu = new ui::ButtonSubmenu2D("shape_editor", "data/textures/shape_editor.png");
 
-            // Operations and sculpt mode
-            {
-                // Add, substract, intersection
-                ui::ComboButtons2D* combo_edit_operation = new ui::ComboButtons2D("combo_edit_operation");
-                combo_edit_operation->add_child(new ui::TextureButton2D("add", "data/textures/sphere.png", ui::SELECTED));
-                combo_edit_operation->add_child(new ui::TextureButton2D("substract", "data/textures/sphere.png"));
-                //combo_edit_operation->add_child(new ui::TextureButton2D("intersect", "data/textures/sphere.png"));
-                shape_editor_submenu->add_child(combo_edit_operation);
-            }
-
             // Edit sizes
             {
                 ui::ItemGroup2D* g_edit_sizes = new ui::ItemGroup2D("g_edit_sizes");
-                g_edit_sizes->add_child(new ui::Slider2D("main_size", "data/textures/x.png", edit_to_add.dimensions.x, ui::SliderMode::VERTICAL, 0.001f, 0.1f));
-                g_edit_sizes->add_child(new ui::Slider2D("sec_size", "data/textures/y.png", edit_to_add.dimensions.w, ui::SliderMode::VERTICAL, 0.001f, 0.1f));
+                g_edit_sizes->add_child(new ui::Slider2D("main_size", "data/textures/x.png", edit_to_add.dimensions.x, ui::SliderMode::VERTICAL, 0, 0.001f, 0.1f, 3));
+                g_edit_sizes->add_child(new ui::Slider2D("sec_size", "data/textures/y.png", edit_to_add.dimensions.w, ui::SliderMode::VERTICAL, 0, 0.001f, 0.1f, 3));
                 shape_editor_submenu->add_child(g_edit_sizes);
             }
 
@@ -1187,7 +1186,8 @@ void SculptEditor::init_ui()
     // ** Main tools (SCULPT & PAINT) **
     {
         ui::ComboButtons2D* combo_main_tools = new ui::ComboButtons2D("combo_main_tools");
-        combo_main_tools->add_child(new ui::TextureButton2D("sculpt", "data/textures/cube.png", ui::SELECTED));
+        combo_main_tools->add_child(new ui::TextureButton2D("add", "data/textures/cube.png", ui::SELECTED));
+        combo_main_tools->add_child(new ui::TextureButton2D("substract", "data/textures/cube_substract.png"));
         combo_main_tools->add_child(new ui::TextureButton2D("paint", "data/textures/paint.png"));
         second_row->add_child(combo_main_tools);
     }
@@ -1217,6 +1217,8 @@ void SculptEditor::init_ui()
         {
             left_hand_container = new ui::VContainer2D("left_controller_root", { 0.0f, 0.0f });
 
+            left_hand_container->add_child(new ui::ImageLabel2D("Round Shape", "data/textures/buttons/l_thumbstick.png", LAYOUT_ANY_NO_SHIFT_L));
+            left_hand_container->add_child(new ui::ImageLabel2D("Smooth", "data/textures/buttons/l_grip_plus_l_thumbstick.png", LAYOUT_ANY_SHIFT_L, double_size));
             left_hand_container->add_child(new ui::ImageLabel2D("Redo", "data/textures/buttons/y.png", LAYOUT_ANY_NO_SHIFT_L));
             left_hand_container->add_child(new ui::ImageLabel2D("Guides", "data/textures/buttons/l_grip_plus_y.png", LAYOUT_ANY_SHIFT_L, double_size));
             left_hand_container->add_child(new ui::ImageLabel2D("Undo", "data/textures/buttons/x.png", LAYOUT_ANY_NO_SHIFT_L));
@@ -1232,7 +1234,7 @@ void SculptEditor::init_ui()
             right_hand_container = new ui::VContainer2D("right_controller_root", { 0.0f, 0.0f });
 
             right_hand_container->add_child(new ui::ImageLabel2D("Main size", "data/textures/buttons/r_thumbstick.png", LAYOUT_ANY_NO_SHIFT_R));
-            right_hand_container->add_child(new ui::ImageLabel2D("Sec size", "data/textures/buttons/r_thumbstick.png", LAYOUT_ANY_SHIFT_R));
+            right_hand_container->add_child(new ui::ImageLabel2D("Sec size", "data/textures/buttons/r_grip_plus_r_thumbstick.png", LAYOUT_ANY_SHIFT_R));
             right_hand_container->add_child(new ui::ImageLabel2D("Add/Substract", "data/textures/buttons/b.png", LAYOUT_SCULPT_NO_SHIFT_R));
             right_hand_container->add_child(new ui::ImageLabel2D("Sculpt/Paint", "data/textures/buttons/r_grip_plus_b.png", LAYOUT_ANY_SHIFT_R, double_size));
             right_hand_container->add_child(new ui::ImageLabel2D("UI Select", "data/textures/buttons/a.png", LAYOUT_ALL));
@@ -1251,7 +1253,16 @@ void SculptEditor::init_ui()
 
 void SculptEditor::bind_events()
 {
-    Node::bind("sculpt", [&](const std::string& signal, void* button) { enable_tool(SCULPT); });
+    Node::bind("add", [&](const std::string& signal, void* button) {
+        enable_tool(SCULPT);
+        set_operation(OP_SMOOTH_UNION);
+    });
+
+    Node::bind("substract", [&](const std::string& signal, void* button) {
+        enable_tool(SCULPT);
+        set_operation(OP_SMOOTH_SUBSTRACTION);
+    });
+
     Node::bind("paint", [&](const std::string& signal, void* button) { enable_tool(PAINT); });
 
     Node::bind("sphere", [&](const std::string& signal, void* button) {  set_primitive(SD_SPHERE); });
@@ -1264,9 +1275,6 @@ void SculptEditor::bind_events()
 
     Node::bind("main_size", [&](const std::string& signal, float value) { set_edit_size(value); });
     Node::bind("sec_size", [&](const std::string& signal, float value) { set_edit_size(-1.0f, value); });
-
-    Node::bind("add", [&](const std::string& signal, void* button) { set_operation(OP_SMOOTH_UNION); });
-    Node::bind("substract", [&](const std::string& signal, void* button) { set_operation(OP_SMOOTH_SUBSTRACTION); });
 
     Node::bind("onion_value", [&](const std::string& signal, float value) { set_onion_modifier(value); });
     Node::bind("cap_value", [&](const std::string& signal, float value) { set_cap_modifier(value); });
@@ -1320,6 +1328,7 @@ void SculptEditor::bind_events()
             Node::bind(child->signal, [&](const std::string& signal, void* button) {
                 const Color& color = (reinterpret_cast<ui::Button2D*>(button))->color;
                 stroke_parameters.set_material_color(color);
+                Node::emit_signal("color_picker@changed", color);
             });
         }
     }

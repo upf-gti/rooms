@@ -392,7 +392,7 @@ const Stroke* RaymarchingRenderer::compute_and_upload_context(const std::vector<
         strokes_to_evaluate = strokes.data();
         stroke_count_to_evaluate = strokes.size();
     } else
-    if (needs_undo && stroke_history.size() > 0u) {
+    if (needs_undo && (stroke_history.size() > 0u || current_stroke.edit_count > 0u)) {
 
         if (current_stroke.edit_count > 0u) {
             change_stroke();
