@@ -22,6 +22,9 @@
 #define MIN_SMOOTH_FACTOR 0.0001f
 #define MAX_SMOOTH_FACTOR 0.02f
 
+#define MIN_PRIMITIVE_SIZE 0.005f
+#define MAX_PRIMITIVE_SIZE 0.08f
+
 class MeshInstance3D;
 
 struct RayIntersectionInfo {

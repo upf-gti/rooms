@@ -234,20 +234,21 @@ bool SculptEditor::edit_update(float delta_time)
 
         // Update primitive main size
         if (!is_shift_right_pressed) {
-            glm::vec3 new_dimensions = glm::clamp(right_size_multiplier + glm::vec3(edit_to_add.dimensions), 0.005f, 0.08f);
+            glm::vec3 new_dimensions = glm::clamp(right_size_multiplier + glm::vec3(edit_to_add.dimensions), MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE);
             edit_to_add.dimensions = glm::vec4(new_dimensions, edit_to_add.dimensions.w);
         }
         else {
             // Update primitive specific size
-            edit_to_add.dimensions.w = glm::clamp(right_size_multiplier + edit_to_add.dimensions.w, 0.005f, 0.08f);
+            edit_to_add.dimensions.w = glm::clamp(right_size_multiplier + edit_to_add.dimensions.w, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE);
         }
 
-        float left_size_multiplier = Input::get_thumbstick_value(HAND_LEFT).y * delta_time * 0.01f;
+        float left_size_multiplier = Input::get_thumbstick_value(HAND_LEFT).y * delta_time * 0.02f;
 
         // Change smooth factor
         if (is_shift_left_pressed) {
             float current_smooth = stroke_parameters.get_smooth_factor();
             stroke_parameters.set_smooth_factor(glm::clamp(current_smooth + left_size_multiplier, MIN_SMOOTH_FACTOR, MAX_SMOOTH_FACTOR));
+            Node::emit_signal("smooth_factor@changed", stroke_parameters.get_smooth_factor());
         }
 
         // Update in primitive state
@@ -273,6 +274,9 @@ bool SculptEditor::edit_update(float delta_time)
 
             edit_rotation_stamp = get_quat_between_vec3(stamp_origin_to_hand, glm::vec3(0.0f, -stamp_to_hand_distance, 0.0f)) * twist;
 
+            // TODO: Remove when we can support BIG primitives
+            float temp_limit = 0.23f;
+
             switch (curr_primitive)
             {
             case SD_SPHERE:
@@ -285,14 +289,17 @@ bool SculptEditor::edit_update(float delta_time)
             case SD_CAPSULE:
                 edit_to_add.position = edit_origin_stamp;
                 edit_to_add.dimensions.w = stamp_to_hand_distance;
+                temp_limit *= 2.0f;
                 break;
-            case SD_CYLINDER:
+           /* case SD_CYLINDER:
                 edit_position_stamp = edit_origin_stamp - stamp_origin_to_hand * stamp_to_hand_distance * 0.5f;
                 edit_to_add.dimensions.w = stamp_to_hand_distance * 0.5f;
-                break;
+                break;*/
             default:
                 break;
             }
+
+            edit_to_add.dimensions = glm::clamp(edit_to_add.dimensions, glm::vec4(MIN_PRIMITIVE_SIZE), glm::vec4(temp_limit));
         }
         else {
             // Only stretch the edit when the acceleration of the hand exceds a threshold
@@ -887,6 +894,9 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
 
         spdlog::trace("Edit mesh preview generated!");
 
+        Node::emit_signal("main_size@changed", edit_to_add.dimensions.x);
+        Node::emit_signal("secondary_size@changed", edit_to_add.dimensions.w);
+
         dimensions_dirty = false;
     }
 
@@ -1056,8 +1066,8 @@ void SculptEditor::init_ui()
             // Edit sizes
             {
                 ui::ItemGroup2D* g_edit_sizes = new ui::ItemGroup2D("g_edit_sizes");
-                g_edit_sizes->add_child(new ui::Slider2D("main_size", edit_to_add.dimensions.x, ui::SliderMode::HORIZONTAL, 0, 0.001f, 0.1f, 3));
-                g_edit_sizes->add_child(new ui::Slider2D("sec_size", edit_to_add.dimensions.w, ui::SliderMode::HORIZONTAL, 0, 0.001f, 0.1f, 3));
+                g_edit_sizes->add_child(new ui::Slider2D("main_size", edit_to_add.dimensions.x, ui::SliderMode::HORIZONTAL, 0, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE, 3));
+                g_edit_sizes->add_child(new ui::Slider2D("secondary_size", edit_to_add.dimensions.w, ui::SliderMode::HORIZONTAL, 0, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE, 3));
                 shape_editor_submenu->add_child(g_edit_sizes);
             }
 
@@ -1198,6 +1208,13 @@ void SculptEditor::init_ui()
         //second_row->add_child(new ui::TextureButton2D("redo", "data/textures/redo.png"));
     }
 
+    // Smooth factor
+    {
+        ui::Slider2D* smooth_factor_slider = new ui::Slider2D("smooth_factor", "data/textures/smooth.png", stroke_parameters.get_smooth_factor(), ui::SliderMode::VERTICAL, ui::DISABLED, MIN_SMOOTH_FACTOR, MAX_SMOOTH_FACTOR, 3);
+        smooth_factor_slider->set_disabled(false);
+        second_row->add_child(smooth_factor_slider);
+    }
+
     if (renderer->get_openxr_available()) {
         main_panel_3d = new Viewport3D(main_panel_2d);
         main_panel_3d->set_active(true);
@@ -1274,7 +1291,7 @@ void SculptEditor::bind_events()
     //Node::bind("bezier", [&](const std::string& signal, void* button) { set_primitive(SD_BEZIER); });
 
     Node::bind("main_size", [&](const std::string& signal, float value) { set_edit_size(value); });
-    Node::bind("sec_size", [&](const std::string& signal, float value) { set_edit_size(-1.0f, value); });
+    Node::bind("secondary_size", [&](const std::string& signal, float value) { set_edit_size(-1.0f, value); });
 
     Node::bind("onion_value", [&](const std::string& signal, float value) { set_onion_modifier(value); });
     Node::bind("cap_value", [&](const std::string& signal, float value) { set_cap_modifier(value); });
@@ -1301,7 +1318,9 @@ void SculptEditor::bind_events()
     Node::bind("pick_material", [&](const std::string& signal, void* button) { is_picking_material = !is_picking_material; });
 
     Node::bind("undo", [&](const std::string& signal, void* button) { renderer->undo(); });
-    Node::bind("redo", [&](const std::string& signal, void* button) { renderer->redo(); });
+    // Node::bind("redo", [&](const std::string& signal, void* button) { renderer->redo(); });
+
+    Node::bind("smooth_factor", [&](const std::string& signal, float value) { stroke_parameters.set_smooth_factor(value); });
 
     // Bind colors callback...
 
