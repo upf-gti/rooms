@@ -63,15 +63,7 @@ void SculptEditor::initialize()
         // Create axis reference
 
         Surface* s = new Surface();
-
-        std::vector<InterleavedData>& vertices = s->get_vertices();
-        vertices.push_back({ glm::vec3(-0.1f,  0.0f,  0.0f)});
-        vertices.push_back({ glm::vec3( 0.1f,  0.0f,  0.0f)});
-        vertices.push_back({ glm::vec3( 0.0f, -0.1f,  0.0f)});
-        vertices.push_back({ glm::vec3( 0.0f,  0.1f,  0.0f)});
-        vertices.push_back({ glm::vec3( 0.0f,  0.0f, -0.1f)});
-        vertices.push_back({ glm::vec3( 0.0f,  0.0f,  0.1f)});
-        s->update_vertex_buffer(vertices);
+        s->create_axis(0.08f);
 
         Material ref_mat;
         ref_mat.priority = 0;
@@ -85,7 +77,7 @@ void SculptEditor::initialize()
 
     // Initialize default primitive states
     {
-        primitive_default_states[SD_SPHERE]     = { glm::vec4(0.09f, 0.0f, 0.0f, 0.0f) };
+        primitive_default_states[SD_SPHERE]     = { glm::vec4(0.02f, 0.0f, 0.0f, 0.0f) };
         primitive_default_states[SD_BOX]        = { glm::vec4(0.02f, 0.02f, 0.02f, 0.0f) };
         primitive_default_states[SD_CONE]       = { glm::vec4(0.05f, 0.0f, 0.0f, 0.05f) };
         primitive_default_states[SD_CYLINDER]   = { glm::vec4(0.03f, 0.0f, 0.0f, 0.05f) };
@@ -160,8 +152,6 @@ void SculptEditor::clean()
     _DESTROY_(sculpt_area_box);
     _DESTROY_(mesh_preview);
     _DESTROY_(mesh_preview_outline);
-    _DESTROY_(controller_mesh_left);
-    _DESTROY_(controller_mesh_right);
     _DESTROY_(right_hand_ui_3D);
     _DESTROY_(left_hand_ui_3D);
 
@@ -207,7 +197,7 @@ bool SculptEditor::edit_update(float delta_time)
 
     // Move the edit a little away
     glm::mat4x4 controller_pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
-    controller_pose = glm::translate(controller_pose, glm::vec3(0.0f, 0.0f, -hand2edit_distance));
+    controller_pose = glm::translate(controller_pose, glm::vec3(0.0f, 0.0f, -hand_to_edit_distance));
 
     // Update edit transform
     if ((!stamp_enabled || !is_tool_pressed) && !is_released) {
@@ -351,24 +341,20 @@ bool SculptEditor::edit_update(float delta_time)
             if (!is_shift_right_pressed) {
 
                 sdOperation op = stroke_parameters.get_operation();
-                std::string new_label_text = "";
 
                 if (current_tool == SCULPT) {
                     switch (op) {
                     case OP_SMOOTH_UNION:
                         op = OP_SMOOTH_SUBSTRACTION;
-                        new_label_text = "Change to Addition";
                         break;
                     case OP_SMOOTH_SUBSTRACTION:
                         op = OP_SMOOTH_UNION;
-                        new_label_text = "Change to Substraction";
                         break;
                     default:
                         assert(0 && "Use smooth operations!");
                         break;
                     }
 
-                    controller_labels[HAND_RIGHT].secondary_button_label->set_text(new_label_text);
                     stroke_parameters.set_operation(op);
                 }
             }
@@ -457,9 +443,6 @@ void SculptEditor::update(float delta_time)
         return;
     }
 
-    is_shift_left_pressed = Input::is_grab_pressed(HAND_LEFT);
-    is_shift_right_pressed = Input::is_grab_pressed(HAND_RIGHT);
-
     // Update UI
     {
         if (main_panel_3d) {
@@ -477,19 +460,49 @@ void SculptEditor::update(float delta_time)
         }
 
         // Update controller UI
-        if (renderer->get_openxr_available())
-        {
+        if (renderer->get_openxr_available()) {
+
+            glm::mat4x4 m = glm::rotate(glm::mat4x4(1.0f), glm::radians(-120.f), glm::vec3(1.0f, 0.0f, 0.0f));
+            m = glm::translate(m, glm::vec3(0.02f, 0.0f, 0.02f));
+
             glm::mat4x4 pose = Input::get_controller_pose(HAND_RIGHT);
             controller_mesh_right->set_model(pose);
-            pose = glm::rotate(pose, glm::radians(-120.f), glm::vec3(1.0f, 0.0f, 0.0f));
-            pose = glm::translate(pose, glm::vec3(0.02f, 0.0f, 0.02f));
-            right_hand_ui_3D->set_model(pose);
+            right_hand_ui_3D->set_model(pose * m);
 
             pose = Input::get_controller_pose(HAND_LEFT);
             controller_mesh_left->set_model(pose);
-            pose = glm::rotate(pose, glm::radians(-120.f), glm::vec3(1.0f, 0.0f, 0.0f));
-            pose = glm::translate(pose, glm::vec3(0.02f, 0.0f, 0.02f));
-            left_hand_ui_3D->set_model(pose);
+            left_hand_ui_3D->set_model(pose * m);
+
+            is_shift_left_pressed = Input::is_grab_pressed(HAND_LEFT);
+            is_shift_right_pressed = Input::is_grab_pressed(HAND_RIGHT);
+
+            // Create current button layout based on state
+            uint8_t current_layout = (current_tool == SCULPT) ? LAYOUT_SCULPT : LAYOUT_PAINT;
+
+            // Decide which buttons labels to render
+            bool space_dirty = false;
+            for (auto label_ptr : left_hand_container->get_children()) {
+                ui::ImageLabel2D* label = dynamic_cast<ui::ImageLabel2D*>(label_ptr);
+                assert(label);
+                uint8_t l_layout = current_layout | (is_shift_left_pressed ? LAYOUT_SHIFT_L : LAYOUT_NO_SHIFT_L);
+                space_dirty |= label->set_visibility((l_layout & label->get_mask()) == l_layout);
+            }
+
+            if (space_dirty) {
+                left_hand_container->on_children_changed();
+            }
+
+            space_dirty = false;
+            for (auto label_ptr : right_hand_container->get_children()) {
+                ui::ImageLabel2D* label = dynamic_cast<ui::ImageLabel2D*>(label_ptr);
+                assert(label);
+                uint8_t r_layout = current_layout | (is_shift_right_pressed ? LAYOUT_SHIFT_R : LAYOUT_NO_SHIFT_R);
+                space_dirty |= label->set_visibility((r_layout & label->get_mask()) == r_layout);
+            }
+
+            if (space_dirty) {
+                right_hand_container->on_children_changed();
+            }
         }
     }
 
@@ -511,7 +524,7 @@ void SculptEditor::update(float delta_time)
     // Undo/Redo open ui stuff
     {
         bool x_pressed = Input::was_button_pressed(XR_BUTTON_X);
-        bool y_pressed = Input::was_button_pressed(XR_BUTTON_X);
+        bool y_pressed = Input::was_button_pressed(XR_BUTTON_Y);
 
         if (!is_shift_left_pressed) {
             if (Input::was_key_pressed(GLFW_KEY_U) || x_pressed) {
@@ -533,7 +546,7 @@ void SculptEditor::update(float delta_time)
 
             // open guides
             if (y_pressed) {
-                Node::emit_signal("guides_submenu", (void*)nullptr);
+                Node::emit_signal("guides", (void*)nullptr);
             }
         }
     }
@@ -717,20 +730,20 @@ void SculptEditor::scene_update_rotation()
 
 void SculptEditor::render()
 {
-    //if (mesh_preview && renderer->get_openxr_available())
-    //{
-    //    update_edit_preview(edit_to_add.dimensions);
+    if (mesh_preview && renderer->get_openxr_available())
+    {
+        update_edit_preview(edit_to_add.dimensions);
 
-    //    // Render something to be able to cull faces later...
-    //    if (!must_render_mesh_preview_outline()) {
-    //            mesh_preview->render();
-    //    }
-    //    else
-    //    {
-    //        mesh_preview_outline->set_model(mesh_preview->get_model());
-    //        mesh_preview_outline->render();
-    //    }
-    //}
+        // Render something to be able to cull faces later...
+        if (!must_render_mesh_preview_outline()) {
+                mesh_preview->render();
+        }
+        else
+        {
+            mesh_preview_outline->set_model(mesh_preview->get_model());
+            mesh_preview_outline->render();
+        }
+    }
 
     if (axis_lock) {
         axis_lock_gizmo.render();
@@ -808,17 +821,6 @@ void SculptEditor::render_gui()
 
     if (changed)
         stroke_parameters.set_dirty(true);
-}
-
-void SculptEditor::toggle_stamp()
-{
-    stamp_enabled = !stamp_enabled;
-
-    auto label = controller_labels[HAND_RIGHT].secondary_button_label;
-
-    if (label) {
-        label->set_text(stamp_enabled ? "Change to Smear" : "Change to Stamp");
-    }
 }
 
 bool SculptEditor::can_snap_to_surface()
@@ -957,13 +959,13 @@ void SculptEditor::enable_tool(eTool tool)
     {
     case SCULPT:
         stroke_parameters.set_operation(OP_SMOOTH_UNION);
-        hand2edit_distance = 0.0f;
+        hand_to_edit_distance = 0.05f;
         static_cast<ui::ButtonSubmenu2D*>(brush_editor_submenu)->set_disabled(true);
         Node::emit_signal("sculpt@pressed", (void*)nullptr);
         break;
     case PAINT:
         stroke_parameters.set_operation(OP_SMOOTH_PAINT);
-        hand2edit_distance = 0.1f;
+        hand_to_edit_distance = 0.15f;
         static_cast<ui::ButtonSubmenu2D*>(brush_editor_submenu)->set_disabled(false);
         Node::emit_signal("paint@pressed", (void*)nullptr);
         break;
@@ -998,11 +1000,8 @@ void SculptEditor::init_ui()
 
             glm::vec2 center = glm::vec2((-color_picker->get_size().x + sample_size) * 0.5f);
 
-            // set_translation(center);
-
             for (size_t i = 0; i < child_count; ++i)
             {
-                // float angle = pi + pi * i / (float)(child_count - 1);
                 float angle = pi + pi_2 * i / (float)(child_count - 1);
                 glm::vec2 translation = glm::vec2(radius * cos(angle), radius * sin(angle)) - center;
                 ui::Button2D* child = new ui::Button2D("recent_color_" + std::to_string(i), colors::WHITE, 0, translation, glm::vec2(sample_size));
@@ -1053,9 +1052,6 @@ void SculptEditor::init_ui()
                 combo_edit_operation->add_child(new ui::TextureButton2D("substract", "data/textures/sphere.png"));
                 //combo_edit_operation->add_child(new ui::TextureButton2D("intersect", "data/textures/sphere.png"));
                 shape_editor_submenu->add_child(combo_edit_operation);
-
-                // Smear, stamp
-                shape_editor_submenu->add_child(new ui::TextureButton2D("use_stamp", "data/textures/x.png", ui::ALLOW_TOGGLE));
             }
 
             // Edit sizes
@@ -1211,14 +1207,21 @@ void SculptEditor::init_ui()
     // Load controller UI labels
     if (renderer->get_openxr_available())
     {
+        // Thumbsticks
+        // Buttons
+        // Triggers
+
+        glm::vec2 double_size = { 2.0f, 1.0f };
+
         // Left hand
         {
             left_hand_container = new ui::VContainer2D("left_controller_root", { 0.0f, 0.0f });
 
-            controller_labels[HAND_LEFT].secondary_button_label = new ui::ImageLabel2D("Redo", "data/textures/buttons/y.png", 30.0f);
-            left_hand_container->add_child(controller_labels[HAND_LEFT].secondary_button_label);
-            controller_labels[HAND_LEFT].main_button_label = new ui::ImageLabel2D("Undo", "data/textures/buttons/x.png", 30.0f);
-            left_hand_container->add_child(controller_labels[HAND_LEFT].main_button_label);
+            left_hand_container->add_child(new ui::ImageLabel2D("Redo", "data/textures/buttons/y.png", LAYOUT_ANY_NO_SHIFT_L));
+            left_hand_container->add_child(new ui::ImageLabel2D("PBR", "data/textures/buttons/l_grip_plus_y.png", LAYOUT_ANY_SHIFT_L, double_size));
+            left_hand_container->add_child(new ui::ImageLabel2D("Undo", "data/textures/buttons/x.png", LAYOUT_ANY_NO_SHIFT_L));
+            left_hand_container->add_child(new ui::ImageLabel2D("Guides", "data/textures/buttons/l_grip_plus_x.png", LAYOUT_ANY_SHIFT_L, double_size));
+            left_hand_container->add_child(new ui::ImageLabel2D("Manipulate Sculpt", "data/textures/buttons/l_trigger.png", LAYOUT_ALL));
 
             left_hand_ui_3D = new Viewport3D(left_hand_container);
             RoomsEngine::entities.push_back(left_hand_ui_3D);
@@ -1228,10 +1231,14 @@ void SculptEditor::init_ui()
         {
             right_hand_container = new ui::VContainer2D("right_controller_root", { 0.0f, 0.0f });
 
-            controller_labels[HAND_RIGHT].secondary_button_label = new ui::ImageLabel2D("Change to Substraction", "data/textures/buttons/b.png", 30.0f);
-            right_hand_container->add_child(controller_labels[HAND_RIGHT].secondary_button_label);
-            controller_labels[HAND_RIGHT].main_button_label = new ui::ImageLabel2D("UI Select", "data/textures/buttons/a.png", 30.0f);
-            right_hand_container->add_child(controller_labels[HAND_RIGHT].main_button_label);
+            right_hand_container->add_child(new ui::ImageLabel2D("Main size", "data/textures/buttons/r_thumbstick.png", LAYOUT_ANY_NO_SHIFT_R));
+            right_hand_container->add_child(new ui::ImageLabel2D("Sec size", "data/textures/buttons/r_thumbstick.png", LAYOUT_ANY_SHIFT_R));
+            right_hand_container->add_child(new ui::ImageLabel2D("Add/Substract", "data/textures/buttons/b.png", LAYOUT_SCULPT_NO_SHIFT_R));
+            right_hand_container->add_child(new ui::ImageLabel2D("Sculpt/Paint", "data/textures/buttons/r_grip_plus_b.png", LAYOUT_ANY_SHIFT_R, double_size));
+            right_hand_container->add_child(new ui::ImageLabel2D("UI Select", "data/textures/buttons/a.png", LAYOUT_ALL));
+            right_hand_container->add_child(new ui::ImageLabel2D("Pick Material", "data/textures/buttons/r_grip_plus_a.png", LAYOUT_ANY_SHIFT_R, double_size));
+            right_hand_container->add_child(new ui::ImageLabel2D("Stamp", "data/textures/buttons/r_trigger.png", LAYOUT_ANY_NO_SHIFT_R));
+            right_hand_container->add_child(new ui::ImageLabel2D("Smear", "data/textures/buttons/r_grip_plus_r_trigger.png", LAYOUT_ANY_SHIFT_R, double_size));
 
             right_hand_ui_3D = new Viewport3D(right_hand_container);
             RoomsEngine::entities.push_back(right_hand_ui_3D);
@@ -1258,22 +1265,11 @@ void SculptEditor::bind_events()
     Node::bind("main_size", [&](const std::string& signal, float value) { set_edit_size(value); });
     Node::bind("sec_size", [&](const std::string& signal, float value) { set_edit_size(-1.0f, value); });
 
-    Node::bind("use_stamp", [&](const std::string& signal, void* button) { toggle_stamp(); });
-
     Node::bind("add", [&](const std::string& signal, void* button) { set_operation(OP_SMOOTH_UNION); });
     Node::bind("substract", [&](const std::string& signal, void* button) { set_operation(OP_SMOOTH_SUBSTRACTION); });
 
     Node::bind("onion_value", [&](const std::string& signal, float value) { set_onion_modifier(value); });
     Node::bind("cap_value", [&](const std::string& signal, float value) { set_cap_modifier(value); });
-
-    Node::bind("addition_toggle", [&](const std::string& signal, void* button) {
-        if (stroke_parameters.get_operation() == OP_SMOOTH_UNION) {
-            stroke_parameters.set_operation(OP_SMOOTH_SUBSTRACTION);
-        }
-        else {
-            stroke_parameters.set_operation(OP_SMOOTH_UNION);
-        }
-    });
 
     Node::bind("mirror_toggle", [&](const std::string& signal, void* button) { use_mirror = !use_mirror; });
     Node::bind("mirror_translation", [&](const std::string& signal, void* button) { mirror_gizmo.set_mode(eGizmoType::POSITION_GIZMO); });

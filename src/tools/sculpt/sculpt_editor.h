@@ -14,6 +14,31 @@ enum eTool : uint8_t {
     TOOL_COUNT
 };
 
+enum : uint8_t {
+    LAYOUT_NONE = 1 << 0,
+    LAYOUT_SCULPT = 1 << 1,
+    LAYOUT_PAINT = 1 << 2,
+    LAYOUT_SHIFT_R = 1 << 3,
+    LAYOUT_SHIFT_L = 1 << 4,
+    LAYOUT_NO_SHIFT_R = 1 << 5,
+    LAYOUT_NO_SHIFT_L = 1 << 6,
+    LAYOUT_SCULPT_SHIFT_R = LAYOUT_SCULPT | LAYOUT_SHIFT_R,
+    LAYOUT_SCULPT_SHIFT_L = LAYOUT_SCULPT | LAYOUT_SHIFT_L,
+    LAYOUT_SCULPT_NO_SHIFT_R = LAYOUT_SCULPT | LAYOUT_NO_SHIFT_R,
+    LAYOUT_SCULPT_NO_SHIFT_L = LAYOUT_SCULPT | LAYOUT_NO_SHIFT_L,
+    LAYOUT_PAINT_SHIFT_R = LAYOUT_PAINT | LAYOUT_SHIFT_R,
+    LAYOUT_PAINT_SHIFT_L = LAYOUT_PAINT | LAYOUT_SHIFT_L,
+    LAYOUT_PAINT_NO_SHIFT_R = LAYOUT_PAINT | LAYOUT_NO_SHIFT_R,
+    LAYOUT_PAINT_NO_SHIFT_L = LAYOUT_PAINT | LAYOUT_NO_SHIFT_L,
+    LAYOUT_ANY_SHIFT_R = LAYOUT_SCULPT_SHIFT_R | LAYOUT_PAINT_SHIFT_R,
+    LAYOUT_ANY_SHIFT_L = LAYOUT_SCULPT_SHIFT_L | LAYOUT_PAINT_SHIFT_L,
+    LAYOUT_ANY_NO_SHIFT_R = LAYOUT_SCULPT_NO_SHIFT_R | LAYOUT_PAINT_NO_SHIFT_R,
+    LAYOUT_ANY_NO_SHIFT_L = LAYOUT_SCULPT_NO_SHIFT_L | LAYOUT_PAINT_NO_SHIFT_L,
+    LAYOUT_SCULPT_ALL = (LAYOUT_SCULPT_SHIFT_R | LAYOUT_SCULPT_SHIFT_L) | (LAYOUT_SCULPT_NO_SHIFT_R | LAYOUT_SCULPT_NO_SHIFT_L),
+    LAYOUT_PAINT_ALL = (LAYOUT_PAINT_SHIFT_R | LAYOUT_PAINT_SHIFT_L) | (LAYOUT_PAINT_NO_SHIFT_R | LAYOUT_PAINT_NO_SHIFT_L),
+    LAYOUT_ALL = LAYOUT_SCULPT_ALL | LAYOUT_PAINT_ALL
+};
+
 class RoomsRenderer;
 class MeshInstance3D;
 class Viewport3D;
@@ -80,8 +105,6 @@ class SculptEditor {
 
     bool can_snap_to_surface();
 
-    void toggle_stamp();
-
     bool dimensions_dirty       = true;
     bool modifiers_dirty        = false;
     bool stamp_enabled          = false;
@@ -108,7 +131,7 @@ class SculptEditor {
     glm::quat sculpt_rotation = { 0.0, 0.0, 0.0, 1.0 };
     glm::quat edit_rotation_world = {};
 
-    float     hand2edit_distance = 0.2f;
+    float hand_to_edit_distance = 0.0f;
 
     /*
     *	Modifiers
@@ -154,16 +177,6 @@ class SculptEditor {
     Viewport3D* right_hand_ui_3D = nullptr;
     Viewport3D* left_hand_ui_3D = nullptr;
 
-    struct ControllerLabels {
-        ui::ImageLabel2D* main_button_label = nullptr;
-        ui::ImageLabel2D* secondary_button_label = nullptr;
-        ui::ImageLabel2D* grip_label = nullptr;
-        ui::ImageLabel2D* trigger_label = nullptr;
-        ui::ImageLabel2D* joystick_label = nullptr;
-    };
-
-    ControllerLabels controller_labels[2];
-
     // Meta quest controller meshes
     MeshInstance3D* controller_mesh_left = nullptr;
     MeshInstance3D* controller_mesh_right = nullptr;
@@ -172,8 +185,8 @@ class SculptEditor {
     ui::HContainer2D* main_panel_2d = nullptr;
     Viewport3D* main_panel_3d = nullptr;
 
-    size_t                max_recent_colors = 0;
-    std::vector<Color>    recent_colors;
+    size_t max_recent_colors = 0;
+    std::vector<Color> recent_colors;
 
     void init_ui();
     void bind_events();
