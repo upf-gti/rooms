@@ -390,6 +390,11 @@ const Stroke* RaymarchingRenderer::compute_and_upload_context(const std::vector<
         stroke_count_to_evaluate = strokes.size();
     } else
     if (needs_undo && stroke_history.size() > 0u) {
+
+        if (current_stroke.edit_count > 0u) {
+            change_stroke();
+        }
+
         uint32_t last_stroke_id = 0u;
         uint32_t stroke_count = 0u;
 
@@ -643,10 +648,6 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
     
 
     if (needs_undo && to_process) {
-
-        if (current_stroke.edit_count > 0u) {
-            change_stroke();
-        }
         uint32_t set_as_preview = 0x01u;
         webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_uniform.data), sizeof(uint32_t) * 3u, &set_as_preview, sizeof(uint32_t));
         evaluate_strokes(compute_pass, to_process, true);
