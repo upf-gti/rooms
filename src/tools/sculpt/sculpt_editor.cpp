@@ -1218,9 +1218,9 @@ void SculptEditor::init_ui()
             left_hand_container = new ui::VContainer2D("left_controller_root", { 0.0f, 0.0f });
 
             left_hand_container->add_child(new ui::ImageLabel2D("Redo", "data/textures/buttons/y.png", LAYOUT_ANY_NO_SHIFT_L));
-            left_hand_container->add_child(new ui::ImageLabel2D("PBR", "data/textures/buttons/l_grip_plus_y.png", LAYOUT_ANY_SHIFT_L, double_size));
+            left_hand_container->add_child(new ui::ImageLabel2D("Guides", "data/textures/buttons/l_grip_plus_y.png", LAYOUT_ANY_SHIFT_L, double_size));
             left_hand_container->add_child(new ui::ImageLabel2D("Undo", "data/textures/buttons/x.png", LAYOUT_ANY_NO_SHIFT_L));
-            left_hand_container->add_child(new ui::ImageLabel2D("Guides", "data/textures/buttons/l_grip_plus_x.png", LAYOUT_ANY_SHIFT_L, double_size));
+            left_hand_container->add_child(new ui::ImageLabel2D("PBR", "data/textures/buttons/l_grip_plus_x.png", LAYOUT_ANY_SHIFT_L, double_size));
             left_hand_container->add_child(new ui::ImageLabel2D("Manipulate Sculpt", "data/textures/buttons/l_trigger.png", LAYOUT_ALL));
 
             left_hand_ui_3D = new Viewport3D(left_hand_container);
@@ -1508,9 +1508,10 @@ void SculptEditor::pick_material()
     }
 
     // Disable picking..
-    Node::emit_signal("pick_material", (void*)nullptr);
+    if (is_picking_material) {
+        Node::emit_signal("pick_material", (void*)nullptr);
+    }
 
     // Manage interactions, set stamp mode until tool is used again
-    stamp_enabled = true;
     was_material_picked = true;
 }

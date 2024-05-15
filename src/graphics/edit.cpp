@@ -136,8 +136,9 @@ glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const
         return glm::vec3(size.x) + smooth_margin;
     case SD_BOX:
         return size + smooth_margin;
-    case SD_CAPSULE:
-        return glm::vec3(size_param) + glm::vec3(0.0f, radius / 2.0f, 0.0f);// +smooth_margin;
+    // Specific case for capsule!!
+    //case SD_CAPSULE:
+    //    return glm::vec3(size_param) + glm::vec3(0.0f, radius / 2.0f, 0.0f);// +smooth_margin;
     case SD_CONE:
         return glm::vec3(size_param, radius, size_param) + smooth_margin;
     //case SD_PYRAMID:
@@ -158,9 +159,9 @@ AABB Stroke::get_edit_world_AABB(const uint8_t edit_index) const
 {
     // Special case for the capsule
     if (primitive == SD_CAPSULE) {
-        const float radius = edits[edit_index].dimensions.w;
-        const float height = edits[edit_index].dimensions.x;
-        const float smooht_margin = parameters.w;
+        const float smooth_margin = parameters.w * 2.0f;
+        const float radius = edits[edit_index].dimensions.x + smooth_margin;
+        const float height = edits[edit_index].dimensions.w;
 
         AABB a1 = { edits[edit_index].position, glm::vec3(radius)};
         AABB a2 = { edits[edit_index].position + (glm::inverse(edits[edit_index].rotation) * glm::vec3(0.0f, height, 0.0f)), glm::vec3(radius) };

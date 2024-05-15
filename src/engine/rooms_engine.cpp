@@ -68,7 +68,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     RoomsRenderer::instance->add_light(omni_light);
     */
 
-    SpotLight3D* spot_light = new SpotLight3D();
+    /*SpotLight3D* spot_light = new SpotLight3D();
     spot_light->set_name("spot_light");
     spot_light->set_translation({ 0.0f, 1.f, 0.0f });
     spot_light->rotate(glm::radians(-90.f), { 1.f, 0.0f, 0.f });
@@ -76,7 +76,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     spot_light->set_intensity(1.0f);
     spot_light->set_range(5.0f);
 
-    entities.push_back(spot_light);
+    entities.push_back(spot_light);*/
 
 	return error;
 }
