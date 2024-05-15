@@ -1049,8 +1049,8 @@ void SculptEditor::init_ui()
             // Edit sizes
             {
                 ui::ItemGroup2D* g_edit_sizes = new ui::ItemGroup2D("g_edit_sizes");
-                g_edit_sizes->add_child(new ui::Slider2D("main_size", "data/textures/x.png", edit_to_add.dimensions.x, ui::SliderMode::VERTICAL, 0.001f, 0.1f));
-                g_edit_sizes->add_child(new ui::Slider2D("sec_size", "data/textures/y.png", edit_to_add.dimensions.w, ui::SliderMode::VERTICAL, 0.001f, 0.1f));
+                g_edit_sizes->add_child(new ui::Slider2D("main_size", "data/textures/x.png", edit_to_add.dimensions.x, ui::SliderMode::VERTICAL, 0, 0.001f, 0.1f, 3));
+                g_edit_sizes->add_child(new ui::Slider2D("sec_size", "data/textures/y.png", edit_to_add.dimensions.w, ui::SliderMode::VERTICAL, 0, 0.001f, 0.1f, 3));
                 shape_editor_submenu->add_child(g_edit_sizes);
             }
 
@@ -1319,6 +1319,7 @@ void SculptEditor::bind_events()
             Node::bind(child->signal, [&](const std::string& signal, void* button) {
                 const Color& color = (reinterpret_cast<ui::Button2D*>(button))->color;
                 stroke_parameters.set_material_color(color);
+                Node::emit_signal("color_picker@changed", color);
             });
         }
     }
