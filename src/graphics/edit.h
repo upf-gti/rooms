@@ -80,7 +80,7 @@ class StrokeParameters {
     sdPrimitive     primitive = SD_SPHERE;
     sdOperation     operation = OP_UNION;
     ColorBlendingOp color_blend_op = COLOR_OP_REPLACE;
-    glm::vec4       parameters = { 0.f, -1.f, 0.f, 0.01f };
+    glm::vec4       parameters = { 0.f, -1.f, 0.f, 0.05f };
     StrokeMaterial  material = {};
 
     bool dirty = false;

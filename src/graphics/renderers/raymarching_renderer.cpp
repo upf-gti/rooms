@@ -52,14 +52,17 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
     max_brick_count = brick_count_in_axis * brick_count_in_axis * brick_count_in_axis;
 
     empty_brick_and_removal_buffer_count = max_brick_count + (max_brick_count % 4);
+    float octree_space_scale = powf(2.0, octree_depth + 3);
 
     // Scale the size of a brick
-    Shader::set_custom_define("WORLD_SPACE_SCALE", powf(2.0, octree_depth + 3)); // Worldspace scale is 1/octree_max_width
+    Shader::set_custom_define("WORLD_SPACE_SCALE", octree_space_scale); // Worldspace scale is 1/octree_max_width
     Shader::set_custom_define("OCTREE_DEPTH", octree_depth);
     Shader::set_custom_define("OCTREE_TOTAL_SIZE", octree_total_size);
     Shader::set_custom_define("PREVIEW_PROXY_BRICKS_COUNT", PREVIEW_PROXY_BRICKS_COUNT);
     Shader::set_custom_define("STROKE_HISTORY_MAX_SIZE", STROKE_HISTORY_MAX_SIZE);
     Shader::set_custom_define("BRICK_REMOVAL_COUNT", empty_brick_and_removal_buffer_count);
+
+    brick_world_size = (SCULPT_MAX_SIZE / octree_space_scale) * 8.0f;
 
 #ifndef DISABLE_RAYMARCHER
 
@@ -431,34 +434,52 @@ const Stroke* RaymarchingRenderer::compute_and_upload_context(const std::vector<
             last_history_index = united_stroke_idx - 1;
         }
     }
-    
+
+    uint32_t context_edit_count = 0u;
     strokes_aabb.half_size += max_smooth_margin;
+
+    AABB roundded_to_grid;
+    {
+        glm::vec3 max_aabb = strokes_aabb.center + strokes_aabb.half_size;
+        glm::vec3 min_aabb = strokes_aabb.center - strokes_aabb.half_size;
+
+        // TODO: revisit this margin of 1 for the AABB size
+        max_aabb = (glm::ceil(max_aabb / brick_world_size) + 1.0f) * brick_world_size;
+        min_aabb = (glm::floor(min_aabb / brick_world_size) - 1.0f)* brick_world_size;
+
+        roundded_to_grid.half_size = (max_aabb - min_aabb) * 0.5f;
+        roundded_to_grid.center = min_aabb + roundded_to_grid.half_size;
+    }
+
+    strokes_aabb.half_size -= max_smooth_margin;
+
     // Get the strokes that are on the region of the undo
     for (uint32_t i = 0u; i < last_history_index; i++) {
-        stroke_history[i].get_AABB_intersecting_stroke(strokes_aabb, intersection_stroke);
+        stroke_history[i].get_AABB_intersecting_stroke(roundded_to_grid, intersection_stroke);
 
         if (intersection_stroke.edit_count > 0u) {
             // reevaluate_edit_count += intersection_stroke.edit_count;
             stroke_influence_list.strokes[stroke_influence_list.stroke_count++] = intersection_stroke;
+            context_edit_count += intersection_stroke.edit_count;
         }
     }
 
     // Include the current stroke as context
     if (current_stroke.edit_count > 0u) {
-        current_stroke.get_AABB_intersecting_stroke(strokes_aabb, intersection_stroke);
+        current_stroke.get_AABB_intersecting_stroke(roundded_to_grid, intersection_stroke);
 
         if (intersection_stroke.edit_count > 0u) {
             // reevaluate_edit_count += intersection_stroke.edit_count;
+            context_edit_count += intersection_stroke.edit_count;
             stroke_influence_list.strokes[stroke_influence_list.stroke_count++] = intersection_stroke;
         }
     }
-    strokes_aabb.half_size -= max_smooth_margin;
 
     compute_merge_data.reevaluation_AABB_min = strokes_aabb.center - strokes_aabb.half_size;
     compute_merge_data.reevaluation_AABB_max = strokes_aabb.center + strokes_aabb.half_size;
 
-    AABB_mesh->set_translation(strokes_aabb.center + get_sculpt_start_position());
-    AABB_mesh->scale(strokes_aabb.half_size * 2.0f);
+    AABB_mesh->set_translation(roundded_to_grid.center + get_sculpt_start_position());
+    AABB_mesh->scale(roundded_to_grid.half_size * 2.0f);
 
     webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_stroke_history.data), 0, &stroke_influence_list, sizeof(sStrokeInfluence));
     // Update uniform buffer
@@ -655,6 +676,7 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
     } else if (needs_evaluation) { // Merge
         spdlog::info("Evaluate stroke");
         uint32_t set_as_preview = 0u;
+        spdlog::info("Stroke context count: {}, stroke edit count: {}", stroke_influence_list.stroke_count, stroke_influence_list.strokes[0].edit_count);
         webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_uniform.data), sizeof(uint32_t) * 3u, &set_as_preview, sizeof(uint32_t));
         evaluate_strokes(compute_pass, to_process);
 
@@ -687,7 +709,7 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
     wgpuCommandEncoderCopyBufferToBuffer(command_encoder, std::get<WGPUBuffer>(octree_brick_buffers.data), 0,
         brick_buffers_counters_read_buffer, 0, sizeof(sBrickBuffers_counters));
 
-    //AABB_mesh->render();
+    AABB_mesh->render();
 
     if (is_going_to_evaluate) {
         //RenderdocCapture::end_capture_frame();

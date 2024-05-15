@@ -16,7 +16,7 @@
 #define PREVIEW_EDITS_MAX 128
 #define SDF_RESOLUTION 400
 #define SCULPT_MAX_SIZE 1 // meters
-#define PREVIEW_PROXY_BRICKS_COUNT 4000u
+#define PREVIEW_PROXY_BRICKS_COUNT 7000u
 #define STROKE_HISTORY_MAX_SIZE 1000u
 
 class MeshInstance3D;
@@ -60,6 +60,7 @@ class RaymarchingRenderer {
     // Octree parameters
     uint32_t        max_brick_count = 0u;
     uint32_t        empty_brick_and_removal_buffer_count = 0u;
+    float           brick_world_size = 0.0f;
 
     struct sBrickBuffers_counters {
         uint32_t atlas_empty_bricks_counter;
