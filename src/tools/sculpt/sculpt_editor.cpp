@@ -234,12 +234,12 @@ bool SculptEditor::edit_update(float delta_time)
 
         // Update primitive main size
         if (!is_shift_right_pressed) {
-            glm::vec3 new_dimensions = glm::clamp(right_size_multiplier + glm::vec3(edit_to_add.dimensions), 0.001f, 0.1f);
+            glm::vec3 new_dimensions = glm::clamp(right_size_multiplier + glm::vec3(edit_to_add.dimensions), 0.005f, 0.08f);
             edit_to_add.dimensions = glm::vec4(new_dimensions, edit_to_add.dimensions.w);
         }
         else {
             // Update primitive specific size
-            edit_to_add.dimensions.w = glm::clamp(right_size_multiplier + edit_to_add.dimensions.w, 0.001f, 0.1f);
+            edit_to_add.dimensions.w = glm::clamp(right_size_multiplier + edit_to_add.dimensions.w, 0.005f, 0.08f);
         }
 
         float left_size_multiplier = Input::get_thumbstick_value(HAND_LEFT).y * delta_time * 0.01f;
