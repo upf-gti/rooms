@@ -1056,8 +1056,8 @@ void SculptEditor::init_ui()
             // Edit sizes
             {
                 ui::ItemGroup2D* g_edit_sizes = new ui::ItemGroup2D("g_edit_sizes");
-                g_edit_sizes->add_child(new ui::Slider2D("main_size", "data/textures/x.png", edit_to_add.dimensions.x, ui::SliderMode::VERTICAL, 0, 0.001f, 0.1f, 3));
-                g_edit_sizes->add_child(new ui::Slider2D("sec_size", "data/textures/y.png", edit_to_add.dimensions.w, ui::SliderMode::VERTICAL, 0, 0.001f, 0.1f, 3));
+                g_edit_sizes->add_child(new ui::Slider2D("main_size", edit_to_add.dimensions.x, ui::SliderMode::HORIZONTAL, 0, 0.001f, 0.1f, 3));
+                g_edit_sizes->add_child(new ui::Slider2D("sec_size", edit_to_add.dimensions.w, ui::SliderMode::HORIZONTAL, 0, 0.001f, 0.1f, 3));
                 shape_editor_submenu->add_child(g_edit_sizes);
             }
 
@@ -1108,7 +1108,7 @@ void SculptEditor::init_ui()
             {
                 ui::ItemGroup2D* g_saved_materials = new ui::ItemGroup2D("g_saved_materials");
 
-                g_saved_materials->add_child(new ui::TextureButton2D("save_material", "data/textures/submenu_mark.png"));
+                // g_saved_materials->add_child(new ui::TextureButton2D("save_material", "data/textures/submenu_mark.png"));
                 g_saved_materials->add_child(new ui::TextureButton2D("pick_material", "data/textures/pick_material.png", ui::ALLOW_TOGGLE));
 
                 {
@@ -1352,9 +1352,9 @@ void SculptEditor::bind_events()
         spdlog::error("Cannot find material_samples button group!");
     }
 
-    Node::bind("save_material", [&](const std::string& signal, void* button) {
+    /*Node::bind("save_material", [&](const std::string& signal, void* button) {
         generate_material_from_stroke(button);
-    });
+    });*/
 
     Node::bind("shuffle_material", [&](const std::string& signal, void* button) {
         generate_random_material();
