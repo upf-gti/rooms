@@ -24,7 +24,7 @@
 
 uint8_t SculptEditor::last_generated_material_uid = 0;
 
-Viewport3D* test_slider_thermometer = nullptr;
+//Viewport3D* test_slider_thermometer = nullptr;
 
 void SculptEditor::initialize()
 {
@@ -131,15 +131,15 @@ void SculptEditor::initialize()
         controller_mesh_right = static_cast<MeshInstance3D*>(entities[1]);
     }
 
-    ui::VContainer2D* test_root = new ui::VContainer2D("test_root", { 0.0f, 0.0f });
+    /*ui::VContainer2D* test_root = new ui::VContainer2D("test_root", { 0.0f, 0.0f });
     test_root->set_centered(true);
 
-    test_root->add_child(new ui::Slider2D("thermometer", 0.0f, ui::SliderMode::HORIZONTAL, ui::DISABLED));
+    test_root->add_child(new ui::Slider2D("thermometer", 0.0f, ui::SliderMode::HORIZONTAL, ui::DISABLED));*/
 
-    test_slider_thermometer = new Viewport3D(test_root);
+    /*test_slider_thermometer = new Viewport3D(test_root);
     test_slider_thermometer->set_active(true);
 
-    RoomsEngine::entities.push_back(test_slider_thermometer);
+    RoomsEngine::entities.push_back(test_slider_thermometer);*/
 
     enable_tool(SCULPT);
 
@@ -446,7 +446,7 @@ void SculptEditor::update(float delta_time)
     m = glm::translate(m, new_pos);
     m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
 
-    test_slider_thermometer->set_model(m);
+    //test_slider_thermometer->set_model(m);
 
     if (current_tool == NONE) {
         return;
@@ -627,11 +627,11 @@ void SculptEditor::update(float delta_time)
 
     was_tool_used = is_tool_used;
 
-    if (was_tool_used) {
+    /*if (was_tool_used) {
         renderer->get_raymarching_renderer()->get_brick_usage([](float pct, uint32_t brick_count) {
             Node::emit_signal("thermometer@changed", pct);
         });
-    }
+    }*/
 }
 
 void SculptEditor::apply_mirror_position(glm::vec3& position)
@@ -1195,7 +1195,7 @@ void SculptEditor::init_ui()
     // ** Undo/Redo **
     {
         second_row->add_child(new ui::TextureButton2D("undo", "data/textures/x.png"));
-        second_row->add_child(new ui::TextureButton2D("redo", "data/textures/y.png"));
+        //second_row->add_child(new ui::TextureButton2D("redo", "data/textures/y.png"));
     }
 
     if (renderer->get_openxr_available()) {
@@ -1219,7 +1219,7 @@ void SculptEditor::init_ui()
 
             left_hand_container->add_child(new ui::ImageLabel2D("Round Shape", "data/textures/buttons/l_thumbstick.png", LAYOUT_ANY_NO_SHIFT_L));
             left_hand_container->add_child(new ui::ImageLabel2D("Smooth", "data/textures/buttons/l_grip_plus_l_thumbstick.png", LAYOUT_ANY_SHIFT_L, double_size));
-            left_hand_container->add_child(new ui::ImageLabel2D("Redo", "data/textures/buttons/y.png", LAYOUT_ANY_NO_SHIFT_L));
+            //left_hand_container->add_child(new ui::ImageLabel2D("Redo", "data/textures/buttons/y.png", LAYOUT_ANY_NO_SHIFT_L));
             left_hand_container->add_child(new ui::ImageLabel2D("Guides", "data/textures/buttons/l_grip_plus_y.png", LAYOUT_ANY_SHIFT_L, double_size));
             left_hand_container->add_child(new ui::ImageLabel2D("Undo", "data/textures/buttons/x.png", LAYOUT_ANY_NO_SHIFT_L));
             left_hand_container->add_child(new ui::ImageLabel2D("PBR", "data/textures/buttons/l_grip_plus_x.png", LAYOUT_ANY_SHIFT_L, double_size));

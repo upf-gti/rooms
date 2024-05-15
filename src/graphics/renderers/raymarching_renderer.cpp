@@ -601,28 +601,28 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
 // TODO
 void RaymarchingRenderer::compute_redo(WGPUComputePassEncoder compute_pass)
 {
-    if (stroke_redo_history.size() == 0) {
-        return;
-    }
+    //if (stroke_redo_history.size() == 0) {
+    //    return;
+    //}
 
-    std::vector<Stroke> strokes_to_evaluate;
+    //std::vector<Stroke> strokes_to_evaluate;
 
-    uint32_t last_stroke_id = stroke_redo_history.front().stroke_id;
+    //uint32_t last_stroke_id = stroke_redo_history.front().stroke_id;
 
-    std::list<Stroke>::iterator stroke_it = stroke_redo_history.begin();
-    while (stroke_it != stroke_redo_history.end()) {
-        // if stroke changes
-        if (stroke_it->stroke_id != last_stroke_id) {
-            break;
-        }
+    //std::list<Stroke>::iterator stroke_it = stroke_redo_history.begin();
+    //while (stroke_it != stroke_redo_history.end()) {
+    //    // if stroke changes
+    //    if (stroke_it->stroke_id != last_stroke_id) {
+    //        break;
+    //    }
 
-        strokes_to_evaluate.push_back(*stroke_it);
-        stroke_history.push_back(*stroke_it);
+    //    strokes_to_evaluate.push_back(*stroke_it);
+    //    stroke_history.push_back(*stroke_it);
 
-        stroke_it = stroke_redo_history.erase(stroke_it);
-    }
+    //    stroke_it = stroke_redo_history.erase(stroke_it);
+    //}
 
-    evaluate_strokes(compute_pass, strokes_to_evaluate.data(), false, true);
+    //evaluate_strokes(compute_pass, strokes_to_evaluate.data(), false, true);
 }
 
 void RaymarchingRenderer::compute_undo(WGPUComputePassEncoder compute_pass)
