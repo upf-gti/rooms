@@ -346,9 +346,11 @@ bool SculptEditor::edit_update(float delta_time)
                     switch (op) {
                     case OP_SMOOTH_UNION:
                         op = OP_SMOOTH_SUBSTRACTION;
+                        Node::emit_signal("substract@pressed", (void*)nullptr);
                         break;
                     case OP_SMOOTH_SUBSTRACTION:
                         op = OP_SMOOTH_UNION;
+                        Node::emit_signal("add@pressed", (void*)nullptr);
                         break;
                     default:
                         assert(0 && "Use smooth operations!");
@@ -961,7 +963,7 @@ void SculptEditor::enable_tool(eTool tool)
         stroke_parameters.set_operation(OP_SMOOTH_UNION);
         hand_to_edit_distance = 0.05f;
         static_cast<ui::ButtonSubmenu2D*>(brush_editor_submenu)->set_disabled(true);
-        Node::emit_signal("sculpt@pressed", (void*)nullptr);
+        Node::emit_signal("add@pressed", (void*)nullptr);
         break;
     case PAINT:
         stroke_parameters.set_operation(OP_SMOOTH_PAINT);
@@ -1043,16 +1045,6 @@ void SculptEditor::init_ui()
         // Shape editor
         {
             ui::ButtonSubmenu2D* shape_editor_submenu = new ui::ButtonSubmenu2D("shape_editor", "data/textures/shape_editor.png");
-
-            // Operations and sculpt mode
-            {
-                // Add, substract, intersection
-                ui::ComboButtons2D* combo_edit_operation = new ui::ComboButtons2D("combo_edit_operation");
-                combo_edit_operation->add_child(new ui::TextureButton2D("add", "data/textures/sphere.png", ui::SELECTED));
-                combo_edit_operation->add_child(new ui::TextureButton2D("substract", "data/textures/sphere.png"));
-                //combo_edit_operation->add_child(new ui::TextureButton2D("intersect", "data/textures/sphere.png"));
-                shape_editor_submenu->add_child(combo_edit_operation);
-            }
 
             // Edit sizes
             {
@@ -1187,7 +1179,8 @@ void SculptEditor::init_ui()
     // ** Main tools (SCULPT & PAINT) **
     {
         ui::ComboButtons2D* combo_main_tools = new ui::ComboButtons2D("combo_main_tools");
-        combo_main_tools->add_child(new ui::TextureButton2D("sculpt", "data/textures/cube.png", ui::SELECTED));
+        combo_main_tools->add_child(new ui::TextureButton2D("add", "data/textures/cube.png", ui::SELECTED));
+        combo_main_tools->add_child(new ui::TextureButton2D("substract", "data/textures/cube_substract.png"));
         combo_main_tools->add_child(new ui::TextureButton2D("paint", "data/textures/paint.png"));
         second_row->add_child(combo_main_tools);
     }
@@ -1251,7 +1244,16 @@ void SculptEditor::init_ui()
 
 void SculptEditor::bind_events()
 {
-    Node::bind("sculpt", [&](const std::string& signal, void* button) { enable_tool(SCULPT); });
+    Node::bind("add", [&](const std::string& signal, void* button) {
+        enable_tool(SCULPT);
+        set_operation(OP_SMOOTH_UNION);
+    });
+
+    Node::bind("substract", [&](const std::string& signal, void* button) {
+        enable_tool(SCULPT);
+        set_operation(OP_SMOOTH_SUBSTRACTION);
+    });
+
     Node::bind("paint", [&](const std::string& signal, void* button) { enable_tool(PAINT); });
 
     Node::bind("sphere", [&](const std::string& signal, void* button) {  set_primitive(SD_SPHERE); });
@@ -1264,9 +1266,6 @@ void SculptEditor::bind_events()
 
     Node::bind("main_size", [&](const std::string& signal, float value) { set_edit_size(value); });
     Node::bind("sec_size", [&](const std::string& signal, float value) { set_edit_size(-1.0f, value); });
-
-    Node::bind("add", [&](const std::string& signal, void* button) { set_operation(OP_SMOOTH_UNION); });
-    Node::bind("substract", [&](const std::string& signal, void* button) { set_operation(OP_SMOOTH_SUBSTRACTION); });
 
     Node::bind("onion_value", [&](const std::string& signal, float value) { set_onion_modifier(value); });
     Node::bind("cap_value", [&](const std::string& signal, float value) { set_cap_modifier(value); });
