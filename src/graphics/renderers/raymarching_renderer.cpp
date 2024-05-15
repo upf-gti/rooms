@@ -652,9 +652,6 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
         evaluate_strokes(compute_pass, to_process, true);
 
     } else if (needs_evaluation) { // Merge
-
-        
-
         spdlog::info("Evaluate stroke");
         uint32_t set_as_preview = 0u;
         webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_uniform.data), sizeof(uint32_t) * 3u, &set_as_preview, sizeof(uint32_t));
@@ -689,7 +686,7 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
     wgpuCommandEncoderCopyBufferToBuffer(command_encoder, std::get<WGPUBuffer>(octree_brick_buffers.data), 0,
         brick_buffers_counters_read_buffer, 0, sizeof(sBrickBuffers_counters));
 
-    AABB_mesh->render();
+    //AABB_mesh->render();
 
     if (is_going_to_evaluate) {
         //RenderdocCapture::end_capture_frame();

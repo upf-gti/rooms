@@ -636,7 +636,7 @@ fn opSmoothSubtractionInterval( s1 : vec2f, s2 : vec2f, k : f32 ) -> vec2f
 
 fn opSmoothPaintInterval( s1 : vec2f, s2 : vec2f, k : f32 ) -> vec2f
 {
-    return opIntersectionInterval(s1, s2);
+    return s1;
 }
 
 fn opOnionInterval(s : vec2f, t : f32) -> vec2f
@@ -775,8 +775,8 @@ fn eval_interval_stroke_sphere_smooth_substraction( position : mat3x3f, current_
     return result_surface;
 }
 
-fn eval_interval_stroke_sphere_paint( position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>) -> vec2f {
-    var result_surface : vec2f = current_surface;
+fn eval_interval_stroke_sphere_smooth_paint( position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>) -> vec2f {
+    var result_surface : vec2f = vec2f(10000.0, 10000.0);
     var tmp_surface : vec2f;
 
     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
@@ -789,10 +789,10 @@ fn eval_interval_stroke_sphere_paint( position : mat3x3f, current_surface : vec2
         let curr_edit : Edit = edit_array[i];
         let radius : f32 = curr_edit.dimensions.x;
         tmp_surface = sphere_interval(position, curr_edit.position,curr_edit.rotation, radius);
-        result_surface = opSmoothPaintInterval(result_surface, tmp_surface, smooth_factor);
+        result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
     }
     
-    return result_surface;
+    return opSmoothPaintInterval(current_surface, result_surface, smooth_factor);
 }
 
 /*
@@ -1263,7 +1263,7 @@ fn evaluate_stroke_interval( position: mat3x3f, stroke: ptr<storage, Stroke, rea
             break;
         }
         case SD_SPHERE_SMOOTH_OP_PAINT: {
-            result_surface = eval_interval_stroke_sphere_smooth_union(position, result_surface, stroke, vec4f(0.0));
+            //result_surface = eval_interval_stroke_sphere_smooth_paint(position, result_surface, stroke);
             break;
         }
         case SD_BOX_SMOOTH_OP_UNION: {

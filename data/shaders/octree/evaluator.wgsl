@@ -291,7 +291,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             current_stroke_interval = surface_interval;
 
             surface_interval = evaluate_stroke_interval(current_subdivision_interval, &(stroke), surface_interval, octant_center, level_half_size);
-        } else {
+        }
+        if (level != OCTREE_DEPTH || stroke.operation == OP_SMOOTH_PAINT) {
             // Twice the smooth factor since it is the top influencing margin 
             // as a way to subdivide to the bottom level. It is not used
             // for sending the work to the write to texture!!
@@ -337,7 +338,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
         // Do not evaluate all the bricks, only the ones whose distance interval has changed
         octree.data[octree_index].octant_center_distance = surface_interval;
-
         
         if (level < OCTREE_DEPTH) {
             if (is_evaluating_undo) {
@@ -383,7 +383,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                     }
                 }
             } else if (stroke.operation == OP_SMOOTH_PAINT) {
-                if (surface_interval.x < 0.0) {
+                if (current_stroke_interval.x < 0.0) {
                     if (is_current_brick_filled) {
                         brick_reevaluate(octree_index);
                     }
