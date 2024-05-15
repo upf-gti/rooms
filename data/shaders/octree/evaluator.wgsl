@@ -384,12 +384,12 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 }
             } else if (stroke.operation == OP_SMOOTH_PAINT) {
                 if (current_stroke_interval.x < 0.0) {
-                    if (is_current_brick_filled) {
-                        brick_reevaluate(octree_index);
+                    if (surface_interval.x < 0.0 && surface_interval.y > 0.0) {
+                        brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
                     }
                 }
             }
-        } else if (is_current_brick_filled && stroke.operation != OP_SMOOTH_PAINT) {
+        } else if (is_current_brick_filled) {
             brick_remove(octree_index);
         }
     } else {
