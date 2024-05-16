@@ -544,7 +544,7 @@ fn eval_stroke_capsule_substraction( position : vec3f, current_surface : Surface
     for(var i : u32 = 0u; i < edit_count; i++) {
         let curr_edit : Edit = edit_array[i];
         tmp_surface = sdCapsule(position, curr_edit.position, curr_edit.dimensions, curr_edit.rotation, material);
-        result_surface = opSmoothUnion(result_surface, tmp_surface, smooth_factor);
+        result_surface = opSmoothSubtraction(result_surface, tmp_surface, smooth_factor);
     }
 
     return result_surface;
