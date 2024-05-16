@@ -1,4 +1,5 @@
 #include "rooms_engine.h"
+
 #include "framework/nodes/environment_3d.h"
 #include "framework/nodes/viewport_3d.h"
 #include "framework/nodes/spot_light_3d.h"
@@ -11,6 +12,7 @@
 #include "graphics/renderers/rooms_renderer.h"
 
 #include "shaders/mesh_grid.wgsl.gen.h"
+#include "shaders/ui/ui_ray_pointer.wgsl.gen.h"
 
 #include "tools/sculpt/sculpt_editor.h"
 
@@ -35,21 +37,34 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 
     entities.push_back(skybox);
 
-    MeshInstance3D* floor_grid_mesh = new MeshInstance3D();
-    floor_grid_mesh->add_surface(RendererStorage::get_surface("quad"));
-    floor_grid_mesh->set_translation(glm::vec3(0.0f));
-    floor_grid_mesh->rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-    floor_grid_mesh->scale(glm::vec3(10.f));
+    // Grid
+    {
+        MeshInstance3D* grid_node = new MeshInstance3D();
+        grid_node->add_surface(RendererStorage::get_surface("quad"));
+        grid_node->set_translation(glm::vec3(0.0f));
+        grid_node->rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+        grid_node->scale(glm::vec3(10.f));
 
-    Material grid_material;
-    grid_material.priority = 100;
-    grid_material.transparency_type = ALPHA_BLEND;
-    grid_material.cull_type = CULL_NONE;
-    grid_material.shader = RendererStorage::get_shader_from_source(shaders::mesh_grid::source, shaders::mesh_grid::path, grid_material);
+        Material grid_material;
+        grid_material.priority = 100;
+        grid_material.transparency_type = ALPHA_BLEND;
+        grid_material.cull_type = CULL_NONE;
+        grid_material.shader = RendererStorage::get_shader_from_source(shaders::mesh_grid::source, shaders::mesh_grid::path, grid_material);
 
-    floor_grid_mesh->set_surface_material_override(floor_grid_mesh->get_surface(0), grid_material);
+        grid_node->set_surface_material_override(grid_node->get_surface(0), grid_material);
 
-    entities.push_back(floor_grid_mesh);
+        entities.push_back(grid_node);
+    }
+
+    // Controller pointer
+    {
+        raycast_pointer = parse_mesh("data/meshes/raycast.obj");
+
+        Material pointer_material;
+        pointer_material.shader = RendererStorage::get_shader_from_source(shaders::ui_ray_pointer::source, shaders::ui_ray_pointer::path, pointer_material);
+
+        raycast_pointer->set_surface_material_override(raycast_pointer->get_surface(0), pointer_material);
+    }
 
     //if (parse_scene("data/gltf_tests/Sponza/Sponza.gltf", entities)) {
     //    //Renderer::instance->get_camera()->look_at_entity(entities.back());
@@ -102,6 +117,12 @@ void RoomsEngine::update(float delta_time)
 
     Node::check_controller_signals();
 
+    if (Renderer::instance->get_openxr_available())
+    {
+        glm::mat4x4 raycast_transform = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
+        raycast_pointer->set_model(raycast_transform);
+    }
+
     for (auto entity : entities) {
         entity->update(delta_time);
     }
@@ -141,9 +162,14 @@ void RoomsEngine::render()
         }
     }
 
-	for (auto entity : entities) {
-		entity->render();
-	}
+    for (auto entity : entities) {
+        entity->render();
+    }
+
+    if (Renderer::instance->get_openxr_available())
+    {
+        raycast_pointer->render();
+    }
 
     if (sculpt_editor) {
         sculpt_editor->render();

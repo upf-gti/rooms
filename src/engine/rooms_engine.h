@@ -6,6 +6,7 @@
 
 class Node;
 class Node3D;
+class MeshInstance3D;
 class Environment3D;
 class SculptEditor;
 
@@ -15,7 +16,9 @@ class RoomsEngine : public Engine
 {
     Environment3D* skybox = nullptr;
 
-    SculptEditor* sculpt_editor;
+    MeshInstance3D* raycast_pointer = nullptr;
+
+    SculptEditor* sculpt_editor = nullptr;
 
     bool export_scene();
     bool import_scene();

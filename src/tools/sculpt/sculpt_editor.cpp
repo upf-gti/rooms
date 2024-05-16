@@ -1196,7 +1196,7 @@ void SculptEditor::init_ui()
     // ** Main tools (SCULPT & PAINT) **
     {
         ui::ComboButtons2D* combo_main_tools = new ui::ComboButtons2D("combo_main_tools");
-        combo_main_tools->add_child(new ui::TextureButton2D("add", "data/textures/cube.png", ui::SELECTED));
+        combo_main_tools->add_child(new ui::TextureButton2D("add", "data/textures/cube_add.png", ui::SELECTED));
         combo_main_tools->add_child(new ui::TextureButton2D("substract", "data/textures/cube_substract.png"));
         combo_main_tools->add_child(new ui::TextureButton2D("paint", "data/textures/paint.png"));
         second_row->add_child(combo_main_tools);
