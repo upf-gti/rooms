@@ -811,11 +811,11 @@ fn box_interval(p : mat3x3f, edit_pos : vec3f, rotation : vec4f, size : vec3f, r
     // Move edit
     let interval_translated : mat3x3f = irotate_point_quat(isub_mat_vec3(p, edit_pos), rotation);
 
-    let interval_translated_sized : mat3x3f = iadd_mat_float( isub_mat_vec(iabs_mats(interval_translated), size), r);
+    let interval_translated_sized : mat3x3f = isub_mat_vec(iabs_mats(interval_translated), size);
 
     var i_distance : vec2f = ilength(imax_mats(interval_translated_sized, mat_zero_interval));
     var max_on_all_axis : vec2f = imax(interval_translated_sized[0].xy, imax(interval_translated_sized[1].xy, interval_translated_sized[2].xy));
-    var i_dist2 : vec2f = isub_vecs(imin(max_on_all_axis , vec2f(0.0, 0.0)), vec2f(r, r));
+    var i_dist2 : vec2f = isub_vecs(imin(max_on_all_axis, vec2f(0.0, 0.0)), vec2f(r, r));
 
     return iadd_vecs(i_distance, i_dist2);
 }

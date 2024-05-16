@@ -400,10 +400,10 @@ fn sdBox( p : vec3f, c : vec3f, s : vec3f, r : f32, rotation : vec4f, material :
 {
     var sf : Surface;
 
-    let pos : vec3f = rotate_point_quat(p - c, rotation) - r;
+    let pos : vec3f = rotate_point_quat(p - c, rotation);
 
     let q : vec3f = abs(pos) - s;
-    sf.distance = length(max(q, vec3f(0.0))) + min(max(q.x, max(q.y, q.z)), 0.0) + r;
+    sf.distance = length(max(q, vec3f(0.0))) + min(max(q.x, max(q.y, q.z)), 0.0) - r;
     sf.material = material;
     return sf;
 }
