@@ -126,8 +126,7 @@ void StrokeParameters::set_material_noise_color(const Color& color)
 glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const
 {
     glm::vec3 size = glm::vec3(edits[edit_index].dimensions);
-    float radius = edits[edit_index].dimensions.x;
-    float height = edits[edit_index].dimensions.w;
+    float round = edits[edit_index].dimensions.w; // TODO: Move params of functions to use dim_y for cone, capsule, cylinder..
 
     const glm::vec3 smooth_margin = (operation == OP_SMOOTH_PAINT || operation == OP_SMOOTH_UNION || operation == OP_SMOOTH_SUBSTRACTION) ? glm::vec3(parameters.w * 2.0f) : glm::vec3(0.0f);
 
@@ -140,13 +139,13 @@ glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const
     //case SD_CAPSULE:
     //    return glm::vec3(height) + glm::vec3(0.0f, radius / 2.0f, 0.0f);// +smooth_margin;
     case SD_CONE:
-        return glm::vec3(radius, height, radius) + smooth_margin;
+        return glm::vec3(size.x, round, size.x) + smooth_margin;
     //case SD_PYRAMID:
         //	return glm::abs(position - size) + radius * 2.0f;
     case SD_CYLINDER:
-        return glm::vec3(radius, height, radius) + smooth_margin;
+        return glm::vec3(size.x, size.y, size.x) + smooth_margin;
     case SD_TORUS:
-        return glm::abs(size) + radius * 2.0f + smooth_margin;
+        return glm::abs(size) + size.x * 2.0f + smooth_margin;
     /*case SD_BEZIER:
         return glm::vec3(0.0f);*/
     default:

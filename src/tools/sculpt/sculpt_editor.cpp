@@ -80,7 +80,7 @@ void SculptEditor::initialize()
         primitive_default_states[SD_SPHERE]     = { glm::vec4(0.02f, 0.0f, 0.0f, 0.0f) };
         primitive_default_states[SD_BOX]        = { glm::vec4(0.02f, 0.02f, 0.02f, 0.0f) };
         primitive_default_states[SD_CONE]       = { glm::vec4(0.05f, 0.0f, 0.0f, 0.05f) };
-        primitive_default_states[SD_CYLINDER]   = { glm::vec4(0.03f, 0.0f, 0.0f, 0.05f) };
+        primitive_default_states[SD_CYLINDER]   = { glm::vec4(0.03f, 0.03f, 0.0f, 0.0f) };
         primitive_default_states[SD_CAPSULE]    = { glm::vec4(0.03f, 0.0f, 0.0f, 0.05f) };
         primitive_default_states[SD_TORUS]      = { glm::vec4(0.03f, 0.0f, 0.0f, 0.01f) };
         primitive_default_states[SD_BEZIER]     = { glm::vec4(0.0) };
@@ -883,7 +883,7 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
             mesh_preview->get_surface(0)->create_cone(grow_dims.x, grow_dims.w);
             break;
         case SD_CYLINDER:
-            mesh_preview->get_surface(0)->create_cylinder(grow_dims.x, grow_dims.w * 2.f);
+            mesh_preview->get_surface(0)->create_cylinder(grow_dims.x, grow_dims.y * 2.f);
             break;
         case SD_TORUS:
             mesh_preview->get_surface(0)->create_torus(grow_dims.x, glm::clamp(grow_dims.w, 0.0001f, grow_dims.x));
@@ -895,7 +895,8 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
         spdlog::trace("Edit mesh preview generated!");
 
         Node::emit_signal("main_size@changed", edit_to_add.dimensions.x);
-        Node::emit_signal("secondary_size@changed", edit_to_add.dimensions.w);
+        Node::emit_signal("secondary_size@changed", edit_to_add.dimensions.y);
+        Node::emit_signal("round_size@changed", edit_to_add.dimensions.w);
 
         dimensions_dirty = false;
     }
@@ -937,16 +938,32 @@ void SculptEditor::set_operation(sdOperation operation)
     stroke_parameters.set_operation(operation);
 }
 
-void SculptEditor::set_edit_size(float main, float secondary)
+void SculptEditor::set_edit_size(float main, float secondary, float round)
 {
     // Update primitive main size
     if (main >= 0.0f) {
-        edit_to_add.dimensions = glm::vec4(glm::vec3(main), edit_to_add.dimensions.w);
+
+        // Box is the only shape that uses XYZ size..
+        if (stroke_parameters.get_primitive() == SD_BOX) {
+            edit_to_add.dimensions = glm::vec4(glm::vec3(main), edit_to_add.dimensions.w);
+        }
+        else {
+            edit_to_add.dimensions.x = main;
+        }
     }
 
     // Update primitive specific size
     else if (secondary >= 0.0f) {
-        edit_to_add.dimensions.w = secondary;
+
+        // Only for shapes that are NOT a box..
+        if (stroke_parameters.get_primitive() != SD_BOX) {
+            edit_to_add.dimensions.y = secondary;
+        }
+    }
+
+    // Update round size
+    else if (round >= 0.0f) {
+        edit_to_add.dimensions.w = round;
     }
 
     // Update in primitive state
@@ -1067,7 +1084,8 @@ void SculptEditor::init_ui()
             {
                 ui::ItemGroup2D* g_edit_sizes = new ui::ItemGroup2D("g_edit_sizes");
                 g_edit_sizes->add_child(new ui::Slider2D("main_size", edit_to_add.dimensions.x, ui::SliderMode::HORIZONTAL, 0, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE, 3));
-                g_edit_sizes->add_child(new ui::Slider2D("secondary_size", edit_to_add.dimensions.w, ui::SliderMode::HORIZONTAL, 0, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE, 3));
+                g_edit_sizes->add_child(new ui::Slider2D("secondary_size", edit_to_add.dimensions.y, ui::SliderMode::HORIZONTAL, 0, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE, 3));
+                g_edit_sizes->add_child(new ui::Slider2D("round_size", edit_to_add.dimensions.w, ui::SliderMode::HORIZONTAL, 0, 0.0f, 0.05f, 2));
                 shape_editor_submenu->add_child(g_edit_sizes);
             }
 
@@ -1292,6 +1310,7 @@ void SculptEditor::bind_events()
 
     Node::bind("main_size", [&](const std::string& signal, float value) { set_edit_size(value); });
     Node::bind("secondary_size", [&](const std::string& signal, float value) { set_edit_size(-1.0f, value); });
+    Node::bind("round_size", [&](const std::string& signal, float value) { set_edit_size(-1.0f, -1.0f, value); });
 
     Node::bind("onion_value", [&](const std::string& signal, float value) { set_onion_modifier(value); });
     Node::bind("cap_value", [&](const std::string& signal, float value) { set_cap_modifier(value); });
