@@ -582,23 +582,29 @@ fn eval_stroke_capsule_paint( position : vec3f, current_surface : Surface, curr_
 
 fn sdCone( p : vec3f, a : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f, material : Material) -> Surface
 {
-    let radius = dims.x;
-    let cap_value = parameters.y;
-    let height : f32 = max(dims.y * (1.0 - cap_value), 0.0025) * 0.5;
-
     var sf : Surface;
-    var r1 = radius; // base radius
-    var r2 = radius * cap_value; // top radius
 
-    let pos : vec3f = rotate_point_quat(p - a, rotation) - vec3f(0.0, height, 0.0);
+    let cap_value = parameters.y;
+    var radius = dims.x;
+    var height : f32 = max(dims.y * (1.0 - cap_value), 0.0025);
+
+    let round : f32 = (dims.w / 0.3) * min(radius, height);
+    radius -= round;
+    height -= round;
+
+    let r1 = radius; // base radius
+    let r2 = radius * cap_value; // top radius
+    let h : f32 = height * 0.5;
+
+    let pos : vec3f = rotate_point_quat(p - a, rotation) - vec3f(0.0, h, 0.0);
     let q = vec2f( length(pos.xz), pos.y );
-    let k1 = vec2f(r2, height);
-    let k2 = vec2f(r2-r1, 2.0 * height);
-    let ca = vec2f(q.x - min(q.x, select(r2, r1, q.y<0.0)), abs(q.y) - height);
+    let k1 = vec2f(r2, h);
+    let k2 = vec2f(r2-r1, 2.0 * h);
+    let ca = vec2f(q.x - min(q.x, select(r2, r1, q.y<0.0)), abs(q.y) - h);
     let cb = q - k1 + k2 * clamp( dot(k1 - q, k2) / dot(k2, k2), 0.0, 1.0);
     let s : f32 = select(1.0, -1.0, cb.x < 0.0 && ca.y < 0.0);
 
-    sf.distance = s * sqrt(min(dot(ca, ca), dot(cb, cb)));
+    sf.distance = s * sqrt(min(dot(ca, ca), dot(cb, cb))) - round;
     sf.material = material;
     return sf;
 }

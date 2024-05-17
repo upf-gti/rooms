@@ -106,7 +106,7 @@ class SculptEditor {
     bool can_snap_to_surface();
 
     bool dimensions_dirty       = true;
-    bool modifiers_dirty        = false;
+    bool modifiers_dirty        = true;
     bool stamp_enabled          = false;
     bool rotation_started       = false;
     bool snap_to_surface        = false;
