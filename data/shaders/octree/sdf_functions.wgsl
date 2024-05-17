@@ -495,7 +495,7 @@ fn sdCapsule( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation :
     let height : f32 = dims.y;
     
     var pc : vec3f = rotate_point_quat(p - c, rotation);
-    pc.y -= clamp(p.y, 0.0, height);
+    pc.y -= clamp(pc.y, 0.0, height);
 
     sf.distance = length(pc) - r;
     sf.material = material;

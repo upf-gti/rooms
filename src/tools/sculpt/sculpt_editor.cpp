@@ -230,29 +230,45 @@ bool SculptEditor::edit_update(float delta_time)
         // Get the data from the primitive default
         edit_to_add.dimensions = primitive_default_states[stroke_parameters.get_primitive()].dimensions;
         float right_size_multiplier = Input::get_thumbstick_value(HAND_RIGHT).y * delta_time * 0.1f;
-        dimensions_dirty |= (fabsf(right_size_multiplier) > 0.f);
 
-        // Update primitive main size
-        if (!is_shift_right_pressed) {
-            glm::vec3 new_dimensions = glm::clamp(right_size_multiplier + glm::vec3(edit_to_add.dimensions), MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE);
-            edit_to_add.dimensions = glm::vec4(new_dimensions, edit_to_add.dimensions.w);
+        if (fabsf(right_size_multiplier) > 0.f) {
+            // Update primitive main size
+            if (!is_shift_right_pressed) {
+                edit_to_add.dimensions.x = glm::clamp(right_size_multiplier + edit_to_add.dimensions.x, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE);
+                if (stroke_parameters.get_primitive() == SD_BOX) {
+                    edit_to_add.dimensions = glm::vec4(glm::vec3(edit_to_add.dimensions.x), edit_to_add.dimensions.w);
+                }
+            }
+            else if (stroke_parameters.get_primitive() != SD_BOX) {
+                // Update primitive specific size
+                edit_to_add.dimensions.y = glm::clamp(edit_to_add.dimensions.y + right_size_multiplier, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE);
+            }
+
+            dimensions_dirty = true;
         }
-        else {
-            // Update primitive specific size
-            edit_to_add.dimensions.w = glm::clamp(right_size_multiplier + edit_to_add.dimensions.w, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE);
-        }
 
-        float left_size_multiplier = Input::get_thumbstick_value(HAND_LEFT).y * delta_time * 0.02f;
+        float left_size_multiplier = Input::get_thumbstick_value(HAND_LEFT).y * delta_time;
 
-        // Change smooth factor
-        if (is_shift_left_pressed) {
-            float current_smooth = stroke_parameters.get_smooth_factor();
-            stroke_parameters.set_smooth_factor(glm::clamp(current_smooth + left_size_multiplier, MIN_SMOOTH_FACTOR, MAX_SMOOTH_FACTOR));
-            Node::emit_signal("smooth_factor@changed", stroke_parameters.get_smooth_factor());
+        if (fabsf(left_size_multiplier) > 0.f) {
+            // Update rounded size
+            if (!is_shift_left_pressed) {
+                edit_to_add.dimensions.w = glm::clamp(edit_to_add.dimensions.w + left_size_multiplier * 0.1f, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE);
+            }
+            else {
+                // Change smooth factor
+                float current_smooth = stroke_parameters.get_smooth_factor();
+                stroke_parameters.set_smooth_factor(glm::clamp(current_smooth + left_size_multiplier * 0.02f, MIN_SMOOTH_FACTOR, MAX_SMOOTH_FACTOR));
+                Node::emit_signal("smooth_factor@changed", stroke_parameters.get_smooth_factor());
+            }
+
+            dimensions_dirty = true;
         }
 
         // Update in primitive state
-        primitive_default_states[stroke_parameters.get_primitive()].dimensions = edit_to_add.dimensions;
+        if (dimensions_dirty) {
+            primitive_default_states[stroke_parameters.get_primitive()].dimensions = edit_to_add.dimensions;
+        }
+
         edit_to_add.rotation = glm::inverse(Input::get_controller_rotation(HAND_RIGHT, POSE_AIM));
         is_stretching_edit = false;
     }
@@ -288,13 +304,13 @@ bool SculptEditor::edit_update(float delta_time)
                 break;
             case SD_CAPSULE:
                 edit_to_add.position = edit_origin_stamp;
-                edit_to_add.dimensions.w = stamp_to_hand_distance;
+                edit_to_add.dimensions.y = stamp_to_hand_distance;
                 temp_limit *= 2.0f;
                 break;
-           /* case SD_CYLINDER:
+            case SD_CYLINDER:
                 edit_position_stamp = edit_origin_stamp - stamp_origin_to_hand * stamp_to_hand_distance * 0.5f;
-                edit_to_add.dimensions.w = stamp_to_hand_distance * 0.5f;
-                break;*/
+                edit_to_add.dimensions.y = stamp_to_hand_distance * 0.5f;
+                break;
             default:
                 break;
             }
@@ -396,7 +412,7 @@ bool SculptEditor::edit_update(float delta_time)
 
                 edit_to_add.position = glm::vec3(glm::vec3(0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1)));
                 glm::vec3 euler_angles(glm::pi<float>() * random_f(), glm::pi<float>()* random_f(), glm::pi<float>()* random_f());
-                edit_to_add.dimensions = glm::vec4(0.05f, 0.05f, 0.05f, 0.0f) * 1.0f;
+                // edit_to_add.dimensions = glm::vec4(0.05f, 0.05f, 0.05f, 0.0f) * 1.0f;
                 //edit_to_add.dimensions = (edit_to_add.operation == OP_SUBSTRACTION) ? 3.0f * glm::vec4(0.2f, 0.2f, 0.2f, 0.2f) : glm::vec4(0.2f, 0.2f, 0.2f, 0.2f);
                 edit_to_add.rotation = glm::normalize(glm::inverse(glm::normalize(glm::quat(euler_angles))));
                 // Stroke
@@ -914,7 +930,7 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
     switch (stroke_parameters.get_primitive())
     {
     case SD_CAPSULE:
-        mesh_preview->translate({ 0.f, dims.w * 0.5, 0.f });
+        mesh_preview->translate({ 0.f, dims.y * 0.5, 0.f });
         break;
     default:
         break;
@@ -1272,7 +1288,7 @@ void SculptEditor::init_ui()
             right_hand_container = new ui::VContainer2D("right_controller_root", { 0.0f, 0.0f });
 
             right_hand_container->add_child(new ui::ImageLabel2D("Main size", "data/textures/buttons/r_thumbstick.png", LAYOUT_ANY_NO_SHIFT_R));
-            right_hand_container->add_child(new ui::ImageLabel2D("Sec size", "data/textures/buttons/r_grip_plus_r_thumbstick.png", LAYOUT_ANY_SHIFT_R));
+            right_hand_container->add_child(new ui::ImageLabel2D("Sec size", "data/textures/buttons/r_grip_plus_r_thumbstick.png", LAYOUT_ANY_SHIFT_R, double_size));
             right_hand_container->add_child(new ui::ImageLabel2D("Add/Substract", "data/textures/buttons/b.png", LAYOUT_SCULPT_NO_SHIFT_R));
             right_hand_container->add_child(new ui::ImageLabel2D("Sculpt/Paint", "data/textures/buttons/r_grip_plus_b.png", LAYOUT_ANY_SHIFT_R, double_size));
             right_hand_container->add_child(new ui::ImageLabel2D("UI Select", "data/textures/buttons/a.png", LAYOUT_ALL));
