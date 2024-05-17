@@ -145,7 +145,7 @@ glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const
     case SD_CYLINDER:
         return glm::vec3(size.x, size.y, size.x) + smooth_margin;
     case SD_TORUS:
-        return glm::vec3(size.x + size.y) + smooth_margin; // TODO: This can be adjusted a lot better..
+        return glm::vec3(size.x + size.y, size.y, size.x + size.y) + smooth_margin; // TODO: This can be adjusted a lot better..
     /*case SD_BEZIER:
         return glm::vec3(0.0f);*/
     default:
@@ -156,46 +156,45 @@ glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const
 
 AABB Stroke::get_edit_world_AABB(const uint8_t edit_index) const
 {
-    const float smooth_margin = parameters.w * 2.0f;
-    const float radius = edits[edit_index].dimensions.x + smooth_margin;
-    const float height = edits[edit_index].dimensions.y;
+    const Edit& edit = edits[edit_index];
 
-    const glm::quat& inv_rotation = glm::inverse(edits[edit_index].rotation);
+    const float smooth_margin = parameters.w * 2.0f;
+    const float radius = edit.dimensions.x + smooth_margin;
+    const float height = edit.dimensions.y;
+
+    glm::quat edit_rotation = { 0.0, 0.0, 0.0, 1.0 };
+    if (primitive != SD_SPHERE) {
+        edit_rotation = edit.rotation;
+    }
+
+    const glm::quat& inv_rotation = glm::inverse(edit_rotation);
 
     // Special case for the capsule
     if (primitive == SD_CAPSULE) {
 
-        AABB a1 = { edits[edit_index].position, glm::vec3(radius)};
-        AABB a2 = { edits[edit_index].position + (inv_rotation * glm::vec3(0.0f, height, 0.0f)), glm::vec3(radius) };
+        AABB a1 = { edit.position, glm::vec3(radius) };
+        AABB a2 = { edit.position + (inv_rotation * glm::vec3(0.0f, height, 0.0f)), glm::vec3(radius) };
 
         return merge_aabbs(a1, a2);
     }
 
     glm::vec3 pure_edit_half_size = get_edit_world_half_size(edit_index);
 
-    glm::quat edit_rotation = { 0.0, 0.0, 0.0, 1.0 };
-
-    const Edit& edit = edits[edit_index];
-
-    if (primitive != SD_SPHERE) {
-        edit_rotation = edits[edit_index].rotation;
-    }
-
-    glm::vec3 aabb_center = edits[edit_index].position;
+    glm::vec3 aabb_center = edit.position;
 
     if (primitive == SD_CONE) {
         aabb_center += (inv_rotation * glm::vec3(0.0f, height * 0.5f, 0.0f));
     }
 
     // Rotate the AABB (turning it into an OBB) and compute the AABB
-    const glm::vec3 axis[8] = { edit_rotation * glm::vec3(pure_edit_half_size.x,  pure_edit_half_size.y,  pure_edit_half_size.z),
-                                edit_rotation * glm::vec3(pure_edit_half_size.x,  pure_edit_half_size.y, -pure_edit_half_size.z),
-                                edit_rotation * glm::vec3(pure_edit_half_size.x, -pure_edit_half_size.y,  pure_edit_half_size.z),
-                                edit_rotation * glm::vec3(pure_edit_half_size.x, -pure_edit_half_size.y, -pure_edit_half_size.z),
-                                edit_rotation * glm::vec3(-pure_edit_half_size.x,  pure_edit_half_size.y,  pure_edit_half_size.z),
-                                edit_rotation * glm::vec3(-pure_edit_half_size.x,  pure_edit_half_size.y, -pure_edit_half_size.z),
-                                edit_rotation * glm::vec3(-pure_edit_half_size.x, -pure_edit_half_size.y,  pure_edit_half_size.z),
-                                edit_rotation * glm::vec3(-pure_edit_half_size.x, -pure_edit_half_size.y, -pure_edit_half_size.z) };
+    const glm::vec3 axis[8] = { inv_rotation * glm::vec3(pure_edit_half_size.x,  pure_edit_half_size.y,  pure_edit_half_size.z),
+                                inv_rotation * glm::vec3(pure_edit_half_size.x,  pure_edit_half_size.y, -pure_edit_half_size.z),
+                                inv_rotation * glm::vec3(pure_edit_half_size.x, -pure_edit_half_size.y,  pure_edit_half_size.z),
+                                inv_rotation * glm::vec3(pure_edit_half_size.x, -pure_edit_half_size.y, -pure_edit_half_size.z),
+                                inv_rotation * glm::vec3(-pure_edit_half_size.x,  pure_edit_half_size.y,  pure_edit_half_size.z),
+                                inv_rotation * glm::vec3(-pure_edit_half_size.x,  pure_edit_half_size.y, -pure_edit_half_size.z),
+                                inv_rotation * glm::vec3(-pure_edit_half_size.x, -pure_edit_half_size.y,  pure_edit_half_size.z),
+                                inv_rotation * glm::vec3(-pure_edit_half_size.x, -pure_edit_half_size.y, -pure_edit_half_size.z) };
 
 
     glm::vec3 rotated_max_size = glm::vec3(-FLT_MAX);

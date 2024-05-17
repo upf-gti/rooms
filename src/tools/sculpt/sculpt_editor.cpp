@@ -239,7 +239,7 @@ bool SculptEditor::edit_update(float delta_time)
                     edit_to_add.dimensions = glm::vec4(glm::vec3(edit_to_add.dimensions.x), edit_to_add.dimensions.w);
                 }
             }
-            else if (stroke_parameters.get_primitive() != SD_BOX) {
+            else { // if (stroke_parameters.get_primitive() != SD_BOX)
                 // Update primitive specific size
                 edit_to_add.dimensions.y = glm::clamp(edit_to_add.dimensions.y + right_size_multiplier, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE);
             }
