@@ -39,14 +39,14 @@ enum sdOperation : uint32_t {
 	ALL_OPERATIONS
 };
 
-enum ColorBlendingOp : uint32_t {
+enum ColorBlendOp : uint32_t {
     COLOR_OP_REPLACE = 0,
     COLOR_OP_MIX,
     COLOR_OP_ADDITIVE,
     COLOR_OP_MULTIPLY,
     COLOR_OP_SCREEN,
-    COLOR_OP_DARKEN,
-    COLOR_OP_LIGHTEN,
+    /*COLOR_OP_DARKEN,
+    COLOR_OP_LIGHTEN,*/
     ALL_COLOR_BLENDING_OPERATIONS
 };
 
@@ -79,7 +79,7 @@ class StrokeParameters {
 
     sdPrimitive     primitive = SD_SPHERE;
     sdOperation     operation = OP_UNION;
-    ColorBlendingOp color_blend_op = COLOR_OP_REPLACE;
+    ColorBlendOp    color_blend_op = COLOR_OP_REPLACE;
     glm::vec4       parameters = { 0.f, -1.f, 0.f, 0.005f };
     StrokeMaterial  material = {};
 
@@ -89,7 +89,7 @@ public:
     void set_primitive(sdPrimitive primitive);
     void set_operation(sdOperation op);
     void set_parameters(const glm::vec4& parameters);
-    void set_color_blend_operation(ColorBlendingOp op);
+    void set_color_blend_operation(ColorBlendOp op);
     void set_smooth_factor(const float smooth_factor);
     void set_material(const StrokeMaterial& material);
     void set_material_color(const Color& color);
@@ -101,7 +101,7 @@ public:
     float get_smooth_factor() const { return parameters.w; }
     sdPrimitive get_primitive() const { return primitive; }
     sdOperation get_operation() const { return operation; }
-    ColorBlendingOp get_color_blending_operation() const { return color_blend_op; }
+    ColorBlendOp get_color_blending_operation() const { return color_blend_op; }
     glm::vec4 get_parameters() const { return parameters; }
     StrokeMaterial& get_material() { return material; }
     const StrokeMaterial& get_material() const { return material; }
@@ -111,14 +111,14 @@ public:
 };
 
 struct Stroke {
-    uint32_t    stroke_id = 0u;
-    uint32_t    edit_count = 0u;
-    sdPrimitive primitive;
-    sdOperation operation;
-    glm::vec4	parameters = { 0.f, -1.f, 0.f, 0.f };
-    glm::vec3	_dummy_;
-    ColorBlendingOp color_blending_op = ColorBlendingOp::COLOR_OP_REPLACE;
-    glm::vec4	_dummy2_;
+    uint32_t        stroke_id = 0u;
+    uint32_t        edit_count = 0u;
+    sdPrimitive     primitive;
+    sdOperation     operation;
+    glm::vec4	    parameters = { 0.f, -1.f, 0.f, 0.f };
+    glm::vec3	    _dummy_;
+    ColorBlendOp    color_blending_op = ColorBlendOp::COLOR_OP_REPLACE;
+    glm::vec4	    _dummy2_;
 
     // 48 bytes
     StrokeMaterial material;

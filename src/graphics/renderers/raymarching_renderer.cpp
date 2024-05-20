@@ -709,7 +709,7 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
     wgpuCommandEncoderCopyBufferToBuffer(command_encoder, std::get<WGPUBuffer>(octree_brick_buffers.data), 0,
         brick_buffers_counters_read_buffer, 0, sizeof(sBrickBuffers_counters));
 
-    //AABB_mesh->render();
+    // AABB_mesh->render();
 
     if (is_going_to_evaluate) {
         //RenderdocCapture::end_capture_frame();

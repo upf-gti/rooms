@@ -634,11 +634,6 @@ fn opSmoothSubtractionInterval( s1 : vec2f, s2 : vec2f, k : f32 ) -> vec2f
     return ineg(isoft_min_quadratic(s2, ineg(s1), k));
 }
 
-fn opSmoothPaintInterval( s1 : vec2f, s2 : vec2f, k : f32 ) -> vec2f
-{
-    return s1;
-}
-
 fn opOnionInterval(s : vec2f, t : f32) -> vec2f
 {
     return isub_vec_float(iabs(s), t);

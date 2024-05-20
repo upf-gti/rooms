@@ -1425,7 +1425,7 @@ void SculptEditor::bind_events()
             {
                 ui::Button2D* child = static_cast<ui::Button2D*>(color_blending_modes->get_children()[i]);
                 Node::bind(child->signal, [&, index = i](const std::string& signal, void* button) {
-                    stroke_parameters.set_color_blend_operation(static_cast<ColorBlendingOp>(index));
+                    stroke_parameters.set_color_blend_operation(static_cast<ColorBlendOp>(index));
                 });
             }
         }

@@ -93,7 +93,7 @@ fn soft_min(a : f32, b : f32, k : f32) -> vec2f
 
 // From iqulzes and Dreams
 fn sminQuadratic(a : f32, b : f32, k : f32) -> vec2f {
-    let norm_k : f32 = k;// * 4.0;
+    let norm_k : f32 = max(k, 0.00001);// * 4.0;
     let h : f32 = max(norm_k - abs(a - b), 0.0) / norm_k;
     let m : f32 = h*h;
     let s : f32 = m*norm_k * 0.25;
@@ -216,35 +216,30 @@ fn opSmoothIntersection( s1 : Surface, s2 : Surface, k : f32 ) -> Surface
 
 fn opSmoothPaint( s1 : Surface, s2 : Surface, color_blend_op : u32, material : Material, k : f32 ) -> Surface
 {
-    var sColorInter : Surface = opIntersection(s1, s2);
-    
-    let smin : vec2f = sminQuadratic(sColorInter.distance, s1.distance, k);
-
     // Permorm the color blending on the incomming material, and then blend it with the other material
     var tmp_material : Material = material;
 
     let base_color : vec3f = s1.material.albedo;
     let new_layer_color : vec3f = material.albedo;
-    var result_color : vec3f = material.albedo;
 
-    if(color_blend_op == CBM_MULTIPLY) {
+    if(color_blend_op == CBM_MIX) {
+        tmp_material.albedo = mix(base_color, new_layer_color, 0.5);
+    }
+    else if(color_blend_op == CBM_ADDITIVE) {
+        tmp_material.albedo = additive(base_color, new_layer_color);
+    }
+    else if(color_blend_op == CBM_MULTIPLY) {
         tmp_material.albedo = multiply(base_color, new_layer_color);
     }
     else if(color_blend_op == CBM_SCREEN) {
         tmp_material.albedo = screen(base_color, new_layer_color);
     }
-    else if(color_blend_op == CBM_DARKEN) {
-        tmp_material.albedo = darken(base_color, new_layer_color);
-    }
-    else if(color_blend_op == CBM_LIGHTEN) {
-        tmp_material.albedo = lighten(base_color, new_layer_color);
-    }
-    else if(color_blend_op == CBM_ADDITIVE) {
-        tmp_material.albedo = additive(base_color, new_layer_color);
-    }
-    else if(color_blend_op == CBM_MIX) {
-        tmp_material.albedo = mix(base_color, new_layer_color, 0.5);
-    }
+    // else if(color_blend_op == CBM_DARKEN) {
+    //     tmp_material.albedo = darken(base_color, new_layer_color);
+    // }
+    // else if(color_blend_op == CBM_LIGHTEN) {
+    //     tmp_material.albedo = lighten(base_color, new_layer_color);
+    // }
 
     if(color_blend_op > 0u) {
         // Since we add too many edits in smear, we need to force blending colors
@@ -254,10 +249,13 @@ fn opSmoothPaint( s1 : Surface, s2 : Surface, color_blend_op : u32, material : M
 
     tmp_material.albedo = clamp(tmp_material.albedo, vec3f(0.0), vec3f(1.0));
 
+    let paint_smooth_factor : f32 = 0.005;
+    let s_intersection : Surface = opSmoothIntersection(s1, s2, paint_smooth_factor);
+    let smin : vec2f = sminQuadratic(s_intersection.distance, s1.distance, paint_smooth_factor);
+
     var s : Surface;
     s.distance = s1.distance;
-    s.material = Material_mix(tmp_material, s1.material, smin.y);
-
+    s.material = Material_mix(tmp_material, s1.material, pow(smin.y, 3.0));
     return s;
 }
 

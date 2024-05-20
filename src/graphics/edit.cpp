@@ -73,7 +73,7 @@ void StrokeParameters::set_parameters(const glm::vec4& parameters)
     dirty = true;
 }
 
-void StrokeParameters::set_color_blend_operation(ColorBlendingOp op)
+void StrokeParameters::set_color_blend_operation(ColorBlendOp op)
 {
     this->color_blend_op = op;
     dirty = true;
