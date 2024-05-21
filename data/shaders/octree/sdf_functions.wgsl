@@ -582,7 +582,7 @@ fn sdCone( p : vec3f, a : vec3f, dims : vec4f, parameters : vec2f, rotation : ve
 {
     var sf : Surface;
 
-    let cap_value = parameters.y;
+    let cap_value = max(parameters.y, 0.0001);
     var radius = dims.x;
     var height : f32 = max(dims.y * (1.0 - cap_value), 0.0025);
 

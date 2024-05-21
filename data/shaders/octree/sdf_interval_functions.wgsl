@@ -905,7 +905,7 @@ fn eval_interval_stroke_capsule_substraction(position : mat3x3f, current_surface
 
 fn cone_interval(p : mat3x3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f) -> vec2f
 {
-    let cap_value = parameters.y;
+    let cap_value = max(parameters.y, 0.0001);
     var radius : f32 = dims.x;
     var height : f32 = max(dims.y * (1.0 - cap_value), 0.0025);
 
@@ -921,31 +921,21 @@ fn cone_interval(p : mat3x3f, c : vec3f, dims : vec4f, parameters : vec2f, rotat
     var pos : mat3x3f = irotate_point_quat(isub_mat_vec3(p, c), rotation);
     pos = isub_mats(pos, offset);
 
-    let q_x : vec2f = isqrt(ipow2_vec(pos[0].xy) + ipow2_vec(pos[2].xy));
-    let q_y : vec2f = pos[1].xy;
+    let q : mat3x3f = iavec3_vecs(isqrt(ipow2_vec(pos[0].xy) + ipow2_vec(pos[2].xy)), pos[1].xy, vec2f(0.0));
 
-    let k1 : vec2f = vec2f(r2, h);
-    let k2 : vec2f = vec2f(r2 - r1, 2.0 * h);
+    let sr : vec2f = iselect(vec2f(r2), vec2f(r1), ilessthan(q[1].xy, vec2f(0.0)));
+    let ca : mat3x3f = iavec3_vecs(isub_vecs(q[0].xy, imin(q[0].xy, sr)), isub_vecs(iabs(q[1].xy), vec2f(h)), vec2f(0.0));
 
-    let sr : vec2f = iselect(vec2f(r2), vec2f(r1), ilessthan(q_y, vec2f(0.0)));
-    let ca_x : vec2f = isub_vecs(q_x, imin(q_x, sr));
-    let ca_y : vec2f = isub_vecs(iabs(q_y), vec2f(h));
+    let mk1 : mat3x3f = iavec3_vec(vec3f(r2, h, 0.0));
+    let mk2 : mat3x3f = iavec3_vec(vec3f(r2 - r1, 2.0 * h, 0.0));
 
-    let m_skq_x : mat3x3f = iavec3_vec(vec3f(isub_vecs(k1, q_x), 0.0));
-    let m_skq_y : mat3x3f = iavec3_vec(vec3f(isub_vecs(k1, q_y), 0.0));
+    let clamp_k_dots : vec2f = iclamp( idiv_vecs(idot_mat(isub_mats(mk1, q), mk2), idot_mat(mk2, mk2)), 0.0, 1.0);
+    let cb : mat3x3f = iadd_mats(isub_mats(q, mk1), imul_vec2_mat(clamp_k_dots, mk2));
 
-    let mk2 : mat3x3f = iavec3_vec(vec3f(k2, 0.0));
-
-    let cb_x : vec2f = isub_vecs(q_x, k1) + imul_vecs(k2, iclamp( idiv_vecs(idot_mat(m_skq_x, mk2), idot_mat(mk2, mk2)), 0.0, 1.0));
-    let cb_y : vec2f = isub_vecs(q_y, k1) + imul_vecs(k2, iclamp( idiv_vecs(idot_mat(m_skq_y, mk2), idot_mat(mk2, mk2)), 0.0, 1.0));
-
-    let cond : vec2<bool> = iand(ilessthan(cb_x, vec2f(0.0)), ilessthan(ca_y, vec2f(0.0)));
+    let cond : vec2<bool> = iand(ilessthan(cb[0].xy, vec2f(0.0)), ilessthan(ca[1].xy, vec2f(0.0)));
     let s : vec2f = select(vec2f(1.0), vec2f(-1.0), cond);
 
-    let m_ca : mat3x3f = iavec3_vecs(ca_x, ca_y, vec2f(0.0));
-    let m_cb : mat3x3f = iavec3_vecs(cb_x, cb_y, vec2f(0.0));
-
-    return isub_vec_float(imul_vecs(s, isqrt(imin(idot_mat(m_ca, m_ca), idot_mat(m_cb, m_cb)))), round);
+    return isub_vec_float(imul_vecs(s, isqrt(imin(idot_mat(ca, ca), idot_mat(cb, cb)))), round);
 }
 
 fn eval_interval_stroke_cone_smooth_union(position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>, dimension_margin : vec4f) -> vec2f {
