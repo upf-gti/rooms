@@ -6,7 +6,7 @@
 #include "graphics/edit.h"
 #include "graphics/texture.h"
 
-#include "framework/aabb.h"
+#include "framework/math/aabb.h"
 
 #include <list>
 

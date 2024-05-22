@@ -1,7 +1,7 @@
 #include "edit.h"
 
-#include "framework/utils/intersections.h"
-#include "framework/utils/math_utils.h"
+#include "framework/math/intersections.h"
+#include "framework/math/math_utils.h"
 
 #include <cfloat>
 #include <sstream>

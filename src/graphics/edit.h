@@ -3,7 +3,7 @@
 #include "includes.h"
 
 #include "framework/colors.h"
-#include "framework/aabb.h"
+#include "framework/math/aabb.h"
 
 #include "glm/vec2.hpp"
 #include "glm/vec3.hpp"
