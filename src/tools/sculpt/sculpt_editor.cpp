@@ -212,6 +212,8 @@ bool SculptEditor::edit_update(float delta_time)
         edit_to_add.rotation = edit_rotation_stamp;
     }
 
+    update_edit_rotation();
+
     // Snap surface
     if (can_snap_to_surface()) {
 
@@ -599,7 +601,7 @@ void SculptEditor::update(float delta_time)
         }
     }
 
-    scene_update_rotation();
+    update_scene_rotation();
 
     // Edit & Stroke submission
     {
@@ -721,9 +723,10 @@ glm::vec3 SculptEditor::texture3d_to_world(const glm::vec3& position)
     return pos_world_space;
 }
 
-void SculptEditor::scene_update_rotation()
+void SculptEditor::update_scene_rotation()
 {
-    if (is_rotation_being_used()) {
+    // Do not rotate sculpt if shift -> we might be rotating the edit
+    if (is_rotation_being_used() && !is_shift_left_pressed) {
 
         if (!rotation_started) {
             initial_hand_rotation = glm::inverse(Input::get_controller_rotation(HAND_LEFT));
@@ -738,7 +741,7 @@ void SculptEditor::scene_update_rotation()
 
         rotation_started = true;
 
-        // Edit rotation WHILE rotation
+        // Edit rotation WHILE rotating
         glm::quat tmp_rotation = sculpt_rotation * rotation_diff;
         edit_to_add.position -= (sculpt_start_position + translation_diff);
         edit_to_add.position = tmp_rotation * edit_to_add.position;
@@ -746,7 +749,7 @@ void SculptEditor::scene_update_rotation()
     }
     else {
         // If rotation has stopped
-        if (rotation_started) {
+        if (rotation_started && !is_shift_left_pressed) {
             sculpt_rotation = sculpt_rotation * rotation_diff;
             sculpt_start_position = sculpt_start_position + translation_diff;
             rotation_started = false;
@@ -757,6 +760,34 @@ void SculptEditor::scene_update_rotation()
         // Push edits in 3d texture space
         edit_to_add.position = world_to_texture3d(edit_to_add.position);
         edit_to_add.rotation *= (glm::conjugate(sculpt_rotation) * rotation_diff);
+    }
+}
+
+void SculptEditor::update_edit_rotation()
+{
+    // Rotate edit only if pressing shift
+    if (is_rotation_being_used() && is_shift_left_pressed) {
+
+        if (!rotation_started) {
+            initial_hand_rotation = glm::inverse(Input::get_controller_rotation(HAND_LEFT));
+            initial_hand_translation = Input::get_controller_position(HAND_LEFT);
+        }
+
+        edit_rotation_diff = glm::inverse(initial_hand_rotation) * glm::inverse(Input::get_controller_rotation(HAND_LEFT));
+        rotation_started = true;
+
+        glm::quat tmp_rotation = edit_user_rotation * edit_rotation_diff;
+        edit_to_add.rotation = glm::conjugate(tmp_rotation);
+    }
+    else {
+        // If rotation has stopped
+        if (rotation_started && is_shift_left_pressed) {
+            edit_user_rotation = edit_user_rotation * edit_rotation_diff;
+            edit_rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
+            rotation_started = false;
+        }
+
+        edit_to_add.rotation *= (glm::conjugate(edit_user_rotation) * edit_rotation_diff);
     }
 }
 
@@ -935,6 +966,8 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
     default:
         break;
     }
+
+    mesh_preview->rotate(glm::conjugate(edit_user_rotation * edit_rotation_diff) );
 }
 
 void SculptEditor::set_sculpt_started(bool value)
