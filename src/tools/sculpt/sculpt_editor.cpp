@@ -572,13 +572,13 @@ void SculptEditor::update(float delta_time)
         else {
             // open pBR
             if (x_pressed) {
-                Node::emit_signal("material_editor", (void*)this);
-                Node::emit_signal("shading", (void*)this);
+                Node::emit_signal("material_editor@pressed", (void*)nullptr);
+                Node::emit_signal("shading@pressed", (void*)this);
             }
 
             // open guides
             if (y_pressed) {
-                Node::emit_signal("guides", (void*)nullptr);
+                Node::emit_signal("guides@pressed", (void*)nullptr);
             }
         }
     }
@@ -1155,7 +1155,7 @@ void SculptEditor::init_ui()
             {
                 ui::ItemGroup2D* g_saved_materials = new ui::ItemGroup2D("g_saved_materials");
 
-                // g_saved_materials->add_child(new ui::TextureButton2D("save_material", "data/textures/submenu_mark.png"));
+                g_saved_materials->add_child(new ui::TextureButton2D("save_material", "data/textures/submenu_mark.png"));
                 g_saved_materials->add_child(new ui::TextureButton2D("pick_material", "data/textures/pick_material.png", ui::ALLOW_TOGGLE));
 
                 {
@@ -1409,9 +1409,9 @@ void SculptEditor::bind_events()
         spdlog::error("Cannot find material_samples button group!");
     }
 
-    /*Node::bind("save_material", [&](const std::string& signal, void* button) {
+    Node::bind("save_material", [&](const std::string& signal, void* button) {
         generate_material_from_stroke(button);
-    });*/
+    });
 
     Node::bind("shuffle_material", [&](const std::string& signal, void* button) {
         generate_random_material();
@@ -1500,8 +1500,8 @@ void SculptEditor::generate_material_from_stroke(void* button)
 
     // Add data to existing samples..
     const StrokeMaterial& mat = stroke_parameters.get_material();
-    add_pbr_material_data(name, mat.color, mat.roughness, mat.metallic,
-        mat.noise_params.x, mat.noise_color, mat.noise_params.y, static_cast<int>(mat.noise_params.z));
+    add_pbr_material_data(name, mat.color, mat.roughness, mat.metallic);
+        // mat.noise_params.x, mat.noise_color, mat.noise_params.y, static_cast<int>(mat.noise_params.z));
 
     Node::bind(name, [&](const std::string& signal, void* button) {
         update_stroke_from_material(signal);
