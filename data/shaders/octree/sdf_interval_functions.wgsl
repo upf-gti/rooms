@@ -377,6 +377,10 @@ fn isin(a : vec2f) -> vec2f {
     return vec2f(r.x, r.y);
 }
 
+fn icos(a : vec2f) -> vec2f {
+    return isin(iadd_vecs(a, vec2f(M_PI * 0.5)));
+}
+
 fn isign(x : vec2f) -> vec2f {
     return vec2f(sign(x.x), sign(x.y));
 }
@@ -905,7 +909,7 @@ fn eval_interval_stroke_capsule_substraction(position : mat3x3f, current_surface
 
 fn cone_interval(p : mat3x3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f) -> vec2f
 {
-    let cap_value = max(parameters.y, 0.0001);
+    let cap_value : f32 = max(parameters.y, 0.0001);
     var radius : f32 = dims.x;
     var height : f32 = max(dims.y * (1.0 - cap_value), 0.0025);
 
@@ -1054,42 +1058,42 @@ fn eval_interval_stroke_cylinder_substraction(position : mat3x3f, current_surfac
   \_/\___/|_|   \__,_|___/
 */
 
-fn torus_interval( p : mat3x3f, c : vec3f, t : vec2f, rotation : vec4f) -> vec2f
+fn torus_interval( p : mat3x3f, c : vec3f, dims : vec4f, rotation : vec4f) -> vec2f
 {
+    let radius = dims.x;
+    let thickness = clamp( dims.y, 0.0001, radius );
+
     let pos : mat3x3f = irotate_point_quat(isub_mat_vec3(p, c), rotation);
+    var q : mat3x3f = iavec3_vecs(isub_vec_float(isqrt(ipow2_vec(pos[0].xy) + ipow2_vec(pos[2].xy)), radius), pos[1].xy, vec2f(0.0));
 
-    let d_x = isub_vec_float(isqrt(ipow2_vec(pos[0].xy) + ipow2_vec(pos[2].xy)), t.x);
-    let d_y = pos[1].xy;
-
-    return isub_vec_float(isqrt(ipow2_vec(d_x) + ipow2_vec(d_y)), t.y);
+    return isub_vec_float(ilength(q), thickness);
 }
 
-fn capped_torus_interval( p : mat3x3f, c : vec3f, t : vec2f, sc : vec2f, rotation : vec4f) -> vec2f
+fn capped_torus_interval( p : mat3x3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f) -> vec2f
 {
+    let cap_value : f32 = clamp(parameters.y, 0.0001, 0.999);
+    let theta : vec2f = vec2f(M_PI * (1.0 - cap_value));
+    let angles : mat3x3f = iavec3_vecs(isin(theta), icos(theta), vec2f(0.0));
+    let radius : f32 = dims.x;
+    let thickness : f32 = clamp( dims.y, 0.0001, radius );
+
     let pos : mat3x3f = irotate_point_quat(isub_mat_vec3(p, c), rotation);
+    let new_pos : mat3x3f = iavec3_vecs(iabs(pos[0].xy), pos[1].xy, pos[2].xy);
 
-    let ra = t.x;
-    let rb = t.y;
+    var cond : vec2<bool> = igreaterthan(imul_vecs(angles[1].xy, new_pos[0].xy), imul_vecs(angles[0].xy, new_pos[2].xy));
 
-    let p_x : vec2f = iabs(pos[0].xy);
-    let p_y : vec2f = pos[1].xy;
-    let p_z : vec2f = pos[2].xy;
+    let m_pos_xz : mat3x3f = iavec3_vecs(new_pos[0].xy, new_pos[2].xy, vec2f(0.0));
+    var len_pxz : vec2f = ilength(m_pos_xz);
 
-    let new_pos = iavec3_vecs(p_x, p_y, p_z);
-
-    var cond : vec2<bool> = igreaterthan(imul_float_vec(sc.y, p_x), imul_float_vec(sc.x, p_z));
-
-    var lenPosXZ : vec2f = isqrt(ipow2_vec(p_x) + ipow2_vec(p_z));
-
-    var posXZdotSC = iadd_vecs( imul_float_vec(sc.x, p_x), imul_float_vec(sc.y, p_z) );
+    var xz_dot_angles = idot_mat(m_pos_xz, angles);
     
-    var k : vec2f = iselect(lenPosXZ, posXZdotSC, cond);
+    var k : vec2f = iselect(len_pxz, xz_dot_angles, cond);
 
     var sqrt_inner : vec2f = idot_mat(new_pos, new_pos);
-    sqrt_inner = iadd_vec_float(sqrt_inner, (ra * ra));
-    sqrt_inner = isub_vecs(sqrt_inner, imul_float_vec(2.0*ra, k));
+    sqrt_inner = iadd_vecs(sqrt_inner, vec2f(radius * radius));
+    sqrt_inner = isub_vecs(sqrt_inner, imul_vecs(vec2f(2.0 * radius), k));
 
-    return isub_vec_float(isqrt((sqrt_inner)), rb);
+    return isub_vec_float(isqrt(sqrt_inner), thickness);
 }
 
 fn eval_interval_stroke_torus_smooth_union(position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>, dimension_margin : vec4f) -> vec2f {
@@ -1103,13 +1107,21 @@ fn eval_interval_stroke_torus_smooth_union(position : mat3x3f, current_surface :
     let smooth_factor : f32 = parameters.w;
     let cap_value : f32 = parameters.y;
 
-    for(var i : u32 = 0u; i < edit_count; i++) {
-        let curr_edit : Edit = edit_array[i];
-        let radius : f32 = curr_edit.dimensions.x;
-        let size_param : f32 = clamp( curr_edit.dimensions.y, 0.0001, radius );
+    // too ugly but.... well
 
-        tmp_surface = torus_interval(position, curr_edit.position, vec2f(radius, size_param), curr_edit.rotation);
-        result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
+    // do capped torus if we have cap value..
+    if(cap_value > 0.0) {
+        for(var i : u32 = 0u; i < edit_count; i++) {
+            let curr_edit : Edit = edit_array[i];
+            tmp_surface = capped_torus_interval(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation);
+            result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
+        }
+    } else {
+        for(var i : u32 = 0u; i < edit_count; i++) {
+            let curr_edit : Edit = edit_array[i];
+            tmp_surface = torus_interval(position, curr_edit.position, curr_edit.dimensions, curr_edit.rotation);
+            result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
+        }
     }
 
     return result_surface;
@@ -1126,13 +1138,18 @@ fn eval_interval_stroke_torus_substraction(position : mat3x3f, current_surface :
     let smooth_factor : f32 = parameters.w;
     let cap_value : f32 = parameters.y;
 
-    for(var i : u32 = 0u; i < edit_count; i++) {
-        let curr_edit : Edit = edit_array[i];
-        let radius : f32 = curr_edit.dimensions.x;
-        let size_param : f32 = clamp( curr_edit.dimensions.y, 0.0001, radius );
-
-        tmp_surface = torus_interval(position, curr_edit.position, vec2f(radius, size_param), curr_edit.rotation);
-        result_surface = opSmoothSubtractionInterval(result_surface, tmp_surface, smooth_factor);
+    if(cap_value > 0.0) {
+        for(var i : u32 = 0u; i < edit_count; i++) {
+            let curr_edit : Edit = edit_array[i];
+            tmp_surface = capped_torus_interval(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation);
+            result_surface = opSmoothSubtractionInterval(result_surface, tmp_surface, smooth_factor);
+        }
+    } else {
+        for(var i : u32 = 0u; i < edit_count; i++) {
+            let curr_edit : Edit = edit_array[i];
+            tmp_surface = torus_interval(position, curr_edit.position, curr_edit.dimensions, curr_edit.rotation);
+            result_surface = opSmoothSubtractionInterval(result_surface, tmp_surface, smooth_factor);
+        }
     }
 
     return result_surface;

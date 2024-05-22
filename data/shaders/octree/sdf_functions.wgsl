@@ -582,7 +582,7 @@ fn sdCone( p : vec3f, a : vec3f, dims : vec4f, parameters : vec2f, rotation : ve
 {
     var sf : Surface;
 
-    let cap_value = max(parameters.y, 0.0001);
+    let cap_value : f32 = max(parameters.y, 0.0001);
     var radius = dims.x;
     var height : f32 = max(dims.y * (1.0 - cap_value), 0.0025);
 
@@ -789,17 +789,17 @@ fn sdTorus( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : v
 
 fn sdCappedTorus( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f, material : Material) -> Surface
 {
-    let cap_value = parameters.y;
+    let cap_value : f32 = clamp(parameters.y, 0.0001, 0.999);
     let theta : f32 = M_PI * (1.0 - cap_value);
     let angles : vec2f = vec2f(sin(theta), cos(theta));
-    let radius = dims.x;
-    let thickness = clamp( dims.y, 0.0001, radius );
+    let radius : f32  = dims.x;
+    let thickness : f32 = clamp( dims.y, 0.0001, radius );
 
     var sf : Surface;
     var pos : vec3f = rotate_point_quat(p - c, rotation);
     pos.x = abs(pos.x);
 
-    var k = select(length(pos.xz), dot(pos.xz, angles), angles.y * pos.x > angles.x * pos.z);
+    var k : f32 = select(length(pos.xz), dot(pos.xz, angles), angles.y * pos.x > angles.x * pos.z);
 
     sf.distance = sqrt( dot(pos, pos) + radius * radius - 2.0 * radius * k ) - thickness;
     sf.material = material;
@@ -818,10 +818,20 @@ fn eval_stroke_torus_union( position : vec3f, current_surface : Surface, curr_st
     let smooth_factor : f32 = parameters.w;
     let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
 
-    for(var i : u32 = 0u; i < edit_count; i++) {
-        let curr_edit : Edit = edit_array[i];
-        tmp_surface = sdTorus(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
-        result_surface = opSmoothUnion(result_surface, tmp_surface, smooth_factor);
+    let cap_value : f32 = parameters.y;
+
+    if(cap_value > 0.0) {
+        for(var i : u32 = 0u; i < edit_count; i++) {
+            let curr_edit : Edit = edit_array[i];
+            tmp_surface = sdCappedTorus(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
+            result_surface = opSmoothUnion(result_surface, tmp_surface, smooth_factor);
+        }
+    } else {
+        for(var i : u32 = 0u; i < edit_count; i++) {
+            let curr_edit : Edit = edit_array[i];
+            tmp_surface = sdTorus(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
+            result_surface = opSmoothUnion(result_surface, tmp_surface, smooth_factor);
+        }
     }
 
     return result_surface;
@@ -839,10 +849,20 @@ fn eval_stroke_torus_substraction( position : vec3f, current_surface : Surface, 
     let smooth_factor : f32 = parameters.w;
     let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
 
-    for(var i : u32 = 0u; i < edit_count; i++) {
-        let curr_edit : Edit = edit_array[i];
-        tmp_surface = sdTorus(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
-        result_surface = opSmoothSubtraction(result_surface, tmp_surface, smooth_factor);
+    let cap_value : f32 = parameters.y;
+
+    if(cap_value > 0.0) {
+        for(var i : u32 = 0u; i < edit_count; i++) {
+            let curr_edit : Edit = edit_array[i];
+            tmp_surface = sdCappedTorus(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
+            result_surface = opSmoothSubtraction(result_surface, tmp_surface, smooth_factor);
+        }
+    } else {
+        for(var i : u32 = 0u; i < edit_count; i++) {
+            let curr_edit : Edit = edit_array[i];
+            tmp_surface = sdTorus(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
+            result_surface = opSmoothSubtraction(result_surface, tmp_surface, smooth_factor);
+        }
     }
 
     return result_surface;
@@ -861,10 +881,20 @@ fn eval_stroke_torus_paint( position : vec3f, current_surface : Surface, curr_st
     let smooth_factor : f32 = parameters.w;
     let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
 
-    for(var i : u32 = 0u; i < edit_count; i++) {
-        let curr_edit : Edit = edit_array[i];
-        tmp_surface = sdTorus(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
-        result_surface = opSmoothPaint(result_surface, tmp_surface, stroke_blend_mode, material, smooth_factor);
+    let cap_value : f32 = parameters.y;
+
+    if(cap_value > 0.0) {
+        for(var i : u32 = 0u; i < edit_count; i++) {
+            let curr_edit : Edit = edit_array[i];
+            tmp_surface = sdCappedTorus(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
+            result_surface = opSmoothPaint(result_surface, tmp_surface, stroke_blend_mode, material, smooth_factor);
+        }
+    } else {
+        for(var i : u32 = 0u; i < edit_count; i++) {
+            let curr_edit : Edit = edit_array[i];
+            tmp_surface = sdTorus(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
+            result_surface = opSmoothPaint(result_surface, tmp_surface, stroke_blend_mode, material, smooth_factor);
+        }
     }
 
     return result_surface;
