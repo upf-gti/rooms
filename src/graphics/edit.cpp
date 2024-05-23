@@ -229,7 +229,8 @@ AABB Stroke::get_world_AABB() const
 
 // Compute the resulting stroke on the current stroke's edits that are inside the area
 void Stroke::get_AABB_intersecting_stroke(const AABB intersection_area,
-                                                Stroke& resulting_stroke) const {
+                                                Stroke& resulting_stroke,
+                                          const uint32_t item_to_exclude) const {
     resulting_stroke.edit_count = 0u;
     resulting_stroke.primitive = primitive;
     resulting_stroke.operation = operation;
@@ -238,7 +239,8 @@ void Stroke::get_AABB_intersecting_stroke(const AABB intersection_area,
     resulting_stroke.material = material;
     resulting_stroke.stroke_id = stroke_id;
 
-    for (uint16_t i = 0u; i < edit_count; i++) {
+    uint32_t count_to_iterate = edit_count - item_to_exclude;
+    for (uint16_t i = 0u; i < count_to_iterate; i++) {
         if (intersection::AABB_AABB_min_max(intersection_area, get_edit_world_AABB(i))) {
             resulting_stroke.edits[resulting_stroke.edit_count++] = edits[i];
         }

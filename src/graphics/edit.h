@@ -101,7 +101,7 @@ public:
     float get_smooth_factor() const { return parameters.w; }
     sdPrimitive get_primitive() const { return primitive; }
     sdOperation get_operation() const { return operation; }
-    ColorBlendOp get_color_blending_operation() const { return color_blend_op; }
+    ColorBlendOp get_color_blend_operation() const { return color_blend_op; }
     glm::vec4 get_parameters() const { return parameters; }
     StrokeMaterial& get_material() { return material; }
     const StrokeMaterial& get_material() const { return material; }
@@ -128,7 +128,7 @@ struct Stroke {
     glm::vec3 get_edit_world_half_size(const uint8_t edit_index) const;
     AABB get_edit_world_AABB(const uint8_t edit_index) const;
     AABB get_world_AABB() const;
-    void get_AABB_intersecting_stroke(const AABB intersection_area, Stroke& resulting_stroke) const;
+    void get_AABB_intersecting_stroke(const AABB intersection_area, Stroke& resulting_stroke, const uint32_t item_to_exclude = 0u) const;
 };
 
 struct PBRMaterialData {

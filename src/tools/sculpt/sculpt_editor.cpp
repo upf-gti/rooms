@@ -111,6 +111,14 @@ void SculptEditor::initialize()
         mesh_preview_outline->set_surface_material_override(sphere_surface, outline_material);
     }
 
+    // Deafult stroke config
+    {
+        stroke_parameters.set_primitive(SD_SPHERE);
+        stroke_parameters.set_operation(OP_SMOOTH_UNION);
+        stroke_parameters.set_color_blend_operation(COLOR_OP_REPLACE);
+        stroke_parameters.set_parameters({ 0.0f, -1.0f, 0.0f, 0.005f });
+    }
+
     // Add pbr materials data
     {
         add_pbr_material_data("aluminium",   Color(0.912f, 0.914f, 0.92f, 1.0f),  0.0f, 1.0f);
@@ -120,6 +128,9 @@ void SculptEditor::initialize()
 
     // Create UI and bind events
     init_ui();
+
+    enable_tool(SCULPT);
+    renderer->change_stroke(stroke_parameters);
 
     // Meta Quest Controllers
     if(renderer->get_openxr_available())
@@ -140,10 +151,6 @@ void SculptEditor::initialize()
     test_slider_thermometer->set_active(true);
 
     RoomsEngine::entities.push_back(test_slider_thermometer);*/
-
-    enable_tool(SCULPT);
-
-    renderer->change_stroke(stroke_parameters);
 }
 
 void SculptEditor::clean()
@@ -1242,7 +1249,7 @@ void SculptEditor::init_ui()
     // ** Undo/Redo **
     {
         second_row->add_child(new ui::TextureButton2D("undo", "data/textures/undo.png"));
-        //second_row->add_child(new ui::TextureButton2D("redo", "data/textures/redo.png"));
+        second_row->add_child(new ui::TextureButton2D("redo", "data/textures/redo.png"));
     }
 
     // Smooth factor
@@ -1273,7 +1280,7 @@ void SculptEditor::init_ui()
 
             left_hand_container->add_child(new ui::ImageLabel2D("Round Shape", "data/textures/buttons/l_thumbstick.png", LAYOUT_ANY_NO_SHIFT_L));
             left_hand_container->add_child(new ui::ImageLabel2D("Smooth", "data/textures/buttons/l_grip_plus_l_thumbstick.png", LAYOUT_ANY_SHIFT_L, double_size));
-            //left_hand_container->add_child(new ui::ImageLabel2D("Redo", "data/textures/buttons/y.png", LAYOUT_ANY_NO_SHIFT_L));
+            left_hand_container->add_child(new ui::ImageLabel2D("Redo", "data/textures/buttons/y.png", LAYOUT_ANY_NO_SHIFT_L));
             left_hand_container->add_child(new ui::ImageLabel2D("Guides", "data/textures/buttons/l_grip_plus_y.png", LAYOUT_ANY_SHIFT_L, double_size));
             left_hand_container->add_child(new ui::ImageLabel2D("Undo", "data/textures/buttons/x.png", LAYOUT_ANY_NO_SHIFT_L));
             left_hand_container->add_child(new ui::ImageLabel2D("PBR", "data/textures/buttons/l_grip_plus_x.png", LAYOUT_ANY_SHIFT_L, double_size));
@@ -1356,7 +1363,7 @@ void SculptEditor::bind_events()
     Node::bind("pick_material", [&](const std::string& signal, void* button) { is_picking_material = !is_picking_material; });
 
     Node::bind("undo", [&](const std::string& signal, void* button) { renderer->undo(); });
-    // Node::bind("redo", [&](const std::string& signal, void* button) { renderer->redo(); });
+    Node::bind("redo", [&](const std::string& signal, void* button) { renderer->redo(); });
 
     Node::bind("smooth_factor", [&](const std::string& signal, float value) { stroke_parameters.set_smooth_factor(value); });
 
