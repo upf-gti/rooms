@@ -8,6 +8,8 @@
 
 #include "framework/math/aabb.h"
 
+#include "stroke_manager.h"
+
 #include <list>
 
 #define OCTREE_DEPTH 6
@@ -17,7 +19,6 @@
 #define SDF_RESOLUTION 400
 #define SCULPT_MAX_SIZE 1 // meters
 #define PREVIEW_PROXY_BRICKS_COUNT 7000u
-#define STROKE_HISTORY_MAX_SIZE 1000u
 
 #define MIN_SMOOTH_FACTOR 0.0001f
 #define MAX_SMOOTH_FACTOR 0.02f
@@ -172,36 +173,12 @@ class RaymarchingRenderer {
         float dummy1;
     } ray_info;
 
-    struct sStrokeInfluence {
-        uint32_t stroke_count = 0u;
-        uint32_t pad_1 = UINT32_MAX; // TODO(Juan): aligment issues when using vec3
-        uint32_t pad_0 = 0u;
-        uint32_t pad_2 = UINT32_MAX;
-        glm::vec4 pad1;
-        glm::vec4 pad2;
-        glm::vec4 pad3;
-        Stroke strokes[STROKE_HISTORY_MAX_SIZE];
-        glm::vec4 padd; // TODO(Juan): HACK esto no deveria ser necesario
-    } stroke_influence_list;
 
     RayIntersectionInfo ray_intersection_info;
 
-    Stroke current_stroke = {};
-    Stroke in_frame_stroke = {};
+    StrokeManager   stroke_manager = {};
 
-    std::vector<Stroke> to_compute_stroke_buffer;
-    std::vector<Stroke> stroke_history;
-    std::list<Stroke> stroke_redo_history;
-    std::vector<Stroke> preview_array;
-
-    // Preview edits
-    //struct sPreviewEditsData {
-    //    glm::vec3 aabb_center;
-    //    float padding = 0.0f;
-    //    glm::vec3 aabb_size;
-    //    uint32_t preview_edits_count = 0u;
-    //    Edit preview_edits[PREVIEW_EDITS_MAX];
-    //} preview_edit_data;
+    std::vector<Edit> incomming_edits;
 
     struct ProxyInstanceData {
         glm::vec3 position;
@@ -241,11 +218,6 @@ class RaymarchingRenderer {
     void evaluate_strokes(WGPUComputePassEncoder compute_pass, const Stroke* to_evaluate_strokes, bool is_undo = false, bool is_redo = false);
 
     void compute_preview_edit(WGPUComputePassEncoder compute_pass);
-
-    const Stroke* compute_and_upload_context(const std::vector<Stroke>& strokes);
-
-    void compute_redo(WGPUComputePassEncoder compute_pass);
-    void compute_undo(WGPUComputePassEncoder compute_pass);
 
     bool needs_undo = false;
     bool needs_redo = false;
@@ -293,7 +265,6 @@ public:
     void change_stroke(const StrokeParameters& params, const uint32_t index_increment = 1u);
     void change_stroke(const uint32_t index_increment = 1u);
 
-    const std::vector<Stroke>& getStrokeHistory() { return stroke_history; };
     void push_edit(const Edit edit);
 
     void push_edit_list(std::vector<Edit> &new_edits) {
@@ -301,8 +272,6 @@ public:
             push_edit(edit);
         }
     };
-
-    void push_stroke(const Stroke& new_stroke);
 
     void add_preview_edit(const Edit& edit);
 
