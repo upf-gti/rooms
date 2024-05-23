@@ -1137,7 +1137,7 @@ void SculptEditor::init_ui()
                 ui::ItemGroup2D* g_edit_sizes = new ui::ItemGroup2D("g_edit_sizes");
                 g_edit_sizes->add_child(new ui::Slider2D("main_size", edit_to_add.dimensions.x, ui::SliderMode::HORIZONTAL, 0, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE, 3));
                 g_edit_sizes->add_child(new ui::Slider2D("secondary_size", edit_to_add.dimensions.y, ui::SliderMode::HORIZONTAL, 0, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE, 3));
-                g_edit_sizes->add_child(new ui::Slider2D("round_size", edit_to_add.dimensions.w, ui::SliderMode::HORIZONTAL, 0, 0.0f, 0.05f, 2));
+                g_edit_sizes->add_child(new ui::Slider2D("round_size", edit_to_add.dimensions.w, ui::SliderMode::VERTICAL, 0, 0.0f, 0.05f, 2));
                 shape_editor_submenu->add_child(g_edit_sizes);
             }
 
@@ -1280,8 +1280,7 @@ void SculptEditor::init_ui()
 
     // Smooth factor
     {
-        ui::Slider2D* smooth_factor_slider = new ui::Slider2D("smooth_factor", "data/textures/smooth.png", stroke_parameters.get_smooth_factor(), ui::SliderMode::VERTICAL, ui::DISABLED, MIN_SMOOTH_FACTOR, MAX_SMOOTH_FACTOR, 3);
-        smooth_factor_slider->set_disabled(false);
+        ui::Slider2D* smooth_factor_slider = new ui::Slider2D("smooth_factor", "data/textures/smooth.png", stroke_parameters.get_smooth_factor(), ui::SliderMode::VERTICAL, ui::SKIP_VALUE, MIN_SMOOTH_FACTOR, MAX_SMOOTH_FACTOR, 3);
         second_row->add_child(smooth_factor_slider);
     }
 
