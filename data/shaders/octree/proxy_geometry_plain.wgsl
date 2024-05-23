@@ -348,6 +348,9 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     var out: FragmentOutput;
 
+    atlas_tile_coordinates = in.atlas_tile_coordinate;
+    brick_center_in_sculpt_space = in.brick_center_in_sculpt_space;
+
     // From world to sculpt: make it relative to the sculpt center, and un-apply the rotation.
     var eye_atlas_pos : vec3f = rotate_point_quat(camera_data.eye_position - sculpt_data.sculpt_start_position, quat_conj(sculpt_data.sculpt_rotation));
     // Get the sculpt space position relative to the current brick
@@ -361,18 +364,20 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     let ray_dir_world : vec3f = normalize(in.vertex_in_world_space.xyz - camera_data.eye_position);
     let ray_dir_sculpt : vec3f = rotate_point_quat(ray_dir_world, quat_conj(sculpt_data.sculpt_rotation));
     // ray dir in atlas coords :((
+
+    let raymarch_distance_sculpt_space : f32 = ray_intersect_AABB_only_near(in.vertex_in_sculpt_space.xyz, -ray_dir_sculpt, brick_center_in_sculpt_space, vec3f(BRICK_WORLD_SIZE));
+    let ray_origin_sculpt_space : vec3f = in.vertex_in_sculpt_space.xyz + raymarch_distance_sculpt_space * (-ray_dir_sculpt);
     
     // Raro
-    let raymarch_distance : f32 = ray_intersect_AABB_only_near(in.in_atlas_pos, ray_dir_atlas, in.atlas_tile_coordinate + vec3f(5.0 / SDF_RESOLUTION), vec3f(BRICK_ATLAS_SIZE));
-    
-    atlas_tile_coordinates = in.atlas_tile_coordinate;
-    brick_center_in_sculpt_space = in.brick_center_in_sculpt_space;
+    let raymarch_distance : f32 = ray_intersect_AABB_only_near(in.in_atlas_pos, -ray_dir_atlas, in.atlas_tile_coordinate + vec3f(5.0 / SDF_RESOLUTION), vec3f(BRICK_ATLAS_SIZE));
+
+    let ray_origin : vec3f = in.in_atlas_pos.xyz + raymarch_distance * (-ray_dir_atlas);
 
     var ray_result : vec4f;
     if (in.has_previews == 1) {
-        ray_result = raymarch_with_previews(in.in_atlas_pos.xyz, in.vertex_in_sculpt_space.xyz, ray_dir_atlas, raymarch_distance, camera_data.view_projection);
+        ray_result = raymarch_with_previews(ray_origin, ray_origin_sculpt_space, ray_dir_atlas, raymarch_distance, camera_data.view_projection);
     } else {
-        ray_result = raymarch(in.in_atlas_pos.xyz, in.vertex_in_sculpt_space.xyz, ray_dir_atlas, raymarch_distance, camera_data.view_projection);
+        ray_result = raymarch(ray_origin, ray_origin_sculpt_space, ray_dir_atlas, raymarch_distance, camera_data.view_projection);
     }
     var final_color : vec3f = ray_result.rgb; 
 

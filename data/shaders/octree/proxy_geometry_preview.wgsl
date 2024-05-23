@@ -168,14 +168,23 @@ var<private> is_inside_brick : bool;
 fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     var out: FragmentOutput;
-    let ray_dir_world : vec3f = normalize(in.vertex_in_world_space.xyz - camera_data.eye_position);
+
+    let camera_to_vertex = in.vertex_in_world_space.xyz - camera_data.eye_position;
+    let camera_to_vertex_distance = length(camera_to_vertex);
+
+    let ray_dir_world : vec3f = camera_to_vertex / camera_to_vertex_distance;
     let ray_dir_sculpt : vec3f = rotate_point_quat(ray_dir_world, quat_conj(sculpt_data.sculpt_rotation));
 
-    let raymarch_distance : f32 = ray_AABB_intersection_distance(in.vertex_in_sculpt_space.xyz, ray_dir_sculpt, in.voxel_center_sculpt_space, vec3f(BRICK_WORLD_SIZE));
+    let raymarch_distance : f32 = min(
+        camera_to_vertex_distance,
+        ray_intersect_AABB_only_near(in.vertex_in_sculpt_space.xyz, -ray_dir_sculpt, in.voxel_center_sculpt_space, vec3f(BRICK_WORLD_SIZE))
+    );
+
+    let ray_origin : vec3f = in.vertex_in_sculpt_space.xyz + raymarch_distance * (-ray_dir_sculpt);
 
     is_inside_brick = (in.is_interior & INTERIOR_BRICK_FLAG) == INTERIOR_BRICK_FLAG;
 
-    let ray_result = raymarch_sculpt_space(in.vertex_in_sculpt_space.xyz, ray_dir_sculpt, raymarch_distance, camera_data.view_projection);
+    let ray_result = raymarch_sculpt_space(ray_origin, ray_dir_sculpt, raymarch_distance, camera_data.view_projection);
 
     var final_color : vec3f = ray_result.rgb; 
 
