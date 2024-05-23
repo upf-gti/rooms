@@ -126,9 +126,16 @@ class SculptEditor {
         glm::vec3 prev_edit_position = {};
     } controller_position_data;
 
+    // Controller rotations
     glm::quat initial_hand_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
+
+    // Sculpt
     glm::quat rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
     glm::quat sculpt_rotation = { 0.0, 0.0, 0.0, 1.0 };
+
+    // Edit
+    glm::quat edit_rotation_diff = { 0.0, 0.0, 0.0, 1.0 };
+    glm::quat edit_user_rotation = { 0.0, 0.0, 0.0, 1.0 };
     glm::quat edit_rotation_world = {};
 
     float hand_to_edit_distance = 0.0f;
@@ -213,7 +220,9 @@ class SculptEditor {
 
     glm::vec3 world_to_texture3d(const glm::vec3& position, bool skip_translation = false);
     glm::vec3 texture3d_to_world(const glm::vec3& position);
-    void scene_update_rotation();
+
+    void update_scene_rotation();
+    void update_edit_rotation();
 
 public:
 

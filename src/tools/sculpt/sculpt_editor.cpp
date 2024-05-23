@@ -219,6 +219,8 @@ bool SculptEditor::edit_update(float delta_time)
         edit_to_add.rotation = edit_rotation_stamp;
     }
 
+    update_edit_rotation();
+
     // Snap surface
     if (can_snap_to_surface()) {
 
@@ -579,13 +581,13 @@ void SculptEditor::update(float delta_time)
         else {
             // open pBR
             if (x_pressed) {
-                Node::emit_signal("material_editor", (void*)this);
-                Node::emit_signal("shading", (void*)this);
+                Node::emit_signal("material_editor@pressed", (void*)nullptr);
+                Node::emit_signal("shading@pressed", (void*)this);
             }
 
             // open guides
             if (y_pressed) {
-                Node::emit_signal("guides", (void*)nullptr);
+                Node::emit_signal("guides@pressed", (void*)nullptr);
             }
         }
     }
@@ -606,7 +608,7 @@ void SculptEditor::update(float delta_time)
         }
     }
 
-    scene_update_rotation();
+    update_scene_rotation();
 
     // Edit & Stroke submission
     {
@@ -728,9 +730,10 @@ glm::vec3 SculptEditor::texture3d_to_world(const glm::vec3& position)
     return pos_world_space;
 }
 
-void SculptEditor::scene_update_rotation()
+void SculptEditor::update_scene_rotation()
 {
-    if (is_rotation_being_used()) {
+    // Do not rotate sculpt if shift -> we might be rotating the edit
+    if (is_rotation_being_used() && !is_shift_left_pressed) {
 
         if (!rotation_started) {
             initial_hand_rotation = glm::inverse(Input::get_controller_rotation(HAND_LEFT));
@@ -745,7 +748,7 @@ void SculptEditor::scene_update_rotation()
 
         rotation_started = true;
 
-        // Edit rotation WHILE rotation
+        // Edit rotation WHILE rotating
         glm::quat tmp_rotation = sculpt_rotation * rotation_diff;
         edit_to_add.position -= (sculpt_start_position + translation_diff);
         edit_to_add.position = tmp_rotation * edit_to_add.position;
@@ -753,7 +756,7 @@ void SculptEditor::scene_update_rotation()
     }
     else {
         // If rotation has stopped
-        if (rotation_started) {
+        if (rotation_started && !is_shift_left_pressed) {
             sculpt_rotation = sculpt_rotation * rotation_diff;
             sculpt_start_position = sculpt_start_position + translation_diff;
             rotation_started = false;
@@ -764,6 +767,34 @@ void SculptEditor::scene_update_rotation()
         // Push edits in 3d texture space
         edit_to_add.position = world_to_texture3d(edit_to_add.position);
         edit_to_add.rotation *= (glm::conjugate(sculpt_rotation) * rotation_diff);
+    }
+}
+
+void SculptEditor::update_edit_rotation()
+{
+    // Rotate edit only if pressing shift
+    if (is_rotation_being_used() && is_shift_left_pressed) {
+
+        if (!rotation_started) {
+            initial_hand_rotation = glm::inverse(Input::get_controller_rotation(HAND_LEFT));
+            initial_hand_translation = Input::get_controller_position(HAND_LEFT);
+        }
+
+        edit_rotation_diff = glm::inverse(initial_hand_rotation) * glm::inverse(Input::get_controller_rotation(HAND_LEFT));
+        rotation_started = true;
+
+        glm::quat tmp_rotation = edit_user_rotation * edit_rotation_diff;
+        edit_to_add.rotation = glm::conjugate(tmp_rotation);
+    }
+    else {
+        // If rotation has stopped
+        if (rotation_started && is_shift_left_pressed) {
+            edit_user_rotation = edit_user_rotation * edit_rotation_diff;
+            edit_rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
+            rotation_started = false;
+        }
+
+        edit_to_add.rotation *= (glm::conjugate(edit_user_rotation) * edit_rotation_diff);
     }
 }
 
@@ -942,6 +973,8 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
     default:
         break;
     }
+
+    mesh_preview->rotate(glm::conjugate(edit_user_rotation * edit_rotation_diff) );
 }
 
 void SculptEditor::set_sculpt_started(bool value)
@@ -1111,7 +1144,7 @@ void SculptEditor::init_ui()
                 ui::ItemGroup2D* g_edit_sizes = new ui::ItemGroup2D("g_edit_sizes");
                 g_edit_sizes->add_child(new ui::Slider2D("main_size", edit_to_add.dimensions.x, ui::SliderMode::HORIZONTAL, 0, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE, 3));
                 g_edit_sizes->add_child(new ui::Slider2D("secondary_size", edit_to_add.dimensions.y, ui::SliderMode::HORIZONTAL, 0, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE, 3));
-                g_edit_sizes->add_child(new ui::Slider2D("round_size", edit_to_add.dimensions.w, ui::SliderMode::HORIZONTAL, 0, 0.0f, 0.05f, 2));
+                g_edit_sizes->add_child(new ui::Slider2D("round_size", edit_to_add.dimensions.w, ui::SliderMode::VERTICAL, 0, 0.0f, 0.05f, 2));
                 shape_editor_submenu->add_child(g_edit_sizes);
             }
 
@@ -1162,7 +1195,7 @@ void SculptEditor::init_ui()
             {
                 ui::ItemGroup2D* g_saved_materials = new ui::ItemGroup2D("g_saved_materials");
 
-                // g_saved_materials->add_child(new ui::TextureButton2D("save_material", "data/textures/submenu_mark.png"));
+                g_saved_materials->add_child(new ui::TextureButton2D("save_material", "data/textures/submenu_mark.png"));
                 g_saved_materials->add_child(new ui::TextureButton2D("pick_material", "data/textures/pick_material.png", ui::ALLOW_TOGGLE));
 
                 {
@@ -1254,8 +1287,7 @@ void SculptEditor::init_ui()
 
     // Smooth factor
     {
-        ui::Slider2D* smooth_factor_slider = new ui::Slider2D("smooth_factor", "data/textures/smooth.png", stroke_parameters.get_smooth_factor(), ui::SliderMode::VERTICAL, ui::DISABLED, MIN_SMOOTH_FACTOR, MAX_SMOOTH_FACTOR, 3);
-        smooth_factor_slider->set_disabled(false);
+        ui::Slider2D* smooth_factor_slider = new ui::Slider2D("smooth_factor", "data/textures/smooth.png", stroke_parameters.get_smooth_factor(), ui::SliderMode::VERTICAL, ui::SKIP_VALUE, MIN_SMOOTH_FACTOR, MAX_SMOOTH_FACTOR, 3);
         second_row->add_child(smooth_factor_slider);
     }
 
@@ -1416,9 +1448,9 @@ void SculptEditor::bind_events()
         spdlog::error("Cannot find material_samples button group!");
     }
 
-    /*Node::bind("save_material", [&](const std::string& signal, void* button) {
+    Node::bind("save_material", [&](const std::string& signal, void* button) {
         generate_material_from_stroke(button);
-    });*/
+    });
 
     Node::bind("shuffle_material", [&](const std::string& signal, void* button) {
         generate_random_material();
@@ -1507,8 +1539,8 @@ void SculptEditor::generate_material_from_stroke(void* button)
 
     // Add data to existing samples..
     const StrokeMaterial& mat = stroke_parameters.get_material();
-    add_pbr_material_data(name, mat.color, mat.roughness, mat.metallic,
-        mat.noise_params.x, mat.noise_color, mat.noise_params.y, static_cast<int>(mat.noise_params.z));
+    add_pbr_material_data(name, mat.color, mat.roughness, mat.metallic);
+        // mat.noise_params.x, mat.noise_color, mat.noise_params.y, static_cast<int>(mat.noise_params.z));
 
     Node::bind(name, [&](const std::string& signal, void* button) {
         update_stroke_from_material(signal);
