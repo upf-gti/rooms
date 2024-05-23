@@ -169,10 +169,6 @@ void SculptEditor::clean()
 
 bool SculptEditor::is_tool_being_used(bool stamp_enabled)
 {
-    if (ui_edit_to_add) {
-        return true;
-    }
-
 #ifdef XR_SUPPORT
     bool is_currently_pressed = Input::get_trigger_value(HAND_RIGHT) > 0.5f;
     is_released = is_tool_pressed && !is_currently_pressed;
@@ -183,7 +179,7 @@ bool SculptEditor::is_tool_being_used(bool stamp_enabled)
     was_tool_pressed = is_tool_pressed;
     is_tool_pressed = is_currently_pressed;
 
-    return Input::is_key_pressed(GLFW_KEY_SPACE) || add_edit_with_tool;
+    return Input::was_key_pressed(GLFW_KEY_SPACE) || add_edit_with_tool;
 #else
     return Input::is_key_pressed(GLFW_KEY_SPACE);
 #endif
@@ -219,14 +215,17 @@ bool SculptEditor::edit_update(float delta_time)
         edit_to_add.rotation = edit_rotation_stamp;
     }
 
-    update_edit_rotation();
+    if (!creating_spline)
+    {
+        update_edit_rotation();
+    }
 
     // Snap surface
     if (can_snap_to_surface()) {
 
         auto callback = [&](glm::vec3 center) {
             edit_to_add.position = texture3d_to_world(center);
-        };
+            };
 
         glm::mat4x4 pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
         glm::vec3 ray_dir = get_front(pose);
@@ -281,7 +280,10 @@ bool SculptEditor::edit_update(float delta_time)
         edit_to_add.rotation = glm::inverse(Input::get_controller_rotation(HAND_RIGHT, POSE_AIM));
         is_stretching_edit = false;
     }
-    else if (stamp_enabled && is_tool_pressed) { // Stretch the edit using motion controls
+
+    // Stretch the edit using motion controls
+    else if (stamp_enabled && is_tool_pressed && !creating_spline) { 
+
         if (is_stretching_edit) {
             sdPrimitive curr_primitive = stroke_parameters.get_primitive();
 
@@ -359,59 +361,6 @@ bool SculptEditor::edit_update(float delta_time)
         }
     }
 
-    // Update shape editor values
-    {
-        if (modifiers_dirty) {
-
-            glm::vec4 parameters = stroke_parameters.get_parameters();
-            parameters.x = onion_thickness;
-            parameters.y = capped_value;
-            stroke_parameters.set_parameters(parameters);
-
-            modifiers_dirty = false;
-        }
-    }
-
-    // Operation changer for the different tools
-    {
-        if (Input::was_button_pressed(XR_BUTTON_B)) {
-
-            // Add/Substract toggle
-            if (!is_shift_right_pressed) {
-
-                sdOperation op = stroke_parameters.get_operation();
-
-                if (current_tool == SCULPT) {
-                    switch (op) {
-                    case OP_SMOOTH_UNION:
-                        op = OP_SMOOTH_SUBSTRACTION;
-                        Node::emit_signal("substract@pressed", (void*)nullptr);
-                        break;
-                    case OP_SMOOTH_SUBSTRACTION:
-                        op = OP_SMOOTH_UNION;
-                        Node::emit_signal("add@pressed", (void*)nullptr);
-                        break;
-                    default:
-                        assert(0 && "Use smooth operations!");
-                        break;
-                    }
-
-                    stroke_parameters.set_operation(op);
-                }
-            }
-            else {
-
-                // Sculpt/Paint toggle
-                enable_tool(current_tool == PAINT ? SCULPT : PAINT);
-            }
-        }
-
-        // Pick material shortcut..
-        if (is_shift_right_pressed && Input::was_button_pressed(XR_BUTTON_A)) {
-            pick_material();
-        }
-    }
-
     // Debug sculpting
     {
         // For debugging sculpture without a headset
@@ -463,8 +412,6 @@ bool SculptEditor::edit_update(float delta_time)
         controller_position_data.prev_edit_position = edit_position_world;
     }
 
-    //(Juan): for the ui toggle (to remove!)
-    ui_edit_to_add = false;
     return is_tool_used;
 }
 
@@ -560,7 +507,45 @@ void SculptEditor::update(float delta_time)
         controller_position_data.prev_controller_pos = curr_controller_pos;
     }
 
-    bool is_tool_used = edit_update(delta_time);
+    // Operation changer for the different tools
+    {
+        if (Input::was_button_pressed(XR_BUTTON_B)) {
+
+            // Add/Substract toggle
+            if (!is_shift_right_pressed) {
+
+                sdOperation op = stroke_parameters.get_operation();
+
+                if (current_tool == SCULPT) {
+                    switch (op) {
+                    case OP_SMOOTH_UNION:
+                        op = OP_SMOOTH_SUBSTRACTION;
+                        Node::emit_signal("substract@pressed", (void*)nullptr);
+                        break;
+                    case OP_SMOOTH_SUBSTRACTION:
+                        op = OP_SMOOTH_UNION;
+                        Node::emit_signal("add@pressed", (void*)nullptr);
+                        break;
+                    default:
+                        assert(0 && "Use smooth operations!");
+                        break;
+                    }
+
+                    stroke_parameters.set_operation(op);
+                }
+            }
+            else {
+
+                // Sculpt/Paint toggle
+                enable_tool(current_tool == PAINT ? SCULPT : PAINT);
+            }
+        }
+
+        // Pick material shortcut..
+        if (is_shift_right_pressed && Input::was_button_pressed(XR_BUTTON_A)) {
+            pick_material();
+        }
+    }
 
     // Undo/Redo open ui stuff
     {
@@ -592,6 +577,8 @@ void SculptEditor::update(float delta_time)
         }
     }
 
+    bool is_tool_used = edit_update(delta_time);
+
     // Sculpt lifecicle
     {
         // Set center of sculpture and reuse it as mirror center
@@ -617,22 +604,64 @@ void SculptEditor::update(float delta_time)
             mirror_normal = glm::normalize(mirror_rotation * glm::vec3(0.f, 0.f, 1.f));
         }
 
+        // If any parameter changed or just stopped sculpting change the stroke (not in case of creating splines.. we need the same stroke)
+        bool must_change_stroke = stroke_parameters.is_dirty();
+        must_change_stroke |= (was_tool_pressed && !is_tool_pressed);
+        must_change_stroke &= !creating_spline;
 
-        // if any parameter changed or just stopped sculpting change the stroke
-        if (stroke_parameters.is_dirty() || (was_tool_pressed && !is_tool_pressed)) {
+        if (must_change_stroke) {
             renderer->change_stroke(stroke_parameters);
             stroke_parameters.set_dirty(false);
         }
 
         // Upload the edit to the  edit list
         if (is_tool_used) {
-            new_edits.push_back(edit_to_add);
+
+            // Manage splines
+            if (creating_spline && stamp_enabled) {
+
+                renderer->change_stroke(stroke_parameters);
+
+                // Already started the spline, so force an undo to evaluate the whole new curve
+                if (current_spline.count()) {
+                    renderer->undo();
+                }
+
+                current_spline.add_knot( { edit_to_add.position, edit_to_add.dimensions.x } );
+
+                dirty_spline = true;
+            }
+            else {
+                new_edits.push_back(edit_to_add);
+            }
+
             // Add recent color only when is used...
             add_recent_color(stroke_parameters.get_material().color);
+
             // Reset smear mode
             if (was_material_picked) {
                 stamp_enabled = false;
             }
+        }
+
+        // Submit spline edits in the next frame..
+        else if (dirty_spline) {
+
+            current_spline.for_each([&](const Knot& point) {
+                Edit edit = edit_to_add;
+                edit.position = point.position;
+                edit.dimensions.x = point.size;
+                new_edits.push_back(edit);
+            });
+
+            renderer->change_stroke(stroke_parameters);
+
+            /*if (current_spline.count() == 4) {
+                creating_spline = false;
+                Node::emit_signal("create_spline@pressed", (void*)nullptr);
+            }*/
+
+            dirty_spline = false;
         }
     }
 
@@ -644,10 +673,10 @@ void SculptEditor::update(float delta_time)
         mirror_current_edits(delta_time);
     }
 
-    //// a hack for flatscreen sculpting
-    //if (!renderer->get_openxr_available() && new_edits.size() > 0u) {
-    //    renderer->change_stroke(stroke_parameters);
-    //}
+    // a hack for flatscreen sculpting
+    /*if (!renderer->get_openxr_available() && new_edits.size() > 0u) {
+        renderer->change_stroke(stroke_parameters);
+    }*/
 
     // Push to the renderer the edits and the previews
     renderer->push_preview_edit_list(preview_tmp_edits);
@@ -1033,14 +1062,16 @@ void SculptEditor::set_edit_size(float main, float secondary, float round)
 
 void SculptEditor::set_onion_modifier(float value)
 {
-    onion_thickness = glm::clamp(value, 0.0f, 1.0f);
-    modifiers_dirty = true;
+    glm::vec4 parameters = stroke_parameters.get_parameters();
+    parameters.x = glm::clamp(value, 0.0f, 1.0f);
+    stroke_parameters.set_parameters(parameters);
 }
 
 void SculptEditor::set_cap_modifier(float value)
 {
-    capped_value = glm::clamp(value, 0.0f, 1.0f);
-    modifiers_dirty = true;
+    glm::vec4 parameters = stroke_parameters.get_parameters();
+    parameters.y = glm::clamp(value, 0.0f, 1.0f);
+    stroke_parameters.set_parameters(parameters);
 }
 
 void SculptEditor::enable_tool(eTool tool)
@@ -1127,9 +1158,11 @@ void SculptEditor::init_ui()
         prim_selector->add_child(new ui::TextureButton2D("capsule", "data/textures/capsule.png"));
         prim_selector->add_child(new ui::TextureButton2D("cylinder", "data/textures/cylinder.png"));
         prim_selector->add_child(new ui::TextureButton2D("torus", "data/textures/torus.png"));
-        //prim_selector->add_child(new ui::TextureButton2D("bezier", "data/textures/bezier.png"));
         first_row->add_child(prim_selector);
     }
+
+    // DEBUG SPLINES: REMOVE THIS!!
+    first_row->add_child(new ui::TextureButton2D("create_spline", "data/textures/bezier.png", ui::ALLOW_TOGGLE));
 
     // ** Shape, Brush, Material Editors **
     {
@@ -1151,7 +1184,7 @@ void SculptEditor::init_ui()
             // Edit modifiers
             {
                 ui::ItemGroup2D* g_edit_modifiers = new ui::ItemGroup2D("g_edit_modifiers");
-                g_edit_modifiers->add_child(new ui::Slider2D("onion_value", "data/textures/onion.png", 0.0f, ui::SliderMode::VERTICAL));
+                //g_edit_modifiers->add_child(new ui::Slider2D("onion_value", "data/textures/onion.png", 0.0f, ui::SliderMode::VERTICAL));
                 g_edit_modifiers->add_child(new ui::Slider2D("cap_value", "data/textures/capped.png", 0.0f, ui::SliderMode::VERTICAL));
                 shape_editor_submenu->add_child(g_edit_modifiers);
             }
@@ -1364,13 +1397,23 @@ void SculptEditor::bind_events()
     Node::bind("capsule", [&](const std::string& signal, void* button) { set_primitive(SD_CAPSULE); });
     Node::bind("cylinder", [&](const std::string& signal, void* button) { set_primitive(SD_CYLINDER); });
     Node::bind("torus", [&](const std::string& signal, void* button) { set_primitive(SD_TORUS); });
-    //Node::bind("bezier", [&](const std::string& signal, void* button) { set_primitive(SD_BEZIER); });
+
+    // DEBUG SPLINE: REMOVE THIS!!
+    Node::bind("create_spline", [&](const std::string& signal, void* button) {
+
+        creating_spline = !creating_spline;
+
+        if (creating_spline) {
+            current_spline.clear();
+        }
+
+    });
 
     Node::bind("main_size", [&](const std::string& signal, float value) { set_edit_size(value); });
     Node::bind("secondary_size", [&](const std::string& signal, float value) { set_edit_size(-1.0f, value); });
     Node::bind("round_size", [&](const std::string& signal, float value) { set_edit_size(-1.0f, -1.0f, value); });
 
-    Node::bind("onion_value", [&](const std::string& signal, float value) { set_onion_modifier(value); });
+    //Node::bind("onion_value", [&](const std::string& signal, float value) { set_onion_modifier(value); });
     Node::bind("cap_value", [&](const std::string& signal, float value) { set_cap_modifier(value); });
 
     Node::bind("mirror_toggle", [&](const std::string& signal, void* button) { use_mirror = !use_mirror; });

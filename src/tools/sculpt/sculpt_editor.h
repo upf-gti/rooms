@@ -4,6 +4,7 @@
 #include "framework/nodes/ui.h"
 #include "framework/nodes/text.h"
 #include "framework/ui/gizmo_3d.h"
+#include "framework/math/spline.h"
 
 #include <map>
 
@@ -60,8 +61,6 @@ class SculptEditor {
 
     eTool current_tool = eTool::NONE;
 
-    bool ui_edit_to_add = false;
-
     static uint8_t last_generated_material_uid;
     uint8_t num_generated_materials = 0u;
 
@@ -106,7 +105,6 @@ class SculptEditor {
     bool can_snap_to_surface();
 
     bool dimensions_dirty       = true;
-    bool modifiers_dirty        = true;
     bool stamp_enabled          = false;
     bool rotation_started       = false;
     bool snap_to_surface        = false;
@@ -139,15 +137,6 @@ class SculptEditor {
     glm::quat edit_rotation_world = {};
 
     float hand_to_edit_distance = 0.0f;
-
-    /*
-    *	Modifiers
-    */
-
-    // Shape Editor
-
-    float onion_thickness = 0.0f;
-    float capped_value = -1.0f; // -1..1 no cap..fully capped
 
     // Axis lock
 
@@ -203,6 +192,14 @@ class SculptEditor {
     glm::vec3 edit_position_stamp = {};
     glm::vec3 edit_origin_stamp = {};
     glm::quat edit_rotation_stamp = { 0.0f, 0.0f, 0.0f, 1.0f };
+
+    /*
+    *	Splines
+    */
+
+    bool creating_spline = false;
+    bool dirty_spline = false;
+    BezierSpline current_spline;
 
     // Editor
     bool is_tool_pressed = false;

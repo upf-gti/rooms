@@ -148,6 +148,7 @@ const RayIntersectionInfo& RaymarchingRenderer::get_ray_intersection_info() cons
 
 void RaymarchingRenderer::initialize_stroke()
 {
+
 }
 
 void RaymarchingRenderer::change_stroke(const StrokeParameters& params, const uint32_t index_increment)
@@ -162,16 +163,16 @@ void RaymarchingRenderer::change_stroke(const StrokeParameters& params, const ui
     preview_stroke.edit_count = 0u;
 }
 
-void RaymarchingRenderer::change_stroke(const uint32_t index_increment) {
+void RaymarchingRenderer::change_stroke(const uint32_t index_increment)
+{
     spdlog::info("Change stroke");
     stroke_manager.change_stroke(index_increment);
 }
 
 void RaymarchingRenderer::push_edit(const Edit edit)
 {
-    incomming_edits.push_back(edit);
+    incoming_edits.push_back(edit);
 }
-
 
 void RaymarchingRenderer::octree_ray_intersect(const glm::vec3& ray_origin, const glm::vec3& ray_dir, std::function<void(glm::vec3)> callback)
 {
@@ -460,8 +461,8 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
 
     bool needs_evaluation = true;
 
-    if (incomming_edits.size() > 0u) {
-        stroke_manager.add(incomming_edits, stroke_to_compute);
+    if (incoming_edits.size() > 0u) {
+        stroke_manager.add(incoming_edits, stroke_to_compute);
     } else if (needs_undo) {
         stroke_manager.undo(stroke_to_compute);
     } else if (needs_redo) {
@@ -512,7 +513,7 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
     stroke_manager.update();
 
     needs_undo = false, needs_redo = false;
-    incomming_edits.clear();
+    incoming_edits.clear();
 }
 
 void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_pass, uint32_t camera_buffer_stride)

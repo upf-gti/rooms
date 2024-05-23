@@ -178,7 +178,7 @@ class RaymarchingRenderer {
 
     StrokeManager   stroke_manager = {};
 
-    std::vector<Edit> incomming_edits;
+    std::vector<Edit> incoming_edits;
 
     struct ProxyInstanceData {
         glm::vec3 position;
@@ -268,7 +268,7 @@ public:
     void push_edit(const Edit edit);
 
     void push_edit_list(std::vector<Edit> &new_edits) {
-        for (Edit &edit : new_edits) {
+        for (const Edit &edit : new_edits) {
             push_edit(edit);
         }
     };
