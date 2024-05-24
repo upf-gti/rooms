@@ -16,6 +16,7 @@
 #include "shaders/mesh_outline.wgsl.gen.h"
 
 #include "engine/rooms_engine.h"
+#include "engine/scene.h"
 
 #include "spdlog/spdlog.h"
 #include "imgui.h"
@@ -135,11 +136,13 @@ void SculptEditor::initialize()
     // Meta Quest Controllers
     if(renderer->get_openxr_available())
     {
-        std::vector<Node3D*> entities;
+        std::vector<Node*> entities;
         parse_gltf("data/meshes/controllers/left_controller.glb", entities);
         parse_gltf("data/meshes/controllers/right_controller.glb", entities);
         controller_mesh_left = static_cast<MeshInstance3D*>(entities[0]);
         controller_mesh_right = static_cast<MeshInstance3D*>(entities[1]);
+
+        Engine::instance->get_main_scene()->add_nodes(entities);
     }
 
     /*ui::VContainer2D* test_root = new ui::VContainer2D("test_root", { 0.0f, 0.0f });
@@ -1340,7 +1343,7 @@ void SculptEditor::init_ui()
     if (renderer->get_openxr_available()) {
         main_panel_3d = new Viewport3D(main_panel_2d);
         main_panel_3d->set_active(true);
-        RoomsEngine::entities.push_back(main_panel_3d);
+        RoomsEngine::instance->get_main_scene()->add_node(main_panel_3d);
     }
 
     // Load controller UI labels
@@ -1365,7 +1368,7 @@ void SculptEditor::init_ui()
             left_hand_container->add_child(new ui::ImageLabel2D("Manipulate Sculpt", "data/textures/buttons/l_trigger.png", LAYOUT_ALL));
 
             left_hand_ui_3D = new Viewport3D(left_hand_container);
-            RoomsEngine::entities.push_back(left_hand_ui_3D);
+            RoomsEngine::instance->get_main_scene()->add_node(left_hand_ui_3D);
         }
 
         // Right hand
@@ -1382,7 +1385,7 @@ void SculptEditor::init_ui()
             right_hand_container->add_child(new ui::ImageLabel2D("Smear", "data/textures/buttons/r_grip_plus_r_trigger.png", LAYOUT_ANY_SHIFT_R, double_size));
 
             right_hand_ui_3D = new Viewport3D(right_hand_container);
-            RoomsEngine::entities.push_back(right_hand_ui_3D);
+            RoomsEngine::instance->get_main_scene()->add_node(right_hand_ui_3D);
         }
     }
 

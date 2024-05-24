@@ -9,6 +9,8 @@
 #include "framework/utils/tinyfiledialogs.h"
 #include "framework/utils/utils.h"
 
+#include "engine/scene.h"
+
 #include "graphics/renderers/rooms_renderer.h"
 
 #include "shaders/mesh_grid.wgsl.gen.h"
@@ -21,8 +23,6 @@
 
 #include <fstream>
 
-std::vector<Node3D*> RoomsEngine::entities;
-
 int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen)
 {
     int error = Engine::initialize(renderer, window, use_glfw, use_mirror_screen);
@@ -33,9 +33,12 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
         sculpt_editor->initialize();
     }
 
-    skybox = new Environment3D();
+    Environment3D* environment = nullptr;
+    environment = new Environment3D();
 
-    entities.push_back(skybox);
+    main_scene = new Scene();
+
+    main_scene->add_node(environment);
 
     // Grid
     {
@@ -53,7 +56,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 
         grid_node->set_surface_material_override(grid_node->get_surface(0), grid_material);
 
-        entities.push_back(grid_node);
+        main_scene->add_node(grid_node);
     }
 
     // Controller pointer
@@ -123,9 +126,7 @@ void RoomsEngine::update(float delta_time)
         raycast_pointer->set_model(raycast_transform);
     }
 
-    for (auto entity : entities) {
-        entity->update(delta_time);
-    }
+    main_scene->update(delta_time);
 
     if (Input::was_key_pressed(GLFW_KEY_E))
     {
@@ -139,32 +140,7 @@ void RoomsEngine::render()
     render_gui();
 #endif
 
-    // Get visible lights
-    {
-        for (auto entity : entities)
-        {
-            Light3D* light_node = dynamic_cast<Light3D*>(entity);
-
-            if (!light_node)
-            {
-                continue;
-            }
-            if (light_node->get_intensity() < 0.001f)
-            {
-                continue;
-            }
-            if (light_node->get_type() != LIGHT_DIRECTIONAL && light_node->get_range() == 0.0f)
-            {
-                continue;
-            }
-
-            RoomsRenderer::instance->add_light(light_node);
-        }
-    }
-
-    for (auto entity : entities) {
-        entity->render();
-    }
+    main_scene->render();
 
     if (Renderer::instance->get_openxr_available())
     {
@@ -350,7 +326,9 @@ void RoomsEngine::render_gui()
                 );
 
                 if (open_file_name) {
+                    std::vector<Node*> entities;
                     parse_scene(open_file_name, entities);
+                    main_scene->add_nodes(entities);
                 }
             }
             ImGui::EndMenu();
@@ -368,18 +346,19 @@ void RoomsEngine::render_gui()
                 if (ImGui::BeginPopupContextItem()) // <-- use last item id as popup id
                 {
                     if (ImGui::Button("Delete All")) {
-                        entities.clear();
+                        main_scene->delete_all();
                         ImGui::CloseCurrentPopup();
                     }
 
                     ImGui::EndPopup();
                 }
 
-                std::vector<Node3D*>::iterator it = entities.begin();
-                while (it != entities.end())
+                std::vector<Node*>& nodes = main_scene->get_nodes();
+                std::vector<Node*>::iterator it = nodes.begin();
+                while (it != nodes.end())
                 {
                     if (show_tree_recursive(*it)) {
-                        it = entities.erase(it);
+                        it = nodes.erase(it);
                     }
                     else {
                         it++;

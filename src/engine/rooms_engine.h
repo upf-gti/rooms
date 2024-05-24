@@ -2,8 +2,6 @@
 
 #include "engine/engine.h"
 
-#include <vector>
-
 class Node;
 class Node3D;
 class MeshInstance3D;
@@ -14,8 +12,6 @@ class SculptEditor;
 
 class RoomsEngine : public Engine
 {
-    Environment3D* skybox = nullptr;
-
     MeshInstance3D* raycast_pointer = nullptr;
 
     SculptEditor* sculpt_editor = nullptr;
@@ -26,8 +22,6 @@ class RoomsEngine : public Engine
     void render_gui();
 
 public:
-
-    static std::vector<Node3D*> entities;
 
 	int initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen) override;
     void clean() override;

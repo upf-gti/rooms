@@ -8,7 +8,7 @@
 
 #ifdef XR_SUPPORT
 #include "xr/openxr_context.h"
-#include "dawnxr/dawnxr_internal.h"
+#include "xr/dawnxr/dawnxr_internal.h"
 #endif
 
 #include "spdlog/spdlog.h"
