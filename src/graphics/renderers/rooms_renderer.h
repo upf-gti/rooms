@@ -99,6 +99,7 @@ public:
 
     void change_stroke(const StrokeParameters& params) {
         raymarching_renderer.change_stroke(params);
+
     }
 
     void push_edit(Edit edit) {
