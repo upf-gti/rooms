@@ -17,7 +17,7 @@ void StrokeManager::compute_history_intersection(sStrokeInfluence &influence, AA
     // Include the current stroke as context
     if (current_stroke.edit_count > 0u) {
         // Exclude the last one, since it is same edit
-        current_stroke.get_AABB_intersecting_stroke(operation_aabb, intersection_stroke, 1u);
+        current_stroke.get_AABB_intersecting_stroke(operation_aabb, intersection_stroke);
 
         if (intersection_stroke.edit_count > 0u) {
             influence.strokes[influence.stroke_count++] = intersection_stroke;
@@ -70,7 +70,7 @@ void StrokeManager::undo(sToComputeStrokeData& result) {
 
     // In the case of first stroke, submit it as substraction to clear everything
     if (united_stroke_idx == 0) {
-        Stroke& prev = history[0];
+        Stroke prev = history[0];
         prev.operation = OP_SMOOTH_SUBSTRACTION;
         result.in_frame_stroke = prev;
         last_history_index = 0;
@@ -94,27 +94,36 @@ void StrokeManager::redo(sToComputeStrokeData& result) {
     if (redo_history.size() <= 0u) {
         return;
     }
-    uint32_t strokes_to_redo_count = redo_history.size() - 1u;
+    uint32_t strokes_to_redo_count = redo_history.size();
     uint32_t united_stroke_idx = redo_history.back().stroke_id;
     float max_smooth_margin = 0.0f;
 
-    redo_pop_count_from_history = 1u;
-    result.in_frame_stroke_aabb = merge_aabbs(result.in_frame_stroke_aabb, redo_history[strokes_to_redo_count].get_world_AABB());
+    if (redo_history.size() == 1u) {
+        max_smooth_margin = redo_history[0u].parameters.w;
+        redo_pop_count_from_history = 1u;
+        strokes_to_redo_count = 1u;
+        result.in_frame_stroke_aabb = redo_history[0u].get_world_AABB();
+    } else {
+        // Get the last edit to redo, and compute the AABB
+        for (; strokes_to_redo_count > 0u;) {
+            Stroke& curr_stroke = redo_history[strokes_to_redo_count - 1u];
 
-    // Get the last edit to redo, and compute the AABB
-    for(; strokes_to_redo_count > 1u; strokes_to_redo_count--) {
-        Stroke& curr_stroke = redo_history[strokes_to_redo_count];
+            if (united_stroke_idx != curr_stroke.stroke_id) {
+                strokes_to_redo_count++;
+                break;
+            }
 
-        if (united_stroke_idx != curr_stroke.stroke_id) {
-            break;
+            max_smooth_margin = glm::max(max_smooth_margin, curr_stroke.parameters.w);
+            redo_pop_count_from_history++;
+            strokes_to_redo_count--;
+            result.in_frame_stroke_aabb = merge_aabbs(result.in_frame_stroke_aabb, curr_stroke.get_world_AABB());
         }
-
-        max_smooth_margin = glm::max(max_smooth_margin, curr_stroke.parameters.w);
-        redo_pop_count_from_history++;
-        result.in_frame_stroke_aabb = merge_aabbs(result.in_frame_stroke_aabb, curr_stroke.get_world_AABB());
     }
+    
 
-    result.in_frame_stroke = redo_history[strokes_to_redo_count];
+    spdlog::info("redo size: {}, to pop {}", redo_history.size(), redo_pop_count_from_history);
+
+    result.in_frame_stroke = redo_history[strokes_to_redo_count-1u];
 
     // Fit the AABB to the eval grid
     result.in_frame_stroke_aabb = compute_grid_aligned_AABB(result.in_frame_stroke_aabb, brick_world_size);
@@ -130,15 +139,6 @@ void StrokeManager::add(std::vector<Edit> new_edits, sToComputeStrokeData& resul
     // Add new edits to the current stroke and the in_frame_stroke
     for (uint8_t i = 0u; i < new_edits.size(); i++) {
         in_frame_stroke.edits[in_frame_stroke.edit_count++] = new_edits[i];
-
-        // if exceeds the maximun number of edits per stroke, store the current to the history
-        // and add them to a new one, with the same ID
-        if (current_stroke.edit_count == MAX_EDITS_PER_EVALUATION) {
-            history.push_back(current_stroke);
-            current_stroke.edit_count = 0u;
-        }
-
-        current_stroke.edits[current_stroke.edit_count++] = new_edits[i];
     }
 
     // Compute AABB for the incomming strokes
@@ -150,6 +150,20 @@ void StrokeManager::add(std::vector<Edit> new_edits, sToComputeStrokeData& resul
     result.in_frame_stroke_aabb.half_size -= glm::vec3(in_frame_stroke.parameters.w);
 
     result.in_frame_stroke = in_frame_stroke;
+
+
+    for (uint8_t i = 0u; i < new_edits.size(); i++) {
+        // if exceeds the maximun number of edits per stroke, store the current to the history
+        // and add them to a new one, with the same ID
+        if (current_stroke.edit_count == MAX_EDITS_PER_EVALUATION) {
+            history.push_back(current_stroke);
+            current_stroke.edit_count = 0u;
+        }
+
+        current_stroke.edits[current_stroke.edit_count++] = new_edits[i];
+    }
+
+    redo_history.clear();
 }
 
 void StrokeManager::update() {

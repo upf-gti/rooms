@@ -471,24 +471,24 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
         needs_evaluation = false;
     }
 
+    AABB aabb_pos;
     if (needs_evaluation) {
+        aabb_pos = stroke_to_compute.in_frame_stroke_aabb;
         compute_merge_data.reevaluation_AABB_min = stroke_to_compute.in_frame_stroke_aabb.center - stroke_to_compute.in_frame_stroke_aabb.half_size;
         compute_merge_data.reevaluation_AABB_max = stroke_to_compute.in_frame_stroke_aabb.center + stroke_to_compute.in_frame_stroke_aabb.half_size;
+        AABB_mesh->set_translation(aabb_pos.center + get_sculpt_start_position());
+        AABB_mesh->scale(aabb_pos.half_size * 2.0f);
     } else {
         AABB preview_aabb = stroke_manager.compute_grid_aligned_AABB(preview_stroke.get_world_AABB(), glm::vec3(brick_world_size));
-
+        //aabb_pos = preview_aabb;
         compute_merge_data.reevaluation_AABB_min = preview_aabb.center - preview_aabb.half_size;
         compute_merge_data.reevaluation_AABB_max = preview_aabb.center + preview_aabb.half_size;
     }
 
     webgpu_context->update_buffer(std::get<WGPUBuffer>(compute_merge_data_uniform.data), 0, &(compute_merge_data), sizeof(sMergeData));
-    AABB_mesh->set_translation(stroke_to_compute.in_frame_stroke_aabb.center + get_sculpt_start_position());
-    AABB_mesh->scale(stroke_to_compute.in_frame_stroke_aabb.half_size * 2.0f);
+    
 
     if (needs_evaluation) {
-        compute_merge_data.reevaluation_AABB_min = stroke_to_compute.in_frame_stroke_aabb.center - stroke_to_compute.in_frame_stroke_aabb.half_size;
-        compute_merge_data.reevaluation_AABB_max = stroke_to_compute.in_frame_stroke_aabb.center + stroke_to_compute.in_frame_stroke_aabb.half_size;
-
         webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_stroke_history.data), 0, &stroke_to_compute.in_frame_influence, sizeof(sStrokeInfluence));
 
         uint32_t set_as_preview = (needs_undo) ? 0x01u : 0u;
