@@ -105,6 +105,7 @@ class SculptEditor {
     bool can_snap_to_surface();
 
     bool dimensions_dirty       = true;
+    bool force_new_stroke       = false;
     bool stamp_enabled          = false;
     bool rotation_started       = false;
     bool snap_to_surface        = false;
@@ -201,7 +202,10 @@ class SculptEditor {
     bool dirty_spline = false;
     BezierSpline current_spline;
 
-    // Editor
+    /*
+    *	Editor
+    */
+
     bool is_tool_pressed = false;
     bool is_released = false;
     bool was_tool_pressed = false;
@@ -220,6 +224,9 @@ class SculptEditor {
 
     void update_scene_rotation();
     void update_edit_rotation();
+
+    void undo();
+    void redo();
 
 public:
 

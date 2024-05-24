@@ -217,7 +217,7 @@ bool SculptEditor::edit_update(float delta_time)
 
     if (!creating_spline)
     {
-        update_edit_rotation();
+        // update_edit_rotation();
     }
 
     // Snap surface
@@ -225,7 +225,8 @@ bool SculptEditor::edit_update(float delta_time)
 
         auto callback = [&](glm::vec3 center) {
             edit_to_add.position = texture3d_to_world(center);
-            };
+        };
+
 
         glm::mat4x4 pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
         glm::vec3 ray_dir = get_front(pose);
@@ -247,7 +248,7 @@ bool SculptEditor::edit_update(float delta_time)
                     edit_to_add.dimensions = glm::vec4(glm::vec3(edit_to_add.dimensions.x), edit_to_add.dimensions.w);
                 }
             }
-            else { // if (stroke_parameters.get_primitive() != SD_BOX)
+            else {
                 // Update primitive specific size
                 edit_to_add.dimensions.y = glm::clamp(edit_to_add.dimensions.y + right_size_multiplier, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE);
             }
@@ -555,12 +556,12 @@ void SculptEditor::update(float delta_time)
         if (!is_shift_left_pressed) {
             if (Input::was_key_pressed(GLFW_KEY_U) || x_pressed) {
                 renderer->toogle_frame_debug();
-                renderer->undo();
+                undo();
             }
 
             if (Input::was_key_pressed(GLFW_KEY_R) || y_pressed) {
                 renderer->toogle_frame_debug();
-                renderer->redo();
+                redo();
             }
         }
         else {
@@ -604,14 +605,15 @@ void SculptEditor::update(float delta_time)
             mirror_normal = glm::normalize(mirror_rotation * glm::vec3(0.f, 0.f, 1.f));
         }
 
-        // If any parameter changed or just stopped sculpting change the stroke (not in case of creating splines.. we need the same stroke)
+        // If any parameter changed or just stopped sculpting change the stroke
         bool must_change_stroke = stroke_parameters.is_dirty();
         must_change_stroke |= (was_tool_pressed && !is_tool_pressed);
-        must_change_stroke &= !creating_spline;
+        must_change_stroke |= force_new_stroke;
 
         if (must_change_stroke) {
             renderer->change_stroke(stroke_parameters);
             stroke_parameters.set_dirty(false);
+            force_new_stroke = false;
         }
 
         // Upload the edit to the  edit list
@@ -620,9 +622,7 @@ void SculptEditor::update(float delta_time)
             // Manage splines
             if (creating_spline && stamp_enabled) {
 
-                renderer->change_stroke(stroke_parameters);
-
-                // Already started the spline, so force an undo to evaluate the whole new curve
+                // Already started the spline, so force an undo to evaluate the whole new curve in the next frame
                 if (current_spline.count()) {
                     renderer->undo();
                 }
@@ -633,6 +633,11 @@ void SculptEditor::update(float delta_time)
             }
             else {
                 new_edits.push_back(edit_to_add);
+
+                // a hack for flatscreen sculpting
+                if (!renderer->get_openxr_available() && new_edits.size() > 0u) {
+                    force_new_stroke = true;
+                }
             }
 
             // Add recent color only when is used...
@@ -654,13 +659,12 @@ void SculptEditor::update(float delta_time)
                 new_edits.push_back(edit);
             });
 
-            renderer->change_stroke(stroke_parameters);
-
             /*if (current_spline.count() == 4) {
                 creating_spline = false;
                 Node::emit_signal("create_spline@pressed", (void*)nullptr);
             }*/
 
+            force_new_stroke = true;
             dirty_spline = false;
         }
     }
@@ -672,11 +676,6 @@ void SculptEditor::update(float delta_time)
     if (use_mirror) {
         mirror_current_edits(delta_time);
     }
-
-    // a hack for flatscreen sculpting
-    /*if (!renderer->get_openxr_available() && new_edits.size() > 0u) {
-        renderer->change_stroke(stroke_parameters);
-    }*/
 
     // Push to the renderer the edits and the previews
     renderer->push_preview_edit_list(preview_tmp_edits);
@@ -825,6 +824,20 @@ void SculptEditor::update_edit_rotation()
 
         edit_to_add.rotation *= (glm::conjugate(edit_user_rotation) * edit_rotation_diff);
     }
+}
+
+void SculptEditor::undo()
+{
+    renderer->undo();
+
+    if (creating_spline) {
+        current_spline.clear();
+    }
+}
+
+void SculptEditor::redo()
+{
+    renderer->redo();
 }
 
 void SculptEditor::render()
@@ -1437,8 +1450,8 @@ void SculptEditor::bind_events()
     Node::bind("color_picker", [&](const std::string& signal, Color color) { stroke_parameters.set_material_color(color); });
     Node::bind("pick_material", [&](const std::string& signal, void* button) { is_picking_material = !is_picking_material; });
 
-    Node::bind("undo", [&](const std::string& signal, void* button) { renderer->undo(); });
-    Node::bind("redo", [&](const std::string& signal, void* button) { renderer->redo(); });
+    Node::bind("undo", [&](const std::string& signal, void* button) { undo(); });
+    Node::bind("redo", [&](const std::string& signal, void* button) { redo(); });
 
     Node::bind("smooth_factor", [&](const std::string& signal, float value) { stroke_parameters.set_smooth_factor(value); });
 
