@@ -247,6 +247,8 @@ public:
     void set_sculpt_start_position(const glm::vec3& position);
     void set_sculpt_rotation(const glm::quat& rotation);
 
+    void set_current_sculpt(SculptInstance* sculpt_instance);
+
     void octree_ray_intersect(const glm::vec3& ray_origin, const glm::vec3& ray_dir, std::function<void(glm::vec3)> callback = nullptr);
 
     void get_brick_usage(std::function<void(float, uint32_t)> callback);

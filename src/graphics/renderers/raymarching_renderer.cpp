@@ -590,6 +590,11 @@ void RaymarchingRenderer::set_sculpt_rotation(const glm::quat& rotation)
     sculpt_data.sculpt_inv_rotation = rotation;
 }
 
+void RaymarchingRenderer::set_current_sculpt(SculptInstance* sculpt_instance)
+{
+    stroke_manager.set_current_sculpt(sculpt_instance);
+}
+
 void RaymarchingRenderer::init_compute_octree_pipeline()
 {
     std::vector<std::string> define_specializations;

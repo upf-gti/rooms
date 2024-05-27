@@ -6,6 +6,8 @@
 
 #define STROKE_HISTORY_MAX_SIZE 1000u
 
+class SculptInstance;
+
 struct sStrokeInfluence {
     uint32_t stroke_count = 0u;
     uint32_t pad_1 = UINT32_MAX; // aligment issues when using vec3
@@ -30,13 +32,15 @@ struct StrokeManager {
     };
     Stroke current_stroke = {};
 
-    std::vector<Stroke> history;
+    std::vector<Stroke>* history = nullptr;
     std::vector<Stroke> redo_history;
 
     uint32_t pop_count_from_history = 0u;
     uint32_t redo_pop_count_from_history = 0u;
 
     glm::vec3 brick_world_size = {};
+
+    void set_current_sculpt(SculptInstance* sculpt_instance);
 
     void set_brick_world_size(const glm::vec3& new_brick_world_size) {
         brick_world_size = new_brick_world_size;

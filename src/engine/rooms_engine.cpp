@@ -9,6 +9,8 @@
 #include "framework/utils/tinyfiledialogs.h"
 #include "framework/utils/utils.h"
 
+#include "framework/nodes/sculpt_instance.h"
+
 #include "engine/scene.h"
 
 #include "graphics/renderers/rooms_renderer.h"
@@ -39,6 +41,11 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     main_scene = new Scene();
 
     main_scene->add_node(environment);
+
+    RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
+
+    SculptInstance* default_sculpt = new SculptInstance();
+    rooms_renderer->get_raymarching_renderer()->set_current_sculpt(default_sculpt);
 
     // Grid
     {

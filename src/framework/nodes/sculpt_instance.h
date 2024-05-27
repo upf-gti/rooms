@@ -14,4 +14,6 @@ public:
     SculptInstance();
     ~SculptInstance();
 
+    std::vector<Stroke>& get_stroke_history();
+
 };

@@ -1,12 +1,14 @@
 #include "stroke_manager.h"
 
+#include "framework/nodes/sculpt_instance.h"
+
 #include "spdlog/spdlog.h"
 
 void StrokeManager::compute_history_intersection(sStrokeInfluence &influence, AABB& operation_aabb, uint32_t history_max_index) {
     Stroke intersection_stroke = {};
     // Get the strokes that are on the region of the undo
     for (uint32_t i = 0u; i < history_max_index; i++) {
-        history[i].get_AABB_intersecting_stroke(operation_aabb, intersection_stroke);
+        history->at(i).get_AABB_intersecting_stroke(operation_aabb, intersection_stroke);
 
         if (intersection_stroke.edit_count > 0u) {
             // reevaluate_edit_count += intersection_stroke.edit_count;
@@ -44,7 +46,7 @@ AABB StrokeManager::compute_grid_aligned_AABB(const AABB& base, const glm::vec3&
 
 
 void StrokeManager::undo(sToComputeStrokeData& result) {
-    if (history.size() <= 0u) {
+    if (history->size() <= 0u) {
         return;
     }
     uint32_t last_stroke_id = 0u;
@@ -53,8 +55,8 @@ void StrokeManager::undo(sToComputeStrokeData& result) {
     float max_smooth_margin = 0.0f;
 
     // Get the last stroke to undo, and compute the AABB
-    for (united_stroke_idx = history.size(); united_stroke_idx > 0; --united_stroke_idx) {
-        Stroke& prev = history[united_stroke_idx - 1];
+    for (united_stroke_idx = history->size(); united_stroke_idx > 0; --united_stroke_idx) {
+        Stroke& prev = (*history)[united_stroke_idx - 1];
 
         // if stroke changes
         if (last_stroke_id != 0u && prev.stroke_id != last_stroke_id) {
@@ -70,13 +72,13 @@ void StrokeManager::undo(sToComputeStrokeData& result) {
 
     // In the case of first stroke, submit it as substraction to clear everything
     if (united_stroke_idx == 0) {
-        Stroke prev = history[0];
+        Stroke prev = history->at(0);
         prev.operation = OP_SMOOTH_SUBSTRACTION;
         result.in_frame_stroke = prev;
         last_history_index = 0;
     }
     else {
-        result.in_frame_stroke = history.data()[united_stroke_idx - 1];
+        result.in_frame_stroke = history->data()[united_stroke_idx - 1];
         last_history_index = united_stroke_idx - 1;
     }
 
@@ -130,7 +132,7 @@ void StrokeManager::redo(sToComputeStrokeData& result) {
 
     // Compute the influence of the undo
     result.in_frame_stroke_aabb.half_size += glm::vec3(max_smooth_margin);
-    compute_history_intersection(result.in_frame_influence, result.in_frame_stroke_aabb, history.size());
+    compute_history_intersection(result.in_frame_influence, result.in_frame_stroke_aabb, history->size());
     result.in_frame_stroke_aabb.half_size -= glm::vec3(max_smooth_margin);
 }
 
@@ -146,7 +148,7 @@ void StrokeManager::add(std::vector<Edit> new_edits, sToComputeStrokeData& resul
 
     // Compute and fill intersection
     result.in_frame_stroke_aabb.half_size += glm::vec3(in_frame_stroke.parameters.w);
-    compute_history_intersection(result.in_frame_influence, result.in_frame_stroke_aabb, history.size());
+    compute_history_intersection(result.in_frame_influence, result.in_frame_stroke_aabb, history->size());
     result.in_frame_stroke_aabb.half_size -= glm::vec3(in_frame_stroke.parameters.w);
 
     result.in_frame_stroke = in_frame_stroke;
@@ -156,7 +158,7 @@ void StrokeManager::add(std::vector<Edit> new_edits, sToComputeStrokeData& resul
         // if exceeds the maximun number of edits per stroke, store the current to the history
         // and add them to a new one, with the same ID
         if (current_stroke.edit_count == MAX_EDITS_PER_EVALUATION) {
-            history.push_back(current_stroke);
+            history->push_back(current_stroke);
             current_stroke.edit_count = 0u;
         }
 
@@ -169,12 +171,12 @@ void StrokeManager::add(std::vector<Edit> new_edits, sToComputeStrokeData& resul
 void StrokeManager::update() {
     // Remove undo strokes of history, and add them to the redo history
     for (uint32_t i = 0u; i < pop_count_from_history; i++) {
-        redo_history.push_back(history.back());
-        history.pop_back();
+        redo_history.push_back(history->back());
+        history->pop_back();
     }
 
     for (uint32_t i = 0u; i < redo_pop_count_from_history; i++) {
-        history.push_back(redo_history.back());
+        history->push_back(redo_history.back());
         redo_history.pop_back();
     }
 
@@ -187,17 +189,36 @@ void StrokeManager::update() {
 void StrokeManager::change_stroke(const uint32_t index_increment) {
     if (current_stroke.edit_count > 0u) {
         // Add it to the history
-        history.push_back(current_stroke);
+        history->push_back(current_stroke);
     }
 
     current_stroke.edit_count = 0u;
     current_stroke.stroke_id = current_stroke.stroke_id + index_increment;
 }
 
+void StrokeManager::set_current_sculpt(SculptInstance* sculpt_instance)
+{
+    history = &sculpt_instance->get_stroke_history();
+
+    if (!history->empty()) {
+        current_stroke.stroke_id = history->back().stroke_id + 1;
+        in_frame_stroke.stroke_id = history->back().stroke_id + 1;
+    }
+    else {
+        current_stroke.stroke_id = 0;
+        in_frame_stroke.stroke_id = 0;
+    }
+
+    redo_history.clear();
+
+    pop_count_from_history = 0;
+    redo_pop_count_from_history = 0;
+}
+
 void StrokeManager::change_stroke(const StrokeParameters& params, const uint32_t index_increment) {
     if (current_stroke.edit_count > 0u) {
         // Add it to the history
-        history.push_back(current_stroke);
+        history->push_back(current_stroke);
     }
 
     current_stroke.edit_count = 0u;
