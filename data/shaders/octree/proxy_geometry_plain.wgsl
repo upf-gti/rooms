@@ -50,20 +50,29 @@ struct CameraData {
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
 
+
     let instance_index : u32 = brick_copy_buffer[in.instance_id];
     let instance_data : ProxyInstanceData = brick_buffers.brick_instance_data[instance_index];
 
+    // let model : mat4x4f = mat4x4f(vec4f(2.0, 0.0, 0.0, 0.0), vec4f(0.0,2.0, 0.0, 0.0), vec4f(0.0, 0.0, 2.0, 0.0), vec4f(0.0, 0.0, 0.0, 1.0));
+    // let model_inv : mat4x4f = mat4x4f(vec4f(0.50, 0.0, 0.0, 0.0), vec4f(0.0,0.50, 0.0, 0.0), vec4f(0.0, 0.0, 0.50, 0.0), vec4f(0.0, 0.0, 0.0, 1.0));
+    let model : mat4x4f = mat4x4f(vec4f(2.0, 0.0, 0.0, 0.0), vec4f(0.0,1.0, 0.0, 0.0), vec4f(0.0, 0.0, 1.0, 0.0), vec4f(0.50, 0.0, 0.0, 1.0));
+    let model_inv : mat4x4f = mat4x4f(vec4f(0.50, 0.0, 0.0, 0.0), vec4f(0.0,1.0, 0.0, 0.0), vec4f(0.0, 0.0, 1.00, 0.0), vec4f(-0.250, 0.0, 0.0, 1.0));
+
     let tile_pointer : u32 = ray_intersection_info.tile_pointer;
 
+    // Compute the sculptsapce brick size and pos
+    // NOTE: In editor mode: world space = sculpt_rotateion * sculpt_position
+    //       In scene mode: world space = sculpture_model * sculpt_position
     var vertex_in_sculpt_space : vec3f = in.position * BRICK_WORLD_SIZE * 0.5 + instance_data.position;
     var vertex_in_world_space : vec3f = rotate_point_quat(vertex_in_sculpt_space, sculpt_data.sculpt_rotation);
     vertex_in_world_space += sculpt_data.sculpt_start_position;
 
-    // let model_mat = mat4x4f(vec4f(BOX_SIZE, 0.0, 0.0, 0.0), vec4f(0.0, BOX_SIZE, 0.0, 0.0), vec4f(0.0, 0.0, BOX_SIZE, 0.0), vec4f(instance_pos.x, instance_pos.y, instance_pos.z, 1.0));
+    // Apply the model of the sculpture
+    let vertex_in_world : vec4f = (model * vec4f(vertex_in_world_space, 1.0));
 
     var out: VertexOutput;
-    // vertex_in_world_space = vec4f(rotate_point_quat(vertex_in_world_space.xyz, sculpt_data.sculpt_rotation), 1.0);
-    out.position = camera_data.view_projection * vec4f(vertex_in_world_space, 1.0);
+    out.position = camera_data.view_projection * vertex_in_world;
     out.uv = in.uv; // forward to the fragment shader
     out.color = vec3f(0.0, 0.0, 0.0);
     out.normal = in.normal;
@@ -84,6 +93,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     out.atlas_tile_coordinate = vec3f(10 * vec3u(instance_data.atlas_tile_index % BRICK_COUNT,
                                                   (instance_data.atlas_tile_index / BRICK_COUNT) % BRICK_COUNT,
                                                    instance_data.atlas_tile_index / (BRICK_COUNT * BRICK_COUNT))) / SDF_RESOLUTION;
+    // Send teh vertex in scultpure space                
     out.vertex_in_world_space = vertex_in_world_space.xyz; 
     // From mesh space -1 to 1, -> 0 to 8.0/SDF_RESOLUTION (plus a voxel for padding)
     out.in_atlas_pos = (in.position * 0.5 + 0.5) * 8.0/SDF_RESOLUTION + 1.0/SDF_RESOLUTION + out.atlas_tile_coordinate;
@@ -325,8 +335,8 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
         // heatmap_color.b = cos(interpolant);
         // return vec4f(heatmap_color, depth);
         //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
-		return vec4f(apply_light(-ray_dir, position_in_world, position_in_world, normal, lightPos + lightOffset, material), depth);
-        //return vec4f(normal, depth);
+		//return vec4f(apply_light(-ray_dir, position_in_world, position_in_world, normal, lightPos + lightOffset, material), depth);
+        return vec4f(normal, depth);
         //return vec4f(material.albedo, depth);
         //return vec4f(normal, depth);
         //return vec4f(vec3f(material.albedo), depth);
@@ -351,8 +361,16 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     atlas_tile_coordinates = in.atlas_tile_coordinate;
     brick_center_in_sculpt_space = in.brick_center_in_sculpt_space;
 
+    // let model : mat4x4f = mat4x4f(vec4f(2.0, 0.0, 0.0, 0.0), vec4f(0.0,2.0, 0.0, 0.0), vec4f(0.0, 0.0, 2.0, 0.0), vec4f(0.0, 0.0, 0.0, 1.0));
+    // let model_inv : mat4x4f = mat4x4f(vec4f(0.50, 0.0, 0.0, 0.0), vec4f(0.0,0.50, 0.0, 0.0), vec4f(0.0, 0.0, 0.50, 0.0), vec4f(0.0, 0.0, 0.0, 1.0));
+    let model : mat4x4f = mat4x4f(vec4f(2.0, 0.0, 0.0, 0.0), vec4f(0.0,1.0, 0.0, 0.0), vec4f(0.0, 0.0, 1.0, 0.0), vec4f(0.50, 0.0, 0.0, 1.0));
+    let model_inv : mat4x4f = mat4x4f(vec4f(0.50, 0.0, 0.0, 0.0), vec4f(0.0,1.0, 0.0, 0.0), vec4f(0.0, 0.0, 1.00, 0.0), vec4f(-0.250, 0.0, 0.0, 1.0));
+
+    // Transform the eye position from world, to the sculpture view
+    let eye_in_world_sculpt = model_inv * vec4f(camera_data.eye_position, 1.0);
+
     // From world to sculpt: make it relative to the sculpt center, and un-apply the rotation.
-    var eye_atlas_pos : vec3f = rotate_point_quat(camera_data.eye_position - sculpt_data.sculpt_start_position, quat_conj(sculpt_data.sculpt_rotation));
+    var eye_atlas_pos : vec3f = rotate_point_quat(eye_in_world_sculpt.xyz - sculpt_data.sculpt_start_position, quat_conj(sculpt_data.sculpt_rotation));
     // Get the sculpt space position relative to the current brick
     eye_atlas_pos -= in.brick_center_in_sculpt_space;
     // Atlas and sculpt space are aligned, the only difference is a change of scale, depednign on brick size. Now the coordinates are Atlas-brick relative
@@ -361,7 +379,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     eye_atlas_pos += in.atlas_tile_coordinate + vec3f(5.0 / SDF_RESOLUTION); 
     let ray_dir_atlas : vec3f = normalize(in.in_atlas_pos - eye_atlas_pos);
 
-    let ray_dir_world : vec3f = normalize(in.vertex_in_world_space.xyz - camera_data.eye_position);
+    let ray_dir_world : vec3f = normalize(in.vertex_in_world_space.xyz - eye_in_world_sculpt.xyz);
     let ray_dir_sculpt : vec3f = rotate_point_quat(ray_dir_world, quat_conj(sculpt_data.sculpt_rotation));
     // ray dir in atlas coords :((
 
