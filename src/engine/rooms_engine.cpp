@@ -25,6 +25,8 @@
 
 #include <fstream>
 
+Gizmo3D RoomsEngine::gizmo = {};
+
 int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen)
 {
     int error = Engine::initialize(renderer, window, use_glfw, use_mirror_screen);
@@ -33,6 +35,8 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     {
         sculpt_editor = new SculptEditor();
         sculpt_editor->initialize();
+
+        gizmo.initialize(POSITION_GIZMO, { 0.0f, 0.0f, 0.0f });
     }
 
     Environment3D* environment = nullptr;
@@ -76,9 +80,9 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
         raycast_pointer->set_surface_material_override(raycast_pointer->get_surface(0), pointer_material);
     }
 
-    //if (parse_scene("data/gltf_tests/Sponza/Sponza.gltf", entities)) {
-    //    //Renderer::instance->get_camera()->look_at_entity(entities.back());
-    //}
+    if (parse_scene("data/meshes/controllers/left_controller.glb", main_scene->get_nodes())) {
+        //Renderer::instance->get_camera()->look_at_entity(entities.back());
+    }
 
     //import_scene();
 
@@ -119,6 +123,8 @@ void RoomsEngine::clean()
 
 void RoomsEngine::update(float delta_time)
 {
+    gizmo.update()
+
     if (sculpt_editor) {
         sculpt_editor->update(delta_time);
     }

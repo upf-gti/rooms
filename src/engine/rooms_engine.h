@@ -2,6 +2,8 @@
 
 #include "engine/engine.h"
 
+#include "framework/ui/gizmo_3d.h"
+
 class Node;
 class Node3D;
 class MeshInstance3D;
@@ -20,6 +22,8 @@ class RoomsEngine : public Engine
     bool import_scene();
 
     void render_gui();
+
+    static Gizmo3D gizmo;
 
 public:
 
