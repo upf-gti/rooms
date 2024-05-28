@@ -31,20 +31,18 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 {
     int error = Engine::initialize(renderer, window, use_glfw, use_mirror_screen);
 
+    main_scene = new Scene();
+
+    Environment3D* environment = new Environment3D();
+    main_scene->add_node(environment);
+
     // Sculpting
     {
         sculpt_editor = new SculptEditor();
         sculpt_editor->initialize();
 
-        gizmo.initialize(POSITION_GIZMO, { 0.0f, 0.0f, 0.0f });
+        gizmo.initialize(ROTATION_GIZMO, { 0.0f, 0.0f, 0.0f });
     }
-
-    Environment3D* environment = nullptr;
-    environment = new Environment3D();
-
-    main_scene = new Scene();
-
-    main_scene->add_node(environment);
 
     RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
 
@@ -81,7 +79,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     }
 
     if (parse_scene("data/meshes/controllers/left_controller.glb", main_scene->get_nodes())) {
-        //Renderer::instance->get_camera()->look_at_entity(entities.back());
+        ((Node3D*)main_scene->get_nodes().back())->translate({ 0.f, 0.9f, -0.35f });
     }
 
     //import_scene();
@@ -123,7 +121,22 @@ void RoomsEngine::clean()
 
 void RoomsEngine::update(float delta_time)
 {
-    //gizmo.update();
+    Node3D* node = (Node3D*)main_scene->get_nodes().back();
+
+    glm::vec3 right_controller_pos = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
+    glm::vec3 new_position = node->get_translation();
+    glm::vec3 new_scale;
+    glm::quat new_rotation;
+
+    if (gizmo.update(new_position, new_scale, new_rotation, right_controller_pos, delta_time)) {
+
+        Transform t;
+        t.position = new_position;
+        t.scale = new_scale;
+        t.rotation = new_rotation;
+
+        node->set_transform(t);
+    }
 
     if (sculpt_editor) {
         sculpt_editor->update(delta_time);
@@ -154,6 +167,8 @@ void RoomsEngine::render()
 #endif
 
     main_scene->render();
+
+    gizmo.render();
 
     if (Renderer::instance->get_openxr_available())
     {

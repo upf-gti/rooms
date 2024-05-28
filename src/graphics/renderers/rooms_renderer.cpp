@@ -373,6 +373,7 @@ void RoomsRenderer::render_mirror(WGPUTextureView swapchain_view)
         WGPURenderPassDescriptor render_pass_descr = {};
         render_pass_descr.colorAttachmentCount = 1;
         render_pass_descr.colorAttachments = &render_pass_color_attachment;
+        render_pass_descr.depthStencilAttachment = nullptr;
 
         {
             WGPURenderPassEncoder render_pass = wgpuCommandEncoderBeginRenderPass(global_command_encoder, &render_pass_descr);
@@ -457,7 +458,7 @@ void RoomsRenderer::init_mirror_pipeline()
         swapchain_bind_groups.push_back(webgpu_context->create_bind_group(uniforms, mirror_shader, 0));
     }
 
-    mirror_pipeline.create_render(mirror_shader, color_target, { .depth_read = false, .depth_write = false });
+    mirror_pipeline.create_render(mirror_shader, color_target, { .use_depth = false });
 }
 
 #endif
