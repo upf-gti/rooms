@@ -83,12 +83,12 @@ void StrokeManager::undo(sToComputeStrokeData& result) {
     }
 
     // Fit the AABB to the eval grid
-    result.in_frame_stroke_aabb = compute_grid_aligned_AABB(result.in_frame_stroke_aabb, brick_world_size);
-
-    // Compute the influence of the undo
     result.in_frame_stroke_aabb.half_size += glm::vec3(max_smooth_margin);
-    compute_history_intersection(result.in_frame_influence, result.in_frame_stroke_aabb, last_history_index);
+    AABB culling_aabb = compute_grid_aligned_AABB(result.in_frame_stroke_aabb, brick_world_size);
     result.in_frame_stroke_aabb.half_size -= glm::vec3(max_smooth_margin);
+
+    // Compute and fill intersection
+    compute_history_intersection(result.in_frame_influence, culling_aabb, last_history_index);
 }
 
 
@@ -128,12 +128,12 @@ void StrokeManager::redo(sToComputeStrokeData& result) {
     result.in_frame_stroke = redo_history[strokes_to_redo_count-1u];
 
     // Fit the AABB to the eval grid
-    result.in_frame_stroke_aabb = compute_grid_aligned_AABB(result.in_frame_stroke_aabb, brick_world_size);
-
-    // Compute the influence of the undo
     result.in_frame_stroke_aabb.half_size += glm::vec3(max_smooth_margin);
-    compute_history_intersection(result.in_frame_influence, result.in_frame_stroke_aabb, history->size());
+    AABB culling_aabb = compute_grid_aligned_AABB(result.in_frame_stroke_aabb, brick_world_size);
     result.in_frame_stroke_aabb.half_size -= glm::vec3(max_smooth_margin);
+
+    // Compute and fill intersection
+    compute_history_intersection(result.in_frame_influence, culling_aabb, history->size());
 }
 
 
@@ -144,12 +144,12 @@ void StrokeManager::add(std::vector<Edit> new_edits, sToComputeStrokeData& resul
     }
 
     // Compute AABB for the incomming strokes
-    result.in_frame_stroke_aabb = compute_grid_aligned_AABB(in_frame_stroke.get_world_AABB(), brick_world_size);
+    result.in_frame_stroke_aabb = in_frame_stroke.get_world_AABB();
+    AABB culling_aabb = compute_grid_aligned_AABB(result.in_frame_stroke_aabb, brick_world_size);
+    result.in_frame_stroke_aabb.half_size -= glm::vec3(in_frame_stroke.parameters.w);
 
     // Compute and fill intersection
-    result.in_frame_stroke_aabb.half_size += glm::vec3(in_frame_stroke.parameters.w);
-    compute_history_intersection(result.in_frame_influence, result.in_frame_stroke_aabb, history->size());
-    result.in_frame_stroke_aabb.half_size -= glm::vec3(in_frame_stroke.parameters.w);
+    compute_history_intersection(result.in_frame_influence, culling_aabb, history->size());
 
     result.in_frame_stroke = in_frame_stroke;
 

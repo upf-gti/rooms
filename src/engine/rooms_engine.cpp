@@ -123,7 +123,7 @@ void RoomsEngine::clean()
 
 void RoomsEngine::update(float delta_time)
 {
-    gizmo.update()
+    //gizmo.update();
 
     if (sculpt_editor) {
         sculpt_editor->update(delta_time);
