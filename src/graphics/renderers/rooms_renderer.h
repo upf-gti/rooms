@@ -97,8 +97,8 @@ public:
     *   Edits
     */
 
-    void change_stroke(const StrokeParameters& params) {
-        raymarching_renderer.change_stroke(params);
+    void change_stroke(const StrokeParameters& params, const uint32_t index = 1u) {
+        raymarching_renderer.change_stroke(params, index);
 
     }
 

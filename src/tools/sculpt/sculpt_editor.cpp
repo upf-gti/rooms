@@ -131,7 +131,7 @@ void SculptEditor::initialize()
     init_ui();
 
     enable_tool(SCULPT);
-    renderer->change_stroke(stroke_parameters);
+    renderer->change_stroke(stroke_parameters, 0u);
 
     // Meta Quest Controllers
     if(renderer->get_openxr_available())
