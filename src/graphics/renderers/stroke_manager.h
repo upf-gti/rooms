@@ -40,10 +40,20 @@ struct StrokeManager {
 
     glm::vec3 brick_world_size = {};
 
+    StrokeParameters dirty_stroke_params;
+    uint32_t dirty_stroke_increment = 0u;
+    bool must_change_stroke = false;
+
     void set_current_sculpt(SculptInstance* sculpt_instance);
 
     void set_brick_world_size(const glm::vec3& new_brick_world_size) {
         brick_world_size = new_brick_world_size;
+    }
+
+    inline void request_new_stroke(const StrokeParameters& params, const uint32_t index_increment = 1u) {
+        must_change_stroke = true;
+        dirty_stroke_increment = index_increment;
+        dirty_stroke_params = params;
     }
 
     void change_stroke(const StrokeParameters& params, const uint32_t index_increment = 1u);

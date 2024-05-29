@@ -153,20 +153,14 @@ void RaymarchingRenderer::initialize_stroke()
 
 void RaymarchingRenderer::change_stroke(const StrokeParameters& params, const uint32_t index_increment)
 {
-    stroke_manager.change_stroke(params, index_increment);
-
+    stroke_manager.request_new_stroke(params, index_increment);
+    
     preview_stroke.primitive = params.get_primitive();
     preview_stroke.operation = params.get_operation();
     preview_stroke.color_blending_op = params.get_color_blend_operation();
     preview_stroke.parameters = params.get_parameters();
     preview_stroke.material = params.get_material();
     preview_stroke.edit_count = 0u;
-}
-
-void RaymarchingRenderer::change_stroke(const uint32_t index_increment)
-{
-    spdlog::info("Change stroke");
-    stroke_manager.change_stroke(index_increment);
 }
 
 void RaymarchingRenderer::push_edit(const Edit edit)

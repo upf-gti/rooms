@@ -166,6 +166,8 @@ void StrokeManager::add(std::vector<Edit> new_edits, sToComputeStrokeData& resul
     }
 
     redo_history.clear();
+
+    
 }
 
 void StrokeManager::update() {
@@ -180,11 +182,15 @@ void StrokeManager::update() {
         redo_history.pop_back();
     }
 
+    if (must_change_stroke) {
+        change_stroke(dirty_stroke_params, dirty_stroke_increment);
+        must_change_stroke = false;
+    }
+
     in_frame_stroke.edit_count = 0u;
     pop_count_from_history = 0u;
     redo_pop_count_from_history = 0u;
 }
-
 
 void StrokeManager::change_stroke(const uint32_t index_increment) {
     if (current_stroke.edit_count > 0u) {
@@ -194,6 +200,7 @@ void StrokeManager::change_stroke(const uint32_t index_increment) {
 
     current_stroke.edit_count = 0u;
     current_stroke.stroke_id = current_stroke.stroke_id + index_increment;
+    spdlog::info("change stroke");
 }
 
 void StrokeManager::set_current_sculpt(SculptInstance* sculpt_instance)
@@ -230,4 +237,5 @@ void StrokeManager::change_stroke(const StrokeParameters& params, const uint32_t
     current_stroke.material = params.get_material();
 
     in_frame_stroke = current_stroke;
+    spdlog::info("change stroke1");
 }

@@ -46,7 +46,7 @@ class Viewport3D;
 
 struct PrimitiveState {
     glm::vec4 dimensions;
-    // color?
+    glm::quat rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
     // modifiers?
 };
 

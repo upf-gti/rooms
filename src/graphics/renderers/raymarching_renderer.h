@@ -265,7 +265,6 @@ public:
     */
     void initialize_stroke();
     void change_stroke(const StrokeParameters& params, const uint32_t index_increment = 1u);
-    void change_stroke(const uint32_t index_increment = 1u);
 
     void push_edit(const Edit edit);
 
