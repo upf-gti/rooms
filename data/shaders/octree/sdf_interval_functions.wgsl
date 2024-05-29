@@ -784,7 +784,7 @@ fn box_interval( p : mat3x3f, edit_pos : vec3f, dims : vec4f, rotation : vec4f )
     var size : vec3f = dims.xyz;
 
     // Make Rounding depend on the side length
-    let round : f32 = (dims.w / 0.1) * size.x;
+    let round : f32 =  clamp(dims.w / 0.08, 0.0, 1.0) * min(size.x, min(size.y, size.z));
     size -= vec3f(round);
 
     let mat_zero_interval : mat3x3f = mat3x3f(vec3f(0.0), vec3f(0.0), vec3f(0.0));
@@ -913,7 +913,7 @@ fn cone_interval(p : mat3x3f, c : vec3f, dims : vec4f, parameters : vec2f, rotat
     var radius : f32 = dims.x;
     var height : f32 = max(dims.y * (1.0 - cap_value), 0.0025);
 
-    let round : f32 = (dims.w / 0.3) * min(radius, height);
+    let round : f32 = clamp(dims.w / 0.08, 0.0001, 1.0) * min(radius, height) * 0.5;
     radius -= round;
     height -= round;
 
@@ -996,7 +996,7 @@ fn cylinder_interval(p : mat3x3f, start_pos : vec3f, dims : vec4f, rotation : ve
     var radius : f32 = dims.x;
     var height : f32 = dims.y;
 
-    let round : f32 = (dims.w / 0.1) * radius;
+    let round : f32 = clamp(dims.w / 0.08, 0.0001, 1.0) * min(radius, height);
     radius -= round;
     height -= round;
 

@@ -258,7 +258,7 @@ bool SculptEditor::edit_update(float delta_time)
         if (fabsf(left_size_multiplier) > 0.f) {
             // Update rounded size
             if (!is_shift_left_pressed) {
-                edit_to_add.dimensions.w = glm::clamp(edit_to_add.dimensions.w + left_size_multiplier * 0.1f, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE);
+                edit_to_add.dimensions.w = glm::clamp(edit_to_add.dimensions.w + left_size_multiplier * 0.1f, 0.0f, MAX_PRIMITIVE_SIZE);
             }
             else {
                 // Change smooth factor
@@ -1195,7 +1195,7 @@ void SculptEditor::init_ui()
                 ui::ItemGroup2D* g_edit_sizes = new ui::ItemGroup2D("g_edit_sizes");
                 g_edit_sizes->add_child(new ui::Slider2D("main_size", edit_to_add.dimensions.x, ui::SliderMode::HORIZONTAL, 0, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE, 3));
                 g_edit_sizes->add_child(new ui::Slider2D("secondary_size", edit_to_add.dimensions.y, ui::SliderMode::HORIZONTAL, 0, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE, 3));
-                g_edit_sizes->add_child(new ui::Slider2D("round_size", edit_to_add.dimensions.w, ui::SliderMode::VERTICAL, 0, 0.0f, 0.05f, 2));
+                g_edit_sizes->add_child(new ui::Slider2D("round_size", edit_to_add.dimensions.w, ui::SliderMode::VERTICAL, 0, 0.0f, MAX_PRIMITIVE_SIZE, 2));
                 shape_editor_submenu->add_child(g_edit_sizes);
             }
 

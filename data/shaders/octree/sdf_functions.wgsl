@@ -401,7 +401,7 @@ fn sdBox( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec
     var sf : Surface;
     var size : vec3f = dims.xyz;
     
-    let round : f32 =  (dims.w / 0.1) * size.x;
+    let round : f32 =  clamp(dims.w / 0.08, 0.0, 1.0) * min(size.x, min(size.y, size.z));
     size -= round;
 
     let pos : vec3f = rotate_point_quat(p - c, rotation);
@@ -586,7 +586,7 @@ fn sdCone( p : vec3f, a : vec3f, dims : vec4f, parameters : vec2f, rotation : ve
     var radius = dims.x;
     var height : f32 = max(dims.y * (1.0 - cap_value), 0.0025);
 
-    let round : f32 = (dims.w / 0.3) * min(radius, height);
+    let round : f32 = clamp(dims.w / 0.08, 0.0001, 1.0) * min(radius, height) * 0.5;
     radius -= round;
     height -= round;
 
@@ -689,7 +689,7 @@ fn sdCylinder(p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation :
     var r : f32 = dims.x;
     var h : f32 = dims.y;
 
-    let round : f32 = (dims.w / 0.1) * r;
+    let round : f32 = clamp(dims.w / 0.08, 0.0001, 1.0) * min(r, h);
     r -= round;
     h -= round;
 
