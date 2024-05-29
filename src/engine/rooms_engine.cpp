@@ -79,7 +79,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     }
 
     if (parse_scene("data/meshes/controllers/left_controller.glb", main_scene->get_nodes())) {
-        ((Node3D*)main_scene->get_nodes().back())->translate({ 0.f, 0.9f, -0.35f });
+        ((Node3D*)main_scene->get_nodes().back())->translate({ 0.f, 1.5f, -0.35f });
     }
 
     //import_scene();
@@ -124,17 +124,9 @@ void RoomsEngine::update(float delta_time)
     Node3D* node = (Node3D*)main_scene->get_nodes().back();
 
     glm::vec3 right_controller_pos = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
-    glm::vec3 new_position = node->get_translation();
-    glm::vec3 new_scale;
-    glm::quat new_rotation;
+    Transform t = mat4ToTransform(node->get_model());
 
-    if (gizmo.update(new_position, new_scale, new_rotation, right_controller_pos, delta_time)) {
-
-        Transform t;
-        t.position = new_position;
-        t.scale = new_scale;
-        t.rotation = new_rotation;
-
+    if (gizmo.update(t, right_controller_pos, delta_time)) {
         node->set_transform(t);
     }
 
