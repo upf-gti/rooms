@@ -218,18 +218,12 @@ bool SculptEditor::edit_update(float delta_time)
         edit_to_add.rotation = edit_rotation_stamp;
     }
 
-    if (!creating_spline)
-    {
-        // update_edit_rotation();
-    }
-
     // Snap surface
     if (can_snap_to_surface()) {
 
         auto callback = [&](glm::vec3 center) {
             edit_to_add.position = texture3d_to_world(center);
         };
-
 
         glm::mat4x4 pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
         glm::vec3 ray_dir = get_front(pose);
@@ -305,6 +299,7 @@ bool SculptEditor::edit_update(float delta_time)
 
             edit_rotation_stamp = get_quat_between_vec3(stamp_origin_to_hand, glm::vec3(0.0f, -stamp_to_hand_distance, 0.0f)) * twist;
 
+
             // TODO: Remove when we can support BIG primitives
             float temp_limit = 0.23f;
 
@@ -336,6 +331,11 @@ bool SculptEditor::edit_update(float delta_time)
             // Only stretch the edit when the acceleration of the hand exceds a threshold
             is_stretching_edit = glm::length(glm::abs(controller_position_data.controller_velocity)) > 0.20f;
         }
+    }
+
+    if (!creating_spline)
+    {
+        update_edit_rotation();
     }
 
     // Edit modifiers
@@ -813,20 +813,21 @@ void SculptEditor::update_edit_rotation()
 
         edit_rotation_diff = glm::inverse(initial_hand_rotation) * glm::inverse(Input::get_controller_rotation(HAND_LEFT));
         rotation_started = true;
-
-        glm::quat tmp_rotation = edit_user_rotation * edit_rotation_diff;
-        edit_to_add.rotation = glm::conjugate(tmp_rotation);
     }
-    else {
-        // If rotation has stopped
-        if (rotation_started && is_shift_left_pressed) {
-            edit_user_rotation = edit_user_rotation * edit_rotation_diff;
-            edit_rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
-            rotation_started = false;
-        }
 
-        edit_to_add.rotation *= (glm::conjugate(edit_user_rotation) * edit_rotation_diff);
+    // If rotation has stopped
+    else if (rotation_started && is_shift_left_pressed) {
+        edit_user_rotation = edit_user_rotation * edit_rotation_diff;
+        edit_rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
+        rotation_started = false;
+
+        sdPrimitive primitive = stroke_parameters.get_primitive();
+
+        primitive_default_states[primitive].rotation = edit_user_rotation;
     }
+
+    glm::quat tmp_rotation = glm::inverse(edit_user_rotation * edit_rotation_diff);
+    edit_to_add.rotation = glm::conjugate(tmp_rotation) * edit_to_add.rotation;
 }
 
 void SculptEditor::undo()
@@ -1019,7 +1020,7 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
         break;
     }
 
-    mesh_preview->rotate(glm::conjugate(edit_user_rotation * edit_rotation_diff) );
+    // mesh_preview->rotate(glm::conjugate(edit_user_rotation * edit_rotation_diff) );
 }
 
 void SculptEditor::set_sculpt_started(bool value)
@@ -1034,6 +1035,7 @@ void SculptEditor::set_primitive(sdPrimitive primitive)
 
     if (primitive_default_states.contains(primitive)) {
         edit_to_add.dimensions = primitive_default_states[primitive].dimensions;
+        edit_user_rotation = primitive_default_states[primitive].rotation;
     }
 }
 
