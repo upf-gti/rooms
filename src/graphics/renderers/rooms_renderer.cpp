@@ -118,7 +118,11 @@ void RoomsRenderer::update(float delta_time)
         camera->update(delta_time);
     }
 
+    timestamp(global_command_encoder, "pre_evaluation");
+
     raymarching_renderer.update_sculpt(global_command_encoder);
+
+    timestamp(global_command_encoder, "evaluation");
 }
 
 void RoomsRenderer::render()
@@ -149,9 +153,13 @@ void RoomsRenderer::render()
     cmd_buff_descriptor.nextInChain = NULL;
     cmd_buff_descriptor.label = "Command buffer";
 
+    resolve_query_set(global_command_encoder, 0);
+
     WGPUCommandBuffer commands = wgpuCommandEncoderFinish(global_command_encoder, &cmd_buff_descriptor);
 
     wgpuQueueSubmit(webgpu_context->device_queue, 1, &commands);
+
+    //print_timestamps();
 
     wgpuCommandBufferRelease(commands);
     wgpuCommandEncoderRelease(global_command_encoder);
@@ -235,6 +243,8 @@ void RoomsRenderer::render_screen(WGPUTextureView swapchain_view)
         render_pass_descr.colorAttachments = &render_pass_color_attachment;
         render_pass_descr.depthStencilAttachment = &render_pass_depth_attachment;
 
+        timestamp(global_command_encoder, "pre_render");
+
         // Create & fill the render pass (encoder)
         WGPURenderPassEncoder render_pass = wgpuCommandEncoderBeginRenderPass(global_command_encoder, &render_pass_descr);
 
@@ -251,6 +261,8 @@ void RoomsRenderer::render_screen(WGPUTextureView swapchain_view)
         wgpuRenderPassEncoderEnd(render_pass);
 
         wgpuRenderPassEncoderRelease(render_pass);
+
+        timestamp(global_command_encoder, "render");
 
         // render imgui
         {
