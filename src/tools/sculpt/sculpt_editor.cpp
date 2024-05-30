@@ -1169,7 +1169,7 @@ void SculptEditor::init_ui()
 
     // ** Primitives **
     {
-        ui::ButtonSelector2D* prim_selector = new ui::ButtonSelector2D("primitives", "data/textures/primitives.png");
+        ui::ButtonSelector2D* prim_selector = new ui::ButtonSelector2D("Shapes", "data/textures/primitives.png");
         prim_selector->add_child(new ui::TextureButton2D("sphere", "data/textures/sphere.png", ui::SELECTED));
         prim_selector->add_child(new ui::TextureButton2D("cube", "data/textures/cube.png"));
         prim_selector->add_child(new ui::TextureButton2D("cone", "data/textures/cone.png"));
@@ -1195,7 +1195,7 @@ void SculptEditor::init_ui()
                 ui::ItemGroup2D* g_edit_sizes = new ui::ItemGroup2D("g_edit_sizes");
                 g_edit_sizes->add_child(new ui::Slider2D("main_size", edit_to_add.dimensions.x, ui::SliderMode::HORIZONTAL, 0, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE, 3));
                 g_edit_sizes->add_child(new ui::Slider2D("secondary_size", edit_to_add.dimensions.y, ui::SliderMode::HORIZONTAL, 0, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE, 3));
-                g_edit_sizes->add_child(new ui::Slider2D("round_size", edit_to_add.dimensions.w, ui::SliderMode::VERTICAL, 0, 0.0f, MAX_PRIMITIVE_SIZE, 2));
+                g_edit_sizes->add_child(new ui::Slider2D("round_size", "data/textures/rounding.png", edit_to_add.dimensions.w, ui::SliderMode::VERTICAL, 0, 0.0f, MAX_PRIMITIVE_SIZE, 2));
                 shape_editor_submenu->add_child(g_edit_sizes);
             }
 
@@ -1246,7 +1246,7 @@ void SculptEditor::init_ui()
             {
                 ui::ItemGroup2D* g_saved_materials = new ui::ItemGroup2D("g_saved_materials");
 
-                g_saved_materials->add_child(new ui::TextureButton2D("save_material", "data/textures/submenu_mark.png"));
+                g_saved_materials->add_child(new ui::TextureButton2D("save_material", "data/textures/add.png"));
                 g_saved_materials->add_child(new ui::TextureButton2D("pick_material", "data/textures/pick_material.png", ui::ALLOW_TOGGLE));
 
                 {
