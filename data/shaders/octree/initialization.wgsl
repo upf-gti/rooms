@@ -6,9 +6,6 @@
 @group(0) @binding(5) var<storage, read_write> brick_buffers: BrickBuffers_ReadOnly;
 @group(0) @binding(8) var<storage, read_write> indirect_buffers : IndirectBuffers_ReadOnly;
 
-#dynamic @group(1) @binding(0) var<storage, read> stroke : Stroke;
-
-
 /**
     Este shader prepara los buffers para la evaluacion de strokes, que vienen de la CPU.
     La funcion principal es limpiar los indirect buffers para el resto de llamadas.
@@ -19,8 +16,6 @@
 @compute @workgroup_size(1, 1, 1)
 fn compute(@builtin(workgroup_id) group_id: vec3u) 
 {
-    //let tmp = edit_culling_data.edit_culling_lists[0];
-    let tmp2 = stroke.edit_count;
     // Clean the structs for the preview
 
     octant_usage_write_0[0] = 0;

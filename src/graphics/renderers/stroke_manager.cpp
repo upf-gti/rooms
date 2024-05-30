@@ -151,7 +151,7 @@ void StrokeManager::add(std::vector<Edit> new_edits, sToComputeStrokeData& resul
     // Compute and fill intersection
     compute_history_intersection(result.in_frame_influence, culling_aabb, history->size());
 
-    result.in_frame_stroke = in_frame_stroke;
+    result.in_frame_influence.strokes[result.in_frame_influence.stroke_count++] = in_frame_stroke;
 
 
     for (uint8_t i = 0u; i < new_edits.size(); i++) {

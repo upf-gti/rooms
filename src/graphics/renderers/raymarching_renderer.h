@@ -215,7 +215,7 @@ class RaymarchingRenderer {
     void init_raymarching_proxy_pipeline();
     void init_octree_ray_intersection_pipeline();
 
-    void evaluate_strokes(WGPUComputePassEncoder compute_pass, const Stroke* to_evaluate_strokes, bool is_undo = false, bool is_redo = false);
+    void evaluate_strokes(WGPUComputePassEncoder compute_pass, bool is_undo = false, bool is_redo = false);
 
     void compute_preview_edit(WGPUComputePassEncoder compute_pass);
 

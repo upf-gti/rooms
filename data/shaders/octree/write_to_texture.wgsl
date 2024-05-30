@@ -11,10 +11,8 @@
 @group(0) @binding(6) var<storage, read> stroke_history : StrokeHistory; 
 @group(0) @binding(8) var write_material_sdf: texture_storage_3d<r32uint, write>;
 
-#dynamic @group(1) @binding(0) var<storage, read> stroke : Stroke;
-
-@group(2) @binding(0) var<storage, read> octant_usage_read : array<u32>;
-@group(2) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
+@group(1) @binding(0) var<storage, read> octant_usage_read : array<u32>;
+@group(1) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
 
 var<workgroup> used_pixels : atomic<u32>;
 
@@ -62,11 +60,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
     let texture_coordinates : vec3u = atlas_tile_coordinate + local_id;
 
-    var material : Material;
-    material.albedo = stroke.material.color.xyz;
-    material.roughness = stroke.material.roughness;
-    material.metalness = stroke.material.metallic;
-
     // wtt: BBF0_0 17
     if ((INTERIOR_BRICK_FLAG & brick_pointer) == INTERIOR_BRICK_FLAG) {
         sSurface.distance = -100.0;
@@ -87,9 +80,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     for (var j : u32 = 0; j < stroke_history.count; j++) {
         curr_surface = evaluate_stroke(pos, &(stroke_history.strokes[j]), curr_surface);
     }
-
-    // Evaluate current stroke
-    curr_surface = evaluate_stroke(pos, &(stroke), curr_surface);
 
     result_surface = curr_surface;
 

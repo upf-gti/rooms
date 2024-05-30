@@ -8,12 +8,10 @@
 @group(0) @binding(5) var<storage, read_write> brick_buffers: BrickBuffers;
 @group(0) @binding(6) var<storage, read> stroke_history : StrokeHistory; 
 
-#dynamic @group(1) @binding(0) var<storage, read> stroke : Stroke;
+@group(1) @binding(0) var<storage, read> octant_usage_read : array<u32>;
+@group(1) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
 
-@group(2) @binding(0) var<storage, read> octant_usage_read : array<u32>;
-@group(2) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
-
-@group(3) @binding(0) var<storage, read> preview_stroke : Stroke;
+@group(2) @binding(0) var<storage, read> preview_stroke : Stroke;
 
 /*
     Este shader es el responsable de subdividir el espacio, para una evaluacion mas eficaz de SDFs.
@@ -236,7 +234,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     // TODO(Juan): fix undo redo reeval
     let is_evaluating_preview : bool = ((octree.evaluation_mode & EVALUATE_PREVIEW_STROKE_FLAG) == EVALUATE_PREVIEW_STROKE_FLAG);
     let is_evaluating_undo : bool = (octree.evaluation_mode & UNDO_EVAL_FLAG) == UNDO_EVAL_FLAG;
-    let is_smooth_paint : bool = stroke.operation == OP_SMOOTH_PAINT;
 
     let octant_min : vec3f = octant_center - vec3f(level_half_size);
     let octant_max : vec3f = octant_center + vec3f(level_half_size);
@@ -247,7 +244,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     var surface_interval = vec2f(10000.0, 10000.0);
     var edit_counter : u32 = 0;
 
-    let SMOOTH_FACTOR : f32 = stroke.parameters.w;
 
     // Base evaluation range
     let x_range : vec2f = vec2f(octant_center.x - level_half_size, octant_center.x + level_half_size);
@@ -287,10 +283,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             for (var j : u32 = 0; j < stroke_history.count; j++) {
                 surface_interval = evaluate_stroke_interval(current_subdivision_interval, &(stroke_history.strokes[j]), surface_interval, octant_center, level_half_size);
             }
-
-            current_stroke_interval = surface_interval;
-
-            surface_interval = evaluate_stroke_interval(current_subdivision_interval, &(stroke), surface_interval, octant_center, level_half_size);
         
             // Pseudo subdivide!
             // Re-compute the strokes for the octants of the last level, and check the interval on those
@@ -312,11 +304,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 var surf_interval : vec2f = vec2f(10000.0, 10000.0);
                 for (var j : u32 = 0; j < stroke_history.count; j++) {
                     surf_interval = evaluate_stroke_interval(current_sub_interval, &(stroke_history.strokes[j]), surf_interval, octant_center, level_half_size);
-                }
-
-                // Check the edits in the parent, and fill its own list with the edits that affect this child
-                surf_interval = evaluate_stroke_interval(current_sub_interval, &(stroke), surf_interval, sub_octant_center, sub_level_half_size);
-                
+                }     
                 
                 subdivide = surf_interval.x <= 0.0 && surf_interval.y >= 0.0;
                 
@@ -328,11 +316,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         octree.data[octree_index].octant_center_distance = surface_interval;
         
         if (level < OCTREE_DEPTH) {
-            if (is_evaluating_undo) {
-                subdivide = intersection_AABB_AABB(eval_aabb_min, eval_aabb_max, merge_data.reevaluation_AABB_min, merge_data.reevaluation_AABB_max);
-            } else {
-                subdivide = intersection_AABB_AABB(eval_aabb_min, eval_aabb_max, merge_data.reevaluation_AABB_min, merge_data.reevaluation_AABB_max);
-            }
+            subdivide = intersection_AABB_AABB(eval_aabb_min, eval_aabb_max, merge_data.reevaluation_AABB_min, merge_data.reevaluation_AABB_max);
+
             // Broad culling using only the incomming stroke
             // TODO: intersection with current edit AABB?
             if (subdivide) {
@@ -353,16 +338,10 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
             let int_distance = abs(distance(prev_interval, surface_interval));
             
-            if (stroke.operation == OP_SMOOTH_SUBSTRACTION || stroke.operation == OP_SMOOTH_UNION) {
-                if (int_distance > 0.00001) {
-                    if (surface_interval.y < 0.0) {
-                        brick_remove_or_mark_as_inside(octree_index, is_current_brick_filled);
-                    } else {
-                        brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
-                    }
-                }
-            } else if (stroke.operation == OP_SMOOTH_PAINT) {
-                if (surface_interval.x < 0.0 && surface_interval.y > 0.0) {
+            if (int_distance > 0.00001) {
+                if (surface_interval.y < 0.0) {
+                    brick_remove_or_mark_as_inside(octree_index, is_current_brick_filled);
+                } else {
                     brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
                 }
             }
@@ -382,6 +361,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         // =============================================================
 
         var surface_with_preview_interval : vec2f;
+        let SMOOTH_FACTOR : f32 = preview_stroke.parameters.w;
 
          if (level == OCTREE_DEPTH) {
             // Compute the context of the current stroke,

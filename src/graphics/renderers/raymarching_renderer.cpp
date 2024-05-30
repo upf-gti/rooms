@@ -302,8 +302,8 @@ void RaymarchingRenderer::compute_preview_edit(WGPUComputePassEncoder compute_pa
 
     uint32_t stroke_dynamic_offset = 0;
     wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_initialization_bind_group, 0, nullptr);
-    wgpuComputePassEncoderSetBindGroup(compute_pass, 1, compute_stroke_buffer_bind_group, 1, &stroke_dynamic_offset);
-    wgpuComputePassEncoderSetBindGroup(compute_pass, 2, preview_stroke_bind_group, 0, nullptr);
+    //wgpuComputePassEncoderSetBindGroup(compute_pass, 1, compute_stroke_buffer_bind_group, 1, &stroke_dynamic_offset);
+    //wgpuComputePassEncoderSetBindGroup(compute_pass, 1, preview_stroke_bind_group, 0, nullptr);
 
     wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
 
@@ -314,9 +314,9 @@ void RaymarchingRenderer::compute_preview_edit(WGPUComputePassEncoder compute_pa
         compute_octree_evaluate_pipeline.set(compute_pass);
 
         wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_evaluate_bind_group, 0, nullptr);
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 1, compute_stroke_buffer_bind_group, 1, &stroke_dynamic_offset);
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 2, compute_octant_usage_bind_groups[ping_pong_idx], 0, nullptr);
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 3, preview_stroke_bind_group, 0, nullptr);
+        //wgpuComputePassEncoderSetBindGroup(compute_pass, 1, compute_stroke_buffer_bind_group, 1, &stroke_dynamic_offset);
+        wgpuComputePassEncoderSetBindGroup(compute_pass, 1, compute_octant_usage_bind_groups[ping_pong_idx], 0, nullptr);
+        wgpuComputePassEncoderSetBindGroup(compute_pass, 2, preview_stroke_bind_group, 0, nullptr);
 
         wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(octree_indirect_buffer_struct.data), sizeof(uint32_t) * 12u);
 
@@ -332,17 +332,13 @@ void RaymarchingRenderer::compute_preview_edit(WGPUComputePassEncoder compute_pa
     preview_stroke.edit_count = 0u;
 };
 
-void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, const Stroke* strokes_to_evaluate, bool is_undo, bool is_redo)
+void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, bool is_undo, bool is_redo)
 {
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
 
 #ifndef NDEBUG
     wgpuComputePassEncoderPushDebugGroup(compute_pass, "Stroke Evaluation");
 #endif
-    
-    //spdlog::info("Stroke count {}, stroke edit count: {}, context size {}, total edit count: {}, avg edits per context {}", stroke_count_to_evaluate, stroke_edit_count, stroke_influence_list.stroke_count, reevaluate_edit_count, reevaluate_edit_count / (stroke_influence_list.stroke_count + 0.0001f));
-    // Upload the current stroke to evaluate
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(compute_stroke_buffer_uniform.data), 0, strokes_to_evaluate, sizeof(Stroke));
 
     //TODO: the evaluator only handle ONE stroke, the other should be added to the history/context
     // First pass: evaluate the incomming strokes
@@ -357,11 +353,11 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
 
         wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_initialization_bind_group, 0, nullptr);
 
-        uint32_t stroke_dynamic_offset = i * sizeof(Stroke);
+        //uint32_t stroke_dynamic_offset = i * sizeof(Stroke);
 
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 1, compute_stroke_buffer_bind_group, 1, &stroke_dynamic_offset);
+        //wgpuComputePassEncoderSetBindGroup(compute_pass, 1, compute_stroke_buffer_bind_group, 1, &stroke_dynamic_offset);
 
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 2, preview_stroke_bind_group, 0, nullptr);
+        //wgpuComputePassEncoderSetBindGroup(compute_pass, 1, preview_stroke_bind_group, 0, nullptr);
 
         wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
 
@@ -372,9 +368,9 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
             compute_octree_evaluate_pipeline.set(compute_pass);
 
             wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_evaluate_bind_group, 0, nullptr);
-            wgpuComputePassEncoderSetBindGroup(compute_pass, 1, compute_stroke_buffer_bind_group, 1, &stroke_dynamic_offset);
-            wgpuComputePassEncoderSetBindGroup(compute_pass, 2, compute_octant_usage_bind_groups[ping_pong_idx], 0, nullptr);
-            wgpuComputePassEncoderSetBindGroup(compute_pass, 3, preview_stroke_bind_group, 0, nullptr);
+            //wgpuComputePassEncoderSetBindGroup(compute_pass, 1, compute_stroke_buffer_bind_group, 1, &stroke_dynamic_offset);
+            wgpuComputePassEncoderSetBindGroup(compute_pass, 1, compute_octant_usage_bind_groups[ping_pong_idx], 0, nullptr);
+            wgpuComputePassEncoderSetBindGroup(compute_pass, 2, preview_stroke_bind_group, 0, nullptr);
 
             wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(octree_indirect_buffer_struct.data), sizeof(uint32_t) * 12u);
 
@@ -398,8 +394,8 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
         compute_octree_write_to_texture_pipeline.set(compute_pass);
 
         wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_write_to_texture_bind_group, 0, nullptr);
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 1, compute_stroke_buffer_bind_group, 1, &stroke_dynamic_offset);
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 2, compute_octant_usage_bind_groups[ping_pong_idx], 0, nullptr);
+        //wgpuComputePassEncoderSetBindGroup(compute_pass, 1, compute_stroke_buffer_bind_group, 1, &stroke_dynamic_offset);
+        wgpuComputePassEncoderSetBindGroup(compute_pass, 1, compute_octant_usage_bind_groups[ping_pong_idx], 0, nullptr);
 
         wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(octree_indirect_buffer_struct.data), sizeof(uint32_t) * 12u);
 
@@ -489,7 +485,7 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
         webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_uniform.data), sizeof(uint32_t) * 3u, &set_as_preview, sizeof(uint32_t));
 
         spdlog::info("Evaluate stroke! id: {}, stroke context count: {}", stroke_to_compute.in_frame_stroke.stroke_id, stroke_to_compute.in_frame_influence.stroke_count);
-        evaluate_strokes(compute_pass, &stroke_to_compute.in_frame_stroke);
+        evaluate_strokes(compute_pass);
     }
 
     compute_preview_edit(compute_pass);
@@ -760,7 +756,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
 
     for (int i = 0; i < 2; ++i) {
         std::vector<Uniform*> uniforms = { &octant_usage_uniform[i], &octant_usage_uniform[3 - i] }; // im sorry
-        compute_octant_usage_bind_groups[i] = webgpu_context->create_bind_group(uniforms, compute_octree_evaluate_shader, 2);
+        compute_octant_usage_bind_groups[i] = webgpu_context->create_bind_group(uniforms, compute_octree_evaluate_shader, 1);
     }
 
     {
@@ -782,7 +778,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
 
         std::vector<Uniform*> uniforms = { &compute_stroke_buffer_uniform };
 
-        compute_stroke_buffer_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_evaluate_shader, 1);
+        //compute_stroke_buffer_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_evaluate_shader, 1);
     }
 
     // Preview data bindgroup
@@ -794,7 +790,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
 
         std::vector<Uniform*> uniforms = { &preview_stroke_uniform };
 
-        preview_stroke_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_evaluate_shader, 3);
+        preview_stroke_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_evaluate_shader, 2);
     }
 
     // Octree initialiation bindgroup
