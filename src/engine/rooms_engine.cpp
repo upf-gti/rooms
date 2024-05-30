@@ -8,7 +8,6 @@
 #include "framework/scene/parse_gltf.h"
 #include "framework/utils/tinyfiledialogs.h"
 #include "framework/utils/utils.h"
-
 #include "framework/nodes/sculpt_instance.h"
 
 #include "engine/scene.h"
@@ -19,13 +18,12 @@
 #include "shaders/ui/ui_ray_pointer.wgsl.gen.h"
 
 #include "tools/sculpt/sculpt_editor.h"
+#include "tools/scene/scene_editor.h"
 
 #include "spdlog/spdlog.h"
 #include "imgui.h"
 
 #include <fstream>
-
-Gizmo3D RoomsEngine::gizmo = {};
 
 int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen)
 {
@@ -36,12 +34,26 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     Environment3D* environment = new Environment3D();
     main_scene->add_node(environment);
 
+    // Meta Quest Controllers
+    if (renderer->get_openxr_available())
+    {
+        std::vector<Node*> entities;
+        parse_gltf("data/meshes/controllers/left_controller.glb", entities);
+        parse_gltf("data/meshes/controllers/right_controller.glb", entities);
+        controller_mesh_left = static_cast<MeshInstance3D*>(entities[0]);
+        controller_mesh_right = static_cast<MeshInstance3D*>(entities[1]);
+    }
+
+    // Scenes
+    {
+        scene_editor = new SceneEditor();
+        scene_editor->initialize();
+    }
+
     // Sculpting
     {
         sculpt_editor = new SculptEditor();
         sculpt_editor->initialize();
-
-        gizmo.initialize(ROTATION_GIZMO, { 0.0f, 0.0f, 0.0f });
     }
 
     RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
@@ -114,6 +126,10 @@ void RoomsEngine::clean()
 
     Node2D::clean();
 
+    if (scene_editor) {
+        scene_editor->clean();
+    }
+
     if (sculpt_editor) {
         sculpt_editor->clean();
     }
@@ -121,13 +137,14 @@ void RoomsEngine::clean()
 
 void RoomsEngine::update(float delta_time)
 {
-    Node3D* node = (Node3D*)main_scene->get_nodes().back();
+    // Update controller UI
+    if (renderer->get_openxr_available()) {
+        controller_mesh_right->set_model(Input::get_controller_pose(HAND_RIGHT));
+        controller_mesh_left->set_model(Input::get_controller_pose(HAND_LEFT));
+    }
 
-    glm::vec3 right_controller_pos = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
-    Transform t = mat4ToTransform(node->get_model());
-
-    if (gizmo.update(t, right_controller_pos, delta_time)) {
-        node->set_transform(t);
+    if (scene_editor) {
+        scene_editor->update(delta_time);
     }
 
     if (sculpt_editor) {
@@ -140,7 +157,7 @@ void RoomsEngine::update(float delta_time)
 
     if (Renderer::instance->get_openxr_available())
     {
-        glm::mat4x4 raycast_transform = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
+        const glm::mat4x4& raycast_transform = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
         raycast_pointer->set_model(raycast_transform);
     }
 
@@ -160,10 +177,11 @@ void RoomsEngine::render()
 
     main_scene->render();
 
-    gizmo.render();
+    if (scene_editor) {
+        scene_editor->render();
+    }
 
-    if (Renderer::instance->get_openxr_available())
-    {
+    if (Renderer::instance->get_openxr_available()) {
         raycast_pointer->render();
     }
 
@@ -172,6 +190,14 @@ void RoomsEngine::render()
     }
 
     Engine::render();
+}
+
+void RoomsEngine::render_controllers()
+{
+    if (renderer->get_openxr_available()) {
+        controller_mesh_right->render();
+        controller_mesh_left->render();
+    }
 }
 
 bool RoomsEngine::export_scene()
@@ -389,7 +415,12 @@ void RoomsEngine::render_gui()
             }
             ImGui::EndTabItem();
         }
-        if (ImGui::BeginTabItem("Sculpt Editor"))
+        if (scene_editor && ImGui::BeginTabItem("Scene Editor"))
+        {
+            scene_editor->render_gui();
+            ImGui::EndTabItem();
+        }
+        if (sculpt_editor && ImGui::BeginTabItem("Sculpt Editor"))
         {
             sculpt_editor->render_gui();
             ImGui::EndTabItem();

@@ -2,7 +2,6 @@
 
 #include "includes.h"
 
-#include "framework/nodes/ui.h"
 #include "framework/input.h"
 #include "framework/nodes/viewport_3d.h"
 #include "framework/scene/parse_gltf.h"
@@ -132,18 +131,6 @@ void SculptEditor::initialize()
 
     enable_tool(SCULPT);
     renderer->change_stroke(stroke_parameters, 0u);
-
-    // Meta Quest Controllers
-    if(renderer->get_openxr_available())
-    {
-        std::vector<Node*> entities;
-        parse_gltf("data/meshes/controllers/left_controller.glb", entities);
-        parse_gltf("data/meshes/controllers/right_controller.glb", entities);
-        controller_mesh_left = static_cast<MeshInstance3D*>(entities[0]);
-        controller_mesh_right = static_cast<MeshInstance3D*>(entities[1]);
-
-        Engine::instance->get_main_scene()->add_nodes(entities);
-    }
 
     /*ui::VContainer2D* test_root = new ui::VContainer2D("test_root", { 0.0f, 0.0f });
     test_root->set_centered(true);
@@ -458,11 +445,9 @@ void SculptEditor::update(float delta_time)
             m = glm::translate(m, glm::vec3(0.02f, 0.0f, 0.02f));
 
             glm::mat4x4 pose = Input::get_controller_pose(HAND_RIGHT);
-            controller_mesh_right->set_model(pose);
             right_hand_ui_3D->set_model(pose * m);
 
             pose = Input::get_controller_pose(HAND_LEFT);
-            controller_mesh_left->set_model(pose);
             left_hand_ui_3D->set_model(pose * m);
 
             is_shift_left_pressed = Input::is_grab_pressed(HAND_LEFT);
@@ -895,11 +880,7 @@ void SculptEditor::render()
         main_panel_2d->render();
     }
 
-    if (renderer->get_openxr_available())
-    {
-        controller_mesh_right->render();
-        controller_mesh_left->render();
-    }
+    static_cast<RoomsEngine*>(RoomsEngine::instance)->render_controllers();
 
     // Render always or only XR?
     sculpt_area_box->set_translation(sculpt_start_position + translation_diff);
@@ -907,10 +888,6 @@ void SculptEditor::render()
     sculpt_area_box->rotate(glm::inverse(sculpt_rotation * rotation_diff));
     sculpt_area_box->render();
 }
-
-// =====================
-// GUI =================
-// =====================
 
 void SculptEditor::render_gui()
 {
