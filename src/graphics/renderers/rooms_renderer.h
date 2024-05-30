@@ -46,6 +46,8 @@ class RoomsRenderer : public Renderer {
     WGPUBindGroup render_bind_group_camera = nullptr;
     WGPUBindGroup render_bind_group_camera_2d = nullptr;
 
+    float last_evaluation_time = 0.0f;
+
     void init_camera_bind_group();
 
 #if defined(XR_SUPPORT)
@@ -82,6 +84,8 @@ public:
     void resize_window(int width, int height) override;
 
     inline Uniform* get_current_camera_uniform() { return &camera_uniform; }
+
+    float get_last_evaluation_time() { return last_evaluation_time; }
 
     void set_sculpt_start_position(const glm::vec3& position) {
         raymarching_renderer.set_sculpt_start_position(position);

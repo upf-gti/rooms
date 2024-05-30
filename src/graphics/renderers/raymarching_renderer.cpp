@@ -113,6 +113,8 @@ void RaymarchingRenderer::clean()
 
 void RaymarchingRenderer::update_sculpt(WGPUCommandEncoder command_encoder)
 {
+    performed_evaluation = false;
+
     //updated_time += delta_time;
     //for (;updated_time >= 0.0166f; updated_time -= 0.0166f) {
     compute_octree(command_encoder);
@@ -336,6 +338,8 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
 {
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
 
+    performed_evaluation = true;
+
 #ifndef NDEBUG
     wgpuComputePassEncoderPushDebugGroup(compute_pass, "Stroke Evaluation");
 #endif
@@ -443,11 +447,17 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
 
     // Create the octree renderpass
     WGPUComputePassDescriptor compute_pass_desc = {};
-    compute_pass_desc.timestampWrites = nullptr;
+
+    std::vector<WGPUComputePassTimestampWrites> timestampWrites(1);
+    timestampWrites[0].beginningOfPassWriteIndex = Renderer::instance->timestamp(command_encoder, "pre_evaluation");
+    timestampWrites[0].querySet = Renderer::instance->get_query_set();
+    timestampWrites[0].endOfPassWriteIndex = Renderer::instance->timestamp(command_encoder, "evaluation");
+
+    compute_pass_desc.timestampWrites = timestampWrites.data();
+
     WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
 
     bool is_openxr_available = RoomsRenderer::instance->get_openxr_available();
-
     
     stroke_to_compute.in_frame_influence.stroke_count = 0u;
     stroke_to_compute.in_frame_stroke.edit_count = 0u;
