@@ -8,14 +8,23 @@ class Node;
 class Node3D;
 class MeshInstance3D;
 class Environment3D;
+class BaseEditor;
 class SculptEditor;
 class SceneEditor;
+
+enum Editor : uint8_t {
+    SCENE_EDITOR,
+    SCULPT_EDITOR,
+    SHAPE_EDITOR
+};
 
 #define _DESTROY_(x) if(x) { delete x; }
 
 class RoomsEngine : public Engine
 {
     MeshInstance3D* raycast_pointer = nullptr;
+
+    BaseEditor* current_editor = nullptr;
 
     SculptEditor* sculpt_editor = nullptr;
 
@@ -40,5 +49,7 @@ public:
 
     bool show_tree_recursive(Node* entity);
 
-    void render_controllers();
+    static void render_controllers();
+
+    static void switch_editor(uint8_t editor);
 };

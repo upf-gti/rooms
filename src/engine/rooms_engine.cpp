@@ -56,6 +56,9 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
         sculpt_editor->initialize();
     }
 
+    // Set default editor..
+    current_editor = sculpt_editor;
+
     RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
 
     SculptInstance* default_sculpt = new SculptInstance();
@@ -88,10 +91,6 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
         pointer_material.shader = RendererStorage::get_shader_from_source(shaders::ui_ray_pointer::source, shaders::ui_ray_pointer::path, pointer_material);
 
         raycast_pointer->set_surface_material_override(raycast_pointer->get_surface(0), pointer_material);
-    }
-
-    if (parse_scene("data/meshes/controllers/left_controller.glb", main_scene->get_nodes())) {
-        ((Node3D*)main_scene->get_nodes().back())->translate({ 0.f, 1.5f, -0.35f });
     }
 
     //import_scene();
@@ -143,12 +142,8 @@ void RoomsEngine::update(float delta_time)
         controller_mesh_left->set_model(Input::get_controller_pose(HAND_LEFT));
     }
 
-    if (scene_editor) {
-        scene_editor->update(delta_time);
-    }
-
-    if (sculpt_editor) {
-        sculpt_editor->update(delta_time);
+    if (current_editor) {
+        current_editor->update(delta_time);
     }
 
     Engine::update(delta_time);
@@ -177,16 +172,12 @@ void RoomsEngine::render()
 
     main_scene->render();
 
-    if (scene_editor) {
-        scene_editor->render();
-    }
-
     if (Renderer::instance->get_openxr_available()) {
         raycast_pointer->render();
     }
 
-    if (sculpt_editor) {
-        sculpt_editor->render();
+    if (current_editor) {
+        current_editor->render();
     }
 
     Engine::render();
@@ -194,9 +185,32 @@ void RoomsEngine::render()
 
 void RoomsEngine::render_controllers()
 {
-    if (renderer->get_openxr_available()) {
-        controller_mesh_right->render();
-        controller_mesh_left->render();
+    RoomsEngine* i = static_cast<RoomsEngine*>(instance);
+
+    if (i->renderer->get_openxr_available()) {
+        i->controller_mesh_right->render();
+        i->controller_mesh_left->render();
+    }
+}
+
+void RoomsEngine::switch_editor(uint8_t editor)
+{
+    RoomsEngine* i = static_cast<RoomsEngine*>(instance);
+
+    switch (editor)
+    {
+    case SCENE_EDITOR:
+        i->current_editor = i->scene_editor;
+        break;
+    case SCULPT_EDITOR:
+        i->current_editor = i->sculpt_editor;
+        break;
+    case SHAPE_EDITOR:
+        // ...
+        break;
+    default:
+        assert(0 && "Editor is not created!");
+        break;
     }
 }
 
