@@ -9,6 +9,7 @@ class Node3D;
 class MeshInstance3D;
 class Environment3D;
 class SculptEditor;
+class SceneEditor;
 
 #define _DESTROY_(x) if(x) { delete x; }
 
@@ -18,12 +19,16 @@ class RoomsEngine : public Engine
 
     SculptEditor* sculpt_editor = nullptr;
 
+    SceneEditor* scene_editor = nullptr;
+
     bool export_scene();
     bool import_scene();
 
     void render_gui();
 
-    static Gizmo3D gizmo;
+    // Meta quest controller meshes
+    MeshInstance3D* controller_mesh_left = nullptr;
+    MeshInstance3D* controller_mesh_right = nullptr;
 
 public:
 
@@ -34,4 +39,6 @@ public:
 	void render() override;
 
     bool show_tree_recursive(Node* entity);
+
+    void render_controllers();
 };

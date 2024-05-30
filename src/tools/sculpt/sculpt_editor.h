@@ -1,7 +1,8 @@
 #pragma once
 
+#include "tools/base_editor.h"
+
 #include "graphics/edit.h"
-#include "framework/nodes/ui.h"
 #include "framework/nodes/text.h"
 #include "framework/ui/gizmo_3d.h"
 #include "framework/math/spline.h"
@@ -40,9 +41,7 @@ enum : uint8_t {
     LAYOUT_ALL = LAYOUT_SCULPT_ALL | LAYOUT_PAINT_ALL
 };
 
-class RoomsRenderer;
 class MeshInstance3D;
-class Viewport3D;
 
 struct PrimitiveState {
     glm::vec4 dimensions;
@@ -50,9 +49,7 @@ struct PrimitiveState {
     // modifiers?
 };
 
-class SculptEditor {
-
-    RoomsRenderer*  renderer = nullptr;
+class SculptEditor : public BaseEditor {
 
     MeshInstance3D* sculpt_area_box = nullptr;
 
@@ -168,19 +165,7 @@ class SculptEditor {
     glm::vec3 mirror_normal = glm::vec3(0.f, 0.f, 1.f);
     glm::quat mirror_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
 
-    // Controller UI
-    ui::VContainer2D* right_hand_container = nullptr;
-    ui::VContainer2D* left_hand_container = nullptr;
-    Viewport3D* right_hand_ui_3D = nullptr;
-    Viewport3D* left_hand_ui_3D = nullptr;
-
-    // Meta quest controller meshes
-    MeshInstance3D* controller_mesh_left = nullptr;
-    MeshInstance3D* controller_mesh_right = nullptr;
-    
-    // Main pannel UI
-    ui::HContainer2D* main_panel_2d = nullptr;
-    Viewport3D* main_panel_3d = nullptr;
+    // UI
 
     size_t max_recent_colors = 0;
     std::vector<Color> recent_colors;
@@ -232,12 +217,12 @@ public:
 
     SculptEditor() {};
 
-    void initialize();
-    void clean();
+    void initialize() override;
+    void clean() override;
 
-    void update(float delta_time);
-    void render();
-    void render_gui();
+    void update(float delta_time) override;
+    void render() override;
+    void render_gui() override;
 
     void enable_tool(eTool tool);
     void set_sculpt_started(bool value);
