@@ -154,10 +154,6 @@ void RoomsEngine::update(float delta_time)
 
 void RoomsEngine::render()
 {
-#ifndef __EMSCRIPTEN__
-    render_gui();
-#endif
-
     main_scene->render();
 
     gizmo.render();
@@ -170,6 +166,10 @@ void RoomsEngine::render()
     if (sculpt_editor) {
         sculpt_editor->render();
     }
+
+#ifndef __EMSCRIPTEN__
+    render_gui();
+#endif
 
     Engine::render();
 }
@@ -326,6 +326,8 @@ void RoomsEngine::render_gui()
 {
     bool active = true;
 
+    RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
+
     // ImGui::SetNextWindowSize({ 300, 400 });
     ImGui::Begin("Debug panel", &active, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoFocusOnAppearing);
 
@@ -396,7 +398,7 @@ void RoomsEngine::render_gui()
         }
         if (ImGui::BeginTabItem("Debugger"))
         {
-            const RayIntersectionInfo& info = static_cast<RoomsRenderer*>(RoomsRenderer::instance)->get_raymarching_renderer()->get_ray_intersection_info();
+            const RayIntersectionInfo& info = rooms_renderer->get_raymarching_renderer()->get_ray_intersection_info();
             std::string intersected = info.intersected ? "yes" : "no";
             ImGui::Text(("Ray Intersection: " + intersected).c_str());
             ImGui::Text(("Tile pointer: " + std::to_string(info.tile_pointer)).c_str());
@@ -415,6 +417,24 @@ void RoomsEngine::render_gui()
                 else {
                     Renderer::instance->set_msaa_count(1);
                 }
+            }
+
+            ImGui::Separator();
+
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(ImColor(0, 255, 0, 255)));
+            ImGui::Text("Timestamp queries:");
+            ImGui::PopStyleColor();
+
+            std::vector<float> timestamps = renderer->get_last_frame_timestamps();
+            std::map<uint8_t, std::string>& queries_map = renderer->get_queries_label_map();
+
+            ImGui::Text("\tlast evaluation time: %.4f", rooms_renderer->get_last_evaluation_time());
+
+            for (int i = 0; i < timestamps.size(); ++i) {
+                float time = timestamps[i];
+                std::string label = queries_map[i * 2 + 1];
+
+                ImGui::Text(("\t" + label + ": %.4f").c_str(), time);
             }
 
             ImGui::EndTabItem();
