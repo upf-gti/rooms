@@ -168,12 +168,12 @@ void RoomsEngine::render()
 {
     main_scene->render();
 
-    if (Renderer::instance->get_openxr_available()) {
-        raycast_pointer->render();
-    }
-
     if (current_editor) {
         current_editor->render();
+    }
+
+    if (Renderer::instance->get_openxr_available()) {
+        raycast_pointer->render();
     }
 
 #ifndef __EMSCRIPTEN__

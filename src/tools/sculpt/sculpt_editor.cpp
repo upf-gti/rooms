@@ -37,6 +37,7 @@ void SculptEditor::initialize()
     Material mirror_material;
     mirror_material.priority = 0;
     mirror_material.transparency_type = ALPHA_BLEND;
+    mirror_material.cull_type = CULL_NONE;
     mirror_material.diffuse_texture = RendererStorage::get_texture("data/textures/mirror_quad_texture.png");
     mirror_material.shader = RendererStorage::get_shader_from_source(shaders::mesh_texture::source, shaders::mesh_texture::path, mirror_material);
 
@@ -814,8 +815,6 @@ void SculptEditor::redo()
 
 void SculptEditor::render()
 {
-    BaseEditor::render();
-
     if (mesh_preview) {
 
         update_edit_preview(edit_to_add.dimensions);
@@ -860,6 +859,8 @@ void SculptEditor::render()
         mirror_mesh->rotate(mirror_rotation);
         mirror_mesh->render();
     }
+
+    BaseEditor::render();
 
     RoomsEngine::render_controllers();
 
