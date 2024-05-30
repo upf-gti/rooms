@@ -12,21 +12,14 @@ class Scene;
 class SceneEditor : public BaseEditor {
 
     Scene* main_scene = nullptr;
-
-    static Gizmo3D gizmo_3d;
-
-    static Gizmo2D gizmo_2d;
-
     Node* selected_node = nullptr;
-
-    void init_ui();
-    void bind_events();
-
-    void clone_node();
 
     /*
     *   Gizmo stuff
     */
+
+    Gizmo3D gizmo_3d;
+    Gizmo2D gizmo_2d;
 
     bool is_gizmo_usable();
     void update_gizmo(float delta_time);
@@ -35,6 +28,22 @@ class SceneEditor : public BaseEditor {
     void set_gizmo_translation();
     void set_gizmo_rotation();
     void set_gizmo_scale();
+
+    /*
+    *   Node actions
+    */
+
+    bool moving_node = false;
+
+    void add_node(Node* node);
+    void clone_node();
+
+    /*
+    *   UI
+    */
+
+    void init_ui();
+    void bind_events();
 
 public:
 

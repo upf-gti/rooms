@@ -5,6 +5,7 @@
 #include "framework/input.h"
 #include "framework/scene/parse_scene.h"
 #include "framework/nodes/viewport_3d.h"
+#include "framework/nodes/sculpt_instance.h"
 
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/renderer_storage.h"
@@ -15,9 +16,6 @@
 #include "spdlog/spdlog.h"
 #include "imgui.h"
 
-Gizmo2D SceneEditor::gizmo_2d = {};
-Gizmo3D SceneEditor::gizmo_3d = {};
-
 void SceneEditor::initialize()
 {
     renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
@@ -27,6 +25,12 @@ void SceneEditor::initialize()
     gizmo_3d.initialize(TRANSLATION_GIZMO, { 0.0f, 0.0f, 0.0f });
 
     init_ui();
+
+    // debug
+
+    SculptInstance* default_sculpt = new SculptInstance();
+    RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
+    rooms_renderer->get_raymarching_renderer()->set_current_sculpt(default_sculpt);
 }
 
 void SceneEditor::clean()
@@ -39,6 +43,15 @@ void SceneEditor::clean()
 void SceneEditor::update(float delta_time)
 {
     BaseEditor::update(delta_time);
+
+    if (moving_node) {
+
+        static_cast<Node3D*>(selected_node)->set_translation(Input::get_controller_position(HAND_RIGHT, POSE_AIM));
+
+        if (Input::was_trigger_pressed(HAND_RIGHT)) {
+            moving_node = false;
+        }
+    }
 
     update_gizmo(delta_time);
 }
@@ -191,7 +204,15 @@ void SceneEditor::bind_events()
 
     Node::bind("gltf", [&](const std::string& signal, void* button) {
         parse_scene("data/meshes/controllers/left_controller.glb", main_scene->get_nodes());
-        selected_node = main_scene->get_nodes().back();
+        add_node(main_scene->get_nodes().back());
+    });
+
+    Node::bind("sculpt", [&](const std::string& signal, void* button) {
+        SculptInstance* new_sculpt = new SculptInstance();
+        RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
+        rooms_renderer->get_raymarching_renderer()->set_current_sculpt(new_sculpt);
+        add_node(new_sculpt);
+
     });
 
     Node::bind("clone", [&](const std::string& signal, void* button) { clone_node(); });
@@ -201,6 +222,14 @@ void SceneEditor::bind_events()
     Node::bind("move", [&](const std::string& signal, void* button) { set_gizmo_translation(); });
     Node::bind("rotate", [&](const std::string& signal, void* button) { set_gizmo_rotation(); });
     Node::bind("scale", [&](const std::string& signal, void* button) { set_gizmo_scale(); });
+}
+
+void SceneEditor::add_node(Node* node)
+{
+    selected_node = node;
+
+    // To allow the user to move the node at the beginning
+    moving_node = is_gizmo_usable();
 }
 
 void SceneEditor::clone_node()
