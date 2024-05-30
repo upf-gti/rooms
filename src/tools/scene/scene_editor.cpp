@@ -6,6 +6,9 @@
 #include "framework/scene/parse_scene.h"
 #include "framework/nodes/viewport_3d.h"
 #include "framework/nodes/sculpt_instance.h"
+#include "framework/nodes/spot_light_3d.h"
+#include "framework/nodes/omni_light_3d.h"
+#include "framework/nodes/directional_light_3d.h"
 
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/renderer_storage.h"
@@ -212,8 +215,43 @@ void SceneEditor::bind_events()
         RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
         rooms_renderer->get_raymarching_renderer()->set_current_sculpt(new_sculpt);
         add_node(new_sculpt);
-
     });
+
+    // Lights
+    {
+        Node::bind("omni", [&](const std::string& signal, void* button) {
+            OmniLight3D* new_light = new OmniLight3D();
+            new_light->set_name("omni_light");
+            new_light->set_translation({ 1.0f, 1.f, 0.0f });
+            new_light->set_color({ 1.0f, 1.0f, 1.0f });
+            new_light->set_intensity(1.0f);
+            new_light->set_range(5.0f);
+            main_scene->add_node(new_light);
+            add_node(new_light);
+        });
+
+        Node::bind("spot", [&](const std::string& signal, void* button) {
+            SpotLight3D* new_light = new SpotLight3D();
+            new_light->set_name("spot_light");
+            new_light->set_translation({ 0.0f, 1.f, 0.0f });
+            new_light->rotate(glm::radians(-90.f), { 1.f, 0.0f, 0.f });
+            new_light->set_color({ 1.0f, 1.0f, 1.0f });
+            new_light->set_intensity(1.0f);
+            new_light->set_range(5.0f);
+            main_scene->add_node(new_light);
+            add_node(new_light);
+        });
+
+        Node::bind("directional", [&](const std::string& signal, void* button) {
+            DirectionalLight3D* new_light = new DirectionalLight3D();
+            new_light->set_name("directional_light");
+            new_light->rotate(glm::radians(-90.f), { 1.f, 0.0f, 0.f });
+            new_light->set_color({ 1.0f, 0.2f, 0.0f });
+            new_light->set_intensity(2.0f);
+            main_scene->add_node(new_light);
+            add_node(new_light);
+        });
+    }
 
     Node::bind("clone", [&](const std::string& signal, void* button) { clone_node(); });
 
