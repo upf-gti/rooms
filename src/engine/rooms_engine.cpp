@@ -2,14 +2,11 @@
 
 #include "framework/nodes/environment_3d.h"
 #include "framework/nodes/viewport_3d.h"
-#include "framework/nodes/spot_light_3d.h"
 #include "framework/input.h"
 #include "framework/scene/parse_scene.h"
 #include "framework/scene/parse_gltf.h"
 #include "framework/utils/tinyfiledialogs.h"
 #include "framework/utils/utils.h"
-
-#include "framework/nodes/sculpt_instance.h"
 
 #include "engine/scene.h"
 
@@ -19,13 +16,12 @@
 #include "shaders/ui/ui_ray_pointer.wgsl.gen.h"
 
 #include "tools/sculpt/sculpt_editor.h"
+#include "tools/scene/scene_editor.h"
 
 #include "spdlog/spdlog.h"
 #include "imgui.h"
 
 #include <fstream>
-
-Gizmo3D RoomsEngine::gizmo = {};
 
 int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen)
 {
@@ -36,18 +32,30 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     Environment3D* environment = new Environment3D();
     main_scene->add_node(environment);
 
+    // Meta Quest Controllers
+    if (renderer->get_openxr_available())
+    {
+        std::vector<Node*> entities;
+        parse_gltf("data/meshes/controllers/left_controller.glb", entities);
+        parse_gltf("data/meshes/controllers/right_controller.glb", entities);
+        controller_mesh_left = static_cast<MeshInstance3D*>(entities[0]);
+        controller_mesh_right = static_cast<MeshInstance3D*>(entities[1]);
+    }
+
+    // Scenes
+    {
+        scene_editor = new SceneEditor();
+        scene_editor->initialize();
+    }
+
     // Sculpting
     {
         sculpt_editor = new SculptEditor();
         sculpt_editor->initialize();
-
-        gizmo.initialize(ROTATION_GIZMO, { 0.0f, 0.0f, 0.0f });
     }
 
-    RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
-
-    SculptInstance* default_sculpt = new SculptInstance();
-    rooms_renderer->get_raymarching_renderer()->set_current_sculpt(default_sculpt);
+    // Set default editor..
+    current_editor = sculpt_editor;
 
     // Grid
     {
@@ -78,33 +86,6 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
         raycast_pointer->set_surface_material_override(raycast_pointer->get_surface(0), pointer_material);
     }
 
-    if (parse_scene("data/meshes/controllers/left_controller.glb", main_scene->get_nodes())) {
-        ((Node3D*)main_scene->get_nodes().back())->translate({ 0.f, 1.5f, -0.35f });
-    }
-
-    //import_scene();
-
-    /*OmniLight3D* omni_light = new OmniLight3D();
-    omni_light->set_name("omni_light");
-    omni_light->set_translation({ 1.0f, 1.f, 0.0f });
-    omni_light->set_color({ 1.0f, 1.0f, 1.0f });
-    omni_light->set_intensity(1.0f);
-    omni_light->set_range(5.0f);
-
-    entities.push_back(omni_light);
-    RoomsRenderer::instance->add_light(omni_light);
-    */
-
-    /*SpotLight3D* spot_light = new SpotLight3D();
-    spot_light->set_name("spot_light");
-    spot_light->set_translation({ 0.0f, 1.f, 0.0f });
-    spot_light->rotate(glm::radians(-90.f), { 1.f, 0.0f, 0.f });
-    spot_light->set_color({ 1.0f, 1.0f, 1.0f });
-    spot_light->set_intensity(1.0f);
-    spot_light->set_range(5.0f);
-
-    entities.push_back(spot_light);*/
-
 	return error;
 }
 
@@ -114,6 +95,10 @@ void RoomsEngine::clean()
 
     Node2D::clean();
 
+    if (scene_editor) {
+        scene_editor->clean();
+    }
+
     if (sculpt_editor) {
         sculpt_editor->clean();
     }
@@ -121,17 +106,14 @@ void RoomsEngine::clean()
 
 void RoomsEngine::update(float delta_time)
 {
-    Node3D* node = (Node3D*)main_scene->get_nodes().back();
-
-    glm::vec3 right_controller_pos = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
-    Transform t = mat4ToTransform(node->get_model());
-
-    if (gizmo.update(t, right_controller_pos, delta_time)) {
-        node->set_transform(t);
+    // Update controller UI
+    if (renderer->get_openxr_available()) {
+        controller_mesh_right->set_model(Input::get_controller_pose(HAND_RIGHT));
+        controller_mesh_left->set_model(Input::get_controller_pose(HAND_LEFT));
     }
 
-    if (sculpt_editor) {
-        sculpt_editor->update(delta_time);
+    if (current_editor) {
+        current_editor->update(delta_time);
     }
 
     Engine::update(delta_time);
@@ -140,7 +122,7 @@ void RoomsEngine::update(float delta_time)
 
     if (Renderer::instance->get_openxr_available())
     {
-        glm::mat4x4 raycast_transform = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
+        const glm::mat4x4& raycast_transform = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
         raycast_pointer->set_model(raycast_transform);
     }
 
@@ -154,24 +136,52 @@ void RoomsEngine::update(float delta_time)
 
 void RoomsEngine::render()
 {
+    main_scene->render();
+
+    if (current_editor) {
+        current_editor->render();
+    }
+
+    if (Renderer::instance->get_openxr_available()) {
+        raycast_pointer->render();
+    }
+
 #ifndef __EMSCRIPTEN__
     render_gui();
 #endif
 
-    main_scene->render();
-
-    gizmo.render();
-
-    if (Renderer::instance->get_openxr_available())
-    {
-        raycast_pointer->render();
-    }
-
-    if (sculpt_editor) {
-        sculpt_editor->render();
-    }
-
     Engine::render();
+}
+
+void RoomsEngine::render_controllers()
+{
+    RoomsEngine* i = static_cast<RoomsEngine*>(instance);
+
+    if (i->renderer->get_openxr_available()) {
+        i->controller_mesh_right->render();
+        i->controller_mesh_left->render();
+    }
+}
+
+void RoomsEngine::switch_editor(uint8_t editor)
+{
+    RoomsEngine* i = static_cast<RoomsEngine*>(instance);
+
+    switch (editor)
+    {
+    case SCENE_EDITOR:
+        i->current_editor = i->scene_editor;
+        break;
+    case SCULPT_EDITOR:
+        i->current_editor = i->sculpt_editor;
+        break;
+    case SHAPE_EDITOR:
+        // ...
+        break;
+    default:
+        assert(0 && "Editor is not created!");
+        break;
+    }
 }
 
 bool RoomsEngine::export_scene()
@@ -326,6 +336,8 @@ void RoomsEngine::render_gui()
 {
     bool active = true;
 
+    RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
+
     // ImGui::SetNextWindowSize({ 300, 400 });
     ImGui::Begin("Debug panel", &active, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoFocusOnAppearing);
 
@@ -389,14 +401,19 @@ void RoomsEngine::render_gui()
             }
             ImGui::EndTabItem();
         }
-        if (ImGui::BeginTabItem("Sculpt Editor"))
+        if (scene_editor && ImGui::BeginTabItem("Scene Editor"))
+        {
+            scene_editor->render_gui();
+            ImGui::EndTabItem();
+        }
+        if (sculpt_editor && ImGui::BeginTabItem("Sculpt Editor"))
         {
             sculpt_editor->render_gui();
             ImGui::EndTabItem();
         }
         if (ImGui::BeginTabItem("Debugger"))
         {
-            const RayIntersectionInfo& info = static_cast<RoomsRenderer*>(RoomsRenderer::instance)->get_raymarching_renderer()->get_ray_intersection_info();
+            const RayIntersectionInfo& info = rooms_renderer->get_raymarching_renderer()->get_ray_intersection_info();
             std::string intersected = info.intersected ? "yes" : "no";
             ImGui::Text(("Ray Intersection: " + intersected).c_str());
             ImGui::Text(("Tile pointer: " + std::to_string(info.tile_pointer)).c_str());
@@ -415,6 +432,24 @@ void RoomsEngine::render_gui()
                 else {
                     Renderer::instance->set_msaa_count(1);
                 }
+            }
+
+            ImGui::Separator();
+
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(ImColor(0, 255, 0, 255)));
+            ImGui::Text("Timestamp queries:");
+            ImGui::PopStyleColor();
+
+            std::vector<float> timestamps = renderer->get_last_frame_timestamps();
+            std::map<uint8_t, std::string>& queries_map = renderer->get_queries_label_map();
+
+            ImGui::Text("\tlast evaluation time: %.4f", rooms_renderer->get_last_evaluation_time());
+
+            for (int i = 0; i < timestamps.size(); ++i) {
+                float time = timestamps[i];
+                std::string label = queries_map[i * 2 + 1];
+
+                ImGui::Text(("\t" + label + ": %.4f").c_str(), time);
             }
 
             ImGui::EndTabItem();

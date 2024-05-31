@@ -8,7 +8,15 @@ class Node;
 class Node3D;
 class MeshInstance3D;
 class Environment3D;
+class BaseEditor;
 class SculptEditor;
+class SceneEditor;
+
+enum Editor : uint8_t {
+    SCENE_EDITOR,
+    SCULPT_EDITOR,
+    SHAPE_EDITOR
+};
 
 #define _DESTROY_(x) if(x) { delete x; }
 
@@ -16,14 +24,20 @@ class RoomsEngine : public Engine
 {
     MeshInstance3D* raycast_pointer = nullptr;
 
+    BaseEditor* current_editor = nullptr;
+
     SculptEditor* sculpt_editor = nullptr;
+
+    SceneEditor* scene_editor = nullptr;
 
     bool export_scene();
     bool import_scene();
 
     void render_gui();
 
-    static Gizmo3D gizmo;
+    // Meta quest controller meshes
+    MeshInstance3D* controller_mesh_left = nullptr;
+    MeshInstance3D* controller_mesh_right = nullptr;
 
 public:
 
@@ -34,4 +48,8 @@ public:
 	void render() override;
 
     bool show_tree_recursive(Node* entity);
+
+    static void render_controllers();
+
+    static void switch_editor(uint8_t editor);
 };

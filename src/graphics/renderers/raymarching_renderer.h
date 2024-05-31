@@ -222,6 +222,8 @@ class RaymarchingRenderer {
     bool needs_undo = false;
     bool needs_redo = false;
 
+    bool performed_evaluation = false;
+
     // DEBUG
     MeshInstance3D *AABB_mesh;
 
@@ -243,6 +245,8 @@ public:
     inline void undo() {
         needs_undo = true;
     }
+
+    bool has_performed_evaluation() { return performed_evaluation; }
 
     void set_sculpt_start_position(const glm::vec3& position);
     void set_sculpt_rotation(const glm::quat& rotation);

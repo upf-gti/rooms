@@ -2,7 +2,6 @@
 
 #include "includes.h"
 
-#include "framework/nodes/ui.h"
 #include "framework/input.h"
 #include "framework/nodes/viewport_3d.h"
 #include "framework/scene/parse_gltf.h"
@@ -38,13 +37,14 @@ void SculptEditor::initialize()
     Material mirror_material;
     mirror_material.priority = 0;
     mirror_material.transparency_type = ALPHA_BLEND;
+    mirror_material.cull_type = CULL_NONE;
     mirror_material.diffuse_texture = RendererStorage::get_texture("data/textures/mirror_quad_texture.png");
     mirror_material.shader = RendererStorage::get_shader_from_source(shaders::mesh_texture::source, shaders::mesh_texture::path, mirror_material);
 
     mirror_mesh->set_surface_material_override(mirror_mesh->get_surface(0), mirror_material);
 
-    axis_lock_gizmo.initialize(POSITION_GIZMO, sculpt_start_position);
-    mirror_gizmo.initialize(POSITION_GIZMO, sculpt_start_position);
+    axis_lock_gizmo.initialize(TRANSLATION_GIZMO, sculpt_start_position);
+    mirror_gizmo.initialize(TRANSLATION_GIZMO, sculpt_start_position);
     mirror_origin = sculpt_start_position;
 
     // Sculpt area box
@@ -133,18 +133,6 @@ void SculptEditor::initialize()
     enable_tool(SCULPT);
     renderer->change_stroke(stroke_parameters, 0u);
 
-    // Meta Quest Controllers
-    if(renderer->get_openxr_available())
-    {
-        std::vector<Node*> entities;
-        parse_gltf("data/meshes/controllers/left_controller.glb", entities);
-        parse_gltf("data/meshes/controllers/right_controller.glb", entities);
-        controller_mesh_left = static_cast<MeshInstance3D*>(entities[0]);
-        controller_mesh_right = static_cast<MeshInstance3D*>(entities[1]);
-
-        Engine::instance->get_main_scene()->add_nodes(entities);
-    }
-
     /*ui::VContainer2D* test_root = new ui::VContainer2D("test_root", { 0.0f, 0.0f });
     test_root->set_centered(true);
 
@@ -162,12 +150,8 @@ void SculptEditor::clean()
     _DESTROY_(sculpt_area_box);
     _DESTROY_(mesh_preview);
     _DESTROY_(mesh_preview_outline);
-    _DESTROY_(right_hand_ui_3D);
-    _DESTROY_(left_hand_ui_3D);
 
-    // TODO
-    // Clean all UI widgets
-    // ...
+    BaseEditor::clean();
 }
 
 bool SculptEditor::is_tool_being_used(bool stamp_enabled)
@@ -435,22 +419,9 @@ void SculptEditor::update(float delta_time)
         return;
     }
 
-    // Update UI
+    BaseEditor::update(delta_time);
+
     {
-        if (main_panel_3d) {
-            glm::mat4x4 pose = Input::get_controller_pose(HAND_LEFT, POSE_AIM);
-            pose = glm::rotate(pose, glm::radians(-45.f), glm::vec3(1.0f, 0.0f, 0.0f));
-            main_panel_3d->set_model(pose);
-        }
-        // This is only for 2d mode..
-        else {
-            main_panel_2d->update(delta_time);
-
-            if (is_picking_material && Input::was_mouse_pressed(GLFW_MOUSE_BUTTON_RIGHT)) {
-                pick_material();
-            }
-        }
-
         // Update controller UI
         if (renderer->get_openxr_available()) {
 
@@ -458,11 +429,9 @@ void SculptEditor::update(float delta_time)
             m = glm::translate(m, glm::vec3(0.02f, 0.0f, 0.02f));
 
             glm::mat4x4 pose = Input::get_controller_pose(HAND_RIGHT);
-            controller_mesh_right->set_model(pose);
             right_hand_ui_3D->set_model(pose * m);
 
             pose = Input::get_controller_pose(HAND_LEFT);
-            controller_mesh_left->set_model(pose);
             left_hand_ui_3D->set_model(pose * m);
 
             is_shift_left_pressed = Input::is_grab_pressed(HAND_LEFT);
@@ -891,15 +860,9 @@ void SculptEditor::render()
         mirror_mesh->render();
     }
 
-    if (!main_panel_3d) {
-        main_panel_2d->render();
-    }
+    BaseEditor::render();
 
-    if (renderer->get_openxr_available())
-    {
-        controller_mesh_right->render();
-        controller_mesh_left->render();
-    }
+    RoomsEngine::render_controllers();
 
     // Render always or only XR?
     sculpt_area_box->set_translation(sculpt_start_position + translation_diff);
@@ -907,10 +870,6 @@ void SculptEditor::render()
     sculpt_area_box->rotate(glm::inverse(sculpt_rotation * rotation_diff));
     sculpt_area_box->render();
 }
-
-// =====================
-// GUI =================
-// =====================
 
 void SculptEditor::render_gui()
 {
@@ -1138,7 +1097,7 @@ void SculptEditor::init_ui()
         // Add recent colors around the picker
         {
             size_t child_count = 5;
-            float sample_size = 36.0f;
+            float sample_size = 32.0f;
             float full_size = color_picker->get_size().x + sample_size;
             float radius = full_size * 0.515f;
 
@@ -1169,7 +1128,7 @@ void SculptEditor::init_ui()
 
     // ** Primitives **
     {
-        ui::ButtonSelector2D* prim_selector = new ui::ButtonSelector2D("primitives", "data/textures/primitives.png");
+        ui::ButtonSelector2D* prim_selector = new ui::ButtonSelector2D("shapes", "data/textures/primitives.png");
         prim_selector->add_child(new ui::TextureButton2D("sphere", "data/textures/sphere.png", ui::SELECTED));
         prim_selector->add_child(new ui::TextureButton2D("cube", "data/textures/cube.png"));
         prim_selector->add_child(new ui::TextureButton2D("cone", "data/textures/cone.png"));
@@ -1195,7 +1154,7 @@ void SculptEditor::init_ui()
                 ui::ItemGroup2D* g_edit_sizes = new ui::ItemGroup2D("g_edit_sizes");
                 g_edit_sizes->add_child(new ui::Slider2D("main_size", edit_to_add.dimensions.x, ui::SliderMode::HORIZONTAL, 0, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE, 3));
                 g_edit_sizes->add_child(new ui::Slider2D("secondary_size", edit_to_add.dimensions.y, ui::SliderMode::HORIZONTAL, 0, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE, 3));
-                g_edit_sizes->add_child(new ui::Slider2D("round_size", edit_to_add.dimensions.w, ui::SliderMode::VERTICAL, 0, 0.0f, MAX_PRIMITIVE_SIZE, 2));
+                g_edit_sizes->add_child(new ui::Slider2D("round_size", "data/textures/rounding.png", edit_to_add.dimensions.w, ui::SliderMode::VERTICAL, 0, 0.0f, MAX_PRIMITIVE_SIZE, 2));
                 shape_editor_submenu->add_child(g_edit_sizes);
             }
 
@@ -1246,7 +1205,7 @@ void SculptEditor::init_ui()
             {
                 ui::ItemGroup2D* g_saved_materials = new ui::ItemGroup2D("g_saved_materials");
 
-                g_saved_materials->add_child(new ui::TextureButton2D("save_material", "data/textures/submenu_mark.png"));
+                g_saved_materials->add_child(new ui::TextureButton2D("save_material", "data/textures/add.png"));
                 g_saved_materials->add_child(new ui::TextureButton2D("pick_material", "data/textures/pick_material.png", ui::ALLOW_TOGGLE));
 
                 {
@@ -1321,6 +1280,9 @@ void SculptEditor::init_ui()
         first_row->add_child(guides_submenu);
     }
 
+    // ** Go back to scene editor **
+    second_row->add_child(new ui::TextureButton2D("go_back", "data/textures/back.png"));
+
     // ** Main tools (SCULPT & PAINT) **
     {
         ui::ComboButtons2D* combo_main_tools = new ui::ComboButtons2D("combo_main_tools");
@@ -1345,7 +1307,6 @@ void SculptEditor::init_ui()
     if (renderer->get_openxr_available()) {
         main_panel_3d = new Viewport3D(main_panel_2d);
         main_panel_3d->set_active(true);
-        RoomsEngine::instance->get_main_scene()->add_node(main_panel_3d);
     }
 
     // Load controller UI labels
@@ -1397,6 +1358,10 @@ void SculptEditor::init_ui()
 
 void SculptEditor::bind_events()
 {
+    Node::bind("go_back", [&](const std::string& signal, void* button) {
+        RoomsEngine::switch_editor(SCENE_EDITOR);
+    });
+
     Node::bind("add", [&](const std::string& signal, void* button) {
         enable_tool(SCULPT);
         set_operation(OP_SMOOTH_UNION);
@@ -1435,9 +1400,9 @@ void SculptEditor::bind_events()
     Node::bind("cap_value", [&](const std::string& signal, float value) { set_cap_modifier(value); });
 
     Node::bind("mirror_toggle", [&](const std::string& signal, void* button) { use_mirror = !use_mirror; });
-    Node::bind("mirror_translation", [&](const std::string& signal, void* button) { mirror_gizmo.set_mode(eGizmoType::POSITION_GIZMO); });
-    Node::bind("mirror_rotation", [&](const std::string& signal, void* button) { mirror_gizmo.set_mode(eGizmoType::ROTATION_GIZMO); });
-    Node::bind("mirror_both", [&](const std::string& signal, void* button) { mirror_gizmo.set_mode(eGizmoType::POSITION_ROTATION_GIZMO); });
+    Node::bind("mirror_translation", [&](const std::string& signal, void* button) { mirror_gizmo.set_operation(eGizmoType::TRANSLATION_GIZMO); });
+    Node::bind("mirror_rotation", [&](const std::string& signal, void* button) { mirror_gizmo.set_operation(eGizmoType::ROTATION_GIZMO); });
+    Node::bind("mirror_both", [&](const std::string& signal, void* button) { mirror_gizmo.set_operation(eGizmoType::POSITION_ROTATION_GIZMO); });
     Node::bind("snap_to_surface", [&](const std::string& signal, void* button) { snap_to_surface = !snap_to_surface; });
     Node::bind("snap_to_grid", [&](const std::string& signal, void* button) { snap_to_grid = !snap_to_grid; });
     Node::bind("lock_axis_toggle", [&](const std::string& signal, void* button) { axis_lock = !axis_lock; });

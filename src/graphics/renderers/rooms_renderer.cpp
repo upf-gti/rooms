@@ -118,11 +118,7 @@ void RoomsRenderer::update(float delta_time)
         camera->update(delta_time);
     }
 
-    timestamp(global_command_encoder, "pre_evaluation");
-
     raymarching_renderer.update_sculpt(global_command_encoder);
-
-    timestamp(global_command_encoder, "evaluation");
 }
 
 void RoomsRenderer::render()
@@ -159,8 +155,6 @@ void RoomsRenderer::render()
 
     wgpuQueueSubmit(webgpu_context->device_queue, 1, &commands);
 
-    //print_timestamps();
-
     wgpuCommandBufferRelease(commands);
     wgpuCommandEncoderRelease(global_command_encoder);
 
@@ -183,6 +177,12 @@ void RoomsRenderer::render()
         wgpuSwapChainPresent(webgpu_context->screen_swapchain);
     }
 #endif
+
+    last_frame_timestamps = get_timestamps();
+
+    if (!last_frame_timestamps.empty() && raymarching_renderer.has_performed_evaluation()) {
+        last_evaluation_time = last_frame_timestamps[0];
+    }
 
     clear_renderables();
 }
@@ -243,7 +243,12 @@ void RoomsRenderer::render_screen(WGPUTextureView swapchain_view)
         render_pass_descr.colorAttachments = &render_pass_color_attachment;
         render_pass_descr.depthStencilAttachment = &render_pass_depth_attachment;
 
-        timestamp(global_command_encoder, "pre_render");
+        std::vector<WGPURenderPassTimestampWrites> timestampWrites(1);
+        timestampWrites[0].beginningOfPassWriteIndex = timestamp(global_command_encoder, "pre_render");
+        timestampWrites[0].querySet = timestamp_query_set;
+        timestampWrites[0].endOfPassWriteIndex = timestamp(global_command_encoder, "render");
+
+        render_pass_descr.timestampWrites = timestampWrites.data();
 
         // Create & fill the render pass (encoder)
         WGPURenderPassEncoder render_pass = wgpuCommandEncoderBeginRenderPass(global_command_encoder, &render_pass_descr);
@@ -262,7 +267,7 @@ void RoomsRenderer::render_screen(WGPUTextureView swapchain_view)
 
         wgpuRenderPassEncoderRelease(render_pass);
 
-        timestamp(global_command_encoder, "render");
+        //timestamp(global_command_encoder, "render");
 
         // render imgui
         {
