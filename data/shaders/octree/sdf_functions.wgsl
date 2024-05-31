@@ -1137,6 +1137,6 @@ fn evaluate_single_edit( position : vec3f, primitive : u32, operation : u32, par
             break;
         }
     }
-
+    
     return pSurface;
 }

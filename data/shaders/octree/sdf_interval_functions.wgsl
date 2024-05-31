@@ -751,25 +751,6 @@ fn eval_interval_stroke_sphere_smooth_union( position : mat3x3f, current_surface
     return result_surface;
 }
 
-fn eval_interval_stroke_sphere_smooth_substraction( position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>) -> vec2f {
-    var result_surface : vec2f = current_surface;
-    var tmp_surface : vec2f;
-
-    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
-    let edit_count : u32 = (*curr_stroke).edit_count;
-    let parameters : vec4f = (*curr_stroke).parameters;
-
-    let smooth_factor : f32 = parameters.w;
-
-    for(var i : u32 = 0u; i < edit_count; i++) {
-        let curr_edit : Edit = edit_array[i];
-        tmp_surface = sphere_interval(position, curr_edit.position, curr_edit.dimensions, curr_edit.rotation);
-        result_surface = opSmoothSubtractionInterval(result_surface, tmp_surface, smooth_factor);
-    }
-    
-    return result_surface;
-}
-
 /*
 ______           
 | ___ \          
@@ -819,26 +800,6 @@ fn eval_interval_stroke_box_smooth_union( position : mat3x3f, current_surface : 
 
     return result_surface;
 }
-
-fn eval_interval_stroke_box_smooth_substraction( position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke> ) -> vec2f {
-    var result_surface : vec2f = current_surface;
-    var tmp_surface : vec2f;
-    
-    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
-    let edit_count : u32 = (*curr_stroke).edit_count;
-    let parameters : vec4f = (*curr_stroke).parameters;
-
-    let smooth_factor : f32 = parameters.w;
-
-    for(var i : u32 = 0u; i < edit_count; i++) {
-        let curr_edit : Edit = edit_array[i];
-        tmp_surface = box_interval(position, curr_edit.position, curr_edit.dimensions, curr_edit.rotation);
-        result_surface = opSmoothSubtractionInterval(result_surface, tmp_surface, smooth_factor);
-    }
-
-    return result_surface;
-}
-
 /*
  _____                       _      
 /  __ \                     | |     
@@ -874,25 +835,6 @@ fn eval_interval_stroke_capsule_smooth_union(position : mat3x3f, current_surface
         let curr_edit : Edit = edit_array[i];
         tmp_surface = capsule_interval(position, curr_edit.position, curr_edit.dimensions.x, curr_edit.dimensions.y, curr_edit.rotation);
         result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
-    }
-
-    return result_surface;
-}
-
-fn eval_interval_stroke_capsule_substraction(position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>) -> vec2f {
-    var result_surface : vec2f = current_surface;
-    var tmp_surface : vec2f;
-    
-    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
-    let edit_count : u32 = (*curr_stroke).edit_count;
-    let parameters : vec4f = (*curr_stroke).parameters;
-
-    let smooth_factor : f32 = parameters.w;
-
-    for(var i : u32 = 0u; i < edit_count; i++) {
-        let curr_edit : Edit = edit_array[i];
-        tmp_surface = capsule_interval(position, curr_edit.position, curr_edit.dimensions.x, curr_edit.dimensions.y, curr_edit.rotation);
-        result_surface = opSmoothSubtractionInterval(result_surface, tmp_surface, smooth_factor);
     }
 
     return result_surface;
@@ -961,25 +903,6 @@ fn eval_interval_stroke_cone_smooth_union(position : mat3x3f, current_surface : 
     return result_surface;
 }
 
-fn eval_interval_stroke_cone_substraction(position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>) -> vec2f {
-    var result_surface : vec2f = current_surface;
-    var tmp_surface : vec2f;
-    
-    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
-    let edit_count : u32 = (*curr_stroke).edit_count;
-    let parameters : vec4f = (*curr_stroke).parameters;
-
-    let smooth_factor : f32 = parameters.w;
-
-    for(var i : u32 = 0u; i < edit_count; i++) {
-        let curr_edit : Edit = edit_array[i];
-        tmp_surface = cone_interval(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation);
-        result_surface = opSmoothSubtractionInterval(result_surface, tmp_surface, smooth_factor);
-    }
-
-    return result_surface;
-}
-
 /*
  _____       _ _           _           
 /  __ \     | (_)         | |          
@@ -1025,25 +948,6 @@ fn eval_interval_stroke_cylinder_smooth_union(position : mat3x3f, current_surfac
         let curr_edit : Edit = edit_array[i];
         tmp_surface = cylinder_interval(position, curr_edit.position, curr_edit.dimensions, curr_edit.rotation);
         result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
-    }
-
-    return result_surface;
-}
-
-fn eval_interval_stroke_cylinder_substraction(position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>) -> vec2f {
-    var result_surface : vec2f = current_surface;
-    var tmp_surface : vec2f;
-    
-    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
-    let edit_count : u32 = (*curr_stroke).edit_count;
-    let parameters : vec4f = (*curr_stroke).parameters;
-
-    let smooth_factor : f32 = parameters.w;
-
-    for(var i : u32 = 0u; i < edit_count; i++) {
-        let curr_edit : Edit = edit_array[i];
-        tmp_surface = cylinder_interval(position, curr_edit.position, curr_edit.dimensions, curr_edit.rotation);
-        result_surface = opSmoothSubtractionInterval(result_surface, tmp_surface, smooth_factor);
     }
 
     return result_surface;
@@ -1127,34 +1031,6 @@ fn eval_interval_stroke_torus_smooth_union(position : mat3x3f, current_surface :
     return result_surface;
 }
 
-fn eval_interval_stroke_torus_substraction(position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>) -> vec2f {
-    var result_surface : vec2f = current_surface;
-    var tmp_surface : vec2f;
-    
-    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
-    let edit_count : u32 = (*curr_stroke).edit_count;
-    let parameters : vec4f = (*curr_stroke).parameters;
-
-    let smooth_factor : f32 = parameters.w;
-    let cap_value : f32 = parameters.y;
-
-    if(cap_value > 0.0) {
-        for(var i : u32 = 0u; i < edit_count; i++) {
-            let curr_edit : Edit = edit_array[i];
-            tmp_surface = capped_torus_interval(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation);
-            result_surface = opSmoothSubtractionInterval(result_surface, tmp_surface, smooth_factor);
-        }
-    } else {
-        for(var i : u32 = 0u; i < edit_count; i++) {
-            let curr_edit : Edit = edit_array[i];
-            tmp_surface = torus_interval(position, curr_edit.position, curr_edit.dimensions, curr_edit.rotation);
-            result_surface = opSmoothSubtractionInterval(result_surface, tmp_surface, smooth_factor);
-        }
-    }
-
-    return result_surface;
-}
-
 /*
 ______          _           
 | ___ \        (_)          
@@ -1213,6 +1089,7 @@ fn bezier_interval( p : mat3x3f, start : vec3f, cp : vec3f, end : vec3f, thickne
 \____/ \__|_|  \___/|_|\_\___| \____/ \_/ \__,_|_|\__,_|\__,_|\__|_|\___/|_| |_|
 */
 
+
 fn evaluate_stroke_interval( position: mat3x3f, stroke: ptr<storage, Stroke, read>, current_surface : vec2f, center : vec3f, half_size : f32) -> vec2f {
     let stroke_operation : u32 = (*stroke).operation;
     let stroke_primitive : u32 = (*stroke).primitive;
@@ -1220,14 +1097,21 @@ fn evaluate_stroke_interval( position: mat3x3f, stroke: ptr<storage, Stroke, rea
     let curr_stroke_code : u32 = stroke_primitive | (stroke_operation << 4u);
 
     var result_surface : vec2f = current_surface;
+    let initial_surface : vec2f = vec2f(10000.0, 10000.0);
+
+    let edit_count : u32 = (*stroke).edit_count;
+    let parameters : vec4f = (*stroke).parameters;
+
+    let smooth_factor : f32 = parameters.w;
 
     switch(curr_stroke_code) {
         case SD_SPHERE_SMOOTH_OP_UNION: {
-            result_surface = eval_interval_stroke_sphere_smooth_union(position, result_surface, stroke, vec4f(0.0));
+            result_surface = eval_interval_stroke_sphere_smooth_union(position, current_surface, stroke, vec4f(0.0));
             break;
         }
         case SD_SPHERE_SMOOTH_OP_SUBSTRACTION: {
-            result_surface = eval_interval_stroke_sphere_smooth_substraction(position, result_surface, stroke);
+            result_surface = eval_interval_stroke_sphere_smooth_union(position, initial_surface, stroke, vec4f(0.0));
+            result_surface = opSmoothSubtractionInterval(current_surface, result_surface, smooth_factor);
             break;
         }
         case SD_BOX_SMOOTH_OP_UNION: {
@@ -1235,7 +1119,8 @@ fn evaluate_stroke_interval( position: mat3x3f, stroke: ptr<storage, Stroke, rea
             break;
         }
         case SD_BOX_SMOOTH_OP_SUBSTRACTION: {
-            result_surface = eval_interval_stroke_box_smooth_substraction(position, result_surface, stroke);
+            result_surface = eval_interval_stroke_box_smooth_union(position, initial_surface, stroke, vec4f(0.0));
+            result_surface = opSmoothSubtractionInterval(current_surface, result_surface, smooth_factor);
             break;
         }
         case SD_CAPSULE_SMOOTH_OP_UNION: {
@@ -1243,7 +1128,8 @@ fn evaluate_stroke_interval( position: mat3x3f, stroke: ptr<storage, Stroke, rea
             break;
         }
         case SD_CAPSULE_SMOOTH_OP_SUBSTRACTION: {
-            result_surface = eval_interval_stroke_capsule_substraction(position, result_surface, stroke);
+            result_surface = eval_interval_stroke_capsule_smooth_union(position, initial_surface, stroke, vec4f(0.0));
+            result_surface = opSmoothSubtractionInterval(current_surface, result_surface, smooth_factor);
             break;
         }
         case SD_CONE_SMOOTH_OP_UNION: {
@@ -1251,7 +1137,8 @@ fn evaluate_stroke_interval( position: mat3x3f, stroke: ptr<storage, Stroke, rea
             break;
         }
         case SD_CONE_SMOOTH_OP_SUBSTRACTION: {
-            result_surface = eval_interval_stroke_cone_substraction(position, result_surface, stroke);
+            result_surface = eval_interval_stroke_cone_smooth_union(position, initial_surface, stroke, vec4f(0.0));
+            result_surface = opSmoothSubtractionInterval(current_surface, result_surface, smooth_factor);
             break;
         }
         case SD_CYLINDER_SMOOTH_OP_UNION: {
@@ -1259,7 +1146,8 @@ fn evaluate_stroke_interval( position: mat3x3f, stroke: ptr<storage, Stroke, rea
             break;
         }
         case SD_CYLINDER_SMOOTH_OP_SUBSTRACTION: {
-            result_surface = eval_interval_stroke_cylinder_substraction(position, result_surface, stroke);
+            result_surface = eval_interval_stroke_cylinder_smooth_union(position, initial_surface, stroke, vec4f(0.0));
+            result_surface = opSmoothSubtractionInterval(current_surface, result_surface, smooth_factor);
             break;
         }
         case SD_TORUS_SMOOTH_OP_UNION: {
@@ -1267,7 +1155,8 @@ fn evaluate_stroke_interval( position: mat3x3f, stroke: ptr<storage, Stroke, rea
             break;
         }
         case SD_TORUS_SMOOTH_OP_SUBSTRACTION: {
-            result_surface = eval_interval_stroke_torus_substraction(position, result_surface, stroke);
+            result_surface = eval_interval_stroke_torus_smooth_union(position, initial_surface, stroke, vec4f(0.0));
+            result_surface = opSmoothSubtractionInterval(current_surface, result_surface, smooth_factor);
             break;
         }
         default: {}
