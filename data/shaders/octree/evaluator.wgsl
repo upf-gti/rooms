@@ -6,7 +6,7 @@
 @group(0) @binding(1) var<uniform> merge_data : MergeData;
 @group(0) @binding(2) var<storage, read_write> octree : Octree;
 @group(0) @binding(5) var<storage, read_write> brick_buffers: BrickBuffers;
-@group(0) @binding(6) var<storage, read> stroke_history : StrokeHistory; 
+@group(0) @binding(6) var<storage, read> stroke_history : StrokeHistory;
 
 @group(1) @binding(0) var<storage, read> octant_usage_read : array<u32>;
 @group(1) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
@@ -238,8 +238,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     let octant_min : vec3f = octant_center - vec3f(level_half_size);
     let octant_max : vec3f = octant_center + vec3f(level_half_size);
 
-    let is_in_reevaluation_zone : bool = intersection_AABB_AABB(merge_data.reevaluation_AABB_min, merge_data.reevaluation_AABB_max, octant_min, octant_max);
-
     var current_stroke_interval : vec2f = vec2f(10000.0, 10000.0);
     var surface_interval = vec2f(10000.0, 10000.0);
     var edit_counter : u32 = 0;
@@ -316,8 +314,9 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         octree.data[octree_index].octant_center_distance = surface_interval;
         
         if (level < OCTREE_DEPTH) {
+            //subdivide = intersection_AABB_AABB(eval_aabb_min, eval_aabb_max, stroke_history.eval_aabb_min, stroke_history.eval_aabb_max);
             subdivide = intersection_AABB_AABB(eval_aabb_min, eval_aabb_max, merge_data.reevaluation_AABB_min, merge_data.reevaluation_AABB_max);
-
+            
             // Broad culling using only the incomming stroke
             // TODO: intersection with current edit AABB?
             if (subdivide) {

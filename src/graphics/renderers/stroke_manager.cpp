@@ -89,6 +89,9 @@ void StrokeManager::undo(sToComputeStrokeData& result) {
 
     // Compute and fill intersection
     compute_history_intersection(result.in_frame_influence, culling_aabb, last_history_index);
+
+    result.in_frame_influence.eval_aabb_min = result.in_frame_stroke_aabb.center - result.in_frame_stroke_aabb.half_size;
+    result.in_frame_influence.eval_aabb_max = result.in_frame_stroke_aabb.center + result.in_frame_stroke_aabb.half_size;
 }
 
 
@@ -134,6 +137,9 @@ void StrokeManager::redo(sToComputeStrokeData& result) {
 
     // Compute and fill intersection
     compute_history_intersection(result.in_frame_influence, culling_aabb, history->size());
+
+    result.in_frame_influence.eval_aabb_min = result.in_frame_stroke_aabb.center - result.in_frame_stroke_aabb.half_size;
+    result.in_frame_influence.eval_aabb_max = result.in_frame_stroke_aabb.center + result.in_frame_stroke_aabb.half_size;
 }
 
 
@@ -167,7 +173,8 @@ void StrokeManager::add(std::vector<Edit> new_edits, sToComputeStrokeData& resul
 
     redo_history.clear();
 
-    
+    result.in_frame_influence.eval_aabb_min = result.in_frame_stroke_aabb.center - result.in_frame_stroke_aabb.half_size;
+    result.in_frame_influence.eval_aabb_max = result.in_frame_stroke_aabb.center + result.in_frame_stroke_aabb.half_size;
 }
 
 void StrokeManager::update() {

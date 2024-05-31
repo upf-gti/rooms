@@ -13,8 +13,10 @@ struct sStrokeInfluence {
     uint32_t pad_1 = UINT32_MAX; // aligment issues when using vec3
     uint32_t pad_0 = 0u;
     uint32_t pad_2 = UINT32_MAX;
-    glm::vec4 pad1;
-    glm::vec4 pad2;
+    glm::vec3 eval_aabb_min;
+    float pad1;
+    glm::vec3 eval_aabb_max;
+    float pad2;
     glm::vec4 pad3;
     Stroke strokes[STROKE_HISTORY_MAX_SIZE];
     glm::vec4 padd; // TODO(Juan): HACK esto no deveria ser necesario

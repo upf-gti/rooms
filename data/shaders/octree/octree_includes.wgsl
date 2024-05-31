@@ -82,9 +82,11 @@ struct StrokeHistory {
     pad0:u32,
     pad1:u32,
     pad2:u32,
-    pad12: vec4f,
-    pad22: vec4f,
-    pad32: vec4f,
+    eval_aabb_min : vec3f,
+    pad3 : f32,
+    eval_aabb_max : vec3f,
+    pad4 : f32,
+    pad5: vec4f,
     strokes : array<Stroke, STROKE_HISTORY_MAX_SIZE>
 };
 
