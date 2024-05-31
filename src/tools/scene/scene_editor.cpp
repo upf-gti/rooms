@@ -114,11 +114,11 @@ void SceneEditor::init_ui()
 
         // Lights
         {
-            ui::ButtonSubmenu2D* lights_submenu = new ui::ButtonSubmenu2D("light", "data/textures/x.png");
+            ui::ButtonSubmenu2D* lights_submenu = new ui::ButtonSubmenu2D("light", "data/textures/light.png");
             ui::ItemGroup2D* g_add_node = new ui::ItemGroup2D("g_light_types");
-            g_add_node->add_child(new ui::TextureButton2D("omni", "data/textures/m.png"));
-            g_add_node->add_child(new ui::TextureButton2D("directional", "data/textures/m.png"));
+            g_add_node->add_child(new ui::TextureButton2D("omni", "data/textures/x.png"));
             g_add_node->add_child(new ui::TextureButton2D("spot", "data/textures/m.png"));
+            g_add_node->add_child(new ui::TextureButton2D("directional", "data/textures/sun.png"));
             lights_submenu->add_child(g_add_node);
             add_node_submenu->add_child(lights_submenu);
         }
@@ -137,8 +137,8 @@ void SceneEditor::init_ui()
 
     // ** Import/Export scene **
     {
-        second_row->add_child(new ui::TextureButton2D("import", "data/textures/x.png"));
-        second_row->add_child(new ui::TextureButton2D("export", "data/textures/y.png"));
+        second_row->add_child(new ui::TextureButton2D("import", "data/textures/import.png"));
+        second_row->add_child(new ui::TextureButton2D("export", "data/textures/export.png"));
     }
 
     // ** Undo/Redo scene **
