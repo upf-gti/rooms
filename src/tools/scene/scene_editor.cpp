@@ -219,38 +219,9 @@ void SceneEditor::bind_events()
 
     // Lights
     {
-        Node::bind("omni", [&](const std::string& signal, void* button) {
-            OmniLight3D* new_light = new OmniLight3D();
-            new_light->set_name("omni_light");
-            new_light->set_translation({ 1.0f, 1.f, 0.0f });
-            new_light->set_color({ 1.0f, 1.0f, 1.0f });
-            new_light->set_intensity(1.0f);
-            new_light->set_range(5.0f);
-            main_scene->add_node(new_light);
-            add_node(new_light);
-        });
-
-        Node::bind("spot", [&](const std::string& signal, void* button) {
-            SpotLight3D* new_light = new SpotLight3D();
-            new_light->set_name("spot_light");
-            new_light->set_translation({ 0.0f, 1.f, 0.0f });
-            new_light->rotate(glm::radians(-90.f), { 1.f, 0.0f, 0.f });
-            new_light->set_color({ 1.0f, 1.0f, 1.0f });
-            new_light->set_intensity(1.0f);
-            new_light->set_range(5.0f);
-            main_scene->add_node(new_light);
-            add_node(new_light);
-        });
-
-        Node::bind("directional", [&](const std::string& signal, void* button) {
-            DirectionalLight3D* new_light = new DirectionalLight3D();
-            new_light->set_name("directional_light");
-            new_light->rotate(glm::radians(-90.f), { 1.f, 0.0f, 0.f });
-            new_light->set_color({ 1.0f, 0.2f, 0.0f });
-            new_light->set_intensity(2.0f);
-            main_scene->add_node(new_light);
-            add_node(new_light);
-        });
+        Node::bind("omni", [&](const std::string& signal, void* button) { create_light_node(LIGHT_OMNI); });
+        Node::bind("spot", [&](const std::string& signal, void* button) { create_light_node(LIGHT_SPOT); });
+        Node::bind("directional", [&](const std::string& signal, void* button) { create_light_node(LIGHT_DIRECTIONAL); });
     }
 
     Node::bind("clone", [&](const std::string& signal, void* button) { clone_node(); });
@@ -267,7 +238,7 @@ void SceneEditor::add_node(Node* node)
     selected_node = node;
 
     // To allow the user to move the node at the beginning
-    moving_node = is_gizmo_usable();
+    moving_node = is_gizmo_usable() && renderer->get_openxr_available();
 }
 
 void SceneEditor::clone_node()
@@ -277,6 +248,42 @@ void SceneEditor::clone_node()
     }
 
     // selected_node.clone() ?
+}
+
+Node* SceneEditor::create_light_node(uint8_t type)
+{
+    Light3D* new_light = nullptr;
+
+    switch (type)
+    {
+    case LIGHT_OMNI:
+        new_light = new OmniLight3D();
+        new_light->set_name("omni_light");
+        new_light->set_translation({ 1.0f, 1.f, 0.0f });
+        new_light->set_range(5.0f);
+        break;
+    case LIGHT_SPOT:
+        new_light = new SpotLight3D();
+        new_light->set_name("spot_light");
+        new_light->set_translation({ 0.0f, 1.f, 0.0f });
+        new_light->rotate(glm::radians(-90.f), { 1.f, 0.0f, 0.f });
+        new_light->set_range(5.0f);
+        break;
+        case LIGHT_DIRECTIONAL:
+        new_light = new DirectionalLight3D();
+        new_light->set_name("directional_light");
+        new_light->rotate(glm::radians(-90.f), { 1.f, 0.0f, 0.f });
+        break;
+    default:
+        assert(0 && "Unsppported light type!");
+        break;
+    }
+
+    new_light->set_color({ 1.0f, 1.0f, 1.0f });
+    new_light->set_intensity(1.0f);
+
+    main_scene->add_node(new_light);
+    add_node(new_light);
 }
 
 bool SceneEditor::is_gizmo_usable()

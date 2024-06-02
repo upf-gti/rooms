@@ -38,6 +38,8 @@ class SceneEditor : public BaseEditor {
     void add_node(Node* node);
     void clone_node();
 
+    Node* create_light_node(uint8_t type);
+
     /*
     *   UI
     */
