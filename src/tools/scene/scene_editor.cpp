@@ -9,15 +9,23 @@
 #include "framework/nodes/spot_light_3d.h"
 #include "framework/nodes/omni_light_3d.h"
 #include "framework/nodes/directional_light_3d.h"
+#include "framework/math/intersections.h"
 
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/renderer_storage.h"
+
+#include "shaders/mesh_color.wgsl.gen.h"
+#include "shaders/curved_quad_texture.wgsl.gen.h"
 
 #include "engine/rooms_engine.h"
 #include "engine/scene.h"
 
 #include "spdlog/spdlog.h"
 #include "imgui.h"
+
+MeshInstance3D* intersection_mesh = nullptr;
+
+uint32_t subdivisions = 16;
 
 void SceneEditor::initialize()
 {
@@ -34,6 +42,38 @@ void SceneEditor::initialize()
     SculptInstance* default_sculpt = new SculptInstance();
     RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
     rooms_renderer->get_raymarching_renderer()->set_current_sculpt(default_sculpt);
+
+    // Create curved quad for VR mode
+    {
+        curved_quad = new MeshInstance3D();
+        Surface* quad = new Surface();
+        quad->create_subvidided_quad(2.0f, 1.0f, subdivisions);
+        curved_quad->add_surface(quad);
+
+        Material curved_mesh_material;
+        curved_mesh_material.cull_type = CULL_NONE;
+        curved_mesh_material.transparency_type = ALPHA_BLEND;
+        curved_mesh_material.diffuse_texture = RendererStorage::get_texture("data/images/welcome_screen.png", true);
+        curved_mesh_material.shader = RendererStorage::get_shader_from_source(shaders::curved_quad_texture::source, shaders::curved_quad_texture::path, curved_mesh_material);
+        curved_quad->set_surface_material_override(curved_quad->get_surface(0), curved_mesh_material);
+
+        curved_quad->translate({ 0.0f, 0.5f, -1.0f });
+
+        main_scene->add_node(curved_quad);
+    }
+
+    // 
+
+    intersection_mesh = new MeshInstance3D();
+    intersection_mesh->add_surface(RendererStorage::get_surface("box"));
+    intersection_mesh->scale(glm::vec3(0.01f));
+
+    Material intersection_mesh_material;
+    intersection_mesh_material.color = colors::CYAN;
+    intersection_mesh_material.shader = RendererStorage::get_shader_from_source(shaders::mesh_color::source, shaders::mesh_color::path, intersection_mesh_material);
+    intersection_mesh->set_surface_material_override(intersection_mesh->get_surface(0), intersection_mesh_material);
+
+    main_scene->add_node(intersection_mesh);
 }
 
 void SceneEditor::clean()
@@ -57,6 +97,68 @@ void SceneEditor::update(float delta_time)
     }
 
     update_gizmo(delta_time);
+
+    // Update welcome screen following headset??
+    {
+        glm::mat4x4 m(1.0f);
+
+        glm::vec3 eye = renderer->get_camera_eye();
+        glm::vec3 new_pos = eye + renderer->get_camera_front() * 2.0f;
+
+        m = glm::translate(m, new_pos);
+        m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
+
+        // curved_quad->set_model(m);
+    }
+
+    // debug
+
+    glm::vec3 ray_origin;
+    glm::vec3 ray_direction;
+
+    if (Renderer::instance->get_openxr_available())
+    {
+        ray_origin = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
+        glm::mat4x4 select_hand_pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
+        ray_direction = get_front(select_hand_pose);
+    }
+    else
+    {
+        Camera* camera = Renderer::instance->get_camera();
+        glm::vec3 ray_dir = camera->screen_to_ray(Input::get_mouse_position());
+
+        ray_origin = camera->get_eye();
+        ray_direction = glm::normalize(ray_dir);
+    }
+
+    // Quad
+    glm::mat4x4 model = curved_quad->get_model();
+
+    glm::vec3 quad_position = model[3];
+    glm::quat quad_rotation = glm::quat_cast(model);
+    glm::vec2 quad_size = { 2.0f, 1.0f };
+
+    float collision_dist;
+    glm::vec3 intersection_point;
+    glm::vec3 local_intersection_point;
+
+    if (intersection::ray_curved_quad(
+        ray_origin,
+        ray_direction,
+        quad_position,
+        quad_size * 0.5f,
+        quad_rotation,
+        subdivisions,
+        0.35f,
+        intersection_point,
+        local_intersection_point,
+        collision_dist,
+        true
+    )) {
+        intersection_mesh->set_translation(intersection_point);
+        intersection_mesh->scale(glm::vec3(0.01f));
+    }
+
 }
 
 void SceneEditor::render()
@@ -250,7 +352,7 @@ void SceneEditor::clone_node()
     // selected_node.clone() ?
 }
 
-Node* SceneEditor::create_light_node(uint8_t type)
+void SceneEditor::create_light_node(uint8_t type)
 {
     Light3D* new_light = nullptr;
 

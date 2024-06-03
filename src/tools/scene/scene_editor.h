@@ -38,7 +38,7 @@ class SceneEditor : public BaseEditor {
     void add_node(Node* node);
     void clone_node();
 
-    Node* create_light_node(uint8_t type);
+    void create_light_node(uint8_t type);
 
     /*
     *   UI
@@ -46,6 +46,8 @@ class SceneEditor : public BaseEditor {
 
     void init_ui();
     void bind_events();
+
+    MeshInstance3D* curved_quad = nullptr;
 
 public:
 
