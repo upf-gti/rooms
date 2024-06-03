@@ -72,31 +72,31 @@ fn colorMix( a : vec3f, b : vec3f, n : f32 ) -> vec3f
     return sqrt(mix(aa, bb, n));
 }
 
-fn sminN( a : f32, b : f32, k : f32, n : f32 ) -> vec2f
-{
-    let h : f32 = max(k - abs(a - b), 0.0) / k;
-    let m : f32 = pow(h, n) * 0.5;
-    let s : f32 = m * k / n;
-    if (a < b) {
-        return vec2f(a - s, m);
-    } else {
-        return vec2f(b - s, 1.0 - m);
-    }
-}
+// fn sminN( a : f32, b : f32, k : f32, n : f32 ) -> vec2f
+// {
+//     let h : f32 = max(k - abs(a - b), 0.0) / k;
+//     let m : f32 = pow(h, n) * 0.5;
+//     let s : f32 = m * k / n;
+//     if (a < b) {
+//         return vec2f(a - s, m);
+//     } else {
+//         return vec2f(b - s, 1.0 - m);
+//     }
+// }
 
-fn soft_min(a : f32, b : f32, k : f32) -> vec2f 
-{ 
-    let h : f32 = max(k - abs(a - b), 0) / k; 
-    let m : f32 = h * h * 0.5;
-    return vec2f(min(a, b) - h * h * k * 0.25, select(1.0 - m, m, a < b)); 
-}
+// fn soft_min(a : f32, b : f32, k : f32) -> vec2f 
+// { 
+//     let h : f32 = max(k - abs(a - b), 0) / k; 
+//     let m : f32 = h * h * 0.5;
+//     return vec2f(min(a, b) - h * h * k * 0.25, select(1.0 - m, m, a < b)); 
+// }
 
 // From iqulzes and Dreams
 fn sminQuadratic(a : f32, b : f32, k : f32) -> vec2f {
     let norm_k : f32 = max(k, 0.00001);// * 4.0;
-    let h : f32 = max(norm_k - abs(a - b), 0.0) / norm_k;
+    let h : f32 = max(norm_k - abs(a - b), 0.0);
     let m : f32 = h*h;
-    let s : f32 = m*norm_k * 0.25;
+    let s : f32 = m * 0.25 / norm_k;
 
     if (a < b) {
         return vec2f(a - s, m *0.5);

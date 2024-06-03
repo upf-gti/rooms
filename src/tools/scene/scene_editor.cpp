@@ -73,7 +73,7 @@ void SceneEditor::initialize()
     intersection_mesh_material.shader = RendererStorage::get_shader_from_source(shaders::mesh_color::source, shaders::mesh_color::path, intersection_mesh_material);
     intersection_mesh->set_surface_material_override(intersection_mesh->get_surface(0), intersection_mesh_material);
 
-    main_scene->add_node(intersection_mesh);
+    //main_scene->add_node(intersection_mesh);
 }
 
 void SceneEditor::clean()

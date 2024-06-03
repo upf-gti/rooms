@@ -502,7 +502,7 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
         evaluate_strokes(compute_pass, &stroke_to_compute.in_frame_stroke);
     }
 
-    compute_preview_edit(compute_pass);
+    //compute_preview_edit(compute_pass);
 
     // Finalize compute_raymarching pass
     wgpuComputePassEncoderEnd(compute_pass);

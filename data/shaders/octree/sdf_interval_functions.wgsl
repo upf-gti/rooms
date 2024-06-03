@@ -154,6 +154,17 @@ fn imul_vec3_vec2(a : vec3f, b : vec2f) -> mat3x3f
 
 // Division
 
+fn idiv_float_vec(a : f32, b : vec2f) -> vec2f
+{
+	return idiv_vecs(vec2f(a), b);
+}
+
+fn idiv_vec_float(a : vec2f, b : f32) -> vec2f
+{
+	return idiv_vecs(a, vec2f(b));
+}
+
+
 fn idiv_vecs(a : vec2f, b : vec2f) -> vec2f
 {
 	return imul_vecs(a, iinv(b));
@@ -587,30 +598,33 @@ fn irotate_interval_mats(p : mat3x3f, q : vec4f) -> mat3x3f {
 
 // Interval sdfs
 
-fn sminN_interval( a : vec2f, b : vec2f, k : f32, n : f32 ) -> vec2f
-{
-    let h : vec2f = imul_float_vec(1.0 / k, imax(k + ineg(iabs(isub_vecs(a, b))), vec2f(0.0)));
-    let m : vec2f = imul_float_vec(0.5, ipow_vec(h, n));
-    let s : vec2f = imul_float_vec(k / n, m);
+// fn sminN_interval( a : vec2f, b : vec2f, k : f32, n : f32 ) -> vec2f
+// {
+//     let h : vec2f = imul_float_vec(1.0 / k, imax(k + ineg(iabs(isub_vecs(a, b))), vec2f(0.0)));
+//     let m : vec2f = imul_float_vec(0.5, ipow_vec(h, n));
+//     let s : vec2f = imul_float_vec(k / n, m);
 
-    return vec2f( iselect( isub_vecs(b, s), isub_vecs(a, s), ilessthan(a, b)));
-}
+//     return vec2f( iselect( isub_vecs(b, s), isub_vecs(a, s), ilessthan(a, b)));
+// }
 
-fn isoft_min(a : vec2f, b : vec2f, r : f32) -> vec2f 
-{ 
-    let e : vec2f = imax(r + ineg(iabs(isub_vecs(a, b))), vec2f(0.0)); 
-    return isub_vecs(imin(a, b), imul_float_vec(0.25 / r, imul_vecs(e, e)));
-}
+// fn isoft_min(a : vec2f, b : vec2f, r : f32) -> vec2f 
+// { 
+//     let e : vec2f = imax(r + ineg(iabs(isub_vecs(a, b))), vec2f(0.0)); 
+//     return isub_vecs(imin(a, b), imul_float_vec(0.25 / r, imul_vecs(e, e)));
+// }
 
 fn isoft_min_quadratic(a : vec2f, b : vec2f, k : f32) -> vec2f {
-    let norm_k : f32 = k;//* 4.0;
-    let h : vec2f = imax(imul_float_vec(1.0 / norm_k, norm_k + ineg(iabs(isub_vecs(a, b)))), vec2f(0.0));
-    //let h : vec2f = imul_float_vec(1.0 / norm_k, imax(norm_k + ineg(iabs(isub_vecs(a, b))), vec2f(0.0)));
-    let m : vec2f = ipow2_vec(h);
-    let s : vec2f = imul_float_vec(norm_k * 0.25, m);
+    let norm_k : f32 = max(k, 0.00001);//* 4.0;
 
-    return isub_vecs(imin(a,b), s);
-    //return vec2f( iselect( isub_vecs(b, s), isub_vecs(a, s), ilessthan(a, b)));
+    let a_div : vec2f = idiv_vec_float(a, norm_k);
+    let b_div : vec2f = idiv_vec_float(b, norm_k);
+
+    let h : vec2f = iclamp( iadd_float_vec(0.5, imul_float_vec(0.5, isub_vecs(b, a))), 0.0, 1.0);
+    let h_inv : vec2f = iadd_float_vec(1.0, ineg(h));
+    let s : vec2f = imul_vecs(imul_float_vec(norm_k, h), h_inv);
+
+    //return isub_vecs(imin(a,b), s);
+    return vec2f( iselect( isub_vecs(b, s), isub_vecs(a, s), ilessthan(a, b)));
 }
 
 fn opUnionInterval( s1 : vec2f, s2 : vec2f ) -> vec2f
@@ -630,7 +644,7 @@ fn opIntersectionInterval( s1 : vec2f, s2 : vec2f ) -> vec2f
 
 fn opSmoothUnionInterval( s1 : vec2f, s2 : vec2f, k : f32 ) -> vec2f
 {
-    return isoft_min_quadratic(s1, s2, k);
+    return isoft_min_quadratic(s2, s1, k);
 }
 
 fn opSmoothSubtractionInterval( s1 : vec2f, s2 : vec2f, k : f32 ) -> vec2f

@@ -21,7 +21,7 @@
 #define PREVIEW_PROXY_BRICKS_COUNT 7000u
 
 #define MIN_SMOOTH_FACTOR 0.0001f
-#define MAX_SMOOTH_FACTOR 0.02f
+#define MAX_SMOOTH_FACTOR 0.1f
 
 #define MIN_PRIMITIVE_SIZE 0.005f
 #define MAX_PRIMITIVE_SIZE 0.08f
@@ -256,6 +256,8 @@ public:
     void octree_ray_intersect(const glm::vec3& ray_origin, const glm::vec3& ray_dir, std::function<void(glm::vec3)> callback = nullptr);
 
     void get_brick_usage(std::function<void(float, uint32_t)> callback);
+
+    float get_brick_world_size() { return brick_world_size; }
 
     const RayIntersectionInfo& get_ray_intersection_info() const;
 

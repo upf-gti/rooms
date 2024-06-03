@@ -109,25 +109,26 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     // TODO(Juan): I dont like this for the SM occupany...
     workgroupBarrier();
 
-    if (local_id.x == 0 && local_id.y == 0 && local_id.z == 0) {
+    let value = brick_buffers.brick_removal_buffer[0];
+    // if (local_id.x == 0 && local_id.y == 0 && local_id.z == 0) {
 
-        let filled_pixel_count : u32 = atomicLoad(&used_pixels);
-        if (filled_pixel_count == 0u || filled_pixel_count == 1000u) {
+    //     let filled_pixel_count : u32 = atomicLoad(&used_pixels);
+    //     if (filled_pixel_count == 0u || filled_pixel_count == 1000u) {
             
-            brick_buffers.brick_instance_data[brick_index].in_use = 0;
-            // Add the brick to the indirect
-            let brick_to_delete_idx = atomicAdd(&brick_buffers.brick_removal_counter, 1u);
-            brick_buffers.brick_removal_buffer[brick_to_delete_idx] = brick_index;
+    //         brick_buffers.brick_instance_data[brick_index].in_use = 0;
+    //         // Add the brick to the indirect
+    //         let brick_to_delete_idx = atomicAdd(&brick_buffers.brick_removal_counter, 1u);
+    //         brick_buffers.brick_removal_buffer[brick_to_delete_idx] = brick_index;
 
-            octree.data[octree_leaf_id].octant_center_distance = vec2f(10000.0, 10000.0);
-            octree.data[octree_leaf_id].tile_pointer = 0u;
-        } 
-        // else {
-        //     // Add "filled" flag and remove "interior" flag
-        //     octree.data[octree_leaf_id].tile_pointer = brick_index | FILLED_BRICK_FLAG;
-        // }
+    //         octree.data[octree_leaf_id].octant_center_distance = vec2f(10000.0, 10000.0);
+    //         octree.data[octree_leaf_id].tile_pointer = 0u;
+    //     } 
+    //     // else {
+    //     //     // Add "filled" flag and remove "interior" flag
+    //     //     octree.data[octree_leaf_id].tile_pointer = brick_index | FILLED_BRICK_FLAG;
+    //     // }
 
-    }
+    // }
 
     // octree.data[octree_leaf_id].tile_pointer = brick_index | FILLED_BRICK_FLAG;
     // let brick_to_delete_idx = indirect_brick_removal.indirect_padding;

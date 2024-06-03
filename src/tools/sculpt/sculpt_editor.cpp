@@ -78,7 +78,7 @@ void SculptEditor::initialize()
 
     // Initialize default primitive states
     {
-        primitive_default_states[SD_SPHERE]     = { glm::vec4(0.02f, 0.0f,  0.0f,  0.0f) };
+        primitive_default_states[SD_SPHERE]     = { glm::vec4(0.005f, 0.0f,  0.0f,  0.0f) };
         primitive_default_states[SD_BOX]        = { glm::vec4(0.02f, 0.02f, 0.02f, 0.0f) };
         primitive_default_states[SD_CONE]       = { glm::vec4(0.05f, 0.05f, 0.0f,  0.0f) };
         primitive_default_states[SD_CYLINDER]   = { glm::vec4(0.03f, 0.05f, 0.0f,  0.0f) };
@@ -356,11 +356,12 @@ bool SculptEditor::edit_update(float delta_time)
 
             if (is_tool_being_used(stamp_enabled)) {
 
-                edit_to_add.position = glm::vec3(glm::vec3(0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1)));
+                float brick_world_size = renderer->get_raymarching_renderer()->get_brick_world_size();
+                edit_to_add.position = glm::vec3(0.0);
                 glm::vec3 euler_angles(glm::pi<float>() * random_f(), glm::pi<float>()* random_f(), glm::pi<float>()* random_f());
-                // edit_to_add.dimensions = glm::vec4(0.05f, 0.05f, 0.05f, 0.0f) * 1.0f;
+                //edit_to_add.dimensions = glm::vec4(0.05f, 0.05f, 0.05f, 0.0f) * 1.0f;
                 //edit_to_add.dimensions = (edit_to_add.operation == OP_SUBSTRACTION) ? 3.0f * glm::vec4(0.2f, 0.2f, 0.2f, 0.2f) : glm::vec4(0.2f, 0.2f, 0.2f, 0.2f);
-                edit_to_add.rotation = glm::normalize(glm::inverse(glm::normalize(glm::quat(euler_angles))));
+                edit_to_add.rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
                 // Stroke
                 //stroke_parameters.set_color(glm::vec4(0.1f, 0.1f, 0.1f, 1.f));
                 //stroke_parameters.set_primitive((random_f() > 0.25f) ? ((random_f() > 0.5f) ? SD_SPHERE : SD_CYLINDER) : SD_BOX);
