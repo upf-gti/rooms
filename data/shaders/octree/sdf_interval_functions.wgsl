@@ -63,6 +63,11 @@ fn isub_vecs(a : vec2f, b : vec2f) -> vec2f
 	return a - b.yx;
 }
 
+fn isub_float_vec(a : f32, b : vec2f) -> vec2f
+{
+	return isub_vecs(vec2f(a), b);
+}
+
 fn isub_mats(a : mat3x3f, b : mat3x3f) -> mat3x3f
 {
 	return iavec3_vecs(
@@ -258,9 +263,12 @@ fn imax_mats(v : mat3x3f, q : mat3x3f) -> mat3x3f
 		imax(v[2].xy, q[2].xy));
 }
 
-fn imix(x : vec2f, y : vec2f, a: vec2f) -> vec2f
+fn imix(a : vec2f, b : vec2f, f: vec2f) -> vec2f
 {
-    return iadd_vecs(x, imul_vecs(isub_vecs(y, x), a));
+    let a_f : vec2f = imul_vecs(a, f);
+    let b_f : vec2f = imul_vecs(b, f);
+
+    return isub_vecs(iadd_vecs(b_f, a), a_f);
 }
 
 fn imix_mats(x : mat3x3f, y : mat3x3f, a: vec2f) -> mat3x3f
@@ -616,15 +624,18 @@ fn irotate_interval_mats(p : mat3x3f, q : vec4f) -> mat3x3f {
 fn isoft_min_quadratic(a : vec2f, b : vec2f, k : f32) -> vec2f {
     let norm_k : f32 = max(k, 0.00001);//* 4.0;
 
-    let a_div : vec2f = idiv_vec_float(a, norm_k);
-    let b_div : vec2f = idiv_vec_float(b, norm_k);
+    let a_div : vec2f = imul_float_vec(0.5 / norm_k, a);
+    let b_div : vec2f = imul_float_vec(0.5 / norm_k, b);
 
-    let h : vec2f = iclamp( iadd_float_vec(0.5, imul_float_vec(0.5, isub_vecs(b, a))), 0.0, 1.0);
-    let h_inv : vec2f = iadd_float_vec(1.0, ineg(h));
-    let s : vec2f = imul_vecs(imul_float_vec(norm_k, h), h_inv);
+    let h : vec2f = iclamp( iadd_float_vec(0.5, isub_vecs(b_div, a_div)), 0.0, 1.0);
+
+    let k_h : vec2f = imul_float_vec(norm_k, h);
+    let k_h_h : vec2f = imul_float_vec(norm_k, imul_vecs(h, h));
+
+    let s : vec2f = isub_vecs(k_h, k_h_h);
 
     //return isub_vecs(imin(a,b), s);
-    return vec2f( iselect( isub_vecs(b, s), isub_vecs(a, s), ilessthan(a, b)));
+    return isub_vecs(imix(b, a, h), s); 
 }
 
 fn opUnionInterval( s1 : vec2f, s2 : vec2f ) -> vec2f
