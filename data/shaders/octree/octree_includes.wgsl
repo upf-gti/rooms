@@ -70,11 +70,12 @@ struct Stroke {
     primitive       : u32,
     operation       : u32,
     parameters      : vec4f,
-    dummy           : vec3f,
+    edit_list_index : u32
+    dummy1          : u32,
+    dummy2          : u32,
     color_blend_op  : u32,
     dummy1          : vec4f,
-    material        : StrokeMaterial,   // 48 bytes
-    edits           : array<Edit, MAX_EDITS_PER_EVALUATION>
+    material        : StrokeMaterial   // 48 bytes,
 };
 
 struct StrokeHistory {
@@ -87,7 +88,7 @@ struct StrokeHistory {
     eval_aabb_max : vec3f,
     pad4 : f32,
     pad5: vec4f,
-    strokes : array<Stroke, STROKE_HISTORY_MAX_SIZE>
+    strokes : array<Stroke>
 };
 
 struct OctreeNode {

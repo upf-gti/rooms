@@ -82,6 +82,9 @@ void StrokeManager::undo(sToComputeStrokeData& result) {
         last_history_index = united_stroke_idx - 1;
     }
 
+    result.in_frame_influence.eval_aabb_min = result.in_frame_stroke_aabb.center - result.in_frame_stroke_aabb.half_size;
+    result.in_frame_influence.eval_aabb_max = result.in_frame_stroke_aabb.center + result.in_frame_stroke_aabb.half_size;
+
     // Fit the AABB to the eval grid
     result.in_frame_stroke_aabb.half_size += glm::vec3(max_smooth_margin);
     AABB culling_aabb = compute_grid_aligned_AABB(result.in_frame_stroke_aabb, brick_world_size);
@@ -89,9 +92,6 @@ void StrokeManager::undo(sToComputeStrokeData& result) {
 
     // Compute and fill intersection
     compute_history_intersection(result.in_frame_influence, culling_aabb, last_history_index);
-
-    result.in_frame_influence.eval_aabb_min = result.in_frame_stroke_aabb.center - result.in_frame_stroke_aabb.half_size;
-    result.in_frame_influence.eval_aabb_max = result.in_frame_stroke_aabb.center + result.in_frame_stroke_aabb.half_size;
 }
 
 
@@ -130,6 +130,9 @@ void StrokeManager::redo(sToComputeStrokeData& result) {
 
     result.in_frame_stroke = redo_history[strokes_to_redo_count-1u];
 
+    result.in_frame_influence.eval_aabb_min = result.in_frame_stroke_aabb.center - result.in_frame_stroke_aabb.half_size;
+    result.in_frame_influence.eval_aabb_max = result.in_frame_stroke_aabb.center + result.in_frame_stroke_aabb.half_size;
+
     // Fit the AABB to the eval grid
     result.in_frame_stroke_aabb.half_size += glm::vec3(max_smooth_margin);
     AABB culling_aabb = compute_grid_aligned_AABB(result.in_frame_stroke_aabb, brick_world_size);
@@ -137,9 +140,6 @@ void StrokeManager::redo(sToComputeStrokeData& result) {
 
     // Compute and fill intersection
     compute_history_intersection(result.in_frame_influence, culling_aabb, history->size());
-
-    result.in_frame_influence.eval_aabb_min = result.in_frame_stroke_aabb.center - result.in_frame_stroke_aabb.half_size;
-    result.in_frame_influence.eval_aabb_max = result.in_frame_stroke_aabb.center + result.in_frame_stroke_aabb.half_size;
 }
 
 

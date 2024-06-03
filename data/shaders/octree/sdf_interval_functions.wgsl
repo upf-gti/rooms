@@ -736,14 +736,16 @@ fn eval_interval_stroke_sphere_smooth_union( position : mat3x3f, current_surface
     var result_surface : vec2f = current_surface;
     var tmp_surface : vec2f;
 
-    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
     let edit_count : u32 = (*curr_stroke).edit_count;
     let parameters : vec4f = (*curr_stroke).parameters;
 
     let smooth_factor : f32 = parameters.w;
 
-    for(var i : u32 = 0u; i < edit_count; i++) {
-        let curr_edit : Edit = edit_array[i];
+    let starting_idx : u32 = (*curr_stroke).edit_list_index;
+    let ending_idx : u32 = (*curr_stroke).edit_count + starting_idx;
+
+    for(var i : u32 = starting_idx; i < ending_idx; i++) {
+        let curr_edit : Edit = edit_list[i];
         tmp_surface = sphere_interval(position, curr_edit.position, curr_edit.dimensions, curr_edit.rotation);
         result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
     }
@@ -792,293 +794,296 @@ fn eval_interval_stroke_box_smooth_union( position : mat3x3f, current_surface : 
 
     let smooth_factor : f32 = parameters.w;
 
-    for(var i : u32 = 0u; i < edit_count; i++) {
-        let curr_edit : Edit = edit_array[i];
+    let starting_idx : u32 = (*curr_stroke).edit_list_index;
+    let ending_idx : u32 = (*curr_stroke).edit_count + starting_idx;
+
+    for(var i : u32 = starting_idx; i < ending_idx; i++) {
+        let curr_edit : Edit = edit_list[i];
         tmp_surface = box_interval(position, curr_edit.position, curr_edit.dimensions, curr_edit.rotation);
         result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
     }
 
     return result_surface;
 }
-/*
- _____                       _      
-/  __ \                     | |     
-| /  \/ __ _ _ __  ___ _   _| | ___ 
-| |    / _` | '_ \/ __| | | | |/ _ \
-| \__/\ (_| | |_) \__ \ |_| | |  __/
- \____/\__,_| .__/|___/\__,_|_|\___|
-            | |                     
-            |_|
-*/
+// /*
+//  _____                       _      
+// /  __ \                     | |     
+// | /  \/ __ _ _ __  ___ _   _| | ___ 
+// | |    / _` | '_ \/ __| | | | |/ _ \
+// | \__/\ (_| | |_) \__ \ |_| | |  __/
+//  \____/\__,_| .__/|___/\__,_|_|\___|
+//             | |                     
+//             |_|
+// */
 
-fn capsule_interval( p : mat3x3f, c : vec3f, radius : f32, height : f32, rotation : vec4f) -> vec2f
-{
-    var pos : mat3x3f = irotate_point_quat(isub_mat_vec(p, c), rotation);
+// fn capsule_interval( p : mat3x3f, c : vec3f, radius : f32, height : f32, rotation : vec4f) -> vec2f
+// {
+//     var pos : mat3x3f = irotate_point_quat(isub_mat_vec(p, c), rotation);
 
-    let pos_y = isub_vecs(pos[1].xy, clamp(pos[1].xy, vec2f(0.0), vec2f(height)));
-    pos = iavec3_vecs(pos[0].xy, pos_y, pos[2].xy);
+//     let pos_y = isub_vecs(pos[1].xy, clamp(pos[1].xy, vec2f(0.0), vec2f(height)));
+//     pos = iavec3_vecs(pos[0].xy, pos_y, pos[2].xy);
 
-    return isub_vec_float(ilength(pos), radius);
-}
+//     return isub_vec_float(ilength(pos), radius);
+// }
 
-fn eval_interval_stroke_capsule_smooth_union(position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>, dimension_margin : vec4f) -> vec2f {
-    var result_surface : vec2f = current_surface;
-    var tmp_surface : vec2f;
+// fn eval_interval_stroke_capsule_smooth_union(position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>, dimension_margin : vec4f) -> vec2f {
+//     var result_surface : vec2f = current_surface;
+//     var tmp_surface : vec2f;
     
-    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
-    let edit_count : u32 = (*curr_stroke).edit_count;
-    let parameters : vec4f = (*curr_stroke).parameters;
+//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
+//     let edit_count : u32 = (*curr_stroke).edit_count;
+//     let parameters : vec4f = (*curr_stroke).parameters;
 
-    let smooth_factor : f32 = parameters.w;
+//     let smooth_factor : f32 = parameters.w;
 
-    for(var i : u32 = 0u; i < edit_count; i++) {
-        let curr_edit : Edit = edit_array[i];
-        tmp_surface = capsule_interval(position, curr_edit.position, curr_edit.dimensions.x, curr_edit.dimensions.y, curr_edit.rotation);
-        result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
-    }
+//     for(var i : u32 = 0u; i < edit_count; i++) {
+//         let curr_edit : Edit = edit_array[i];
+//         tmp_surface = capsule_interval(position, curr_edit.position, curr_edit.dimensions.x, curr_edit.dimensions.y, curr_edit.rotation);
+//         result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
+//     }
 
-    return result_surface;
-}
+//     return result_surface;
+// }
 
-/*
- _____                  
-/  __ \                 
-| /  \/ ___  _ __   ___ 
-| |    / _ \| '_ \ / _ \
-| \__/\ (_) | | | |  __/
- \____/\___/|_| |_|\___|
-*/
+// /*
+//  _____                  
+// /  __ \                 
+// | /  \/ ___  _ __   ___ 
+// | |    / _ \| '_ \ / _ \
+// | \__/\ (_) | | | |  __/
+//  \____/\___/|_| |_|\___|
+// */
 
-fn cone_interval(p : mat3x3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f) -> vec2f
-{
-    let cap_value : f32 = max(parameters.y, 0.0001);
-    var radius : f32 = dims.x;
-    var height : f32 = max(dims.y * (1.0 - cap_value), 0.0025);
+// fn cone_interval(p : mat3x3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f) -> vec2f
+// {
+//     let cap_value : f32 = max(parameters.y, 0.0001);
+//     var radius : f32 = dims.x;
+//     var height : f32 = max(dims.y * (1.0 - cap_value), 0.0025);
 
-    let round : f32 = clamp(dims.w / 0.08, 0.0001, 1.0) * min(radius, height) * 0.5;
-    radius -= round;
-    height -= round;
+//     let round : f32 = clamp(dims.w / 0.08, 0.0001, 1.0) * min(radius, height) * 0.5;
+//     radius -= round;
+//     height -= round;
 
-    let r1 : f32 = radius;
-    let r2 : f32 = radius * cap_value;
-    let h : f32 = height * 0.5;
+//     let r1 : f32 = radius;
+//     let r2 : f32 = radius * cap_value;
+//     let h : f32 = height * 0.5;
 
-    var offset : mat3x3f = iavec3_vec(vec3f(0.0, h, 0.0));
-    var pos : mat3x3f = irotate_point_quat(isub_mat_vec3(p, c), rotation);
-    pos = isub_mats(pos, offset);
+//     var offset : mat3x3f = iavec3_vec(vec3f(0.0, h, 0.0));
+//     var pos : mat3x3f = irotate_point_quat(isub_mat_vec3(p, c), rotation);
+//     pos = isub_mats(pos, offset);
 
-    let q : mat3x3f = iavec3_vecs(isqrt(ipow2_vec(pos[0].xy) + ipow2_vec(pos[2].xy)), pos[1].xy, vec2f(0.0));
+//     let q : mat3x3f = iavec3_vecs(isqrt(ipow2_vec(pos[0].xy) + ipow2_vec(pos[2].xy)), pos[1].xy, vec2f(0.0));
 
-    let sr : vec2f = iselect(vec2f(r2), vec2f(r1), ilessthan(q[1].xy, vec2f(0.0)));
-    let ca : mat3x3f = iavec3_vecs(isub_vecs(q[0].xy, imin(q[0].xy, sr)), isub_vecs(iabs(q[1].xy), vec2f(h)), vec2f(0.0));
+//     let sr : vec2f = iselect(vec2f(r2), vec2f(r1), ilessthan(q[1].xy, vec2f(0.0)));
+//     let ca : mat3x3f = iavec3_vecs(isub_vecs(q[0].xy, imin(q[0].xy, sr)), isub_vecs(iabs(q[1].xy), vec2f(h)), vec2f(0.0));
 
-    let mk1 : mat3x3f = iavec3_vec(vec3f(r2, h, 0.0));
-    let mk2 : mat3x3f = iavec3_vec(vec3f(r2 - r1, 2.0 * h, 0.0));
+//     let mk1 : mat3x3f = iavec3_vec(vec3f(r2, h, 0.0));
+//     let mk2 : mat3x3f = iavec3_vec(vec3f(r2 - r1, 2.0 * h, 0.0));
 
-    let clamp_k_dots : vec2f = iclamp( idiv_vecs(idot_mat(isub_mats(mk1, q), mk2), idot_mat(mk2, mk2)), 0.0, 1.0);
-    let cb : mat3x3f = iadd_mats(isub_mats(q, mk1), imul_vec2_mat(clamp_k_dots, mk2));
+//     let clamp_k_dots : vec2f = iclamp( idiv_vecs(idot_mat(isub_mats(mk1, q), mk2), idot_mat(mk2, mk2)), 0.0, 1.0);
+//     let cb : mat3x3f = iadd_mats(isub_mats(q, mk1), imul_vec2_mat(clamp_k_dots, mk2));
 
-    let cond : vec2<bool> = iand(ilessthan(cb[0].xy, vec2f(0.0)), ilessthan(ca[1].xy, vec2f(0.0)));
-    let s : vec2f = select(vec2f(1.0), vec2f(-1.0), cond);
+//     let cond : vec2<bool> = iand(ilessthan(cb[0].xy, vec2f(0.0)), ilessthan(ca[1].xy, vec2f(0.0)));
+//     let s : vec2f = select(vec2f(1.0), vec2f(-1.0), cond);
 
-    return isub_vec_float(imul_vecs(s, isqrt(imin(idot_mat(ca, ca), idot_mat(cb, cb)))), round);
-}
+//     return isub_vec_float(imul_vecs(s, isqrt(imin(idot_mat(ca, ca), idot_mat(cb, cb)))), round);
+// }
 
-fn eval_interval_stroke_cone_smooth_union(position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>, dimension_margin : vec4f) -> vec2f {
-    var result_surface : vec2f = current_surface;
-    var tmp_surface : vec2f;
+// fn eval_interval_stroke_cone_smooth_union(position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>, dimension_margin : vec4f) -> vec2f {
+//     var result_surface : vec2f = current_surface;
+//     var tmp_surface : vec2f;
     
-    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
-    let edit_count : u32 = (*curr_stroke).edit_count;
-    let parameters : vec4f = (*curr_stroke).parameters;
+//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
+//     let edit_count : u32 = (*curr_stroke).edit_count;
+//     let parameters : vec4f = (*curr_stroke).parameters;
 
-    let smooth_factor : f32 = parameters.w;
+//     let smooth_factor : f32 = parameters.w;
 
-    for(var i : u32 = 0u; i < edit_count; i++) {
-        let curr_edit : Edit = edit_array[i];
-        tmp_surface = cone_interval(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation);
-        result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
-    }
+//     for(var i : u32 = 0u; i < edit_count; i++) {
+//         let curr_edit : Edit = edit_array[i];
+//         tmp_surface = cone_interval(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation);
+//         result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
+//     }
 
-    return result_surface;
-}
+//     return result_surface;
+// }
 
-/*
- _____       _ _           _           
-/  __ \     | (_)         | |          
-| /  \/_   _| |_ _ __   __| | ___ _ __ 
-| |   | | | | | | '_ \ / _` |/ _ \ '__|
-| \__/\ |_| | | | | | | (_| |  __/ |   
- \____/\__, |_|_|_| |_|\__,_|\___|_|   
-        __/ |                          
-       |___/
-*/
+// /*
+//  _____       _ _           _           
+// /  __ \     | (_)         | |          
+// | /  \/_   _| |_ _ __   __| | ___ _ __ 
+// | |   | | | | | | '_ \ / _` |/ _ \ '__|
+// | \__/\ |_| | | | | | | (_| |  __/ |   
+//  \____/\__, |_|_|_| |_|\__,_|\___|_|   
+//         __/ |                          
+//        |___/
+// */
 
-fn cylinder_interval(p : mat3x3f, start_pos : vec3f, dims : vec4f, rotation : vec4f) -> vec2f
-{
-    var radius : f32 = dims.x;
-    var height : f32 = dims.y;
+// fn cylinder_interval(p : mat3x3f, start_pos : vec3f, dims : vec4f, rotation : vec4f) -> vec2f
+// {
+//     var radius : f32 = dims.x;
+//     var height : f32 = dims.y;
 
-    let round : f32 = clamp(dims.w / 0.08, 0.0001, 1.0) * min(radius, height);
-    radius -= round;
-    height -= round;
+//     let round : f32 = clamp(dims.w / 0.08, 0.0001, 1.0) * min(radius, height);
+//     radius -= round;
+//     height -= round;
 
-    let cyl_origin : mat3x3f = irotate_point_quat(isub_mat_vec3(p, start_pos), rotation);
+//     let cyl_origin : mat3x3f = irotate_point_quat(isub_mat_vec3(p, start_pos), rotation);
     
-    let d_x : vec2f = isub_vecs(iabs(isqrt(ipow2_vec(cyl_origin[0].xy) + ipow2_vec(cyl_origin[2].xy))), vec2f(radius, radius)); 
-    let d_y : vec2f = isub_vecs(iabs(cyl_origin[1].xy), vec2f(height, height)); 
+//     let d_x : vec2f = isub_vecs(iabs(isqrt(ipow2_vec(cyl_origin[0].xy) + ipow2_vec(cyl_origin[2].xy))), vec2f(radius, radius)); 
+//     let d_y : vec2f = isub_vecs(iabs(cyl_origin[1].xy), vec2f(height, height)); 
 
-    let max_d_x : vec2f = imax(vec2f(0.0), d_x);
-    let max_d_y : vec2f = imax(vec2f(0.0), d_y);
+//     let max_d_x : vec2f = imax(vec2f(0.0), d_x);
+//     let max_d_y : vec2f = imax(vec2f(0.0), d_y);
 
-    return isub_vec_float(iadd_vecs(imin(imax(d_x, d_y), vec2f(0.0)), isqrt(ipow2_vec(max_d_x.xy) + ipow2_vec(max_d_y.xy))), round);
-}
+//     return isub_vec_float(iadd_vecs(imin(imax(d_x, d_y), vec2f(0.0)), isqrt(ipow2_vec(max_d_x.xy) + ipow2_vec(max_d_y.xy))), round);
+// }
 
-fn eval_interval_stroke_cylinder_smooth_union(position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>, dimension_margin : vec4f) -> vec2f {
-    var result_surface : vec2f = current_surface;
-    var tmp_surface : vec2f;
+// fn eval_interval_stroke_cylinder_smooth_union(position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>, dimension_margin : vec4f) -> vec2f {
+//     var result_surface : vec2f = current_surface;
+//     var tmp_surface : vec2f;
     
-    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
-    let edit_count : u32 = (*curr_stroke).edit_count;
-    let parameters : vec4f = (*curr_stroke).parameters;
+//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
+//     let edit_count : u32 = (*curr_stroke).edit_count;
+//     let parameters : vec4f = (*curr_stroke).parameters;
 
-    let smooth_factor : f32 = parameters.w;
+//     let smooth_factor : f32 = parameters.w;
 
-    for(var i : u32 = 0u; i < edit_count; i++) {
-        let curr_edit : Edit = edit_array[i];
-        tmp_surface = cylinder_interval(position, curr_edit.position, curr_edit.dimensions, curr_edit.rotation);
-        result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
-    }
+//     for(var i : u32 = 0u; i < edit_count; i++) {
+//         let curr_edit : Edit = edit_array[i];
+//         tmp_surface = cylinder_interval(position, curr_edit.position, curr_edit.dimensions, curr_edit.rotation);
+//         result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
+//     }
 
-    return result_surface;
-}
+//     return result_surface;
+// }
 
-/*
- _____                    
-|_   _|                   
-  | | ___  _ __ _   _ ___ 
-  | |/ _ \| '__| | | / __|
-  | | (_) | |  | |_| \__ \
-  \_/\___/|_|   \__,_|___/
-*/
+// /*
+//  _____                    
+// |_   _|                   
+//   | | ___  _ __ _   _ ___ 
+//   | |/ _ \| '__| | | / __|
+//   | | (_) | |  | |_| \__ \
+//   \_/\___/|_|   \__,_|___/
+// */
 
-fn torus_interval( p : mat3x3f, c : vec3f, dims : vec4f, rotation : vec4f) -> vec2f
-{
-    let radius = dims.x;
-    let thickness = clamp( dims.y, 0.0001, radius );
+// fn torus_interval( p : mat3x3f, c : vec3f, dims : vec4f, rotation : vec4f) -> vec2f
+// {
+//     let radius = dims.x;
+//     let thickness = clamp( dims.y, 0.0001, radius );
 
-    let pos : mat3x3f = irotate_point_quat(isub_mat_vec3(p, c), rotation);
-    var q : mat3x3f = iavec3_vecs(isub_vec_float(isqrt(ipow2_vec(pos[0].xy) + ipow2_vec(pos[2].xy)), radius), pos[1].xy, vec2f(0.0));
+//     let pos : mat3x3f = irotate_point_quat(isub_mat_vec3(p, c), rotation);
+//     var q : mat3x3f = iavec3_vecs(isub_vec_float(isqrt(ipow2_vec(pos[0].xy) + ipow2_vec(pos[2].xy)), radius), pos[1].xy, vec2f(0.0));
 
-    return isub_vec_float(ilength(q), thickness);
-}
+//     return isub_vec_float(ilength(q), thickness);
+// }
 
-fn capped_torus_interval( p : mat3x3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f) -> vec2f
-{
-    let cap_value : f32 = clamp(parameters.y, 0.0001, 0.999);
-    let theta : vec2f = vec2f(M_PI * (1.0 - cap_value));
-    let angles : mat3x3f = iavec3_vecs(isin(theta), icos(theta), vec2f(0.0));
-    let radius : f32 = dims.x;
-    let thickness : f32 = clamp( dims.y, 0.0001, radius );
+// fn capped_torus_interval( p : mat3x3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f) -> vec2f
+// {
+//     let cap_value : f32 = clamp(parameters.y, 0.0001, 0.999);
+//     let theta : vec2f = vec2f(M_PI * (1.0 - cap_value));
+//     let angles : mat3x3f = iavec3_vecs(isin(theta), icos(theta), vec2f(0.0));
+//     let radius : f32 = dims.x;
+//     let thickness : f32 = clamp( dims.y, 0.0001, radius );
 
-    let pos : mat3x3f = irotate_point_quat(isub_mat_vec3(p, c), rotation);
-    let new_pos : mat3x3f = iavec3_vecs(iabs(pos[0].xy), pos[1].xy, pos[2].xy);
+//     let pos : mat3x3f = irotate_point_quat(isub_mat_vec3(p, c), rotation);
+//     let new_pos : mat3x3f = iavec3_vecs(iabs(pos[0].xy), pos[1].xy, pos[2].xy);
 
-    var cond : vec2<bool> = igreaterthan(imul_vecs(angles[1].xy, new_pos[0].xy), imul_vecs(angles[0].xy, new_pos[2].xy));
+//     var cond : vec2<bool> = igreaterthan(imul_vecs(angles[1].xy, new_pos[0].xy), imul_vecs(angles[0].xy, new_pos[2].xy));
 
-    let m_pos_xz : mat3x3f = iavec3_vecs(new_pos[0].xy, new_pos[2].xy, vec2f(0.0));
-    var len_pxz : vec2f = ilength(m_pos_xz);
+//     let m_pos_xz : mat3x3f = iavec3_vecs(new_pos[0].xy, new_pos[2].xy, vec2f(0.0));
+//     var len_pxz : vec2f = ilength(m_pos_xz);
 
-    var xz_dot_angles = idot_mat(m_pos_xz, angles);
+//     var xz_dot_angles = idot_mat(m_pos_xz, angles);
     
-    var k : vec2f = iselect(len_pxz, xz_dot_angles, cond);
+//     var k : vec2f = iselect(len_pxz, xz_dot_angles, cond);
 
-    var sqrt_inner : vec2f = idot_mat(new_pos, new_pos);
-    sqrt_inner = iadd_vecs(sqrt_inner, vec2f(radius * radius));
-    sqrt_inner = isub_vecs(sqrt_inner, imul_vecs(vec2f(2.0 * radius), k));
+//     var sqrt_inner : vec2f = idot_mat(new_pos, new_pos);
+//     sqrt_inner = iadd_vecs(sqrt_inner, vec2f(radius * radius));
+//     sqrt_inner = isub_vecs(sqrt_inner, imul_vecs(vec2f(2.0 * radius), k));
 
-    return isub_vec_float(isqrt(sqrt_inner), thickness);
-}
+//     return isub_vec_float(isqrt(sqrt_inner), thickness);
+// }
 
-fn eval_interval_stroke_torus_smooth_union(position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>, dimension_margin : vec4f) -> vec2f {
-    var result_surface : vec2f = current_surface;
-    var tmp_surface : vec2f;
+// fn eval_interval_stroke_torus_smooth_union(position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>, dimension_margin : vec4f) -> vec2f {
+//     var result_surface : vec2f = current_surface;
+//     var tmp_surface : vec2f;
     
-    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
-    let edit_count : u32 = (*curr_stroke).edit_count;
-    let parameters : vec4f = (*curr_stroke).parameters;
+//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
+//     let edit_count : u32 = (*curr_stroke).edit_count;
+//     let parameters : vec4f = (*curr_stroke).parameters;
 
-    let smooth_factor : f32 = parameters.w;
-    let cap_value : f32 = parameters.y;
+//     let smooth_factor : f32 = parameters.w;
+//     let cap_value : f32 = parameters.y;
 
-    // too ugly but.... well
+//     // too ugly but.... well
 
-    // do capped torus if we have cap value..
-    if(cap_value > 0.0) {
-        for(var i : u32 = 0u; i < edit_count; i++) {
-            let curr_edit : Edit = edit_array[i];
-            tmp_surface = capped_torus_interval(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation);
-            result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
-        }
-    } else {
-        for(var i : u32 = 0u; i < edit_count; i++) {
-            let curr_edit : Edit = edit_array[i];
-            tmp_surface = torus_interval(position, curr_edit.position, curr_edit.dimensions, curr_edit.rotation);
-            result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
-        }
-    }
+//     // do capped torus if we have cap value..
+//     if(cap_value > 0.0) {
+//         for(var i : u32 = 0u; i < edit_count; i++) {
+//             let curr_edit : Edit = edit_array[i];
+//             tmp_surface = capped_torus_interval(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation);
+//             result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
+//         }
+//     } else {
+//         for(var i : u32 = 0u; i < edit_count; i++) {
+//             let curr_edit : Edit = edit_array[i];
+//             tmp_surface = torus_interval(position, curr_edit.position, curr_edit.dimensions, curr_edit.rotation);
+//             result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
+//         }
+//     }
 
-    return result_surface;
-}
+//     return result_surface;
+// }
 
-/*
-______          _           
-| ___ \        (_)          
-| |_/ / ___ _____  ___ _ __ 
-| ___ \/ _ \_  / |/ _ \ '__|
-| |_/ /  __// /| |  __/ |   
-\____/ \___/___|_|\___|_|
-*/
+// /*
+// ______          _           
+// | ___ \        (_)          
+// | |_/ / ___ _____  ___ _ __ 
+// | ___ \/ _ \_  / |/ _ \ '__|
+// | |_/ /  __// /| |  __/ |   
+// \____/ \___/___|_|\___|_|
+// */
 
-fn bezier_interval( p : mat3x3f, start : vec3f, cp : vec3f, end : vec3f, thickness : f32, rotation : vec4f) -> vec2f
-{
-    let b0 : mat3x3f = irotate_point_quat(isub_mats(iavec3_vec(start), p), rotation);
-    let b1 : mat3x3f = irotate_point_quat(isub_mats(iavec3_vec(cp), p), rotation);
-    let b2 : mat3x3f = irotate_point_quat(isub_mats(iavec3_vec(end), p), rotation);
+// fn bezier_interval( p : mat3x3f, start : vec3f, cp : vec3f, end : vec3f, thickness : f32, rotation : vec4f) -> vec2f
+// {
+//     let b0 : mat3x3f = irotate_point_quat(isub_mats(iavec3_vec(start), p), rotation);
+//     let b1 : mat3x3f = irotate_point_quat(isub_mats(iavec3_vec(cp), p), rotation);
+//     let b2 : mat3x3f = irotate_point_quat(isub_mats(iavec3_vec(end), p), rotation);
 
-    var b01 : mat3x3f = icross_mats(b0, b1);
-    var b12 : mat3x3f = icross_mats(b1, b2);
-    var b20 : mat3x3f = icross_mats(b2, b0);
+//     var b01 : mat3x3f = icross_mats(b0, b1);
+//     var b12 : mat3x3f = icross_mats(b1, b2);
+//     var b20 : mat3x3f = icross_mats(b2, b0);
 
-    var n : mat3x3f = iadd_mats(iadd_mats(b01, b12), b20);
+//     var n : mat3x3f = iadd_mats(iadd_mats(b01, b12), b20);
 
-    var a : vec2f = ineg(idot_mat(b20, n));
-    var b : vec2f = ineg(idot_mat(b01, n));
-    var d : vec2f = ineg(idot_mat(b12, n));
+//     var a : vec2f = ineg(idot_mat(b20, n));
+//     var b : vec2f = ineg(idot_mat(b01, n));
+//     var d : vec2f = ineg(idot_mat(b12, n));
 
-    var m : vec2f = ineg(idot_mat(n, n));
+//     var m : vec2f = ineg(idot_mat(n, n));
 
-    var g0 : mat3x3f = imul_vec2_mat(isub_vecs(d, b), b1);
-    var g1 : mat3x3f = imul_vec2_mat(iadd_vecs(b, imul_float_vec(0.5, a)), b2);
-    var g2 : mat3x3f = imul_vec2_mat(isub_vecs(ineg(d), imul_float_vec(0.5, a)), b0);
-    var g : mat3x3f = iadd_mats(iadd_mats(g0, g1), g2);
+//     var g0 : mat3x3f = imul_vec2_mat(isub_vecs(d, b), b1);
+//     var g1 : mat3x3f = imul_vec2_mat(iadd_vecs(b, imul_float_vec(0.5, a)), b2);
+//     var g2 : mat3x3f = imul_vec2_mat(isub_vecs(ineg(d), imul_float_vec(0.5, a)), b0);
+//     var g : mat3x3f = iadd_mats(iadd_mats(g0, g1), g2);
 
-    var f : vec2f = isub_vecs(imul_float_vec(0.25, ipow2_vec(a)), imul_vecs(b, d));
-    var k : mat3x3f = iadd_mats(isub_mats(b0, imul_float_mat(2.0, b1)), b2);
+//     var f : vec2f = isub_vecs(imul_float_vec(0.25, ipow2_vec(a)), imul_vecs(b, d));
+//     var k : mat3x3f = iadd_mats(isub_mats(b0, imul_float_mat(2.0, b1)), b2);
 
-    var t00 : vec2f = iadd_vecs(imul_float_vec(0.5, a), b);         // [a * 0.5 + b]
-    var t01 : vec2f = imul_float_vec(0.5, f);                       // [f * 0.5]
-    var t10 : vec2f = idiv_vecs(idot_mat(g,k), idot_mat(g, g));     // [dot(g,k) / dot(g,g)]
-    var t1 : vec2f = isub_vecs(t00, imul_vecs(t01, t10));           // [a * 0.5 + b] - [0.5 * f * dot(g,k) / dot(g,g)]
-    var t2 : vec2f = idiv_vecs(t1, m);                              // [a * 0.5 + b - 0.5 * f * dot(g,k) / dot(g,g)] / [m]
-    var t : vec2f = iclamp(t2, 0.0, 1.0 );
+//     var t00 : vec2f = iadd_vecs(imul_float_vec(0.5, a), b);         // [a * 0.5 + b]
+//     var t01 : vec2f = imul_float_vec(0.5, f);                       // [f * 0.5]
+//     var t10 : vec2f = idiv_vecs(idot_mat(g,k), idot_mat(g, g));     // [dot(g,k) / dot(g,g)]
+//     var t1 : vec2f = isub_vecs(t00, imul_vecs(t01, t10));           // [a * 0.5 + b] - [0.5 * f * dot(g,k) / dot(g,g)]
+//     var t2 : vec2f = idiv_vecs(t1, m);                              // [a * 0.5 + b - 0.5 * f * dot(g,k) / dot(g,g)] / [m]
+//     var t : vec2f = iclamp(t2, 0.0, 1.0 );
 
-    var x0 : mat3x3f = imix_mats(b0, b1, t);
-    var x1 : mat3x3f = imix_mats(b1, b2, t);
-    var x : mat3x3f = idiv_mats(x0, x1);
+//     var x0 : mat3x3f = imix_mats(b0, b1, t);
+//     var x1 : mat3x3f = imix_mats(b1, b2, t);
+//     var x : mat3x3f = idiv_mats(x0, x1);
 
-    return isub_vec_float(ilength(x), thickness);
-}
+//     return isub_vec_float(ilength(x), thickness);
+// }
 
 /*
  _____ _             _          _____           _             _   _             
@@ -1123,42 +1128,42 @@ fn evaluate_stroke_interval( position: mat3x3f, stroke: ptr<storage, Stroke, rea
             result_surface = opSmoothSubtractionInterval(current_surface, result_surface, smooth_factor);
             break;
         }
-        case SD_CAPSULE_SMOOTH_OP_UNION: {
-            result_surface = eval_interval_stroke_capsule_smooth_union(position, result_surface, stroke, vec4f(0.0));
-            break;
-        }
-        case SD_CAPSULE_SMOOTH_OP_SUBSTRACTION: {
-            result_surface = eval_interval_stroke_capsule_smooth_union(position, initial_surface, stroke, vec4f(0.0));
-            result_surface = opSmoothSubtractionInterval(current_surface, result_surface, smooth_factor);
-            break;
-        }
-        case SD_CONE_SMOOTH_OP_UNION: {
-            result_surface = eval_interval_stroke_cone_smooth_union(position, result_surface, stroke, vec4f(0.0));
-            break;
-        }
-        case SD_CONE_SMOOTH_OP_SUBSTRACTION: {
-            result_surface = eval_interval_stroke_cone_smooth_union(position, initial_surface, stroke, vec4f(0.0));
-            result_surface = opSmoothSubtractionInterval(current_surface, result_surface, smooth_factor);
-            break;
-        }
-        case SD_CYLINDER_SMOOTH_OP_UNION: {
-            result_surface = eval_interval_stroke_cylinder_smooth_union(position, result_surface, stroke, vec4f(0.0));
-            break;
-        }
-        case SD_CYLINDER_SMOOTH_OP_SUBSTRACTION: {
-            result_surface = eval_interval_stroke_cylinder_smooth_union(position, initial_surface, stroke, vec4f(0.0));
-            result_surface = opSmoothSubtractionInterval(current_surface, result_surface, smooth_factor);
-            break;
-        }
-        case SD_TORUS_SMOOTH_OP_UNION: {
-            result_surface = eval_interval_stroke_torus_smooth_union(position, result_surface, stroke, vec4f(0.0));
-            break;
-        }
-        case SD_TORUS_SMOOTH_OP_SUBSTRACTION: {
-            result_surface = eval_interval_stroke_torus_smooth_union(position, initial_surface, stroke, vec4f(0.0));
-            result_surface = opSmoothSubtractionInterval(current_surface, result_surface, smooth_factor);
-            break;
-        }
+        // case SD_CAPSULE_SMOOTH_OP_UNION: {
+        //     result_surface = eval_interval_stroke_capsule_smooth_union(position, result_surface, stroke, vec4f(0.0));
+        //     break;
+        // }
+        // case SD_CAPSULE_SMOOTH_OP_SUBSTRACTION: {
+        //     result_surface = eval_interval_stroke_capsule_smooth_union(position, initial_surface, stroke, vec4f(0.0));
+        //     result_surface = opSmoothSubtractionInterval(current_surface, result_surface, smooth_factor);
+        //     break;
+        // }
+        // case SD_CONE_SMOOTH_OP_UNION: {
+        //     result_surface = eval_interval_stroke_cone_smooth_union(position, result_surface, stroke, vec4f(0.0));
+        //     break;
+        // }
+        // case SD_CONE_SMOOTH_OP_SUBSTRACTION: {
+        //     result_surface = eval_interval_stroke_cone_smooth_union(position, initial_surface, stroke, vec4f(0.0));
+        //     result_surface = opSmoothSubtractionInterval(current_surface, result_surface, smooth_factor);
+        //     break;
+        // }
+        // case SD_CYLINDER_SMOOTH_OP_UNION: {
+        //     result_surface = eval_interval_stroke_cylinder_smooth_union(position, result_surface, stroke, vec4f(0.0));
+        //     break;
+        // }
+        // case SD_CYLINDER_SMOOTH_OP_SUBSTRACTION: {
+        //     result_surface = eval_interval_stroke_cylinder_smooth_union(position, initial_surface, stroke, vec4f(0.0));
+        //     result_surface = opSmoothSubtractionInterval(current_surface, result_surface, smooth_factor);
+        //     break;
+        // }
+        // case SD_TORUS_SMOOTH_OP_UNION: {
+        //     result_surface = eval_interval_stroke_torus_smooth_union(position, result_surface, stroke, vec4f(0.0));
+        //     break;
+        // }
+        // case SD_TORUS_SMOOTH_OP_SUBSTRACTION: {
+        //     result_surface = eval_interval_stroke_torus_smooth_union(position, initial_surface, stroke, vec4f(0.0));
+        //     result_surface = opSmoothSubtractionInterval(current_surface, result_surface, smooth_factor);
+        //     break;
+        // }
         default: {}
     }
 
@@ -1179,22 +1184,22 @@ fn evaluate_stroke_interval_force_union( position: mat3x3f, stroke: ptr<storage,
             result_surface = eval_interval_stroke_box_smooth_union(position, result_surface, stroke, margin);
             break;
         }
-        case SD_CAPSULE: {
-            result_surface = eval_interval_stroke_capsule_smooth_union(position, result_surface, stroke, margin);
-            break;
-        }
-        case SD_CONE: {
-            result_surface = eval_interval_stroke_cone_smooth_union(position, result_surface, stroke, margin);
-            break;
-        }
-        case SD_CYLINDER: {
-            result_surface = eval_interval_stroke_cylinder_smooth_union(position, result_surface, stroke, margin);
-            break;
-        }
-        case SD_TORUS: {
-            result_surface = eval_interval_stroke_torus_smooth_union(position, result_surface, stroke, margin);
-            break;
-        }
+        // case SD_CAPSULE: {
+        //     result_surface = eval_interval_stroke_capsule_smooth_union(position, result_surface, stroke, margin);
+        //     break;
+        // }
+        // case SD_CONE: {
+        //     result_surface = eval_interval_stroke_cone_smooth_union(position, result_surface, stroke, margin);
+        //     break;
+        // }
+        // case SD_CYLINDER: {
+        //     result_surface = eval_interval_stroke_cylinder_smooth_union(position, result_surface, stroke, margin);
+        //     break;
+        // }
+        // case SD_TORUS: {
+        //     result_surface = eval_interval_stroke_torus_smooth_union(position, result_surface, stroke, margin);
+        //     break;
+        // }
         default: {}
     }
 

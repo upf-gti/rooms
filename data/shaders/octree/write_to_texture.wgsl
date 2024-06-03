@@ -1,5 +1,4 @@
 #include math.wgsl
-#include sdf_functions.wgsl
 #include sdf_utils.wgsl
 #include octree_includes.wgsl
 #include material_packing.wgsl
@@ -13,6 +12,8 @@
 
 @group(1) @binding(0) var<storage, read> octant_usage_read : array<u32>;
 @group(1) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
+
+#include sdf_functions.wgsl
 
 var<workgroup> used_pixels : atomic<u32>;
 

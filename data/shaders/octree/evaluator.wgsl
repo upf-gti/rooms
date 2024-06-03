@@ -1,17 +1,20 @@
 #include math.wgsl
 #include octree_includes.wgsl
 #include sdf_commons.wgsl
-#include sdf_interval_functions.wgsl
 
 @group(0) @binding(1) var<uniform> merge_data : MergeData;
 @group(0) @binding(2) var<storage, read_write> octree : Octree;
 @group(0) @binding(5) var<storage, read_write> brick_buffers: BrickBuffers;
 @group(0) @binding(6) var<storage, read> stroke_history : StrokeHistory;
+@group(0) @binding(7) var<storage, read> edit_list : array<Edit>;
 
 @group(1) @binding(0) var<storage, read> octant_usage_read : array<u32>;
 @group(1) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
 
 @group(2) @binding(0) var<storage, read> preview_stroke : Stroke;
+
+#include sdf_interval_functions.wgsl
+
 
 /*
     Este shader es el responsable de subdividir el espacio, para una evaluacion mas eficaz de SDFs.
@@ -314,8 +317,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         octree.data[octree_index].octant_center_distance = surface_interval;
         
         if (level < OCTREE_DEPTH) {
-            //subdivide = intersection_AABB_AABB(eval_aabb_min, eval_aabb_max, stroke_history.eval_aabb_min, stroke_history.eval_aabb_max);
-            subdivide = intersection_AABB_AABB(eval_aabb_min, eval_aabb_max, merge_data.reevaluation_AABB_min, merge_data.reevaluation_AABB_max);
+            subdivide = intersection_AABB_AABB(eval_aabb_min, eval_aabb_max, stroke_history.eval_aabb_min, stroke_history.eval_aabb_max);
             
             // Broad culling using only the incomming stroke
             // TODO: intersection with current edit AABB?
