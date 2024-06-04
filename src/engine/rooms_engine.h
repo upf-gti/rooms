@@ -11,11 +11,13 @@ class Environment3D;
 class BaseEditor;
 class SculptEditor;
 class SceneEditor;
+class TutorialEditor;
 
 enum Editor : uint8_t {
     SCENE_EDITOR,
     SCULPT_EDITOR,
-    SHAPE_EDITOR
+    SHAPE_EDITOR,
+    TUTORIAL_EDITOR
 };
 
 #define _DESTROY_(x) if(x) { delete x; }
@@ -29,6 +31,8 @@ class RoomsEngine : public Engine
     SculptEditor* sculpt_editor = nullptr;
 
     SceneEditor* scene_editor = nullptr;
+
+    TutorialEditor* tutorial_editor = nullptr;
 
     bool export_scene();
     bool import_scene();

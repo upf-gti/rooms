@@ -17,6 +17,7 @@
 
 #include "tools/sculpt/sculpt_editor.h"
 #include "tools/scene/scene_editor.h"
+#include "tools/tutorial_editor.h"
 
 #include "spdlog/spdlog.h"
 #include "imgui.h"
@@ -54,8 +55,14 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
         sculpt_editor->initialize();
     }
 
+    // Tutorial
+    {
+        tutorial_editor = new TutorialEditor();
+        tutorial_editor->initialize();
+    }
+
     // Set default editor..
-    current_editor = scene_editor;
+    current_editor = tutorial_editor;
 
     // Grid
     {
