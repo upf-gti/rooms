@@ -15,7 +15,7 @@
 #include "graphics/renderer_storage.h"
 
 #include "shaders/mesh_color.wgsl.gen.h"
-#include "shaders/curved_quad_texture.wgsl.gen.h"
+#include "shaders/ui/ui_xr_panel.wgsl.gen.h"
 
 #include "engine/rooms_engine.h"
 #include "engine/scene.h"
@@ -43,28 +43,7 @@ void SceneEditor::initialize()
     RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
     rooms_renderer->get_raymarching_renderer()->set_current_sculpt(default_sculpt);
 
-    // Create curved quad for VR mode
-    {
-        curved_quad = new MeshInstance3D();
-        Surface* quad = new Surface();
-        quad->create_subvidided_quad(2.0f, 1.0f, subdivisions);
-        curved_quad->add_surface(quad);
-
-        Material curved_mesh_material;
-        curved_mesh_material.cull_type = CULL_NONE;
-        curved_mesh_material.transparency_type = ALPHA_BLEND;
-        curved_mesh_material.diffuse_texture = RendererStorage::get_texture("data/images/welcome_screen.png", true);
-        curved_mesh_material.shader = RendererStorage::get_shader_from_source(shaders::curved_quad_texture::source, shaders::curved_quad_texture::path, curved_mesh_material);
-        curved_quad->set_surface_material_override(curved_quad->get_surface(0), curved_mesh_material);
-
-        curved_quad->translate({ 0.0f, 0.5f, -1.0f });
-
-        main_scene->add_node(curved_quad);
-    }
-
-    // 
-
-    intersection_mesh = new MeshInstance3D();
+    /*intersection_mesh = new MeshInstance3D();
     intersection_mesh->add_surface(RendererStorage::get_surface("box"));
     intersection_mesh->scale(glm::vec3(0.01f));
 
@@ -73,7 +52,7 @@ void SceneEditor::initialize()
     intersection_mesh_material.shader = RendererStorage::get_shader_from_source(shaders::mesh_color::source, shaders::mesh_color::path, intersection_mesh_material);
     intersection_mesh->set_surface_material_override(intersection_mesh->get_surface(0), intersection_mesh_material);
 
-    main_scene->add_node(intersection_mesh);
+    main_scene->add_node(intersection_mesh);*/
 }
 
 void SceneEditor::clean()
@@ -98,67 +77,72 @@ void SceneEditor::update(float delta_time)
 
     update_gizmo(delta_time);
 
-    // Update welcome screen following headset??
-    {
-        glm::mat4x4 m(1.0f);
+    if (xr_panel_3d) {
 
+        // Update welcome screen following headset??
+
+        glm::mat4x4 m(1.0f);
         glm::vec3 eye = renderer->get_camera_eye();
-        glm::vec3 new_pos = eye + renderer->get_camera_front() * 2.0f;
+        glm::vec3 new_pos = eye + renderer->get_camera_front();
 
         m = glm::translate(m, new_pos);
         m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
+        // m = glm::translate(m, -glm::vec3(1.0f, 1.0f, 0.0f));
 
-        // curved_quad->set_model(m);
+        xr_panel_3d->set_model(m);
+        xr_panel_3d->update(delta_time);
+    }
+    else {
+        xr_panel_2d->update(delta_time);
     }
 
     // debug
 
-    glm::vec3 ray_origin;
-    glm::vec3 ray_direction;
+    //glm::vec3 ray_origin;
+    //glm::vec3 ray_direction;
 
-    if (Renderer::instance->get_openxr_available())
-    {
-        ray_origin = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
-        glm::mat4x4 select_hand_pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
-        ray_direction = get_front(select_hand_pose);
-    }
-    else
-    {
-        Camera* camera = Renderer::instance->get_camera();
-        glm::vec3 ray_dir = camera->screen_to_ray(Input::get_mouse_position());
+    //if (Renderer::instance->get_openxr_available())
+    //{
+    //    ray_origin = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
+    //    glm::mat4x4 select_hand_pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
+    //    ray_direction = get_front(select_hand_pose);
+    //}
+    //else
+    //{
+    //    Camera* camera = Renderer::instance->get_camera();
+    //    glm::vec3 ray_dir = camera->screen_to_ray(Input::get_mouse_position());
 
-        ray_origin = camera->get_eye();
-        ray_direction = glm::normalize(ray_dir);
-    }
+    //    ray_origin = camera->get_eye();
+    //    ray_direction = glm::normalize(ray_dir);
+    //}
 
-    // Quad
-    glm::mat4x4 model = curved_quad->get_model();
+    //// Quad
+    //glm::mat4x4 model = curved_quad->get_model();
 
-    glm::vec3 quad_position = model[3];
-    glm::quat quad_rotation = glm::quat_cast(model);
-    glm::vec2 quad_size = { 2.0f, 1.0f };
+    //glm::vec3 quad_position = model[3];
+    //glm::quat quad_rotation = glm::quat_cast(model);
+    //glm::vec2 quad_size = { 2.0f, 1.0f };
 
-    float collision_dist;
-    glm::vec3 intersection_point;
-    glm::vec3 local_intersection_point;
+    //float collision_dist;
+    //glm::vec3 intersection_point;
+    //glm::vec3 local_intersection_point;
 
-    if (intersection::ray_curved_quad(
-        ray_origin,
-        ray_direction,
-        quad_position,
-        quad_size * 0.5f,
-        quad_rotation,
-        subdivisions,
-        0.35f,
-        intersection_point,
-        local_intersection_point,
-        collision_dist,
-        true
-    )) {
-        intersection_mesh->set_translation(intersection_point);
-        intersection_mesh->scale(glm::vec3(0.01f));
-    }
-
+    //if (intersection::ray_curved_quad(
+    //    ray_origin,
+    //    ray_direction,
+    //    quad_position,
+    //    quad_size * 0.5f,
+    //    quad_rotation,
+    //    subdivisions,
+    //    0.25f,
+    //    intersection_point,
+    //    local_intersection_point,
+    //    collision_dist,
+    //    true
+    //)) {
+    //    intersection_mesh->set_translation(intersection_point);
+    //    intersection_mesh->scale(glm::vec3(0.01f));
+    //}
 }
 
 void SceneEditor::render()
@@ -167,7 +151,14 @@ void SceneEditor::render()
 
     RoomsEngine::render_controllers();
 
-    render_gizmo(); 
+    render_gizmo();
+
+    if (xr_panel_3d) {
+        xr_panel_3d->render();
+    }
+    else {
+        xr_panel_2d->render();
+    }
 }
 
 void SceneEditor::render_gui()
@@ -252,6 +243,42 @@ void SceneEditor::init_ui()
     if (renderer->get_openxr_available()) {
         main_panel_3d = new Viewport3D(main_panel_2d);
         main_panel_3d->set_active(true);
+    }
+
+    // Create tutorial/welcome panel
+    {
+        xr_panel_2d = new Node2D("tutorial_scene_root", { 0.0f, 0.0f }, { 1.0f, 1.0f });
+
+        auto webgpu_context = Renderer::instance->get_webgpu_context();
+        glm::vec2 size = glm::vec2(static_cast<float>(webgpu_context->render_width), static_cast<float>(webgpu_context->render_height)) * 0.5f;
+        glm::vec2 pos = size * 0.5f;
+
+        if (renderer->get_openxr_available()) {
+            size = glm::vec2(1920.f, 1080.0f);
+            pos = -size * 0.5f;
+        }
+
+        ui::XRPanel* xr_panel = new ui::XRPanel("scene_editor_root", "data/images/welcome_screen.png", pos, size);
+        xr_panel_2d->add_child(xr_panel);
+
+        /*ui::HContainer2D* first_xr_panel_row = new ui::HContainer2D("first_xr_panel_row", { 0.0f, 0.0f });
+        xr_panel->add_child(first_xr_panel_row);
+
+        first_xr_panel_row->add_child(new ui::TextureButton2D("test_0", "data/textures/import.png"));
+        first_xr_panel_row->add_child(new ui::TextureButton2D("test_1", "data/textures/export.png"));*/
+
+        const glm::vec2& button_size = { size.x * 0.5f, size.y * 0.5 };
+
+        //xr_panel->add_button({ button_size.x * 0.5f, size.y - button_size.y * 0.5f }, button_size);
+        xr_panel->add_button({ size.x * 0.5f, size.y - button_size.y * 0.5f }, button_size);
+
+        xr_panel->add_button({ button_size.x * 0.5f, button_size.y * 0.5f }, button_size);
+        xr_panel->add_button({ size.x - button_size.x * 0.5f, button_size.y * 0.5f }, button_size);
+
+        if (renderer->get_openxr_available()) {
+            xr_panel_3d = new Viewport3D(xr_panel_2d);
+            xr_panel_3d->set_active(true);
+        }
     }
 
     // Load controller UI labels

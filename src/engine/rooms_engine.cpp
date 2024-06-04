@@ -55,7 +55,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     }
 
     // Set default editor..
-    current_editor = sculpt_editor;
+    current_editor = scene_editor;
 
     // Grid
     {
@@ -124,6 +124,7 @@ void RoomsEngine::update(float delta_time)
     {
         const glm::mat4x4& raycast_transform = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
         raycast_pointer->set_model(raycast_transform);
+        raycast_pointer->scale(glm::vec3(1.0f, 1.0f, 10.0f));
     }
 
     main_scene->update(delta_time);
