@@ -116,10 +116,9 @@ struct Stroke {
     sdPrimitive     primitive;
     sdOperation     operation;
     glm::vec4	    parameters = { 0.f, -1.f, 0.f, 0.f };
-    glm::vec3	    _dummy_;
     ColorBlendOp    color_blending_op = ColorBlendOp::COLOR_OP_REPLACE;
+    glm::vec3	    _dummy_;
     glm::vec4	    _dummy2_;
-
     // 48 bytes
     StrokeMaterial material;
 

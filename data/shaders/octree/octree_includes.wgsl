@@ -70,12 +70,11 @@ struct Stroke {
     primitive       : u32,
     operation       : u32,
     parameters      : vec4f,
-    edit_list_index : u32
-    dummy1          : u32,
-    dummy2          : u32,
     color_blend_op  : u32,
-    dummy1          : vec4f,
-    material        : StrokeMaterial   // 48 bytes,
+    aabb_min        : vec3,
+    aabb_max        : vec3,
+    edit_list_index : u32,
+    material        : StrokeMaterial   // 48 bytes
 };
 
 struct StrokeHistory {

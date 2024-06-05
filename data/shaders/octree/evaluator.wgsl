@@ -15,7 +15,6 @@
 
 #include sdf_interval_functions.wgsl
 
-
 /*
     Este shader es el responsable de subdividir el espacio, para una evaluacion mas eficaz de SDFs.
     La estructra de subdivision es de forma de octree y la idea es ir suprimiendo zonas que no tienen superficie (dentro o fuera de la SDF).
