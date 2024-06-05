@@ -68,36 +68,33 @@ void StrokeManager::undo(sToComputeStrokeData& result) {
     uint32_t last_history_index = 0u;
     float max_smooth_margin = 0.0f;
 
-    //// Get the last stroke to undo, and compute the AABB
-    //for (united_stroke_idx = history->size(); united_stroke_idx > 0; --united_stroke_idx) {
-    //    Stroke& prev = (*history)[united_stroke_idx - 1];
+    // Get the last stroke to undo, and compute the AABB
+    for (united_stroke_idx = history->size(); united_stroke_idx > 0; --united_stroke_idx) {
+        Stroke& prev = (*history)[united_stroke_idx - 1];
 
-    //    // if stroke changes
-    //    if (last_stroke_id != 0u && prev.stroke_id != last_stroke_id) {
-    //        break;
-    //    }
+        // if stroke changes
+        if (last_stroke_id != 0u && prev.stroke_id != last_stroke_id) {
+            break;
+        }
 
-    //    result.in_frame_stroke_aabb = merge_aabbs(result.in_frame_stroke_aabb, prev.get_world_AABB());
-    //    max_smooth_margin = glm::max(prev.parameters.w, max_smooth_margin);
-    //    pop_count_from_history++;
+        result.in_frame_stroke_aabb = merge_aabbs(result.in_frame_stroke_aabb, prev.get_world_AABB());
+        max_smooth_margin = glm::max(prev.parameters.w, max_smooth_margin);
+        pop_count_from_history++;
 
-    //    last_stroke_id = prev.stroke_id;
-    //}
+        last_stroke_id = prev.stroke_id;
+    }
 
-    //// In the case of first stroke, submit it as substraction to clear everything
-    //if (united_stroke_idx == 0) {
-    //    Stroke prev = history->at(0);
-    //    prev.operation = OP_SMOOTH_SUBSTRACTION;
-    //    result.in_frame_stroke = prev;
-    //    last_history_index = 0;
-    //}
-    //else {
-    //    result.in_frame_stroke = history->data()[united_stroke_idx - 1];
-    //    last_history_index = united_stroke_idx - 1;
-    //}
+    // In the case of first stroke, submit it as substraction to clear everything
+    if (united_stroke_idx == 0) {
+        last_history_index = 0;
+    }
+    else {
+        //result.in_frame_stroke = history->data()[united_stroke_idx - 1];
+        last_history_index = united_stroke_idx - 1;
+    }
 
-    //result.in_frame_influence.eval_aabb_min = result.in_frame_stroke_aabb.center - result.in_frame_stroke_aabb.half_size;
-    //result.in_frame_influence.eval_aabb_max = result.in_frame_stroke_aabb.center + result.in_frame_stroke_aabb.half_size;
+    result.in_frame_influence.eval_aabb_min = result.in_frame_stroke_aabb.center - result.in_frame_stroke_aabb.half_size;
+    result.in_frame_influence.eval_aabb_max = result.in_frame_stroke_aabb.center + result.in_frame_stroke_aabb.half_size;
 
     // Fit the AABB to the eval grid
     result.in_frame_stroke_aabb.half_size += glm::vec3(max_smooth_margin);
@@ -106,6 +103,18 @@ void StrokeManager::undo(sToComputeStrokeData& result) {
 
     // Compute and fill intersection
     compute_history_intersection(result.in_frame_influence, culling_aabb, last_history_index);
+
+    // In the case of first stroke, submit it as substraction to clear everything
+    if (united_stroke_idx == 0) {
+        Stroke prev = history->at(0);
+        prev.operation = OP_SMOOTH_SUBSTRACTION;
+        //result.in_frame_stroke = prev;
+
+        add_stroke_to_upload_list(result.in_frame_influence, prev);
+    } else {
+        //result.in_frame_stroke = history->data()[united_stroke_idx - 1];
+        add_stroke_to_upload_list(result.in_frame_influence, history->data()[united_stroke_idx - 1]);
+    }
 }
 
 
@@ -140,20 +149,20 @@ void StrokeManager::redo(sToComputeStrokeData& result) {
     }
     
 
-    //spdlog::info("redo size: {}, to pop {}", redo_history.size(), redo_pop_count_from_history);
+    spdlog::info("redo size: {}, to pop {}", redo_history.size(), redo_pop_count_from_history);
 
-    //result.in_frame_stroke = redo_history[strokes_to_redo_count-1u];
+    add_stroke_to_upload_list(result.in_frame_influence, redo_history[strokes_to_redo_count - 1u]);
 
-    //result.in_frame_influence.eval_aabb_min = result.in_frame_stroke_aabb.center - result.in_frame_stroke_aabb.half_size;
-    //result.in_frame_influence.eval_aabb_max = result.in_frame_stroke_aabb.center + result.in_frame_stroke_aabb.half_size;
+    result.in_frame_influence.eval_aabb_min = result.in_frame_stroke_aabb.center - result.in_frame_stroke_aabb.half_size;
+    result.in_frame_influence.eval_aabb_max = result.in_frame_stroke_aabb.center + result.in_frame_stroke_aabb.half_size;
 
-    //// Fit the AABB to the eval grid
-    //result.in_frame_stroke_aabb.half_size += glm::vec3(max_smooth_margin);
-    //AABB culling_aabb = compute_grid_aligned_AABB(result.in_frame_stroke_aabb, brick_world_size);
-    //result.in_frame_stroke_aabb.half_size -= glm::vec3(max_smooth_margin);
+    // Fit the AABB to the eval grid
+    result.in_frame_stroke_aabb.half_size += glm::vec3(max_smooth_margin);
+    AABB culling_aabb = compute_grid_aligned_AABB(result.in_frame_stroke_aabb, brick_world_size);
+    result.in_frame_stroke_aabb.half_size -= glm::vec3(max_smooth_margin);
 
-    //// Compute and fill intersection
-    //compute_history_intersection(result.in_frame_influence, culling_aabb, history->size());
+    // Compute and fill intersection
+    compute_history_intersection(result.in_frame_influence, culling_aabb, history->size());
 }
 
 
