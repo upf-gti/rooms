@@ -15,7 +15,7 @@ void TutorialEditor::initialize()
 
     // Create tutorial/welcome panel
     {
-        xr_panel_2d = new Node2D("tutorial_welcome", { 0.0f, 0.0f }, { 1.0f, 1.0f });
+        xr_panel_2d = new Node2D("tutorial_root", { 0.0f, 0.0f }, { 1.0f, 1.0f });
 
         auto webgpu_context = Renderer::instance->get_webgpu_context();
         glm::vec2 size = glm::vec2(static_cast<float>(webgpu_context->render_width), static_cast<float>(webgpu_context->render_height)) * 0.5f;
@@ -26,13 +26,25 @@ void TutorialEditor::initialize()
             pos = -size * 0.5f;
         }
 
-        ui::XRPanel* xr_panel = new ui::XRPanel("scene_editor_root", "data/images/welcome_screen.png", pos, size);
-        xr_panel_2d->add_child(xr_panel);
-
         const glm::vec2& button_size = { size.x * 0.4f, size.y * 0.25f };
 
-        xr_panel->add_button("skip_button", "data/textures/menu_buttons/skip.png", { button_size.x * 0.75f, button_size.y }, button_size);
-        xr_panel->add_button("create_button", "data/textures/menu_buttons/create_now.png", { size.x - button_size.x * 0.75f, button_size.y }, button_size);
+        // Welcome panel
+        {
+            welcome_panel = new ui::XRPanel("scene_editor_root", "data/images/welcome_screen.png", pos, size);
+            xr_panel_2d->add_child(welcome_panel);
+
+            welcome_panel->add_button("start_tutorial", "data/textures/menu_buttons/start_tutorial.png", { button_size.x * 0.75f, button_size.y }, button_size);
+            welcome_panel->add_button("create_button", "data/textures/menu_buttons/create_now.png", { size.x - button_size.x * 0.75f, button_size.y }, button_size);
+        }
+
+        // Rooms intro panel
+        {
+            rooms_intro_panel = new ui::XRPanel("scene_editor_root", "data/images/rooms_intro.png", pos, size);
+            rooms_intro_panel->set_visibility(false);
+            xr_panel_2d->add_child(rooms_intro_panel);
+
+            rooms_intro_panel->add_button("skip_button", "data/textures/menu_buttons/next.png", { size.x * 0.5f, button_size.y }, button_size);
+        }
 
         if (renderer->get_openxr_available()) {
             xr_panel_3d = new Viewport3D(xr_panel_2d);
@@ -44,6 +56,11 @@ void TutorialEditor::initialize()
     {
         Node::bind("create_button", [&](const std::string& signal, void* button) {
             RoomsEngine::switch_editor(SCENE_EDITOR);
+        });
+
+        Node::bind("start_tutorial", [&](const std::string& signal, void* button) {
+            welcome_panel->set_visibility(false);
+            rooms_intro_panel->set_visibility(true);
         });
     }
 }

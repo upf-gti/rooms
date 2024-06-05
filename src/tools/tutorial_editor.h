@@ -16,6 +16,10 @@ protected:
     Node2D* xr_panel_2d = nullptr;
     Viewport3D* xr_panel_3d = nullptr;
 
+    // Panels
+    ui::XRPanel* welcome_panel = nullptr;
+    ui::XRPanel* rooms_intro_panel = nullptr;
+
 public:
 
     TutorialEditor() {};
