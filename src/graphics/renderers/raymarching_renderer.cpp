@@ -489,6 +489,20 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
     
 
     if (needs_evaluation) {
+        if (stroke_to_compute.in_frame_influence.stroke_count > octree_edit_list_size) {
+            spdlog::info("Resized GPU edit buffer from {} to {}", octree_edit_list_size, stroke_manager.edit_list.size());
+
+            octree_edit_list_size = stroke_manager.edit_list.size();
+            octree_edit_list.destroy();
+
+            size_t edit_list_size = sizeof(Edit) * octree_edit_list_size;
+            octree_edit_list.data = webgpu_context->create_buffer(edit_list_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "edit_list");
+            octree_edit_list.binding = 7;
+            octree_edit_list.buffer_size = edit_list_size;
+        }
+
+        webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_edit_list.data), 0, stroke_manager.edit_list.data(), sizeof(Edit) * stroke_manager.edit_list_count);
+
         webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_stroke_history.data), 0, &stroke_to_compute.in_frame_influence, sizeof(sStrokeInfluence));
 
         uint32_t set_as_preview = (needs_undo) ? 0x01u : 0u;
@@ -498,7 +512,7 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
         evaluate_strokes(compute_pass);
     }
 
-    compute_preview_edit(compute_pass);
+    //compute_preview_edit(compute_pass);
 
     // Finalize compute_raymarching pass
     wgpuComputePassEncoderEnd(compute_pass);
@@ -688,13 +702,19 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_brick_buffers.data), 0u, atlas_indices, sizeof(uint32_t) * (octants_max_size + 4u));
         delete[] atlas_indices;
 
-
         // Stroke history
         size_t stroke_history_size = sizeof(sStrokeInfluence);
         octree_stroke_history.data = webgpu_context->create_buffer(stroke_history_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "stroke_history");
         octree_stroke_history.binding = 6;
         octree_stroke_history.buffer_size = stroke_history_size;
         webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_stroke_history.data), 0, &default_val, sizeof(uint32_t));
+
+        // Stroke Edit list
+        octree_edit_list_size = EDIT_BUFFER_INITAL_SIZE;
+        size_t edit_list_size = sizeof(Edit) * octree_edit_list_size;
+        octree_edit_list.data = webgpu_context->create_buffer(edit_list_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "stroke_history");
+        octree_edit_list.binding = 7;
+        octree_edit_list.buffer_size = edit_list_size;
 
         // Buffer for indirect buffers
         uint32_t buffer_size = sizeof(uint32_t) * 4u * 4u;
@@ -711,7 +731,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_indirect_buffer_struct.data), 0, default_indirect_values, sizeof(uint32_t) * 16u);
 
 
-        std::vector<Uniform*> uniforms = { &octree_uniform, &compute_merge_data_uniform,
+        std::vector<Uniform*> uniforms = { &octree_uniform, &compute_merge_data_uniform, &octree_edit_list,
                                            &octree_stroke_history, &octree_brick_buffers };
 
         compute_octree_evaluate_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_evaluate_shader, 0);
@@ -772,7 +792,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
     {
         octree_indirect_buffer_struct_2 = octree_indirect_buffer_struct;
         octree_indirect_buffer_struct_2.binding = 7u;
-        std::vector<Uniform*> uniforms = { &sdf_texture_uniform, &octree_uniform,
+        std::vector<Uniform*> uniforms = { &sdf_texture_uniform, &octree_uniform, &octree_edit_list,
                                            &octree_stroke_history, &octree_brick_buffers, &sdf_material_texture_uniform };
         compute_octree_write_to_texture_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_write_to_texture_shader, 0);
     }

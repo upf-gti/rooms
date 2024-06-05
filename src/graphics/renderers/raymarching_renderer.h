@@ -120,6 +120,8 @@ class RaymarchingRenderer {
     Uniform         octree_brick_buffers;
     Uniform         octree_preview_stroke;
     Uniform         octree_stroke_history;
+    uint32_t        octree_edit_list_size;
+    Uniform         octree_edit_list;
     Uniform         octree_brick_copy_buffer;
     WGPUBindGroup   render_camera_bind_group = nullptr;
 

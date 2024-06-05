@@ -68,12 +68,12 @@ struct Stroke {
     stroke_id       : u32,
     edit_count      : u32,
     primitive       : u32,
-    operation       : u32,
-    parameters      : vec4f,
+    operation       : u32,//4
+    parameters      : vec4f,//4
+    aabb_min        : vec3f,//4
     color_blend_op  : u32,
-    aabb_min        : vec3,
-    aabb_max        : vec3,
-    edit_list_index : u32,
+    aabb_max        : vec3f,
+    edit_list_index : u32, //4
     material        : StrokeMaterial   // 48 bytes
 };
 

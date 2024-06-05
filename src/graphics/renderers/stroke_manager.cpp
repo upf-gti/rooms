@@ -4,6 +4,10 @@
 
 #include "spdlog/spdlog.h"
 
+void StrokeManager::init() {
+    edit_list.resize(EDIT_BUFFER_INITAL_SIZE);
+}
+
 void StrokeManager::add_stroke_to_upload_list(sStrokeInfluence& influence, const Stroke& stroke) {
     memcpy(&influence.strokes[influence.stroke_count], &stroke, sizeof(sToUploadStroke));
     influence.strokes[influence.stroke_count].edit_list_index = edit_list_count;
@@ -207,6 +211,7 @@ void StrokeManager::update() {
     in_frame_stroke.edit_count = 0u;
     pop_count_from_history = 0u;
     redo_pop_count_from_history = 0u;
+    edit_list_count = 0u;
 }
 
 void StrokeManager::change_stroke(const uint32_t index_increment) {

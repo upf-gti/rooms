@@ -159,10 +159,10 @@ fn sample_sdf_with_preview(sculpt_position : vec3f, atlas_position : vec3f) -> S
     surface.distance = sample_sdf_atlas(atlas_position);
     surface.material = interpolate_material(atlas_position * SDF_RESOLUTION);
     
-    for(var i : u32 = 0u; i < preview_stroke.edit_count; i++) {
-        surface = evaluate_single_edit(sculpt_position, preview_stroke.primitive, preview_stroke.operation, preview_stroke.parameters, preview_stroke.color_blend_op, surface, material, preview_stroke.edits[i]);
-        surface.distance = surface.distance / 2.0; 
-    }
+    // for(var i : u32 = 0u; i < preview_stroke.edit_count; i++) {
+    //     //surface = evaluate_single_edit(sculpt_position, preview_stroke.primitive, preview_stroke.operation, preview_stroke.parameters, preview_stroke.color_blend_op, surface, material, preview_stroke.edits[i]);
+    //     surface.distance = surface.distance / 2.0; 
+    // }
     
     return surface;
 }
@@ -174,9 +174,9 @@ fn sample_sdf_with_preview_without_material(sculpt_position : vec3f, atlas_posit
     var surface : Surface;
     surface.distance = sample_sdf_atlas(atlas_position);
     
-    for(var i : u32 = 0u; i < preview_stroke.edit_count; i++) {
-        surface = evaluate_single_edit(sculpt_position, preview_stroke.primitive, preview_stroke.operation, preview_stroke.parameters, preview_stroke.color_blend_op, surface, material, preview_stroke.edits[i]);
-    }
+    // for(var i : u32 = 0u; i < preview_stroke.edit_count; i++) {
+    //     surface = evaluate_single_edit(sculpt_position, preview_stroke.primitive, preview_stroke.operation, preview_stroke.parameters, preview_stroke.color_blend_op, surface, material, preview_stroke.edits[i]);
+    // }
     
     return surface.distance;
 }
@@ -342,6 +342,8 @@ var<private> atlas_tile_coordinates : vec3f;
 var<private> last_found_surface_distance : f32;
 
 var<private> last_sampled_material : Material;
+
+var<private> edit_list : array<Edit, 2>;
 
 @fragment
 fn fs_main(in: VertexOutput) -> FragmentOutput {
