@@ -1,10 +1,13 @@
 #include "cursor.h"
 
 #include "framework/nodes/ui.h"
+#include "framework/nodes/viewport_3d.h"
 #include "framework/input.h"
 #include "framework/ui/context_2d.h"
 
 #include "graphics/renderer.h"
+
+#include "glm/gtx/quaternion.hpp"
 
 #include "imgui.h"
 
@@ -22,6 +25,11 @@ namespace ui {
         c_disabled = new Image2D("default_cursor", "data/textures/cursors/disabled.png", size, CURSOR);
 
         current = c_default;
+
+        HContainer2D* root_cursor = new HContainer2D("root_cursor", { 0.0f, 0.0f });
+        root_cursor->add_child(current);
+
+        cursor_3d = new Viewport3D(root_cursor);
     }
 
     void Cursor::set(int type)
@@ -54,36 +62,61 @@ namespace ui {
         }
     }
 
-    void Cursor::render()
+    void Cursor::update(float delta_time)
     {
-        auto& io = ImGui::GetIO();
-        if (!current || io.WantCaptureMouse) {
-            return;
-        }
-
-        ImGui::SetMouseCursor(ImGuiMouseCursor_None);
-
-        glm::vec2 cursor_position;
-
         if (Renderer::instance->get_openxr_available()) {
+
+            must_render_xr_cursor = false;
 
             if (!Context2D::any_hover()) {
                 return;
             }
 
-            cursor_position = Context2D::get_xr_position();
+            Node2D* hovered = Context2D::get_hover();
+
+            glm::mat4x4 m(1.0f);
+            m = glm::translate(m, Context2D::get_xr_world_position());
+            m = m * glm::toMat4(glm::quat_cast(hovered->get_global_viewport_model()));
+
+            cursor_3d->set_model(m);
+
+            cursor_3d->update(delta_time);
+
+            // must_render_xr_cursor = true;
+        }
+    }
+
+    void Cursor::render()
+    {
+        if (!current) {
+            return;
+        }
+
+        if (Renderer::instance->get_openxr_available()) {
+
+            if (must_render_xr_cursor) {
+                cursor_3d->render();
+            }
 
         } else {
+
+            auto& io = ImGui::GetIO();
+            if (io.WantCaptureMouse) {
+                return;
+            }
+
+            ImGui::SetMouseCursor(ImGuiMouseCursor_None);
+
             auto webgpu_context = Renderer::instance->get_webgpu_context();
 
             glm::vec2 mouse_pos = Input::get_mouse_position();
             mouse_pos.y = webgpu_context->render_height - mouse_pos.y;
 
-            cursor_position = { mouse_pos.x - size.x * 0.25f, mouse_pos.y - size.y * 0.75f };
+            glm::vec2 cursor_position = { mouse_pos.x - size.x * 0.25f, mouse_pos.y - size.y * 0.75f };
+
+            current->set_translation(cursor_position);
+
+            current->render();
         }
-
-        current->set_translation(cursor_position);
-
-        current->render();
     }
 }
