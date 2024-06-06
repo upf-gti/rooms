@@ -4,6 +4,8 @@
 
 #include "glm/vec2.hpp"
 
+class Viewport3D;
+
 namespace ui {
 
     class Image2D;
@@ -27,6 +29,10 @@ namespace ui {
 
         Image2D* current = nullptr;
 
+        // Support for vr cursor
+        Viewport3D* cursor_3d = nullptr;
+        bool must_render_xr_cursor = false;
+
         // Pre-load different cursors
 
         Image2D* c_default      = nullptr;
@@ -42,9 +48,9 @@ namespace ui {
         Cursor() {};
 
         void load();
-
         void set(int type);
 
+        void update(float delta_time);
         void render();
     };
 }

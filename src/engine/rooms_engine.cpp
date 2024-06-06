@@ -147,6 +147,8 @@ void RoomsEngine::update(float delta_time)
         else if (ui::Context2D::is_hover_disabled()) {
             cursor.set(ui::MOUSE_CURSOR_DISABLED);
         }
+
+        cursor.update(delta_time);
     }
 
     Engine::update(delta_time);
@@ -167,9 +169,8 @@ void RoomsEngine::render()
     if (Renderer::instance->get_openxr_available()) {
         raycast_pointer->render();
     }
-    else {
-        cursor.render();
-    }
+
+    cursor.render();
 
 #ifndef __EMSCRIPTEN__
     render_gui();
