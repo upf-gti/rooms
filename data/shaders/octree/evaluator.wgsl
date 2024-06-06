@@ -11,7 +11,7 @@
 @group(1) @binding(0) var<storage, read> octant_usage_read : array<u32>;
 @group(1) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
 
-@group(2) @binding(0) var<storage, read> preview_stroke : Stroke;
+@group(2) @binding(0) var<storage, read> preview_stroke : PreviewStroke;
 
 #include sdf_interval_functions.wgsl
 
@@ -194,8 +194,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 {
     let level : u32 = atomicLoad(&octree.current_level);
 
-    let p = preview_stroke.edit_count;
-
     let id : u32 = group_id.x;
 
     var parent_level : u32;
@@ -359,33 +357,12 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         // =============================================================
         // =============================================================
 
-        var surface_with_preview_interval : vec2f;
-        let SMOOTH_FACTOR : f32 = preview_stroke.parameters.w;
-
-         if (level == OCTREE_DEPTH) {
-            // Compute the context of the current stroke,
-            for (var j : u32 = 0; j < stroke_history.count; j++) {
-                surface_interval = evaluate_stroke_interval(current_subdivision_interval, &(stroke_history.strokes[j]), &edit_list, surface_interval, octant_center, level_half_size);
-            }
-
-            // No bueno
-            surface_with_preview_interval = evaluate_stroke_interval(current_subdivision_interval,  &(preview_stroke), &edit_list, surface_interval, octant_center, level_half_size);
-        } 
-            // Twice the smooth factor since it is the top influencing margin 
-            // as a way to subdivide to the bottom level. It is not used
-            // for sending the work to the write to texture!!
-            margin = vec4f(SMOOTH_FACTOR * 2.0);
-        
-        // Check the edits in the parent, and fill its own list with the edits that affect this child
-        // The magin is twice the smooth factor if there are two strokes with this smooth factor, they will act on eachotehr
-        current_stroke_interval = evaluate_stroke_interval_force_union(current_subdivision_interval,  &(preview_stroke), &edit_list, current_stroke_interval, margin);
-        let preview_stroke_interval = evaluate_stroke_interval_force_union(current_subdivision_interval,  &(preview_stroke), &edit_list, current_stroke_interval, vec4f(0.0));
-        
+        let SMOOTH_FACTOR : f32 = preview_stroke.stroke.parameters.w;
         
         if (level < OCTREE_DEPTH) {
             // Broad culling using only the incomming stroke
             // TODO: intersection with current edit AABB?
-            if (current_stroke_interval.x < 0.0 && intersection_AABB_AABB(eval_aabb_min, eval_aabb_max, merge_data.reevaluation_AABB_min, merge_data.reevaluation_AABB_max)) {
+            if (intersection_AABB_AABB(eval_aabb_min, eval_aabb_max, merge_data.reevaluation_AABB_min, merge_data.reevaluation_AABB_max)) {
                 // Subdivide
                 // Increase the number of children from the current level
                 let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 8);
@@ -396,30 +373,16 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 }
             }
         } else {
-            if (preview_stroke.operation == OP_SMOOTH_SUBSTRACTION) {
-                let int_distance = abs(distance(surface_with_preview_interval, surface_interval));
-            
-                if (int_distance > 0.00001) {
+            let prev_interval : vec2f = octree.data[octree_index].octant_center_distance;
+            let surface_with_preview_interval : vec2f = evaluate_stroke_interval(current_subdivision_interval,  &(preview_stroke.stroke), &preview_stroke.edit_list, prev_interval, octant_center, level_half_size);
+            let int_distance = abs(distance(prev_interval, surface_with_preview_interval));
+
+            if (int_distance > 0.00001) {
+                if (surface_with_preview_interval.x < 0.0) {
                     if (is_current_brick_filled) {
                         brick_mark_as_preview(octree_index);
-                    } else if (surface_interval.x < 0.0){
+                    } else {
                         preview_brick_create(octree_index, octant_center, false);
-                    }
-                }
-            } else if (preview_stroke.operation == OP_SMOOTH_UNION) {
-                let int_distance = abs(distance(surface_with_preview_interval, surface_interval));
-            
-                if (int_distance > 0.00001) {
-                    if (is_current_brick_filled) {
-                        brick_mark_as_preview(octree_index);
-                    } else if (surface_with_preview_interval.x < 0.0) {
-                        preview_brick_create(octree_index, octant_center, false);
-                    }
-                }
-            } else if (preview_stroke.operation == OP_SMOOTH_PAINT) {
-                if (current_stroke_interval.x < 0.0) {
-                    if (is_current_brick_filled) {
-                        brick_mark_as_preview(octree_index);
                     }
                 }
             }

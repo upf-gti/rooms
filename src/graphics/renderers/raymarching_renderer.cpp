@@ -85,6 +85,10 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
     AABB_material.shader = RendererStorage::get_shader_from_source(shaders::AABB_shader::source, shaders::AABB_shader::path, AABB_material);
     //AABB_material.diffuse_texture = RendererStorage::get_texture("data/meshes/cube/cube_AABB.png");
     AABB_mesh->set_surface_material_override(AABB_mesh->get_surface(0), AABB_material);
+
+    // Prepare preview stroke
+    preview_stroke.edit_list.resize(PREVIEW_BASE_EDIT_LIST);
+    preview_stroke.stroke.edit_count = 0u;
     
     return 0;
 }
@@ -135,12 +139,13 @@ void RaymarchingRenderer::update_sculpt(WGPUCommandEncoder command_encoder)
 
 }
 
-void RaymarchingRenderer::add_preview_edit(const Edit& edit)
-{
-    if (preview_stroke.edit_count == MAX_EDITS_PER_EVALUATION) {
-        return;
+AABB RaymarchingRenderer::sPreviewStroke::get_AABB() const {
+    AABB result = {};
+    for (uint32_t i = 0u; i < stroke.edit_count; i++) {
+        result = merge_aabbs(result, extern_get_edit_world_AABB(edit_list[i], stroke.primitive, stroke.parameters.w * 2.0f));
     }
-    preview_stroke.edits[preview_stroke.edit_count++] = edit;
+
+    return result;
 }
 
 const RayIntersectionInfo& RaymarchingRenderer::get_ray_intersection_info() const
@@ -157,12 +162,12 @@ void RaymarchingRenderer::change_stroke(const StrokeParameters& params, const ui
 {
     stroke_manager.request_new_stroke(params, index_increment);
     
-    preview_stroke.primitive = params.get_primitive();
-    preview_stroke.operation = params.get_operation();
-    preview_stroke.color_blending_op = params.get_color_blend_operation();
-    preview_stroke.parameters = params.get_parameters();
-    preview_stroke.material = params.get_material();
-    preview_stroke.edit_count = 0u;
+    preview_stroke.stroke.primitive = params.get_primitive();
+    preview_stroke.stroke.operation = params.get_operation();
+    preview_stroke.stroke.color_blending_op = params.get_color_blend_operation();
+    preview_stroke.stroke.parameters = params.get_parameters();
+    preview_stroke.stroke.material = params.get_material();
+    preview_stroke.stroke.edit_count = 0u;
 }
 
 void RaymarchingRenderer::push_edit(const Edit edit)
@@ -289,10 +294,13 @@ void RaymarchingRenderer::get_brick_usage(std::function<void(float, uint32_t)> c
 void RaymarchingRenderer::compute_preview_edit(WGPUComputePassEncoder compute_pass)
 {
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
+#ifndef NDEBUG
+    wgpuComputePassEncoderPushDebugGroup(compute_pass, "Preview evaluation");
+#endif
 
-    // Upload preview data
-
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(preview_stroke_uniform.data), 0u, &preview_stroke, sizeof(Stroke));
+    // Upload preview data, first the stoke and tehn the edit list, since we are storing it in a vector
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(preview_stroke_uniform.data), 0u, &(preview_stroke.stroke), sizeof(sToUploadStroke));
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(preview_stroke_uniform.data), sizeof(sToUploadStroke), preview_stroke.edit_list.data(), preview_stroke.stroke.edit_count * sizeof(Edit));
 
     // Remove the preview tag from all the bricks
     compute_octree_brick_unmark_pipeline.set(compute_pass);
@@ -331,7 +339,10 @@ void RaymarchingRenderer::compute_preview_edit(WGPUComputePassEncoder compute_pa
         ping_pong_idx = (ping_pong_idx + 1) % 2;
     }
 
-    preview_stroke.edit_count = 0u;
+    preview_stroke.stroke.edit_count = 0u;
+#ifndef NDEBUG
+    wgpuComputePassEncoderPopDebugGroup(compute_pass);
+#endif
 };
 
 void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, bool is_undo, bool is_redo)
@@ -479,8 +490,8 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
         AABB_mesh->set_translation(aabb_pos.center + get_sculpt_start_position());
         AABB_mesh->scale(aabb_pos.half_size * 2.0f);
     } else {
-        AABB preview_aabb = stroke_manager.compute_grid_aligned_AABB(preview_stroke.get_world_AABB(), glm::vec3(brick_world_size));
-        //aabb_pos = preview_aabb;
+        AABB preview_aabb = stroke_manager.compute_grid_aligned_AABB(preview_stroke.get_AABB(), glm::vec3(brick_world_size));
+        aabb_pos = preview_aabb;
         compute_merge_data.reevaluation_AABB_min = preview_aabb.center - preview_aabb.half_size;
         compute_merge_data.reevaluation_AABB_max = preview_aabb.center + preview_aabb.half_size;
     }
@@ -512,7 +523,7 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
         evaluate_strokes(compute_pass);
     }
 
-    //compute_preview_edit(compute_pass);
+    compute_preview_edit(compute_pass);
 
     // Finalize compute_raymarching pass
     wgpuComputePassEncoderEnd(compute_pass);

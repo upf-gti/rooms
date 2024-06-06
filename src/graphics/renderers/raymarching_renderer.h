@@ -26,6 +26,9 @@
 #define MIN_PRIMITIVE_SIZE 0.005f
 #define MAX_PRIMITIVE_SIZE 0.08f
 
+#define PREVIEW_BASE_EDIT_LIST 64u
+#define PREVIEW_EDIT_LIST_INCREMENT 200u
+
 class MeshInstance3D;
 
 struct RayIntersectionInfo {
@@ -180,6 +183,13 @@ class RaymarchingRenderer {
 
     StrokeManager   stroke_manager = {};
 
+    struct sPreviewStroke {
+        sToUploadStroke stroke;
+        std::vector<Edit> edit_list;
+
+        AABB get_AABB() const;
+    } preview_stroke;
+
     std::vector<Edit> incoming_edits;
 
     struct ProxyInstanceData {
@@ -187,27 +197,6 @@ class RaymarchingRenderer {
         uint32_t atlas_index;
         uint32_t octree_parent_index;
         uint32_t padding[3];
-    };
-
-    Stroke   preview_stroke = {
-             .edit_count = 1u,
-             .primitive = SD_SPHERE,
-             .operation = OP_UNION,
-             .color_blending_op = COLOR_OP_REPLACE,
-             .edits = {
-                 {
-                     .position = {0.00f, 0.10f, 0.0f},
-                     .dimensions = {0.050f, 0.01f, 0.01f,0.01f}
-                 },
-                 {
-                     .position = {0.00f, 0.00f, 0.0f},
-                     .dimensions = {0.050f, 0.01f, 0.01f,0.01f}
-                 },
-                 {
-                     .position = {0.00f, -0.150f, 0.0f},
-                     .dimensions = {0.10f, 0.01f, 0.01f,0.01f}
-                 }
-             },
     };
 
     // Timestepping counters
@@ -261,11 +250,6 @@ public:
 
     const RayIntersectionInfo& get_ray_intersection_info() const;
 
-    void set_preview_edit(const Edit& preview) {
-        preview_stroke.edits[0] = preview;
-        preview_stroke.edit_count = 1u;
-    }
-
     /*
     *   Edits
     */
@@ -280,7 +264,12 @@ public:
         }
     };
 
-    void add_preview_edit(const Edit& edit);
+    inline void add_preview_edit(const Edit& edit) {
+        if (preview_stroke.stroke.edit_count == preview_stroke.edit_list.size()) {
+            preview_stroke.edit_list.resize(preview_stroke.edit_list.size() + PREVIEW_EDIT_LIST_INCREMENT);
+        }
+        preview_stroke.edit_list[preview_stroke.stroke.edit_count++] = edit;
+    }
 
     const glm::vec3& get_sculpt_start_position() { return sculpt_data.sculpt_start_position; }
 };

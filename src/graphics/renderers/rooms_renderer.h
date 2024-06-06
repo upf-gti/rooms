@@ -116,12 +116,6 @@ public:
 #endif
     };
 
-    void add_preview_edit(const Edit& edit) {
-#ifndef DISABLE_RAYMARCHER
-        raymarching_renderer.add_preview_edit(edit);
-#endif
-    }
-
     void push_preview_edit_list(std::vector<Edit>& edits) {
 #ifndef DISABLE_RAYMARCHER
         for (uint32_t i = 0u; i < edits.size(); i++) {
@@ -140,10 +134,6 @@ public:
 
     void redo() {
         raymarching_renderer.redo();
-    }
-
-    inline void set_preview_edit(const Edit& stroke) {
-        raymarching_renderer.set_preview_edit(stroke);
     }
 
     glm::vec3 get_camera_eye();

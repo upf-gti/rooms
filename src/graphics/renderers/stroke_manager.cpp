@@ -148,7 +148,6 @@ void StrokeManager::redo(sToComputeStrokeData& result) {
         }
     }
     
-
     spdlog::info("redo size: {}, to pop {}", redo_history.size(), redo_pop_count_from_history);
 
     add_stroke_to_upload_list(result.in_frame_influence, redo_history[strokes_to_redo_count - 1u]);

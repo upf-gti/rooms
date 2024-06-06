@@ -63,6 +63,11 @@ struct StrokeMaterial {
     noise_color     : vec4f
 };
 
+struct PreviewStroke {
+    stroke    : Stroke,
+    edit_list : array<Edit>
+};
+
 //TODO(Juan): revisit the padding, and avoid using vec2/3/4 as padding
 struct Stroke {
     stroke_id       : u32,
