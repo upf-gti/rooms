@@ -63,7 +63,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     }
 
     // Set default editor..
-    current_editor = tutorial_editor;
+    current_editor = sculpt_editor;
 
     // Grid
     {
