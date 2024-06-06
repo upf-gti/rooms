@@ -1089,10 +1089,12 @@ void SculptEditor::init_ui()
 {
     main_panel_2d = new ui::HContainer2D("root", { 48.0f, 64.f });
 
+    const StrokeMaterial& stroke_material = stroke_parameters.get_material();
+
     // Color picker...
 
     {
-        ui::ColorPicker2D* color_picker = new ui::ColorPicker2D("color_picker", stroke_parameters.get_material().color);
+        ui::ColorPicker2D* color_picker = new ui::ColorPicker2D("color_picker", stroke_material.color);
 
         // Add recent colors around the picker
         {
@@ -1174,7 +1176,7 @@ void SculptEditor::init_ui()
             ui::ButtonSubmenu2D* material_editor_submenu = new ui::ButtonSubmenu2D("material_editor", "data/textures/material_editor.png");
 
             // Shading properties
-            {
+            /*{
                 ui::ButtonSubmenu2D* shading_submenu = new ui::ButtonSubmenu2D("shading", "data/textures/shading.png");
 
                 {
@@ -1184,17 +1186,21 @@ void SculptEditor::init_ui()
                     shading_submenu->add_child(g_edit_pbr);
                 }
 
-                /*{
+                {
                     ui::ItemGroup2D* g_edit_pattern = new ui::ItemGroup2D("g_edit_pattern");
                     g_edit_pattern->add_child(new ui::Slider2D("noise_intensity", 0.0f, ui::SliderMode::VERTICAL, 0.0f, 10.0f));
                     g_edit_pattern->add_child(new ui::Slider2D("noise_frequency", 20.0f, ui::SliderMode::VERTICAL, 0.0f, 50.0f));
                     g_edit_pattern->add_child(new ui::Slider2D("noise_octaves", 8.0f, ui::SliderMode::VERTICAL, 0.0f, 16.0f, 1.0f));
                     g_edit_pattern->add_child(new ui::ColorPicker2D("noise_color_picker", colors::WHITE));
                     material_editor_submenu->add_child(g_edit_pattern);
-                }*/
+                }
 
                 material_editor_submenu->add_child(shading_submenu);
-            }
+            }*/
+
+            // Put directly these two props until there are more pbr props to show
+            material_editor_submenu->add_child(new ui::Slider2D("roughness", "data/textures/roughness.png", stroke_material.roughness));
+            material_editor_submenu->add_child(new ui::Slider2D("metallic", "data/textures/metallic.png", stroke_material.metallic));
 
             // Shuffle
             {

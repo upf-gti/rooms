@@ -20,6 +20,10 @@ protected:
     ui::HContainer2D* main_panel_2d = nullptr;
     Viewport3D* main_panel_3d = nullptr;
 
+    // Tutorial
+    Node2D* xr_panel_2d = nullptr;
+    Viewport3D* xr_panel_3d = nullptr;
+
 public:
 
     BaseEditor() {};

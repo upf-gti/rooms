@@ -3,6 +3,7 @@
 #include "engine/engine.h"
 
 #include "framework/ui/gizmo_3d.h"
+#include "framework/ui/cursor.h"
 
 class Node;
 class Node3D;
@@ -11,11 +12,13 @@ class Environment3D;
 class BaseEditor;
 class SculptEditor;
 class SceneEditor;
+class TutorialEditor;
 
 enum Editor : uint8_t {
     SCENE_EDITOR,
     SCULPT_EDITOR,
-    SHAPE_EDITOR
+    SHAPE_EDITOR,
+    TUTORIAL_EDITOR
 };
 
 #define _DESTROY_(x) if(x) { delete x; }
@@ -30,6 +33,8 @@ class RoomsEngine : public Engine
 
     SceneEditor* scene_editor = nullptr;
 
+    TutorialEditor* tutorial_editor = nullptr;
+
     bool export_scene();
     bool import_scene();
 
@@ -38,6 +43,8 @@ class RoomsEngine : public Engine
     // Meta quest controller meshes
     MeshInstance3D* controller_mesh_left = nullptr;
     MeshInstance3D* controller_mesh_right = nullptr;
+
+    ui::Cursor cursor;
 
 public:
 

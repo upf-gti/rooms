@@ -1,0 +1,54 @@
+{
+    "steps": [
+
+        {
+            "id": "stamp_smear",
+            "desc": "How to stamp, smear and change between both",
+            "allowed": [
+
+            ]
+        },
+        {
+            "id": "primitives_operations",
+            "desc": "How to sculpt using different primitives and operations",
+            "allowed": [
+
+            ]
+        },
+        {
+            "id": "materials",
+            "desc": "",
+            "allowed": [
+
+            ]
+        },
+        {
+            "id": "guides",
+            "desc": "",
+            "allowed": [
+
+            ]
+        },
+        {
+            "id": "curves",
+            "desc": "",
+            "allowed": [
+
+            ]
+        },
+        {
+            "id": "undo_redo",
+            "desc": "",
+            "allowed": [
+
+            ]
+        },
+        {
+            "id": "paint",
+            "desc": "",
+            "allowed": [
+
+            ]
+        }
+    ]
+}

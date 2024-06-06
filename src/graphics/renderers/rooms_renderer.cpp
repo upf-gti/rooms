@@ -5,6 +5,7 @@
 
 #include "framework/camera/camera_2d.h"
 #include "framework/input.h"
+#include "framework/ui/context_2d.h"
 
 #ifdef XR_SUPPORT
 #include "xr/openxr_context.h"
@@ -111,7 +112,7 @@ void RoomsRenderer::update(float delta_time)
 
     if (!is_openxr_available) {
         const auto& io = ImGui::GetIO();
-        if (!io.WantCaptureMouse && !io.WantCaptureKeyboard) {
+        if (!io.WantCaptureMouse && !io.WantCaptureKeyboard && !ui::Context2D::any_focus()) {
             camera->update(delta_time);
         }
     } else {

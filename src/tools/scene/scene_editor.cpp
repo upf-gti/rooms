@@ -9,15 +9,23 @@
 #include "framework/nodes/spot_light_3d.h"
 #include "framework/nodes/omni_light_3d.h"
 #include "framework/nodes/directional_light_3d.h"
+#include "framework/math/intersections.h"
 
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/renderer_storage.h"
+
+#include "shaders/mesh_color.wgsl.gen.h"
+#include "shaders/ui/ui_xr_panel.wgsl.gen.h"
 
 #include "engine/rooms_engine.h"
 #include "engine/scene.h"
 
 #include "spdlog/spdlog.h"
 #include "imgui.h"
+
+MeshInstance3D* intersection_mesh = nullptr;
+
+uint32_t subdivisions = 16;
 
 void SceneEditor::initialize()
 {
@@ -34,6 +42,17 @@ void SceneEditor::initialize()
     SculptInstance* default_sculpt = new SculptInstance();
     RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
     rooms_renderer->get_raymarching_renderer()->set_current_sculpt(default_sculpt);
+
+    /*intersection_mesh = new MeshInstance3D();
+    intersection_mesh->add_surface(RendererStorage::get_surface("box"));
+    intersection_mesh->scale(glm::vec3(0.01f));
+
+    Material intersection_mesh_material;
+    intersection_mesh_material.color = colors::CYAN;
+    intersection_mesh_material.shader = RendererStorage::get_shader_from_source(shaders::mesh_color::source, shaders::mesh_color::path, intersection_mesh_material);
+    intersection_mesh->set_surface_material_override(intersection_mesh->get_surface(0), intersection_mesh_material);
+
+    main_scene->add_node(intersection_mesh);*/
 }
 
 void SceneEditor::clean()
@@ -57,6 +76,72 @@ void SceneEditor::update(float delta_time)
     }
 
     update_gizmo(delta_time);
+
+    //if (xr_panel_3d) {
+
+    //    // Update welcome screen following headset??
+
+    //    glm::mat4x4 m(1.0f);
+    //    glm::vec3 eye = renderer->get_camera_eye();
+    //    glm::vec3 new_pos = eye + renderer->get_camera_front();
+
+    //    m = glm::translate(m, new_pos);
+    //    m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
+
+    //    xr_panel_3d->set_model(m);
+    //    xr_panel_3d->update(delta_time);
+    //}
+    //else {
+    //    xr_panel_2d->update(delta_time);
+    //}
+
+    // debug
+
+    //glm::vec3 ray_origin;
+    //glm::vec3 ray_direction;
+
+    //if (Renderer::instance->get_openxr_available())
+    //{
+    //    ray_origin = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
+    //    glm::mat4x4 select_hand_pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
+    //    ray_direction = get_front(select_hand_pose);
+    //}
+    //else
+    //{
+    //    Camera* camera = Renderer::instance->get_camera();
+    //    glm::vec3 ray_dir = camera->screen_to_ray(Input::get_mouse_position());
+
+    //    ray_origin = camera->get_eye();
+    //    ray_direction = glm::normalize(ray_dir);
+    //}
+
+    //// Quad
+    //glm::mat4x4 model = curved_quad->get_model();
+
+    //glm::vec3 quad_position = model[3];
+    //glm::quat quad_rotation = glm::quat_cast(model);
+    //glm::vec2 quad_size = { 2.0f, 1.0f };
+
+    //float collision_dist;
+    //glm::vec3 intersection_point;
+    //glm::vec3 local_intersection_point;
+
+    //if (intersection::ray_curved_quad(
+    //    ray_origin,
+    //    ray_direction,
+    //    quad_position,
+    //    quad_size * 0.5f,
+    //    quad_rotation,
+    //    subdivisions,
+    //    0.25f,
+    //    intersection_point,
+    //    local_intersection_point,
+    //    collision_dist,
+    //    true
+    //)) {
+    //    intersection_mesh->set_translation(intersection_point);
+    //    intersection_mesh->scale(glm::vec3(0.01f));
+    //}
 }
 
 void SceneEditor::render()
@@ -65,7 +150,14 @@ void SceneEditor::render()
 
     RoomsEngine::render_controllers();
 
-    render_gizmo(); 
+    render_gizmo();
+
+    /*if (xr_panel_3d) {
+        xr_panel_3d->render();
+    }
+    else {
+        xr_panel_2d->render();
+    }*/
 }
 
 void SceneEditor::render_gui()
@@ -152,6 +244,39 @@ void SceneEditor::init_ui()
         main_panel_3d->set_active(true);
     }
 
+    // Create tutorial/welcome panel
+    //{
+    //    xr_panel_2d = new Node2D("tutorial_scene_root", { 0.0f, 0.0f }, { 1.0f, 1.0f });
+
+    //    auto webgpu_context = Renderer::instance->get_webgpu_context();
+    //    glm::vec2 size = glm::vec2(static_cast<float>(webgpu_context->render_width), static_cast<float>(webgpu_context->render_height)) * 0.5f;
+    //    glm::vec2 pos = size * 0.5f;
+
+    //    if (renderer->get_openxr_available()) {
+    //        size = glm::vec2(1920.f, 1080.0f);
+    //        pos = -size * 0.5f;
+    //    }
+
+    //    ui::XRPanel* xr_panel = new ui::XRPanel("scene_editor_root", "data/images/welcome_screen.png", pos, size);
+    //    xr_panel_2d->add_child(xr_panel);
+
+    //    /*ui::HContainer2D* first_xr_panel_row = new ui::HContainer2D("first_xr_panel_row", { 0.0f, 0.0f });
+    //    xr_panel->add_child(first_xr_panel_row);
+
+    //    first_xr_panel_row->add_child(new ui::TextureButton2D("test_0", "data/textures/import.png"));
+    //    first_xr_panel_row->add_child(new ui::TextureButton2D("test_1", "data/textures/export.png"));*/
+
+    //    const glm::vec2& button_size = { size.x * 0.4f, size.y * 0.25f };
+
+    //    xr_panel->add_button("data/textures/menu_buttons/skip.png", { button_size.x * 0.75f, button_size.y }, button_size);
+    //    xr_panel->add_button("data/textures/menu_buttons/create_now.png", { size.x - button_size.x * 0.75f, button_size.y }, button_size);
+
+    //    if (renderer->get_openxr_available()) {
+    //        xr_panel_3d = new Viewport3D(xr_panel_2d);
+    //        xr_panel_3d->set_active(true);
+    //    }
+    //}
+
     // Load controller UI labels
     //if (renderer->get_openxr_available())
     //{
@@ -219,38 +344,9 @@ void SceneEditor::bind_events()
 
     // Lights
     {
-        Node::bind("omni", [&](const std::string& signal, void* button) {
-            OmniLight3D* new_light = new OmniLight3D();
-            new_light->set_name("omni_light");
-            new_light->set_translation({ 1.0f, 1.f, 0.0f });
-            new_light->set_color({ 1.0f, 1.0f, 1.0f });
-            new_light->set_intensity(1.0f);
-            new_light->set_range(5.0f);
-            main_scene->add_node(new_light);
-            add_node(new_light);
-        });
-
-        Node::bind("spot", [&](const std::string& signal, void* button) {
-            SpotLight3D* new_light = new SpotLight3D();
-            new_light->set_name("spot_light");
-            new_light->set_translation({ 0.0f, 1.f, 0.0f });
-            new_light->rotate(glm::radians(-90.f), { 1.f, 0.0f, 0.f });
-            new_light->set_color({ 1.0f, 1.0f, 1.0f });
-            new_light->set_intensity(1.0f);
-            new_light->set_range(5.0f);
-            main_scene->add_node(new_light);
-            add_node(new_light);
-        });
-
-        Node::bind("directional", [&](const std::string& signal, void* button) {
-            DirectionalLight3D* new_light = new DirectionalLight3D();
-            new_light->set_name("directional_light");
-            new_light->rotate(glm::radians(-90.f), { 1.f, 0.0f, 0.f });
-            new_light->set_color({ 1.0f, 0.2f, 0.0f });
-            new_light->set_intensity(2.0f);
-            main_scene->add_node(new_light);
-            add_node(new_light);
-        });
+        Node::bind("omni", [&](const std::string& signal, void* button) { create_light_node(LIGHT_OMNI); });
+        Node::bind("spot", [&](const std::string& signal, void* button) { create_light_node(LIGHT_SPOT); });
+        Node::bind("directional", [&](const std::string& signal, void* button) { create_light_node(LIGHT_DIRECTIONAL); });
     }
 
     Node::bind("clone", [&](const std::string& signal, void* button) { clone_node(); });
@@ -267,7 +363,7 @@ void SceneEditor::add_node(Node* node)
     selected_node = node;
 
     // To allow the user to move the node at the beginning
-    moving_node = is_gizmo_usable();
+    moving_node = is_gizmo_usable() && renderer->get_openxr_available();
 }
 
 void SceneEditor::clone_node()
@@ -277,6 +373,42 @@ void SceneEditor::clone_node()
     }
 
     // selected_node.clone() ?
+}
+
+void SceneEditor::create_light_node(uint8_t type)
+{
+    Light3D* new_light = nullptr;
+
+    switch (type)
+    {
+    case LIGHT_OMNI:
+        new_light = new OmniLight3D();
+        new_light->set_name("omni_light");
+        new_light->set_translation({ 1.0f, 1.f, 0.0f });
+        new_light->set_range(5.0f);
+        break;
+    case LIGHT_SPOT:
+        new_light = new SpotLight3D();
+        new_light->set_name("spot_light");
+        new_light->set_translation({ 0.0f, 1.f, 0.0f });
+        new_light->rotate(glm::radians(-90.f), { 1.f, 0.0f, 0.f });
+        new_light->set_range(5.0f);
+        break;
+        case LIGHT_DIRECTIONAL:
+        new_light = new DirectionalLight3D();
+        new_light->set_name("directional_light");
+        new_light->rotate(glm::radians(-90.f), { 1.f, 0.0f, 0.f });
+        break;
+    default:
+        assert(0 && "Unsppported light type!");
+        break;
+    }
+
+    new_light->set_color({ 1.0f, 1.0f, 1.0f });
+    new_light->set_intensity(1.0f);
+
+    main_scene->add_node(new_light);
+    add_node(new_light);
 }
 
 bool SceneEditor::is_gizmo_usable()
