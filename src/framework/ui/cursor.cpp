@@ -26,10 +26,11 @@ namespace ui {
 
         current = c_default;
 
-        HContainer2D* root_cursor = new HContainer2D("root_cursor", { 0.0f, 0.0f });
-        root_cursor->add_child(current);
-
-        cursor_3d = new Viewport3D(root_cursor);
+        if (Renderer::instance->get_openxr_available()) {
+            HContainer2D* root_cursor = new HContainer2D("root_cursor", { 0.0f, 0.0f });
+            root_cursor->add_child(current);
+            cursor_3d = new Viewport3D(root_cursor);
+        }
     }
 
     void Cursor::set(int type)
