@@ -3,6 +3,7 @@
 #include "engine/engine.h"
 
 #include "framework/ui/gizmo_3d.h"
+#include "framework/ui/cursor.h"
 
 class Node;
 class Node3D;
@@ -42,6 +43,8 @@ class RoomsEngine : public Engine
     // Meta quest controller meshes
     MeshInstance3D* controller_mesh_left = nullptr;
     MeshInstance3D* controller_mesh_right = nullptr;
+
+    ui::Cursor cursor;
 
 public:
 
