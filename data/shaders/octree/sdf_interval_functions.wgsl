@@ -467,13 +467,26 @@ fn imat_mul(m1_x : mat3x3f, m1_y : mat3x3f, m2_x : mat3x3f, m2_y : mat3x3f) -> i
 
 fn imat_mul_vec(m1 : mat3x3f, p : mat3x3f) -> mat3x3f {
     var res : mat3x3f = mat3x3f();
-    for(var i : u32 = 0; i < 3; i++) {
-        var tmp : vec2f = vec2f(0.0); 
-        for(var j : u32 = 0; j < 3; j++) {
-           tmp = iadd_vecs(tmp, imul_float_vec(m1[i][j], p[j].xy));
-        }
-        res[i] = vec3f(tmp.xy, 0.0);
-    }
+
+    var tmp : vec2f = vec2f(0.0);
+
+    tmp = iadd_vecs(tmp, imul_float_vec(m1[0][0], p[0].xy));
+    tmp = iadd_vecs(tmp, imul_float_vec(m1[0][1], p[1].xy));
+    tmp = iadd_vecs(tmp, imul_float_vec(m1[0][2], p[2].xy));
+
+    res[0] = vec3f(tmp.xy, 0.0);
+
+    tmp = iadd_vecs(tmp, imul_float_vec(m1[1][0], p[0].xy));
+    tmp = iadd_vecs(tmp, imul_float_vec(m1[1][1], p[1].xy));
+    tmp = iadd_vecs(tmp, imul_float_vec(m1[1][2], p[2].xy));
+
+    res[1] = vec3f(tmp.xy, 0.0);
+
+    tmp = iadd_vecs(tmp, imul_float_vec(m1[2][0], p[0].xy));
+    tmp = iadd_vecs(tmp, imul_float_vec(m1[2][1], p[1].xy));
+    tmp = iadd_vecs(tmp, imul_float_vec(m1[2][2], p[2].xy));
+
+    res[2] = vec3f(tmp.xy, 0.0);
 
     return res;
 }
