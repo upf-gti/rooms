@@ -6,26 +6,20 @@
 
 #include "graphics/renderer.h"
 
+#include "imgui.h"
+
 namespace ui {
 
     void Cursor::load()
     {
         size = { 32.f, 32.f };
 
-        c_default = new Image2D("default_cursor", "data/textures/cursors/pointer_d.png", size);
-        c_pointer = new Image2D("default_cursor", "data/textures/cursors/dot_large.png", size);
-        c_resize_ew = new Image2D("default_cursor", "data/textures/cursors/resize_c_horizontal.png", size);
-        c_resize_ns = new Image2D("default_cursor", "data/textures/cursors/resize_c_vertical.png", size);
-        c_picker = new Image2D("default_cursor", "data/textures/cursors/drawing_picker.png", size * 0.5f);
-        c_disabled = new Image2D("default_cursor", "data/textures/cursors/disabled.png", size);
-
-        // Set as cursors for rendering priority
-        c_default->set_priority(CURSOR);
-        c_pointer->set_priority(CURSOR);
-        c_resize_ew->set_priority(CURSOR);
-        c_resize_ns->set_priority(CURSOR);
-        c_picker->set_priority(CURSOR);
-        c_disabled->set_priority(CURSOR);
+        c_default = new Image2D("default_cursor", "data/textures/cursors/pointer_d.png", size, CURSOR);
+        c_pointer = new Image2D("default_cursor", "data/textures/cursors/dot_large.png", size, CURSOR);
+        c_resize_ew = new Image2D("default_cursor", "data/textures/cursors/resize_c_horizontal.png", size, CURSOR);
+        c_resize_ns = new Image2D("default_cursor", "data/textures/cursors/resize_c_vertical.png", size, CURSOR);
+        c_picker = new Image2D("default_cursor", "data/textures/cursors/drawing_picker.png", size * 0.5f, CURSOR);
+        c_disabled = new Image2D("default_cursor", "data/textures/cursors/disabled.png", size, CURSOR);
 
         current = c_default;
     }
@@ -62,9 +56,12 @@ namespace ui {
 
     void Cursor::render()
     {
-        if (!current) {
+        auto& io = ImGui::GetIO();
+        if (!current || io.WantCaptureMouse) {
             return;
         }
+
+        ImGui::SetMouseCursor(ImGuiMouseCursor_None);
 
         glm::vec2 cursor_position;
 

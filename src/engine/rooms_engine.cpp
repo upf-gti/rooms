@@ -168,8 +168,6 @@ void RoomsEngine::render()
         raycast_pointer->render();
     }
     else {
-        // Use custom cursor
-        ImGui::SetMouseCursor(ImGuiMouseCursor_None);
         cursor.render();
     }
 
