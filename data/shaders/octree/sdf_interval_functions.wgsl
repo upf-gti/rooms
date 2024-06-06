@@ -476,11 +476,15 @@ fn imat_mul_vec(m1 : mat3x3f, p : mat3x3f) -> mat3x3f {
 
     res[0] = vec3f(tmp.xy, 0.0);
 
+    tmp = vec2f(0.0);
+
     tmp = iadd_vecs(tmp, imul_float_vec(m1[1][0], p[0].xy));
     tmp = iadd_vecs(tmp, imul_float_vec(m1[1][1], p[1].xy));
     tmp = iadd_vecs(tmp, imul_float_vec(m1[1][2], p[2].xy));
 
     res[1] = vec3f(tmp.xy, 0.0);
+
+    tmp = vec2f(0.0);
 
     tmp = iadd_vecs(tmp, imul_float_vec(m1[2][0], p[0].xy));
     tmp = iadd_vecs(tmp, imul_float_vec(m1[2][1], p[1].xy));
