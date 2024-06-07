@@ -305,7 +305,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 }     
                 
                 subdivide = surf_interval.x <= 0.0 && surf_interval.y >= 0.0;
-                
             }
         }
 
@@ -374,16 +373,42 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             }
         } else {
             let prev_interval : vec2f = octree.data[octree_index].octant_center_distance;
-            let surface_with_preview_interval : vec2f = evaluate_stroke_interval(current_subdivision_interval,  &(preview_stroke.stroke), &preview_stroke.edit_list, prev_interval, octant_center, level_half_size);
+            let surface_with_preview_interval : vec2f = evaluate_stroke_interval(current_subdivision_interval,  &(preview_stroke.stroke), &(preview_stroke.edit_list), prev_interval, octant_center, level_half_size);
             let int_distance = abs(distance(prev_interval, surface_with_preview_interval));
 
-            if (int_distance > 0.00001) {
-                if (surface_with_preview_interval.x < 0.0) {
-                    if (is_current_brick_filled) {
+            let in_surface_with_preview : bool = surface_with_preview_interval.x < 0.0 && surface_with_preview_interval.y > 0.0;
+            let outside_surface_with_preview : bool = surface_with_preview_interval.x > 0.0 && surface_with_preview_interval.y > 0.0;
+            let fully_inside_surface : bool = prev_interval.x < 0.0 && prev_interval.y < 0.0;
+            let in_surface : bool = prev_interval.x < 0.0 && prev_interval.y > 0.0;
+            let outside_surface : bool = prev_interval.x > 0.0 && prev_interval.y > 0.0;
+
+            
+            // if (int_distance > 0.00001) {
+            //     if (surface_with_preview_interval.y < 0.0) {
+            //         if (!is_current_brick_filled) {
+            //             preview_brick_create(octree_index, octant_center, true);
+            //         } else {
+            //             brick_mark_as_preview(octree_index);
+            //         }
+            //     } else {
+            //         brick_mark_as_preview(octree_index);
+            //     }
+            // } else {
+
+            // }
+
+            if (int_distance > 0.0001) {
+                if (in_surface_with_preview) {
+                    if (fully_inside_surface) {
+                        preview_brick_create(octree_index, octant_center, true);
+                    } else if (in_surface && is_current_brick_filled) {
                         brick_mark_as_preview(octree_index);
-                    } else {
+                    } else if (outside_surface) {
                         preview_brick_create(octree_index, octant_center, false);
                     }
+                } else if (outside_surface_with_preview && is_current_brick_filled) {
+                    // TODO: hide this bricks!!
+                    brick_mark_as_preview(octree_index);
                 }
             }
         }

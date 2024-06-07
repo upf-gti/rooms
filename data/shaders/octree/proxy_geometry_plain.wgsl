@@ -37,7 +37,7 @@ struct CameraData {
 };
 
 @group(0) @binding(0) var<storage, read> brick_copy_buffer : array<u32>;
-@group(0) @binding(1) var<storage, read> preview_stroke : Stroke;
+@group(0) @binding(1) var<storage, read> preview_stroke : PreviewStroke;
 @group(0) @binding(3) var read_sdf: texture_3d<f32>;
 @group(0) @binding(4) var texture_sampler : sampler;
 @group(0) @binding(5) var<storage, read> brick_buffers: BrickBuffers_ReadOnly;
@@ -151,18 +151,15 @@ fn sample_sdf_atlas(atlas_position : vec3f) -> f32
 fn sample_sdf_with_preview(sculpt_position : vec3f, atlas_position : vec3f) -> Surface
 {
     var material : Material;
-    material.albedo = preview_stroke.material.color.xyz;
-    material.roughness = preview_stroke.material.roughness;
-    material.metalness = preview_stroke.material.metallic;
+    material.albedo = preview_stroke.stroke.material.color.xyz;
+    material.roughness = preview_stroke.stroke.material.roughness;
+    material.metalness = preview_stroke.stroke.material.metallic;
 
     var surface : Surface;
     surface.distance = sample_sdf_atlas(atlas_position);
     surface.material = interpolate_material(atlas_position * SDF_RESOLUTION);
     
-    // for(var i : u32 = 0u; i < preview_stroke.edit_count; i++) {
-    //     //surface = evaluate_single_edit(sculpt_position, preview_stroke.primitive, preview_stroke.operation, preview_stroke.parameters, preview_stroke.color_blend_op, surface, material, preview_stroke.edits[i]);
-    //     surface.distance = surface.distance / 2.0; 
-    // }
+    surface = evaluate_stroke(sculpt_position, &(preview_stroke.stroke), &(preview_stroke.edit_list), surface);
     
     return surface;
 }
@@ -174,9 +171,8 @@ fn sample_sdf_with_preview_without_material(sculpt_position : vec3f, atlas_posit
     var surface : Surface;
     surface.distance = sample_sdf_atlas(atlas_position);
     
-    // for(var i : u32 = 0u; i < preview_stroke.edit_count; i++) {
-    //     surface = evaluate_single_edit(sculpt_position, preview_stroke.primitive, preview_stroke.operation, preview_stroke.parameters, preview_stroke.color_blend_op, surface, material, preview_stroke.edits[i]);
-    // }
+    surface = evaluate_stroke(sculpt_position, &(preview_stroke.stroke), &(preview_stroke.edit_list), surface);
+
     
     return surface.distance;
 }
@@ -250,8 +246,8 @@ fn raymarch_with_previews(ray_origin_atlas_space : vec3f, ray_origin_sculpt_spac
         // heatmap_color.b = cos(interpolant);
         // return vec4f(heatmap_color, depth);
         //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
-		return vec4f(apply_light(-ray_dir, position_in_world, position_in_world, normal, lightPos + lightOffset, surface.material), depth);
-        //return vec4f(normal, depth);
+		//return vec4f(apply_light(-ray_dir, position_in_world, position_in_world, normal, lightPos + lightOffset, surface.material), depth);
+        return vec4f(normal*0.5 + 0.50, depth);
         //return vec4f(material.albedo, depth);
         //return vec4f(normal, depth);
         //return vec4f(vec3f(material.albedo), depth);
@@ -325,8 +321,8 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
         // heatmap_color.b = cos(interpolant);
         // return vec4f(heatmap_color, depth);
         //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
-		return vec4f(apply_light(-ray_dir, position_in_world, position_in_world, normal, lightPos + lightOffset, material), depth);
-        //return vec4f(normal, depth);
+		//return vec4f(apply_light(-ray_dir, position_in_world, position_in_world, normal, lightPos + lightOffset, material), depth);
+        return vec4f(normal*0.5 + 0.50, depth);
         //return vec4f(material.albedo, depth);
         //return vec4f(normal, depth);
         //return vec4f(vec3f(material.albedo), depth);

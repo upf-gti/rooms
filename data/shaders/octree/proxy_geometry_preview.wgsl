@@ -66,7 +66,7 @@ struct FragmentOutput {
 }
 
 @group(1) @binding(0) var<uniform> sculpt_data : SculptData;
-@group(1) @binding(1) var<storage, read> preview_stroke : Stroke;
+@group(1) @binding(1) var<storage, read> preview_stroke : PreviewStroke;
 @group(1) @binding(5) var<storage, read> brick_buffers: BrickBuffers_ReadOnly;
 
 @group(2) @binding(0) var irradiance_texture: texture_cube<f32>;
@@ -77,9 +77,9 @@ struct FragmentOutput {
 
 fn get_material_preview() -> Material {
     var material : Material;
-    material.albedo = preview_stroke.material.color.xyz;
-    material.roughness = preview_stroke.material.roughness;
-    material.metalness = preview_stroke.material.metallic;
+    material.albedo = preview_stroke.stroke.material.color.xyz;
+    material.roughness = preview_stroke.stroke.material.roughness;
+    material.metalness = preview_stroke.stroke.material.metallic;
     return material;
 }
 
@@ -94,9 +94,8 @@ fn sample_sdf_preview(position : vec3f) -> f32
         surface.distance = 10000.0;
     }
     
-    // for(var i : u32 = 0u; i < preview_stroke.edit_count; i++) {
-    //     surface = evaluate_single_edit(position, preview_stroke.primitive, preview_stroke.operation, preview_stroke.parameters, preview_stroke.color_blend_op, surface, material, preview_stroke.edits[i]);
-    // }
+    surface = evaluate_stroke(position, &(preview_stroke.stroke), &(preview_stroke.edit_list), surface);
+    
     return surface.distance;
 }
 
@@ -153,9 +152,9 @@ fn raymarch_sculpt_space(ray_origin_sculpt_space : vec3f, ray_dir : vec3f, max_d
 
         let material : Material = get_material_preview();
         //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
-		return vec4f(apply_light(-ray_dir, pos, pos_world, normal, lightPos + lightOffset, material), depth);
+		//return vec4f(apply_light(-ray_dir, pos, pos_world, normal, lightPos + lightOffset, material), depth);
         //return vec4f(vec3f(material.albedo), depth);
-        //return vec4f(normal, depth);
+        return vec4f(normal *0.5 + 0.50, depth);
 	}
 
     // Use a two band spherical harmonic as a skymap

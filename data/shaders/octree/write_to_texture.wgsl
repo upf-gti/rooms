@@ -111,7 +111,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
             let brick_to_delete_idx = atomicAdd(&brick_buffers.brick_removal_counter, 1u);
             brick_buffers.brick_removal_buffer[brick_to_delete_idx] = brick_index;
 
-            octree.data[octree_leaf_id].octant_center_distance = vec2f(10000.0, 10000.0);
+            //octree.data[octree_leaf_id].octant_center_distance = vec2f(10000.0, 10000.0);
             octree.data[octree_leaf_id].tile_pointer = 0u;
         } 
         // else {

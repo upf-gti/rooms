@@ -35,7 +35,7 @@ struct sStrokeInfluence {
     float pad2;
     glm::vec4 pad3;
     sToUploadStroke strokes[STROKE_HISTORY_MAX_SIZE];
-    glm::vec4 padd; // TODO(Juan): HACK esto no deveria ser necesario
+    glm::vec4 padd; // TODO(Juan): HACK esto no deberia ser necesario
 };
 
 struct sToComputeStrokeData {
