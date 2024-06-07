@@ -25,8 +25,6 @@ enum Editor : uint8_t {
 
 class RoomsEngine : public Engine
 {
-    MeshInstance3D* raycast_pointer = nullptr;
-
     BaseEditor* current_editor = nullptr;
 
     SculptEditor* sculpt_editor = nullptr;

@@ -27,42 +27,75 @@ void TutorialEditor::initialize()
         }
 
         const glm::vec2& button_size = { size.x * 0.4f, size.y * 0.25f };
+        const glm::vec2& mini_button_size = { size.x * 0.2f, size.y * 0.125f };
 
         // Welcome panel
         {
-            welcome_panel = new ui::XRPanel("scene_editor_root", "data/images/welcome_screen.png", pos, size);
+            ui::XRPanel* welcome_panel = new ui::XRPanel("root_welcome", "data/textures/tutorial/welcome_screen.png", pos, size);
             xr_panel_2d->add_child(welcome_panel);
+            welcome_panel->add_button("start_tutorial", "data/textures/tutorial/start_tutorial.png", { button_size.x * 0.75f, button_size.y }, button_size);
+            welcome_panel->add_button("create_button", "data/textures/tutorial/create_now.png", { size.x - button_size.x * 0.75f, button_size.y }, button_size);
+            panels[TUTORIAL_WELCOME] = welcome_panel;
 
-            welcome_panel->add_button("start_tutorial", "data/textures/menu_buttons/start_tutorial.png", { button_size.x * 0.75f, button_size.y }, button_size);
-            welcome_panel->add_button("create_button", "data/textures/menu_buttons/create_now.png", { size.x - button_size.x * 0.75f, button_size.y }, button_size);
+            Node::bind("create_button", [&](const std::string& signal, void* button) { RoomsEngine::switch_editor(SCENE_EDITOR); });
+            Node::bind("start_tutorial", [&](const std::string& signal, void* button) {
+                panels[TUTORIAL_WELCOME]->set_visibility(false);
+                panels[TUTORIAL_STAMP_SMEAR]->set_visibility(true);
+            });
         }
 
-        // Rooms intro panel
-        {
-            rooms_intro_panel = new ui::XRPanel("scene_editor_root", "data/images/rooms_intro.png", pos, size);
-            rooms_intro_panel->set_visibility(false);
-            xr_panel_2d->add_child(rooms_intro_panel);
-
-            rooms_intro_panel->add_button("skip_button", "data/textures/menu_buttons/next.png", { size.x * 0.5f, button_size.y }, button_size);
-        }
+        panels[TUTORIAL_STAMP_SMEAR] = generate_panel("root_stamp_smear", "data/textures/tutorial/stamp_smear.png", TUTORIAL_NONE, TUTORIAL_PRIMITIVES_OPERATIONS);
+        panels[TUTORIAL_PRIMITIVES_OPERATIONS] = generate_panel("root_primitives_op", "data/textures/tutorial/prims_ops.png", TUTORIAL_STAMP_SMEAR, TUTORIAL_MATERIAL);
+        panels[TUTORIAL_MATERIAL] = generate_panel("root_materials", "data/textures/tutorial/materials.png", TUTORIAL_PRIMITIVES_OPERATIONS, TUTORIAL_UNDO_REDO);
+        panels[TUTORIAL_UNDO_REDO] = generate_panel("root_undo_redo", "data/textures/tutorial/undo_redo.png", TUTORIAL_MATERIAL, TUTORIAL_NONE);
 
         if (renderer->get_openxr_available()) {
             xr_panel_3d = new Viewport3D(xr_panel_2d);
             xr_panel_3d->set_active(true);
         }
     }
+}
 
-    // Bind button events
-    {
-        Node::bind("create_button", [&](const std::string& signal, void* button) {
-            RoomsEngine::switch_editor(SCENE_EDITOR);
-        });
+ui::XRPanel* TutorialEditor::generate_panel(const std::string& name, const std::string& path, uint8_t prev, uint8_t next)
+{
+    auto webgpu_context = Renderer::instance->get_webgpu_context();
+    glm::vec2 size = glm::vec2(static_cast<float>(webgpu_context->render_width), static_cast<float>(webgpu_context->render_height)) * 0.5f;
+    glm::vec2 pos = size * 0.5f;
 
-        Node::bind("start_tutorial", [&](const std::string& signal, void* button) {
-            welcome_panel->set_visibility(false);
-            rooms_intro_panel->set_visibility(true);
+    if (renderer->get_openxr_available()) {
+        size = glm::vec2(1920.f, 1080.0f);
+        pos = -size * 0.5f;
+    }
+
+    const glm::vec2& button_size = { size.x * 0.4f, size.y * 0.25f };
+    const glm::vec2& mini_button_size = { size.x * 0.2f, size.y * 0.125f };
+
+    ui::XRPanel* new_panel = new ui::XRPanel(name, path, pos, size);
+    new_panel->set_visibility(false);
+    xr_panel_2d->add_child(new_panel);
+
+    if (prev != TUTORIAL_NONE) {
+        new_panel->add_button(name + "@prev", "data/textures/tutorial/back.png", { size.x * 0.25f, mini_button_size.y }, mini_button_size);
+        Node::bind(name + "@prev", [&, c = new_panel, p = prev](const std::string& signal, void* button) {
+            c->set_visibility(false);
+            panels[p]->set_visibility(true);
         });
     }
+
+    // There's always next button.. next panel or start creating!
+    new_panel->add_button(name + "@next", "data/textures/tutorial/next.png", { size.x * 0.75f, mini_button_size.y }, mini_button_size);
+
+    Node::bind(name + "@next", [&, c = new_panel, n = next](const std::string& signal, void* button) {
+        c->set_visibility(false);
+        if (n != TUTORIAL_NONE) {
+            panels[n]->set_visibility(true);
+        }
+        else {
+            RoomsEngine::switch_editor(SCENE_EDITOR);
+        }
+    });
+
+    return new_panel;
 }
 
 void TutorialEditor::clean()
@@ -78,7 +111,7 @@ void TutorialEditor::update(float delta_time)
 
         glm::mat4x4 m(1.0f);
         glm::vec3 eye = renderer->get_camera_eye();
-        glm::vec3 new_pos = eye + renderer->get_camera_front();
+        glm::vec3 new_pos = eye + renderer->get_camera_front() * 1.5f;
 
         m = glm::translate(m, new_pos);
         m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
