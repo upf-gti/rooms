@@ -3,7 +3,7 @@
 #include "framework/nodes/ui.h"
 #include "framework/nodes/viewport_3d.h"
 #include "framework/input.h"
-#include "framework/ui/context_2d.h"
+#include "framework/ui/io.h"
 
 #include "graphics/renderer.h"
 
@@ -15,75 +15,78 @@ namespace ui {
 
     void Cursor::load()
     {
-        size = { 32.f, 32.f };
+        is_xr = Renderer::instance->get_openxr_available();
 
-        c_default = new Image2D("default_cursor", "data/textures/cursors/pointer_d.png", size, CURSOR);
-        c_pointer = new Image2D("default_cursor", "data/textures/cursors/dot_large.png", size, CURSOR);
-        c_resize_ew = new Image2D("default_cursor", "data/textures/cursors/resize_c_horizontal.png", size, CURSOR);
-        c_resize_ns = new Image2D("default_cursor", "data/textures/cursors/resize_c_vertical.png", size, CURSOR);
-        c_picker = new Image2D("default_cursor", "data/textures/cursors/drawing_picker.png", size * 0.5f, CURSOR);
-        c_disabled = new Image2D("default_cursor", "data/textures/cursors/disabled.png", size, CURSOR);
+        size = is_xr ? glm::vec2(44.f) : glm::vec2(32.f);
 
-        current = c_default;
+        cursors[MOUSE_CURSOR_DEFAULT] = new Image2D("default_cursor", "data/textures/cursors/pointer_d.png", size, CURSOR);
+        cursors[MOUSE_CURSOR_CIRCLE] = new Image2D("default_cursor", "data/textures/cursors/dot_large.png", size, CURSOR);
+        cursors[MOUSE_CURSOR_POINTER] = new Image2D("default_cursor", "data/textures/cursors/hand_small_point.png", size, CURSOR);
+        cursors[MOUSE_CURSOR_RESIZE_EW] = new Image2D("default_cursor", "data/textures/cursors/resize_c_horizontal.png", size, CURSOR);
+        cursors[MOUSE_CURSOR_RESIZE_NS] = new Image2D("default_cursor", "data/textures/cursors/resize_c_vertical.png", size, CURSOR);
+        cursors[MOUSE_CURSOR_PICKER] = new Image2D("default_cursor", "data/textures/cursors/drawing_picker.png", size * 0.5f, CURSOR);
+        cursors[MOUSE_CURSOR_GRAB] = new Image2D("default_cursor", "data/textures/cursors/hand_small_closed.png", size * 0.5f, CURSOR);
+        cursors[MOUSE_CURSOR_DISABLED] = new Image2D("default_cursor", "data/textures/cursors/disabled.png", size, CURSOR);
 
-        if (Renderer::instance->get_openxr_available()) {
+        current = cursors[MOUSE_CURSOR_DEFAULT];
+
+        // Set all visibility as false by default
+        for (uint8_t i = 0u; i < MOUSE_CURSOR_COUNT; ++i) {
+            cursors[i]->set_visibility(false);
+        }
+
+        if (is_xr) {
+
             HContainer2D* root_cursor = new HContainer2D("root_cursor", { 0.0f, 0.0f });
-            root_cursor->add_child(current);
+
+            // Add all of them to the viewport 3d
+
+            for (uint8_t i = 0u; i < MOUSE_CURSOR_COUNT; ++i) {
+                root_cursor->add_child(cursors[i]);
+            }
+
             cursor_3d = new Viewport3D(root_cursor);
         }
     }
 
     void Cursor::set(int type)
     {
-        switch (type)
-        {
-        case MOUSE_CURSOR_NONE:
+        if (type < 0 || type >= MOUSE_CURSOR_COUNT) {
             current = nullptr;
-            break;
-        case MOUSE_CURSOR_DEFAULT:
-            current = c_default;
-            break;
-        case MOUSE_CURSOR_POINTER:
-            current = c_pointer;
-            break;
-        case MOUSE_CURSOR_RESIZE_EW:
-            current = c_resize_ew;
-            break;
-        case MOUSE_CURSOR_RESIZE_NS:
-            current = c_resize_ns;
-            break;
-        case MOUSE_CURSOR_PICKER:
-            current = c_picker;
-            break;
-        case MOUSE_CURSOR_DISABLED:
-            current = c_disabled;
-            break;
-        default:
-            assert(0 && "Undefined type of cursor!");
+            return;
         }
+
+        for (uint8_t i = 0u; i < MOUSE_CURSOR_COUNT; ++i) {
+            cursors[i]->set_visibility(false);
+        }
+
+        current = cursors[type];
+
+        current->set_visibility(true);
     }
 
     void Cursor::update(float delta_time)
     {
-        if (Renderer::instance->get_openxr_available()) {
+        if (is_xr) {
 
             must_render_xr_cursor = false;
 
-            if (!Context2D::any_hover()) {
+            if (!IO::any_hover()) {
                 return;
             }
 
-            Node2D* hovered = Context2D::get_hover();
+            Node2D* hovered = IO::get_hover();
 
             glm::mat4x4 m(1.0f);
-            m = glm::translate(m, Context2D::get_xr_world_position());
+            m = glm::translate(m, IO::get_xr_world_position());
             m = m * glm::toMat4(glm::quat_cast(hovered->get_global_viewport_model()));
+            m = glm::translate(m, glm::vec3(-size * 0.5f * hovered->get_scale(), 0.0f));
 
             cursor_3d->set_model(m);
 
             cursor_3d->update(delta_time);
 
-            // must_render_xr_cursor = true;
+            must_render_xr_cursor = true;
         }
     }
 
@@ -93,7 +96,7 @@ namespace ui {
             return;
         }
 
-        if (Renderer::instance->get_openxr_available()) {
+        if (is_xr) {
 
             if (must_render_xr_cursor) {
                 cursor_3d->render();

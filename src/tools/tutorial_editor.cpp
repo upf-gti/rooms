@@ -78,7 +78,7 @@ void TutorialEditor::update(float delta_time)
 
         glm::mat4x4 m(1.0f);
         glm::vec3 eye = renderer->get_camera_eye();
-        glm::vec3 new_pos = eye + renderer->get_camera_front();
+        glm::vec3 new_pos = eye + renderer->get_camera_front() * 1.5f;
 
         m = glm::translate(m, new_pos);
         m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));

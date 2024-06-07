@@ -7,14 +7,13 @@
 #include "framework/scene/parse_gltf.h"
 #include "framework/utils/tinyfiledialogs.h"
 #include "framework/utils/utils.h"
-#include "framework/ui/context_2d.h"
+#include "framework/ui/io.h"
 
 #include "engine/scene.h"
 
 #include "graphics/renderers/rooms_renderer.h"
 
 #include "shaders/mesh_grid.wgsl.gen.h"
-#include "shaders/ui/ui_ray_pointer.wgsl.gen.h"
 
 #include "tools/sculpt/sculpt_editor.h"
 #include "tools/scene/scene_editor.h"
@@ -84,16 +83,6 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
         main_scene->add_node(grid_node);
     }
 
-    // Controller pointer
-    {
-        raycast_pointer = parse_mesh("data/meshes/raycast.obj");
-
-        Material pointer_material;
-        pointer_material.shader = RendererStorage::get_shader_from_source(shaders::ui_ray_pointer::source, shaders::ui_ray_pointer::path, pointer_material);
-
-        raycast_pointer->set_surface_material_override(raycast_pointer->get_surface(0), pointer_material);
-    }
-
     cursor.load();
 
 	return error;
@@ -116,46 +105,46 @@ void RoomsEngine::clean()
 
 void RoomsEngine::update(float delta_time)
 {
-    // Update controller UI
-    if (renderer->get_openxr_available()) {
+    bool is_xr = renderer->get_openxr_available();
 
-        controller_mesh_right->set_model(Input::get_controller_pose(HAND_RIGHT));
-        controller_mesh_left->set_model(Input::get_controller_pose(HAND_LEFT));
+    // Default cursor
+    cursor.set(is_xr ? ui::MOUSE_CURSOR_CIRCLE : ui::MOUSE_CURSOR_DEFAULT);
 
-        const glm::mat4x4& raycast_transform = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
-        raycast_pointer->set_model(raycast_transform);
-        raycast_pointer->scale(glm::vec3(1.0f, 1.0f, 10.0f));
-    }
-    else {
-        cursor.set(ui::MOUSE_CURSOR_DEFAULT);
-    }
-
+    // IO data will change here, so update later the new cursor
     if (current_editor) {
         current_editor->update(delta_time);
     }
 
-    if (ui::Context2D::any_hover()) {
+    if (IO::any_hover()) {
 
-        Node2D* hover_element = ui::Context2D::get_hover();
+        Node2D* hover_element = IO::get_hover();
 
-        if(hover_element->get_class_type() == Node2DClassType::HSLIDER) {
+        if (hover_element->get_class_type() == Node2DClassType::PANEL - 1u) {
+            cursor.set(ui::MOUSE_CURSOR_POINTER);
+        }
+        else if(hover_element->get_class_type() == Node2DClassType::HSLIDER) {
             cursor.set(ui::MOUSE_CURSOR_RESIZE_EW);
         }
         else if (hover_element->get_class_type() == Node2DClassType::VSLIDER) {
             cursor.set(ui::MOUSE_CURSOR_RESIZE_NS);
         }
-        else if (ui::Context2D::is_hover_disabled()) {
+        else if (IO::is_hover_disabled()) {
             cursor.set(ui::MOUSE_CURSOR_DISABLED);
         }
-
-        cursor.update(delta_time);
     }
 
-    Engine::update(delta_time);
+    cursor.update(delta_time);
 
     Node::check_controller_signals();
 
+    Engine::update(delta_time);
+
     main_scene->update(delta_time);
+
+    if (is_xr) {
+        controller_mesh_right->set_model(Input::get_controller_pose(HAND_RIGHT));
+        controller_mesh_left->set_model(Input::get_controller_pose(HAND_LEFT));
+    }
 }
 
 void RoomsEngine::render()
@@ -167,7 +156,7 @@ void RoomsEngine::render()
     }
 
     if (Renderer::instance->get_openxr_available()) {
-        raycast_pointer->render();
+        IO::ray_pointer->render();
     }
 
     cursor.render();
