@@ -7,6 +7,16 @@
 class RoomsRenderer;
 class Viewport3D;
 
+enum : uint8_t {
+    TUTORIAL_NONE,
+    TUTORIAL_WELCOME,
+    TUTORIAL_STAMP_SMEAR,
+    TUTORIAL_PRIMITIVES_OPERATIONS,
+    TUTORIAL_MATERIAL,
+    TUTORIAL_UNDO_REDO,
+    TUTORIAL_PANEL_COUNT,
+};
+
 class TutorialEditor : public BaseEditor {
 protected:
 
@@ -17,11 +27,9 @@ protected:
     Viewport3D* xr_panel_3d = nullptr;
 
     // Panels
-    ui::XRPanel* welcome_panel = nullptr;
-    ui::XRPanel* intro_panel = nullptr;
-    ui::XRPanel* primitives_op_panel = nullptr;
-    ui::XRPanel* materials_panel = nullptr;
-    // ...
+    ui::XRPanel* panels[TUTORIAL_PANEL_COUNT];
+
+    ui::XRPanel* generate_panel(const std::string& name, const std::string& path, uint8_t prev, uint8_t next);
 
 public:
 
