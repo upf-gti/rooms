@@ -18,7 +18,10 @@ protected:
 
     // Panels
     ui::XRPanel* welcome_panel = nullptr;
-    ui::XRPanel* rooms_intro_panel = nullptr;
+    ui::XRPanel* intro_panel = nullptr;
+    ui::XRPanel* primitives_op_panel = nullptr;
+    ui::XRPanel* materials_panel = nullptr;
+    // ...
 
 public:
 
