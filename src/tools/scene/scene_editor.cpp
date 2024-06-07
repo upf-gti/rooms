@@ -40,6 +40,10 @@ void SceneEditor::initialize()
     // debug
 
     SculptInstance* default_sculpt = new SculptInstance();
+    default_sculpt->set_name("default_sculpt");
+
+    RoomsEngine::instance->add_node(default_sculpt);
+
     RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
     rooms_renderer->get_raymarching_renderer()->set_current_sculpt(default_sculpt);
 
