@@ -178,6 +178,8 @@ class RaymarchingRenderer {
         float dummy1;
     } ray_info;
 
+    bool needs_context_upload = false;
+    sToComputeStrokeData context_to_upload = {};
 
     RayIntersectionInfo ray_intersection_info;
 

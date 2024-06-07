@@ -1,4 +1,5 @@
 #include "sculpt_instance.h"
+#include "graphics/renderers/rooms_renderer.h"
 
 #include <fstream>
 
@@ -40,4 +41,7 @@ void SculptInstance::parse(std::ifstream& binary_scene_file)
 
     stroke_history.resize(header.stroke_count);
     binary_scene_file.read(reinterpret_cast<char*>(&stroke_history[0]), header.stroke_count * sizeof(Stroke));
+
+    RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
+    rooms_renderer->get_raymarching_renderer()->set_current_sculpt(this);
 }
