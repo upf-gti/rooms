@@ -596,6 +596,15 @@ fn iselect(a : vec2f, b : vec2f, cond : vec2<bool>) -> vec2f
     return vec2f(min(a.x, b.x), max(a.y, b.y));
 }
 
+fn iselect_mats(a : mat3x3f, b : mat3x3f, cond : vec2<bool>) -> mat3x3f
+{    
+    return iavec3_vecs(
+        iselect(a[0].xy, b[0].xy, cond),
+        iselect(a[1].xy, b[1].xy, cond),
+        iselect(a[2].xy, b[2].xy, cond),
+    );
+}
+
 fn irotate_interval_mats(p : mat3x3f, q : vec4f) -> mat3x3f {
     let v1 : vec3f = rotate_point_quat(vec3f(p[0].x, p[1].x, p[2].x), q);
     let v2 : vec3f = rotate_point_quat(vec3f(p[0].y, p[1].y, p[2].y), q);
@@ -1173,6 +1182,89 @@ fn eval_interval_stroke_torus_substraction(position : mat3x3f, current_surface :
 }
 
 /*
+ _   _           _           
+| | | |         (_)          
+| | | | ___  ___ _  ___ __ _ 
+| | | |/ _ \/ __| |/ __/ _` |
+\ \_/ /  __/\__ \ | (_| (_| |
+ \___/ \___||___/_|\___\__,_|
+*/
+
+fn vesica_interval( p : mat3x3f, c : vec3f, dims : vec4f, rotation : vec4f) -> vec2f
+{
+    var radius : f32 = dims.x;
+    var height : f32 = dims.y;
+    
+    // let round : f32 = clamp(dims.w / 0.08, 0.0001, 1.0) * min(radius, height);
+    // radius -= round;
+    // height -= round;
+
+    let pos : mat3x3f = irotate_point_quat(isub_mat_vec3(p, c), rotation);
+
+    // shape constants
+    let h : f32 = height * 0.5;
+    let w : f32 = radius * 0.5;
+    let d : f32 = 0.5 * (h * h - w * w) / w;
+
+    // project to 2D
+    let m_pos_xz : mat3x3f = iavec3_vecs(pos[0].xy, pos[2].xy, vec2f(0.0));
+    var len_pxz : vec2f = ilength(m_pos_xz);
+    let q : mat3x3f = iavec3_vecs(len_pxz, iabs(isub_vec_float(pos[1].xy, h)), vec2f(0.0));
+
+    // feature selection (vertex or body)
+    let t_a : mat3x3f = iavec3_vec(vec3f(-d,0.0,d+w));
+    let t_b : mat3x3f = iavec3_vec(vec3f(0.0,h,0.0));
+
+    let cond_a : vec2f = imul_float_vec(h, q[0].xy);
+    let cond_b : vec2f = isub_vec_float(imul_float_vec(d, q[1].xy), d * h);
+    let cond : vec2<bool> = ilessthan(cond_a, cond_b);
+
+    let t : mat3x3f = iselect_mats(t_a, t_b, cond);
+    let t_xy : mat3x3f = iavec3_vecs(t[0].xy, t[1].xy, vec2f(0.0));
+
+    // return isub_vec_float(isub_vecs(ilength(isub_mats(q, t_xy)), t[2].xy), round);
+    return isub_vecs(ilength(isub_mats(q, t_xy)), t[2].xy);
+}
+
+fn eval_interval_stroke_vesica_smooth_union(position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>, dimension_margin : vec4f) -> vec2f {
+    var result_surface : vec2f = current_surface;
+    var tmp_surface : vec2f;
+    
+    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
+    let edit_count : u32 = (*curr_stroke).edit_count;
+    let parameters : vec4f = (*curr_stroke).parameters;
+
+    let smooth_factor : f32 = parameters.w;
+
+    for(var i : u32 = 0u; i < edit_count; i++) {
+        let curr_edit : Edit = edit_array[i];
+        tmp_surface = vesica_interval(position, curr_edit.position, curr_edit.dimensions, curr_edit.rotation);
+        result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
+    }
+
+    return result_surface;
+}
+
+fn eval_interval_stroke_vesica_substraction(position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>) -> vec2f {
+    var result_surface : vec2f = current_surface;
+    var tmp_surface : vec2f;
+    
+    let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
+    let edit_count : u32 = (*curr_stroke).edit_count;
+    let parameters : vec4f = (*curr_stroke).parameters;
+
+    let smooth_factor : f32 = parameters.w;
+
+    for(var i : u32 = 0u; i < edit_count; i++) {
+        let curr_edit : Edit = edit_array[i];
+        tmp_surface = vesica_interval(position, curr_edit.position, curr_edit.dimensions, curr_edit.rotation);
+        result_surface = opSmoothSubtractionInterval(result_surface, tmp_surface, smooth_factor);
+    }
+
+    return result_surface;
+}
+
+/*
 ______          _           
 | ___ \        (_)          
 | |_/ / ___ _____  ___ _ __ 
@@ -1287,6 +1379,14 @@ fn evaluate_stroke_interval( position: mat3x3f, stroke: ptr<storage, Stroke, rea
             result_surface = eval_interval_stroke_torus_substraction(position, result_surface, stroke);
             break;
         }
+        case SD_VESICA_SMOOTH_OP_UNION: {
+            result_surface = eval_interval_stroke_vesica_smooth_union(position, result_surface, stroke, vec4f(0.0));
+            break;
+        }
+        case SD_VESICA_SMOOTH_OP_SUBSTRACTION: {
+            result_surface = eval_interval_stroke_vesica_substraction(position, result_surface, stroke);
+            break;
+        }
         default: {}
     }
 
@@ -1317,6 +1417,10 @@ fn evaluate_stroke_interval_force_union( position: mat3x3f, stroke: ptr<storage,
         }
         case SD_CYLINDER: {
             result_surface = eval_interval_stroke_cylinder_smooth_union(position, result_surface, stroke, margin);
+            break;
+        }
+        case SD_VESICA: {
+            result_surface = eval_interval_stroke_vesica_smooth_union(position, result_surface, stroke, margin);
             break;
         }
         case SD_TORUS: {

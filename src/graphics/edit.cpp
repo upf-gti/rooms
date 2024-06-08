@@ -146,6 +146,8 @@ glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const
         return glm::vec3(size.x, size.y, size.x) + smooth_margin;
     case SD_TORUS:
         return glm::vec3(size.x + size.y, size.y, size.x + size.y) + smooth_margin; // TODO: This can be adjusted a lot better..
+    case SD_VESICA:
+        return glm::vec3(size.x, size.y, size.x) + smooth_margin;
     /*case SD_BEZIER:
         return glm::vec3(0.0f);*/
     default:

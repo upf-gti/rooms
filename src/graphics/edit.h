@@ -21,6 +21,7 @@ enum sdPrimitive : uint32_t {
 	SD_CONE,
 	SD_CYLINDER,
     SD_TORUS,
+    SD_VESICA,
     SD_BEZIER,
 	SD_ELLIPSOID,
 	SD_PYRAMID,

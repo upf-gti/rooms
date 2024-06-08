@@ -84,6 +84,7 @@ void SculptEditor::initialize()
         primitive_default_states[SD_CYLINDER]   = { glm::vec4(0.03f, 0.05f, 0.0f,  0.0f) };
         primitive_default_states[SD_CAPSULE]    = { glm::vec4(0.03f, 0.05f, 0.0f,  0.0f) };
         primitive_default_states[SD_TORUS]      = { glm::vec4(0.03f, 0.01f, 0.0f,  0.0f) };
+        primitive_default_states[SD_VESICA]     = { glm::vec4(0.03f, 0.05f, 0.0f,  0.0f) };
         primitive_default_states[SD_BEZIER]     = { glm::vec4(0.0) };
     }
 
@@ -1137,6 +1138,7 @@ void SculptEditor::init_ui()
         prim_selector->add_child(new ui::TextureButton2D("capsule", "data/textures/capsule.png"));
         prim_selector->add_child(new ui::TextureButton2D("cylinder", "data/textures/cylinder.png"));
         prim_selector->add_child(new ui::TextureButton2D("torus", "data/textures/torus.png"));
+        prim_selector->add_child(new ui::TextureButton2D("vesica", "data/textures/x.png"));
         first_row->add_child(prim_selector);
     }
 
@@ -1386,6 +1388,7 @@ void SculptEditor::bind_events()
     Node::bind("capsule", [&](const std::string& signal, void* button) { set_primitive(SD_CAPSULE); });
     Node::bind("cylinder", [&](const std::string& signal, void* button) { set_primitive(SD_CYLINDER); });
     Node::bind("torus", [&](const std::string& signal, void* button) { set_primitive(SD_TORUS); });
+    Node::bind("vesica", [&](const std::string& signal, void* button) { set_primitive(SD_VESICA); });
 
     // DEBUG SPLINE: REMOVE THIS!!
     Node::bind("create_spline", [&](const std::string& signal, void* button) {
