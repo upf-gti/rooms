@@ -145,9 +145,10 @@ glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const
     case SD_CYLINDER:
         return glm::vec3(size.x, size.y, size.x) + smooth_margin;
     case SD_TORUS:
-        return glm::vec3(size.x + size.y, size.y, size.x + size.y) + smooth_margin; // TODO: This can be adjusted a lot better..
-    case SD_VESICA:
-        return glm::vec3(size.x, size.y, size.x) + smooth_margin;
+        return glm::vec3(size.x + size.y, size.y, size.x + size.y) + smooth_margin;
+    // Specific case for vesica!!
+    //case SD_VESICA:
+    //    return glm::vec3(size.x, size.y, size.x) + smooth_margin;
     /*case SD_BEZIER:
         return glm::vec3(0.0f);*/
     default:
@@ -172,7 +173,7 @@ AABB Stroke::get_edit_world_AABB(const uint8_t edit_index) const
     const glm::quat& inv_rotation = glm::inverse(edit_rotation);
 
     // Special case for the capsule
-    if (primitive == SD_CAPSULE) {
+    if (primitive == SD_CAPSULE || primitive == SD_VESICA) {
 
         AABB a1 = { edit.position, glm::vec3(radius) };
         AABB a2 = { edit.position + (inv_rotation * glm::vec3(0.0f, height, 0.0f)), glm::vec3(radius) };
