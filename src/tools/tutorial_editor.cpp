@@ -46,8 +46,9 @@ void TutorialEditor::initialize()
 
         panels[TUTORIAL_STAMP_SMEAR] = generate_panel("root_stamp_smear", "data/textures/tutorial/stamp_smear.png", TUTORIAL_NONE, TUTORIAL_PRIMITIVES_OPERATIONS);
         panels[TUTORIAL_PRIMITIVES_OPERATIONS] = generate_panel("root_primitives_op", "data/textures/tutorial/prims_ops.png", TUTORIAL_STAMP_SMEAR, TUTORIAL_MATERIAL);
-        panels[TUTORIAL_MATERIAL] = generate_panel("root_materials", "data/textures/tutorial/materials.png", TUTORIAL_PRIMITIVES_OPERATIONS, TUTORIAL_UNDO_REDO);
-        panels[TUTORIAL_UNDO_REDO] = generate_panel("root_undo_redo", "data/textures/tutorial/undo_redo.png", TUTORIAL_MATERIAL, TUTORIAL_NONE);
+        panels[TUTORIAL_MATERIAL] = generate_panel("root_materials", "data/textures/tutorial/materials.png", TUTORIAL_PRIMITIVES_OPERATIONS, TUTORIAL_PAINT);
+        panels[TUTORIAL_PAINT] = generate_panel("root_paint", "data/textures/tutorial/paint.png", TUTORIAL_MATERIAL, TUTORIAL_UNDO_REDO);
+        panels[TUTORIAL_UNDO_REDO] = generate_panel("root_undo_redo", "data/textures/tutorial/undo_redo.png", TUTORIAL_PAINT, TUTORIAL_NONE);
 
         if (renderer->get_openxr_available()) {
             xr_panel_3d = new Viewport3D(xr_panel_2d);
