@@ -917,9 +917,9 @@ fn sdVesica( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : 
     var radius : f32 = dims.x;
     var height : f32 = dims.y;
 
-    // let round : f32 = clamp(dims.w / 0.08, 0.0001, 1.0) * min(radius, height);
-    // radius -= round;
-    // height -= round;
+    let round : f32 = clamp(dims.w / 0.125, 0.001, 0.99) * min(radius, height);
+    radius -= round;
+    height -= round;
 
     // shape constants
     let h : f32 = height * 0.5;
@@ -932,7 +932,7 @@ fn sdVesica( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : 
     // feature selection (vertex or body)
     let t : vec3f = select(vec3f(-d,0.0,d+w), vec3f(0.0,h,0.0), (h*q.x < d*(q.y-h)));
     
-    sf.distance = (length(q-t.xy) - t.z);// - round;
+    sf.distance = (length(q-t.xy) - t.z) - round;
     sf.material = material;
     return sf;
 }

@@ -1195,9 +1195,9 @@ fn vesica_interval( p : mat3x3f, c : vec3f, dims : vec4f, rotation : vec4f) -> v
     var radius : f32 = dims.x;
     var height : f32 = dims.y;
     
-    // let round : f32 = clamp(dims.w / 0.08, 0.0001, 1.0) * min(radius, height);
-    // radius -= round;
-    // height -= round;
+    let round : f32 = clamp(dims.w / 0.125, 0.001, 0.99) * min(radius, height);
+    radius -= round;
+    height -= round;
 
     let pos : mat3x3f = irotate_point_quat(isub_mat_vec3(p, c), rotation);
 
@@ -1219,11 +1219,10 @@ fn vesica_interval( p : mat3x3f, c : vec3f, dims : vec4f, rotation : vec4f) -> v
     let cond_b : vec2f = isub_vec_float(imul_float_vec(d, q[1].xy), d * h);
     let cond : vec2<bool> = ilessthan(cond_a, cond_b);
 
-    let t : mat3x3f = iselect_mats(t_a, t_b, cond);
+    let t : mat3x3f = t_a;//iselect_mats(t_a, t_b, cond);
     let t_xy : mat3x3f = iavec3_vecs(t[0].xy, t[1].xy, vec2f(0.0));
 
-    // return isub_vec_float(isub_vecs(ilength(isub_mats(q, t_xy)), t[2].xy), round);
-    return isub_vecs(ilength(isub_mats(q, t_xy)), t[2].xy);
+    return isub_vec_float(isub_vecs(ilength(isub_mats(q, t_xy)), t[2].xy), round);
 }
 
 fn eval_interval_stroke_vesica_smooth_union(position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>, dimension_margin : vec4f) -> vec2f {
