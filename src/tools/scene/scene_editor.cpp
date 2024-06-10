@@ -256,81 +256,48 @@ void SceneEditor::init_ui()
         main_panel_3d->set_active(true);
     }
 
-    // Create tutorial/welcome panel
-    //{
-    //    xr_panel_2d = new Node2D("tutorial_scene_root", { 0.0f, 0.0f }, { 1.0f, 1.0f });
-
-    //    auto webgpu_context = Renderer::instance->get_webgpu_context();
-    //    glm::vec2 size = glm::vec2(static_cast<float>(webgpu_context->render_width), static_cast<float>(webgpu_context->render_height)) * 0.5f;
-    //    glm::vec2 pos = size * 0.5f;
-
-    //    if (renderer->get_openxr_available()) {
-    //        size = glm::vec2(1920.f, 1080.0f);
-    //        pos = -size * 0.5f;
-    //    }
-
-    //    ui::XRPanel* xr_panel = new ui::XRPanel("scene_editor_root", "data/images/welcome_screen.png", pos, size);
-    //    xr_panel_2d->add_child(xr_panel);
-
-    //    /*ui::HContainer2D* first_xr_panel_row = new ui::HContainer2D("first_xr_panel_row", { 0.0f, 0.0f });
-    //    xr_panel->add_child(first_xr_panel_row);
-
-    //    first_xr_panel_row->add_child(new ui::TextureButton2D("test_0", "data/textures/import.png"));
-    //    first_xr_panel_row->add_child(new ui::TextureButton2D("test_1", "data/textures/export.png"));*/
-
-    //    const glm::vec2& button_size = { size.x * 0.4f, size.y * 0.25f };
-
-    //    xr_panel->add_button("data/textures/menu_buttons/skip.png", { button_size.x * 0.75f, button_size.y }, button_size);
-    //    xr_panel->add_button("data/textures/menu_buttons/create_now.png", { size.x - button_size.x * 0.75f, button_size.y }, button_size);
-
-    //    if (renderer->get_openxr_available()) {
-    //        xr_panel_3d = new Viewport3D(xr_panel_2d);
-    //        xr_panel_3d->set_active(true);
-    //    }
-    //}
-
     // Load controller UI labels
-    //if (renderer->get_openxr_available())
-    //{
-    //    // Thumbsticks
-    //    // Buttons
-    //    // Triggers
+    if (renderer->get_openxr_available())
+    {
+        // Thumbsticks
+        // Buttons
+        // Triggers
 
-    //    glm::vec2 double_size = { 2.0f, 1.0f };
+        glm::vec2 double_size = { 2.0f, 1.0f };
 
-    //    // Left hand
-    //    {
-    //        left_hand_container = new ui::VContainer2D("left_controller_root", { 0.0f, 0.0f });
+        // Left hand
+        {
+            left_hand_container = new ui::VContainer2D("left_controller_root", { 0.0f, 0.0f });
 
-    //        left_hand_container->add_child(new ui::ImageLabel2D("Round Shape", "data/textures/buttons/l_thumbstick.png", LAYOUT_ANY_NO_SHIFT_L));
-    //        left_hand_container->add_child(new ui::ImageLabel2D("Smooth", "data/textures/buttons/l_grip_plus_l_thumbstick.png", LAYOUT_ANY_SHIFT_L, double_size));
-    //        left_hand_container->add_child(new ui::ImageLabel2D("Redo", "data/textures/buttons/y.png", LAYOUT_ANY_NO_SHIFT_L));
-    //        left_hand_container->add_child(new ui::ImageLabel2D("Guides", "data/textures/buttons/l_grip_plus_y.png", LAYOUT_ANY_SHIFT_L, double_size));
-    //        left_hand_container->add_child(new ui::ImageLabel2D("Undo", "data/textures/buttons/x.png", LAYOUT_ANY_NO_SHIFT_L));
-    //        left_hand_container->add_child(new ui::ImageLabel2D("PBR", "data/textures/buttons/l_grip_plus_x.png", LAYOUT_ANY_SHIFT_L, double_size));
-    //        left_hand_container->add_child(new ui::ImageLabel2D("Manipulate Sculpt", "data/textures/buttons/l_trigger.png", LAYOUT_ALL));
+            // left_hand_container->add_child(new ui::ImageLabel2D("Round Shape", "data/textures/buttons/l_thumbstick.png", LAYOUT_ANY_NO_SHIFT_L));
+            // left_hand_container->add_child(new ui::ImageLabel2D("Smooth", "data/textures/buttons/l_grip_plus_l_thumbstick.png", LAYOUT_ANY_SHIFT_L, double_size));
+            // left_hand_container->add_child(new ui::ImageLabel2D("Redo", "data/textures/buttons/y.png", LAYOUT_ANY_NO_SHIFT_L));
+            // left_hand_container->add_child(new ui::ImageLabel2D("Guides", "data/textures/buttons/l_grip_plus_y.png", LAYOUT_ANY_SHIFT_L, double_size));
+            // left_hand_container->add_child(new ui::ImageLabel2D("Undo", "data/textures/buttons/x.png", LAYOUT_ANY_NO_SHIFT_L));
+            // left_hand_container->add_child(new ui::ImageLabel2D("PBR", "data/textures/buttons/l_grip_plus_x.png", LAYOUT_ANY_SHIFT_L, double_size));
+            // left_hand_container->add_child(new ui::ImageLabel2D("Manipulate Sculpt", "data/textures/buttons/l_trigger.png", LAYOUT_ALL));
 
-    //        left_hand_ui_3D = new Viewport3D(left_hand_container);
-    //        RoomsEngine::instance->get_main_scene()->add_node(left_hand_ui_3D);
-    //    }
+            left_hand_ui_3D = new Viewport3D(left_hand_container);
+            RoomsEngine::instance->get_main_scene()->add_node(left_hand_ui_3D);
+        }
 
-    //    // Right hand
-    //    {
-    //        right_hand_container = new ui::VContainer2D("right_controller_root", { 0.0f, 0.0f });
+        // Right hand
+        {
+            right_hand_container = new ui::VContainer2D("right_controller_root", { 0.0f, 0.0f });
 
-    //        right_hand_container->add_child(new ui::ImageLabel2D("Main size", "data/textures/buttons/r_thumbstick.png", LAYOUT_ANY_NO_SHIFT_R));
-    //        right_hand_container->add_child(new ui::ImageLabel2D("Sec size", "data/textures/buttons/r_grip_plus_r_thumbstick.png", LAYOUT_ANY_SHIFT_R, double_size));
-    //        right_hand_container->add_child(new ui::ImageLabel2D("Add/Substract", "data/textures/buttons/b.png", LAYOUT_SCULPT_NO_SHIFT_R));
-    //        right_hand_container->add_child(new ui::ImageLabel2D("Sculpt/Paint", "data/textures/buttons/r_grip_plus_b.png", LAYOUT_ANY_SHIFT_R, double_size));
-    //        right_hand_container->add_child(new ui::ImageLabel2D("UI Select", "data/textures/buttons/a.png", LAYOUT_ALL));
-    //        right_hand_container->add_child(new ui::ImageLabel2D("Pick Material", "data/textures/buttons/r_grip_plus_a.png", LAYOUT_ANY_SHIFT_R, double_size));
-    //        right_hand_container->add_child(new ui::ImageLabel2D("Stamp", "data/textures/buttons/r_trigger.png", LAYOUT_ANY_NO_SHIFT_R));
-    //        right_hand_container->add_child(new ui::ImageLabel2D("Smear", "data/textures/buttons/r_grip_plus_r_trigger.png", LAYOUT_ANY_SHIFT_R, double_size));
+            // right_hand_container->add_child(new ui::ImageLabel2D("Main size", "data/textures/buttons/r_thumbstick.png", LAYOUT_ANY_NO_SHIFT_R));
+            // right_hand_container->add_child(new ui::ImageLabel2D("Sec size", "data/textures/buttons/r_grip_plus_r_thumbstick.png", LAYOUT_ANY_SHIFT_R, double_size));
+            // right_hand_container->add_child(new ui::ImageLabel2D("Add/Substract", "data/textures/buttons/b.png", LAYOUT_SCULPT_NO_SHIFT_R));
+            // right_hand_container->add_child(new ui::ImageLabel2D("Sculpt/Paint", "data/textures/buttons/r_grip_plus_b.png", LAYOUT_ANY_SHIFT_R, double_size));
+            // right_hand_container->add_child(new ui::ImageLabel2D("UI Select", "data/textures/buttons/a.png", LAYOUT_ALL));
+            // right_hand_container->add_child(new ui::ImageLabel2D("Pick Material", "data/textures/buttons/r_grip_plus_a.png", LAYOUT_ANY_SHIFT_R, double_size));
+            // right_hand_container->add_child(new ui::ImageLabel2D("Stamp", "data/textures/buttons/r_trigger.png", LAYOUT_ANY_NO_SHIFT_R));
+            // right_hand_container->add_child(new ui::ImageLabel2D("Smear", "data/textures/buttons/r_grip_plus_r_trigger.png", LAYOUT_ANY_SHIFT_R, double_size));
 
-    //        right_hand_ui_3D = new Viewport3D(right_hand_container);
-    //        RoomsEngine::instance->get_main_scene()->add_node(right_hand_ui_3D);
-    //    }
-    //}
+            right_hand_ui_3D = new Viewport3D(right_hand_container);
+            RoomsEngine::instance->get_main_scene()->add_node(right_hand_ui_3D);
+        }
+    }
 
     // Bind callbacks
     bind_events();

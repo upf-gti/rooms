@@ -426,15 +426,6 @@ void SculptEditor::update(float delta_time)
         // Update controller UI
         if (renderer->get_openxr_available()) {
 
-            glm::mat4x4 m = glm::rotate(glm::mat4x4(1.0f), glm::radians(-120.f), glm::vec3(1.0f, 0.0f, 0.0f));
-            m = glm::translate(m, glm::vec3(0.02f, 0.0f, 0.02f));
-
-            glm::mat4x4 pose = Input::get_controller_pose(HAND_RIGHT);
-            right_hand_ui_3D->set_model(pose * m);
-
-            pose = Input::get_controller_pose(HAND_LEFT);
-            left_hand_ui_3D->set_model(pose * m);
-
             is_shift_left_pressed = Input::is_grab_pressed(HAND_LEFT);
             is_shift_right_pressed = Input::is_grab_pressed(HAND_RIGHT);
 
@@ -1339,7 +1330,7 @@ void SculptEditor::init_ui()
             left_hand_container->add_child(new ui::ImageLabel2D("Manipulate Sculpt", "data/textures/buttons/l_trigger.png", LAYOUT_ALL));
 
             left_hand_ui_3D = new Viewport3D(left_hand_container);
-            RoomsEngine::instance->get_main_scene()->add_node(left_hand_ui_3D);
+            // RoomsEngine::instance->get_main_scene()->add_node(left_hand_ui_3D);
         }
 
         // Right hand
@@ -1356,7 +1347,7 @@ void SculptEditor::init_ui()
             right_hand_container->add_child(new ui::ImageLabel2D("Smear", "data/textures/buttons/r_grip_plus_r_trigger.png", LAYOUT_ANY_SHIFT_R, double_size));
 
             right_hand_ui_3D = new Viewport3D(right_hand_container);
-            RoomsEngine::instance->get_main_scene()->add_node(right_hand_ui_3D);
+            // RoomsEngine::instance->get_main_scene()->add_node(right_hand_ui_3D);
         }
     }
 
