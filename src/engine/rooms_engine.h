@@ -39,9 +39,10 @@ class RoomsEngine : public Engine
 
     void render_gui();
 
-    // Meta quest controller meshes
+    // Engine meshes
     MeshInstance3D* controller_mesh_left = nullptr;
     MeshInstance3D* controller_mesh_right = nullptr;
+    MeshInstance3D* ray_pointer = nullptr;
 
     ui::Cursor cursor;
 

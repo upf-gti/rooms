@@ -14,6 +14,7 @@
 #include "graphics/renderers/rooms_renderer.h"
 
 #include "shaders/mesh_grid.wgsl.gen.h"
+#include "shaders/ui/ui_ray_pointer.wgsl.gen.h"
 
 #include "tools/sculpt/sculpt_editor.h"
 #include "tools/scene/scene_editor.h"
@@ -85,6 +86,18 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
         main_scene->add_node(grid_node);
     }
 
+    // Controller pointer
+    {
+        ray_pointer = parse_mesh("data/meshes/raycast.obj");
+
+        Material pointer_material;
+        pointer_material.transparency_type = ALPHA_BLEND;
+        pointer_material.cull_type = CULL_NONE;
+        pointer_material.shader = RendererStorage::get_shader_from_source(shaders::ui_ray_pointer::source, shaders::ui_ray_pointer::path, pointer_material);
+
+        ray_pointer->set_surface_material_override(ray_pointer->get_surface(0), pointer_material);
+    }
+
     cursor.load();
 
 	return error;
@@ -150,6 +163,11 @@ void RoomsEngine::update(float delta_time)
     if (is_xr) {
         controller_mesh_right->set_model(Input::get_controller_pose(HAND_RIGHT));
         controller_mesh_left->set_model(Input::get_controller_pose(HAND_LEFT));
+
+        const glm::mat4x4& raycast_transform = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
+        ray_pointer->set_model(raycast_transform);
+        float xr_ray_distance = IO::get_xr_ray_distance();
+        ray_pointer->scale(glm::vec3(1.0f, 1.0f, xr_ray_distance < 0.0f ? 0.5f : xr_ray_distance));
     }
 }
 
@@ -166,7 +184,7 @@ void RoomsEngine::render()
     }
 
     if (Renderer::instance->get_openxr_available()) {
-        IO::ray_pointer->render();
+        ray_pointer->render();
     }
 
     cursor.render();
