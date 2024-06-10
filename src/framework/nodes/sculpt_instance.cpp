@@ -44,4 +44,5 @@ void SculptInstance::parse(std::ifstream& binary_scene_file)
 
     RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
     rooms_renderer->get_raymarching_renderer()->set_current_sculpt(this);
+    rooms_renderer->toogle_frame_debug();
 }

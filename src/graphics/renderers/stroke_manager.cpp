@@ -260,6 +260,9 @@ void StrokeManager::set_current_sculpt(SculptInstance* sculpt_instance, sToCompu
         }
 
         result.in_frame_stroke_aabb = base_aabb;
+
+        result.in_frame_influence.eval_aabb_min = result.in_frame_stroke_aabb.center - result.in_frame_stroke_aabb.half_size;
+        result.in_frame_influence.eval_aabb_max = result.in_frame_stroke_aabb.center + result.in_frame_stroke_aabb.half_size;
     }
 }
 
