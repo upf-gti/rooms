@@ -297,7 +297,7 @@ fn sdSphere( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : 
 
 fn sdCutSphere( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f, material : Material ) -> Surface
 {
-    var cap_value : f32 = clamp(parameters.y, 0.0, 0.9) * 2.0 - 1.0;
+    var cap_value : f32 = clamp(parameters.y * 0.75, 0.0, 1.0) * 2.0 - 1.0;
     let r : f32 = dims.x;
     let h : f32 = r * cap_value;
     var sf : Surface;
@@ -333,11 +333,20 @@ fn eval_stroke_sphere_union( position : vec3f, current_surface : Surface, curr_s
 
     let smooth_factor : f32 = parameters.w;
     let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let cap_value : f32 = parameters.y;
 
-    for(var i : u32 = 0u; i < edit_count; i++) {
-        let curr_edit : Edit = edit_array[i];
-        tmp_surface = sdSphere(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
-        result_surface = opSmoothUnion(result_surface, tmp_surface, smooth_factor);
+    if(cap_value > 0.0) {
+        for(var i : u32 = 0u; i < edit_count; i++) {
+            let curr_edit : Edit = edit_array[i];
+            tmp_surface = sdCutSphere(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
+            result_surface = opSmoothUnion(result_surface, tmp_surface, smooth_factor);
+        }
+    } else {
+        for(var i : u32 = 0u; i < edit_count; i++) {
+            let curr_edit : Edit = edit_array[i];
+            tmp_surface = sdSphere(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
+            result_surface = opSmoothUnion(result_surface, tmp_surface, smooth_factor);
+        }
     }
     
     return result_surface;
@@ -353,13 +362,21 @@ fn eval_stroke_sphere_substraction( position : vec3f, current_surface : Surface,
     let parameters : vec4f = (*curr_stroke).parameters;
 
     let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
-
     let smooth_factor : f32 = parameters.w;
+    let cap_value : f32 = parameters.y;
 
-    for(var i : u32 = 0u; i < edit_count; i++) {
-        let curr_edit : Edit = edit_array[i];
-        tmp_surface = sdSphere(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
-        result_surface = opSmoothSubtraction(result_surface, tmp_surface, smooth_factor);
+    if(cap_value > 0.0) {
+        for(var i : u32 = 0u; i < edit_count; i++) {
+            let curr_edit : Edit = edit_array[i];
+            tmp_surface = sdCutSphere(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
+            result_surface = opSmoothSubtraction(result_surface, tmp_surface, smooth_factor);
+        }
+    } else {
+        for(var i : u32 = 0u; i < edit_count; i++) {
+            let curr_edit : Edit = edit_array[i];
+            tmp_surface = sdSphere(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
+            result_surface = opSmoothSubtraction(result_surface, tmp_surface, smooth_factor);
+        }
     }
     
     return result_surface;
@@ -375,13 +392,22 @@ fn eval_stroke_sphere_paint( position : vec3f, current_surface : Surface, curr_s
     let parameters : vec4f = (*curr_stroke).parameters;
     let stroke_blend_mode : u32 = (*curr_stroke).color_blend_op;
 
-    let smooth_factor : f32 = parameters.w;
     let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let smooth_factor : f32 = parameters.w;
+    let cap_value : f32 = parameters.y;
 
-    for(var i : u32 = 0u; i < edit_count; i++) {
-        let curr_edit : Edit = edit_array[i];
-        tmp_surface = sdSphere(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
-        result_surface = opSmoothPaint(result_surface, tmp_surface, stroke_blend_mode, material, smooth_factor);
+    if(cap_value > 0.0) {
+        for(var i : u32 = 0u; i < edit_count; i++) {
+            let curr_edit : Edit = edit_array[i];
+            tmp_surface = sdCutSphere(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
+            result_surface = opSmoothPaint(result_surface, tmp_surface, stroke_blend_mode, material, smooth_factor);
+        }
+    } else {
+        for(var i : u32 = 0u; i < edit_count; i++) {
+            let curr_edit : Edit = edit_array[i];
+            tmp_surface = sdSphere(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
+            result_surface = opSmoothPaint(result_surface, tmp_surface, stroke_blend_mode, material, smooth_factor);
+        }
     }
     
     return result_surface;

@@ -63,6 +63,11 @@ fn isub_vecs(a : vec2f, b : vec2f) -> vec2f
 	return a - b.yx;
 }
 
+fn isub_float_vec(a : f32, b : vec2f) -> vec2f
+{
+	return isub_vecs(vec2f(a), b);
+}
+
 fn isub_mats(a : mat3x3f, b : mat3x3f) -> mat3x3f
 {
 	return iavec3_vecs(
@@ -721,39 +726,40 @@ fn sphere_interval(p : mat3x3f, c : vec3f, dims : vec4f, rotation : vec4f) -> ve
     return isub_vec_float(ilength(pos), r);
 }
 
-fn cut_sphere_interval(p : mat3x3f, c : vec3f, rotation : vec4f, r : f32, h : f32) -> vec2f
+fn cut_sphere_interval(p : mat3x3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f) -> vec2f
 {
+    var cap_value : f32 = clamp(parameters.y * 0.75, 0.0, 1.0) * 2.0 - 1.0;
+    let r : f32 = dims.x;
+    let h : f32 = r * cap_value;
+
     let pos : mat3x3f = irotate_point_quat(isub_mat_vec3(p, c), rotation);
 
     // sampling independent computations (only depend on shape)
     // be careful if h ~= r to skip the sqrt(0)!
-    var w : f32 = sqrt(r*r-h*h);
+    var w : f32 = sqrt(r*r-h*h+0.0001);
+    let w2 : f32 = w * w;
+    let wwh : f32 = w2 * h;
+    let wwr : f32 = w2 * r;
 
     // sampling dependant computations
-    let q_x = isqrt(ipow2_vec(pos[0].xy) + ipow2_vec(pos[1].xy));
-    let q_y = pos[2].xy;
+    let q_x : vec2f = isqrt(ipow2_vec(pos[0].xy) + ipow2_vec(pos[1].xy));
+    let q_y : vec2f = pos[2].xy;
+    let q : mat3x3f = iavec3_vecs(q_x, q_y, vec2f(0.0));
 
-    let q_x_mW = isub_vec_float(q_x, w);
-    let q_y_mH = isub_vec_float(q_y, h);
+    let max_00 : vec2f = isub_vecs(imul_float_vec(h, ipow2_vec(q_x)), imul_float_vec(r, ipow2_vec(q_x)));
+    let max_01 : vec2f = isub_float_vec(wwh + wwr, imul_float_vec(w2 * 2.0, q_y));
+    let max_1 : vec2f = iadd_vecs(max_00, max_01);
+    let max_2 : vec2f = isub_vecs(imul_float_vec(h, q_x), imul_float_vec(w, q_y));
 
-    let hMr = h - r;
-    let hPr = h + r;
-
-    let max_00 = imul_float_vec(hMr, ipow2_vec(q_x));
-    let max_01 = ineg(imul_float_vec(2.0, q_y)) + hPr;
-    let max_11 = imul_float_vec(w * w, max_01);
-    let max_02 = iadd_vecs(max_00, max_11);
-    let max_1 = isub_vecs(imul_float_vec(h, q_x), imul_float_vec(w, q_y));
-
-    let s : vec2f = imax(max_02, max_1);
+    let s : vec2f = imax(max_1, max_2);
 
     return iselect(
         iselect(
-            isqrt(ipow2_vec(q_x_mW) + ipow2_vec(q_y_mH)), 
-            ineg(q_y) + h,
+            ilength(isub_mat_vec(q, vec3f(w, h, 0.0))), 
+            isub_float_vec(h, q_y),
             ilessthan(q_x, vec2f(w))
         ), 
-        isub_vec_float(isqrt(ipow2_vec(q_x) + ipow2_vec(q_y)), r),
+        isub_vec_float(ilength(q), r),
         ilessthan(s, vec2f(0.0))
     );
 }
@@ -767,11 +773,21 @@ fn eval_interval_stroke_sphere_smooth_union( position : mat3x3f, current_surface
     let parameters : vec4f = (*curr_stroke).parameters;
 
     let smooth_factor : f32 = parameters.w;
+    let cap_value : f32 = parameters.y;
 
-    for(var i : u32 = 0u; i < edit_count; i++) {
-        let curr_edit : Edit = edit_array[i];
-        tmp_surface = sphere_interval(position, curr_edit.position, curr_edit.dimensions, curr_edit.rotation);
-        result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
+    // do capped sphere if we have cap value..
+    if(cap_value > 0.0) {
+        for(var i : u32 = 0u; i < edit_count; i++) {
+            let curr_edit : Edit = edit_array[i];
+            tmp_surface = cut_sphere_interval(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation);
+            result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
+        }
+    } else {
+        for(var i : u32 = 0u; i < edit_count; i++) {
+            let curr_edit : Edit = edit_array[i];
+            tmp_surface = sphere_interval(position, curr_edit.position, curr_edit.dimensions, curr_edit.rotation);
+            result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
+        }
     }
     
     return result_surface;
@@ -786,11 +802,21 @@ fn eval_interval_stroke_sphere_smooth_substraction( position : mat3x3f, current_
     let parameters : vec4f = (*curr_stroke).parameters;
 
     let smooth_factor : f32 = parameters.w;
+    let cap_value : f32 = parameters.y;
 
-    for(var i : u32 = 0u; i < edit_count; i++) {
-        let curr_edit : Edit = edit_array[i];
-        tmp_surface = sphere_interval(position, curr_edit.position, curr_edit.dimensions, curr_edit.rotation);
-        result_surface = opSmoothSubtractionInterval(result_surface, tmp_surface, smooth_factor);
+    // do capped sphere if we have cap value..
+    if(cap_value > 0.0) {
+        for(var i : u32 = 0u; i < edit_count; i++) {
+            let curr_edit : Edit = edit_array[i];
+            tmp_surface = cut_sphere_interval(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation);
+            result_surface = opSmoothSubtractionInterval(result_surface, tmp_surface, smooth_factor);
+        }
+    } else {
+        for(var i : u32 = 0u; i < edit_count; i++) {
+            let curr_edit : Edit = edit_array[i];
+            tmp_surface = sphere_interval(position, curr_edit.position, curr_edit.dimensions, curr_edit.rotation);
+            result_surface = opSmoothSubtractionInterval(result_surface, tmp_surface, smooth_factor);
+        }
     }
     
     return result_surface;
