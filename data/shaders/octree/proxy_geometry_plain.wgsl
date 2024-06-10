@@ -321,8 +321,8 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
         // heatmap_color.b = cos(interpolant);
         // return vec4f(heatmap_color, depth);
         //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
-		//return vec4f(apply_light(-ray_dir, position_in_world, position_in_world, normal, lightPos + lightOffset, material), depth);
-        return vec4f(normal*0.5 + 0.50, depth);
+		return vec4f(apply_light(-ray_dir, position_in_world, position_in_world, normal, lightPos + lightOffset, material), depth);
+        //return vec4f(normal*0.5 + 0.50, depth);
         //return vec4f(material.albedo, depth);
         //return vec4f(normal, depth);
         //return vec4f(vec3f(material.albedo), depth);
@@ -386,10 +386,10 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     out.color = vec4f(final_color, 1.0); // Color
     out.depth = ray_result.a;
 
-    // if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
-    //     out.color = vec4f(in.color.x, in.color.y, in.color.z, 1.0);
-    //     out.depth = in.position.z;
-    // }
+    if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
+        out.color = vec4f(in.color.x, in.color.y, in.color.z, 1.0);
+        out.depth = in.position.z;
+    }
 
     // out.color = vec4f(raymarch_distance / (SQRT_3 * BRICK_WORLD_SIZE), 0.0, 0.0, 0.0); // Color
     // out.depth = in.position.z / in.position.w;

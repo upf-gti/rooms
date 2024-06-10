@@ -62,8 +62,9 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
     let texture_coordinates : vec3u = atlas_tile_coordinate + local_id;
 
-    // wtt: BBF0_0 17
-    if ((INTERIOR_BRICK_FLAG & brick_pointer) == INTERIOR_BRICK_FLAG) {
+    let is_interior_brick : bool = (INTERIOR_BRICK_FLAG & brick_pointer) == INTERIOR_BRICK_FLAG;
+
+    if (is_interior_brick) {
         sSurface.distance = -100.0;
     } else {
         sSurface.distance = 10000.0;
@@ -111,8 +112,14 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
             let brick_to_delete_idx = atomicAdd(&brick_buffers.brick_removal_counter, 1u);
             brick_buffers.brick_removal_buffer[brick_to_delete_idx] = brick_index;
 
-            //octree.data[octree_leaf_id].octant_center_distance = vec2f(10000.0, 10000.0);
-            octree.data[octree_leaf_id].tile_pointer = 0u;
+            if (filled_pixel_count == 1000u) {
+                octree.data[octree_leaf_id].octant_center_distance = vec2f(-10000.0, -10000.0);
+                octree.data[octree_leaf_id].tile_pointer = INTERIOR_BRICK_FLAG;
+            } else {
+                octree.data[octree_leaf_id].octant_center_distance = vec2f(10000.0, 10000.0);
+                octree.data[octree_leaf_id].tile_pointer = 0u;
+            }
+
         } 
         // else {
         //     // Add "filled" flag and remove "interior" flag

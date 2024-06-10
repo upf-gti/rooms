@@ -63,6 +63,11 @@ fn isub_vecs(a : vec2f, b : vec2f) -> vec2f
 	return a - b.yx;
 }
 
+fn isub_float_vec(a : f32, b : vec2f) -> vec2f
+{
+	return isub_vecs(vec2f(a), b);
+}
+
 fn isub_mats(a : mat3x3f, b : mat3x3f) -> mat3x3f
 {
 	return iavec3_vecs(
@@ -618,6 +623,20 @@ fn isoft_min(a : vec2f, b : vec2f, r : f32) -> vec2f
     let e : vec2f = imax(r + ineg(iabs(isub_vecs(a, b))), vec2f(0.0)); 
     return isub_vecs(imin(a, b), imul_float_vec(0.25 / r, imul_vecs(e, e)));
 }
+
+// fn isoft_min_quadratic(a : vec2f, b : vec2f, k : f32) -> vec2f {
+//     let norm_k : f32 = k;//* 4.0;
+
+//     let a_div : vec2f = imul_float_vec(1.0 / norm_k, a);
+//     let b_div : vec2f = imul_float_vec(1.0 / norm_k, b);
+
+//     let h : vec2f = imax(isub_float_vec(1.0, iabs((a_div - b_div))), vec2f(0.0));
+//     let m : vec2f = ipow2_vec(h);
+//     let s : vec2f = imul_float_vec(norm_k * 0.25, m);
+
+//     return isub_vecs(imin(a, b), s);
+//     //return vec2f( iselect( isub_vecs(b, s), isub_vecs(a, s), ilessthan(a, b)));
+// }
 
 fn isoft_min_quadratic(a : vec2f, b : vec2f, k : f32) -> vec2f {
     let norm_k : f32 = k;//* 4.0;

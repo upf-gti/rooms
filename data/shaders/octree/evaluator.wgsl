@@ -137,7 +137,7 @@ fn brick_remove(octree_index : u32) {
 }
 
 // Brick managing functions
-fn brick_remove_or_mark_as_inside(octree_index : u32, is_current_brick_filled : bool) {
+fn brick_remove_and_mark_as_inside(octree_index : u32, is_current_brick_filled : bool) {
     if (is_current_brick_filled) {
         brick_remove(octree_index);
     } 
@@ -157,13 +157,8 @@ fn brick_create_or_reevaluate(octree_index : u32, is_current_brick_filled : bool
         brick_buffers.brick_instance_data[instance_index].octree_parent_id = octree_index;
         brick_buffers.brick_instance_data[instance_index].in_use = BRICK_IN_USE_FLAG;
 
-        if (is_interior_brick) {
-            // TODO(Juan): remove this brick
-            octree.data[octree_index].tile_pointer = INTERIOR_BRICK_FLAG;
-            octree.data[octree_index].octant_center_distance = vec2f(-10000.0, -10000.0);
-        } else {
+
             octree.data[octree_index].tile_pointer = instance_index | FILLED_BRICK_FLAG;
-        }
     }
                 
     octant_usage_write[prev_counter] = octree_index;
@@ -287,25 +282,26 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             // Since the interval are smaller, the wrapping effect is lessend, and you add a brick if
             // at least one of this interval subdivisions is true.
 
-            for (var i : u32 = 0; i < 8 && !subdivide; i++) {
-                let sub_octant_id = octant_id | (i << (3 * level));
+            subdivide = true;
+            // for (var i : u32 = 0; i < 8 && !subdivide; i++) {
+            //     let sub_octant_id = octant_id | (i << (3 * level));
 
-                let sub_level_half_size = SCULPT_MAX_SIZE / pow(2.0, f32((level+1) + 1));
+            //     let sub_level_half_size = SCULPT_MAX_SIZE / pow(2.0, f32((level+1) + 1));
 
-                let sub_octant_center = octant_center + sub_level_half_size * OCTREE_CHILD_OFFSET_LUT[(sub_octant_id >> (3 * ((level+1) - 1))) & 0x7];
+            //     let sub_octant_center = octant_center + sub_level_half_size * OCTREE_CHILD_OFFSET_LUT[(sub_octant_id >> (3 * ((level+1) - 1))) & 0x7];
 
-                let x_range : vec2f = vec2f(sub_octant_center.x - sub_level_half_size, sub_octant_center.x + sub_level_half_size);
-                let y_range : vec2f = vec2f(sub_octant_center.y - sub_level_half_size, sub_octant_center.y + sub_level_half_size);
-                let z_range : vec2f = vec2f(sub_octant_center.z - sub_level_half_size, sub_octant_center.z + sub_level_half_size);
-                let current_sub_interval = iavec3_vecs(x_range, y_range, z_range);
+            //     let x_range : vec2f = vec2f(sub_octant_center.x - sub_level_half_size, sub_octant_center.x + sub_level_half_size);
+            //     let y_range : vec2f = vec2f(sub_octant_center.y - sub_level_half_size, sub_octant_center.y + sub_level_half_size);
+            //     let z_range : vec2f = vec2f(sub_octant_center.z - sub_level_half_size, sub_octant_center.z + sub_level_half_size);
+            //     let current_sub_interval = iavec3_vecs(x_range, y_range, z_range);
 
-                var surf_interval : vec2f = vec2f(10000.0, 10000.0);
-                for (var j : u32 = 0; j < stroke_history.count; j++) {
-                    surf_interval = evaluate_stroke_interval(current_sub_interval, &(stroke_history.strokes[j]), &edit_list, surf_interval, octant_center, level_half_size);
-                }     
+            //     var surf_interval : vec2f = vec2f(10000.0, 10000.0);
+            //     for (var j : u32 = 0; j < stroke_history.count; j++) {
+            //         surf_interval = evaluate_stroke_interval(current_sub_interval, &(stroke_history.strokes[j]), &edit_list, surf_interval, octant_center, level_half_size);
+            //     }
                 
-                subdivide = surf_interval.x <= 0.0 && surf_interval.y >= 0.0;
-            }
+            //     subdivide = surf_interval.x <= 0.0 && surf_interval.y >= 0.0;
+            // }
         }
 
         // Do not evaluate all the bricks, only the ones whose distance interval has changed
@@ -335,9 +331,11 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             let int_distance = abs(distance(prev_interval, surface_interval));
             
             if (int_distance > 0.00001) {
-                if (surface_interval.y < 0.0) {
-                    brick_remove_or_mark_as_inside(octree_index, is_current_brick_filled);
-                } else {
+                if (surface_interval.x > 0.0 && is_current_brick_filled) {
+                    brick_remove(octree_index);
+                } else if (surface_interval.y < 0.0) {
+                    brick_remove_and_mark_as_inside(octree_index, is_current_brick_filled);
+                } else if (surface_interval.x < 0.0) {
                     brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
                 }
             }
@@ -398,13 +396,16 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             // }
 
             if (int_distance > 0.0001) {
-                if (in_surface_with_preview) {
+                if (in_surface_with_preview || is_interior_brick) {
+
                     if (fully_inside_surface) {
                         preview_brick_create(octree_index, octant_center, true);
                     } else if (in_surface && is_current_brick_filled) {
                         brick_mark_as_preview(octree_index);
                     } else if (outside_surface) {
                         preview_brick_create(octree_index, octant_center, false);
+                    } else if (in_surface) {
+                        // preview_brick_create(octree_index, octant_center, true);
                     }
                 } else if (outside_surface_with_preview && is_current_brick_filled) {
                     // TODO: hide this bricks!!
