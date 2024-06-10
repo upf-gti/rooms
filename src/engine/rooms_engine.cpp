@@ -24,14 +24,16 @@
 
 #include <fstream>
 
+bool RoomsEngine::use_environment_map = true;
+
 int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen)
 {
     int error = Engine::initialize(renderer, window, use_glfw, use_mirror_screen);
 
     main_scene = new Scene();
 
-    Environment3D* environment = new Environment3D();
-    main_scene->add_node(environment);
+    environment = new Environment3D();
+    // main_scene->add_node(environment);
 
     // Meta Quest Controllers
     if (renderer->get_openxr_available())
@@ -139,6 +141,10 @@ void RoomsEngine::update(float delta_time)
 
     Engine::update(delta_time);
 
+    if (use_environment_map) {
+        environment->update(delta_time);
+    }
+
     main_scene->update(delta_time);
 
     if (is_xr) {
@@ -149,6 +155,10 @@ void RoomsEngine::update(float delta_time)
 
 void RoomsEngine::render()
 {
+    if (use_environment_map) {
+        environment->render();
+    }
+
     main_scene->render();
 
     if (current_editor) {
@@ -197,6 +207,11 @@ void RoomsEngine::switch_editor(uint8_t editor)
         assert(0 && "Editor is not created!");
         break;
     }
+}
+
+void RoomsEngine::toggle_use_environment_map()
+{
+    use_environment_map = !use_environment_map;
 }
 
 bool RoomsEngine::export_scene()

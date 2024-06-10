@@ -25,12 +25,13 @@ enum Editor : uint8_t {
 
 class RoomsEngine : public Engine
 {
+    static bool use_environment_map;
+    Environment3D* environment = nullptr;
+
+    // Editors
     BaseEditor* current_editor = nullptr;
-
     SculptEditor* sculpt_editor = nullptr;
-
     SceneEditor* scene_editor = nullptr;
-
     TutorialEditor* tutorial_editor = nullptr;
 
     bool export_scene();
@@ -57,4 +58,5 @@ public:
     static void render_controllers();
 
     static void switch_editor(uint8_t editor);
+    static void toggle_use_environment_map();
 };

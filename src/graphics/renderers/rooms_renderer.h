@@ -12,7 +12,7 @@
 #include "framework/camera/flyover_camera.h"
 #include "framework/camera/orbit_camera.h"
 
-#define DISABLE_RAYMARCHER
+// #define DISABLE_RAYMARCHER
 
 class RoomsRenderer : public Renderer {
 
@@ -30,15 +30,19 @@ class RoomsRenderer : public Renderer {
 
     struct sCameraData {
         glm::mat4x4 mvp;
+
         glm::vec3 eye;
-        float dummy;
+        float exposure;
 
         glm::vec3 right_controller_position;
-        float dummy2;
+        float ibl_intensity;
     };
 
     sCameraData camera_data;
     sCameraData camera_2d_data;
+
+    float exposure = 1.0f;
+    float ibl_intensity = 1.0f;
 
     void render_screen(WGPUTextureView swapchain_view);
 
@@ -83,19 +87,19 @@ public:
 
     void resize_window(int width, int height) override;
 
-    inline Uniform* get_current_camera_uniform() { return &camera_uniform; }
+    inline void set_sculpt_start_position(const glm::vec3& position) { raymarching_renderer.set_sculpt_start_position(position); }
+    inline void set_exposure(float new_exposure) { exposure = new_exposure; }
+    inline void set_ibl_intensity(float new_intensity) { ibl_intensity = new_intensity; }
 
-    float get_last_evaluation_time() { return last_evaluation_time; }
-
-    void set_sculpt_start_position(const glm::vec3& position) {
-        raymarching_renderer.set_sculpt_start_position(position);
-    }
+    inline void toogle_frame_debug() { debug_this_frame = true; }
 
     RaymarchingRenderer* get_raymarching_renderer() { return &raymarching_renderer; }
-
-    inline void toogle_frame_debug() {
-        debug_this_frame = true;
-    }
+    inline Uniform* get_current_camera_uniform() { return &camera_uniform; }
+    glm::vec3 get_camera_eye();
+    glm::vec3 get_camera_front();
+    float get_last_evaluation_time() { return last_evaluation_time; }
+    float get_exposure() { return exposure; }
+    float get_ibl_intensity() { return ibl_intensity; }
 
     /*
     *   Edits
@@ -145,7 +149,4 @@ public:
     inline void set_preview_edit(const Edit& stroke) {
         raymarching_renderer.set_preview_edit(stroke);
     }
-
-    glm::vec3 get_camera_eye();
-    glm::vec3 get_camera_front();
 };

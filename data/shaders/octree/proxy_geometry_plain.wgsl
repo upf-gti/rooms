@@ -32,8 +32,10 @@ struct VertexOutput {
 
 struct CameraData {
     view_projection : mat4x4f,
-    eye_position : vec3f,
-    dummy : f32
+    eye : vec3f,
+    exposure : f32,
+    right_controller_position : vec3f,
+    ibl_intensity : f32
 };
 
 @group(0) @binding(0) var<storage, read> brick_copy_buffer : array<u32>;
@@ -352,7 +354,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     brick_center_in_sculpt_space = in.brick_center_in_sculpt_space;
 
     // From world to sculpt: make it relative to the sculpt center, and un-apply the rotation.
-    var eye_atlas_pos : vec3f = rotate_point_quat(camera_data.eye_position - sculpt_data.sculpt_start_position, quat_conj(sculpt_data.sculpt_rotation));
+    var eye_atlas_pos : vec3f = rotate_point_quat(camera_data.eye - sculpt_data.sculpt_start_position, quat_conj(sculpt_data.sculpt_rotation));
     // Get the sculpt space position relative to the current brick
     eye_atlas_pos -= in.brick_center_in_sculpt_space;
     // Atlas and sculpt space are aligned, the only difference is a change of scale, depednign on brick size. Now the coordinates are Atlas-brick relative
@@ -361,7 +363,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     eye_atlas_pos += in.atlas_tile_coordinate + vec3f(5.0 / SDF_RESOLUTION); 
     let ray_dir_atlas : vec3f = normalize(in.in_atlas_pos - eye_atlas_pos);
 
-    let ray_dir_world : vec3f = normalize(in.vertex_in_world_space.xyz - camera_data.eye_position);
+    let ray_dir_world : vec3f = normalize(in.vertex_in_world_space.xyz - camera_data.eye);
     let ray_dir_sculpt : vec3f = rotate_point_quat(ray_dir_world, quat_conj(sculpt_data.sculpt_rotation));
     // ray dir in atlas coords :((
 

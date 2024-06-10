@@ -52,5 +52,7 @@ fn apply_light(toEye : vec3f, position : vec3f, position_world : vec3f, normal_i
     final_color += get_direct_light(m);
     final_color += m.emissive;
 
+    final_color *= camera_data.exposure;
+
     return tonemap_khronos_pbr_neutral(final_color);
 }

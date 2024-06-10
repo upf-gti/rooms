@@ -198,6 +198,9 @@ void RoomsRenderer::render_screen(WGPUTextureView swapchain_view)
     // Use camera position as controller position
     camera_data.right_controller_position = camera_data.eye;
 
+    camera_data.exposure = exposure;
+    camera_data.ibl_intensity = ibl_intensity;
+
     wgpuQueueWriteBuffer(webgpu_context->device_queue, std::get<WGPUBuffer>(camera_uniform.data), 0, &camera_data, sizeof(sCameraData));
 
     // Update 2d camera for UI
@@ -310,6 +313,9 @@ void RoomsRenderer::render_xr()
         camera_data.mvp = xr_context->per_view_data[i].view_projection_matrix;
 
         camera_data.right_controller_position = Input::get_controller_position(HAND_RIGHT);
+
+        camera_data.exposure = exposure;
+        camera_data.ibl_intensity = ibl_intensity;
 
         wgpuQueueWriteBuffer(webgpu_context->device_queue, std::get<WGPUBuffer>(camera_uniform.data), i * camera_buffer_stride, &camera_data, sizeof(sCameraData));
 

@@ -29,8 +29,10 @@ struct VertexOutput {
 
 struct CameraData {
     view_projection : mat4x4f,
-    eye_position : vec3f,
-    dummy : f32
+    eye : vec3f,
+    exposure : f32,
+    right_controller_position : vec3f,
+    ibl_intensity : f32
 };
 
 #dynamic @group(0) @binding(0) var<uniform> camera_data : CameraData;
@@ -169,7 +171,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     var out: FragmentOutput;
 
-    let camera_to_vertex = in.vertex_in_world_space.xyz - camera_data.eye_position;
+    let camera_to_vertex = in.vertex_in_world_space.xyz - camera_data.eye;
     let camera_to_vertex_distance = length(camera_to_vertex);
 
     let ray_dir_world : vec3f = camera_to_vertex / camera_to_vertex_distance;
@@ -195,15 +197,15 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     out.color = vec4f(final_color, 1.0); // Color
     out.depth = ray_result.a;
 
-    // if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
-    //     if (is_inside_brick) {
-    //         out.color = vec4f(1.0, 0.0, 1.0, 1.0);
-    //     } else {
-    //         out.color = vec4f(0.0, 0.0, 1.0, 1.0);
-    //     }
+    if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
+        if (is_inside_brick) {
+            out.color = vec4f(1.0, 0.0, 1.0, 1.0);
+        } else {
+            out.color = vec4f(0.0, 0.0, 1.0, 1.0);
+        }
         
-    //     out.depth = in.position.z;
-    // }
+        out.depth = in.position.z;
+    }
 
     // out.color = vec4f(1.0, 0.0, 0.0, 1.0); // Color
     // out.depth = 0.0;

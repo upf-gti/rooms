@@ -46,7 +46,6 @@ class RaymarchingRenderer {
         EVALUATE_PREVIEW_STROKE = 0x0002u
     };
 
-
     Uniform         linear_sampler_uniform;
 
     Pipeline        render_proxy_geometry_pipeline;

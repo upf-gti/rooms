@@ -218,6 +218,18 @@ void SceneEditor::init_ui()
         first_row->add_child(add_node_submenu);
     }
 
+    // ** Display Settings **
+    {
+        RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
+        ui::ItemGroup2D* g_display = new ui::ItemGroup2D("g_display");
+        ui::ButtonSubmenu2D* display_submenu = new ui::ButtonSubmenu2D("display", "data/textures/display_settings.png");
+        g_display->add_child(new ui::TextureButton2D("use_environment", "data/textures/skybox.png", ui::ALLOW_TOGGLE | ui::SELECTED));
+        g_display->add_child(new ui::Slider2D("IBL_intensity", "data/textures/ibl_intensity.png", rooms_renderer->get_ibl_intensity(), ui::SliderMode::VERTICAL, ui::USER_RANGE/*ui::CURVE_INV_POW, 21.f, -6.0f*/, 0.0f, 4.0f, 2));
+        display_submenu->add_child(g_display);
+        display_submenu->add_child(new ui::Slider2D("exposure", "data/textures/exposure.png", rooms_renderer->get_exposure(), ui::SliderMode::VERTICAL, ui::USER_RANGE/*ui::CURVE_INV_POW, 21.f, -6.0f*/, 0.0f, 4.0f, 2));
+        first_row->add_child(display_submenu);
+    }
+
     // ** Gizmo modes **
     {
         ui::ComboButtons2D* combo_gizmo_modes = new ui::ComboButtons2D("combo_gizmo_modes");
@@ -342,11 +354,25 @@ void SceneEditor::bind_events()
         add_node(new_sculpt);
     });
 
-    // Lights
+    // Environment / Scene Lights
     {
         Node::bind("omni", [&](const std::string& signal, void* button) { create_light_node(LIGHT_OMNI); });
         Node::bind("spot", [&](const std::string& signal, void* button) { create_light_node(LIGHT_SPOT); });
         Node::bind("directional", [&](const std::string& signal, void* button) { create_light_node(LIGHT_DIRECTIONAL); });
+
+        Node::bind("exposure", [&](const std::string& signal, float value) {
+            RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
+            rooms_renderer->set_exposure(value);
+        });
+
+        Node::bind("IBL_intensity", [&](const std::string& signal, float value) {
+            RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
+            rooms_renderer->set_ibl_intensity(value);
+        });
+
+        Node::bind("use_environment", [&](const std::string& signal, void* button) {
+            RoomsEngine::toggle_use_environment_map();
+        });
     }
 
     Node::bind("clone", [&](const std::string& signal, void* button) { clone_node(); });
