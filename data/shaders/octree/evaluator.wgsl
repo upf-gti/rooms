@@ -188,6 +188,10 @@ fn brick_mark_as_preview(octree_index : u32, edit_start_index : u32, edit_count 
     brick_buffers.brick_instance_data[octree.data[octree_index].tile_pointer & OCTREE_TILE_INDEX_MASK].edit_count = edit_count;
 }
 
+fn brick_mark_as_hidden(octree_index : u32) {
+    brick_buffers.brick_instance_data[octree.data[octree_index].tile_pointer & OCTREE_TILE_INDEX_MASK].in_use |= BRICK_HIDE_FLAG;
+}
+
 @compute @workgroup_size(1, 1, 1)
 fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) workgroup_size : vec3u) 
 {

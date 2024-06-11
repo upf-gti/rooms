@@ -19,7 +19,9 @@ fn compute(@builtin(workgroup_id) id: vec3<u32>, @builtin(local_invocation_index
 
     let current_instance_in_use_flag : u32 = brick_buffers.brick_instance_data[current_instance_index].in_use;
 
-    if ((current_instance_in_use_flag & BRICK_IN_USE_FLAG) == BRICK_IN_USE_FLAG) {
+    if ((current_instance_in_use_flag & BRICK_IN_USE_FLAG) == BRICK_IN_USE_FLAG
+     && (current_instance_in_use_flag & BRICK_HIDE_FLAG) == 0)
+    {
         let prev_value : u32 = atomicAdd(&brick_buffers.brick_instance_counter, 1u);
         brick_copy_buffer[prev_value] = current_instance_index;
     }
