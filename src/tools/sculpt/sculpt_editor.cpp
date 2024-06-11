@@ -1325,7 +1325,6 @@ void SculptEditor::init_ui()
             left_hand_container->add_child(new ui::ImageLabel2D("Manipulate Sculpt", "data/textures/buttons/l_trigger.png", LAYOUT_ALL));
 
             left_hand_ui_3D = new Viewport3D(left_hand_container);
-            // RoomsEngine::instance->get_main_scene()->add_node(left_hand_ui_3D);
         }
 
         // Right hand
@@ -1342,7 +1341,6 @@ void SculptEditor::init_ui()
             right_hand_container->add_child(new ui::ImageLabel2D("Smear", "data/textures/buttons/r_grip_plus_r_trigger.png", LAYOUT_ANY_SHIFT_R, double_size));
 
             right_hand_ui_3D = new Viewport3D(right_hand_container);
-            // RoomsEngine::instance->get_main_scene()->add_node(right_hand_ui_3D);
         }
     }
 

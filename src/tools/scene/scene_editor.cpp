@@ -77,24 +77,6 @@ void SceneEditor::update(float delta_time)
 
     update_gizmo(delta_time);
 
-    //if (xr_panel_3d) {
-
-    //    // Update welcome screen following headset??
-
-    //    glm::mat4x4 m(1.0f);
-    //    glm::vec3 eye = renderer->get_camera_eye();
-    //    glm::vec3 new_pos = eye + renderer->get_camera_front();
-
-    //    m = glm::translate(m, new_pos);
-    //    m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
-
-    //    xr_panel_3d->set_model(m);
-    //    xr_panel_3d->update(delta_time);
-    //}
-    //else {
-    //    xr_panel_2d->update(delta_time);
-    //}
-
     // debug
 
     //glm::vec3 ray_origin;
@@ -151,13 +133,6 @@ void SceneEditor::render()
     RoomsEngine::render_controllers();
 
     render_gizmo();
-
-    /*if (xr_panel_3d) {
-        xr_panel_3d->render();
-    }
-    else {
-        xr_panel_2d->render();
-    }*/
 }
 
 void SceneEditor::render_gui()
@@ -271,14 +246,13 @@ void SceneEditor::init_ui()
 
             // left_hand_container->add_child(new ui::ImageLabel2D("Round Shape", "data/textures/buttons/l_thumbstick.png", LAYOUT_ANY_NO_SHIFT_L));
             // left_hand_container->add_child(new ui::ImageLabel2D("Smooth", "data/textures/buttons/l_grip_plus_l_thumbstick.png", LAYOUT_ANY_SHIFT_L, double_size));
-            // left_hand_container->add_child(new ui::ImageLabel2D("Redo", "data/textures/buttons/y.png", LAYOUT_ANY_NO_SHIFT_L));
+            left_hand_container->add_child(new ui::ImageLabel2D("Redo", "data/textures/buttons/y.png", LAYOUT_ANY_NO_SHIFT_L));
             // left_hand_container->add_child(new ui::ImageLabel2D("Guides", "data/textures/buttons/l_grip_plus_y.png", LAYOUT_ANY_SHIFT_L, double_size));
-            // left_hand_container->add_child(new ui::ImageLabel2D("Undo", "data/textures/buttons/x.png", LAYOUT_ANY_NO_SHIFT_L));
+            left_hand_container->add_child(new ui::ImageLabel2D("Undo", "data/textures/buttons/x.png", LAYOUT_ANY_NO_SHIFT_L));
             // left_hand_container->add_child(new ui::ImageLabel2D("PBR", "data/textures/buttons/l_grip_plus_x.png", LAYOUT_ANY_SHIFT_L, double_size));
             // left_hand_container->add_child(new ui::ImageLabel2D("Manipulate Sculpt", "data/textures/buttons/l_trigger.png", LAYOUT_ALL));
 
             left_hand_ui_3D = new Viewport3D(left_hand_container);
-            RoomsEngine::instance->get_main_scene()->add_node(left_hand_ui_3D);
         }
 
         // Right hand
@@ -289,13 +263,12 @@ void SceneEditor::init_ui()
             // right_hand_container->add_child(new ui::ImageLabel2D("Sec size", "data/textures/buttons/r_grip_plus_r_thumbstick.png", LAYOUT_ANY_SHIFT_R, double_size));
             // right_hand_container->add_child(new ui::ImageLabel2D("Add/Substract", "data/textures/buttons/b.png", LAYOUT_SCULPT_NO_SHIFT_R));
             // right_hand_container->add_child(new ui::ImageLabel2D("Sculpt/Paint", "data/textures/buttons/r_grip_plus_b.png", LAYOUT_ANY_SHIFT_R, double_size));
-            // right_hand_container->add_child(new ui::ImageLabel2D("UI Select", "data/textures/buttons/a.png", LAYOUT_ALL));
+            right_hand_container->add_child(new ui::ImageLabel2D("Select Node", "data/textures/buttons/a.png", LAYOUT_ALL));
             // right_hand_container->add_child(new ui::ImageLabel2D("Pick Material", "data/textures/buttons/r_grip_plus_a.png", LAYOUT_ANY_SHIFT_R, double_size));
             // right_hand_container->add_child(new ui::ImageLabel2D("Stamp", "data/textures/buttons/r_trigger.png", LAYOUT_ANY_NO_SHIFT_R));
             // right_hand_container->add_child(new ui::ImageLabel2D("Smear", "data/textures/buttons/r_grip_plus_r_trigger.png", LAYOUT_ANY_SHIFT_R, double_size));
 
             right_hand_ui_3D = new Viewport3D(right_hand_container);
-            RoomsEngine::instance->get_main_scene()->add_node(right_hand_ui_3D);
         }
     }
 

@@ -122,30 +122,11 @@ void RoomsEngine::update(float delta_time)
 {
     bool is_xr = renderer->get_openxr_available();
 
-    // Default cursor
+    // Default cursor at the beginning of the frame..
     cursor.set(is_xr ? ui::MOUSE_CURSOR_CIRCLE : ui::MOUSE_CURSOR_DEFAULT);
 
-    // IO data will change here, so update later the new cursor
     if (current_editor) {
         current_editor->update(delta_time);
-    }
-
-    if (IO::any_hover()) {
-
-        Node2D* hover_element = IO::get_hover();
-
-        if (hover_element->get_class_type() == Node2DClassType::PANEL - 1u) {
-            cursor.set(ui::MOUSE_CURSOR_POINTER);
-        }
-        else if(hover_element->get_class_type() == Node2DClassType::HSLIDER) {
-            cursor.set(ui::MOUSE_CURSOR_RESIZE_EW);
-        }
-        else if (hover_element->get_class_type() == Node2DClassType::VSLIDER) {
-            cursor.set(ui::MOUSE_CURSOR_RESIZE_NS);
-        }
-        else if (IO::is_hover_disabled()) {
-            cursor.set(ui::MOUSE_CURSOR_DISABLED);
-        }
     }
 
     cursor.update(delta_time);
