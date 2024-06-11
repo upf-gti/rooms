@@ -335,8 +335,14 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             let int_distance = abs(distance(prev_interval, surface_interval));
             
             if (int_distance > 0.00001) {
-                if (surface_interval.x > 0.0 && is_current_brick_filled) {
-                    brick_remove(octree_index);
+                if (surface_interval.x > 0.0) {
+                    if (is_current_brick_filled) {
+                        // delete any brick outside surface that was previosly filled
+                        brick_remove(octree_index);
+                    } else {
+                        // reset flags for potential interior bricks
+                        octree.data[octree_index].tile_pointer = 0;
+                    }
                 } else if (surface_interval.y < 0.0) {
                     brick_remove_and_mark_as_inside(octree_index, is_current_brick_filled);
                 } else if (surface_interval.x < 0.0) {
@@ -421,7 +427,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                     }
                 }
 
-                if (in_surface_with_preview || is_interior_brick) {
+                if (in_surface_with_preview) {
 
                     if (fully_inside_surface) {
                         preview_brick_create(octree_index, octant_center, true, edit_index_start, edit_count);
