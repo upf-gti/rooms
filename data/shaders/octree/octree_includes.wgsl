@@ -121,8 +121,8 @@ struct ProxyInstanceData {
     atlas_tile_index : u32,
     octree_parent_id : u32, // a hack I dont like it
     in_use : u32,
-    padd : u32,
-    padd2 : u32
+    edit_id_start : u32,
+    edit_count : u32
 };
 
 

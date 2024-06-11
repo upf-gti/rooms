@@ -81,7 +81,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
     // Evaluating the edit context
     for (var j : u32 = 0; j < stroke_history.count; j++) {
-        curr_surface = evaluate_stroke(pos, &(stroke_history.strokes[j]), &edit_list, curr_surface);
+        curr_surface = evaluate_stroke(pos, &(stroke_history.strokes[j]), &edit_list, curr_surface, stroke_history.strokes[j].edit_list_index, stroke_history.strokes[j].edit_count);
     }
 
     result_surface = curr_surface;

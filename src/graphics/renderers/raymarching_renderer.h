@@ -26,7 +26,7 @@
 #define MIN_PRIMITIVE_SIZE 0.005f
 #define MAX_PRIMITIVE_SIZE 0.08f
 
-#define PREVIEW_BASE_EDIT_LIST 64u
+#define PREVIEW_BASE_EDIT_LIST 200u
 #define PREVIEW_EDIT_LIST_INCREMENT 200u
 
 class MeshInstance3D;
@@ -185,6 +185,7 @@ class RaymarchingRenderer {
 
     StrokeManager   stroke_manager = {};
 
+    uint32_t preview_edit_array_length = 0u;
     struct sPreviewStroke {
         sToUploadStroke stroke;
         std::vector<Edit> edit_list;

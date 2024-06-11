@@ -169,19 +169,23 @@ fn brick_reevaluate(octree_index : u32) {
     octant_usage_write[prev_counter] = octree_index;
 }
 
-fn preview_brick_create(octree_index : u32, octant_center : vec3f, is_interior_brick : bool) {
+fn preview_brick_create(octree_index : u32, octant_center : vec3f, is_interior_brick : bool, edit_start_index : u32, edit_count : u32) {
     let preview_brick : u32 = atomicAdd(&brick_buffers.preview_instance_counter, 1u);
     
     brick_buffers.preview_instance_data[preview_brick].position = octant_center;
     brick_buffers.preview_instance_data[preview_brick].octree_parent_id = octree_index;
     brick_buffers.preview_instance_data[preview_brick].in_use = 0u;
+    brick_buffers.preview_instance_data[preview_brick].edit_id_start = edit_start_index;
+    brick_buffers.preview_instance_data[preview_brick].edit_count = edit_count;
     if (is_interior_brick) {
         brick_buffers.preview_instance_data[preview_brick].in_use = INTERIOR_BRICK_FLAG; 
     }
 }
 
-fn brick_mark_as_preview(octree_index : u32) {
+fn brick_mark_as_preview(octree_index : u32, edit_start_index : u32, edit_count : u32) {
     brick_buffers.brick_instance_data[octree.data[octree_index].tile_pointer & OCTREE_TILE_INDEX_MASK].in_use |= BRICK_HAS_PREVIEW_FLAG;
+    brick_buffers.brick_instance_data[octree.data[octree_index].tile_pointer & OCTREE_TILE_INDEX_MASK].edit_id_start = edit_start_index;
+    brick_buffers.brick_instance_data[octree.data[octree_index].tile_pointer & OCTREE_TILE_INDEX_MASK].edit_count = edit_count;
 }
 
 @compute @workgroup_size(1, 1, 1)
@@ -396,20 +400,41 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             // }
 
             if (int_distance > 0.0001) {
+                // Compute edit margin for preview evaluation
+                var edit_index_start : u32 = 1000u;
+                var edit_count : u32 = 0u;
+                let starting_edit_pos : u32 = preview_stroke.stroke.edit_list_index;
+
+                for(var i : u32 = 0u; i < preview_stroke.stroke.edit_count; i++) {
+                    // WIP get AABB of current edit
+                    let edit_pointer : ptr<storage, Edit> = &(preview_stroke.edit_list[i + starting_edit_pos]);
+
+                    let half_size : vec3f = vec3f(edit_pointer.dimensions.x + preview_stroke.stroke.parameters.w);
+                    let position : vec3f = (edit_pointer.position);
+
+                    let aabb_min : vec3f = position - half_size;
+                    let aabb_max : vec3f = position + half_size;
+
+                    if (intersection_AABB_AABB(aabb_min, aabb_max, eval_aabb_min, eval_aabb_max)) {
+                        edit_index_start = min(edit_index_start, i + starting_edit_pos);
+                        edit_count = max(edit_count, i+1);
+                    }
+                }
+
                 if (in_surface_with_preview || is_interior_brick) {
 
                     if (fully_inside_surface) {
-                        preview_brick_create(octree_index, octant_center, true);
+                        preview_brick_create(octree_index, octant_center, true, edit_index_start, edit_count);
                     } else if (in_surface && is_current_brick_filled) {
-                        brick_mark_as_preview(octree_index);
+                        brick_mark_as_preview(octree_index, edit_index_start, edit_count);
                     } else if (outside_surface) {
-                        preview_brick_create(octree_index, octant_center, false);
+                        preview_brick_create(octree_index, octant_center, false, edit_index_start, edit_count);
                     } else if (in_surface) {
                         // preview_brick_create(octree_index, octant_center, true);
                     }
                 } else if (outside_surface_with_preview && is_current_brick_filled) {
                     // TODO: hide this bricks!!
-                    brick_mark_as_preview(octree_index);
+                    brick_mark_as_preview(octree_index, edit_index_start, edit_count);
                 }
             }
         }

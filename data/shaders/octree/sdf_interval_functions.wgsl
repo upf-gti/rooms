@@ -772,13 +772,13 @@ fn eval_interval_stroke_sphere_smooth_union( position : mat3x3f, current_surface
     var result_surface : vec2f = current_surface;
     var tmp_surface : vec2f;
 
-    let edit_count : u32 = (*curr_stroke).edit_count;
-    let parameters : vec4f = (*curr_stroke).parameters;
+    let edit_count : u32 = curr_stroke.edit_count;
+    let parameters : vec4f = curr_stroke.parameters;
 
     let smooth_factor : f32 = parameters.w;
 
-    let starting_idx : u32 = (*curr_stroke).edit_list_index;
-    let ending_idx : u32 = (*curr_stroke).edit_count + starting_idx;
+    let starting_idx : u32 = curr_stroke.edit_list_index;
+    let ending_idx : u32 = curr_stroke.edit_count + starting_idx;
 
     for(var i : u32 = starting_idx; i < ending_idx; i++) {
         let curr_edit : Edit = curr_edit_list[i];
@@ -824,13 +824,13 @@ fn eval_interval_stroke_box_smooth_union( position : mat3x3f, current_surface : 
     var result_surface : vec2f = current_surface;
     var tmp_surface : vec2f;
 
-    let edit_count : u32 = (*curr_stroke).edit_count;
-    let parameters : vec4f = (*curr_stroke).parameters;
+    let edit_count : u32 = curr_stroke.edit_count;
+    let parameters : vec4f = curr_stroke.parameters;
 
     let smooth_factor : f32 = parameters.w;
 
-    let starting_idx : u32 = (*curr_stroke).edit_list_index;
-    let ending_idx : u32 = (*curr_stroke).edit_count + starting_idx;
+    let starting_idx : u32 = curr_stroke.edit_list_index;
+    let ending_idx : u32 = curr_stroke.edit_count + starting_idx;
 
     for(var i : u32 = starting_idx; i < ending_idx; i++) {
         let curr_edit : Edit = curr_edit_list[i];
@@ -865,9 +865,9 @@ fn eval_interval_stroke_box_smooth_union( position : mat3x3f, current_surface : 
 //     var result_surface : vec2f = current_surface;
 //     var tmp_surface : vec2f;
     
-//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
-//     let edit_count : u32 = (*curr_stroke).edit_count;
-//     let parameters : vec4f = (*curr_stroke).parameters;
+//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &(curr_stroke.edits);
+//     let edit_count : u32 = curr_stroke.edit_count;
+//     let parameters : vec4f = curr_stroke.parameters;
 
 //     let smooth_factor : f32 = parameters.w;
 
@@ -928,9 +928,9 @@ fn eval_interval_stroke_box_smooth_union( position : mat3x3f, current_surface : 
 //     var result_surface : vec2f = current_surface;
 //     var tmp_surface : vec2f;
     
-//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
-//     let edit_count : u32 = (*curr_stroke).edit_count;
-//     let parameters : vec4f = (*curr_stroke).parameters;
+//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &(curr_stroke.edits);
+//     let edit_count : u32 = curr_stroke.edit_count;
+//     let parameters : vec4f = curr_stroke.parameters;
 
 //     let smooth_factor : f32 = parameters.w;
 
@@ -978,9 +978,9 @@ fn eval_interval_stroke_box_smooth_union( position : mat3x3f, current_surface : 
 //     var result_surface : vec2f = current_surface;
 //     var tmp_surface : vec2f;
     
-//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
-//     let edit_count : u32 = (*curr_stroke).edit_count;
-//     let parameters : vec4f = (*curr_stroke).parameters;
+//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &(curr_stroke.edits);
+//     let edit_count : u32 = curr_stroke.edit_count;
+//     let parameters : vec4f = curr_stroke.parameters;
 
 //     let smooth_factor : f32 = parameters.w;
 
@@ -1044,9 +1044,9 @@ fn eval_interval_stroke_box_smooth_union( position : mat3x3f, current_surface : 
 //     var result_surface : vec2f = current_surface;
 //     var tmp_surface : vec2f;
     
-//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
-//     let edit_count : u32 = (*curr_stroke).edit_count;
-//     let parameters : vec4f = (*curr_stroke).parameters;
+//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &(curr_stroke.edits);
+//     let edit_count : u32 = curr_stroke.edit_count;
+//     let parameters : vec4f = curr_stroke.parameters;
 
 //     let smooth_factor : f32 = parameters.w;
 //     let cap_value : f32 = parameters.y;

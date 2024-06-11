@@ -89,6 +89,8 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
     // Prepare preview stroke
     preview_stroke.edit_list.resize(PREVIEW_BASE_EDIT_LIST);
     preview_stroke.stroke.edit_count = 0u;
+
+    preview_edit_array_length = PREVIEW_BASE_EDIT_LIST;
     
     return 0;
 }
@@ -298,6 +300,31 @@ void RaymarchingRenderer::compute_preview_edit(WGPUComputePassEncoder compute_pa
     wgpuComputePassEncoderPushDebugGroup(compute_pass, "Preview evaluation");
 #endif
 
+    // Resize the edit buffer and rebuild the bindgroups
+    if (preview_stroke.edit_list.size() > preview_edit_array_length) {
+        preview_edit_array_length = preview_stroke.edit_list.size();
+        uint32_t struct_size = sizeof(sToUploadStroke) + sizeof(Edit) * preview_edit_array_length;
+        preview_stroke_uniform.destroy();
+        preview_stroke_uniform.data = webgpu_context->create_buffer(struct_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "preview_stroke_buffer");
+        preview_stroke_uniform.binding = 0;
+        preview_stroke_uniform.buffer_size = struct_size;
+
+        prev_stroke_uniform_2.data = preview_stroke_uniform.data;
+        prev_stroke_uniform_2.buffer_size = preview_stroke_uniform.buffer_size;
+
+        std::vector<Uniform*> uniforms = { &linear_sampler_uniform, &sdf_texture_uniform, &octree_brick_buffers, &octree_brick_copy_buffer, &sdf_material_texture_uniform, &prev_stroke_uniform_2 };
+        wgpuBindGroupRelease(render_proxy_geometry_bind_group);
+        render_proxy_geometry_bind_group = webgpu_context->create_bind_group(uniforms, render_proxy_shader, 0);
+
+        uniforms = { &sculpt_data_uniform, &prev_stroke_uniform_2, &octree_brick_buffers };
+        wgpuBindGroupRelease(sculpt_data_bind_preview_group);
+        sculpt_data_bind_preview_group = webgpu_context->create_bind_group(uniforms, render_preview_proxy_shader, 1);
+
+        uniforms = { &preview_stroke_uniform };
+        wgpuBindGroupRelease(preview_stroke_bind_group);
+        preview_stroke_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_evaluate_shader, 2);
+    }
+
     // Upload preview data, first the stoke and tehn the edit list, since we are storing it in a vector
     webgpu_context->update_buffer(std::get<WGPUBuffer>(preview_stroke_uniform.data), 0u, &(preview_stroke.stroke), sizeof(sToUploadStroke));
     webgpu_context->update_buffer(std::get<WGPUBuffer>(preview_stroke_uniform.data), sizeof(sToUploadStroke), preview_stroke.edit_list.data(), preview_stroke.stroke.edit_count * sizeof(Edit));
@@ -500,7 +527,6 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
     }
 
     webgpu_context->update_buffer(std::get<WGPUBuffer>(compute_merge_data_uniform.data), 0, &(compute_merge_data), sizeof(sMergeData));
-    
 
     if (needs_evaluation) {
         if (stroke_to_compute.in_frame_influence.stroke_count > octree_edit_list_size) {
@@ -829,8 +855,8 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
 
     // Preview data bindgroup
     {
-        uint32_t struct_size = sizeof(Stroke);
-        preview_stroke_uniform.data = webgpu_context->create_buffer(struct_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "preview_stroke_bindgroup");
+        uint32_t struct_size = sizeof(sToUploadStroke) + sizeof(Edit) * PREVIEW_BASE_EDIT_LIST;
+        preview_stroke_uniform.data = webgpu_context->create_buffer(struct_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "preview_stroke_buffer");
         preview_stroke_uniform.binding = 0;
         preview_stroke_uniform.buffer_size = struct_size;
 

@@ -159,7 +159,7 @@ fn sample_sdf_with_preview(sculpt_position : vec3f, atlas_position : vec3f) -> S
     surface.distance = sample_sdf_atlas(atlas_position);
     surface.material = interpolate_material(atlas_position * SDF_RESOLUTION);
     
-    surface = evaluate_stroke(sculpt_position, &(preview_stroke.stroke), &(preview_stroke.edit_list), surface);
+    surface = evaluate_stroke(sculpt_position, &(preview_stroke.stroke), &(preview_stroke.edit_list), surface, preview_stroke.stroke.edit_list_index, preview_stroke.stroke.edit_count);
     
     return surface;
 }
@@ -171,7 +171,7 @@ fn sample_sdf_with_preview_without_material(sculpt_position : vec3f, atlas_posit
     var surface : Surface;
     surface.distance = sample_sdf_atlas(atlas_position);
     
-    surface = evaluate_stroke(sculpt_position, &(preview_stroke.stroke), &(preview_stroke.edit_list), surface);
+    surface = evaluate_stroke(sculpt_position, &(preview_stroke.stroke), &(preview_stroke.edit_list), surface, preview_stroke.stroke.edit_list_index, preview_stroke.stroke.edit_count);
 
     
     return surface.distance;

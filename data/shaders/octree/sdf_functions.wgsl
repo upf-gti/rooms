@@ -322,21 +322,20 @@ fn sdCutSphere( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation
     return sf;
 }
 
-fn eval_stroke_sphere_union( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>, curr_edit_list : ptr<storage, array<Edit>> ) -> Surface {
+fn eval_stroke_sphere_union( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>, curr_edit_list : ptr<storage, array<Edit>>, edit_starting_idx : u32, edit_count : u32) -> Surface {
     var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
 
-    let edit_count : u32 = (*curr_stroke).edit_count;
-    let stroke_material = (*curr_stroke).material;
-    let parameters : vec4f = (*curr_stroke).parameters;
+    let stroke_material = curr_stroke.material;
+    let parameters : vec4f = curr_stroke.parameters;
 
     let smooth_factor : f32 = parameters.w;
     let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
 
-    let starting_idx : u32 = (*curr_stroke).edit_list_index;
-    let ending_idx : u32 = (*curr_stroke).edit_count + starting_idx;
+    let starting_idx : u32 = edit_starting_idx;
+    let ending_idx : u32 = edit_count + edit_starting_idx;
 
-    for(var i : u32 = starting_idx; i < ending_idx; i++) {
+    for(var i : u32 = edit_starting_idx; i < ending_idx; i++) {
         let curr_edit : Edit = curr_edit_list[i];
         tmp_surface = sdSphere(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
         result_surface = opSmoothUnion(result_surface, tmp_surface, smooth_factor);
@@ -345,21 +344,20 @@ fn eval_stroke_sphere_union( position : vec3f, current_surface : Surface, curr_s
     return result_surface;
 }
 
-fn eval_stroke_sphere_substraction( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>, curr_edit_list : ptr<storage, array<Edit>> ) -> Surface {
+fn eval_stroke_sphere_substraction( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>, curr_edit_list : ptr<storage, array<Edit>>, edit_starting_idx : u32, edit_count : u32 ) -> Surface {
 var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
 
-    let edit_count : u32 = (*curr_stroke).edit_count;
-    let stroke_material = (*curr_stroke).material;
-    let parameters : vec4f = (*curr_stroke).parameters;
+    let stroke_material = curr_stroke.material;
+    let parameters : vec4f = curr_stroke.parameters;
 
     let smooth_factor : f32 = parameters.w;
     let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
 
-    let starting_idx : u32 = (*curr_stroke).edit_list_index;
-    let ending_idx : u32 = (*curr_stroke).edit_count + starting_idx;
+    let starting_idx : u32 = edit_starting_idx;
+    let ending_idx : u32 = edit_count + edit_starting_idx;
 
-    for(var i : u32 = starting_idx; i < ending_idx; i++) {
+    for(var i : u32 = edit_starting_idx; i < ending_idx; i++) {
         let curr_edit : Edit = curr_edit_list[i];
         tmp_surface = sdSphere(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
         result_surface = opSmoothSubtraction(result_surface, tmp_surface, smooth_factor);
@@ -368,22 +366,21 @@ var result_surface : Surface = current_surface;
     return result_surface;
 }
 
-fn eval_stroke_sphere_paint( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>, curr_edit_list : ptr<storage, array<Edit>> ) -> Surface {
+fn eval_stroke_sphere_paint( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>, curr_edit_list : ptr<storage, array<Edit>>, edit_starting_idx : u32, edit_count : u32 ) -> Surface {
     var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
 
-    let edit_count : u32 = (*curr_stroke).edit_count;
-    let stroke_material = (*curr_stroke).material;
-    let parameters : vec4f = (*curr_stroke).parameters;
-    let stroke_blend_mode : u32 = (*curr_stroke).color_blend_op;
+    let stroke_material = curr_stroke.material;
+    let parameters : vec4f = curr_stroke.parameters;
+    let stroke_blend_mode : u32 = curr_stroke.color_blend_op;
 
     let smooth_factor : f32 = parameters.w;
     let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
 
-    let starting_idx : u32 = (*curr_stroke).edit_list_index;
-    let ending_idx : u32 = (*curr_stroke).edit_count + starting_idx;
+    let starting_idx : u32 = edit_starting_idx;
+    let ending_idx : u32 = edit_count + edit_starting_idx;
 
-    for(var i : u32 = starting_idx; i < ending_idx; i++) {
+    for(var i : u32 = edit_starting_idx; i < ending_idx; i++) {
         let curr_edit : Edit = curr_edit_list[i];
         tmp_surface = sdSphere(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
         result_surface = opSmoothPaint(result_surface, tmp_surface, stroke_blend_mode, material, smooth_factor);
@@ -416,21 +413,20 @@ fn sdBox( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec
     return sf;
 }
 
-fn eval_stroke_box_union( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>, curr_edit_list : ptr<storage, array<Edit>> ) -> Surface {
+fn eval_stroke_box_union( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>, curr_edit_list : ptr<storage, array<Edit>>, edit_starting_idx : u32, edit_count : u32 ) -> Surface {
     var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
     
-    let edit_count : u32 = (*curr_stroke).edit_count;
-    let stroke_material = (*curr_stroke).material;
-    let parameters : vec4f = (*curr_stroke).parameters;
+    let stroke_material = curr_stroke.material;
+    let parameters : vec4f = curr_stroke.parameters;
 
     let smooth_factor : f32 = parameters.w;
     let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
 
-    let starting_idx : u32 = (*curr_stroke).edit_list_index;
-    let ending_idx : u32 = (*curr_stroke).edit_count + starting_idx;
+    let starting_idx : u32 = edit_starting_idx;
+    let ending_idx : u32 = edit_count + edit_starting_idx;
 
-    for(var i : u32 = starting_idx; i < ending_idx; i++) {
+    for(var i : u32 = edit_starting_idx; i < ending_idx; i++) {
         let curr_edit : Edit = curr_edit_list[i];
         tmp_surface = sdBox(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
         result_surface = opSmoothUnion(result_surface, tmp_surface, smooth_factor);
@@ -439,21 +435,20 @@ fn eval_stroke_box_union( position : vec3f, current_surface : Surface, curr_stro
     return result_surface;
 }
 
-fn eval_stroke_box_substraction( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>, curr_edit_list : ptr<storage, array<Edit>> ) -> Surface {
+fn eval_stroke_box_substraction( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>, curr_edit_list : ptr<storage, array<Edit>>, edit_starting_idx : u32, edit_count : u32 ) -> Surface {
     var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
     
-    let edit_count : u32 = (*curr_stroke).edit_count;
-    let stroke_material = (*curr_stroke).material;
-    let parameters : vec4f = (*curr_stroke).parameters;
+    let stroke_material = curr_stroke.material;
+    let parameters : vec4f = curr_stroke.parameters;
 
     let smooth_factor : f32 = parameters.w;
     let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
 
-    let starting_idx : u32 = (*curr_stroke).edit_list_index;
-    let ending_idx : u32 = (*curr_stroke).edit_count + starting_idx;
+    let starting_idx : u32 = edit_starting_idx;
+    let ending_idx : u32 = edit_count + edit_starting_idx;
 
-    for(var i : u32 = starting_idx; i < ending_idx; i++) {
+    for(var i : u32 = edit_starting_idx; i < ending_idx; i++) {
         let curr_edit : Edit = curr_edit_list[i];
         tmp_surface = sdBox(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
         result_surface = opSmoothSubtraction(result_surface, tmp_surface, smooth_factor);
@@ -462,22 +457,21 @@ fn eval_stroke_box_substraction( position : vec3f, current_surface : Surface, cu
     return result_surface;
 }
 
-fn eval_stroke_box_paint( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>, curr_edit_list : ptr<storage, array<Edit>> ) -> Surface {
+fn eval_stroke_box_paint( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>, curr_edit_list : ptr<storage, array<Edit>>, edit_starting_idx : u32, edit_count : u32 ) -> Surface {
     var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
     
-    let edit_count : u32 = (*curr_stroke).edit_count;
-    let stroke_material = (*curr_stroke).material;
-    let parameters : vec4f = (*curr_stroke).parameters;
-    let stroke_blend_mode : u32 = (*curr_stroke).color_blend_op;
+    let stroke_material = curr_stroke.material;
+    let parameters : vec4f = curr_stroke.parameters;
+    let stroke_blend_mode : u32 = curr_stroke.color_blend_op;
 
     let smooth_factor : f32 = parameters.w;
     let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
 
-    let starting_idx : u32 = (*curr_stroke).edit_list_index;
-    let ending_idx : u32 = (*curr_stroke).edit_count + starting_idx;
+    let starting_idx : u32 = edit_starting_idx;
+    let ending_idx : u32 = edit_count + edit_starting_idx;
 
-    for(var i : u32 = starting_idx; i < ending_idx; i++) {
+    for(var i : u32 = edit_starting_idx; i < ending_idx; i++) {
         let curr_edit : Edit = curr_edit_list[i];
         tmp_surface = sdBox(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
         result_surface = opSmoothPaint(result_surface, tmp_surface, stroke_blend_mode, material, smooth_factor);
@@ -520,10 +514,10 @@ fn eval_stroke_box_paint( position : vec3f, current_surface : Surface, curr_stro
 //     var result_surface : Surface = current_surface;
 //     var tmp_surface : Surface;
 
-//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
-//     let edit_count : u32 = (*curr_stroke).edit_count;
-//     let stroke_material  = (*curr_stroke).material;
-//     let parameters : vec4f = (*curr_stroke).parameters;
+//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &(curr_stroke.edits);
+//     let edit_count : u32 = curr_stroke.edit_count;
+//     let stroke_material  = curr_stroke.material;
+//     let parameters : vec4f = curr_stroke.parameters;
     
 //     let smooth_factor : f32 = parameters.w;
 //     let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
@@ -541,10 +535,10 @@ fn eval_stroke_box_paint( position : vec3f, current_surface : Surface, curr_stro
 //     var result_surface : Surface = current_surface;
 //     var tmp_surface : Surface;
 
-//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
-//     let edit_count : u32 = (*curr_stroke).edit_count;
-//     let stroke_material = (*curr_stroke).material;
-//     let parameters : vec4f = (*curr_stroke).parameters;
+//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &(curr_stroke.edits);
+//     let edit_count : u32 = curr_stroke.edit_count;
+//     let stroke_material = curr_stroke.material;
+//     let parameters : vec4f = curr_stroke.parameters;
 
 //     let smooth_factor : f32 = parameters.w;
 //     let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
@@ -562,11 +556,11 @@ fn eval_stroke_box_paint( position : vec3f, current_surface : Surface, curr_stro
 //     var result_surface : Surface = current_surface;
 //     var tmp_surface : Surface;
 
-//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
-//     let edit_count : u32 = (*curr_stroke).edit_count;
-//     let stroke_material = (*curr_stroke).material;
-//     let parameters : vec4f = (*curr_stroke).parameters;
-//     let stroke_blend_mode : u32 = (*curr_stroke).color_blend_op;
+//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &(curr_stroke.edits);
+//     let edit_count : u32 = curr_stroke.edit_count;
+//     let stroke_material = curr_stroke.material;
+//     let parameters : vec4f = curr_stroke.parameters;
+//     let stroke_blend_mode : u32 = curr_stroke.color_blend_op;
 
 //     let smooth_factor : f32 = parameters.w;
 //     let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
@@ -622,10 +616,10 @@ fn eval_stroke_box_paint( position : vec3f, current_surface : Surface, curr_stro
 //     var result_surface : Surface = current_surface;
 //     var tmp_surface : Surface;
 
-//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
-//     let edit_count : u32 = (*curr_stroke).edit_count;
-//     let stroke_material  = (*curr_stroke).material;
-//     let parameters : vec4f = (*curr_stroke).parameters;
+//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &(curr_stroke.edits);
+//     let edit_count : u32 = curr_stroke.edit_count;
+//     let stroke_material  = curr_stroke.material;
+//     let parameters : vec4f = curr_stroke.parameters;
     
 //     let smooth_factor : f32 = parameters.w;
 //     let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
@@ -643,10 +637,10 @@ fn eval_stroke_box_paint( position : vec3f, current_surface : Surface, curr_stro
 //     var result_surface : Surface = current_surface;
 //     var tmp_surface : Surface;
 
-//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
-//     let edit_count : u32 = (*curr_stroke).edit_count;
-//     let stroke_material = (*curr_stroke).material;
-//     let parameters : vec4f = (*curr_stroke).parameters;
+//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &(curr_stroke.edits);
+//     let edit_count : u32 = curr_stroke.edit_count;
+//     let stroke_material = curr_stroke.material;
+//     let parameters : vec4f = curr_stroke.parameters;
 
 //     let smooth_factor : f32 = parameters.w;
 //     let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
@@ -664,11 +658,11 @@ fn eval_stroke_box_paint( position : vec3f, current_surface : Surface, curr_stro
 //     var result_surface : Surface = current_surface;
 //     var tmp_surface : Surface;
 
-//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
-//     let edit_count : u32 = (*curr_stroke).edit_count;
-//     let stroke_material = (*curr_stroke).material;
-//     let parameters : vec4f = (*curr_stroke).parameters;
-//     let stroke_blend_mode : u32 = (*curr_stroke).color_blend_op;
+//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &(curr_stroke.edits);
+//     let edit_count : u32 = curr_stroke.edit_count;
+//     let stroke_material = curr_stroke.material;
+//     let parameters : vec4f = curr_stroke.parameters;
+//     let stroke_blend_mode : u32 = curr_stroke.color_blend_op;
 
 //     let smooth_factor : f32 = parameters.w;
 //     let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
@@ -716,10 +710,10 @@ fn eval_stroke_box_paint( position : vec3f, current_surface : Surface, curr_stro
 //     var result_surface : Surface = current_surface;
 //     var tmp_surface : Surface;
 
-//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
-//     let edit_count : u32 = (*curr_stroke).edit_count;
-//     let stroke_material  = (*curr_stroke).material;
-//     let parameters : vec4f = (*curr_stroke).parameters;
+//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &(curr_stroke.edits);
+//     let edit_count : u32 = curr_stroke.edit_count;
+//     let stroke_material  = curr_stroke.material;
+//     let parameters : vec4f = curr_stroke.parameters;
     
 //     let smooth_factor : f32 = parameters.w;
 //     let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
@@ -737,10 +731,10 @@ fn eval_stroke_box_paint( position : vec3f, current_surface : Surface, curr_stro
 //     var result_surface : Surface = current_surface;
 //     var tmp_surface : Surface;
 
-//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
-//     let edit_count : u32 = (*curr_stroke).edit_count;
-//     let stroke_material = (*curr_stroke).material;
-//     let parameters : vec4f = (*curr_stroke).parameters;
+//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &(curr_stroke.edits);
+//     let edit_count : u32 = curr_stroke.edit_count;
+//     let stroke_material = curr_stroke.material;
+//     let parameters : vec4f = curr_stroke.parameters;
 
 //     let smooth_factor : f32 = parameters.w;
 //     let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
@@ -758,11 +752,11 @@ fn eval_stroke_box_paint( position : vec3f, current_surface : Surface, curr_stro
 //     var result_surface : Surface = current_surface;
 //     var tmp_surface : Surface;
 
-//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
-//     let edit_count : u32 = (*curr_stroke).edit_count;
-//     let stroke_material = (*curr_stroke).material;
-//     let parameters : vec4f = (*curr_stroke).parameters;
-//     let stroke_blend_mode : u32 = (*curr_stroke).color_blend_op;
+//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &(curr_stroke.edits);
+//     let edit_count : u32 = curr_stroke.edit_count;
+//     let stroke_material = curr_stroke.material;
+//     let parameters : vec4f = curr_stroke.parameters;
+//     let stroke_blend_mode : u32 = curr_stroke.color_blend_op;
 
 //     let smooth_factor : f32 = parameters.w;
 //     let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
@@ -821,10 +815,10 @@ fn eval_stroke_box_paint( position : vec3f, current_surface : Surface, curr_stro
 //     var result_surface : Surface = current_surface;
 //     var tmp_surface : Surface;
 
-//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
-//     let edit_count : u32 = (*curr_stroke).edit_count;
-//     let stroke_material  = (*curr_stroke).material;
-//     let parameters : vec4f = (*curr_stroke).parameters;
+//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &(curr_stroke.edits);
+//     let edit_count : u32 = curr_stroke.edit_count;
+//     let stroke_material  = curr_stroke.material;
+//     let parameters : vec4f = curr_stroke.parameters;
     
 //     let smooth_factor : f32 = parameters.w;
 //     let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
@@ -852,10 +846,10 @@ fn eval_stroke_box_paint( position : vec3f, current_surface : Surface, curr_stro
 //     var result_surface : Surface = current_surface;
 //     var tmp_surface : Surface;
 
-//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
-//     let edit_count : u32 = (*curr_stroke).edit_count;
-//     let stroke_material = (*curr_stroke).material;
-//     let parameters : vec4f = (*curr_stroke).parameters;
+//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &(curr_stroke.edits);
+//     let edit_count : u32 = curr_stroke.edit_count;
+//     let stroke_material = curr_stroke.material;
+//     let parameters : vec4f = curr_stroke.parameters;
 
 //     let smooth_factor : f32 = parameters.w;
 //     let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
@@ -883,11 +877,11 @@ fn eval_stroke_box_paint( position : vec3f, current_surface : Surface, curr_stro
 //     var result_surface : Surface = current_surface;
 //     var tmp_surface : Surface;
 
-//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
-//     let edit_count : u32 = (*curr_stroke).edit_count;
-//     let stroke_material = (*curr_stroke).material;
-//     let parameters : vec4f = (*curr_stroke).parameters;
-//     let stroke_blend_mode : u32 = (*curr_stroke).color_blend_op;
+//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &(curr_stroke.edits);
+//     let edit_count : u32 = curr_stroke.edit_count;
+//     let stroke_material = curr_stroke.material;
+//     let parameters : vec4f = curr_stroke.parameters;
+//     let stroke_blend_mode : u32 = curr_stroke.color_blend_op;
 
 //     let smooth_factor : f32 = parameters.w;
 //     let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
@@ -954,7 +948,7 @@ fn eval_stroke_box_paint( position : vec3f, current_surface : Surface, curr_stro
 
 // STROKE EVALUATION ================
 
-fn evaluate_stroke( position: vec3f, stroke: ptr<storage, Stroke, read>, curr_edit_list : ptr<storage, array<Edit>, read>, current_surface : Surface) -> Surface {
+fn evaluate_stroke( position: vec3f, stroke: ptr<storage, Stroke, read>, curr_edit_list : ptr<storage, array<Edit>, read>, current_surface : Surface, edit_starting_index : u32, edit_count : u32) -> Surface {
     let stroke_operation : u32 = (*stroke).operation;
     let stroke_primitive : u32 = (*stroke).primitive;
 
@@ -964,27 +958,27 @@ fn evaluate_stroke( position: vec3f, stroke: ptr<storage, Stroke, read>, curr_ed
 
     switch(curr_stroke_code) {
         case SD_SPHERE_SMOOTH_OP_UNION: {
-            result_surface = eval_stroke_sphere_union(position, result_surface, stroke, curr_edit_list);
+            result_surface = eval_stroke_sphere_union(position, result_surface, stroke, curr_edit_list, edit_starting_index, edit_count);
             break;
         }
         case SD_SPHERE_SMOOTH_OP_SUBSTRACTION:{
-            result_surface = eval_stroke_sphere_substraction(position, result_surface, stroke, curr_edit_list);
+            result_surface = eval_stroke_sphere_substraction(position, result_surface, stroke, curr_edit_list, edit_starting_index, edit_count);
             break;
         }
         case SD_SPHERE_SMOOTH_OP_PAINT:{
-            result_surface = eval_stroke_sphere_paint(position, result_surface, stroke, curr_edit_list);
+            result_surface = eval_stroke_sphere_paint(position, result_surface, stroke, curr_edit_list, edit_starting_index, edit_count);
             break;
         }
         case SD_BOX_SMOOTH_OP_UNION: {
-            result_surface = eval_stroke_box_union(position, result_surface, stroke, curr_edit_list);
+            result_surface = eval_stroke_box_union(position, result_surface, stroke, curr_edit_list, edit_starting_index, edit_count);
             break;
         }
         case SD_BOX_SMOOTH_OP_SUBSTRACTION: {
-            result_surface = eval_stroke_box_substraction(position, result_surface, stroke, curr_edit_list);
+            result_surface = eval_stroke_box_substraction(position, result_surface, stroke, curr_edit_list, edit_starting_index, edit_count);
             break;
         }
         case SD_BOX_SMOOTH_OP_PAINT: {
-            result_surface = eval_stroke_box_paint(position, result_surface, stroke, curr_edit_list);
+            result_surface = eval_stroke_box_paint(position, result_surface, stroke, curr_edit_list, edit_starting_index, edit_count);
             break;
         }
         // case SD_CONE_SMOOTH_OP_UNION: {
