@@ -6,6 +6,7 @@
 #include "framework/nodes/viewport_3d.h"
 #include "framework/scene/parse_gltf.h"
 #include "framework/scene/parse_scene.h"
+#include "framework/ui/io.h"
 
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/renderer_storage.h"
@@ -158,7 +159,7 @@ void SculptEditor::clean()
 bool SculptEditor::is_tool_being_used(bool stamp_enabled)
 {
 #ifdef XR_SUPPORT
-    bool is_currently_pressed = Input::get_trigger_value(HAND_RIGHT) > 0.5f;
+    bool is_currently_pressed = !IO::any_hover() && Input::is_trigger_pressed(HAND_RIGHT);
     is_released = is_tool_pressed && !is_currently_pressed;
 
     bool add_edit_with_tool = stamp_enabled ? is_released : is_currently_pressed;
@@ -909,38 +910,32 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
 
     if (dimensions_dirty)
     {
-        // Expand a little bit the edges
-        glm::vec4 grow_dims = dims;
-
-        if (!must_render_mesh_preview_outline()) {
-            grow_dims.x = std::max(grow_dims.x - 0.002f, 0.001f);
-        }
-
         switch (stroke_parameters.get_primitive())
         {
         case SD_SPHERE:
-            mesh_preview->get_surface(0)->create_sphere(grow_dims.x);
+            mesh_preview->get_surface(0)->create_sphere(dims.x);
             break;
         case SD_BOX:
             if (dims.w > 0.001f) {
-                mesh_preview->get_surface(0)->create_rounded_box(grow_dims.x, grow_dims.y, grow_dims.z, (dims.w / 0.1f) * grow_dims.x);
+                mesh_preview->get_surface(0)->create_rounded_box(dims.x, dims.y, dims.z, glm::clamp(dims.w / 0.08f, 0.0f, 1.0f) * glm::min(dims.x, glm::min(dims.y, dims.z)));
             }
             else {
-                grow_dims += 0.002f;
+                // Expand a little bit the edges
+                glm::vec4 grow_dims = dims + 0.00275f;
                 mesh_preview->get_surface(0)->create_box(grow_dims.x, grow_dims.y, grow_dims.z);
             }
             break;
         case SD_CAPSULE:
-            mesh_preview->get_surface(0)->create_capsule(grow_dims.x, grow_dims.y);
+            mesh_preview->get_surface(0)->create_capsule(dims.x, dims.y);
             break;
         case SD_CONE:
-            mesh_preview->get_surface(0)->create_cone(grow_dims.x, grow_dims.y);
+            mesh_preview->get_surface(0)->create_cone(dims.x, dims.y);
             break;
         case SD_CYLINDER:
-            mesh_preview->get_surface(0)->create_cylinder(grow_dims.x, grow_dims.y * 2.f);
+            mesh_preview->get_surface(0)->create_cylinder(dims.x, dims.y * 2.f);
             break;
         case SD_TORUS:
-            mesh_preview->get_surface(0)->create_torus(grow_dims.x, glm::clamp(grow_dims.y, 0.0001f, grow_dims.x));
+            mesh_preview->get_surface(0)->create_torus(dims.x, glm::clamp(dims.y, 0.0001f, dims.x));
             break;
         default:
             break;

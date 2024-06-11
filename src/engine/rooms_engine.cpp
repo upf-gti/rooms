@@ -163,11 +163,6 @@ void RoomsEngine::update(float delta_time)
     if (is_xr) {
         controller_mesh_right->set_model(Input::get_controller_pose(HAND_RIGHT));
         controller_mesh_left->set_model(Input::get_controller_pose(HAND_LEFT));
-
-        const glm::mat4x4& raycast_transform = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
-        ray_pointer->set_model(raycast_transform);
-        float xr_ray_distance = IO::get_xr_ray_distance();
-        ray_pointer->scale(glm::vec3(1.0f, 1.0f, xr_ray_distance < 0.0f ? 0.5f : xr_ray_distance));
     }
 }
 
@@ -184,6 +179,12 @@ void RoomsEngine::render()
     }
 
     if (Renderer::instance->get_openxr_available()) {
+
+        const glm::mat4x4& raycast_transform = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
+        ray_pointer->set_model(raycast_transform);
+        float xr_ray_distance = IO::get_xr_ray_distance();
+        ray_pointer->scale(glm::vec3(1.0f, 1.0f, xr_ray_distance < 0.0f ? 0.5f : xr_ray_distance));
+
         ray_pointer->render();
     }
 
