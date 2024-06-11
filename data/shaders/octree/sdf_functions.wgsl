@@ -93,7 +93,7 @@ fn soft_min(a : f32, b : f32, k : f32) -> vec2f
 
 // From iqulzes and Dreams
 fn sminQuadratic(a : f32, b : f32, k : f32) -> vec2f {
-    let norm_k : f32 = max(k, 0.00001);// * 4.0;
+    let norm_k : f32 = max(k, 0.001);// * 4.0;
     let h : f32 = max(norm_k - abs(a - b), 0.0) / norm_k;
     let m : f32 = h*h;
     let s : f32 = m*norm_k * 0.25;
@@ -345,7 +345,7 @@ fn eval_stroke_sphere_union( position : vec3f, current_surface : Surface, curr_s
 }
 
 fn eval_stroke_sphere_substraction( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>, curr_edit_list : ptr<storage, array<Edit>>, edit_starting_idx : u32, edit_count : u32 ) -> Surface {
-var result_surface : Surface = current_surface;
+    var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
 
     let stroke_material = curr_stroke.material;

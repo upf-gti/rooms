@@ -639,7 +639,7 @@ fn isoft_min(a : vec2f, b : vec2f, r : f32) -> vec2f
 // }
 
 fn isoft_min_quadratic(a : vec2f, b : vec2f, k : f32) -> vec2f {
-    let norm_k : f32 = k;//* 4.0;
+    let norm_k : f32 = max(k, 0.001);// * 4.0;
     let h : vec2f = imax(imul_float_vec(1.0 / norm_k, norm_k + ineg(iabs(isub_vecs(a, b)))), vec2f(0.0));
     //let h : vec2f = imul_float_vec(1.0 / norm_k, imax(norm_k + ineg(iabs(isub_vecs(a, b))), vec2f(0.0)));
     let m : vec2f = ipow2_vec(h);
