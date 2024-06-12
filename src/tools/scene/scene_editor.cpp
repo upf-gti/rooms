@@ -64,8 +64,6 @@ void SceneEditor::clean()
 
 void SceneEditor::update(float delta_time)
 {
-    BaseEditor::update(delta_time);
-
     if (moving_node) {
 
         static_cast<Node3D*>(selected_node)->set_translation(Input::get_controller_position(HAND_RIGHT, POSE_AIM));
@@ -76,6 +74,15 @@ void SceneEditor::update(float delta_time)
     }
 
     update_gizmo(delta_time);
+
+    BaseEditor::update(delta_time);
+
+    if (renderer->get_openxr_available()) {
+        // ...
+    }
+    else {
+        inspect_panel_2d->update(delta_time);
+    }
 
     // debug
 
@@ -128,11 +135,17 @@ void SceneEditor::update(float delta_time)
 
 void SceneEditor::render()
 {
-    BaseEditor::render();
-
     RoomsEngine::render_controllers();
 
     render_gizmo();
+
+    BaseEditor::render();
+
+    if (renderer->get_openxr_available()) {
+        // ...
+    } else {
+        inspect_panel_2d->render();
+    }
 }
 
 void SceneEditor::render_gui()
@@ -226,14 +239,83 @@ void SceneEditor::init_ui()
         second_row->add_child(new ui::TextureButton2D("scene_redo", "data/textures/redo.png"));
     }
 
-    if (renderer->get_openxr_available()) {
-        main_panel_3d = new Viewport3D(main_panel_2d);
-        main_panel_3d->set_active(true);
+    // Create inspection panel (Nodes, properties, etc)
+    {
+        inspect_panel_2d = new Node2D("inspector_root", { 64.0f, 512.f }, { 0.0f, 0.f });
+
+        ui::XRPanel* background_panel = new ui::XRPanel("background_panel", Color(0.01f, 0.01f, 0.01f, 0.85f), { 0.0f, 0.f }, { 256.f, 336.f });
+        inspect_panel_2d->add_child(background_panel);
+
+        ui::VContainer2D* vertical_spacer = new ui::VContainer2D("vertical_spacer", { 12.0f, 0.0f }, colors::GREEN);
+        vertical_spacer->set_fixed_size({ 232.0f, 0.0f });
+        background_panel->add_child(vertical_spacer);
+
+        // Title
+        ui::Container2D* title_container = new ui::Container2D("title_container", { 0.0f, 0.0f }, { 227.0f, 48.0f }, colors::BLUE);
+        title_container->add_child(new ui::Text2D("Inspector", { 0.0f, 20.0f }, 22.0f, ui::TEXT_CENTERED));
+        vertical_spacer->add_child(title_container);
+
+        // Body row
+        ui::VContainer2D* body = new ui::VContainer2D("body", { 0.0f, 0.f }, colors::RED);
+        vertical_spacer->add_child(body);
+
+        /*
+            Debug panel example
+        */
+
+        std::string button_node_names[] = { "pedrito", "cristiano", "mbape" };
+        std::string slider_node_names[] = { "carajaula", "pepe luis", "picapiedra" };
+
+        glm::vec2 b_size = glm::vec2(32.f);
+        uint32_t button_flags = ui::ALLOW_TOGGLE | ui::SKIP_NAME;
+        uint32_t button_toggle_flags = button_flags | ui::ALLOW_TOGGLE;
+
+        for (const auto& name : button_node_names) {
+
+            ui::HContainer2D* flex_container = new ui::HContainer2D(name + "_flex", { 0.0f, 0.0f });
+            flex_container->padding = glm::vec2(2.0f, 1.0f);
+            flex_container->item_margin = glm::vec2(4.0f, 0.0f);
+
+            // Add visibility button
+            flex_container->add_child(new ui::TextureButton2D(name + "@visibility", "data/textures/visibility.png", button_toggle_flags, { 0.0f, 0.0f }, b_size));
+            // Add edit button
+            flex_container->add_child(new ui::TextureButton2D(name + "@edit", "data/textures/tool_wrench.png", button_flags, { 0.0f, 0.0f }, b_size));
+            // Add label
+            flex_container->add_child(new ui::Text2D(name, 16.f));
+
+            body->add_child(flex_container);
+        }
+
+        glm::vec2 s_size = { 64.0f, 24.0f };
+        uint32_t slider_flags = ui::SKIP_NAME | ui::SKIP_VALUE;
+
+        for (const auto& name : slider_node_names) {
+
+            ui::HContainer2D* flex_container = new ui::HContainer2D(name + "_flex", { 0.0f, 0.0f });
+            flex_container->padding = glm::vec2(2.0f, 1.0f);
+            flex_container->item_margin = glm::vec2(4.0f, 0.0f);
+
+            // Add visibility button
+            flex_container->add_child(new ui::Slider2D(name + "@intensity", "", 0.5f, { 0.0f, 0.0f }, s_size, ui::SliderMode::HORIZONTAL, slider_flags));
+            // Add label
+            flex_container->add_child(new ui::Text2D(name, 16.f));
+
+            body->add_child(flex_container);
+        }
     }
 
-    // Load controller UI labels
     if (renderer->get_openxr_available())
     {
+        // Main ui
+        main_panel_3d = new Viewport3D(main_panel_2d);
+        main_panel_3d->set_active(true);
+
+        // Inspector ui
+        inspect_panel_3d = new Viewport3D(inspect_panel_2d);
+        inspect_panel_3d->set_active(false);
+
+        // Load controller UI labels
+
         // Thumbsticks
         // Buttons
         // Triggers

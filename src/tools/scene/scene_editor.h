@@ -6,6 +6,7 @@
 #include "framework/ui/gizmo_3d.h"
 
 class Node;
+class Node2D;
 class MeshInstance3D;
 class Scene;
 
@@ -18,8 +19,8 @@ class SceneEditor : public BaseEditor {
     *   Gizmo stuff
     */
 
-    Gizmo3D gizmo_3d;
     Gizmo2D gizmo_2d;
+    Gizmo3D gizmo_3d;
 
     bool is_gizmo_usable();
     void update_gizmo(float delta_time);
@@ -47,7 +48,10 @@ class SceneEditor : public BaseEditor {
     void init_ui();
     void bind_events();
 
-    MeshInstance3D* curved_quad = nullptr;
+    Node2D* inspect_panel_2d = nullptr;
+    Viewport3D* inspect_panel_3d = nullptr;
+
+    //MeshInstance3D* curved_quad = nullptr;
 
 public:
 

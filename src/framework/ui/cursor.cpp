@@ -137,7 +137,7 @@ namespace ui {
 
             glm::vec2 cursor_position = { mouse_pos.x - size.x * 0.25f, mouse_pos.y - size.y * 0.75f };
 
-            if (current == cursors[MOUSE_CURSOR_RESIZE_NS] || current == cursors[MOUSE_CURSOR_DISABLED]) {
+            if (current == cursors[MOUSE_CURSOR_RESIZE_NS] || current == cursors[MOUSE_CURSOR_RESIZE_EW] || current == cursors[MOUSE_CURSOR_DISABLED]) {
                 cursor_position.y += size.y * 0.35f;
             }
 
