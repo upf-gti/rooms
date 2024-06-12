@@ -69,7 +69,7 @@ int RoomsRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
     float h = static_cast<float>(webgpu_context->render_height);
 
     camera_2d = new Camera2D();
-    camera_2d->set_orthographic(0.0f, w, 0.0f, h, -1.0f, 1.0f);
+    camera_2d->set_orthographic(0.0f, w, h, 0.0f, -1.0f, 1.0f);
 
     uniforms = { &camera_2d_uniform };
     render_bind_group_camera_2d = webgpu_context->create_bind_group(uniforms, RendererStorage::get_shader_from_source(shaders::mesh_color::source, shaders::mesh_color::path), 1);

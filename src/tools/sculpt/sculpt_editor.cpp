@@ -1074,7 +1074,10 @@ bool SculptEditor::is_rotation_being_used()
 
 void SculptEditor::init_ui()
 {
-    main_panel_2d = new ui::HContainer2D("root", { 48.0f, 64.f });
+    auto webgpu_context = Renderer::instance->get_webgpu_context();
+    glm::vec2 screen_size = glm::vec2(static_cast<float>(webgpu_context->render_width), static_cast<float>(webgpu_context->render_height));
+
+    main_panel_2d = new ui::HContainer2D("root", { 48.0f, screen_size.y - 224.f });
 
     const StrokeMaterial& stroke_material = stroke_parameters.get_material();
 
@@ -1094,7 +1097,7 @@ void SculptEditor::init_ui()
 
             for (size_t i = 0; i < child_count; ++i)
             {
-                float angle = pi + pi_2 * i / (float)(child_count - 1);
+                float angle = pi - pi_2 * i / (float)(child_count - 1);
                 glm::vec2 translation = glm::vec2(radius * cos(angle), radius * sin(angle)) - center;
                 ui::Button2D* child = new ui::Button2D("recent_color_" + std::to_string(i), colors::WHITE, 0, translation, glm::vec2(sample_size));
                 child->set_translation(translation);

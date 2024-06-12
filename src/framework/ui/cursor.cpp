@@ -130,15 +130,11 @@ namespace ui {
 
             ImGui::SetMouseCursor(ImGuiMouseCursor_None);
 
-            auto webgpu_context = Renderer::instance->get_webgpu_context();
-
             glm::vec2 mouse_pos = Input::get_mouse_position();
-            mouse_pos.y = webgpu_context->render_height - mouse_pos.y;
-
-            glm::vec2 cursor_position = { mouse_pos.x - size.x * 0.25f, mouse_pos.y - size.y * 0.75f };
+            glm::vec2 cursor_position = { mouse_pos.x - size.x * 0.25f, mouse_pos.y };
 
             if (current == cursors[MOUSE_CURSOR_RESIZE_NS] || current == cursors[MOUSE_CURSOR_RESIZE_EW] || current == cursors[MOUSE_CURSOR_DISABLED]) {
-                cursor_position.y += size.y * 0.35f;
+                cursor_position.y -= size.y * 0.25f;
             }
 
             current->set_translation(cursor_position);

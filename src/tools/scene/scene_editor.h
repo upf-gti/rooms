@@ -10,6 +10,10 @@ class Node2D;
 class MeshInstance3D;
 class Scene;
 
+namespace ui {
+    class Inspector;
+}
+
 class SceneEditor : public BaseEditor {
 
     Scene* main_scene = nullptr;
@@ -48,10 +52,8 @@ class SceneEditor : public BaseEditor {
     void init_ui();
     void bind_events();
 
-    Node2D* inspect_panel_2d = nullptr;
+    ui::Inspector* inspector = nullptr;
     Viewport3D* inspect_panel_3d = nullptr;
-
-    //MeshInstance3D* curved_quad = nullptr;
 
 public:
 
