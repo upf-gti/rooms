@@ -14,5 +14,5 @@ fn compute(@builtin(workgroup_id) id: vec3<u32>, @builtin(local_invocation_index
     let current_instance_index : u32 = (id.x) * (8u * 8u * 8u) + local_id;
 
     brick_buffers.brick_instance_data[current_instance_index].in_use &= ~BRICK_HAS_PREVIEW_FLAG;
-    // brick_buffers.brick_instance_data[current_instance_index].in_use &= ~BRICK_HIDE_FLAG;
+    brick_buffers.brick_instance_data[current_instance_index].in_use &= ~BRICK_HIDE_FLAG;
 }

@@ -329,11 +329,6 @@ void RaymarchingRenderer::compute_preview_edit(WGPUComputePassEncoder compute_pa
     webgpu_context->update_buffer(std::get<WGPUBuffer>(preview_stroke_uniform.data), 0u, &(preview_stroke.stroke), sizeof(sToUploadStroke));
     webgpu_context->update_buffer(std::get<WGPUBuffer>(preview_stroke_uniform.data), sizeof(sToUploadStroke), preview_stroke.edit_list.data(), preview_stroke.stroke.edit_count * sizeof(Edit));
 
-    // Remove the preview tag from all the bricks
-    compute_octree_brick_unmark_pipeline.set(compute_pass);
-    wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_brick_unmark_bind_group, 0, nullptr);
-    wgpuComputePassEncoderDispatchWorkgroups(compute_pass, octants_max_size / (8u * 8u * 8u), 1, 1);
-
     // Initializate the evaluator sequence
     compute_octree_initialization_pipeline.set(compute_pass);
 
@@ -458,14 +453,6 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
 
     }
 
-    compute_octree_brick_copy_pipeline.set(compute_pass);
-    wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_brick_copy_bind_group, 0, nullptr);
-    wgpuComputePassEncoderDispatchWorkgroups(compute_pass, octants_max_size / (8u * 8u * 8u), 1, 1);
-
-    compute_octree_increment_level_pipeline.set(compute_pass);
-    wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_increment_level_bind_group, 0, nullptr);
-    wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
-
 #ifndef NDEBUG
     wgpuComputePassEncoderPopDebugGroup(compute_pass);
 #endif
@@ -528,6 +515,18 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
 
     webgpu_context->update_buffer(std::get<WGPUBuffer>(compute_merge_data_uniform.data), 0, &(compute_merge_data), sizeof(sMergeData));
 
+    // rset the brick instance counter
+    /*uint32_t zero = 0u;
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_brick_buffers.data), sizeof(uint32_t), &(zero), sizeof(uint32_t));*/
+
+    // Remove the preview tag from all the bricks
+
+    {
+        compute_octree_brick_unmark_pipeline.set(compute_pass);
+        wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_brick_unmark_bind_group, 0, nullptr);
+        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, octants_max_size / (8u * 8u * 8u), 1, 1);
+    }
+
     if (needs_evaluation) {
         if (stroke_to_compute.in_frame_influence.stroke_count > octree_edit_list_size) {
             spdlog::info("Resized GPU edit buffer from {} to {}", octree_edit_list_size, stroke_manager.edit_list.size());
@@ -553,6 +552,14 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
     }
 
     compute_preview_edit(compute_pass);
+
+    compute_octree_brick_copy_pipeline.set(compute_pass);
+    wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_brick_copy_bind_group, 0, nullptr);
+    wgpuComputePassEncoderDispatchWorkgroups(compute_pass, octants_max_size / (8u * 8u * 8u), 1, 1);
+
+    compute_octree_increment_level_pipeline.set(compute_pass);
+    wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_increment_level_bind_group, 0, nullptr);
+    wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
 
     // Finalize compute_raymarching pass
     wgpuComputePassEncoderEnd(compute_pass);

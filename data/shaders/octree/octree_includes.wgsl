@@ -31,8 +31,6 @@ const BRICK_IN_USE_FLAG = 0x001u;
 const BRICK_HAS_PREVIEW_FLAG = 0x002u;
 const BRICK_HIDE_FLAG = 0x004u;
 
-const PREVIEW_BRICK_INSIDE_FLAG = 0x001u;
-
 const OCTREE_CHILD_OFFSET_LUT : array<vec3f, 8> = array<vec3f, 8>(
     vec3f(-1.0, -1.0, -1.0),
     vec3f( 1.0, -1.0, -1.0),

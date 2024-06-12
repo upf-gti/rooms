@@ -444,7 +444,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                     }
                 } else if (outside_surface_with_preview && is_current_brick_filled) {
                     // TODO: hide this bricks!!
-                    brick_mark_as_preview(octree_index, edit_index_start, edit_count);
+                    //brick_mark_as_preview(octree_index, edit_index_start, edit_count);
+                    brick_mark_as_hidden(octree_index);
                 }
             }
         }
