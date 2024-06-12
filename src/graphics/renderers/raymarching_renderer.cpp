@@ -373,9 +373,7 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
 
     performed_evaluation = true;
 
-#ifndef NDEBUG
     wgpuComputePassEncoderPushDebugGroup(compute_pass, "Stroke Evaluation");
-#endif
 
     //TODO: the evaluator only handle ONE stroke, the other should be added to the history/context
     // First pass: evaluate the incomming strokes
@@ -383,9 +381,8 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
     uint16_t eval_steps = 1;//(is_undo && strokes.empty()) ? 1 : strokes.size();
     for (uint16_t i = 0; i < eval_steps; ++i)
     {
-#ifndef NDEBUG
         wgpuComputePassEncoderPushDebugGroup(compute_pass, "Octree evaluation");
-#endif
+
         compute_octree_initialization_pipeline.set(compute_pass);
 
         wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_initialization_bind_group, 0, nullptr);
@@ -420,13 +417,10 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
             ping_pong_idx = (ping_pong_idx + 1) % 2;
         }
 
-#ifndef NDEBUG
         wgpuComputePassEncoderPopDebugGroup(compute_pass);
-#endif
 
-#ifndef NDEBUG
         wgpuComputePassEncoderPushDebugGroup(compute_pass, "Write to texture");
-#endif
+
         // Write to texture dispatch
         compute_octree_write_to_texture_pipeline.set(compute_pass);
 
@@ -436,9 +430,7 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
 
         wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(octree_indirect_buffer_struct.data), sizeof(uint32_t) * 12u);
 
-#ifndef NDEBUG
         wgpuComputePassEncoderPopDebugGroup(compute_pass);
-#endif
 
         compute_octree_increment_level_pipeline.set(compute_pass);
         wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_increment_level_bind_group, 0, nullptr);
@@ -453,9 +445,7 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
 
     }
 
-#ifndef NDEBUG
     wgpuComputePassEncoderPopDebugGroup(compute_pass);
-#endif
 }
 
 sToComputeStrokeData stroke_to_compute = {};
@@ -483,6 +473,23 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
     stroke_to_compute.in_frame_influence.stroke_count = 0u;
     stroke_to_compute.in_frame_stroke.edit_count = 0u;
     stroke_to_compute.in_frame_stroke_aabb = { {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f} };
+
+    // Upload Frustrum data
+    {
+        Camera *cam = RoomsRenderer::instance->get_camera();
+        cone_frustum_data.cone1_normal = glm::normalize(cam->get_center());
+        cone_frustum_data.cone1_origen = cam->get_eye() - get_sculpt_start_position();
+
+        const float m11 = cam->get_projection()[1][1];
+        const float FOV = 2.0 * atan(1.0f / m11);
+        cone_frustum_data.cos_angle = cos(FOV);
+        cone_frustum_data.sin_angle = sin(FOV);
+
+        // TODO: compute the propper distance
+        cone_frustum_data.cone_distance = 1000.0f;
+
+        webgpu_context->update_buffer(std::get<WGPUBuffer>(frustrum_culling_uniform.data), 0, &cone_frustum_data, sizeof(sFrustrumCullingData));
+    }
 
     bool needs_evaluation = true;
 
@@ -515,12 +522,8 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
 
     webgpu_context->update_buffer(std::get<WGPUBuffer>(compute_merge_data_uniform.data), 0, &(compute_merge_data), sizeof(sMergeData));
 
-    // rset the brick instance counter
-    /*uint32_t zero = 0u;
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_brick_buffers.data), sizeof(uint32_t), &(zero), sizeof(uint32_t));*/
-
+    
     // Remove the preview tag from all the bricks
-
     {
         compute_octree_brick_unmark_pipeline.set(compute_pass);
         wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_brick_unmark_bind_group, 0, nullptr);
@@ -555,6 +558,7 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
 
     compute_octree_brick_copy_pipeline.set(compute_pass);
     wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_brick_copy_bind_group, 0, nullptr);
+    wgpuComputePassEncoderSetBindGroup(compute_pass, 1, compute_octree_frustrum_culling_bind_group, 0, nullptr);
     wgpuComputePassEncoderDispatchWorkgroups(compute_pass, octants_max_size / (8u * 8u * 8u), 1, 1);
 
     compute_octree_increment_level_pipeline.set(compute_pass);
@@ -581,9 +585,7 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
 {
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
 
-#ifndef NDEBUG
         wgpuRenderPassEncoderPushDebugGroup(render_pass, "Render sculpt proxy geometry");
-#endif
 
     // Render Sculpt's Proxy geometry
     {
@@ -608,10 +610,8 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
     }
 
 
-#ifndef NDEBUG
     wgpuRenderPassEncoderPopDebugGroup(render_pass);
     wgpuRenderPassEncoderPushDebugGroup(render_pass, "Render preview proxy geometry");
-#endif
     // Render Preview proxy geometry
     {
         render_preview_proxy_geometry_pipeline.set(render_pass);
@@ -635,9 +635,7 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
         wgpuRenderPassEncoderDrawIndirect(render_pass, std::get<WGPUBuffer>(octree_indirect_buffer_struct.data), sizeof(uint32_t) * 4u);
     }
 
-#ifndef NDEBUG
     wgpuRenderPassEncoderPopDebugGroup(render_pass);
-#endif
 }
 
 void RaymarchingRenderer::set_sculpt_start_position(const glm::vec3& position)
@@ -895,6 +893,17 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
     {
         std::vector<Uniform*> uniforms = { &octree_uniform, &octree_indirect_buffer_struct, &octree_brick_buffers };
         compute_octree_clean_octree_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_cleaning_shader, 0);
+    }
+
+    // Frustrum culling bindgroup
+    {
+        frustrum_culling_uniform.data = webgpu_context->create_buffer(sizeof(sFrustrumCullingData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "frustrum_culling_buffer");;
+        frustrum_culling_uniform.binding = 0;
+        frustrum_culling_uniform.buffer_size = sizeof(sFrustrumCullingData);
+
+        std::vector<Uniform*> uniforms = { &frustrum_culling_uniform };
+
+        compute_octree_frustrum_culling_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_brick_copy_shader, 1);
     }
 
     compute_octree_evaluate_pipeline.create_compute(compute_octree_evaluate_shader);

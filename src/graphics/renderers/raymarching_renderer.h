@@ -128,6 +128,8 @@ class RaymarchingRenderer {
     Uniform         octree_brick_copy_buffer;
     WGPUBindGroup   render_camera_bind_group = nullptr;
 
+    Uniform         frustrum_culling_uniform;
+    WGPUBindGroup   compute_octree_frustrum_culling_bind_group = nullptr;
 
     Uniform         ray_info_uniform;
     Uniform         ray_intersection_info_uniform;
@@ -192,6 +194,21 @@ class RaymarchingRenderer {
 
         AABB get_AABB() const;
     } preview_stroke;
+
+    struct sFrustrumCullingData {
+        float       cos_angle;
+        float       sin_angle;
+        float       cone_distance;
+        float       pad1;
+        glm::vec3   cone1_normal;
+        float       pad2;
+        glm::vec3   cone1_origen;
+        float       pad3;
+        glm::vec3   cone2_normal;
+        float       pad4;
+        glm::vec3   cone2_origen;
+        float       pad5;
+    } cone_frustum_data;
 
     std::vector<Edit> incoming_edits;
 

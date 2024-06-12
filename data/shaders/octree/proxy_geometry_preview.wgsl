@@ -90,7 +90,7 @@ fn sample_sdf_preview(position : vec3f) -> f32
     var material : Material = get_material_preview();
     var surface : Surface;
     if (is_inside_brick) {
-        surface.distance = -10000.0;
+        surface.distance = -1000.0;
     } else {
         surface.distance = 10000.0;
     }
@@ -99,8 +99,6 @@ fn sample_sdf_preview(position : vec3f) -> f32
     
     return surface.distance;
 }
-
-var<private> last_found_surface_distance : f32;
 
 // https://iquilezles.org/articles/normalsSDF/
 fn estimate_normal_preview(sculpt_position : vec3f) -> vec3f

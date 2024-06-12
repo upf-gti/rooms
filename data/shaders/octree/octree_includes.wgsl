@@ -218,3 +218,18 @@ struct RayIntersectionInfo
     intersection_position : vec3f,
     dummy1 : u32,
 };
+
+struct FrustrumCullingData {
+    cos_angle : f32,
+    sin_angle : f32,
+    cone_distance : f32,
+    pad1 : f32,
+    cone1_normal : vec3f,
+    pad2 : f32,
+    cone1_origen : vec3f,
+    pad3 : f32,
+    cone2_normal : vec3f,
+    pad4 : f32,
+    cone2_origen : vec3f,
+    pad5 : f32
+};
