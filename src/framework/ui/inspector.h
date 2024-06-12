@@ -23,7 +23,7 @@ namespace ui {
         static uint32_t row_id;
 
         glm::vec2 panel_size = {};
-        Color panel_color = { 0.01f, 0.01f, 0.01f, 0.85f };
+        Color panel_color = { 0.0f, 0.0f, 0.0f, 0.8f };
         float padding = 0.0f;
         float scroll_top = 0.0f;
 
@@ -33,7 +33,6 @@ namespace ui {
 
         HContainer2D* create_row();
 
-        bool grabbing = false;
         glm::vec2 last_grab_position = {};
 
     public:

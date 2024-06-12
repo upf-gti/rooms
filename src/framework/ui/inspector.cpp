@@ -42,16 +42,15 @@ namespace ui {
             float scroll_dt = Input::get_mouse_wheel_delta() * 8.0f;
 
             if (data.was_pressed) {
-                grabbing = true;
+                IO::set_focus(root);
             }
 
-            if (data.is_pressed) {
-                grabbing = true;
+            if (data.is_pressed && IO::equals_focus(root)) {
                 scroll_dt += (last_grab_position.y - data.local_position.y);
             }
 
             if (data.was_released) {
-                grabbing = false;
+                IO::set_focus(nullptr);
             }
 
             last_grab_position = data.local_position;
