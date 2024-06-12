@@ -71,6 +71,10 @@ void SceneEditor::update(float delta_time)
 
         if (Input::was_trigger_pressed(HAND_RIGHT)) {
             moving_node = false;
+
+            // Open inspector there!
+            glm::mat4x4 pose = glm::translate(glm::mat4x4(1.0f), static_cast<Node3D*>(selected_node)->get_translation());
+            inspect_panel_3d->set_model(pose);
         }
     }
 
@@ -79,7 +83,7 @@ void SceneEditor::update(float delta_time)
     BaseEditor::update(delta_time);
 
     if (renderer->get_openxr_available()) {
-        // ...
+        inspect_panel_3d->update(delta_time);
     }
     else {
         inspector->update(delta_time);
@@ -143,7 +147,7 @@ void SceneEditor::render()
     BaseEditor::render();
 
     if (renderer->get_openxr_available()) {
-        // ...
+        inspect_panel_3d->render();
     } else {
         inspector->render();
     }

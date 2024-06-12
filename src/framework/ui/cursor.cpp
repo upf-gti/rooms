@@ -99,7 +99,7 @@ namespace ui {
             glm::mat4x4 m(1.0f);
             m = glm::translate(m, IO::get_xr_world_position());
             m = m * glm::toMat4(glm::quat_cast(hovered->get_global_viewport_model()));
-            m = glm::translate(m, glm::vec3(-size * 0.5f * hovered->get_scale(), 0.0f));
+            m = glm::translate(m, glm::vec3(-size * 0.5f * hovered->get_scale(), 0.01f));
 
             cursor_3d->set_model(m);
 
