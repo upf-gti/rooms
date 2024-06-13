@@ -41,8 +41,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     let id : u32 = group_id.x;
     let octree_leaf_id : u32 = octant_usage_read[id];
 
-    // let culling_count : u32 = octree.data[octree_leaf_id].stroke_count;
-    // let curr_culling_layer_index = octree.data[octree_leaf_id].culling_id;
+    let culling_count : u32 = octree.data[octree_leaf_id].stroke_count;
+    let curr_culling_layer_index = octree.data[octree_leaf_id].culling_id;
 
     let brick_pointer : u32 = octree.data[octree_leaf_id].tile_pointer;
 
@@ -83,12 +83,10 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     var curr_surface : Surface = sSurface;
     let pos = octant_center + pixel_offset;
 
-    let index : u32 = stroke_culling[0];//culling_get_stroke_index(stroke_culling[0 + curr_culling_layer_index]);
-
-
     // Evaluating the edit context
-    for (var j : u32 = 0; j < stroke_history.count; j++) {
-        curr_surface = evaluate_stroke(pos, &(stroke_history.strokes[j]), &edit_list, curr_surface, stroke_history.strokes[j].edit_list_index, stroke_history.strokes[j].edit_count);
+    for (var j : u32 = 0; j < culling_count; j++) {
+        let index : u32 = culling_get_stroke_index(stroke_culling[j + curr_culling_layer_index]);
+        curr_surface = evaluate_stroke(pos, &(stroke_history.strokes[index]), &edit_list, curr_surface, stroke_history.strokes[index].edit_list_index, stroke_history.strokes[index].edit_count);
     }
 
     result_surface = curr_surface;

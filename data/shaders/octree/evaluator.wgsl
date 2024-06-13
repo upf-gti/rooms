@@ -326,7 +326,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             if (subdivide) {
                 // Stroke history culling
                 var curr_stroke_count : u32 = 0u;
-                for(var i : u32 = 0u; i < octree.data[octree_index].stroke_count; i++) {
+                for(var i : u32 = 0u; i < octree.data[parent_octree_index].stroke_count; i++) {
                     let index : u32 = culling_get_stroke_index(stroke_culling[prev_culling_layer_index + i + 1u]);
                     if (intersection_AABB_AABB(eval_aabb_min, 
                                                eval_aabb_max, 
@@ -368,21 +368,21 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                     brick_remove_and_mark_as_inside(octree_index, is_current_brick_filled);
                 } else if (surface_interval.x < 0.0) {
                     brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
-                    // // Stroke history culling
-                    // var curr_stroke_count : u32 = 0u;
-                    // for(var i : u32 = 0u; i < octree.data[octree_index].stroke_count; i++) {
-                    //     let index : u32 = culling_get_stroke_index(stroke_culling[prev_culling_layer_index + i + 1u]);
-                    //     if (intersection_AABB_AABB(eval_aabb_min, 
-                    //                             eval_aabb_max, 
-                    //                             stroke_history.strokes[index].aabb_min, 
-                    //                             stroke_history.strokes[index].aabb_max)) {
-                    //         // Added to the current list
-                    //         stroke_culling[curr_culling_layer_index + curr_stroke_count + 1u] = culling_get_culling_data(index, 0u, 0u);
-                    //         curr_stroke_count = curr_stroke_count + 1u;
-                    //     }
-                    // }
+                    // Stroke history culling
+                    var curr_stroke_count : u32 = 0u;
+                    for(var i : u32 = 0u; i < octree.data[parent_octree_index].stroke_count; i++) {
+                        let index : u32 = culling_get_stroke_index(stroke_culling[prev_culling_layer_index + i + 1u]);
+                        if (intersection_AABB_AABB(eval_aabb_min, 
+                                                eval_aabb_max, 
+                                                stroke_history.strokes[index].aabb_min, 
+                                                stroke_history.strokes[index].aabb_max)) {
+                            // Added to the current list
+                            stroke_culling[curr_culling_layer_index + curr_stroke_count + 1u] = culling_get_culling_data(index, 0u, 0u);
+                            curr_stroke_count = curr_stroke_count + 1u;
+                        }
+                    }
                     octree.data[octree_index].stroke_count = 1u;
-                    octree.data[octree_index].culling_id = prev_culling_layer_index + 1u;
+                    octree.data[octree_index].culling_id = curr_culling_layer_index + 1u;
                 }
             }
         } else if (is_current_brick_filled) {
