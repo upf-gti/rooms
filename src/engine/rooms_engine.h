@@ -44,6 +44,7 @@ class RoomsEngine : public Engine
     MeshInstance3D* controller_mesh_right = nullptr;
     MeshInstance3D* ray_pointer = nullptr;
 
+    // make Cursor all static and remove this??
     ui::Cursor cursor;
 
 public:

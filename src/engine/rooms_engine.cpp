@@ -8,6 +8,7 @@
 #include "framework/utils/tinyfiledialogs.h"
 #include "framework/utils/utils.h"
 #include "framework/ui/io.h"
+#include "framework/ui/keyboard.h"
 
 #include "engine/scene.h"
 
@@ -100,6 +101,8 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 
     cursor.load();
 
+    ui::Keyboard::initialize();
+
 	return error;
 }
 
@@ -125,6 +128,8 @@ void RoomsEngine::update(float delta_time)
     // Default cursor at the beginning of the frame..
     cursor.set(is_xr ? ui::MOUSE_CURSOR_CIRCLE : ui::MOUSE_CURSOR_DEFAULT);
 
+    ui::Keyboard::update(delta_time);
+
     if (current_editor) {
         current_editor->update(delta_time);
     }
@@ -149,6 +154,9 @@ void RoomsEngine::update(float delta_time)
 
 void RoomsEngine::render()
 {
+    cursor.render();
+    ui::Keyboard::render();
+
     if (use_environment_map) {
         environment->render();
     }
@@ -168,8 +176,6 @@ void RoomsEngine::render()
 
         ray_pointer->render();
     }
-
-    cursor.render();
 
 #ifndef __EMSCRIPTEN__
     render_gui();
