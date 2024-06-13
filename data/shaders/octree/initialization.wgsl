@@ -4,7 +4,10 @@
 @group(0) @binding(2) var<storage, read_write> octant_usage_write_1: array<u32>;
 @group(0) @binding(4) var<storage, read_write> octree : Octree;
 @group(0) @binding(5) var<storage, read_write> brick_buffers: BrickBuffers_ReadOnly;
+@group(0) @binding(6) var<storage, read> stroke_history : StrokeHistory;
 @group(0) @binding(8) var<storage, read_write> indirect_buffers : IndirectBuffers_ReadOnly;
+@group(0) @binding(9) var<storage, read_write> stroke_culling : array<u32>;
+
 
 /**
     Este shader prepara los buffers para la evaluacion de strokes, que vienen de la CPU.
@@ -35,6 +38,12 @@ fn compute(@builtin(workgroup_id) group_id: vec3u)
         brick_buffers.brick_removal_counter = 0u;
         indirect_buffers.brick_instance_count = 0u;
         brick_buffers.brick_instance_counter = 0u;
+
+        // Store the culling data of the first level
+        for(var i = 0u; i < stroke_history.count; i++){
+            stroke_culling[i] = culling_get_culling_data(i, stroke_history.strokes[i].edit_list_index, stroke_history.strokes[i].edit_count);
+        }
+        octree.data[0].stroke_count = stroke_history.count;
     }
 
     indirect_buffers.evaluator_subdivision_counter = 1u;

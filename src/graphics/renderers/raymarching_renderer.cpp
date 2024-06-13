@@ -758,10 +758,16 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         octree_stroke_history.buffer_size = stroke_history_size;
         webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_stroke_history.data), 0, &default_val, sizeof(uint32_t));
 
+        // Culling list
+        uint32_t culling_size = sizeof(uint32_t) * (2u * max_brick_count * max_stroke_influence_count + 1u);
+        stroke_culling_data.data = webgpu_context->create_buffer(culling_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "stroke_culling_data");
+        stroke_culling_data.binding = 9;
+        stroke_culling_data.buffer_size = culling_size;
+
         // Stroke Edit list
         octree_edit_list_size = EDIT_BUFFER_INITAL_SIZE;
         size_t edit_list_size = sizeof(Edit) * octree_edit_list_size;
-        octree_edit_list.data = webgpu_context->create_buffer(edit_list_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "stroke_history");
+        octree_edit_list.data = webgpu_context->create_buffer(edit_list_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "octree_edit_list");
         octree_edit_list.binding = 7;
         octree_edit_list.buffer_size = edit_list_size;
 
@@ -781,7 +787,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
 
 
         std::vector<Uniform*> uniforms = { &octree_uniform, &compute_merge_data_uniform, &octree_edit_list,
-                                           &octree_stroke_history, &octree_brick_buffers };
+                                           &octree_stroke_history, &octree_brick_buffers, &stroke_culling_data };
 
         compute_octree_evaluate_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_evaluate_shader, 0);
     }
@@ -794,7 +800,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
 
     // Octree increment iteration pass
     {
-        std::vector<Uniform*> uniforms = { &octree_indirect_buffer_struct, &octree_uniform, &octree_brick_buffers };
+        std::vector<Uniform*> uniforms = { &octree_indirect_buffer_struct, &octree_uniform, &octree_brick_buffers, &stroke_culling_data };
 
         compute_octree_increment_level_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_increment_level_shader, 0);
     }
@@ -841,7 +847,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
     {
         octree_indirect_buffer_struct_2 = octree_indirect_buffer_struct;
         octree_indirect_buffer_struct_2.binding = 7u;
-        std::vector<Uniform*> uniforms = { &sdf_texture_uniform, &octree_uniform, &octree_edit_list,
+        std::vector<Uniform*> uniforms = { &sdf_texture_uniform, &octree_uniform, &octree_edit_list, &stroke_culling_data,
                                            &octree_stroke_history, &octree_brick_buffers, &sdf_material_texture_uniform };
         compute_octree_write_to_texture_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_write_to_texture_shader, 0);
     }
@@ -886,7 +892,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         octree_new_uniform.binding = 4;
 
         std::vector<Uniform*> uniforms = { &octree_indirect_buffer_struct, &octant_usage_initialization_uniform[0], &octant_usage_initialization_uniform[1],
-                                           &octree_new_uniform, &octree_brick_buffers };
+                                           &octree_new_uniform, &octree_brick_buffers, &stroke_culling_data, &octree_stroke_history };
 
         compute_octree_initialization_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_initialization_shader, 0);
     }

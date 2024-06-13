@@ -49,7 +49,6 @@ class RaymarchingRenderer {
         EVALUATE_PREVIEW_STROKE = 0x0002u
     };
 
-
     Uniform         linear_sampler_uniform;
 
     Pipeline        render_proxy_geometry_pipeline;
@@ -128,6 +127,9 @@ class RaymarchingRenderer {
     Uniform         octree_brick_copy_buffer;
     WGPUBindGroup   render_camera_bind_group = nullptr;
 
+    // Stroke culling data
+    Uniform         stroke_culling_data;
+    uint32_t        max_stroke_influence_count = 200u;
 
     Uniform         ray_info_uniform;
     Uniform         ray_intersection_info_uniform;
@@ -169,6 +171,7 @@ class RaymarchingRenderer {
         glm::vec2 octant_center_distance = glm::vec2(10000.0f, 10000.0f);
         float dummy = 0.0f;
         uint32_t tile_pointer = 0;
+        uint32_t culling_data = 0u;
     };
 
     struct RayInfo {

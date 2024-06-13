@@ -95,8 +95,9 @@ struct StrokeHistory {
 
 struct OctreeNode {
     octant_center_distance : vec2f,
-    dummy : f32,
+    stroke_count : u32,
     tile_pointer : u32,
+    culling_id : u32
 };
 
 struct Octree {
@@ -218,3 +219,35 @@ struct RayIntersectionInfo
     intersection_position : vec3f,
     dummy1 : u32,
 };
+
+struct CullingStroke {
+    stroke_idx : u32,
+    edit_start_idx : u32,
+    edit_count : u32
+};
+/**
+    0-20 bits -> stroke id (0-1048576 # of strokes)
+    21-27 bits -> edit start (0-64)
+    28-32 bits -> edit count (0-64)
+*/
+fn culling_stroke_get_edit_start_and_count(culling_data : u32, stroke_list : ptr<storage, array<Stroke>, read>) -> CullingStroke {
+    let stroke_id : u32 = (culling_data & 0xFFFF0000u) >> 16;
+    let edit_start : u32 = (culling_data & 0xFF00u) >> 8;
+    let edit_count : u32 = (culling_data & 0xFFu);
+
+    let stroke_pointer : ptr<storage, Stroke, read> = &stroke_list[stroke_id];
+
+    return CullingStroke(stroke_id, edit_start + stroke_pointer.edit_list_index, stroke_pointer.edit_count);
+}
+
+fn culling_get_culling_data(stroke_pointer : u32, edit_start : u32, edit_count : u32) -> u32 {
+    var result : u32 = stroke_pointer << 16;
+    result |= edit_start << 8;
+    result |= edit_count;
+
+    return result;
+}
+
+fn culling_get_stroke_index(culling_data : u32) -> u32 {
+    return (culling_data & 0xFFFF0000) >> 16;
+}

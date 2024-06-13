@@ -7,6 +7,7 @@
 @group(0) @binding(5) var<storage, read_write> brick_buffers: BrickBuffers;
 @group(0) @binding(6) var<storage, read> stroke_history : StrokeHistory;
 @group(0) @binding(7) var<storage, read> edit_list : array<Edit>;
+@group(0) @binding(9) var<storage, read_write> stroke_culling : array<u32>;
 
 @group(1) @binding(0) var<storage, read> octant_usage_read : array<u32>;
 @group(1) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
@@ -102,7 +103,6 @@
             - If its an union, we delete all bricks iside the resulting SDF, end write/re-evaluate the bricks on the surface of the resulting SDF.
             - If its a substraction, we delete all bricks inside the new_edits, and only create/re-evaluate bricks on the intersection of the 
               new_edits and the resulting SDF.
-
 
     TODO:
      - Redo edit culling with interval arithmetic.
@@ -218,6 +218,10 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     let octree_index : u32 = octant_id + u32((pow(8.0, f32(level)) - 1) / 7);
     let parent_octree_index : u32 = parent_octant_id + u32((pow(8.0, f32(parent_level)) - 1) / 7);
 
+    // Culling list indices
+    let curr_culling_layer_index = (octant_id + stroke_culling[0] * BRICK_COUNT) * stroke_history.count;
+    let prev_culling_layer_index = (octant_id + ((stroke_culling[0] + 1u) % 2) * BRICK_COUNT) * stroke_history.count;
+
     var octant_center : vec3f = vec3f(0.0);
     var level_half_size : f32 = 0.5 * SCULPT_MAX_SIZE;
 
@@ -319,9 +323,22 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         if (level < OCTREE_DEPTH) {
             subdivide = intersection_AABB_AABB(eval_aabb_min, eval_aabb_max, stroke_history.eval_aabb_min, stroke_history.eval_aabb_max);
             
-            // Broad culling using only the incomming stroke
-            // TODO: intersection with current edit AABB?
             if (subdivide) {
+                // Stroke history culling
+                var curr_stroke_count : u32 = 0u;
+                for(var i : u32 = 0u; i < octree.data[octree_index].stroke_count; i++) {
+                    let index : u32 = culling_get_stroke_index(stroke_culling[prev_culling_layer_index + i + 1u]);
+                    if (intersection_AABB_AABB(eval_aabb_min, 
+                                               eval_aabb_max, 
+                                               stroke_history.strokes[index].aabb_min, 
+                                               stroke_history.strokes[index].aabb_max)) {
+                        // Added to the current list
+                        stroke_culling[curr_culling_layer_index + curr_stroke_count + 1u] = culling_get_culling_data(index, 0u, 0u);
+                        curr_stroke_count = curr_stroke_count + 1u;
+                    }
+                }
+                octree.data[octree_index].stroke_count = curr_stroke_count;
+
                 // Subdivide
                 // Increase the number of children from the current level
                 let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 8);
@@ -351,6 +368,21 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                     brick_remove_and_mark_as_inside(octree_index, is_current_brick_filled);
                 } else if (surface_interval.x < 0.0) {
                     brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
+                    // // Stroke history culling
+                    // var curr_stroke_count : u32 = 0u;
+                    // for(var i : u32 = 0u; i < octree.data[octree_index].stroke_count; i++) {
+                    //     let index : u32 = culling_get_stroke_index(stroke_culling[prev_culling_layer_index + i + 1u]);
+                    //     if (intersection_AABB_AABB(eval_aabb_min, 
+                    //                             eval_aabb_max, 
+                    //                             stroke_history.strokes[index].aabb_min, 
+                    //                             stroke_history.strokes[index].aabb_max)) {
+                    //         // Added to the current list
+                    //         stroke_culling[curr_culling_layer_index + curr_stroke_count + 1u] = culling_get_culling_data(index, 0u, 0u);
+                    //         curr_stroke_count = curr_stroke_count + 1u;
+                    //     }
+                    // }
+                    octree.data[octree_index].stroke_count = 1u;
+                    octree.data[octree_index].culling_id = prev_culling_layer_index + 1u;
                 }
             }
         } else if (is_current_brick_filled) {

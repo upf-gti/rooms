@@ -10,6 +10,7 @@
 @group(0) @binding(6) var<storage, read> stroke_history : StrokeHistory; 
 @group(0) @binding(7) var<storage, read> edit_list : array<Edit>;
 @group(0) @binding(8) var write_material_sdf: texture_storage_3d<r32uint, write>;
+@group(0) @binding(9) var<storage, read_write> stroke_culling : array<u32>;
 
 @group(1) @binding(0) var<storage, read> octant_usage_read : array<u32>;
 @group(1) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
@@ -39,6 +40,9 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 {
     let id : u32 = group_id.x;
     let octree_leaf_id : u32 = octant_usage_read[id];
+
+    // let culling_count : u32 = octree.data[octree_leaf_id].stroke_count;
+    // let curr_culling_layer_index = octree.data[octree_leaf_id].culling_id;
 
     let brick_pointer : u32 = octree.data[octree_leaf_id].tile_pointer;
 
@@ -79,6 +83,9 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     var curr_surface : Surface = sSurface;
     let pos = octant_center + pixel_offset;
 
+    let index : u32 = stroke_culling[0];//culling_get_stroke_index(stroke_culling[0 + curr_culling_layer_index]);
+
+
     // Evaluating the edit context
     for (var j : u32 = 0; j < stroke_history.count; j++) {
         curr_surface = evaluate_stroke(pos, &(stroke_history.strokes[j]), &edit_list, curr_surface, stroke_history.strokes[j].edit_list_index, stroke_history.strokes[j].edit_count);
@@ -97,7 +104,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     
     // Hack, for buffer usage
     octant_usage_write[0] = 0;
-    let edit_count : u32 = stroke_history.count;
 
     // TODO(Juan): I dont like this for the SM occupany...
     workgroupBarrier();
