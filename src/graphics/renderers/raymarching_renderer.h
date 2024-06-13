@@ -169,8 +169,9 @@ class RaymarchingRenderer {
 
     struct sOctreeNode {
         glm::vec2 octant_center_distance = glm::vec2(10000.0f, 10000.0f);
-        float dummy = 0.0f;
+        uint32_t dummy = 0.0f;
         uint32_t tile_pointer = 0;
+        glm::vec3 padding;
         uint32_t culling_data = 0u;
     };
 

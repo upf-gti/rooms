@@ -12,6 +12,11 @@ void StrokeManager::add_stroke_to_upload_list(sStrokeInfluence& influence, const
     memcpy(&influence.strokes[influence.stroke_count], &stroke, sizeof(sToUploadStroke));
     influence.strokes[influence.stroke_count].edit_list_index = edit_list_count;
 
+    AABB stroke_aabb = stroke.get_world_AABB();
+
+    influence.strokes[influence.stroke_count].aabb_max = stroke_aabb.center + stroke_aabb.half_size;
+    influence.strokes[influence.stroke_count].aabb_min = stroke_aabb.center - stroke_aabb.half_size;
+
     for (uint32_t j = 0u; j < stroke.edit_count; j++) {
         add_edit_to_upload(stroke.edits[j]);
     }

@@ -97,6 +97,7 @@ struct OctreeNode {
     octant_center_distance : vec2f,
     stroke_count : u32,
     tile_pointer : u32,
+    padding : vec3f,
     culling_id : u32
 };
 
