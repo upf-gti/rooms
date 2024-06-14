@@ -4,6 +4,8 @@
 
 #include "framework/nodes/node.h"
 
+#include <functional>
+
 class Node2D;
 class Viewport3D;
 
@@ -26,12 +28,15 @@ namespace ui {
         bool symbols = false;
         std::string input = ":";
         ui::Text2D* text = nullptr;
+        std::function<void(const std::string&)> callback;
 
-        const std::string& get_input() { return input; }
+        void set_input(const std::string& str);
         void clear_input();
         void push_char(char c);
         void remove_char();
         void reset();
+
+        std::string get_input() { return input.substr(1); }
 
         void toggle_caps();
         void toggle_caps_lock();
@@ -45,7 +50,7 @@ namespace ui {
         static Viewport3D* xr_keyboard;
         static bool active;
 
-        static XrKeyboardState xr_keyboard_state;
+        static XrKeyboardState state;
 
         static void create_keyboard_letters_layout(std::vector<XrKey>& keys, float start_x, float start_y, float margin);
         static void create_keyboard_symbols_layout(std::vector<XrKey>& keys, float start_x, float start_y, float margin);
@@ -59,7 +64,7 @@ namespace ui {
         static void render();
         static void update(float delta_time);
 
-        static void request() { active = true; };
+        static void request(std::function<void(const std::string&)> fn, const std::string& str = "");
         static void close() { active = false; };
     };
 }

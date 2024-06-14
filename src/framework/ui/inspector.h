@@ -14,7 +14,7 @@ namespace ui {
         std::string title = "";
         float title_height = 48.0f;
         float padding = 12.0f;
-        glm::vec2 size = { 300, 400.f };
+        glm::vec2 size = { 344.f, 512.f };
         glm::vec2 position = { 0.0f, 0.0f };
     };
 
@@ -26,6 +26,7 @@ namespace ui {
         Color panel_color = { 0.0f, 0.0f, 0.0f, 0.8f };
         float padding = 0.0f;
         float scroll_top = 0.0f;
+        float last_scroll_top = 0.0f;
 
         ui::XRPanel* root = nullptr;
         VContainer2D* body = nullptr;
@@ -35,6 +36,8 @@ namespace ui {
 
         glm::vec2 last_grab_position = {};
 
+        std::map<std::string, Node2D*> items;
+
     public:
 
         Inspector() {};
@@ -42,12 +45,16 @@ namespace ui {
 
         void update(float delta_time);
         /*void render(); */
+        void clear();
 
-        void add_label(const std::string& label);
+        void add_label(const std::string& name, const std::string& label);
+        void add_icon(const std::string& texture_path);
         void add_button(const std::string& name, const std::string& texture_path, uint32_t flags = 0);
         void add_slider(const std::string& name, float value, float min = 0.0f, float max = 1.0f, int precision = 1);
 
         void same_line();
         void end_line();
+
+        Node2D* get(const std::string& name);
     };
 }

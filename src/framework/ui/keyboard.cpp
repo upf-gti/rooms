@@ -9,8 +9,14 @@ namespace ui {
 
     Node2D* Keyboard::keyboard_2d = nullptr;
     Viewport3D* Keyboard::xr_keyboard = nullptr;
-    XrKeyboardState Keyboard::xr_keyboard_state;
-    bool Keyboard::active = true;
+    XrKeyboardState Keyboard::state;
+    bool Keyboard::active = false;
+
+    void XrKeyboardState::set_input(const std::string& str)
+    {
+        input = ":" + str;
+        text->set_text(input);
+    }
 
     void XrKeyboardState::clear_input()
     {
@@ -98,7 +104,7 @@ namespace ui {
         std::vector<XrKey> keys;
         create_keyboard_letters_layout(keys, start_pos.x, start_pos.y + input_height, button_margin);
 
-        keyboard_2d = new Node2D(name, { 512.0f, 16.0f }, { 1.0f, 1.0f });
+        keyboard_2d = new Node2D(name, { 0.0f, 0.0f }, { 1.0f, 1.0f });
 
         ui::XRPanel* root = new ui::XRPanel(name + "@letters", panel_color, { 0.0f, 0.f }, panel_size);
         keyboard_2d->add_child(root);
@@ -112,43 +118,42 @@ namespace ui {
         keyboard_2d->add_child(title_container);
 
         ui::Text2D* text = new ui::Text2D(":", { start_pos.x + 12.0f, start_pos.y + 8.0f }, 18.0f, ui::SKIP_TEXT_SHADOW);
-        xr_keyboard_state.text = text;
+        state.text = text;
         title_container->add_child(text);
 
         auto process_click = [rs = root_symbols, rl = root](const std::string& sg, void* data) {
             if (sg == "Shift") {
-                xr_keyboard_state.toggle_caps();
+                state.toggle_caps();
             }
             else if (sg == "Backspace") {
-                xr_keyboard_state.remove_char();
+                state.remove_char();
             }
             else if (sg == "Space") {
-                xr_keyboard_state.push_char(' ');
+                state.push_char(' ');
             }
             else if (sg == "HideKeyboard") {
-                xr_keyboard_state.reset();
+                state.reset();
                 close();
             }
             else if (sg == "Enter") {
-                // Send the input text where needed..
-                // ...
+                state.callback(state.get_input());
                 close();
             }
             else if (sg == "Symbols") {
-                xr_keyboard_state.toggle_symbols();
-                rs->set_visibility(xr_keyboard_state.symbols);
-                rl->set_visibility(!xr_keyboard_state.symbols);
+                state.toggle_symbols();
+                rs->set_visibility(state.symbols);
+                rl->set_visibility(!state.symbols);
             }
             else {
                 char c = sg[0];
-                xr_keyboard_state.push_char(xr_keyboard_state.caps ? std::toupper(c) : c);
-                xr_keyboard_state.disable_caps();
+                state.push_char(state.caps ? std::toupper(c) : c);
+                state.disable_caps();
             }
         };
 
         auto process_dbl_click = [](const std::string& sg, void* data) {
             if (sg == "Shift@dbl_click") {
-                xr_keyboard_state.toggle_caps_lock();
+                state.toggle_caps_lock();
             }
         };
 
@@ -172,23 +177,37 @@ namespace ui {
                 Node::bind(key.label, process_click);
             }
         }
+
+        // Move keyboard to center it (at least in flat screen)
+        auto webgpu_context = Renderer::instance->get_webgpu_context();
+        glm::vec2 screen_size = glm::vec2(static_cast<float>(webgpu_context->render_width), static_cast<float>(webgpu_context->render_height));
+
+        keyboard_2d->translate({ screen_size.x * 0.5f - panel_size.x * 0.5f, 16.0f});
     }
 
     void Keyboard::render()
     {
-        if (Renderer::instance->get_openxr_available() && active) {
-            xr_keyboard->render();
+        if (!active) {
+            return;
         }
 
-        // debug for flat screen!! remove later
-        keyboard_2d->render();
+        if (Renderer::instance->get_openxr_available()) {
+            xr_keyboard->render();
+        }
+        else {
+            keyboard_2d->render();
+        }
     }
 
     void Keyboard::update(float delta_time)
     {
+        if (!active) {
+            return;
+        }
+
         auto renderer = Renderer::instance;
 
-        if (renderer->get_openxr_available() && active) {
+        if (renderer->get_openxr_available()) {
             glm::mat4x4 m(1.0f);
             /*glm::vec3 eye = renderer->get_camera_eye();
             glm::vec3 new_pos = eye + renderer->get_camera_front() * 1.5f;
@@ -200,9 +219,20 @@ namespace ui {
             xr_keyboard->set_model(m);
             xr_keyboard->update(delta_time);
         }
+        else {
+            keyboard_2d->update(delta_time);
+        }
+    }
 
-        // debug for flat screen!! remove later
-        keyboard_2d->update(delta_time);
+    void Keyboard::request(std::function<void(const std::string&)> fn, const std::string& str)
+    {
+        active = true;
+
+        state.callback = fn;
+
+        if (str.size() > 0u) {
+            state.set_input(str);
+        }
     }
 
     void Keyboard::create_keyboard_letters_layout(std::vector<XrKey>& keys, float start_x, float start_y, float margin)
