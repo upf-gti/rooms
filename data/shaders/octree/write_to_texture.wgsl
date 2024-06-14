@@ -96,8 +96,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
         atomicAdd(&used_pixels, 1);
     }
 
-    // result_surface.material.albedo *= vec3f(f32(culling_count));
-    // result_surface.material.albedo /= vec3f(.0);
+    result_surface.material.albedo = vec3f(f32(culling_count)/ 15.0);
 
     // Duplicate the texture Store, becuase then we have a branch depeding on an uniform!
     textureStore(write_sdf, texture_coordinates, vec4f(result_surface.distance));

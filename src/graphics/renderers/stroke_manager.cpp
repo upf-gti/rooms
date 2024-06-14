@@ -13,6 +13,7 @@ void StrokeManager::add_stroke_to_upload_list(sStrokeInfluence& influence, const
     influence.strokes[influence.stroke_count].edit_list_index = edit_list_count;
 
     AABB stroke_aabb = stroke.get_world_AABB();
+    stroke_aabb.half_size *= 2.0;
 
     influence.strokes[influence.stroke_count].aabb_max = stroke_aabb.center + stroke_aabb.half_size;
     influence.strokes[influence.stroke_count].aabb_min = stroke_aabb.center - stroke_aabb.half_size;

@@ -220,7 +220,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
     // Culling list indices
     let curr_culling_layer_index = (octant_id + stroke_culling[0] * BRICK_COUNT) * stroke_history.count;
-    let prev_culling_layer_index = (octant_id + ((stroke_culling[0] + 1u) % 2) * BRICK_COUNT) * stroke_history.count;
+    let prev_culling_layer_index = (parent_octant_id + ((stroke_culling[0] + 1u) % 2) * BRICK_COUNT) * stroke_history.count;
 
     var octant_center : vec3f = vec3f(0.0);
     var level_half_size : f32 = 0.5 * SCULPT_MAX_SIZE;
@@ -282,55 +282,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         //  |_____/ \__|_|  \___/|_|\_\___| |______\_/ \__,_|_|
         // =====================================================
         // =====================================================
-                                                    
-        if (level == OCTREE_DEPTH) {
-            // Stroke history culling
-            var curr_stroke_count : u32 = 0u;
-            for(var i : u32 = 0u; i < octree.data[parent_octree_index].stroke_count; i++) {
-                let index : u32 = culling_get_stroke_index(stroke_culling[prev_culling_layer_index + i + 1u]);
-                if (intersection_AABB_AABB(eval_aabb_min, 
-                                           eval_aabb_max, 
-                                           stroke_history.strokes[index].aabb_min, 
-                                           stroke_history.strokes[index].aabb_max)) {
-                    // Added to the current list
-                    stroke_culling[curr_culling_layer_index + curr_stroke_count + 1u] = culling_get_culling_data(index, 0u, 0u);
-                    curr_stroke_count++;
-
-                    surface_interval = evaluate_stroke_interval(current_subdivision_interval, &(stroke_history.strokes[index]), &edit_list, surface_interval, octant_center, level_half_size);
-                }
-            }
-            octree.data[octree_index].stroke_count = curr_stroke_count;
-            octree.data[octree_index].culling_id = curr_culling_layer_index + 1u;
-            // Pseudo subdivide!
-            // Re-compute the strokes for the octants of the last level, and check the interval on those
-            // Since the interval are smaller, the wrapping effect is lessend, and you add a brick if
-            // at least one of this interval subdivisions is true.
-
-            subdivide = true;
-            // for (var i : u32 = 0; i < 8 && !subdivide; i++) {
-            //     let sub_octant_id = octant_id | (i << (3 * level));
-
-            //     let sub_level_half_size = SCULPT_MAX_SIZE / pow(2.0, f32((level+1) + 1));
-
-            //     let sub_octant_center = octant_center + sub_level_half_size * OCTREE_CHILD_OFFSET_LUT[(sub_octant_id >> (3 * ((level+1) - 1))) & 0x7];
-
-            //     let x_range : vec2f = vec2f(sub_octant_center.x - sub_level_half_size, sub_octant_center.x + sub_level_half_size);
-            //     let y_range : vec2f = vec2f(sub_octant_center.y - sub_level_half_size, sub_octant_center.y + sub_level_half_size);
-            //     let z_range : vec2f = vec2f(sub_octant_center.z - sub_level_half_size, sub_octant_center.z + sub_level_half_size);
-            //     let current_sub_interval = iavec3_vecs(x_range, y_range, z_range);
-
-            //     var surf_interval : vec2f = vec2f(10000.0, 10000.0);
-            //     for (var j : u32 = 0; j < stroke_history.count; j++) {
-            //         surf_interval = evaluate_stroke_interval(current_sub_interval, &(stroke_history.strokes[j]), &edit_list, surf_interval, octant_center, level_half_size);
-            //     }
-                
-            //     subdivide = surf_interval.x <= 0.0 && surf_interval.y >= 0.0;
-            // }
-        }
-
-        // Do not evaluate all the bricks, only the ones whose distance interval has changed
-        let prev_interval = octree.data[octree_index].octant_center_distance;
-        octree.data[octree_index].octant_center_distance = surface_interval;
         
         if (level < OCTREE_DEPTH) {
             subdivide = intersection_AABB_AABB(eval_aabb_min, eval_aabb_max, stroke_history.eval_aabb_min, stroke_history.eval_aabb_max);
@@ -360,10 +311,30 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                     octant_usage_write[prev_counter + i] = octant_id | (i << (3 * level));
                 }
             }
-        } else if (subdivide) {
+        } else {
             // in order to detect where the smooth factor is influencing  with the "goops"
             // We compare the two intervals,
             // in order to find the goops (where the current stroke is taking affect)
+            var curr_stroke_count : u32 = 0u;
+            for(var i : u32 = 0u; i < octree.data[parent_octree_index].stroke_count; i++) {
+                let index : u32 = culling_get_stroke_index(stroke_culling[prev_culling_layer_index + i + 1u]);
+                if (intersection_AABB_AABB(eval_aabb_min, 
+                                           eval_aabb_max, 
+                                           stroke_history.strokes[index].aabb_min, 
+                                           stroke_history.strokes[index].aabb_max)) {
+                    // Added to the current list
+                    stroke_culling[curr_culling_layer_index + curr_stroke_count + 1u] = culling_get_culling_data(index, 0u, 0u);
+                    curr_stroke_count++;
+
+                    surface_interval = evaluate_stroke_interval(current_subdivision_interval, &(stroke_history.strokes[index]), &edit_list, surface_interval, octant_center, level_half_size);
+                }
+            }
+            octree.data[octree_index].stroke_count = curr_stroke_count;
+            octree.data[octree_index].culling_id = curr_culling_layer_index + 1u;
+
+            // Do not evaluate all the bricks, only the ones whose distance interval has changed
+            let prev_interval = octree.data[octree_index].octant_center_distance;
+            octree.data[octree_index].octant_center_distance = surface_interval;
 
             let int_distance = abs(distance(prev_interval, surface_interval));
             
@@ -382,8 +353,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                     brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
                 }
             }
-        } else if (is_current_brick_filled) {
-            brick_remove(octree_index);
         }
     } else {
         // ============================================================
