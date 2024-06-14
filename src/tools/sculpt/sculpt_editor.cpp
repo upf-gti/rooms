@@ -1427,7 +1427,7 @@ void SculptEditor::bind_events()
     {
         ui::Button2D* child = dynamic_cast<ui::Button2D*>(it.second);
         if (!child || !child->is_color_button) continue;
-        Node::bind(child->signal, [&](const std::string& signal, void* button) {
+        Node::bind(child->get_name(), [&](const std::string& signal, void* button) {
             const Color& color = (reinterpret_cast<ui::Button2D*>(button))->color;
             stroke_parameters.set_material_color(color);
         });
@@ -1443,7 +1443,7 @@ void SculptEditor::bind_events()
         for (size_t i = 0; i < max_recent_colors; ++i)
         {
             ui::Button2D* child = static_cast<ui::Button2D*>(color_picker->get_children()[i]);
-            Node::bind(child->signal, [&](const std::string& signal, void* button) {
+            Node::bind(child->get_name(), [&](const std::string& signal, void* button) {
                 const Color& color = (reinterpret_cast<ui::Button2D*>(button))->color;
                 stroke_parameters.set_material_color(color);
                 Node::emit_signal("color_picker@changed", color);
@@ -1461,9 +1461,9 @@ void SculptEditor::bind_events()
         for (size_t i = 0; i < samples_group->get_children().size(); ++i)
         {
             ui::Button2D* child = static_cast<ui::Button2D*>(samples_group->get_children()[i]);
-            Node::bind(child->signal, [&](const std::string& signal, void* button) {
+            Node::bind(child->get_name(), [&](const std::string& signal, void* button) {
                 update_stroke_from_material(signal);
-            });
+                });
         }
     }
     else {
@@ -1472,11 +1472,11 @@ void SculptEditor::bind_events()
 
     Node::bind("save_material", [&](const std::string& signal, void* button) {
         generate_material_from_stroke(button);
-    });
+        });
 
     Node::bind("shuffle_material", [&](const std::string& signal, void* button) {
         generate_random_material();
-    });
+        });
 
     // Bind color blendind operations for painting
     {
@@ -1485,7 +1485,7 @@ void SculptEditor::bind_events()
             for (size_t i = 0; i < color_blending_modes->get_children().size(); ++i)
             {
                 ui::Button2D* child = static_cast<ui::Button2D*>(color_blending_modes->get_children()[i]);
-                Node::bind(child->signal, [&, index = i](const std::string& signal, void* button) {
+                Node::bind(child->get_name(), [&, index = i](const std::string& signal, void* button) {
                     stroke_parameters.set_color_blend_operation(static_cast<ColorBlendOp>(index));
                 });
             }

@@ -11,6 +11,7 @@
 #include "framework/nodes/directional_light_3d.h"
 #include "framework/math/intersections.h"
 #include "framework/ui/inspector.h"
+#include "framework/ui/keyboard.h"
 
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/renderer_storage.h"
@@ -65,6 +66,10 @@ void SceneEditor::clean()
 
 void SceneEditor::update(float delta_time)
 {
+    if (inspector_dirty) {
+        inspector_from_scene();
+    }
+
     if (moving_node) {
 
         static_cast<Node3D*>(selected_node)->set_translation(Input::get_controller_position(HAND_RIGHT, POSE_AIM));
@@ -187,28 +192,20 @@ void SceneEditor::init_ui()
     // Note: This should be disabled if no node is selected
     first_row->add_child(new ui::TextureButton2D("clone", "data/textures/clone.png", 0/*ui::DISABLED*/));
 
-    // ** Manipulate sculpt **
-    {
-        // Note: This should be disabled if no sculpt is selected
-        first_row->add_child(new ui::TextureButton2D("edit_sculpt", "data/textures/cube_add.png", 0/*ui::DISABLED*/));
-    }
-
     // ** Posible scene nodes **
     {
         ui::ButtonSubmenu2D* add_node_submenu = new ui::ButtonSubmenu2D("add_node", "data/textures/add.png");
 
-        add_node_submenu->add_child(new ui::TextureButton2D("gltf", "data/textures/m.png"));
-        add_node_submenu->add_child(new ui::TextureButton2D("sculpt", "data/textures/m.png"));
+        add_node_submenu->add_child(new ui::TextureButton2D("gltf", "data/textures/monkey.png"));
+        add_node_submenu->add_child(new ui::TextureButton2D("sculpt", "data/textures/s.png"));
 
         // Lights
         {
-            ui::ButtonSubmenu2D* lights_submenu = new ui::ButtonSubmenu2D("light", "data/textures/light.png");
             ui::ItemGroup2D* g_add_node = new ui::ItemGroup2D("g_light_types");
-            g_add_node->add_child(new ui::TextureButton2D("omni", "data/textures/x.png"));
-            g_add_node->add_child(new ui::TextureButton2D("spot", "data/textures/m.png"));
+            g_add_node->add_child(new ui::TextureButton2D("omni", "data/textures/light.png"));
+            g_add_node->add_child(new ui::TextureButton2D("spot", "data/textures/spot.png"));
             g_add_node->add_child(new ui::TextureButton2D("directional", "data/textures/sun.png"));
-            lights_submenu->add_child(g_add_node);
-            add_node_submenu->add_child(lights_submenu);
+            add_node_submenu->add_child(g_add_node);
         }
 
         first_row->add_child(add_node_submenu);
@@ -249,13 +246,13 @@ void SceneEditor::init_ui()
 
     // Create inspection panel (Nodes, properties, etc)
     {
-        inspector = new ui::Inspector({ .name = "inspector_root", .position = { 64.0f, 64.f } });
+        inspector = new ui::Inspector({ .name = "inspector_root", .position = { 32.0f, 32.f } });
 
         /*
             Debug panel example
         */
 
-        std::string button_node_names[] = { "pedrito", "cristiano", "mbape", "madero", "pintamonas", "ps5" };
+        /*std::string button_node_names[] = { "pedrito", "cristiano", "mbape", "madero", "pintamonas", "ps5" };
 
         for (const auto& name : button_node_names) {
             inspector->same_line();
@@ -272,7 +269,7 @@ void SceneEditor::init_ui()
             inspector->add_slider(name + "@intensity", name.size() / 10.f);
             inspector->add_label(name);
             inspector->end_line();
-        }
+        }*/
     }
 
     if (renderer->get_openxr_available())
@@ -331,20 +328,19 @@ void SceneEditor::init_ui()
 
 void SceneEditor::bind_events()
 {
-    Node::bind("edit_sculpt", [&](const std::string& signal, void* button) {
-        RoomsEngine::switch_editor(SCULPT_EDITOR);
-    });
-
     Node::bind("gltf", [&](const std::string& signal, void* button) {
         parse_scene("data/meshes/controllers/left_controller.glb", main_scene->get_nodes());
-        add_node(main_scene->get_nodes().back());
+        select_node(main_scene->get_nodes().back());
+        inspector_dirty = true;
     });
 
     Node::bind("sculpt", [&](const std::string& signal, void* button) {
         SculptInstance* new_sculpt = new SculptInstance();
         RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
         rooms_renderer->get_raymarching_renderer()->set_current_sculpt(new_sculpt);
-        add_node(new_sculpt);
+        main_scene->add_node(new_sculpt);
+        select_node(new_sculpt);
+        inspector_dirty = true;
     });
 
     // Environment / Scene Lights
@@ -377,12 +373,70 @@ void SceneEditor::bind_events()
     Node::bind("scale", [&](const std::string& signal, void* button) { set_gizmo_scale(); });
 }
 
-void SceneEditor::add_node(Node* node)
+void SceneEditor::select_node(Node* node, bool place)
 {
     selected_node = node;
 
     // To allow the user to move the node at the beginning
-    moving_node = is_gizmo_usable() && renderer->get_openxr_available();
+    moving_node = place && is_gizmo_usable() && renderer->get_openxr_available();
+}
+
+void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& texture_path)
+{
+    inspector->same_line();
+
+    std::string node_name = node->get_name();
+
+    if (flags & NODE_ICON) {
+        inspector->add_icon(texture_path);
+    }
+
+    if (flags & NODE_VISIBILITY) {
+        std::string signal = node_name + "_visibility";
+        inspector->add_button(signal, "data/textures/visibility.png", ui::ALLOW_TOGGLE);
+
+        Node::bind(signal, [n = node](const std::string& sg, void* data) {
+            // Implement visibility for Node3D
+            // ...
+        });
+    }
+
+    if (flags & NODE_EDIT) {
+        std::string signal = node_name + "_edit";
+        inspector->add_button(signal, "data/textures/tool_wrench.png");
+
+        Node::bind(signal, [n = node, flags = flags](const std::string& sg, void* data) {
+
+            // Set as current sculpt and go to sculpt editor
+            if (flags & NODE_SCULPT) {
+                RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
+                rooms_renderer->get_raymarching_renderer()->set_current_sculpt(static_cast<SculptInstance*>(n));
+                RoomsEngine::switch_editor(SCULPT_EDITOR);
+            }
+            else if (flags & NODE_GLTF) {
+                // ...
+            }
+        });
+    }
+
+    if (flags & NODE_NAME) {
+        std::string signal = node_name + "_label";
+        inspector->add_label(signal, node_name);
+
+        // Request keyboard and use the result to set the new node name. Not the nicest code, but anyway..
+        {
+            auto callback = [&, n = node](const std::string& output) {
+                n->set_name(output);
+                inspector_dirty = true;
+            };
+
+            Node::bind(signal + "@dbl_click", [fn = callback, str = node_name](const std::string& sg, void* data) {
+                ui::Keyboard::request(fn, str);
+            });
+        }
+    }
+
+    inspector->end_line();
 }
 
 void SceneEditor::clone_node()
@@ -402,32 +456,29 @@ void SceneEditor::create_light_node(uint8_t type)
     {
     case LIGHT_OMNI:
         new_light = new OmniLight3D();
-        new_light->set_name("omni_light");
         new_light->set_translation({ 1.0f, 1.f, 0.0f });
-        new_light->set_range(5.0f);
         break;
     case LIGHT_SPOT:
         new_light = new SpotLight3D();
-        new_light->set_name("spot_light");
         new_light->set_translation({ 0.0f, 1.f, 0.0f });
         new_light->rotate(glm::radians(-90.f), { 1.f, 0.0f, 0.f });
-        new_light->set_range(5.0f);
         break;
         case LIGHT_DIRECTIONAL:
         new_light = new DirectionalLight3D();
-        new_light->set_name("directional_light");
         new_light->rotate(glm::radians(-90.f), { 1.f, 0.0f, 0.f });
         break;
     default:
-        assert(0 && "Unsppported light type!");
+        assert(0 && "Unsupported light type!");
         break;
     }
 
     new_light->set_color({ 1.0f, 1.0f, 1.0f });
     new_light->set_intensity(1.0f);
+    new_light->set_range(5.0f);
 
     main_scene->add_node(new_light);
-    add_node(new_light);
+    select_node(new_light);
+    inspector_dirty = true;
 }
 
 bool SceneEditor::is_gizmo_usable()
@@ -505,4 +556,26 @@ void SceneEditor::set_gizmo_scale()
     else {
         gizmo_2d.set_operation(ImGuizmo::SCALE);
     }
+}
+
+void SceneEditor::inspector_from_scene()
+{
+    inspector->clear();
+
+    auto& nodes = main_scene->get_nodes();
+
+    for (auto node : nodes) {
+
+        if (dynamic_cast<Light3D*>(node)) {
+            inspect_node(node, NODE_LIGHT, "data/textures/light.png");
+        }
+        else if (dynamic_cast<SculptInstance*>(node)) {
+            inspect_node(node, NODE_SCULPT);
+        }
+        else {
+            inspect_node(node, NODE_GLTF);
+        }
+    }
+
+    inspector_dirty = false;
 }

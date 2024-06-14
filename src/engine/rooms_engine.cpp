@@ -35,7 +35,6 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     main_scene = new Scene();
 
     environment = new Environment3D();
-    // main_scene->add_node(environment);
 
     // Meta Quest Controllers
     if (renderer->get_openxr_available())
