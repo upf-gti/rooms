@@ -219,8 +219,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     let parent_octree_index : u32 = parent_octant_id + u32((pow(8.0, f32(parent_level)) - 1) / 7);
 
     // Culling list indices
-    let curr_culling_layer_index = (octant_id + stroke_culling[0] * BRICK_COUNT) * stroke_history.count;
-    let prev_culling_layer_index = (parent_octant_id + ((stroke_culling[0] + 1u) % 2) * BRICK_COUNT) * stroke_history.count;
+    let curr_culling_layer_index = (octant_id + (level % 2) * BRICK_COUNT) * stroke_history.count;
+    let prev_culling_layer_index = (parent_octant_id + (parent_level % 2) * BRICK_COUNT) * stroke_history.count;
 
     var octant_center : vec3f = vec3f(0.0);
     var level_half_size : f32 = 0.5 * SCULPT_MAX_SIZE;
@@ -287,20 +287,20 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             subdivide = intersection_AABB_AABB(eval_aabb_min, eval_aabb_max, stroke_history.eval_aabb_min, stroke_history.eval_aabb_max);
             
             if (subdivide) {
-                // Stroke history culling
-                var curr_stroke_count : u32 = 0u;
-                for(var i : u32 = 0u; i < octree.data[parent_octree_index].stroke_count; i++) {
-                    let index : u32 = culling_get_stroke_index(stroke_culling[prev_culling_layer_index + i + 1u]);
-                    if (intersection_AABB_AABB(eval_aabb_min, 
+                    // Stroke history culling
+                    var curr_stroke_count : u32 = 0u;
+                    for(var i : u32 = 0u; i < octree.data[parent_octree_index].stroke_count; i++) {
+                        let index : u32 = culling_get_stroke_index(stroke_culling[prev_culling_layer_index + i]);
+                        if (intersection_AABB_AABB(eval_aabb_min, 
                                                eval_aabb_max, 
                                                stroke_history.strokes[index].aabb_min, 
                                                stroke_history.strokes[index].aabb_max)) {
-                        // Added to the current list
-                        stroke_culling[curr_culling_layer_index + curr_stroke_count + 1u] = culling_get_culling_data(index, 0u, 0u);
-                        curr_stroke_count = curr_stroke_count + 1u;
+                            // Added to the current list
+                            stroke_culling[curr_culling_layer_index + curr_stroke_count] = culling_get_culling_data(index, 0u, 0u);
+                            curr_stroke_count = curr_stroke_count + 1u;
+                        }
                     }
-                }
-                octree.data[octree_index].stroke_count = curr_stroke_count;
+                    octree.data[octree_index].stroke_count = curr_stroke_count;
 
                 // Subdivide
                 // Increase the number of children from the current level
@@ -317,20 +317,20 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             // in order to find the goops (where the current stroke is taking affect)
             var curr_stroke_count : u32 = 0u;
             for(var i : u32 = 0u; i < octree.data[parent_octree_index].stroke_count; i++) {
-                let index : u32 = culling_get_stroke_index(stroke_culling[prev_culling_layer_index + i + 1u]);
+                let index : u32 = culling_get_stroke_index(stroke_culling[prev_culling_layer_index + i]);
                 if (intersection_AABB_AABB(eval_aabb_min, 
-                                           eval_aabb_max, 
-                                           stroke_history.strokes[index].aabb_min, 
-                                           stroke_history.strokes[index].aabb_max)) {
+                                               eval_aabb_max, 
+                                               stroke_history.strokes[index].aabb_min, 
+                                               stroke_history.strokes[index].aabb_max)) {
                     // Added to the current list
-                    stroke_culling[curr_culling_layer_index + curr_stroke_count + 1u] = culling_get_culling_data(index, 0u, 0u);
+                    stroke_culling[curr_culling_layer_index + curr_stroke_count] = culling_get_culling_data(index, 0u, 0u);
                     curr_stroke_count++;
 
                     surface_interval = evaluate_stroke_interval(current_subdivision_interval, &(stroke_history.strokes[index]), &edit_list, surface_interval, octant_center, level_half_size);
                 }
             }
             octree.data[octree_index].stroke_count = curr_stroke_count;
-            octree.data[octree_index].culling_id = curr_culling_layer_index + 1u;
+            octree.data[octree_index].culling_id = curr_culling_layer_index;
 
             // Do not evaluate all the bricks, only the ones whose distance interval has changed
             let prev_interval = octree.data[octree_index].octant_center_distance;

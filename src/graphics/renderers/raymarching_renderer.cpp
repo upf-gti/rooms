@@ -759,7 +759,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_stroke_history.data), 0, &default_val, sizeof(uint32_t));
 
         // Culling list
-        uint32_t culling_size = sizeof(uint32_t) * (2u * max_brick_count * max_stroke_influence_count + 1u);
+        uint32_t culling_size = sizeof(uint32_t) * (2u * max_brick_count * max_stroke_influence_count);
         stroke_culling_data.data = webgpu_context->create_buffer(culling_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "stroke_culling_data");
         stroke_culling_data.binding = 9;
         stroke_culling_data.buffer_size = culling_size;
@@ -800,7 +800,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
 
     // Octree increment iteration pass
     {
-        std::vector<Uniform*> uniforms = { &octree_indirect_buffer_struct, &octree_uniform, &octree_brick_buffers, &stroke_culling_data };
+        std::vector<Uniform*> uniforms = { &octree_indirect_buffer_struct, &octree_uniform, &octree_brick_buffers };
 
         compute_octree_increment_level_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_increment_level_shader, 0);
     }

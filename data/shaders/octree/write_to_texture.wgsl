@@ -84,6 +84,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     let pos = octant_center + pixel_offset;
 
     // Evaluating the edit context
+    //let p = stroke_culling[0];
     for (var j : u32 = 0; j < culling_count; j++) {
         let index : u32 = culling_get_stroke_index(stroke_culling[j + curr_culling_layer_index]);
         curr_surface = evaluate_stroke(pos, &(stroke_history.strokes[index]), &edit_list, curr_surface, stroke_history.strokes[index].edit_list_index, stroke_history.strokes[index].edit_count);
@@ -96,7 +97,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
         atomicAdd(&used_pixels, 1);
     }
 
-    result_surface.material.albedo = vec3f(f32(culling_count)/ 15.0);
+    //result_surface.material.albedo = vec3f(f32(culling_count)/ 15.0);
 
     // Duplicate the texture Store, becuase then we have a branch depeding on an uniform!
     textureStore(write_sdf, texture_coordinates, vec4f(result_surface.distance));

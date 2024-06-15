@@ -3,7 +3,6 @@
 @group(0) @binding(2) var<storage, read_write> octree : Octree;
 @group(0) @binding(5) var<storage, read_write> brick_buffers: BrickBuffers_ReadOnly;
 @group(0) @binding(8) var<storage, read_write> indirect_buffers : IndirectBuffers_ReadOnly;
-@group(0) @binding(9) var<storage, read_write> stroke_culling : array<u32>;
 
 /**
     Este shader se llama despues de cada pasada de evaluator, y su fin es configurar el
@@ -44,6 +43,4 @@ fn compute(@builtin(global_invocation_id) id: vec3<u32>)
             indirect_buffers.preview_instance_count = brick_buffers.preview_instance_counter;
         }
     }
-
-    stroke_culling[0] = ((stroke_culling[0] + 1u) % 2);
 }
