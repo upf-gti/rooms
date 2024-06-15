@@ -19,9 +19,9 @@ enum InspectNodeFlags {
     NODE_ICON = 1 << 1,
     NODE_VISIBILITY = 1 << 2,
     NODE_EDIT = 1 << 3,
-    NODE_GLTF = NODE_NAME | NODE_VISIBILITY,
-    NODE_LIGHT = NODE_ICON | NODE_NAME | NODE_VISIBILITY | NODE_EDIT,
-    NODE_SCULPT = NODE_NAME | NODE_VISIBILITY | NODE_EDIT
+    NODE_STANDARD = NODE_NAME | NODE_VISIBILITY,
+    NODE_SCULPT = NODE_NAME | NODE_VISIBILITY | NODE_EDIT,
+    NODE_LIGHT = NODE_ICON | NODE_NAME | NODE_VISIBILITY | NODE_EDIT
 };
 
 class SceneEditor : public BaseEditor {
@@ -51,7 +51,7 @@ class SceneEditor : public BaseEditor {
     bool moving_node = false;
 
     void select_node(Node* node, bool place = true);
-    void inspect_node(Node* node, uint32_t flags = 0, const std::string& texture_path = "");
+    void inspect_node(Node* node, uint32_t flags = NODE_STANDARD, const std::string& texture_path = "");
     void clone_node();
 
     void create_light_node(uint8_t type);
@@ -65,6 +65,8 @@ class SceneEditor : public BaseEditor {
 
     bool inspector_dirty = true;
     void inspector_from_scene();
+
+    static uint64_t node_signal_uid;
 
     ui::Inspector* inspector = nullptr;
     Viewport3D* inspect_panel_3d = nullptr;

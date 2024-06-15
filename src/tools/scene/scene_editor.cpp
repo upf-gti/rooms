@@ -25,9 +25,10 @@
 #include "spdlog/spdlog.h"
 #include "imgui.h"
 
-MeshInstance3D* intersection_mesh = nullptr;
+// MeshInstance3D* intersection_mesh = nullptr;
+// uint32_t subdivisions = 16;
 
-uint32_t subdivisions = 16;
+uint64_t SceneEditor::node_signal_uid = 0;
 
 void SceneEditor::initialize()
 {
@@ -39,12 +40,13 @@ void SceneEditor::initialize()
 
     init_ui();
 
-    // debug
-
     SculptInstance* default_sculpt = new SculptInstance();
+    default_sculpt->set_name("default_sculpt");
     RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
     rooms_renderer->get_raymarching_renderer()->set_current_sculpt(default_sculpt);
+    main_scene->add_node(default_sculpt);
 
+    // debug
     /*intersection_mesh = new MeshInstance3D();
     intersection_mesh->add_surface(RendererStorage::get_surface("box"));
     intersection_mesh->scale(glm::vec3(0.01f));
@@ -76,11 +78,28 @@ void SceneEditor::update(float delta_time)
 
         if (Input::was_trigger_pressed(HAND_RIGHT)) {
             moving_node = false;
-
-            // Open inspector there!
-            glm::mat4x4 pose = glm::translate(glm::mat4x4(1.0f), static_cast<Node3D*>(selected_node)->get_translation());
-            inspect_panel_3d->set_model(pose);
         }
+    }
+
+    if (Input::was_button_pressed(XR_BUTTON_B)) {
+
+        // Open inspector
+        inspector->set_visibility(true);
+
+        glm::mat4x4 m(1.0f);
+        glm::vec3 eye = renderer->get_camera_eye();
+        glm::vec3 new_pos = eye + renderer->get_camera_front() * 0.6f;
+
+        m = glm::translate(m, new_pos);
+        m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
+        m = glm::rotate(m, glm::radians(180.f), { 1.0f, 0.0f, 0.0f });
+
+        inspect_panel_3d->set_model(m);
+    }
+
+    if (Input::was_key_pressed(GLFW_KEY_T)) {
+        // Open inspector
+        inspector->set_visibility(true);
     }
 
     update_gizmo(delta_time);
@@ -188,16 +207,21 @@ void SceneEditor::init_ui()
     ui::HContainer2D* second_row = new ui::HContainer2D("row_1", { 0.0f, 0.0f });
     vertical_container->add_child(second_row);
 
+    // ** Undo/Redo scene **
+    {
+        first_row->add_child(new ui::TextureButton2D("scene_undo", "data/textures/undo.png"));
+        first_row->add_child(new ui::TextureButton2D("scene_redo", "data/textures/redo.png"));
+    }
+
     // ** Clone node **
-    // Note: This should be disabled if no node is selected
-    first_row->add_child(new ui::TextureButton2D("clone", "data/textures/clone.png", 0/*ui::DISABLED*/));
+    // first_row->add_child(new ui::TextureButton2D("clone", "data/textures/clone.png", ui::DISABLED));
 
     // ** Posible scene nodes **
     {
         ui::ButtonSubmenu2D* add_node_submenu = new ui::ButtonSubmenu2D("add_node", "data/textures/add.png");
 
         add_node_submenu->add_child(new ui::TextureButton2D("gltf", "data/textures/monkey.png"));
-        add_node_submenu->add_child(new ui::TextureButton2D("sculpt", "data/textures/s.png"));
+        add_node_submenu->add_child(new ui::TextureButton2D("sculpt", "data/textures/sculpt.png"));
 
         // Lights
         {
@@ -209,18 +233,6 @@ void SceneEditor::init_ui()
         }
 
         first_row->add_child(add_node_submenu);
-    }
-
-    // ** Display Settings **
-    {
-        RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
-        ui::ItemGroup2D* g_display = new ui::ItemGroup2D("g_display");
-        ui::ButtonSubmenu2D* display_submenu = new ui::ButtonSubmenu2D("display", "data/textures/display_settings.png");
-        g_display->add_child(new ui::TextureButton2D("use_environment", "data/textures/skybox.png", ui::ALLOW_TOGGLE | ui::SELECTED));
-        g_display->add_child(new ui::Slider2D("IBL_intensity", "data/textures/ibl_intensity.png", rooms_renderer->get_ibl_intensity(), ui::SliderMode::VERTICAL, ui::USER_RANGE/*ui::CURVE_INV_POW, 21.f, -6.0f*/, 0.0f, 4.0f, 2));
-        display_submenu->add_child(g_display);
-        display_submenu->add_child(new ui::Slider2D("exposure", "data/textures/exposure.png", rooms_renderer->get_exposure(), ui::SliderMode::VERTICAL, ui::USER_RANGE/*ui::CURVE_INV_POW, 21.f, -6.0f*/, 0.0f, 4.0f, 2));
-        first_row->add_child(display_submenu);
     }
 
     // ** Gizmo modes **
@@ -238,49 +250,29 @@ void SceneEditor::init_ui()
         second_row->add_child(new ui::TextureButton2D("export", "data/textures/export.png"));
     }
 
-    // ** Undo/Redo scene **
+    // ** Display Settings **
     {
-        second_row->add_child(new ui::TextureButton2D("scene_undo", "data/textures/undo.png"));
-        second_row->add_child(new ui::TextureButton2D("scene_redo", "data/textures/redo.png"));
+        RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
+        ui::ItemGroup2D* g_display = new ui::ItemGroup2D("g_display");
+        ui::ButtonSubmenu2D* display_submenu = new ui::ButtonSubmenu2D("display", "data/textures/display_settings.png");
+        g_display->add_child(new ui::TextureButton2D("use_environment", "data/textures/skybox.png", ui::ALLOW_TOGGLE | ui::SELECTED));
+        g_display->add_child(new ui::Slider2D("IBL_intensity", "data/textures/ibl_intensity.png", rooms_renderer->get_ibl_intensity(), ui::SliderMode::VERTICAL, ui::USER_RANGE/*ui::CURVE_INV_POW, 21.f, -6.0f*/, 0.0f, 4.0f, 2));
+        display_submenu->add_child(g_display);
+        display_submenu->add_child(new ui::Slider2D("exposure", "data/textures/exposure.png", rooms_renderer->get_exposure(), ui::SliderMode::VERTICAL, ui::USER_RANGE/*ui::CURVE_INV_POW, 21.f, -6.0f*/, 0.0f, 4.0f, 2));
+        second_row->add_child(display_submenu);
     }
 
     // Create inspection panel (Nodes, properties, etc)
     {
         inspector = new ui::Inspector({ .name = "inspector_root", .position = { 32.0f, 32.f } });
-
-        /*
-            Debug panel example
-        */
-
-        /*std::string button_node_names[] = { "pedrito", "cristiano", "mbape", "madero", "pintamonas", "ps5" };
-
-        for (const auto& name : button_node_names) {
-            inspector->same_line();
-            inspector->add_button(name + "@visibility", "data/textures/visibility.png", ui::ALLOW_TOGGLE);
-            inspector->add_button(name + "@edit", "data/textures/tool_wrench.png");
-            inspector->add_label(name);
-            inspector->end_line();
-        }
-
-        std::string slider_node_names[] = { "carajaula", "luis", "picapiedra", "cascarrabias", "hola" };
-
-        for (const auto& name : slider_node_names) {
-            inspector->same_line();
-            inspector->add_slider(name + "@intensity", name.size() / 10.f);
-            inspector->add_label(name);
-            inspector->end_line();
-        }*/
+        inspector->set_visibility(false);
     }
 
     if (renderer->get_openxr_available())
     {
-        // Main ui
+        // create 3d viewports
         main_panel_3d = new Viewport3D(main_panel_2d);
-        main_panel_3d->set_active(true);
-
-        // Inspector ui
         inspect_panel_3d = new Viewport3D(inspector);
-        inspect_panel_3d->set_active(false);
 
         // Load controller UI labels
 
@@ -311,7 +303,7 @@ void SceneEditor::init_ui()
 
             // right_hand_container->add_child(new ui::ImageLabel2D("Main size", "data/textures/buttons/r_thumbstick.png", LAYOUT_ANY_NO_SHIFT_R));
             // right_hand_container->add_child(new ui::ImageLabel2D("Sec size", "data/textures/buttons/r_grip_plus_r_thumbstick.png", LAYOUT_ANY_SHIFT_R, double_size));
-            // right_hand_container->add_child(new ui::ImageLabel2D("Add/Substract", "data/textures/buttons/b.png", LAYOUT_SCULPT_NO_SHIFT_R));
+            right_hand_container->add_child(new ui::ImageLabel2D("Scene Panel", "data/textures/buttons/b.png", LAYOUT_SCULPT_NO_SHIFT_R));
             // right_hand_container->add_child(new ui::ImageLabel2D("Sculpt/Paint", "data/textures/buttons/r_grip_plus_b.png", LAYOUT_ANY_SHIFT_R, double_size));
             right_hand_container->add_child(new ui::ImageLabel2D("Select Node", "data/textures/buttons/a.png", LAYOUT_ALL));
             // right_hand_container->add_child(new ui::ImageLabel2D("Pick Material", "data/textures/buttons/r_grip_plus_a.png", LAYOUT_ANY_SHIFT_R, double_size));
@@ -385,6 +377,8 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
 {
     inspector->same_line();
 
+    // add unique identifier for signals
+    uint64_t signal_id = node_signal_uid++;
     std::string node_name = node->get_name();
 
     if (flags & NODE_ICON) {
@@ -392,7 +386,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
     }
 
     if (flags & NODE_VISIBILITY) {
-        std::string signal = node_name + "_visibility";
+        std::string signal = node_name + std::to_string(signal_id++) + "_visibility";
         inspector->add_button(signal, "data/textures/visibility.png", ui::ALLOW_TOGGLE);
 
         Node::bind(signal, [n = node](const std::string& sg, void* data) {
@@ -402,29 +396,33 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
     }
 
     if (flags & NODE_EDIT) {
-        std::string signal = node_name + "_edit";
+        std::string signal = node_name + std::to_string(signal_id++) + "_edit";
         inspector->add_button(signal, "data/textures/tool_wrench.png");
 
         Node::bind(signal, [n = node, flags = flags](const std::string& sg, void* data) {
 
             // Set as current sculpt and go to sculpt editor
-            if (flags & NODE_SCULPT) {
+            if (flags == NODE_SCULPT) {
                 RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
                 rooms_renderer->get_raymarching_renderer()->set_current_sculpt(static_cast<SculptInstance*>(n));
                 RoomsEngine::switch_editor(SCULPT_EDITOR);
             }
-            else if (flags & NODE_GLTF) {
+            else if (flags == NODE_STANDARD) {
                 // ...
             }
         });
     }
 
     if (flags & NODE_NAME) {
-        std::string signal = node_name + "_label";
+        std::string signal = node_name + std::to_string(signal_id++) + "_label";
         inspector->add_label(signal, node_name);
 
         // Request keyboard and use the result to set the new node name. Not the nicest code, but anyway..
         {
+            Node::bind(signal, [&, n = node](const std::string& sg, void* data) {
+                select_node(n, false);
+            });
+
             auto callback = [&, n = node](const std::string& output) {
                 n->set_name(output);
                 inspector_dirty = true;
@@ -434,6 +432,10 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
                 ui::Keyboard::request(fn, str);
             });
         }
+    }
+
+    if (renderer->get_openxr_available()) {
+        inspector->remove_flag(MATERIAL_2D);
     }
 
     inspector->end_line();
@@ -566,6 +568,11 @@ void SceneEditor::inspector_from_scene()
 
     for (auto node : nodes) {
 
+        // Don't inspect specific stuff..
+        if (node->get_name() == "Grid") {
+            continue;
+        }
+
         if (dynamic_cast<Light3D*>(node)) {
             inspect_node(node, NODE_LIGHT, "data/textures/light.png");
         }
@@ -573,9 +580,37 @@ void SceneEditor::inspector_from_scene()
             inspect_node(node, NODE_SCULPT);
         }
         else {
-            inspect_node(node, NODE_GLTF);
+            inspect_node(node);
         }
     }
 
+    Node::emit_signal(inspector->get_name() + "@children_changed", (void*)nullptr);
+
+    /*
+        Debug
+    */
+
+    /*std::string button_node_names[] = { "cristiano", "mbape", "madero", "pintamonas" };
+
+    for (const auto& name : button_node_names) {
+        inspector->same_line();
+        inspector->add_button(name + "_visibility", "data/textures/visibility.png", ui::ALLOW_TOGGLE);
+        inspector->add_button(name + "_edit", "data/textures/tool_wrench.png");
+        inspector->add_label(name, name);
+        inspector->end_line();
+    }
+
+    std::string slider_node_names[] = { "carajaula", "picapiedra", "cascarrabias" };
+
+    for (const auto& name : slider_node_names) {
+        inspector->same_line();
+        inspector->add_slider(name + "_intensity", name.size() / 10.f);
+        inspector->add_label(name, name);
+        inspector->end_line();
+    }
+
+    inspector->add_color_picker("colorin", Color(1.0, 0.0, 0.0, 1.0f));*/
+
     inspector_dirty = false;
+
 }

@@ -24,9 +24,10 @@ namespace ui {
 
         glm::vec2 panel_size = {};
         Color panel_color = { 0.0f, 0.0f, 0.0f, 0.8f };
+
+        float body_height = 0.0f;
         float padding = 0.0f;
         float scroll_top = 0.0f;
-        float last_scroll_top = 0.0f;
 
         ui::XRPanel* root = nullptr;
         VContainer2D* body = nullptr;
@@ -51,6 +52,7 @@ namespace ui {
         void add_icon(const std::string& texture_path);
         void add_button(const std::string& name, const std::string& texture_path, uint32_t flags = 0);
         void add_slider(const std::string& name, float value, float min = 0.0f, float max = 1.0f, int precision = 1);
+        void add_color_picker(const std::string& name, const Color& c);
 
         void same_line();
         void end_line();

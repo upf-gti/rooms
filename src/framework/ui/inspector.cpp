@@ -15,24 +15,48 @@ namespace ui {
         float inner_width = panel_size.x - padding * 2.0f;
         float inner_height = panel_size.y - padding * 2.0f;
 
-        root = new ui::XRPanel(name + "@background", panel_color, { 0.0f, 0.f }, panel_size);
+        root = new ui::XRPanel(name + "_background", panel_color, { 0.0f, 0.f }, panel_size);
         add_child(root);
 
-        ui::VContainer2D* column = new ui::VContainer2D(name + "@column", glm::vec2(padding), colors::GREEN);
+        ui::VContainer2D* column = new ui::VContainer2D(name + "_column", glm::vec2(padding), colors::GREEN);
         column->set_fixed_size({ inner_width, inner_height });
         root->add_child(column);
 
         // Title
         float title_text_scale = 22.0f;
         float title_y_corrected = desc.title_height * 0.5f - title_text_scale * 0.5f;
-        ui::Container2D* title_container = new ui::Container2D(name + "@title", { 0.0f, 0.0f }, { inner_width - padding * 0.4f, desc.title_height }, colors::BLUE);
+        ui::Container2D* title_container = new ui::Container2D(name + "_title", { 0.0f, 0.0f }, { inner_width - padding * 0.4f, desc.title_height }, colors::BLUE);
         title_container->add_child(new ui::Text2D("Inspector", { 0.0f, title_y_corrected }, title_text_scale, ui::TEXT_CENTERED | ui::SKIP_TEXT_SHADOW));
+        title_container->add_child(new ui::TextureButton2D("close_button", "data/textures/buttons/x.png", ui::SKIP_NAME, { inner_width - padding * 4.0f, title_y_corrected }, glm::vec2(32.0f)));
         column->add_child(title_container);
 
+        Node::bind("close_button", [&](const std::string& sg, void* data) {
+            set_visibility(false);
+        });
+
         // Body row
-        body = new ui::VContainer2D(name + "@body", { 0.0f, 0.0f }, colors::RED);
+        body = new ui::VContainer2D(name + "_body", { 0.0f, 0.0f }, colors::RED);
         body->set_fixed_size({ inner_width, panel_size.y - desc.title_height - padding * 5.0f });
         column->add_child(body);
+
+        // Listen for body children changes to update size
+        Node::bind(name + "@children_changed", [&, b = body](const std::string& sg, void* data) {
+
+            body_height = 0.0f;
+
+            for (auto child : b->get_children()) {
+                Node2D* row = static_cast<Node2D*>(child);
+                body_height += row->get_size().y + padding * 0.5f;
+            }
+
+            // Scroll to max_scroll
+            last_grab_position = { 0.0f, 0.0f };
+            scroll_top = -glm::max(body_height - body->get_size().y, 0.0f);
+            for (auto child : b->get_children()) {
+                Node2D* row = static_cast<Node2D*>(child);
+                row->translate({ 0.0f, scroll_top });
+            }
+        });
     }
 
     void Inspector::update(float delta_time)
@@ -57,11 +81,8 @@ namespace ui {
 
             last_grab_position = data.local_position;
 
-            float real_body_size = body->get_children().size() * 38.0f + 24.f;
-            float max_scroll = glm::max(real_body_size - body->get_size().y, 0.0f);
+            float max_scroll = glm::max(body_height - body->get_size().y, 0.0f);
             float new_scroll = scroll_top + scroll_dt;
-
-            // spdlog::info("max_scroll is {}", max_scroll);
 
             if (new_scroll > 0.0f) {
                 scroll_dt = glm::abs(scroll_top);
@@ -71,16 +92,12 @@ namespace ui {
             }
 
             scroll_top += scroll_dt;
-            //scroll_top = glm::min(glm::max(scroll_top, -max_scroll), 0.0f);
 
             // do the scroll..
-            for (auto r : body->get_children())
-            {
+            for (auto r : body->get_children()) {
                 Node2D* row = static_cast<Node2D*>(r);
                 row->translate({ 0.0f, scroll_dt });
             }
-
-            //last_scroll_top = scroll_top;
         }
 
         Node2D::update(delta_time);
@@ -88,8 +105,6 @@ namespace ui {
 
     void Inspector::clear()
     {
-        scroll_top = 0.0f;
-
         std::vector<Node*> to_delete;
 
         for (auto node : body->get_children()) {
@@ -153,6 +168,22 @@ namespace ui {
 
         auto w = new ui::Slider2D(name, "", value, { 0.0f, 0.0f }, glm::vec2(panel_size.x / 4.0f, 24.f), ui::SliderMode::HORIZONTAL, ui::SKIP_NAME | ui::SKIP_VALUE | ui::SCROLLABLE, min, max, precision);
         flex_container->add_child(w);
+        items[name] = w;
+    }
+
+    void Inspector::add_color_picker(const std::string& name, const Color& c)
+    {
+        ui::HContainer2D* flex_container = current_row;
+
+        if (!flex_container) {
+            flex_container = create_row();
+        }
+
+        float picker_size = PICKER_SIZE * 0.75f;
+        auto w = new ui::ColorPicker2D(name, { 0.0f, 0.0f }, glm::vec2(picker_size), c, ui::SCROLLABLE);
+        flex_container->add_child(w);
+        // Translate after being added to the container
+        w->translate({ (body->get_size().x - padding * 2.0f) * 0.5f - picker_size * 0.5f, 0.0f });
         items[name] = w;
     }
 

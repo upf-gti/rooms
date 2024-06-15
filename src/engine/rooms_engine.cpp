@@ -70,6 +70,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     // Grid
     {
         MeshInstance3D* grid_node = new MeshInstance3D();
+        grid_node->set_name("Grid");
         grid_node->add_surface(RendererStorage::get_surface("quad"));
         grid_node->set_translation(glm::vec3(0.0f));
         grid_node->rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
@@ -154,6 +155,7 @@ void RoomsEngine::update(float delta_time)
 void RoomsEngine::render()
 {
     cursor.render();
+
     ui::Keyboard::render();
 
     if (use_environment_map) {

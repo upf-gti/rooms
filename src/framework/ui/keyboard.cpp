@@ -2,14 +2,18 @@
 
 #include "framework/nodes/ui.h"
 #include "framework/nodes/viewport_3d.h"
+#include "framework/input.h"
 
-#include "graphics/renderer.h"
+#include "graphics/renderers/rooms_renderer.h"
+
+#include "glm/gtx/quaternion.hpp"
 
 namespace ui {
 
     Node2D* Keyboard::keyboard_2d = nullptr;
     Viewport3D* Keyboard::xr_keyboard = nullptr;
     XrKeyboardState Keyboard::state;
+    glm::vec2 Keyboard::keyboard_size = {};
     bool Keyboard::active = false;
 
     void XrKeyboardState::set_input(const std::string& str)
@@ -32,7 +36,8 @@ namespace ui {
 
     void XrKeyboardState::push_char(char c)
     {
-        input += c;
+        bool use_caps = caps || Input::is_grab_pressed(HAND_RIGHT);
+        input += (use_caps ? std::toupper(c) : c);
         text->set_text(input);
     };
 
@@ -98,7 +103,7 @@ namespace ui {
         float full_size = button_size + button_margin;
 
         glm::vec2 start_pos = { full_size * 0.8f, full_size * 0.75f };
-        glm::vec2 panel_size = glm::vec2(button_size * (max_col_count + 3u), button_size * (max_row_count + 2u) + input_height);
+        keyboard_size = glm::vec2(button_size * (max_col_count + 3u), button_size * (max_row_count + 2u) + input_height);
         Color panel_color = Color(0.0f, 0.0f, 0.0f, 0.8f);
 
         std::vector<XrKey> keys;
@@ -106,15 +111,15 @@ namespace ui {
 
         keyboard_2d = new Node2D(name, { 0.0f, 0.0f }, { 1.0f, 1.0f });
 
-        ui::XRPanel* root = new ui::XRPanel(name + "@letters", panel_color, { 0.0f, 0.f }, panel_size);
+        ui::XRPanel* root = new ui::XRPanel(name + "_letters", panel_color, { 0.0f, 0.f }, keyboard_size);
         keyboard_2d->add_child(root);
 
-        ui::XRPanel* root_symbols = new ui::XRPanel(name + "@symbols", panel_color, { 0.0f, 0.f }, panel_size);
+        ui::XRPanel* root_symbols = new ui::XRPanel(name + "_symbols", panel_color, { 0.0f, 0.f }, keyboard_size);
         root_symbols->set_visibility(false);
         keyboard_2d->add_child(root_symbols);
 
         // Input text
-        ui::Container2D* title_container = new ui::Container2D(name + "@title", { 0.0f, 0.0f }, { 512.0f, 48.f }, colors::BLUE);
+        ui::Container2D* title_container = new ui::Container2D(name + "_title", { 0.0f, 0.0f }, { 512.0f, 48.f }, colors::BLUE);
         keyboard_2d->add_child(title_container);
 
         ui::Text2D* text = new ui::Text2D(":", { start_pos.x + 12.0f, start_pos.y + 8.0f }, 18.0f, ui::SKIP_TEXT_SHADOW);
@@ -145,8 +150,7 @@ namespace ui {
                 rl->set_visibility(!state.symbols);
             }
             else {
-                char c = sg[0];
-                state.push_char(state.caps ? std::toupper(c) : c);
+                state.push_char(sg[0]);
                 state.disable_caps();
             }
         };
@@ -157,12 +161,19 @@ namespace ui {
             }
         };
 
+        auto process_long_click = [](const std::string& sg, void* data) {
+            if (sg == "Backspace@long_click") {
+                state.clear_input();
+            }
+        };
+
         for (const XrKey& key : keys) {
             root->add_child(new ui::TextureButton2D(key.label, key.texture_path, key.flags | ui::SKIP_NAME, key.position, key.size));
 
             if (key.bind_event) {
                 Node::bind(key.label, process_click);
                 Node::bind(key.label + "@dbl_click", process_dbl_click);
+                Node::bind(key.label + "@long_click", process_long_click);
             }
         }
 
@@ -182,7 +193,13 @@ namespace ui {
         auto webgpu_context = Renderer::instance->get_webgpu_context();
         glm::vec2 screen_size = glm::vec2(static_cast<float>(webgpu_context->render_width), static_cast<float>(webgpu_context->render_height));
 
-        keyboard_2d->translate({ screen_size.x * 0.5f - panel_size.x * 0.5f, 16.0f});
+        keyboard_2d->translate({ screen_size.x * 0.5f - keyboard_size.x * 0.5f, 16.0f});
+
+        // Generate 3d version of the keyboard
+        if(Renderer::instance->get_openxr_available()) {
+            xr_keyboard = new Viewport3D(keyboard_2d);
+            xr_keyboard->set_active(true);
+        }
     }
 
     void Keyboard::render()
@@ -205,16 +222,23 @@ namespace ui {
             return;
         }
 
-        auto renderer = Renderer::instance;
+        auto renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
 
         if (renderer->get_openxr_available()) {
             glm::mat4x4 m(1.0f);
-            /*glm::vec3 eye = renderer->get_camera_eye();
-            glm::vec3 new_pos = eye + renderer->get_camera_front() * 1.5f;
+            glm::vec3 eye = renderer->get_camera_eye();
+            glm::vec3 new_pos = eye + renderer->get_camera_front() * 0.5f;
 
+            // Set current pos
             m = glm::translate(m, new_pos);
+            // Rotate to face camera
             m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
-            m = glm::rotate(m, glm::radians(180.f), { 1.0f, 0.0f, 0.0f });*/
+            m = glm::rotate(m, glm::radians(180.f), { 1.0f, 0.0f, 0.0f });
+            // Center panel
+            glm::vec2 offset = -(keyboard_size * 0.5f * keyboard_2d->get_scale());
+            m = glm::translate(m, glm::vec3(offset.x, -offset.y, 0.0f));
+            // Rotate to have a good perspective
+            //m = glm::rotate(m, glm::radians(35.f), { 1.0f, 0.0f, 0.0f });
 
             xr_keyboard->set_model(m);
             xr_keyboard->update(delta_time);
@@ -260,6 +284,7 @@ namespace ui {
         keys.push_back({
             .label = "Backspace",
             .position = glm::vec2(start_x + first_row.size() * spacing.x, start_y),
+            .flags = ui::LONG_CLICK,
             .texture_path = "data/textures/buttons/backspace_key.png"
         });
 

@@ -46,6 +46,8 @@ namespace ui {
 
     class Keyboard {
 
+        static glm::vec2 keyboard_size;
+
         static Node2D* keyboard_2d;
         static Viewport3D* xr_keyboard;
         static bool active;

@@ -17,7 +17,7 @@ namespace ui {
     {
         is_xr = Renderer::instance->get_openxr_available();
 
-        size = is_xr ? glm::vec2(44.f) : glm::vec2(32.f);
+        size = is_xr ? glm::vec2(42.f) : glm::vec2(32.f);
 
         cursors[MOUSE_CURSOR_DEFAULT] = new Image2D("default_cursor", "data/textures/cursors/pointer_d.png", size, CURSOR);
         cursors[MOUSE_CURSOR_CIRCLE] = new Image2D("circle_cursor", "data/textures/cursors/dot_large.png", size, CURSOR);
@@ -99,7 +99,7 @@ namespace ui {
             glm::mat4x4 m(1.0f);
             m = glm::translate(m, IO::get_xr_world_position());
             m = m * glm::toMat4(glm::quat_cast(hovered->get_global_viewport_model()));
-            m = glm::translate(m, glm::vec3(-size * 0.5f * hovered->get_scale(), 0.01f));
+            m = glm::translate(m, glm::vec3(-size * 0.5f * hovered->get_scale(), 0.0f));
 
             cursor_3d->set_model(m);
 

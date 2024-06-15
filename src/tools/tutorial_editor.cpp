@@ -76,17 +76,17 @@ ui::XRPanel* TutorialEditor::generate_panel(const std::string& name, const std::
     xr_panel_2d->add_child(new_panel);
 
     if (prev != TUTORIAL_NONE) {
-        new_panel->add_button(name + "@prev", "data/textures/tutorial/back.png", { size.x * 0.25f, mini_button_size.y }, mini_button_size);
-        Node::bind(name + "@prev", [&, c = new_panel, p = prev](const std::string& signal, void* button) {
+        new_panel->add_button(name + "_prev", "data/textures/tutorial/back.png", { size.x * 0.25f, mini_button_size.y }, mini_button_size);
+        Node::bind(name + "_prev", [&, c = new_panel, p = prev](const std::string& signal, void* button) {
             c->set_visibility(false);
             panels[p]->set_visibility(true);
         });
     }
 
     // There's always next button.. next panel or start creating!
-    new_panel->add_button(name + "@next", "data/textures/tutorial/next.png", { size.x * 0.75f, mini_button_size.y }, mini_button_size);
+    new_panel->add_button(name + "_next", "data/textures/tutorial/next.png", { size.x * 0.75f, mini_button_size.y }, mini_button_size);
 
-    Node::bind(name + "@next", [&, c = new_panel, n = next](const std::string& signal, void* button) {
+    Node::bind(name + "_next", [&, c = new_panel, n = next](const std::string& signal, void* button) {
         c->set_visibility(false);
         if (n != TUTORIAL_NONE) {
             panels[n]->set_visibility(true);
@@ -112,7 +112,7 @@ void TutorialEditor::update(float delta_time)
 
         glm::mat4x4 m(1.0f);
         glm::vec3 eye = renderer->get_camera_eye();
-        glm::vec3 new_pos = eye + renderer->get_camera_front() * 1.5f;
+        glm::vec3 new_pos = eye + renderer->get_camera_front() * 1.25f;
 
         m = glm::translate(m, new_pos);
         m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
