@@ -46,6 +46,12 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
         controller_mesh_right = static_cast<MeshInstance3D*>(entities[1]);
     }
 
+    // Tutorial
+    {
+        tutorial_editor = new TutorialEditor();
+        tutorial_editor->initialize();
+    }
+
     // Scenes
     {
         scene_editor = new SceneEditor();
@@ -58,14 +64,8 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
         sculpt_editor->initialize();
     }
 
-    // Tutorial
-    {
-        tutorial_editor = new TutorialEditor();
-        tutorial_editor->initialize();
-    }
-
     // Set default editor..
-    current_editor = scene_editor;
+    current_editor = sculpt_editor;
 
     // Grid
     {
