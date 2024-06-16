@@ -126,7 +126,7 @@ namespace ui {
             flex_container = create_row();
         }
 
-        auto w = new ui::Text2D(label, 16.f, ui::SCROLLABLE | ui::TEXT_EVENTS | ui::DBL_CLICK);
+        auto w = new ui::Text2D(label, 16.f, ui::SCROLLABLE | ui::TEXT_EVENTS | ui::DBL_CLICK | ui::LONG_CLICK);
         w->set_signal(name);
         flex_container->add_child(w);
         items[name] = w;

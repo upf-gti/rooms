@@ -83,6 +83,9 @@ void SceneEditor::update(float delta_time)
 
     if (Input::was_button_pressed(XR_BUTTON_B)) {
 
+        // Recreate scene panel
+        inspector_from_scene();
+
         // Open inspector
         inspector->set_visibility(true);
 
@@ -98,6 +101,9 @@ void SceneEditor::update(float delta_time)
     }
 
     if (Input::was_key_pressed(GLFW_KEY_T)) {
+        // Recreate scene panel
+        inspector_from_scene();
+
         // Open inspector
         inspector->set_visibility(true);
     }
@@ -371,74 +377,10 @@ void SceneEditor::select_node(Node* node, bool place)
 
     // To allow the user to move the node at the beginning
     moving_node = place && is_gizmo_usable() && renderer->get_openxr_available();
-}
 
-void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& texture_path)
-{
-    inspector->same_line();
-
-    // add unique identifier for signals
-    uint64_t signal_id = node_signal_uid++;
-    std::string node_name = node->get_name();
-
-    if (flags & NODE_ICON) {
-        inspector->add_icon(texture_path);
+    if (!place && dynamic_cast<Light3D*>(node)) {
+        inspect_light();
     }
-
-    if (flags & NODE_VISIBILITY) {
-        std::string signal = node_name + std::to_string(signal_id++) + "_visibility";
-        inspector->add_button(signal, "data/textures/visibility.png", ui::ALLOW_TOGGLE);
-
-        Node::bind(signal, [n = node](const std::string& sg, void* data) {
-            // Implement visibility for Node3D
-            // ...
-        });
-    }
-
-    if (flags & NODE_EDIT) {
-        std::string signal = node_name + std::to_string(signal_id++) + "_edit";
-        inspector->add_button(signal, "data/textures/tool_wrench.png");
-
-        Node::bind(signal, [n = node, flags = flags](const std::string& sg, void* data) {
-
-            // Set as current sculpt and go to sculpt editor
-            if (flags == NODE_SCULPT) {
-                RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
-                rooms_renderer->get_raymarching_renderer()->set_current_sculpt(static_cast<SculptInstance*>(n));
-                RoomsEngine::switch_editor(SCULPT_EDITOR);
-            }
-            else if (flags == NODE_STANDARD) {
-                // ...
-            }
-        });
-    }
-
-    if (flags & NODE_NAME) {
-        std::string signal = node_name + std::to_string(signal_id++) + "_label";
-        inspector->add_label(signal, node_name);
-
-        // Request keyboard and use the result to set the new node name. Not the nicest code, but anyway..
-        {
-            Node::bind(signal, [&, n = node](const std::string& sg, void* data) {
-                select_node(n, false);
-            });
-
-            auto callback = [&, n = node](const std::string& output) {
-                n->set_name(output);
-                inspector_dirty = true;
-            };
-
-            Node::bind(signal + "@dbl_click", [fn = callback, str = node_name](const std::string& sg, void* data) {
-                ui::Keyboard::request(fn, str);
-            });
-        }
-    }
-
-    if (renderer->get_openxr_available()) {
-        inspector->remove_flag(MATERIAL_2D);
-    }
-
-    inspector->end_line();
 }
 
 void SceneEditor::clone_node()
@@ -574,7 +516,7 @@ void SceneEditor::inspector_from_scene()
         }
 
         if (dynamic_cast<Light3D*>(node)) {
-            inspect_node(node, NODE_LIGHT, "data/textures/light.png");
+            inspect_node(node, NODE_LIGHT);
         }
         else if (dynamic_cast<SculptInstance*>(node)) {
             inspect_node(node, NODE_SCULPT);
@@ -586,31 +528,132 @@ void SceneEditor::inspector_from_scene()
 
     Node::emit_signal(inspector->get_name() + "@children_changed", (void*)nullptr);
 
-    /*
-        Debug
-    */
-
-    /*std::string button_node_names[] = { "cristiano", "mbape", "madero", "pintamonas" };
-
-    for (const auto& name : button_node_names) {
-        inspector->same_line();
-        inspector->add_button(name + "_visibility", "data/textures/visibility.png", ui::ALLOW_TOGGLE);
-        inspector->add_button(name + "_edit", "data/textures/tool_wrench.png");
-        inspector->add_label(name, name);
-        inspector->end_line();
+    // Enable xr for the buttons that need it..
+    if (renderer->get_openxr_available()) {
+        inspector->remove_flag(MATERIAL_2D);
     }
-
-    std::string slider_node_names[] = { "carajaula", "picapiedra", "cascarrabias" };
-
-    for (const auto& name : slider_node_names) {
-        inspector->same_line();
-        inspector->add_slider(name + "_intensity", name.size() / 10.f);
-        inspector->add_label(name, name);
-        inspector->end_line();
-    }
-
-    inspector->add_color_picker("colorin", Color(1.0, 0.0, 0.0, 1.0f));*/
 
     inspector_dirty = false;
+}
 
+void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& texture_path)
+{
+    inspector->same_line();
+
+    // add unique identifier for signals
+    uint64_t signal_id = node_signal_uid++;
+    std::string node_name = node->get_name();
+
+    if ((flags & NODE_ICON) && texture_path.size()) {
+        inspector->add_icon(texture_path);
+    }
+
+    if (flags & NODE_VISIBILITY) {
+        std::string signal = node_name + std::to_string(signal_id++) + "_visibility";
+        inspector->add_button(signal, "data/textures/visibility.png", ui::ALLOW_TOGGLE);
+
+        Node::bind(signal, [n = node](const std::string& sg, void* data) {
+            // Implement visibility for Node3D
+            // ...
+        });
+    }
+
+    if (flags & NODE_EDIT) {
+        std::string signal = node_name + std::to_string(signal_id++) + "_edit";
+        inspector->add_button(signal, "data/textures/tool_wrench.png");
+
+        Node::bind(signal, [&, n = node, flags = flags](const std::string& sg, void* data) {
+
+            select_node(n, false);
+
+            // Set as current sculpt and go to sculpt editor
+            if (dynamic_cast<SculptInstance*>(n)) {
+                RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
+                rooms_renderer->get_raymarching_renderer()->set_current_sculpt(static_cast<SculptInstance*>(n));
+                RoomsEngine::switch_editor(SCULPT_EDITOR);
+            }
+            else {
+                // ...
+            }
+        });
+    }
+
+    if (flags & NODE_NAME) {
+        std::string signal = node_name + std::to_string(signal_id++) + "_label";
+        inspector->add_label(signal, node_name);
+
+        // Request keyboard and use the result to set the new node name. Not the nicest code, but anyway..
+        {
+            Node::bind(signal, [&, n = node](const std::string& sg, void* data) {
+                select_node(n, false);
+            });
+
+            auto callback = [&, n = node](const std::string& output) {
+                n->set_name(output);
+                inspector_dirty = true;
+            };
+
+            Node::bind(signal + "@long_click", [fn = callback, str = node_name](const std::string& sg, void* data) {
+                ui::Keyboard::request(fn, str);
+            });
+        }
+    }
+
+    inspector->end_line();
+}
+
+void SceneEditor::inspect_light()
+{
+    inspector->clear();
+
+    Light3D* light = static_cast<Light3D*>(selected_node);
+
+    // add unique identifier for signals
+    uint64_t signal_id = node_signal_uid++;
+    std::string node_name = selected_node->get_name();
+
+    inspector->same_line();
+    inspector->add_icon("data/textures/light.png");
+    inspector->add_label("empty", node_name);
+    inspector->end_line();
+
+    // Color
+    {
+        std::string signal = node_name + std::to_string(signal_id++) + "_picker";
+        inspector->add_color_picker(signal, Color(light->get_color(), 1.0f));
+        Node::bind(signal, [l = light](const std::string& sg, const Color& color) {
+            l->set_color(color);
+        });
+    }
+
+    // Intensity
+    {
+        inspector->same_line();
+        std::string signal = node_name + std::to_string(signal_id++) + "_intensity_slider";
+        inspector->add_slider(signal, light->get_intensity(), 0.0f, 10.0f, 2);
+        inspector->add_label("empty", "Intensity");
+        inspector->end_line();
+        Node::bind(signal, [l = light](const std::string& sg, float value) {
+            l->set_intensity(value);
+        });
+    }
+
+    // Range
+    {
+        inspector->same_line();
+        std::string signal = node_name + std::to_string(signal_id++) + "_range_slider";
+        inspector->add_slider(signal, light->get_intensity(), 0.0f, 5.0f, 2);
+        inspector->add_label("empty", "Range");
+        inspector->end_line();
+        Node::bind(signal, [l = light](const std::string& sg, float value) {
+            l->set_range(value);
+        });
+    }
+
+    // Enable xr for the buttons that need it..
+    if (renderer->get_openxr_available()) {
+        inspector->remove_flag(MATERIAL_2D);
+    }
+
+    inspector->end_line();
 }
