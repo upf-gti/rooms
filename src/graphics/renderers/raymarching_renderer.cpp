@@ -511,6 +511,7 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
         aabb_pos = preview_aabb;
         compute_merge_data.reevaluation_AABB_min = preview_aabb.center - preview_aabb.half_size;
         compute_merge_data.reevaluation_AABB_max = preview_aabb.center + preview_aabb.half_size;
+        spdlog::info("{} {} {}", preview_aabb.half_size.x, preview_aabb.half_size.y, preview_aabb.half_size.z);
     }
 
     webgpu_context->update_buffer(std::get<WGPUBuffer>(compute_merge_data_uniform.data), 0, &(compute_merge_data), sizeof(sMergeData));
@@ -711,9 +712,10 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
 
         // Octree buffer
         std::vector<sOctreeNode> octree_default(octree_total_size+1);
-        octree_uniform.data = webgpu_context->create_buffer(sizeof(uint32_t) * 4 + octree_total_size * sizeof(sOctreeNode), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, octree_default.data(), "octree");
+        octree_uniform.data = webgpu_context->create_buffer(sizeof(uint32_t) * 4 + octree_total_size * sizeof(sOctreeNode), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "octree");
         octree_uniform.binding = 2;
         octree_uniform.buffer_size = sizeof(uint32_t) * 4 + octree_total_size * sizeof(sOctreeNode);
+        webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_uniform.data), sizeof(uint32_t) * 4, octree_default.data(), sizeof(sOctreeNode) * octree_total_size);
 
         // Counters for octree merge
         uint32_t default_vals_zero[4] = { 0, 0, 0, 0 };
