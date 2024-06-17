@@ -994,25 +994,12 @@ void SculptEditor::set_edit_size(float main, float secondary, float round)
 {
     // Update primitive main size
     if (main >= 0.0f) {
-
-        // Box is the only shape that uses XYZ size..
-        if (stroke_parameters.get_primitive() == SD_BOX) {
-            edit_to_add.dimensions = glm::vec4(glm::vec3(main), edit_to_add.dimensions.w);
-        }
-        else {
-            edit_to_add.dimensions.x = main;
-        }
+        edit_to_add.dimensions.x = main;
     }
-
     // Update primitive specific size
     else if (secondary >= 0.0f) {
-
-        // Only for shapes that are NOT a box..
-        if (stroke_parameters.get_primitive() != SD_BOX) {
-            edit_to_add.dimensions.y = secondary;
-        }
+        edit_to_add.dimensions.y = secondary;
     }
-
     // Update round size
     else if (round >= 0.0f) {
         edit_to_add.dimensions.w = round;
