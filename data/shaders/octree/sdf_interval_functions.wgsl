@@ -1220,10 +1220,8 @@ fn vesica_interval( p : mat3x3f, c : vec3f, dims : vec4f, rotation : vec4f) -> v
 {
     var radius : f32 = dims.x * 2.0;
     var height : f32 = dims.y * 2.0;
-    
+
     let round : f32 = clamp(dims.w / 0.125, 0.001, 0.99) * min(radius, height);
-    radius -= round;
-    height -= round;
 
     var offset : mat3x3f = iavec3_vec(vec3f(0.0, -height * 0.5, 0.0));
     var pos : mat3x3f = irotate_point_quat(isub_mat_vec3(p, c), rotation);

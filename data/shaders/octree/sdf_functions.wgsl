@@ -942,11 +942,9 @@ fn sdVesica( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : 
     var radius : f32 = dims.x * 2.0;
     var height : f32 = dims.y * 2.0;
 
-    let pos : vec3f = rotate_point_quat(p - c, rotation) + vec3f(0.0, height * 0.5, 0.0);
-
     let round : f32 = clamp(dims.w / 0.125, 0.001, 0.99) * min(radius, height);
-    radius -= round;
-    height -= round;
+
+    let pos : vec3f = rotate_point_quat(p - c, rotation) + vec3f(0.0, height * 0.5, 0.0);
 
     // shape constants
     let h : f32 = height * 0.5;
