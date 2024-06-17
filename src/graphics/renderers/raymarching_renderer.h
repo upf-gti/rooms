@@ -109,6 +109,7 @@ class RaymarchingRenderer {
     WGPUBindGroup   compute_octree_initialization_bind_group = nullptr;
     WGPUBindGroup   compute_octree_clean_octree_bind_group = nullptr;
     WGPUBindGroup   compute_octree_brick_unmark_bind_group = nullptr;
+    WGPUBindGroup   octree_buffer_bindgroup = nullptr;
 
     Uniform         octree_uniform;
     Uniform         octant_usage_uniform[4];

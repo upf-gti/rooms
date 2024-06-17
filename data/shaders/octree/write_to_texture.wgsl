@@ -4,7 +4,6 @@
 #include material_packing.wgsl
 #include ../noise.wgsl
 
-@group(0) @binding(2) var<storage, read_write> octree : Octree;
 @group(0) @binding(3) var write_sdf: texture_storage_3d<r32float, write>;
 @group(0) @binding(5) var<storage, read_write> brick_buffers: BrickBuffers;
 @group(0) @binding(6) var<storage, read> stroke_history : StrokeHistory; 
@@ -12,8 +11,10 @@
 @group(0) @binding(8) var write_material_sdf: texture_storage_3d<r32uint, write>;
 @group(0) @binding(9) var<storage, read_write> stroke_culling : array<u32>;
 
-@group(1) @binding(0) var<storage, read> octant_usage_read : array<u32>;
-@group(1) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
+@group(1) @binding(0) var<storage, read_write> octree : Octree;
+
+@group(2) @binding(0) var<storage, read> octant_usage_read : array<u32>;
+@group(2) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
 
 #include sdf_functions.wgsl
 

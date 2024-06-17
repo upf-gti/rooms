@@ -1,8 +1,9 @@
 #include octree_includes.wgsl
 
-@group(0) @binding(2) var<storage, read_write> octree : Octree;
 @group(0) @binding(5) var<storage, read_write> brick_buffers: BrickBuffers_ReadOnly;
 @group(0) @binding(8) var<storage, read_write> indirect_buffers : IndirectBuffers_ReadOnly;
+
+@group(1) @binding(0) var<storage, read_write> octree : Octree;
 
 /**
     Este shader se llama despues de cada pasada de evaluator, y su fin es configurar el
