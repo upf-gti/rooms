@@ -1,7 +1,29 @@
 #include octree_includes.wgsl
 
+struct SculptInstanceData {
+    model_instances : array<mat4x4f>,
+};
+
+/*
+Sculpt intances u32
+    12 -> n number of instances (0-4096)
+    20 -> index of the n indices of the model matrices (0-1048576)
+
+    First part of the buffer, indexing using the scult instance u32
+    Then its just an array of indices
+*/
+struct SculptBrickInstances {
+    brick_instance : array<u32>
+};
+/*
+Brick copy buffer u32
+    20 -> Brick ID (0-1048576)
+    12 -> model index (0-4096)
+*/
 @group(0) @binding(0) var<storage, read_write> brick_copy_buffer : array<u32>;
 @group(0) @binding(5) var<storage, read_write> brick_buffers: BrickBuffers;
+
+@group(1) @binding(0) var<storage, read_write> instance_data: BrickBuffers;
 
 
 /**
