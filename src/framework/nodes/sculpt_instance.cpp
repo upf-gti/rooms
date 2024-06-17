@@ -6,6 +6,11 @@
 SculptInstance::SculptInstance() : Node3D()
 {
     node_type = "SculptInstance";
+
+    SculptureData new_sculpt_data = dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->create_new_sculpture();
+
+    sculpture_octree_uniform = new_sculpt_data.sculpture_octree_uniform;
+    sculpture_octree_bindgroup = new_sculpt_data.sculpture_octree_bindgroup;
 }
 
 SculptInstance::~SculptInstance()

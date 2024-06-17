@@ -42,6 +42,11 @@ struct RayIntersectionInfo {
     uint32_t    dummy2 = 0;
 };
 
+struct SculptureData {
+    Uniform sculpture_octree_uniform;
+    WGPUBindGroup sculpture_octree_bindgroup = nullptr;
+};
+
 class RaymarchingRenderer {
 
     enum eEvaluatorOperationFlags : uint32_t {
@@ -80,6 +85,9 @@ class RaymarchingRenderer {
 
     WGPUBuffer     brick_buffers_counters_read_buffer = nullptr;
 
+    Uniform *sculpture_octree_uniform = nullptr;
+    WGPUBindGroup sculpture_octree_bindgroup = nullptr;
+
     // Octree creation
     Pipeline        compute_octree_evaluate_pipeline;
     Pipeline        compute_octree_increment_level_pipeline;
@@ -109,9 +117,7 @@ class RaymarchingRenderer {
     WGPUBindGroup   compute_octree_initialization_bind_group = nullptr;
     WGPUBindGroup   compute_octree_clean_octree_bind_group = nullptr;
     WGPUBindGroup   compute_octree_brick_unmark_bind_group = nullptr;
-    WGPUBindGroup   octree_buffer_bindgroup = nullptr;
 
-    Uniform         octree_uniform;
     Uniform         octant_usage_uniform[4];
     Uniform         octant_usage_initialization_uniform[2];
     uint8_t         octree_depth = 0;
@@ -270,7 +276,7 @@ public:
         for (const Edit &edit : new_edits) {
             push_edit(edit);
         }
-    };
+    }
 
     inline void add_preview_edit(const Edit& edit) {
         if (preview_stroke.stroke.edit_count == preview_stroke.edit_list.size()) {
@@ -280,4 +286,6 @@ public:
     }
 
     const glm::vec3& get_sculpt_start_position() { return sculpt_data.sculpt_start_position; }
+
+    SculptureData create_new_sculpture();
 };
