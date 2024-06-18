@@ -11,6 +11,7 @@ SculptInstance::SculptInstance() : Node3D()
 
     sculpture_octree_uniform = new_sculpt_data.sculpture_octree_uniform;
     sculpture_octree_bindgroup = new_sculpt_data.sculpture_octree_bindgroup;
+    octree_id = new_sculpt_data.octree_id;
 }
 
 SculptInstance::~SculptInstance()

@@ -20,6 +20,8 @@ class SculptInstance : public Node3D {
         size_t stroke_count = 0;
     };
 
+    uint32_t octree_id;
+
 public:
 
     SculptInstance();
@@ -31,7 +33,7 @@ public:
         return sculpture_octree_uniform;
     }
 
-    inline WGPUBindGroup get_octree_bindgroup() {
+    inline WGPUBindGroup get_octree_bindgroup() const {
         return sculpture_octree_bindgroup;
     }
 
@@ -41,6 +43,10 @@ public:
 
     inline void set_octree_bindgroup(const WGPUBindGroup bindgroup) {
         sculpture_octree_bindgroup = bindgroup;
+    }
+
+    inline uint32_t get_octree_id() const {
+        return octree_id;
     }
 
     virtual void serialize(std::ofstream& binary_scene_file);

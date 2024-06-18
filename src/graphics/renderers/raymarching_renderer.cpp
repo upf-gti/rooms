@@ -560,6 +560,7 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
 
     compute_octree_brick_copy_pipeline.set(compute_pass);
     wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_brick_copy_bind_group, 0, nullptr);
+    wgpuComputePassEncoderSetBindGroup(compute_pass, 1, sculpt_instances_bindgroup, 0, nullptr);
     wgpuComputePassEncoderDispatchWorkgroups(compute_pass, octants_max_size / (8u * 8u * 8u), 1, 1);
 
     compute_octree_increment_level_pipeline.set(compute_pass);
@@ -585,6 +586,38 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
 void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_pass, uint32_t camera_buffer_stride)
 {
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
+
+    // Get the number of sculpt instances and the model
+    // TODO: we dont need to re-upload it each frame, inly when changed in hieraqui.. but the we need to detect changes
+    {
+        // Index buffer for the sculpt instances and their model matrices
+        uint32_t buffer_size = sculpt_count + sculpt_instances_list.size() * sculpt_instances_list.size();
+        uint32_t* buffer = new uint32_t[buffer_size];
+
+        memset(buffer, 0, sizeof(uint32_t) * buffer_size);
+        glm::mat4* matrices_list = new glm::mat4[sculpt_instances_list.size()];
+
+        const uint32_t sculpt_instances_count = sculpt_instances_list.size();
+
+        uint32_t prev_start = 0u;
+        for (uint32_t i = 0u; i < sculpt_instances_list.size(); i++) {
+            uint32_t octree_id = sculpt_instances_list[i]->get_octree_id();
+
+            matrices_list[i] = sculpt_instances_list[i]->get_model();
+
+            uint32_t number_of_instances = buffer[octree_id] >> 20u;
+            uint32_t instances_index = buffer[octree_id] & 0xFFFFF;
+
+            buffer[(octree_id * sculpt_instances_count) + sculpt_count + number_of_instances] = i;
+            buffer[octree_id] = ((number_of_instances + 1) << 20) | ((octree_id * sculpt_instances_count) + sculpt_count);
+        }
+
+        webgpu_context->update_buffer(std::get<WGPUBuffer>(sculpt_instances_buffer_uniform.data), 0u, buffer, sizeof(uint32_t) * buffer_size);
+        webgpu_context->update_buffer(std::get<WGPUBuffer>(sculpt_model_buffer_uniform.data), 0u, matrices_list, sizeof(glm::mat4) * sculpt_instances_count);
+
+        delete matrices_list;
+        delete buffer;
+    }
 
 #ifndef NDEBUG
         wgpuRenderPassEncoderPushDebugGroup(render_pass, "Render sculpt proxy geometry");
@@ -886,6 +919,17 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         compute_octree_initialization_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_initialization_shader, 0);
     }
 
+    // Model and sculpt isntances bindgroups
+    {
+        uint32_t size = sizeof(uint32_t) * 4096u * 4096u; // The current max size of instances
+        sculpt_instances_buffer_uniform.data = webgpu_context->create_buffer(size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, 0u, "sculpt instance data");
+        sculpt_instances_buffer_uniform.binding = 0u;
+        sculpt_instances_buffer_uniform.buffer_size = size;
+
+        std::vector<Uniform*> uniforms = { &sculpt_instances_buffer_uniform };
+        sculpt_instances_bindgroup = webgpu_context->create_bind_group(uniforms, compute_octree_brick_copy_shader, 1u);
+    }
+
     compute_octree_evaluate_pipeline.create_compute(compute_octree_evaluate_shader);
     compute_octree_increment_level_pipeline.create_compute(compute_octree_increment_level_shader);
     compute_octree_write_to_texture_pipeline.create_compute(compute_octree_write_to_texture_shader);
@@ -905,6 +949,14 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
 
     render_proxy_shader = RendererStorage::get_shader("data/shaders/octree/proxy_geometry_plain.wgsl");
 
+    // Sculpt model buffer
+    {
+        uint32_t size = sizeof(glm::mat4) * 4096u; // The current max size of instances
+        sculpt_model_buffer_uniform.data = webgpu_context->create_buffer(size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, 0u, "sculpt instance data");
+        sculpt_model_buffer_uniform.binding = 9u;
+        sculpt_model_buffer_uniform.buffer_size = size;
+    }
+
     {
         RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
 
@@ -914,7 +966,7 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
         prev_stroke_uniform_2.binding = 1u;
         prev_stroke_uniform_2.buffer_size = preview_stroke_uniform.buffer_size;
 
-        std::vector<Uniform*> uniforms = { &linear_sampler_uniform, &sdf_texture_uniform, &octree_brick_buffers, &octree_brick_copy_buffer, &sdf_material_texture_uniform, &prev_stroke_uniform_2 };
+        std::vector<Uniform*> uniforms = { &sculpt_model_buffer_uniform, &linear_sampler_uniform, &sdf_texture_uniform, &octree_brick_buffers, &octree_brick_copy_buffer, &sdf_material_texture_uniform, &prev_stroke_uniform_2 };
 
         render_proxy_geometry_bind_group = webgpu_context->create_bind_group(uniforms, render_proxy_shader, 0);
         uniforms = { camera_uniform };
@@ -1003,13 +1055,16 @@ SculptureData RaymarchingRenderer::create_new_sculpture() {
 
     Uniform octree_uniform;
     std::vector<sOctreeNode> octree_default(octree_total_size + 1);
-    octree_uniform.data = webgpu_context->create_buffer(sizeof(uint32_t) * 4 + octree_total_size * sizeof(sOctreeNode), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "octree");
+    octree_uniform.data = webgpu_context->create_buffer(sizeof(uint32_t) * 8 + octree_total_size * sizeof(sOctreeNode), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "octree");
     octree_uniform.binding = 0;
-    octree_uniform.buffer_size = sizeof(uint32_t) * 4 + octree_total_size * sizeof(sOctreeNode);
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_uniform.data), sizeof(uint32_t) * 4, octree_default.data(), sizeof(sOctreeNode) * octree_total_size);
+    octree_uniform.buffer_size = sizeof(uint32_t) * 8u + octree_total_size * sizeof(sOctreeNode);
+    // Set the id of the octree
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_uniform.data), sizeof(uint32_t) * 4, &sculpt_count, sizeof(uint32_t));
+    // Set default values of the octree
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_uniform.data), sizeof(uint32_t) * 8, octree_default.data(), sizeof(sOctreeNode) * octree_total_size);
 
     std::vector<Uniform*> uniforms = { &octree_uniform };
     WGPUBindGroup octree_buffer_bindgroup = webgpu_context->create_bind_group(uniforms, compute_octree_evaluate_shader, 1);
 
-    return { octree_uniform, octree_buffer_bindgroup };
+    return { sculpt_count++, octree_uniform, octree_buffer_bindgroup };
 }

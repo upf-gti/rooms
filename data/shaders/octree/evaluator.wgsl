@@ -156,11 +156,10 @@ fn brick_create_or_reevaluate(octree_index : u32, is_current_brick_filled : bool
         let instance_index : u32 = brick_buffers.atlas_empty_bricks_buffer[brick_spot_id];
         brick_buffers.brick_instance_data[instance_index].position = octant_center;
         brick_buffers.brick_instance_data[instance_index].atlas_tile_index = instance_index;
-        brick_buffers.brick_instance_data[instance_index].octree_parent_id = octree_index;
         brick_buffers.brick_instance_data[instance_index].in_use = BRICK_IN_USE_FLAG;
+        brick_buffers.brick_instance_data[instance_index].octree_id = octree.octree_id;
 
-
-            octree.data[octree_index].tile_pointer = instance_index | FILLED_BRICK_FLAG;
+        octree.data[octree_index].tile_pointer = instance_index | FILLED_BRICK_FLAG;
     }
                 
     octant_usage_write[prev_counter] = octree_index;
@@ -175,7 +174,6 @@ fn preview_brick_create(octree_index : u32, octant_center : vec3f, is_interior_b
     let preview_brick : u32 = atomicAdd(&brick_buffers.preview_instance_counter, 1u);
     
     brick_buffers.preview_instance_data[preview_brick].position = octant_center;
-    brick_buffers.preview_instance_data[preview_brick].octree_parent_id = octree_index;
     brick_buffers.preview_instance_data[preview_brick].in_use = 0u;
     brick_buffers.preview_instance_data[preview_brick].edit_id_start = edit_start_index;
     brick_buffers.preview_instance_data[preview_brick].edit_count = edit_count;

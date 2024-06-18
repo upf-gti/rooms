@@ -43,6 +43,7 @@ struct RayIntersectionInfo {
 };
 
 struct SculptureData {
+    uint32_t octree_id;
     Uniform sculpture_octree_uniform;
     WGPUBindGroup sculpture_octree_bindgroup = nullptr;
 };
@@ -53,6 +54,10 @@ class RaymarchingRenderer {
         CLEAN_BEFORE_EVAL = 0x0001u,
         EVALUATE_PREVIEW_STROKE = 0x0002u
     };
+
+    uint32_t sculpt_count = 0u;
+
+    std::vector<SculptInstance*> sculpt_instances_list;
 
     Uniform         linear_sampler_uniform;
 
@@ -156,6 +161,11 @@ class RaymarchingRenderer {
 
     Uniform         compute_merge_data_uniform;
     Uniform         compute_stroke_buffer_uniform;
+
+    Uniform         sculpt_model_buffer_uniform;
+
+    Uniform         sculpt_instances_buffer_uniform;
+    WGPUBindGroup   sculpt_instances_bindgroup = nullptr;
 
     MeshInstance3D* cube_mesh = nullptr;
 
@@ -286,6 +296,10 @@ public:
     }
 
     const glm::vec3& get_sculpt_start_position() { return sculpt_data.sculpt_start_position; }
+
+    void add_sculpt_instance(SculptInstance* instance) {
+        sculpt_instances_list.push_back(instance);
+    }
 
     SculptureData create_new_sculpture();
 };
