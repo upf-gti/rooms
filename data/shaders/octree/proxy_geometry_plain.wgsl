@@ -407,7 +407,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     eye_atlas_pos += in.atlas_tile_coordinate + vec3f(5.0 / SDF_RESOLUTION); 
     let ray_dir_atlas : vec3f = normalize(in.in_atlas_pos - eye_atlas_pos);
 
-    let ray_dir_world : vec3f = normalize(in.vertex_in_world_space.xyz - camera_data.eye_position);
+    let ray_dir_world : vec3f = normalize(in.vertex_in_world_space.xyz - eye_in_world_sculpt.xyz);
     let ray_dir_sculpt : vec3f = rotate_point_quat(ray_dir_world, quat_conj(sculpt_data.sculpt_rotation));
     // ray dir in atlas coords :((
 
