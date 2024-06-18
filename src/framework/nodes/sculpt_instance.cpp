@@ -12,6 +12,19 @@ SculptInstance::SculptInstance() : Node3D()
     sculpture_octree_uniform = new_sculpt_data.sculpture_octree_uniform;
     sculpture_octree_bindgroup = new_sculpt_data.sculpture_octree_bindgroup;
     octree_id = new_sculpt_data.octree_id;
+
+    dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->add_sculpt_instance(this);
+}
+
+SculptInstance::SculptInstance(SculptInstance* reference) : Node3D()
+{
+    node_type = "SculptInstance";
+
+    sculpture_octree_uniform = reference->get_octree_uniform();
+    sculpture_octree_bindgroup = reference->get_octree_bindgroup();
+    octree_id = reference->get_octree_id();
+
+    dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->add_sculpt_instance(this);
 }
 
 SculptInstance::~SculptInstance()

@@ -45,7 +45,7 @@ void SceneEditor::initialize()
     RoomsEngine::instance->add_node(default_sculpt);
 
     RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
-    rooms_renderer->get_raymarching_renderer()->add_sculpt_instance(default_sculpt);
+    //rooms_renderer->get_raymarching_renderer()->add_sculpt_instance(default_sculpt);
     rooms_renderer->get_raymarching_renderer()->set_current_sculpt(default_sculpt);
 
     /*intersection_mesh = new MeshInstance3D();
@@ -344,7 +344,6 @@ void SceneEditor::bind_events()
         SculptInstance* new_sculpt = new SculptInstance();
         RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
         rooms_renderer->get_raymarching_renderer()->set_current_sculpt(new_sculpt);
-        rooms_renderer->get_raymarching_renderer()->add_sculpt_instance(new_sculpt);
         add_node(new_sculpt);
     });
 

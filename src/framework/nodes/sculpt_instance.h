@@ -20,11 +20,12 @@ class SculptInstance : public Node3D {
         size_t stroke_count = 0;
     };
 
-    uint32_t octree_id;
+    uint32_t octree_id = 0u;
 
 public:
 
     SculptInstance();
+    SculptInstance(SculptInstance *reference);
     ~SculptInstance();
 
     std::vector<Stroke>& get_stroke_history();
