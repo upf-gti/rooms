@@ -125,7 +125,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 
     var out: VertexOutput;
     // vertex_in_world_space = vec4f(rotate_point_quat(vertex_in_world_space.xyz, sculpt_data.sculpt_rotation), 1.0);
-    out.position = camera_data.view_projection * sculpt_model_buffer[model_index] * vec4f(vertex_in_world_space, 1.0);
+    out.position = camera_data.view_projection * (sculpt_model_buffer[model_index] * vec4f(vertex_in_world_space, 1.0));
     out.uv = in.uv; // forward to the fragment shader
 
     out.edit_range = vec2u(instance_data.edit_id_start, instance_data.edit_count);
@@ -412,7 +412,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     // ray dir in atlas coords :((
 
     let raymarch_distance_sculpt_space : f32 = ray_intersect_AABB_only_near(in.vertex_in_sculpt_space.xyz, -ray_dir_sculpt, in.brick_center_in_sculpt_space, vec3f(BRICK_WORLD_SIZE));
-    let ray_origin_sculpt_space : vec3f = in.vertex_in_sculpt_space.xyz + raymarch_distance_sculpt_space * (-ray_dir_sculpt);
+    let ray_origin_sculpt_space : vec3f = (sculpt_model_buffer[in.model_index] *  vec4f(in.vertex_in_sculpt_space.xyz, 1.0)).xyz + raymarch_distance_sculpt_space * (-ray_dir_sculpt);
     
     // Raro
     let raymarch_distance : f32 = ray_intersect_AABB_only_near(in.in_atlas_pos, -ray_dir_atlas, in.atlas_tile_coordinate + vec3f(5.0 / SDF_RESOLUTION), vec3f(BRICK_ATLAS_SIZE));
