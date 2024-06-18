@@ -122,7 +122,7 @@ class SculptEditor : public BaseEditor {
     bool axis_lock = false;
     Gizmo3D axis_lock_gizmo = {};
     uint8_t axis_lock_mode = AXIS_LOCK_Z;
-    glm::vec3 axis_lock_position = glm::vec3(0.f);
+    glm::vec3 axis_lock_origin = glm::vec3(0.f);
 
     // Snap to grid
 

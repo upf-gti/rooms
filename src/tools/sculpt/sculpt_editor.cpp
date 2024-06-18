@@ -204,16 +204,48 @@ bool SculptEditor::edit_update(float delta_time)
         edit_to_add.rotation = edit_rotation_stamp;
     }
 
-    // Snap surface
-    if (can_snap_to_surface()) {
+    // Guides: edit position modifiers
+    {
+        // Snap surface
+        if (can_snap_to_surface()) {
 
-        auto callback = [&](glm::vec3 center) {
-            edit_to_add.position = texture3d_to_world(center);
-        };
+            auto callback = [&](glm::vec3 center) {
+                edit_to_add.position = texture3d_to_world(center);
+            };
 
-        glm::mat4x4 pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
-        glm::vec3 ray_dir = get_front(pose);
-        renderer->get_raymarching_renderer()->octree_ray_intersect(pose[3], ray_dir, callback);
+            glm::mat4x4 pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
+            glm::vec3 ray_dir = get_front(pose);
+            renderer->get_raymarching_renderer()->octree_ray_intersect(pose[3], ray_dir, callback);
+        }
+
+        if (use_mirror) {
+            bool r = mirror_gizmo.update(mirror_origin, mirror_rotation, Input::get_controller_position(HAND_RIGHT, POSE_AIM), delta_time);
+            is_tool_used &= !r;
+            is_tool_pressed &= !r;
+            mirror_normal = glm::normalize(mirror_rotation * glm::vec3(0.f, 0.f, 1.f));
+        }
+
+        if (snap_to_grid) {
+            float grid_multiplier = 1.f / snap_grid_size;
+            // Uncomment for grid size of half of the edit radius
+            // grid_multiplier = 1.f / (edit_to_add.dimensions.x / 2.f);
+            edit_to_add.position = glm::round(edit_to_add.position * grid_multiplier) / grid_multiplier;
+        }
+
+        else if (axis_lock) {
+            bool r = axis_lock_gizmo.update(axis_lock_origin, Input::get_controller_position(HAND_RIGHT, POSE_AIM), delta_time);
+            is_tool_used &= !r;
+            is_tool_pressed &= !r;
+
+            glm::vec3 locked_pos = edit_to_add.position;
+            if (axis_lock_mode & AXIS_LOCK_X)
+                locked_pos.x = axis_lock_origin.x;
+            else if (axis_lock_mode & AXIS_LOCK_Y)
+                locked_pos.y = axis_lock_origin.y;
+            else if (axis_lock_mode & AXIS_LOCK_Z)
+                locked_pos.z = axis_lock_origin.z;
+            edit_to_add.position = locked_pos;
+        }
     }
 
     // Update edit dimensions
@@ -322,33 +354,6 @@ bool SculptEditor::edit_update(float delta_time)
     if (!creating_spline)
     {
         update_edit_rotation();
-    }
-
-    // Edit modifiers
-    {
-        if (snap_to_grid) {
-            float grid_multiplier = 1.f / snap_grid_size;
-            // Uncomment for grid size of half of the edit radius
-            // grid_multiplier = 1.f / (edit_to_add.dimensions.x / 2.f);
-            edit_to_add.position = glm::round(edit_to_add.position * grid_multiplier) / grid_multiplier;
-        }
-
-        if (axis_lock) {
-
-            is_tool_used &= !(axis_lock_gizmo.update(axis_lock_position, edit_to_add.position, delta_time));
-
-            glm::vec3 locked_pos = edit_to_add.position;
-
-            if (axis_lock_mode & AXIS_LOCK_X)
-                locked_pos.x = axis_lock_position.x;
-            else if (axis_lock_mode & AXIS_LOCK_Y)
-                locked_pos.y = axis_lock_position.y;
-            else if (axis_lock_mode & AXIS_LOCK_Z)
-                locked_pos.z = axis_lock_position.z;
-
-            edit_to_add.position = locked_pos;
-            edit_to_add.rotation = glm::quat();
-        }
     }
 
     // Debug sculpting
@@ -552,7 +557,7 @@ void SculptEditor::update(float delta_time)
             sculpt_start_position = edit_to_add.position;
             renderer->set_sculpt_start_position(sculpt_start_position);
             mirror_origin = sculpt_start_position;
-            axis_lock_position = sculpt_start_position;
+            axis_lock_origin = sculpt_start_position;
         }
 
         // Mark the start of the sculpture for the origin
@@ -565,11 +570,6 @@ void SculptEditor::update(float delta_time)
 
     // Edit & Stroke submission
     {
-        if (use_mirror) {
-            is_tool_used &= !(mirror_gizmo.update(mirror_origin, mirror_rotation, edit_position_world, delta_time));
-            mirror_normal = glm::normalize(mirror_rotation * glm::vec3(0.f, 0.f, 1.f));
-        }
-
         // If any parameter changed or just stopped sculpting change the stroke
         bool must_change_stroke = stroke_parameters.is_dirty();
         must_change_stroke |= (was_tool_pressed && !is_tool_pressed);
@@ -829,7 +829,7 @@ void SculptEditor::render()
     if (axis_lock) {
         axis_lock_gizmo.render();
 
-        mirror_mesh->set_translation(axis_lock_position);
+        mirror_mesh->set_translation(axis_lock_origin);
         if (axis_lock_mode & AXIS_LOCK_X)
             mirror_mesh->rotate(glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         else if (axis_lock_mode & AXIS_LOCK_Y)

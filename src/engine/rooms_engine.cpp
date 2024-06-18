@@ -14,6 +14,7 @@
 
 #include "graphics/renderers/rooms_renderer.h"
 
+#include "shaders/mesh_color.wgsl.gen.h"
 #include "shaders/mesh_grid.wgsl.gen.h"
 #include "shaders/ui/ui_ray_pointer.wgsl.gen.h"
 
@@ -97,6 +98,13 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
         pointer_material.shader = RendererStorage::get_shader_from_source(shaders::ui_ray_pointer::source, shaders::ui_ray_pointer::path, pointer_material);
 
         ray_pointer->set_surface_material_override(ray_pointer->get_surface(0), pointer_material);
+
+        sphere_pointer = parse_mesh("data/meshes/sphere.obj");
+
+        pointer_material = {};
+        pointer_material.shader = RendererStorage::get_shader_from_source(shaders::mesh_color::source, shaders::mesh_color::path, pointer_material);
+
+        sphere_pointer->set_surface_material_override(sphere_pointer->get_surface(0), pointer_material);
     }
 
     cursor.load();
@@ -174,8 +182,11 @@ void RoomsEngine::render()
         ray_pointer->set_model(raycast_transform);
         float xr_ray_distance = IO::get_xr_ray_distance();
         ray_pointer->scale(glm::vec3(1.0f, 1.0f, xr_ray_distance < 0.0f ? 0.5f : xr_ray_distance));
-
         ray_pointer->render();
+
+        sphere_pointer->set_model(raycast_transform);
+        sphere_pointer->scale(glm::vec3(0.1f));
+        sphere_pointer->render();
     }
 
 #ifndef __EMSCRIPTEN__
