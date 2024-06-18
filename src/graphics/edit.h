@@ -12,7 +12,7 @@
 
 #include <string>
 
-#define MAX_EDITS_PER_EVALUATION 64
+#define MAX_EDITS_PER_EVALUATION 256
 
 enum sdPrimitive : uint32_t {
 	SD_SPHERE = 0,
