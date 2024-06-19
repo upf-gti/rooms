@@ -360,9 +360,10 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
         // From atlas position, to sculpt, to world
         let position_in_sculpt : vec3f = ray_origin_in_sculpt_space + ray_dir * (depth / SCULPT_TO_ATLAS_CONVERSION_FACTOR);
         let position_in_world : vec3f = rotate_point_quat(position_in_sculpt, (sculpt_data.sculpt_rotation)) + sculpt_data.sculpt_start_position;
+        let world_space_position : vec3f = (sculpt_model_buffer[model_index] * vec4f(position_in_world, 1.0)).xyz;
 
         let epsilon : f32 = 0.000001; // avoids flashing when camera inside sdf
-        let proj_pos : vec4f = view_proj * vec4f(position_in_world + ray_dir * epsilon, 1.0);
+        let proj_pos : vec4f = view_proj * vec4f(world_space_position + ray_dir * epsilon, 1.0);
         depth = proj_pos.z / proj_pos.w;
 
         let normal : vec3f = estimate_normal_atlas(position_in_atlas);
@@ -375,7 +376,7 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
         // heatmap_color.b = cos(interpolant);
         // return vec4f(heatmap_color, depth);
         //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
-		return vec4f(apply_light(-ray_dir, position_in_world, position_in_world, normal, lightPos + lightOffset, material), depth);
+		return vec4f(apply_light(-ray_dir, world_space_position, world_space_position, normal, lightPos + lightOffset, material), depth);
         //return vec4f(normal*0.5 + 0.50, depth);
         //return vec4f(material.albedo, depth);
         //return vec4f(normal, depth);
@@ -387,6 +388,7 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
 }
 
 var<private> edit_range : vec2u;
+var<private> model_index : u32;
 
 @fragment
 fn fs_main(in: VertexOutput) -> FragmentOutput {
@@ -394,6 +396,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var out: FragmentOutput;
 
     edit_range = in.edit_range;
+    model_index = in.model_index;
 
     let eye_in_world_sculpt = inverse(sculpt_model_buffer[in.model_index]) * vec4f(camera_data.eye_position, 1.0);
 
@@ -412,7 +415,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     // ray dir in atlas coords :((
 
     let raymarch_distance_sculpt_space : f32 = ray_intersect_AABB_only_near(in.vertex_in_sculpt_space.xyz, -ray_dir_sculpt, in.brick_center_in_sculpt_space, vec3f(BRICK_WORLD_SIZE));
-    let ray_origin_sculpt_space : vec3f = (sculpt_model_buffer[in.model_index] *  vec4f(in.vertex_in_sculpt_space.xyz, 1.0)).xyz + raymarch_distance_sculpt_space * (-ray_dir_sculpt);
+    let ray_origin_sculpt_space : vec3f = in.vertex_in_sculpt_space.xyz + raymarch_distance_sculpt_space * (-ray_dir_sculpt);
     
     // Raro
     let raymarch_distance : f32 = ray_intersect_AABB_only_near(in.in_atlas_pos, -ray_dir_atlas, in.atlas_tile_coordinate + vec3f(5.0 / SDF_RESOLUTION), vec3f(BRICK_ATLAS_SIZE));
