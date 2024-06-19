@@ -800,35 +800,6 @@ fn eval_interval_stroke_sphere_smooth_union( position : mat3x3f, current_surface
     return result_surface;
 }
 
-// fn eval_interval_stroke_sphere_smooth_substraction( position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>) -> vec2f {
-//     var result_surface : vec2f = current_surface;
-//     var tmp_surface : vec2f;
-
-//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
-//     let edit_count : u32 = (*curr_stroke).edit_count;
-//     let parameters : vec4f = (*curr_stroke).parameters;
-
-//     let smooth_factor : f32 = parameters.w;
-//     let cap_value : f32 = parameters.y;
-
-//     // do capped sphere if we have cap value..
-//     if(cap_value > 0.0) {
-//         for(var i : u32 = 0u; i < edit_count; i++) {
-//             let curr_edit : Edit = edit_array[i];
-//             tmp_surface = cut_sphere_interval(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation);
-//             result_surface = opSmoothSubtractionInterval(result_surface, tmp_surface, smooth_factor);
-//         }
-//     } else {
-//         for(var i : u32 = 0u; i < edit_count; i++) {
-//             let curr_edit : Edit = edit_array[i];
-//             tmp_surface = sphere_interval(position, curr_edit.position, curr_edit.dimensions, curr_edit.rotation);
-//             result_surface = opSmoothSubtractionInterval(result_surface, tmp_surface, smooth_factor);
-//         }
-//     }
-    
-//     return result_surface;
-// }
-
 /*
 ______           
 | ___ \          
@@ -880,6 +851,7 @@ fn eval_interval_stroke_box_smooth_union( position : mat3x3f, current_surface : 
 
     return result_surface;
 }
+
 // /*
 //  _____                       _      
 // /  __ \                     | |     
@@ -1111,92 +1083,6 @@ fn eval_interval_stroke_box_smooth_union( position : mat3x3f, current_surface : 
 //     return result_surface;
 // }
 
-// fn capped_torus_interval( p : mat3x3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f) -> vec2f
-// {
-//     let cap_value : f32 = clamp(parameters.y, 0.0001, 0.999);
-//     let theta : vec2f = vec2f(M_PI * (1.0 - cap_value));
-//     let angles : mat3x3f = iavec3_vecs(isin(theta), icos(theta), vec2f(0.0));
-//     let radius : f32 = dims.x;
-//     let thickness : f32 = clamp( dims.y, 0.0001, radius );
-
-//     let pos : mat3x3f = irotate_point_quat(isub_mat_vec3(p, c), rotation);
-//     let new_pos : mat3x3f = iavec3_vecs(iabs(pos[0].xy), pos[1].xy, pos[2].xy);
-
-//     var cond : vec2<bool> = igreaterthan(imul_vecs(angles[1].xy, new_pos[0].xy), imul_vecs(angles[0].xy, new_pos[2].xy));
-
-//     let m_pos_xz : mat3x3f = iavec3_vecs(new_pos[0].xy, new_pos[2].xy, vec2f(0.0));
-//     var len_pxz : vec2f = ilength(m_pos_xz);
-
-//     var xz_dot_angles = idot_mat(m_pos_xz, angles);
-    
-//     var k : vec2f = iselect(len_pxz, xz_dot_angles, cond);
-
-//     var sqrt_inner : vec2f = idot_mat(new_pos, new_pos);
-//     sqrt_inner = iadd_vecs(sqrt_inner, vec2f(radius * radius));
-//     sqrt_inner = isub_vecs(sqrt_inner, imul_vecs(vec2f(2.0 * radius), k));
-
-//     return isub_vec_float(isqrt(sqrt_inner), thickness);
-// }
-
-// fn eval_interval_stroke_torus_smooth_union(position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>, dimension_margin : vec4f) -> vec2f {
-//     var result_surface : vec2f = current_surface;
-//     var tmp_surface : vec2f;
-    
-//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
-//     let edit_count : u32 = (*curr_stroke).edit_count;
-//     let parameters : vec4f = (*curr_stroke).parameters;
-
-//     let smooth_factor : f32 = parameters.w;
-//     let cap_value : f32 = parameters.y;
-
-//     // too ugly but.... well
-
-//     // do capped torus if we have cap value..
-//     if(cap_value > 0.0) {
-//         for(var i : u32 = 0u; i < edit_count; i++) {
-//             let curr_edit : Edit = edit_array[i];
-//             tmp_surface = capped_torus_interval(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation);
-//             result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
-//         }
-//     } else {
-//         for(var i : u32 = 0u; i < edit_count; i++) {
-//             let curr_edit : Edit = edit_array[i];
-//             tmp_surface = torus_interval(position, curr_edit.position, curr_edit.dimensions, curr_edit.rotation);
-//             result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
-//         }
-//     }
-
-//     return result_surface;
-// }
-
-// fn eval_interval_stroke_torus_substraction(position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>) -> vec2f {
-//     var result_surface : vec2f = current_surface;
-//     var tmp_surface : vec2f;
-    
-//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
-//     let edit_count : u32 = (*curr_stroke).edit_count;
-//     let parameters : vec4f = (*curr_stroke).parameters;
-
-//     let smooth_factor : f32 = parameters.w;
-//     let cap_value : f32 = parameters.y;
-
-//     if(cap_value > 0.0) {
-//         for(var i : u32 = 0u; i < edit_count; i++) {
-//             let curr_edit : Edit = edit_array[i];
-//             tmp_surface = capped_torus_interval(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation);
-//             result_surface = opSmoothSubtractionInterval(result_surface, tmp_surface, smooth_factor);
-//         }
-//     } else {
-//         for(var i : u32 = 0u; i < edit_count; i++) {
-//             let curr_edit : Edit = edit_array[i];
-//             tmp_surface = torus_interval(position, curr_edit.position, curr_edit.dimensions, curr_edit.rotation);
-//             result_surface = opSmoothSubtractionInterval(result_surface, tmp_surface, smooth_factor);
-//         }
-//     }
-
-//     return result_surface;
-// }
-
 /*
  _   _           _           
 | | | |         (_)          
@@ -1260,25 +1146,6 @@ fn eval_interval_stroke_box_smooth_union( position : mat3x3f, current_surface : 
 //     return result_surface;
 // }
 
-// fn eval_interval_stroke_vesica_substraction(position : mat3x3f, current_surface : vec2f, curr_stroke: ptr<storage, Stroke>) -> vec2f {
-//     var result_surface : vec2f = current_surface;
-//     var tmp_surface : vec2f;
-    
-//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
-//     let edit_count : u32 = (*curr_stroke).edit_count;
-//     let parameters : vec4f = (*curr_stroke).parameters;
-
-//     let smooth_factor : f32 = parameters.w;
-
-//     for(var i : u32 = 0u; i < edit_count; i++) {
-//         let curr_edit : Edit = edit_array[i];
-//         tmp_surface = vesica_interval(position, curr_edit.position, curr_edit.dimensions, curr_edit.rotation);
-//         result_surface = opSmoothSubtractionInterval(result_surface, tmp_surface, smooth_factor);
-//     }
-
-//     return result_surface;
-// }
-
 /*
  _____ _             _          _____           _             _   _             
 /  ___| |           | |        |  ___|         | |           | | (_)            
@@ -1322,14 +1189,6 @@ fn evaluate_stroke_interval( position: mat3x3f, stroke: ptr<storage, Stroke, rea
             result_surface = opSmoothSubtractionInterval(current_surface, result_surface, smooth_factor);
             break;
         }
-        // case SD_VESICA_SMOOTH_OP_UNION: {
-        //     result_surface = eval_interval_stroke_vesica_smooth_union(position, result_surface, stroke, vec4f(0.0));
-        //     break;
-        // }
-        // case SD_VESICA_SMOOTH_OP_SUBSTRACTION: {
-        //     result_surface = eval_interval_stroke_vesica_substraction(position, result_surface, stroke);
-        //     break;
-        // }
         // case SD_CAPSULE_SMOOTH_OP_UNION: {
         //     result_surface = eval_interval_stroke_capsule_smooth_union(position, result_surface, stroke, vec4f(0.0));
         //     break;
@@ -1363,6 +1222,15 @@ fn evaluate_stroke_interval( position: mat3x3f, stroke: ptr<storage, Stroke, rea
         // }
         // case SD_TORUS_SMOOTH_OP_SUBSTRACTION: {
         //     result_surface = eval_interval_stroke_torus_smooth_union(position, initial_surface, stroke, vec4f(0.0));
+        //     result_surface = opSmoothSubtractionInterval(current_surface, result_surface, smooth_factor);
+        //     break;
+        // }
+        // case SD_VESICA_SMOOTH_OP_UNION: {
+        //     result_surface = eval_interval_stroke_vesica_smooth_union(position, result_surface, stroke, vec4f(0.0));
+        //     break;
+        // }
+        // case SD_VESICA_SMOOTH_OP_SUBSTRACTION: {
+        //     result_surface = eval_interval_stroke_vesica_smooth_union(position, initial_surface, stroke, vec4f(0.0));
         //     result_surface = opSmoothSubtractionInterval(current_surface, result_surface, smooth_factor);
         //     break;
         // }

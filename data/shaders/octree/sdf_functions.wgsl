@@ -1164,6 +1164,11 @@ fn evaluate_single_edit( position : vec3f, primitive : u32, operation : u32, par
         //     pSurface = sdCapsule(position, edit.position, edit.dimensions, edit_parameters, edit.rotation, stroke_material);
         //     break;
         // }
+        // case SD_CONE: {
+        //     // onion_thickness = map_thickness( onion_thickness, 0.01 );
+        //     pSurface = sdCone(position, edit.position, edit.dimensions, edit_parameters, edit.rotation, stroke_material);
+        //     break;
+        // }
         // case SD_CYLINDER: {
         //     // onion_thickness = map_thickness( onion_thickness, size_param );
         //     // size_param -= onion_thickness; // Compensate onion size
@@ -1184,26 +1189,6 @@ fn evaluate_single_edit( position : vec3f, primitive : u32, operation : u32, par
         //     // onion_thickness = map_thickness( onion_thickness, size_param );
         //     // size_param -= onion_thickness; // Compensate onion size
         //     pSurface = sdVesica(position, edit.position, edit.dimensions, edit_parameters, edit.rotation, stroke_material);
-        //     break;
-        // }
-        // // case SD_PYRAMID: {
-        // //     pSurface = sdPyramid(position, edit.position, edit.rotation, radius, size_param, edit_color);
-        // //     break;
-        // // }
-        // case SD_CYLINDER: {
-        //     // onion_thickness = map_thickness( onion_thickness, size_param );
-        //     // size_param -= onion_thickness; // Compensate onion size
-        //     pSurface = sdCylinder(position, edit.position, edit.dimensions, edit_parameters, edit.rotation, stroke_material);
-        //     break;
-        // }
-        // case SD_TORUS: {
-        //     // onion_thickness = map_thickness( onion_thickness, size_param );
-        //     // size_param -= onion_thickness; // Compensate onion size
-        //     if(cap_value > 0.0) {
-        //         pSurface = sdCappedTorus(position, edit.position, edit.dimensions, edit_parameters, edit.rotation, stroke_material);
-        //     } else {
-        //         pSurface = sdTorus(position, edit.position, edit.dimensions, edit_parameters, edit.rotation, stroke_material);
-        //     }
         //     break;
         // }
         default: {
