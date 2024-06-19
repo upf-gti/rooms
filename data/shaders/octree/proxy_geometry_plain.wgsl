@@ -400,7 +400,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     edit_range = in.edit_range;
     model_index = in.model_index;
 
-    let eye_in_world_sculpt = inverse(sculpt_model_buffer[in.model_index]) * vec4f(camera_data.eye_position, 1.0);
+    let eye_in_world_sculpt = inverse(sculpt_model_buffer[in.model_index]) * vec4f(camera_data.eye, 1.0);
 
     // From world to sculpt: make it relative to the sculpt center, and un-apply the rotation.
     var eye_atlas_pos : vec3f = rotate_point_quat(eye_in_world_sculpt.xyz - sculpt_data.sculpt_start_position, quat_conj(sculpt_data.sculpt_rotation));

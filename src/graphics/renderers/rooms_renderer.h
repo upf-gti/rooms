@@ -143,7 +143,4 @@ public:
     inline void set_preview_edit(const Edit& stroke) {
         raymarching_renderer.add_preview_edit(stroke);
     }
-
-    glm::vec3 get_camera_eye();
-    glm::vec3 get_camera_front();
 };

@@ -4,11 +4,7 @@
 #include "graphics/edit.h"
 #include "graphics/pipeline.h"
 
-
 #include <vector>
-
-
-
 
 class SculptInstance : public Node3D {
 
