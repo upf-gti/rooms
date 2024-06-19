@@ -572,6 +572,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
             if (dynamic_cast<SculptInstance*>(n)) {
                 RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
                 rooms_renderer->get_raymarching_renderer()->set_current_sculpt(static_cast<SculptInstance*>(n));
+                rooms_renderer->toogle_frame_debug();
                 RoomsEngine::switch_editor(SCULPT_EDITOR);
             }
             else {

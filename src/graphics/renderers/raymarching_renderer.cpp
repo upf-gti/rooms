@@ -582,7 +582,7 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder, boo
     wgpuCommandEncoderCopyBufferToBuffer(command_encoder, std::get<WGPUBuffer>(octree_brick_buffers.data), 0,
         brick_buffers_counters_read_buffer, 0, sizeof(sBrickBuffers_counters));
 
-    AABB_mesh->render();
+    //AABB_mesh->render();
 
     stroke_manager.update();
 
@@ -658,7 +658,7 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
     wgpuRenderPassEncoderPushDebugGroup(render_pass, "Render preview proxy geometry");
 #endif
     // Render Preview proxy geometry
-    {
+    if (static_cast<RoomsEngine*>(RoomsEngine::instance)->get_current_editor_type() == EditorType::SCULPT_EDITOR) {
         render_preview_proxy_geometry_pipeline.set(render_pass);
 
         // Update sculpt data
@@ -700,7 +700,7 @@ void RaymarchingRenderer::set_current_sculpt(SculptInstance* sculpt_instance)
 {
     context_to_upload.in_frame_influence.stroke_count = 0u;
     stroke_manager.set_current_sculpt(sculpt_instance, context_to_upload);
-    needs_context_upload = context_to_upload.in_frame_influence.stroke_count > 0u;
+    needs_context_upload = false;
 
     sculpture_octree_bindgroup = sculpt_instance->get_octree_bindgroup();
     sculpture_octree_uniform = &sculpt_instance->get_octree_uniform();
