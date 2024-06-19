@@ -7,14 +7,14 @@ struct RayInfo
     ray_dir    : vec3f,
     dummy1     : f32
 }
-
-@group(0) @binding(2) var<storage, read_write> octree : Octree;
 @group(0) @binding(3) var read_sdf: texture_3d<f32>;
 @group(0) @binding(4) var texture_sampler : sampler;
 @group(0) @binding(8) var read_material_sdf: texture_3d<u32>;
 
 @group(1) @binding(0) var<uniform> ray_info: RayInfo;
 @group(1) @binding(3) var<storage, read_write> ray_intersection_info: RayIntersectionInfo;
+
+@group(2) @binding(0) var<storage, read_write> octree : Octree;
 
 // https://gist.github.com/DomNomNom/46bb1ce47f68d255fd5d
 fn ray_AABB_intersection(ray_origin : vec3f, ray_dir : vec3f, box_min : vec3f, box_max : vec3f, t_near : ptr<function, f32>, t_far : ptr<function, f32>) -> bool

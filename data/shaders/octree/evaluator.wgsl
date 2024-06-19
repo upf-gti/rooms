@@ -3,16 +3,18 @@
 #include sdf_commons.wgsl
 
 @group(0) @binding(1) var<uniform> merge_data : MergeData;
-@group(0) @binding(2) var<storage, read_write> octree : Octree;
 @group(0) @binding(5) var<storage, read_write> brick_buffers: BrickBuffers;
 @group(0) @binding(6) var<storage, read> stroke_history : StrokeHistory;
 @group(0) @binding(7) var<storage, read> edit_list : array<Edit>;
 @group(0) @binding(9) var<storage, read_write> stroke_culling : array<u32>;
 
-@group(1) @binding(0) var<storage, read> octant_usage_read : array<u32>;
-@group(1) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
+@group(1) @binding(0) var<storage, read_write> octree : Octree;
 
-@group(2) @binding(0) var<storage, read> preview_stroke : PreviewStroke;
+@group(2) @binding(0) var<storage, read> octant_usage_read : array<u32>;
+@group(2) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
+
+@group(3) @binding(0) var<storage, read> preview_stroke : PreviewStroke;
+
 
 #include sdf_interval_functions.wgsl
 
@@ -154,11 +156,10 @@ fn brick_create_or_reevaluate(octree_index : u32, is_current_brick_filled : bool
         let instance_index : u32 = brick_buffers.atlas_empty_bricks_buffer[brick_spot_id];
         brick_buffers.brick_instance_data[instance_index].position = octant_center;
         brick_buffers.brick_instance_data[instance_index].atlas_tile_index = instance_index;
-        brick_buffers.brick_instance_data[instance_index].octree_parent_id = octree_index;
         brick_buffers.brick_instance_data[instance_index].in_use = BRICK_IN_USE_FLAG;
+        brick_buffers.brick_instance_data[instance_index].octree_id = octree.octree_id;
 
-
-            octree.data[octree_index].tile_pointer = instance_index | FILLED_BRICK_FLAG;
+        octree.data[octree_index].tile_pointer = instance_index | FILLED_BRICK_FLAG;
     }
                 
     octant_usage_write[prev_counter] = octree_index;
@@ -173,7 +174,6 @@ fn preview_brick_create(octree_index : u32, octant_center : vec3f, is_interior_b
     let preview_brick : u32 = atomicAdd(&brick_buffers.preview_instance_counter, 1u);
     
     brick_buffers.preview_instance_data[preview_brick].position = octant_center;
-    brick_buffers.preview_instance_data[preview_brick].octree_parent_id = octree_index;
     brick_buffers.preview_instance_data[preview_brick].in_use = 0u;
     brick_buffers.preview_instance_data[preview_brick].edit_id_start = edit_start_index;
     brick_buffers.preview_instance_data[preview_brick].edit_count = edit_count;

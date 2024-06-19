@@ -14,7 +14,7 @@ class SculptEditor;
 class SceneEditor;
 class TutorialEditor;
 
-enum Editor : uint8_t {
+enum EditorType : uint8_t {
     SCENE_EDITOR,
     SCULPT_EDITOR,
     SHAPE_EDITOR,
@@ -25,6 +25,8 @@ enum Editor : uint8_t {
 
 class RoomsEngine : public Engine
 {
+    EditorType current_editor_type;
+
     BaseEditor* current_editor = nullptr;
 
     SculptEditor* sculpt_editor = nullptr;
@@ -57,4 +59,12 @@ public:
     static void render_controllers();
 
     static void switch_editor(uint8_t editor);
+
+    inline BaseEditor* get_current_editor() const {
+        return current_editor;
+    }
+
+    inline EditorType get_current_editor_type() const {
+        return current_editor_type;
+    }
 };

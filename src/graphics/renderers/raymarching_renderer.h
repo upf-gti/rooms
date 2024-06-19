@@ -42,12 +42,22 @@ struct RayIntersectionInfo {
     uint32_t    dummy2 = 0;
 };
 
+struct SculptureData {
+    uint32_t octree_id;
+    Uniform sculpture_octree_uniform;
+    WGPUBindGroup sculpture_octree_bindgroup = nullptr;
+};
+
 class RaymarchingRenderer {
 
     enum eEvaluatorOperationFlags : uint32_t {
         CLEAN_BEFORE_EVAL = 0x0001u,
         EVALUATE_PREVIEW_STROKE = 0x0002u
     };
+
+    uint32_t sculpt_count = 0u;
+
+    std::vector<SculptInstance*> sculpt_instances_list;
 
     Uniform         linear_sampler_uniform;
 
@@ -80,6 +90,9 @@ class RaymarchingRenderer {
 
     WGPUBuffer     brick_buffers_counters_read_buffer = nullptr;
 
+    Uniform *sculpture_octree_uniform = nullptr;
+    WGPUBindGroup sculpture_octree_bindgroup = nullptr;
+
     // Octree creation
     Pipeline        compute_octree_evaluate_pipeline;
     Pipeline        compute_octree_increment_level_pipeline;
@@ -110,7 +123,6 @@ class RaymarchingRenderer {
     WGPUBindGroup   compute_octree_clean_octree_bind_group = nullptr;
     WGPUBindGroup   compute_octree_brick_unmark_bind_group = nullptr;
 
-    Uniform         octree_uniform;
     Uniform         octant_usage_uniform[4];
     Uniform         octant_usage_initialization_uniform[2];
     uint8_t         octree_depth = 0;
@@ -149,6 +161,11 @@ class RaymarchingRenderer {
 
     Uniform         compute_merge_data_uniform;
     Uniform         compute_stroke_buffer_uniform;
+
+    Uniform         sculpt_model_buffer_uniform;
+
+    Uniform         sculpt_instances_buffer_uniform;
+    WGPUBindGroup   sculpt_instances_bindgroup = nullptr;
 
     MeshInstance3D* cube_mesh = nullptr;
 
@@ -213,7 +230,7 @@ class RaymarchingRenderer {
     void init_raymarching_proxy_pipeline();
     void init_octree_ray_intersection_pipeline();
 
-    void evaluate_strokes(WGPUComputePassEncoder compute_pass, bool is_undo = false, bool is_redo = false);
+    void evaluate_strokes(WGPUComputePassEncoder compute_pass);
 
     void compute_preview_edit(WGPUComputePassEncoder compute_pass);
 
@@ -234,7 +251,7 @@ public:
 
     void update_sculpt(WGPUCommandEncoder command_encoder);
 
-    void compute_octree(WGPUCommandEncoder command_encoder);
+    void compute_octree(WGPUCommandEncoder command_encoder, bool show_previews = false);
     void render_raymarching_proxy(WGPURenderPassEncoder render_pass, uint32_t camera_buffer_stride = 0);
 
     inline void redo() {
@@ -269,7 +286,7 @@ public:
         for (const Edit &edit : new_edits) {
             push_edit(edit);
         }
-    };
+    }
 
     inline void add_preview_edit(const Edit& edit) {
         if (preview_stroke.stroke.edit_count == preview_stroke.edit_list.size()) {
@@ -279,4 +296,10 @@ public:
     }
 
     const glm::vec3& get_sculpt_start_position() { return sculpt_data.sculpt_start_position; }
+
+    void add_sculpt_instance(SculptInstance* instance) {
+        sculpt_instances_list.push_back(instance);
+    }
+
+    SculptureData create_new_sculpture();
 };

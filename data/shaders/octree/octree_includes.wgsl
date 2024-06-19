@@ -106,6 +106,10 @@ struct Octree {
     atomic_counter : atomic<u32>,
     proxy_instance_counter : atomic<u32>,
     evaluation_mode : u32,
+    octree_id : u32,
+    padd0 : u32,
+    padd1 : u32,
+    padd2 : u32,
     data : array<OctreeNode>
 };
 
@@ -119,7 +123,7 @@ struct MergeData {
 struct ProxyInstanceData {
     position : vec3f,
     atlas_tile_index : u32,
-    octree_parent_id : u32, // a hack I dont like it
+    octree_id : u32,
     in_use : u32,
     edit_id_start : u32,
     edit_count : u32
