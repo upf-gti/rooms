@@ -66,7 +66,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     }
 
     // Set default editor..
-    current_editor = scene_editor;
+    switch_editor(EditorType::SCENE_EDITOR);
 
     // Grid
     {
@@ -201,6 +201,8 @@ void RoomsEngine::switch_editor(uint8_t editor)
         assert(0 && "Editor is not created!");
         break;
     }
+
+    i->current_editor_type = (EditorType) editor;
 }
 
 bool RoomsEngine::export_scene()

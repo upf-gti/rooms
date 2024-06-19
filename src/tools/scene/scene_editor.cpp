@@ -343,8 +343,10 @@ void SceneEditor::bind_events()
     Node::bind("sculpt", [&](const std::string& signal, void* button) {
         SculptInstance* new_sculpt = new SculptInstance();
         RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
+        rooms_renderer->toogle_frame_debug();
         rooms_renderer->get_raymarching_renderer()->set_current_sculpt(new_sculpt);
         add_node(new_sculpt);
+        main_scene->add_node(new_sculpt);
     });
 
     // Lights

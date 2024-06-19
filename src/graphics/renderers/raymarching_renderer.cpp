@@ -1,5 +1,6 @@
 #include "raymarching_renderer.h"
 
+#include "engine/rooms_engine.h"
 #include "rooms_renderer.h"
 #include "framework/scene/parse_scene.h"
 #include "framework/math/intersections.h"
@@ -124,7 +125,8 @@ void RaymarchingRenderer::update_sculpt(WGPUCommandEncoder command_encoder)
 
     //updated_time += delta_time;
     //for (;updated_time >= 0.0166f; updated_time -= 0.0166f) {
-    compute_octree(command_encoder);
+    RoomsEngine* engine_instance = static_cast<RoomsEngine*>(RoomsEngine::instance);
+    compute_octree(command_encoder, engine_instance->get_current_editor_type() == EditorType::SCULPT_EDITOR);
     //}
 
 #ifndef DISABLE_RAYMARCHER
@@ -369,7 +371,7 @@ void RaymarchingRenderer::compute_preview_edit(WGPUComputePassEncoder compute_pa
 #endif
 };
 
-void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, bool is_undo, bool is_redo)
+void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass)
 {
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
 
@@ -465,7 +467,7 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass, 
 
 sToComputeStrokeData stroke_to_compute = {};
 
-void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
+void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder, bool show_preview)
 {
     if (!compute_octree_evaluate_shader || !compute_octree_evaluate_shader->is_loaded()) return;
 
@@ -556,7 +558,12 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder)
         evaluate_strokes(compute_pass);
     }
 
-    compute_preview_edit(compute_pass);
+    if (show_preview) {
+        compute_preview_edit(compute_pass);
+    } else if (!needs_evaluation) {
+        uint32_t zero[3] = { 0u, 0u, 0u };
+        webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_brick_buffers.data), sizeof(uint32_t), zero, sizeof(uint32_t) * 3u);
+    }
 
     compute_octree_brick_copy_pipeline.set(compute_pass);
     wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_brick_copy_bind_group, 0, nullptr);

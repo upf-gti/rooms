@@ -230,7 +230,7 @@ class RaymarchingRenderer {
     void init_raymarching_proxy_pipeline();
     void init_octree_ray_intersection_pipeline();
 
-    void evaluate_strokes(WGPUComputePassEncoder compute_pass, bool is_undo = false, bool is_redo = false);
+    void evaluate_strokes(WGPUComputePassEncoder compute_pass);
 
     void compute_preview_edit(WGPUComputePassEncoder compute_pass);
 
@@ -251,7 +251,7 @@ public:
 
     void update_sculpt(WGPUCommandEncoder command_encoder);
 
-    void compute_octree(WGPUCommandEncoder command_encoder);
+    void compute_octree(WGPUCommandEncoder command_encoder, bool show_previews = false);
     void render_raymarching_proxy(WGPURenderPassEncoder render_pass, uint32_t camera_buffer_stride = 0);
 
     inline void redo() {
