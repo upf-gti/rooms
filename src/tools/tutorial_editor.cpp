@@ -45,8 +45,10 @@ void TutorialEditor::initialize()
         }
 
         panels[TUTORIAL_STAMP_SMEAR] = generate_panel("root_stamp_smear", "data/textures/tutorial/stamp_smear.png", TUTORIAL_NONE, TUTORIAL_PRIMITIVES_OPERATIONS);
-        panels[TUTORIAL_PRIMITIVES_OPERATIONS] = generate_panel("root_primitives_op", "data/textures/tutorial/prims_ops.png", TUTORIAL_STAMP_SMEAR, TUTORIAL_MATERIAL);
-        panels[TUTORIAL_MATERIAL] = generate_panel("root_materials", "data/textures/tutorial/materials.png", TUTORIAL_PRIMITIVES_OPERATIONS, TUTORIAL_PAINT);
+        panels[TUTORIAL_PRIMITIVES_OPERATIONS] = generate_panel("root_primitives_op", "data/textures/tutorial/prims_ops.png", TUTORIAL_STAMP_SMEAR, TUTORIAL_CURVES);
+        panels[TUTORIAL_CURVES] = generate_panel("root_curves", "data/textures/tutorial/curves.png", TUTORIAL_PRIMITIVES_OPERATIONS, TUTORIAL_GUIDES);
+        panels[TUTORIAL_GUIDES] = generate_panel("root_guides", "data/textures/tutorial/guides.png", TUTORIAL_CURVES, TUTORIAL_MATERIAL);
+        panels[TUTORIAL_MATERIAL] = generate_panel("root_materials", "data/textures/tutorial/materials.png", TUTORIAL_GUIDES, TUTORIAL_PAINT);
         panels[TUTORIAL_PAINT] = generate_panel("root_paint", "data/textures/tutorial/paint.png", TUTORIAL_MATERIAL, TUTORIAL_UNDO_REDO);
         panels[TUTORIAL_UNDO_REDO] = generate_panel("root_undo_redo", "data/textures/tutorial/undo_redo.png", TUTORIAL_PAINT, TUTORIAL_NONE);
 
@@ -54,6 +56,45 @@ void TutorialEditor::initialize()
             xr_panel_3d = new Viewport3D(xr_panel_2d);
             xr_panel_3d->set_active(true);
         }
+    }
+}
+
+void TutorialEditor::clean()
+{
+    BaseEditor::clean();
+}
+
+void TutorialEditor::update(float delta_time)
+{
+    if (xr_panel_3d) {
+
+        // Update welcome screen following headset??
+
+        glm::mat4x4 m(1.0f);
+        glm::vec3 eye = renderer->get_camera_eye();
+        glm::vec3 new_pos = eye + renderer->get_camera_front() * 1.25f;
+
+        m = glm::translate(m, new_pos);
+        m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
+        m = glm::rotate(m, glm::radians(180.f), { 1.0f, 0.0f, 0.0f });
+
+        xr_panel_3d->set_model(m);
+        xr_panel_3d->update(delta_time);
+    }
+    else {
+        xr_panel_2d->update(delta_time);
+    }
+}
+
+void TutorialEditor::render()
+{
+    RoomsEngine::render_controllers();
+
+    if (xr_panel_3d) {
+        xr_panel_3d->render();
+    }
+    else {
+        xr_panel_2d->render();
     }
 }
 
@@ -97,43 +138,4 @@ ui::XRPanel* TutorialEditor::generate_panel(const std::string& name, const std::
     });
 
     return new_panel;
-}
-
-void TutorialEditor::clean()
-{
-    BaseEditor::clean();
-}
-
-void TutorialEditor::update(float delta_time)
-{
-    if (xr_panel_3d) {
-
-        // Update welcome screen following headset??
-
-        glm::mat4x4 m(1.0f);
-        glm::vec3 eye = renderer->get_camera_eye();
-        glm::vec3 new_pos = eye + renderer->get_camera_front() * 1.25f;
-
-        m = glm::translate(m, new_pos);
-        m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
-        m = glm::rotate(m, glm::radians(180.f), { 1.0f, 0.0f, 0.0f });
-
-        xr_panel_3d->set_model(m);
-        xr_panel_3d->update(delta_time);
-    }
-    else {
-        xr_panel_2d->update(delta_time);
-    }
-}
-
-void TutorialEditor::render()
-{
-    RoomsEngine::render_controllers();
-
-    if (xr_panel_3d) {
-        xr_panel_3d->render();
-    }
-    else {
-        xr_panel_2d->render();
-    }
 }
