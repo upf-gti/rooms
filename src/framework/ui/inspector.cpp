@@ -116,6 +116,10 @@ namespace ui {
             body->remove_child(node_2d);
             delete node;
         }
+
+        items.clear();
+
+        IO::set_hover(nullptr, {});
     }
 
     void Inspector::add_label(const std::string& name, const std::string& label)
@@ -179,7 +183,7 @@ namespace ui {
             flex_container = create_row();
         }
 
-        float picker_size = PICKER_SIZE * 0.75f;
+        float picker_size = PICKER_SIZE * 0.8f;
         auto w = new ui::ColorPicker2D(name, { 0.0f, 0.0f }, glm::vec2(picker_size), c, ui::SCROLLABLE);
         flex_container->add_child(w);
         // Translate after being added to the container
