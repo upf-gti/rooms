@@ -26,6 +26,9 @@
 #define MIN_PRIMITIVE_SIZE 0.005f
 #define MAX_PRIMITIVE_SIZE 0.08f
 
+#define PREVIEW_BASE_EDIT_LIST 200u
+#define PREVIEW_EDIT_LIST_INCREMENT 200u
+
 class MeshInstance3D;
 
 struct RayIntersectionInfo {
@@ -39,12 +42,22 @@ struct RayIntersectionInfo {
     uint32_t    dummy2 = 0;
 };
 
+struct SculptureData {
+    uint32_t octree_id;
+    Uniform sculpture_octree_uniform;
+    WGPUBindGroup sculpture_octree_bindgroup = nullptr;
+};
+
 class RaymarchingRenderer {
 
     enum eEvaluatorOperationFlags : uint32_t {
         CLEAN_BEFORE_EVAL = 0x0001u,
         EVALUATE_PREVIEW_STROKE = 0x0002u
     };
+
+    uint32_t sculpt_count = 0u;
+
+    std::vector<SculptInstance*> sculpt_instances_list;
 
     Uniform         linear_sampler_uniform;
 
@@ -77,6 +90,9 @@ class RaymarchingRenderer {
 
     WGPUBuffer     brick_buffers_counters_read_buffer = nullptr;
 
+    Uniform *sculpture_octree_uniform = nullptr;
+    WGPUBindGroup sculpture_octree_bindgroup = nullptr;
+
     // Octree creation
     Pipeline        compute_octree_evaluate_pipeline;
     Pipeline        compute_octree_increment_level_pipeline;
@@ -107,7 +123,6 @@ class RaymarchingRenderer {
     WGPUBindGroup   compute_octree_clean_octree_bind_group = nullptr;
     WGPUBindGroup   compute_octree_brick_unmark_bind_group = nullptr;
 
-    Uniform         octree_uniform;
     Uniform         octant_usage_uniform[4];
     Uniform         octant_usage_initialization_uniform[2];
     uint8_t         octree_depth = 0;
@@ -119,9 +134,14 @@ class RaymarchingRenderer {
     Uniform         octree_brick_buffers;
     Uniform         octree_preview_stroke;
     Uniform         octree_stroke_history;
+    uint32_t        octree_edit_list_size;
+    Uniform         octree_edit_list;
     Uniform         octree_brick_copy_buffer;
     WGPUBindGroup   render_camera_bind_group = nullptr;
 
+    // Stroke culling data
+    Uniform         stroke_culling_data;
+    uint32_t        max_stroke_influence_count = 200u;
 
     Uniform         ray_info_uniform;
     Uniform         ray_intersection_info_uniform;
@@ -142,6 +162,11 @@ class RaymarchingRenderer {
     Uniform         compute_merge_data_uniform;
     Uniform         compute_stroke_buffer_uniform;
 
+    Uniform         sculpt_model_buffer_uniform;
+
+    Uniform         sculpt_instances_buffer_uniform;
+    WGPUBindGroup   sculpt_instances_bindgroup = nullptr;
+
     MeshInstance3D* cube_mesh = nullptr;
 
     struct sSculptData {
@@ -161,8 +186,10 @@ class RaymarchingRenderer {
 
     struct sOctreeNode {
         glm::vec2 octant_center_distance = glm::vec2(10000.0f, 10000.0f);
-        float dummy = 0.0f;
+        uint32_t dummy = 0.0f;
         uint32_t tile_pointer = 0;
+        glm::vec3 padding;
+        uint32_t culling_data = 0u;
     };
 
     struct RayInfo {
@@ -172,10 +199,20 @@ class RaymarchingRenderer {
         float dummy1;
     } ray_info;
 
+    bool needs_context_upload = false;
+    sToComputeStrokeData context_to_upload = {};
 
     RayIntersectionInfo ray_intersection_info;
 
     StrokeManager   stroke_manager = {};
+
+    uint32_t preview_edit_array_length = 0u;
+    struct sPreviewStroke {
+        sToUploadStroke stroke;
+        std::vector<Edit> edit_list;
+
+        AABB get_AABB() const;
+    } preview_stroke;
 
     std::vector<Edit> incoming_edits;
 
@@ -186,27 +223,6 @@ class RaymarchingRenderer {
         uint32_t padding[3];
     };
 
-    Stroke   preview_stroke = {
-             .edit_count = 1u,
-             .primitive = SD_SPHERE,
-             .operation = OP_UNION,
-             .color_blending_op = COLOR_OP_REPLACE,
-             .edits = {
-                 {
-                     .position = {0.00f, 0.10f, 0.0f},
-                     .dimensions = {0.050f, 0.01f, 0.01f,0.01f}
-                 },
-                 {
-                     .position = {0.00f, 0.00f, 0.0f},
-                     .dimensions = {0.050f, 0.01f, 0.01f,0.01f}
-                 },
-                 {
-                     .position = {0.00f, -0.150f, 0.0f},
-                     .dimensions = {0.10f, 0.01f, 0.01f,0.01f}
-                 }
-             },
-    };
-
     // Timestepping counters
     float updated_time = 0.0f;
 
@@ -214,7 +230,7 @@ class RaymarchingRenderer {
     void init_raymarching_proxy_pipeline();
     void init_octree_ray_intersection_pipeline();
 
-    void evaluate_strokes(WGPUComputePassEncoder compute_pass, const Stroke* to_evaluate_strokes, bool is_undo = false, bool is_redo = false);
+    void evaluate_strokes(WGPUComputePassEncoder compute_pass);
 
     void compute_preview_edit(WGPUComputePassEncoder compute_pass);
 
@@ -235,7 +251,7 @@ public:
 
     void update_sculpt(WGPUCommandEncoder command_encoder);
 
-    void compute_octree(WGPUCommandEncoder command_encoder);
+    void compute_octree(WGPUCommandEncoder command_encoder, bool show_previews = false);
     void render_raymarching_proxy(WGPURenderPassEncoder render_pass, uint32_t camera_buffer_stride = 0);
 
     inline void redo() {
@@ -258,11 +274,6 @@ public:
 
     const RayIntersectionInfo& get_ray_intersection_info() const;
 
-    void set_preview_edit(const Edit& preview) {
-        preview_stroke.edits[0] = preview;
-        preview_stroke.edit_count = 1u;
-    }
-
     /*
     *   Edits
     */
@@ -275,9 +286,20 @@ public:
         for (const Edit &edit : new_edits) {
             push_edit(edit);
         }
-    };
+    }
 
-    void add_preview_edit(const Edit& edit);
+    inline void add_preview_edit(const Edit& edit) {
+        if (preview_stroke.stroke.edit_count == preview_stroke.edit_list.size()) {
+            preview_stroke.edit_list.resize(preview_stroke.edit_list.size() + PREVIEW_EDIT_LIST_INCREMENT);
+        }
+        preview_stroke.edit_list[preview_stroke.stroke.edit_count++] = edit;
+    }
 
     const glm::vec3& get_sculpt_start_position() { return sculpt_data.sculpt_start_position; }
+
+    void add_sculpt_instance(SculptInstance* instance) {
+        sculpt_instances_list.push_back(instance);
+    }
+
+    SculptureData create_new_sculpture();
 };

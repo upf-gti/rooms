@@ -1,19 +1,22 @@
 #include math.wgsl
 #include octree_includes.wgsl
 #include sdf_commons.wgsl
-#include sdf_interval_functions.wgsl
 
 @group(0) @binding(1) var<uniform> merge_data : MergeData;
-@group(0) @binding(2) var<storage, read_write> octree : Octree;
 @group(0) @binding(5) var<storage, read_write> brick_buffers: BrickBuffers;
-@group(0) @binding(6) var<storage, read> stroke_history : StrokeHistory; 
+@group(0) @binding(6) var<storage, read> stroke_history : StrokeHistory;
+@group(0) @binding(7) var<storage, read> edit_list : array<Edit>;
+@group(0) @binding(9) var<storage, read_write> stroke_culling : array<u32>;
 
-#dynamic @group(1) @binding(0) var<storage, read> stroke : Stroke;
+@group(1) @binding(0) var<storage, read_write> octree : Octree;
 
 @group(2) @binding(0) var<storage, read> octant_usage_read : array<u32>;
 @group(2) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
 
-@group(3) @binding(0) var<storage, read> preview_stroke : Stroke;
+@group(3) @binding(0) var<storage, read> preview_stroke : PreviewStroke;
+
+
+#include sdf_interval_functions.wgsl
 
 /*
     Este shader es el responsable de subdividir el espacio, para una evaluacion mas eficaz de SDFs.
@@ -103,7 +106,6 @@
             - If its a substraction, we delete all bricks inside the new_edits, and only create/re-evaluate bricks on the intersection of the 
               new_edits and the resulting SDF.
 
-
     TODO:
      - Redo edit culling with interval arithmetic.
      - Redo preview
@@ -137,7 +139,7 @@ fn brick_remove(octree_index : u32) {
 }
 
 // Brick managing functions
-fn brick_remove_or_mark_as_inside(octree_index : u32, is_current_brick_filled : bool) {
+fn brick_remove_and_mark_as_inside(octree_index : u32, is_current_brick_filled : bool) {
     if (is_current_brick_filled) {
         brick_remove(octree_index);
     } 
@@ -154,16 +156,10 @@ fn brick_create_or_reevaluate(octree_index : u32, is_current_brick_filled : bool
         let instance_index : u32 = brick_buffers.atlas_empty_bricks_buffer[brick_spot_id];
         brick_buffers.brick_instance_data[instance_index].position = octant_center;
         brick_buffers.brick_instance_data[instance_index].atlas_tile_index = instance_index;
-        brick_buffers.brick_instance_data[instance_index].octree_parent_id = octree_index;
         brick_buffers.brick_instance_data[instance_index].in_use = BRICK_IN_USE_FLAG;
+        brick_buffers.brick_instance_data[instance_index].octree_id = octree.octree_id;
 
-        if (is_interior_brick) {
-            // TODO(Juan): remove this brick
-            octree.data[octree_index].tile_pointer = INTERIOR_BRICK_FLAG;
-            octree.data[octree_index].octant_center_distance = vec2f(-10000.0, -10000.0);
-        } else {
-            octree.data[octree_index].tile_pointer = instance_index | FILLED_BRICK_FLAG;
-        }
+        octree.data[octree_index].tile_pointer = instance_index | FILLED_BRICK_FLAG;
     }
                 
     octant_usage_write[prev_counter] = octree_index;
@@ -174,27 +170,44 @@ fn brick_reevaluate(octree_index : u32) {
     octant_usage_write[prev_counter] = octree_index;
 }
 
-fn preview_brick_create(octree_index : u32, octant_center : vec3f, is_interior_brick : bool) {
+fn preview_brick_create(octree_index : u32, octant_center : vec3f, is_interior_brick : bool, edit_start_index : u32, edit_count : u32) {
     let preview_brick : u32 = atomicAdd(&brick_buffers.preview_instance_counter, 1u);
     
     brick_buffers.preview_instance_data[preview_brick].position = octant_center;
-    brick_buffers.preview_instance_data[preview_brick].octree_parent_id = octree_index;
     brick_buffers.preview_instance_data[preview_brick].in_use = 0u;
+    brick_buffers.preview_instance_data[preview_brick].edit_id_start = edit_start_index;
+    brick_buffers.preview_instance_data[preview_brick].edit_count = edit_count;
     if (is_interior_brick) {
         brick_buffers.preview_instance_data[preview_brick].in_use = INTERIOR_BRICK_FLAG; 
     }
 }
 
-fn brick_mark_as_preview(octree_index : u32) {
+fn brick_mark_as_preview(octree_index : u32, edit_start_index : u32, edit_count : u32) {
     brick_buffers.brick_instance_data[octree.data[octree_index].tile_pointer & OCTREE_TILE_INDEX_MASK].in_use |= BRICK_HAS_PREVIEW_FLAG;
+    brick_buffers.brick_instance_data[octree.data[octree_index].tile_pointer & OCTREE_TILE_INDEX_MASK].edit_id_start = edit_start_index;
+    brick_buffers.brick_instance_data[octree.data[octree_index].tile_pointer & OCTREE_TILE_INDEX_MASK].edit_count = edit_count;
+}
+
+fn brick_mark_as_hidden(octree_index : u32) {
+    brick_buffers.brick_instance_data[octree.data[octree_index].tile_pointer & OCTREE_TILE_INDEX_MASK].in_use |= BRICK_HIDE_FLAG;
+}
+
+fn get_loose_half_size_mat(prim : u32) -> mat4x3f{
+    if (prim == SD_SPHERE) {
+        return mat4x3f(vec3f(1.0, 1.0, 1.0), vec3f(0.0), vec3f(0.0), vec3f(0.0));
+    } else if (prim == SD_BOX) {
+        return mat4x3f(vec3f(1.0, 0.0, 0.0), vec3f(0.0, 1.0, 0.0), vec3f(0.0, 0.0, 1.0), vec3f(0.0));
+    } else if (prim == SD_CAPSULE) {
+        return mat4x3f(vec3f(1.0, 1.0, 1.0), vec3f(0.0), vec3f(0.0), vec3f(0.50, 0.50, 0.50));
+    }
+
+    return mat4x3f();
 }
 
 @compute @workgroup_size(1, 1, 1)
 fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) workgroup_size : vec3u) 
 {
     let level : u32 = atomicLoad(&octree.current_level);
-
-    let p = preview_stroke.edit_count;
 
     let id : u32 = group_id.x;
 
@@ -217,6 +230,10 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     let octree_index : u32 = octant_id + u32((pow(8.0, f32(level)) - 1) / 7);
     let parent_octree_index : u32 = parent_octant_id + u32((pow(8.0, f32(parent_level)) - 1) / 7);
 
+    // Culling list indices
+    let curr_culling_layer_index = (octant_id + (level % 2) * BRICK_COUNT) * stroke_history.count;
+    let prev_culling_layer_index = (parent_octant_id + (parent_level % 2) * BRICK_COUNT) * stroke_history.count;
+
     var octant_center : vec3f = vec3f(0.0);
     var level_half_size : f32 = 0.5 * SCULPT_MAX_SIZE;
 
@@ -236,18 +253,14 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     // TODO(Juan): fix undo redo reeval
     let is_evaluating_preview : bool = ((octree.evaluation_mode & EVALUATE_PREVIEW_STROKE_FLAG) == EVALUATE_PREVIEW_STROKE_FLAG);
     let is_evaluating_undo : bool = (octree.evaluation_mode & UNDO_EVAL_FLAG) == UNDO_EVAL_FLAG;
-    let is_smooth_paint : bool = stroke.operation == OP_SMOOTH_PAINT;
 
     let octant_min : vec3f = octant_center - vec3f(level_half_size);
     let octant_max : vec3f = octant_center + vec3f(level_half_size);
-
-    let is_in_reevaluation_zone : bool = intersection_AABB_AABB(merge_data.reevaluation_AABB_min, merge_data.reevaluation_AABB_max, octant_min, octant_max);
 
     var current_stroke_interval : vec2f = vec2f(10000.0, 10000.0);
     var surface_interval = vec2f(10000.0, 10000.0);
     var edit_counter : u32 = 0;
 
-    let SMOOTH_FACTOR : f32 = stroke.parameters.w;
 
     // Base evaluation range
     let x_range : vec2f = vec2f(octant_center.x - level_half_size, octant_center.x + level_half_size);
@@ -281,73 +294,26 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         //  |_____/ \__|_|  \___/|_|\_\___| |______\_/ \__,_|_|
         // =====================================================
         // =====================================================
-                                                    
-        if (level == OCTREE_DEPTH) {
-            // Compute the context of the current stroke,
-            for (var j : u32 = 0; j < stroke_history.count; j++) {
-                surface_interval = evaluate_stroke_interval(current_subdivision_interval, &(stroke_history.strokes[j]), surface_interval, octant_center, level_half_size);
-            }
-
-            current_stroke_interval = surface_interval;
-
-            surface_interval = evaluate_stroke_interval(current_subdivision_interval, &(stroke), surface_interval, octant_center, level_half_size);
-        }
-        if (level != OCTREE_DEPTH || stroke.operation == OP_SMOOTH_PAINT) {
-            // Twice the smooth factor since it is the top influencing margin 
-            // as a way to subdivide to the bottom level. It is not used
-            // for sending the work to the write to texture!!
-            margin = vec4f(SMOOTH_FACTOR * 2.0);
-        }
-
-        // Check the edits in the parent, and fill its own list with the edits that affect this child
-        // The magin is twice the smooth factor if there are two strokes with this smooth factor, they will act on eachotehr
-        current_stroke_interval = evaluate_stroke_interval_force_union(current_subdivision_interval,  &(stroke), current_stroke_interval, margin);
-        // Pseudo subdivide!
-        // Re-compute the strokes for the octants of the last level, and check the interval on those
-        // Since the interval are smaller, the wrapping effect is lessend, and you add a brick if
-        // at least one of this interval subdivisions is true.
-        if (level == OCTREE_DEPTH) {
-            for (var i : u32 = 0; i < 8 && !subdivide; i++) {
-                let sub_octant_id = octant_id | (i << (3 * level));
-
-                let sub_level_half_size = SCULPT_MAX_SIZE / pow(2.0, f32((level+1) + 1));
-
-                let sub_octant_center = octant_center + sub_level_half_size * OCTREE_CHILD_OFFSET_LUT[(sub_octant_id >> (3 * ((level+1) - 1))) & 0x7];
-
-                let x_range : vec2f = vec2f(sub_octant_center.x - sub_level_half_size, sub_octant_center.x + sub_level_half_size);
-                let y_range : vec2f = vec2f(sub_octant_center.y - sub_level_half_size, sub_octant_center.y + sub_level_half_size);
-                let z_range : vec2f = vec2f(sub_octant_center.z - sub_level_half_size, sub_octant_center.z + sub_level_half_size);
-                let current_sub_interval = iavec3_vecs(x_range, y_range, z_range);
-
-                var surf_interval : vec2f = vec2f(10000.0, 10000.0);
-                for (var j : u32 = 0; j < stroke_history.count; j++) {
-                    surf_interval = evaluate_stroke_interval(current_sub_interval, &(stroke_history.strokes[j]), surf_interval, octant_center, level_half_size);
-                }
-
-                // Check the edits in the parent, and fill its own list with the edits that affect this child
-                surf_interval = evaluate_stroke_interval(current_sub_interval, &(stroke), surf_interval, sub_octant_center, sub_level_half_size);
-                
-                if (is_smooth_paint) {
-                    subdivide = surf_interval.x <= 0.0;
-                } else {
-                    subdivide = surf_interval.x <= 0.0 && surf_interval.y >= 0.0;
-                }
-                
-            }
-        }
-
-        // Do not evaluate all the bricks, only the ones whose distance interval has changed
-        octree.data[octree_index].octant_center_distance = surface_interval;
         
         if (level < OCTREE_DEPTH) {
-            if (is_evaluating_undo) {
-                subdivide = intersection_AABB_AABB(eval_aabb_min, eval_aabb_max, merge_data.reevaluation_AABB_min, merge_data.reevaluation_AABB_max);
-            } else {
-                subdivide = current_stroke_interval.x < 0.0 && intersection_AABB_AABB(eval_aabb_min, eval_aabb_max, merge_data.reevaluation_AABB_min, merge_data.reevaluation_AABB_max);
-            }
-            // Broad culling using only the incomming stroke
-            // TODO: intersection with current edit AABB?
+            subdivide = intersection_AABB_AABB(eval_aabb_min, eval_aabb_max, stroke_history.eval_aabb_min, stroke_history.eval_aabb_max);
+            
             if (subdivide) {
+                    // Stroke history culling
+                    var curr_stroke_count : u32 = 0u;
+                    for(var i : u32 = 0u; i < octree.data[parent_octree_index].stroke_count; i++) {
+                        let index : u32 = culling_get_stroke_index(stroke_culling[prev_culling_layer_index + i]);
+                        if (intersection_AABB_AABB(eval_aabb_min, 
+                                               eval_aabb_max, 
+                                               stroke_history.strokes[index].aabb_min, 
+                                               stroke_history.strokes[index].aabb_max)) {
+                            // Added to the current list
+                            stroke_culling[curr_culling_layer_index + curr_stroke_count] = culling_get_culling_data(index, 0u, 0u);
+                            curr_stroke_count = curr_stroke_count + 1u;
+                        }
+                    }
+                    octree.data[octree_index].stroke_count = curr_stroke_count;
+
                 // Subdivide
                 // Increase the number of children from the current level
                 let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 8);
@@ -357,40 +323,49 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                     octant_usage_write[prev_counter + i] = octant_id | (i << (3 * level));
                 }
             }
-        } else if (subdivide) {
+        } else {
             // in order to detect where the smooth factor is influencing  with the "goops"
-            // we evaluate the whole history and the store 2 diferent results, one with the 
-            // substraction, and another using it as adition. Then, we compare the two intervals,
+            // We compare the two intervals,
             // in order to find the goops (where the current stroke is taking affect)
-            if (stroke.operation == OP_SMOOTH_SUBSTRACTION) {
-                if ((current_stroke_interval.x < 0.0)) {
-                    if (surface_interval.x < 0.0) {
-                        if (surface_interval.y < 0.0) {
-                            brick_remove_or_mark_as_inside(octree_index, is_current_brick_filled);
-                        } else {
-                            brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
-                        }  
-                    } else if (is_current_brick_filled) {
-                        brick_remove(octree_index);
-                    }
-                }
-            } else if (stroke.operation == OP_SMOOTH_UNION) {
-                if (current_stroke_interval.x < 0.0) {
-                    if (surface_interval.x < 0.0 && surface_interval.y > 0.0) {
-                        brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
-                    } else if (surface_interval.y < 0.0) {
-                        brick_remove_or_mark_as_inside(octree_index, is_current_brick_filled);
-                    }
-                }
-            } else if (stroke.operation == OP_SMOOTH_PAINT) {
-                if (current_stroke_interval.x < 0.0) {
-                    if (surface_interval.x < 0.0 && surface_interval.y > 0.0) {
-                        brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
-                    }
+            var curr_stroke_count : u32 = 0u;
+            for(var i : u32 = 0u; i < octree.data[parent_octree_index].stroke_count; i++) {
+                let index : u32 = culling_get_stroke_index(stroke_culling[prev_culling_layer_index + i]);
+                if (intersection_AABB_AABB(eval_aabb_min, 
+                                               eval_aabb_max, 
+                                               stroke_history.strokes[index].aabb_min, 
+                                               stroke_history.strokes[index].aabb_max)) {
+                    // Added to the current list
+                    stroke_culling[curr_culling_layer_index + curr_stroke_count] = culling_get_culling_data(index, 0u, 0u);
+                    curr_stroke_count++;
+
+                    surface_interval = evaluate_stroke_interval(current_subdivision_interval, &(stroke_history.strokes[index]), &edit_list, surface_interval, octant_center, level_half_size);
                 }
             }
-        } else if (is_current_brick_filled) {
-            brick_remove(octree_index);
+            octree.data[octree_index].stroke_count = curr_stroke_count;
+            octree.data[octree_index].culling_id = curr_culling_layer_index;
+
+            // Do not evaluate all the bricks, only the ones whose distance interval has changed
+            let prev_interval = octree.data[octree_index].octant_center_distance;
+            octree.data[octree_index].octant_center_distance = surface_interval;
+
+            let int_distance = abs(distance(prev_interval, surface_interval));
+            
+            if (int_distance > 0.00001) {
+                if (surface_interval.x > 0.0) {
+                    if (is_current_brick_filled) {
+                        // delete any brick outside surface that was previosly filled
+                        brick_remove(octree_index);
+                    } else {
+                        // reset flags for potential interior bricks
+                        octree.data[octree_index].tile_pointer = 0;
+                        octree.data[octree_index].octant_center_distance = vec2f(10000.0, 10000.0);
+                    }
+                } else if (surface_interval.y < 0.0) {
+                    brick_remove_and_mark_as_inside(octree_index, is_current_brick_filled);
+                } else if (surface_interval.x < 0.0) {
+                    brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
+                }
+            }
         }
     } else {
         // ============================================================
@@ -404,32 +379,10 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         // =============================================================
         // =============================================================
 
-        var surface_with_preview_interval : vec2f;
-
-         if (level == OCTREE_DEPTH) {
-            // Compute the context of the current stroke,
-            for (var j : u32 = 0; j < stroke_history.count; j++) {
-                surface_interval = evaluate_stroke_interval(current_subdivision_interval, &(stroke_history.strokes[j]), surface_interval, octant_center, level_half_size);
-            }
-
-            // No bueno
-            surface_with_preview_interval = evaluate_stroke_interval(current_subdivision_interval,  &(preview_stroke), surface_interval, octant_center, level_half_size);
-        } 
-            // Twice the smooth factor since it is the top influencing margin 
-            // as a way to subdivide to the bottom level. It is not used
-            // for sending the work to the write to texture!!
-            margin = vec4f(SMOOTH_FACTOR * 2.0);
-        
-        // Check the edits in the parent, and fill its own list with the edits that affect this child
-        // The magin is twice the smooth factor if there are two strokes with this smooth factor, they will act on eachotehr
-        current_stroke_interval = evaluate_stroke_interval_force_union(current_subdivision_interval,  &(preview_stroke), current_stroke_interval, margin);
-        let preview_stroke_interval = evaluate_stroke_interval_force_union(current_subdivision_interval,  &(preview_stroke), current_stroke_interval, vec4f(0.0));
-        
-        
         if (level < OCTREE_DEPTH) {
             // Broad culling using only the incomming stroke
             // TODO: intersection with current edit AABB?
-            if (current_stroke_interval.x < 0.0 && intersection_AABB_AABB(eval_aabb_min, eval_aabb_max, merge_data.reevaluation_AABB_min, merge_data.reevaluation_AABB_max)) {
+            if (intersection_AABB_AABB(eval_aabb_min, eval_aabb_max, merge_data.reevaluation_AABB_min, merge_data.reevaluation_AABB_max)) {
                 // Subdivide
                 // Increase the number of children from the current level
                 let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 8);
@@ -440,53 +393,54 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 }
             }
         } else {
-            if (preview_stroke.operation == OP_SMOOTH_SUBSTRACTION) {
-                if ((current_stroke_interval.x < 0.0)) {
-                    if (is_current_brick_filled) {
-                        brick_mark_as_preview(octree_index);
-                    } else if (preview_stroke_interval.x < 0.0 && surface_with_preview_interval.x < 0.0 && surface_with_preview_interval.y > 0.0) {
-                        // Pseudo subdivide!
-                        // Perform subdivision in order to test with better precision
-                        // The desired test is surface_interval.y < 0.0
-                        for (var i : u32 = 0; i < 8 && !subdivide; i++) {
-                            let sub_octant_id = octant_id | (i << (3 * level));
+            let prev_interval : vec2f = octree.data[octree_index].octant_center_distance;
+            let surface_with_preview_interval : vec2f = evaluate_stroke_interval(current_subdivision_interval,  &(preview_stroke.stroke), &(preview_stroke.edit_list), prev_interval, octant_center, level_half_size);
+            let int_distance = abs(distance(prev_interval, surface_with_preview_interval));
 
-                            let sub_level_half_size = SCULPT_MAX_SIZE / pow(2.0, f32((level+1) + 1));
+            let in_surface_with_preview : bool = surface_with_preview_interval.x < 0.0 && surface_with_preview_interval.y > 0.0;
+            let outside_surface_with_preview : bool = surface_with_preview_interval.x > 0.0 && surface_with_preview_interval.y > 0.0;
+            let fully_inside_surface : bool = prev_interval.x < 0.0 && prev_interval.y < 0.0;
+            let in_surface : bool = prev_interval.x < 0.0 && prev_interval.y > 0.0;
+            let outside_surface : bool = prev_interval.x > 0.0 && prev_interval.y > 0.0;
 
-                            let sub_octant_center = octant_center + sub_level_half_size * OCTREE_CHILD_OFFSET_LUT[(sub_octant_id >> (3 * ((level+1) - 1))) & 0x7];
+            if (int_distance > 0.0001) {
+                // Compute edit margin for preview evaluation
+                var edit_index_start : u32 = 1000u;
+                var edit_count : u32 = 0u;
+                let starting_edit_pos : u32 = preview_stroke.stroke.edit_list_index;
 
-                            let x_range : vec2f = vec2f(sub_octant_center.x - sub_level_half_size, sub_octant_center.x + sub_level_half_size);
-                            let y_range : vec2f = vec2f(sub_octant_center.y - sub_level_half_size, sub_octant_center.y + sub_level_half_size);
-                            let z_range : vec2f = vec2f(sub_octant_center.z - sub_level_half_size, sub_octant_center.z + sub_level_half_size);
-                            let current_sub_interval = iavec3_vecs(x_range, y_range, z_range);
+                let aabb_half_size : mat4x3f = get_loose_half_size_mat(preview_stroke.stroke.primitive);
 
-                            var surf_interval : vec2f = vec2f(10000.0, 10000.0);
-                            for (var j : u32 = 0; j < stroke_history.count; j++) {
-                                surf_interval = evaluate_stroke_interval(current_sub_interval, &(stroke_history.strokes[j]), surf_interval, octant_center, level_half_size);
-                            }
+                let smooth_margin : vec3f = vec3f(preview_stroke.stroke.parameters.w);
 
-                            subdivide = surf_interval.y < 0.0;
-                        }
-                        if (subdivide) {
-                            preview_brick_create(octree_index, octant_center, true);
-                        }
+                for(var i : u32 = 0u; i < preview_stroke.stroke.edit_count; i++) {
+                    // WIP get AABB of current edit
+                    let edit_pointer : ptr<storage, Edit> = &(preview_stroke.edit_list[i + starting_edit_pos]);
+
+                    let half_size : vec3f = (aabb_half_size * edit_pointer.dimensions) + smooth_margin;
+                    let position : vec3f = (edit_pointer.position);
+
+                    let aabb_min : vec3f = position - half_size;
+                    let aabb_max : vec3f = position + half_size;
+
+                    if (intersection_AABB_AABB(aabb_min, aabb_max, eval_aabb_min, eval_aabb_max)) {
+                        edit_index_start = min(edit_index_start, i + starting_edit_pos);
+                        edit_count = max(edit_count, i+1);
                     }
                 }
-            } else if (preview_stroke.operation == OP_SMOOTH_UNION) {
-                if (current_stroke_interval.x < 0.0) {
-                    if (surface_with_preview_interval.y > 0.0) {
-                        if (is_current_brick_filled) {
-                            brick_mark_as_preview(octree_index);
-                        } else if (surface_with_preview_interval.x < 0.0) {
-                            preview_brick_create(octree_index, octant_center, false);
-                        }
+
+                if (in_surface_with_preview) {
+                    if (fully_inside_surface) {
+                        preview_brick_create(octree_index, octant_center, true, edit_index_start, edit_count);
+                    } else if (in_surface && is_current_brick_filled) {
+                        brick_mark_as_preview(octree_index, edit_index_start, edit_count);
+                    } else if (outside_surface) {
+                        preview_brick_create(octree_index, octant_center, false, edit_index_start, edit_count);
+                    } else if (in_surface) {
+                        // preview_brick_create(octree_index, octant_center, true);
                     }
-                }
-            } else if (preview_stroke.operation == OP_SMOOTH_PAINT) {
-                if (current_stroke_interval.x < 0.0) {
-                    if (is_current_brick_filled) {
-                        brick_mark_as_preview(octree_index);
-                    }
+                } else if (outside_surface_with_preview && is_current_brick_filled) {
+                    brick_mark_as_hidden(octree_index);
                 }
             }
         }

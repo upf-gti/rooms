@@ -1,5 +1,6 @@
 #include "rooms_engine.h"
 
+#include "framework/nodes/custom_node_factory.h"
 #include "framework/nodes/environment_3d.h"
 #include "framework/nodes/viewport_3d.h"
 #include "framework/input.h"
@@ -22,6 +23,7 @@
 #include "tools/scene/scene_editor.h"
 #include "tools/tutorial_editor.h"
 
+
 #include "spdlog/spdlog.h"
 #include "imgui.h"
 
@@ -33,7 +35,9 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 {
     int error = Engine::initialize(renderer, window, use_glfw, use_mirror_screen);
 
-    main_scene = new Scene();
+    node_factory = custom_node_factory;
+
+    main_scene = new Scene("main_scene");
 
     environment = new Environment3D();
 
@@ -66,7 +70,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     }
 
     // Set default editor..
-    current_editor = sculpt_editor;
+    switch_editor(EditorType::SCENE_EDITOR);
 
     // Grid
     {
@@ -225,6 +229,8 @@ void RoomsEngine::switch_editor(uint8_t editor)
         assert(0 && "Editor is not created!");
         break;
     }
+
+    i->current_editor_type = (EditorType) editor;
 }
 
 void RoomsEngine::toggle_use_environment_map()
@@ -393,6 +399,40 @@ void RoomsEngine::render_gui()
     {
         if (ImGui::BeginMenu("File"))
         {
+            if (ImGui::MenuItem("Open room (.room)"))
+            {
+                std::vector<const char*> filter_patterns = { "*.room" };
+                char const* open_file_name = tinyfd_openFileDialog(
+                    "Room loader",
+                    "",
+                    filter_patterns.size(),
+                    filter_patterns.data(),
+                    "Rooms format",
+                    0
+                );
+
+                if (open_file_name) {
+                    delete main_scene;
+                    main_scene = new Scene();
+                    main_scene->parse(open_file_name);
+                }
+            }
+            if (ImGui::MenuItem("Save room (.room)"))
+            {
+                std::vector<const char*> filter_patterns = { "*.room" };
+
+                char const* save_file_name = tinyfd_saveFileDialog(
+                    "Room loader",
+                    "",
+                    filter_patterns.size(),
+                    filter_patterns.data(),
+                    "Rooms format"
+                );
+
+                if (save_file_name) {
+                    main_scene->serialize(save_file_name);
+                }
+            }
             if (ImGui::MenuItem("Open scene (.gltf, .glb, .obj)"))
             {
                 std::vector<const char*> filter_patterns = { "*.gltf", "*.glb", "*.obj" };

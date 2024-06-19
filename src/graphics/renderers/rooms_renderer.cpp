@@ -159,7 +159,7 @@ void RoomsRenderer::render()
     wgpuCommandBufferRelease(commands);
     wgpuCommandEncoderRelease(global_command_encoder);
 
-    if (debug_this_frame) {
+    if (RenderdocCapture::is_capture_started() && debug_this_frame) {
         RenderdocCapture::end_capture_frame();
         debug_this_frame = false;
     }

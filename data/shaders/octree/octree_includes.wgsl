@@ -31,8 +31,6 @@ const BRICK_IN_USE_FLAG = 0x001u;
 const BRICK_HAS_PREVIEW_FLAG = 0x002u;
 const BRICK_HIDE_FLAG = 0x004u;
 
-const PREVIEW_BRICK_INSIDE_FLAG = 0x001u;
-
 const OCTREE_CHILD_OFFSET_LUT : array<vec3f, 8> = array<vec3f, 8>(
     vec3f(-1.0, -1.0, -1.0),
     vec3f( 1.0, -1.0, -1.0),
@@ -63,18 +61,23 @@ struct StrokeMaterial {
     noise_color     : vec4f
 };
 
+struct PreviewStroke {
+    stroke    : Stroke,
+    edit_list : array<Edit>
+};
+
 //TODO(Juan): revisit the padding, and avoid using vec2/3/4 as padding
 struct Stroke {
     stroke_id       : u32,
     edit_count      : u32,
     primitive       : u32,
-    operation       : u32,
-    parameters      : vec4f,
-    dummy           : vec3f,
+    operation       : u32,//4
+    parameters      : vec4f,//4
+    aabb_min        : vec3f,//4
     color_blend_op  : u32,
-    dummy1          : vec4f,
-    material        : StrokeMaterial,   // 48 bytes
-    edits           : array<Edit, MAX_EDITS_PER_EVALUATION>
+    aabb_max        : vec3f,
+    edit_list_index : u32, //4
+    material        : StrokeMaterial   // 48 bytes
 };
 
 struct StrokeHistory {
@@ -82,16 +85,20 @@ struct StrokeHistory {
     pad0:u32,
     pad1:u32,
     pad2:u32,
-    pad12: vec4f,
-    pad22: vec4f,
-    pad32: vec4f,
-    strokes : array<Stroke, STROKE_HISTORY_MAX_SIZE>
+    eval_aabb_min : vec3f,
+    pad3 : f32,
+    eval_aabb_max : vec3f,
+    pad4 : f32,
+    pad5: vec4f,
+    strokes : array<Stroke>
 };
 
 struct OctreeNode {
     octant_center_distance : vec2f,
-    dummy : f32,
+    stroke_count : u32,
     tile_pointer : u32,
+    padding : vec3f,
+    culling_id : u32
 };
 
 struct Octree {
@@ -99,6 +106,10 @@ struct Octree {
     atomic_counter : atomic<u32>,
     proxy_instance_counter : atomic<u32>,
     evaluation_mode : u32,
+    octree_id : u32,
+    padd0 : u32,
+    padd1 : u32,
+    padd2 : u32,
     data : array<OctreeNode>
 };
 
@@ -112,10 +123,10 @@ struct MergeData {
 struct ProxyInstanceData {
     position : vec3f,
     atlas_tile_index : u32,
-    octree_parent_id : u32, // a hack I dont like it
+    octree_id : u32,
     in_use : u32,
-    padd : u32,
-    padd2 : u32
+    edit_id_start : u32,
+    edit_count : u32
 };
 
 
@@ -213,3 +224,35 @@ struct RayIntersectionInfo
     intersection_position : vec3f,
     dummy1 : u32,
 };
+
+struct CullingStroke {
+    stroke_idx : u32,
+    edit_start_idx : u32,
+    edit_count : u32
+};
+/**
+    0-20 bits -> stroke id (0-1048576 # of strokes)
+    21-27 bits -> edit start (0-64)
+    28-32 bits -> edit count (0-64)
+*/
+fn culling_stroke_get_edit_start_and_count(culling_data : u32, stroke_list : ptr<storage, array<Stroke>, read>) -> CullingStroke {
+    let stroke_id : u32 = (culling_data & 0xFFFF0000u) >> 16;
+    let edit_start : u32 = (culling_data & 0xFF00u) >> 8;
+    let edit_count : u32 = (culling_data & 0xFFu);
+
+    let stroke_pointer : ptr<storage, Stroke, read> = &stroke_list[stroke_id];
+
+    return CullingStroke(stroke_id, edit_start + stroke_pointer.edit_list_index, stroke_pointer.edit_count);
+}
+
+fn culling_get_culling_data(stroke_pointer : u32, edit_start : u32, edit_count : u32) -> u32 {
+    var result : u32 = stroke_pointer << 16;
+    result |= edit_start << 8;
+    result |= edit_count;
+
+    return result;
+}
+
+fn culling_get_stroke_index(culling_data : u32) -> u32 {
+    return (culling_data & 0xFFFF0000) >> 16;
+}

@@ -1,8 +1,9 @@
 #include octree_includes.wgsl
 
-@group(0) @binding(2) var<storage, read_write> octree : Octree;
-@group(0) @binding(5) var<storage, read> brick_buffers: BrickBuffers_ReadOnly;
+@group(0) @binding(5) var<storage, read_write> brick_buffers: BrickBuffers_ReadOnly;
 @group(0) @binding(8) var<storage, read_write> indirect_buffers : IndirectBuffers_ReadOnly;
+
+@group(1) @binding(0) var<storage, read_write> octree : Octree;
 
 /**
     Este shader se llama despues de cada pasada de evaluator, y su fin es configurar el
@@ -27,6 +28,10 @@ fn compute(@builtin(global_invocation_id) id: vec3<u32>)
     indirect_buffers.evaluator_subdivision_counter = num_dispatches;
     indirect_buffers.brick_instance_count = brick_buffers.brick_instance_counter;
     indirect_buffers.brick_removal_counter = brick_buffers.brick_removal_counter;
+
+    if (level == 0u) {
+        brick_buffers.brick_instance_counter = 0u;
+    }
 
     if (level == OCTREE_DEPTH) {
         // If we evaluated the preview in the prev subdivision pass, we set it back.

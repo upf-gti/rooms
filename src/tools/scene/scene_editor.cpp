@@ -42,6 +42,7 @@ void SceneEditor::initialize()
 
     SculptInstance* default_sculpt = new SculptInstance();
     default_sculpt->set_name("default_sculpt");
+    RoomsEngine::instance->add_node(default_sculpt);
     RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
     rooms_renderer->get_raymarching_renderer()->set_current_sculpt(default_sculpt);
     main_scene->add_node(default_sculpt);
@@ -335,6 +336,7 @@ void SceneEditor::bind_events()
     Node::bind("sculpt", [&](const std::string& signal, void* button) {
         SculptInstance* new_sculpt = new SculptInstance();
         RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
+        rooms_renderer->toogle_frame_debug();
         rooms_renderer->get_raymarching_renderer()->set_current_sculpt(new_sculpt);
         main_scene->add_node(new_sculpt);
         select_node(new_sculpt);

@@ -123,25 +123,23 @@ void StrokeParameters::set_material_noise_color(const Color& color)
     dirty = true;
 }
 
-glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const
-{
-    glm::vec3 size = glm::vec3(edits[edit_index].dimensions);
-    float round = edits[edit_index].dimensions.w;
 
-    const glm::vec3 smooth_margin = (operation == OP_SMOOTH_PAINT || operation == OP_SMOOTH_UNION || operation == OP_SMOOTH_SUBSTRACTION) ? glm::vec3(parameters.w * 2.0f) : glm::vec3(0.0f);
+glm::vec3 get_edit_world_half_size(const Edit &edit, const sdPrimitive primitive, const float smooth_margin) {
+    glm::vec3 size = glm::vec3(edit.dimensions);
+    float round = edit.dimensions.w;
 
     switch (primitive) {
     case SD_SPHERE:
         return glm::vec3(size.x) + smooth_margin;
     case SD_BOX:
         return size + smooth_margin;
-    // Specific case for capsule!!
-    //case SD_CAPSULE:
-    //    return { 0.0f, 0.0f, 0.0f };
+        // Specific case for capsule!!
+        //case SD_CAPSULE:
+        //    return { 0.0f, 0.0f, 0.0f };
     case SD_CONE:
         return glm::vec3(size.x, size.y * 0.5f, size.x) + smooth_margin;
-    //case SD_PYRAMID:
-        //	return glm::abs(position - size) + radius * 2.0f;
+        //case SD_PYRAMID:
+            //	return glm::abs(position - size) + radius * 2.0f;
     case SD_CYLINDER:
         return glm::vec3(size.x, size.y, size.x) + smooth_margin;
     case SD_TORUS:
@@ -156,11 +154,7 @@ glm::vec3 Stroke::get_edit_world_half_size(const uint8_t edit_index) const
     }
 }
 
-AABB Stroke::get_edit_world_AABB(const uint8_t edit_index) const
-{
-    const Edit& edit = edits[edit_index];
-
-    const float smooth_margin = parameters.w * 2.0f;
+AABB extern_get_edit_world_AABB(const Edit &edit, const sdPrimitive primitive, const float smooth_margin) {
     const float radius = edit.dimensions.x + smooth_margin;
     const float height = edit.dimensions.y;
 
@@ -180,7 +174,7 @@ AABB Stroke::get_edit_world_AABB(const uint8_t edit_index) const
         return merge_aabbs(a1, a2);
     }
 
-    glm::vec3 pure_edit_half_size = get_edit_world_half_size(edit_index);
+    glm::vec3 pure_edit_half_size = get_edit_world_half_size(edit, primitive, smooth_margin);
 
     glm::vec3 aabb_center = edit.position;
 
@@ -217,6 +211,14 @@ AABB Stroke::get_edit_world_AABB(const uint8_t edit_index) const
     return { aabb_center, edit_half_size };
 }
 
+AABB Stroke::get_edit_world_AABB(const uint8_t edit_index) const
+{
+    const Edit& edit = edits[edit_index];
+
+    const float smooth_margin = parameters.w * 2.0f;
+
+    return extern_get_edit_world_AABB(edit, primitive, smooth_margin);
+}
 
 AABB Stroke::get_world_AABB() const
 {

@@ -20,7 +20,7 @@ struct VertexInput {
 struct VertexOutput {
     @builtin(position) position: vec4f,
     @location(0) uv: vec2f,
-    @location(1) normal: vec3f,
+    @location(1) @interpolate(flat) edit_range: vec2u,
     @location(2) @interpolate(flat) is_interior: u32,
     @location(3) vertex_in_world_space : vec3f,
     @location(4) vertex_in_sculpt_space : vec3f,
@@ -35,12 +35,16 @@ struct CameraData {
     ibl_intensity : f32
 };
 
+@group(1) @binding(0) var<uniform> sculpt_data : SculptData;
+@group(1) @binding(1) var<storage, read> preview_stroke : PreviewStroke;
+@group(1) @binding(5) var<storage, read> brick_buffers: BrickBuffers_ReadOnly;
+
 #dynamic @group(0) @binding(0) var<uniform> camera_data : CameraData;
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
 
-    let instance_data : ProxyInstanceData = brick_buffers.preview_instance_data[in.instance_id];
+    let instance_data : ptr<storage, ProxyInstanceData, read> = &brick_buffers.preview_instance_data[in.instance_id];
 
     var vertex_in_sculpt_space : vec3f = in.position * BRICK_WORLD_SIZE * 0.5 + instance_data.position;
     var vertex_in_world_space : vec3f = rotate_point_quat(vertex_in_sculpt_space, sculpt_data.sculpt_rotation);
@@ -53,7 +57,8 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     out.position = camera_data.view_projection * vec4f(vertex_in_world_space, 1.0);
     out.uv = in.uv; // forward to the fragment shader
     out.is_interior = instance_data.in_use;
-    out.normal = in.normal;
+    //out.edit_range = vec2u(preview_stroke.stroke.edit_list_index, preview_stroke.stroke.edit_count);
+    out.edit_range = vec2u(instance_data.edit_id_start, instance_data.edit_count);
     
     out.vertex_in_sculpt_space = vertex_in_sculpt_space;
     // This is in an attribute for debugging
@@ -67,10 +72,6 @@ struct FragmentOutput {
     @builtin(frag_depth) depth: f32
 }
 
-@group(1) @binding(0) var<uniform> sculpt_data : SculptData;
-@group(1) @binding(1) var<storage, read> preview_stroke : Stroke;
-@group(1) @binding(5) var<storage, read> brick_buffers: BrickBuffers_ReadOnly;
-
 @group(2) @binding(0) var irradiance_texture: texture_cube<f32>;
 @group(2) @binding(1) var brdf_lut_texture: texture_2d<f32>;
 @group(2) @binding(2) var sampler_clamp: sampler;
@@ -79,9 +80,9 @@ struct FragmentOutput {
 
 fn get_material_preview() -> Material {
     var material : Material;
-    material.albedo = preview_stroke.material.color.xyz;
-    material.roughness = preview_stroke.material.roughness;
-    material.metalness = preview_stroke.material.metallic;
+    material.albedo = preview_stroke.stroke.material.color.xyz;
+    material.roughness = preview_stroke.stroke.material.roughness;
+    material.metalness = preview_stroke.stroke.material.metallic;
     return material;
 }
 
@@ -96,9 +97,8 @@ fn sample_sdf_preview(position : vec3f) -> f32
         surface.distance = 10000.0;
     }
     
-    for(var i : u32 = 0u; i < preview_stroke.edit_count; i++) {
-        surface = evaluate_single_edit(position, preview_stroke.primitive, preview_stroke.operation, preview_stroke.parameters, preview_stroke.color_blend_op, surface, material, preview_stroke.edits[i]);
-    }
+    surface = evaluate_stroke(position, &(preview_stroke.stroke), &(preview_stroke.edit_list), surface, edit_range.x, edit_range.y);
+    
     return surface.distance;
 }
 
@@ -155,9 +155,9 @@ fn raymarch_sculpt_space(ray_origin_sculpt_space : vec3f, ray_dir : vec3f, max_d
 
         let material : Material = get_material_preview();
         //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
-		return vec4f(apply_light(-ray_dir, pos, pos_world, normal, lightPos + lightOffset, material), depth);
+		//return vec4f(apply_light(-ray_dir, pos, pos_world, normal, lightPos + lightOffset, material), depth);
         //return vec4f(vec3f(material.albedo), depth);
-        //return vec4f(normal, depth);
+        return vec4f(normal *0.5 + 0.50, depth);
 	}
 
     // Use a two band spherical harmonic as a skymap
@@ -165,6 +165,7 @@ fn raymarch_sculpt_space(ray_origin_sculpt_space : vec3f, ray_dir : vec3f, max_d
 }
 
 var<private> is_inside_brick : bool;
+var<private> edit_range : vec2u;
 
 @fragment
 fn fs_main(in: VertexOutput) -> FragmentOutput {
@@ -173,6 +174,8 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     let camera_to_vertex = in.vertex_in_world_space.xyz - camera_data.eye;
     let camera_to_vertex_distance = length(camera_to_vertex);
+
+    edit_range = in.edit_range;
 
     let ray_dir_world : vec3f = camera_to_vertex / camera_to_vertex_distance;
     let ray_dir_sculpt : vec3f = rotate_point_quat(ray_dir_world, quat_conj(sculpt_data.sculpt_rotation));
@@ -197,11 +200,18 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     out.color = vec4f(final_color, 1.0); // Color
     out.depth = ray_result.a;
 
+    let interpolant : f32 = (f32( edit_range.y ) / f32(preview_stroke.stroke.edit_count)) * (M_PI / 2.0);
+    var heatmap_color : vec3f;
+    heatmap_color.r = sin(interpolant);
+    heatmap_color.g = sin(interpolant * 2.0);
+    heatmap_color.b = cos(interpolant);
+
     if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
         if (is_inside_brick) {
             out.color = vec4f(1.0, 0.0, 1.0, 1.0);
         } else {
-            out.color = vec4f(0.0, 0.0, 1.0, 1.0);
+            out.color = vec4f(heatmap_color.x, heatmap_color.y, heatmap_color.z, 1.0);
+            //out.color = vec4f(0.0, 0.0, f32(edit_range.y) / f32(preview_stroke.stroke.edit_count), 1.0);
         }
         
         out.depth = in.position.z;

@@ -12,7 +12,7 @@
 
 #include <string>
 
-#define MAX_EDITS_PER_EVALUATION 64
+#define MAX_EDITS_PER_EVALUATION 256
 
 enum sdPrimitive : uint32_t {
 	SD_SPHERE = 0,
@@ -115,18 +115,16 @@ struct Stroke {
     uint32_t        stroke_id = 0u;
     uint32_t        edit_count = 0u;
     sdPrimitive     primitive;
-    sdOperation     operation;
-    glm::vec4	    parameters = { 0.f, -1.f, 0.f, 0.f };
-    glm::vec3	    _dummy_;
+    sdOperation     operation;//4
+    glm::vec4	    parameters = { 0.f, -1.f, 0.f, 0.f }; // 4
+    glm::vec3	    _dummy_;//4
     ColorBlendOp    color_blending_op = ColorBlendOp::COLOR_OP_REPLACE;
-    glm::vec4	    _dummy2_;
-
+    glm::vec4	    _dummy2_;//4
     // 48 bytes
     StrokeMaterial material;
 
     Edit    edits[MAX_EDITS_PER_EVALUATION] = {};
 
-    glm::vec3 get_edit_world_half_size(const uint8_t edit_index) const;
     AABB get_edit_world_AABB(const uint8_t edit_index) const;
     AABB get_world_AABB() const;
     void get_AABB_intersecting_stroke(const AABB intersection_area, Stroke& resulting_stroke, const uint32_t item_to_exclude = 0u) const;
@@ -140,3 +138,6 @@ struct PBRMaterialData {
     glm::vec4 noise_params = glm::vec4(0.0f);
     Color noise_color = colors::RUST;
 };
+
+glm::vec3 get_edit_world_half_size(const Edit& edit, const sdPrimitive primitive, const float smooth_margin);
+AABB extern_get_edit_world_AABB(const Edit &edit, const sdPrimitive primitive, const float smooth_margin);

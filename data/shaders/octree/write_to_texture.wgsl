@@ -1,20 +1,22 @@
 #include math.wgsl
-#include sdf_functions.wgsl
 #include sdf_utils.wgsl
 #include octree_includes.wgsl
 #include material_packing.wgsl
 #include ../noise.wgsl
 
-@group(0) @binding(2) var<storage, read_write> octree : Octree;
 @group(0) @binding(3) var write_sdf: texture_storage_3d<r32float, write>;
 @group(0) @binding(5) var<storage, read_write> brick_buffers: BrickBuffers;
 @group(0) @binding(6) var<storage, read> stroke_history : StrokeHistory; 
+@group(0) @binding(7) var<storage, read> edit_list : array<Edit>;
 @group(0) @binding(8) var write_material_sdf: texture_storage_3d<r32uint, write>;
+@group(0) @binding(9) var<storage, read_write> stroke_culling : array<u32>;
 
-#dynamic @group(1) @binding(0) var<storage, read> stroke : Stroke;
+@group(1) @binding(0) var<storage, read_write> octree : Octree;
 
 @group(2) @binding(0) var<storage, read> octant_usage_read : array<u32>;
 @group(2) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
+
+#include sdf_functions.wgsl
 
 var<workgroup> used_pixels : atomic<u32>;
 
@@ -40,6 +42,9 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     let id : u32 = group_id.x;
     let octree_leaf_id : u32 = octant_usage_read[id];
 
+    let culling_count : u32 = octree.data[octree_leaf_id].stroke_count;
+    let curr_culling_layer_index = octree.data[octree_leaf_id].culling_id;
+
     let brick_pointer : u32 = octree.data[octree_leaf_id].tile_pointer;
 
     // Get the brick index, without the MSb that signals if it has an already initialized brick
@@ -62,13 +67,9 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
     let texture_coordinates : vec3u = atlas_tile_coordinate + local_id;
 
-    var material : Material;
-    material.albedo = stroke.material.color.xyz;
-    material.roughness = stroke.material.roughness;
-    material.metalness = stroke.material.metallic;
+    let is_interior_brick : bool = (INTERIOR_BRICK_FLAG & brick_pointer) == INTERIOR_BRICK_FLAG;
 
-    // wtt: BBF0_0 17
-    if ((INTERIOR_BRICK_FLAG & brick_pointer) == INTERIOR_BRICK_FLAG) {
+    if (is_interior_brick) {
         sSurface.distance = -100.0;
     } else {
         sSurface.distance = 10000.0;
@@ -84,12 +85,11 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     let pos = octant_center + pixel_offset;
 
     // Evaluating the edit context
-    for (var j : u32 = 0; j < stroke_history.count; j++) {
-        curr_surface = evaluate_stroke(pos, &(stroke_history.strokes[j]), curr_surface);
+    //let p = stroke_culling[0];
+    for (var j : u32 = 0; j < culling_count; j++) {
+        let index : u32 = culling_get_stroke_index(stroke_culling[j + curr_culling_layer_index]);
+        curr_surface = evaluate_stroke(pos, &(stroke_history.strokes[index]), &edit_list, curr_surface, stroke_history.strokes[index].edit_list_index, stroke_history.strokes[index].edit_count);
     }
-
-    // Evaluate current stroke
-    curr_surface = evaluate_stroke(pos, &(stroke), curr_surface);
 
     result_surface = curr_surface;
 
@@ -98,13 +98,14 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
         atomicAdd(&used_pixels, 1);
     }
 
+    //result_surface.material.albedo = vec3f(f32(culling_count)/ 15.0);
+
     // Duplicate the texture Store, becuase then we have a branch depeding on an uniform!
     textureStore(write_sdf, texture_coordinates, vec4f(result_surface.distance));
     textureStore(write_material_sdf, texture_coordinates, vec4<u32>((pack_material(result_surface.material))));
     
     // Hack, for buffer usage
     octant_usage_write[0] = 0;
-    let edit_count : u32 = stroke_history.count;
 
     // TODO(Juan): I dont like this for the SM occupany...
     workgroupBarrier();
@@ -119,8 +120,14 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
             let brick_to_delete_idx = atomicAdd(&brick_buffers.brick_removal_counter, 1u);
             brick_buffers.brick_removal_buffer[brick_to_delete_idx] = brick_index;
 
-            octree.data[octree_leaf_id].octant_center_distance = vec2f(10000.0, 10000.0);
-            octree.data[octree_leaf_id].tile_pointer = 0u;
+            if (filled_pixel_count == 1000u) {
+                octree.data[octree_leaf_id].octant_center_distance = vec2f(-10000.0, -10000.0);
+                octree.data[octree_leaf_id].tile_pointer = INTERIOR_BRICK_FLAG;
+            } else {
+                octree.data[octree_leaf_id].octant_center_distance = vec2f(10000.0, 10000.0);
+                octree.data[octree_leaf_id].tile_pointer = 0u;
+            }
+
         } 
         // else {
         //     // Add "filled" flag and remove "interior" flag

@@ -16,6 +16,21 @@ enum eTool : uint8_t {
     TOOL_COUNT
 };
 
+enum : uint8_t {
+    LAYOUT_SCULPT = 1 << 0,
+    LAYOUT_PAINT = 1 << 1,
+    LAYOUT_SPLINES = 1 << 2,
+    LAYOUT_SHIFT = 1 << 3,
+    LAYOUT_SCULPT_PAINT = LAYOUT_SCULPT | LAYOUT_PAINT,
+    LAYOUT_ANY = LAYOUT_SCULPT | LAYOUT_PAINT | LAYOUT_SPLINES,
+    LAYOUT_SCULPT_SHIFT = LAYOUT_SCULPT | LAYOUT_SHIFT,
+    LAYOUT_PAINT_SHIFT = LAYOUT_PAINT | LAYOUT_SHIFT,
+    LAYOUT_SCULPT_PAINT_SHIFT = LAYOUT_SCULPT_PAINT | LAYOUT_SHIFT,
+    LAYOUT_SPLINES_SHIFT = LAYOUT_SPLINES | LAYOUT_SHIFT,
+    LAYOUT_ANY_SHIFT = LAYOUT_SCULPT_SHIFT | LAYOUT_PAINT_SHIFT | LAYOUT_SCULPT_PAINT_SHIFT,
+    LAYOUT_ALL = ~0u
+};
+
 class MeshInstance3D;
 
 struct PrimitiveState {
@@ -147,6 +162,8 @@ class SculptEditor : public BaseEditor {
 
     void init_ui();
     void bind_events();
+    void update_controller_flags();
+    bool should_render_label(uint8_t mask, uint8_t state);
     void add_recent_color(const Color& color);
 
     // Stamp slide
@@ -161,6 +178,11 @@ class SculptEditor : public BaseEditor {
     bool creating_spline = false;
     bool dirty_spline = false;
     BezierSpline current_spline;
+    BezierSpline preview_spline;
+
+    void start_spline();
+    void reset_spline();
+    void end_spline();
 
     /*
     *	Editor
