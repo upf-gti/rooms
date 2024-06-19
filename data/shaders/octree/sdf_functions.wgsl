@@ -322,13 +322,13 @@ fn sdCutSphere( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation
     return sf;
 }
 
-fn eval_stroke_sphere_union( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>, curr_edit_list : ptr<storage, array<Edit>>, edit_starting_idx : u32, edit_count : u32) -> Surface {
+fn eval_stroke_sphere_union( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>, curr_edit_list : ptr<storage, array<Edit>>, edit_starting_idx : u32, edit_count : u32) -> Surface
+{
     var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
 
     let stroke_material = curr_stroke.material;
     let parameters : vec4f = curr_stroke.parameters;
-
     let smooth_factor : f32 = parameters.w;
     let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
     let cap_value : f32 = parameters.y;
@@ -1020,7 +1020,14 @@ fn eval_stroke_box_paint( position : vec3f, current_surface : Surface, curr_stro
 //     return result_surface;
 // }
 
-// STROKE EVALUATION ================
+/*
+ _____ _             _          _____           _             _   _             
+/  ___| |           | |        |  ___|         | |           | | (_)            
+\ `--.| |_ _ __ ___ | | _____  | |____   ____ _| |_   _  __ _| |_ _  ___  _ __  
+ `--. \ __| '__/ _ \| |/ / _ \ |  __\ \ / / _` | | | | |/ _` | __| |/ _ \| '_ \ 
+/\__/ / |_| | | (_) |   <  __/ | |___\ V / (_| | | |_| | (_| | |_| | (_) | | | |
+\____/ \__|_|  \___/|_|\_\___| \____/ \_/ \__,_|_|\__,_|\__,_|\__|_|\___/|_| |_|
+*/
 
 fn evaluate_stroke( position: vec3f, stroke: ptr<storage, Stroke, read>, curr_edit_list : ptr<storage, array<Edit>, read>, current_surface : Surface, edit_starting_index : u32, edit_count : u32) -> Surface {
     let stroke_operation : u32 = (*stroke).operation;
