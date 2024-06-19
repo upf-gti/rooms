@@ -204,9 +204,15 @@ fn get_loose_half_size_mat(prim : u32) -> mat4x3f
     } else if (prim == SD_BOX) {
         return mat4x3f(vec3f(1.0, 0.0, 0.0), vec3f(0.0, 1.0, 0.0), vec3f(0.0, 0.0, 1.0), vec3f(0.0));
     } else if (prim == SD_CAPSULE) {
-        return mat4x3f(vec3f(1.0, 1.0, 1.0), vec3f(0.0, 1.0, 0.0), vec3f(0.0), vec3f(0.50, 0.50, 0.50));
+        return mat4x3f(vec3f(1.0, 1.0, 1.0), vec3f(0.0, 1.0, 0.0), vec3f(0.0), vec3f(0.0));
     } else if (prim == SD_CONE) {
         return mat4x3f(vec3f(1.0, 1.0, 1.0), vec3f(0.0, 1.0, 0.0), vec3f(0.0), vec3f(0.0));
+    } else if (prim == SD_CYLINDER) {
+        return mat4x3f(vec3f(1.0, 1.0, 1.0), vec3f(0.0, 0.5, 0.0), vec3f(0.0), vec3f(0.0));
+    } else if (prim == SD_TORUS) {
+        return mat4x3f(vec3f(1.0, 0.0, 1.0), vec3f(1.0, 1.0, 1.0), vec3f(0.0), vec3f(0.0));
+    } else if (prim == SD_VESICA) {
+        return mat4x3f(vec3f(1.0, 1.0, 1.0), vec3f(0.0, 0.5, 0.0), vec3f(0.0), vec3f(1.0));
     }
 
     return mat4x3f();

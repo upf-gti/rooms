@@ -721,87 +721,90 @@ fn eval_stroke_cone_paint( position : vec3f, current_surface : Surface, curr_str
 //        |___/
 // */
 
-// fn sdCylinder(p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f, material : Material) -> Surface
-// {
-//     var sf : Surface;
-//     var r : f32 = dims.x;
-//     var h : f32 = dims.y;
+fn sdCylinder(p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f, material : Material) -> Surface
+{
+    var sf : Surface;
+    var r : f32 = dims.x;
+    var h : f32 = dims.y;
 
-//     let round : f32 = clamp(dims.w / 0.08, 0.0001, 1.0) * min(r, h);
-//     r -= round;
-//     h -= round;
+    let round : f32 = clamp(dims.w / 0.08, 0.0001, 1.0) * min(r, h);
+    r -= round;
+    h -= round;
 
-//     let pos : vec3f = rotate_point_quat(p - c, rotation);
+    let pos : vec3f = rotate_point_quat(p - c, rotation);
 
-//     let d : vec2f = abs(vec2f(length(vec2f(pos.x, pos.z)), pos.y)) - vec2(r, h);
-//     sf.distance = min(max(d.x, d.y), 0.0) + length(max(d, vec2f(0.0))) - round;
-//     sf.material = material;
-//     return sf;
-// }
+    let d : vec2f = abs(vec2f(length(vec2f(pos.x, pos.z)), pos.y)) - vec2(r, h);
+    sf.distance = min(max(d.x, d.y), 0.0) + length(max(d, vec2f(0.0))) - round;
+    sf.material = material;
+    return sf;
+}
 
-// fn eval_stroke_cylinder_union( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>, curr_edit_list : ptr<storage, array<Edit>>) -> Surface {
-//     var result_surface : Surface = current_surface;
-//     var tmp_surface : Surface;
-
-//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &(curr_stroke.edits);
-//     let edit_count : u32 = curr_stroke.edit_count;
-//     let stroke_material  = curr_stroke.material;
-//     let parameters : vec4f = curr_stroke.parameters;
+fn eval_stroke_cylinder_union( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>, curr_edit_list : ptr<storage, array<Edit>>, edit_starting_idx : u32, edit_count : u32 ) -> Surface
+{
+    var result_surface : Surface = current_surface;
+    var tmp_surface : Surface;
     
-//     let smooth_factor : f32 = parameters.w;
-//     let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let stroke_material = curr_stroke.material;
+    let parameters : vec4f = curr_stroke.parameters;
+    let smooth_factor : f32 = parameters.w;
+    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
 
-//     for(var i : u32 = 0u; i < edit_count; i++) {
-//         let curr_edit : Edit = edit_array[i];
-//         tmp_surface = sdCylinder(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
-//         result_surface = opSmoothUnion(result_surface, tmp_surface, smooth_factor);
-//     }
+    let starting_idx : u32 = edit_starting_idx;
+    let ending_idx : u32 = edit_count + edit_starting_idx;
 
-//     return result_surface;
-// }
+    for(var i : u32 = edit_starting_idx; i < ending_idx; i++) {
+        let curr_edit : Edit = curr_edit_list[i];
+        tmp_surface = sdCylinder(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
+        result_surface = opSmoothUnion(result_surface, tmp_surface, smooth_factor);
+    }
 
-// fn eval_stroke_cylinder_substraction( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>, curr_edit_list : ptr<storage, array<Edit>>) -> Surface {
-//     var result_surface : Surface = current_surface;
-//     var tmp_surface : Surface;
+    return result_surface;
+}
 
-//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &(curr_stroke.edits);
-//     let edit_count : u32 = curr_stroke.edit_count;
-//     let stroke_material = curr_stroke.material;
-//     let parameters : vec4f = curr_stroke.parameters;
+fn eval_stroke_cylinder_substraction( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>, curr_edit_list : ptr<storage, array<Edit>>, edit_starting_idx : u32, edit_count : u32 ) -> Surface
+{
+    var result_surface : Surface = current_surface;
+    var tmp_surface : Surface;
+    
+    let stroke_material = curr_stroke.material;
+    let parameters : vec4f = curr_stroke.parameters;
+    let smooth_factor : f32 = parameters.w;
+    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
 
-//     let smooth_factor : f32 = parameters.w;
-//     let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let starting_idx : u32 = edit_starting_idx;
+    let ending_idx : u32 = edit_count + edit_starting_idx;
 
-//     for(var i : u32 = 0u; i < edit_count; i++) {
-//         let curr_edit : Edit = edit_array[i];
-//         tmp_surface = sdCylinder(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
-//         result_surface = opSmoothSubtraction(result_surface, tmp_surface, smooth_factor);
-//     }
+    for(var i : u32 = edit_starting_idx; i < ending_idx; i++) {
+        let curr_edit : Edit = curr_edit_list[i];
+        tmp_surface = sdCylinder(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
+        result_surface = opSmoothSubtraction(result_surface, tmp_surface, smooth_factor);
+    }
 
-//     return result_surface;
-// }
+    return result_surface;
+}
 
-// fn eval_stroke_cylinder_paint( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>, curr_edit_list : ptr<storage, array<Edit>>) -> Surface {
-//     var result_surface : Surface = current_surface;
-//     var tmp_surface : Surface;
+fn eval_stroke_cylinder_paint( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>, curr_edit_list : ptr<storage, array<Edit>>, edit_starting_idx : u32, edit_count : u32 ) -> Surface
+{
+    var result_surface : Surface = current_surface;
+    var tmp_surface : Surface;
+    
+    let stroke_material = curr_stroke.material;
+    let parameters : vec4f = curr_stroke.parameters;
+    let stroke_blend_mode : u32 = curr_stroke.color_blend_op;
+    let smooth_factor : f32 = parameters.w;
+    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
 
-//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &(curr_stroke.edits);
-//     let edit_count : u32 = curr_stroke.edit_count;
-//     let stroke_material = curr_stroke.material;
-//     let parameters : vec4f = curr_stroke.parameters;
-//     let stroke_blend_mode : u32 = curr_stroke.color_blend_op;
+    let starting_idx : u32 = edit_starting_idx;
+    let ending_idx : u32 = edit_count + edit_starting_idx;
 
-//     let smooth_factor : f32 = parameters.w;
-//     let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    for(var i : u32 = edit_starting_idx; i < ending_idx; i++) {
+        let curr_edit : Edit = curr_edit_list[i];
+        tmp_surface = sdCylinder(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
+        result_surface = opSmoothPaint(result_surface, tmp_surface, stroke_blend_mode, material, smooth_factor);
+    }
 
-//     for(var i : u32 = 0u; i < edit_count; i++) {
-//         let curr_edit : Edit = edit_array[i];
-//         tmp_surface = sdCylinder(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
-//         result_surface = opSmoothPaint(result_surface, tmp_surface, stroke_blend_mode, material, smooth_factor);
-//     }
-
-//     return result_surface;
-// }
+    return result_surface;
+}
 
 // /*
 //  _____                    
@@ -812,131 +815,131 @@ fn eval_stroke_cone_paint( position : vec3f, current_surface : Surface, curr_str
 //   \_/\___/|_|   \__,_|___/
 // */
 
-// fn sdTorus( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f, material : Material) -> Surface
-// {
-//     let radius = dims.x;
-//     let thickness = clamp( dims.y, 0.0001, radius );
+fn sdTorus( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f, material : Material) -> Surface
+{
+    let radius = dims.x;
+    let thickness = clamp( dims.y, 0.0001, radius );
 
-//     var sf : Surface;
-//     let pos : vec3f = rotate_point_quat(p - c, rotation);
-//     var q = vec2f(length(pos.xz) - radius, pos.y);
-//     sf.distance = length(q) - thickness;
-//     sf.material = material;
-//     return sf;
-// }
+    var sf : Surface;
+    let pos : vec3f = rotate_point_quat(p - c, rotation);
+    var q = vec2f(length(pos.xz) - radius, pos.y);
+    sf.distance = length(q) - thickness;
+    sf.material = material;
+    return sf;
+}
 
-// fn sdCappedTorus( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f, material : Material) -> Surface
-// {
-//     let cap_value : f32 = clamp(parameters.y, 0.0001, 0.999);
-//     let theta : f32 = M_PI * (1.0 - cap_value);
-//     let angles : vec2f = vec2f(sin(theta), cos(theta));
-//     let radius : f32  = dims.x;
-//     let thickness : f32 = clamp( dims.y, 0.0001, radius );
+fn sdCappedTorus( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f, material : Material) -> Surface
+{
+    let cap_value : f32 = clamp(parameters.y, 0.0001, 0.999);
+    let theta : f32 = M_PI * (1.0 - cap_value);
+    let angles : vec2f = vec2f(sin(theta), cos(theta));
+    let radius : f32  = dims.x;
+    let thickness : f32 = clamp( dims.y, 0.0001, radius );
 
-//     var sf : Surface;
-//     var pos : vec3f = rotate_point_quat(p - c, rotation);
-//     pos.x = abs(pos.x);
+    var sf : Surface;
+    var pos : vec3f = rotate_point_quat(p - c, rotation);
+    pos.x = abs(pos.x);
 
-//     var k : f32 = select(length(pos.xz), dot(pos.xz, angles), angles.y * pos.x > angles.x * pos.z);
+    var k : f32 = select(length(pos.xz), dot(pos.xz, angles), angles.y * pos.x > angles.x * pos.z);
 
-//     sf.distance = sqrt( dot(pos, pos) + radius * radius - 2.0 * radius * k ) - thickness;
-//     sf.material = material;
-//     return sf;
-// }
+    sf.distance = sqrt( dot(pos, pos) + radius * radius - 2.0 * radius * k ) - thickness;
+    sf.material = material;
+    return sf;
+}
 
-// fn eval_stroke_torus_union( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>, curr_edit_list : ptr<storage, array<Edit>>) -> Surface {
-//     var result_surface : Surface = current_surface;
-//     var tmp_surface : Surface;
+fn eval_stroke_torus_union( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>, curr_edit_list : ptr<storage, array<Edit>>, edit_starting_idx : u32, edit_count : u32) -> Surface
+{
+    var result_surface : Surface = current_surface;
+    var tmp_surface : Surface;
 
-//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &(curr_stroke.edits);
-//     let edit_count : u32 = curr_stroke.edit_count;
-//     let stroke_material  = curr_stroke.material;
-//     let parameters : vec4f = curr_stroke.parameters;
+    let stroke_material = curr_stroke.material;
+    let parameters : vec4f = curr_stroke.parameters;
+    let smooth_factor : f32 = parameters.w;
+    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let cap_value : f32 = parameters.y;
+
+    let starting_idx : u32 = edit_starting_idx;
+    let ending_idx : u32 = edit_count + edit_starting_idx;
+
+    if(cap_value > 0.0) {
+        for(var i : u32 = edit_starting_idx; i < ending_idx; i++) {
+            let curr_edit : Edit = curr_edit_list[i];
+            tmp_surface = sdCappedTorus(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
+            result_surface = opSmoothUnion(result_surface, tmp_surface, smooth_factor);
+        }
+    } else {
+        for(var i : u32 = edit_starting_idx; i < ending_idx; i++) {
+            let curr_edit : Edit = curr_edit_list[i];
+            tmp_surface = sdTorus(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
+            result_surface = opSmoothUnion(result_surface, tmp_surface, smooth_factor);
+        }
+    }
     
-//     let smooth_factor : f32 = parameters.w;
-//     let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    return result_surface;
+}
 
-//     let cap_value : f32 = parameters.y;
+fn eval_stroke_torus_substraction( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>, curr_edit_list : ptr<storage, array<Edit>>, edit_starting_idx : u32, edit_count : u32 ) -> Surface
+{
+    var result_surface : Surface = current_surface;
+    var tmp_surface : Surface;
 
-//     if(cap_value > 0.0) {
-//         for(var i : u32 = 0u; i < edit_count; i++) {
-//             let curr_edit : Edit = edit_array[i];
-//             tmp_surface = sdCappedTorus(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
-//             result_surface = opSmoothUnion(result_surface, tmp_surface, smooth_factor);
-//         }
-//     } else {
-//         for(var i : u32 = 0u; i < edit_count; i++) {
-//             let curr_edit : Edit = edit_array[i];
-//             tmp_surface = sdTorus(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
-//             result_surface = opSmoothUnion(result_surface, tmp_surface, smooth_factor);
-//         }
-//     }
+    let stroke_material = curr_stroke.material;
+    let parameters : vec4f = curr_stroke.parameters;
+    let smooth_factor : f32 = parameters.w;
+    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let cap_value : f32 = parameters.y;
 
-//     return result_surface;
-// }
+    let starting_idx : u32 = edit_starting_idx;
+    let ending_idx : u32 = edit_count + edit_starting_idx;
 
-// fn eval_stroke_torus_substraction( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>, curr_edit_list : ptr<storage, array<Edit>>) -> Surface {
-//     var result_surface : Surface = current_surface;
-//     var tmp_surface : Surface;
+    if(cap_value > 0.0) {
+        for(var i : u32 = edit_starting_idx; i < ending_idx; i++) {
+            let curr_edit : Edit = curr_edit_list[i];
+            tmp_surface = sdCappedTorus(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
+            result_surface = opSmoothSubtraction(result_surface, tmp_surface, smooth_factor);
+        }
+    } else {
+        for(var i : u32 = edit_starting_idx; i < ending_idx; i++) {
+            let curr_edit : Edit = curr_edit_list[i];
+            tmp_surface = sdTorus(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
+            result_surface = opSmoothSubtraction(result_surface, tmp_surface, smooth_factor);
+        }
+    }
 
-//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &(curr_stroke.edits);
-//     let edit_count : u32 = curr_stroke.edit_count;
-//     let stroke_material = curr_stroke.material;
-//     let parameters : vec4f = curr_stroke.parameters;
+    return result_surface;
+}
 
-//     let smooth_factor : f32 = parameters.w;
-//     let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+fn eval_stroke_torus_paint( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>, curr_edit_list : ptr<storage, array<Edit>>, edit_starting_idx : u32, edit_count : u32 ) -> Surface
+{
+    var result_surface : Surface = current_surface;
+    var tmp_surface : Surface;
 
-//     let cap_value : f32 = parameters.y;
+    let stroke_material = curr_stroke.material;
+    let parameters : vec4f = curr_stroke.parameters;
+    let stroke_blend_mode : u32 = curr_stroke.color_blend_op;
+    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let smooth_factor : f32 = parameters.w;
+    let cap_value : f32 = parameters.y;
 
-//     if(cap_value > 0.0) {
-//         for(var i : u32 = 0u; i < edit_count; i++) {
-//             let curr_edit : Edit = edit_array[i];
-//             tmp_surface = sdCappedTorus(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
-//             result_surface = opSmoothSubtraction(result_surface, tmp_surface, smooth_factor);
-//         }
-//     } else {
-//         for(var i : u32 = 0u; i < edit_count; i++) {
-//             let curr_edit : Edit = edit_array[i];
-//             tmp_surface = sdTorus(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
-//             result_surface = opSmoothSubtraction(result_surface, tmp_surface, smooth_factor);
-//         }
-//     }
+    let starting_idx : u32 = edit_starting_idx;
+    let ending_idx : u32 = edit_count + edit_starting_idx;
 
-//     return result_surface;
-// }
-
-// fn eval_stroke_torus_paint( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>, curr_edit_list : ptr<storage, array<Edit>>) -> Surface {
-//     var result_surface : Surface = current_surface;
-//     var tmp_surface : Surface;
-
-//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &(curr_stroke.edits);
-//     let edit_count : u32 = curr_stroke.edit_count;
-//     let stroke_material = curr_stroke.material;
-//     let parameters : vec4f = curr_stroke.parameters;
-//     let stroke_blend_mode : u32 = curr_stroke.color_blend_op;
-
-//     let smooth_factor : f32 = parameters.w;
-//     let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
-
-//     let cap_value : f32 = parameters.y;
-
-//     if(cap_value > 0.0) {
-//         for(var i : u32 = 0u; i < edit_count; i++) {
-//             let curr_edit : Edit = edit_array[i];
-//             tmp_surface = sdCappedTorus(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
-//             result_surface = opSmoothPaint(result_surface, tmp_surface, stroke_blend_mode, material, smooth_factor);
-//         }
-//     } else {
-//         for(var i : u32 = 0u; i < edit_count; i++) {
-//             let curr_edit : Edit = edit_array[i];
-//             tmp_surface = sdTorus(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
-//             result_surface = opSmoothPaint(result_surface, tmp_surface, stroke_blend_mode, material, smooth_factor);
-//         }
-//     }
-
-//     return result_surface;
-// }
+    if(cap_value > 0.0) {
+        for(var i : u32 = edit_starting_idx; i < ending_idx; i++) {
+            let curr_edit : Edit = curr_edit_list[i];
+            tmp_surface = sdCappedTorus(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
+            result_surface = opSmoothPaint(result_surface, tmp_surface, stroke_blend_mode, material, smooth_factor);
+        }
+    } else {
+        for(var i : u32 = edit_starting_idx; i < ending_idx; i++) {
+            let curr_edit : Edit = curr_edit_list[i];
+            tmp_surface = sdTorus(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
+            result_surface = opSmoothPaint(result_surface, tmp_surface, stroke_blend_mode, material, smooth_factor);
+        }
+    }
+    
+    return result_surface;
+}
 
 /*
  _   _           _           
@@ -947,96 +950,99 @@ fn eval_stroke_cone_paint( position : vec3f, current_surface : Surface, curr_str
  \___/ \___||___/_|\___\__,_|
 */
 
-// fn sdVesica( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f, material : Material) -> Surface
-// {
-//     var sf : Surface;
+fn sdVesica( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f, material : Material) -> Surface
+{
+    var sf : Surface;
 
-//     var radius : f32 = dims.x * 2.0;
-//     var height : f32 = dims.y * 2.0;
+    var radius : f32 = dims.x * 2.0;
+    var height : f32 = dims.y * 2.0;
 
-//     let round : f32 = clamp(dims.w / 0.125, 0.001, 0.99) * min(radius, height);
+    let round : f32 = clamp(dims.w / 0.125, 0.001, 0.99) * min(radius, height);
 
-//     let pos : vec3f = rotate_point_quat(p - c, rotation) + vec3f(0.0, height * 0.5, 0.0);
+    let pos : vec3f = rotate_point_quat(p - c, rotation) + vec3f(0.0, height * 0.5, 0.0);
 
-//     // shape constants
-//     let h : f32 = height * 0.5;
-//     let w : f32 = radius * 0.5;
-//     let d : f32 = 0.5 * (h * h - w * w) / w;
+    // shape constants
+    let h : f32 = height * 0.5;
+    let w : f32 = radius * 0.5;
+    let d : f32 = 0.5 * (h * h - w * w) / w;
     
-//     // project to 2D
-//     let q : vec2f = vec2f(length(pos.xz), abs(pos.y - h));
+    // project to 2D
+    let q : vec2f = vec2f(length(pos.xz), abs(pos.y - h));
     
-//     // feature selection (vertex or body)
-//     let t : vec3f = select(vec3f(-d,0.0,d+w), vec3f(0.0,h,0.0), (h*q.x < d*(q.y-h)));
+    // feature selection (vertex or body)
+    let t : vec3f = select(vec3f(-d,0.0,d+w), vec3f(0.0,h,0.0), (h*q.x < d*(q.y-h)));
     
-//     sf.distance = (length(q-t.xy) - t.z) - round;
-//     sf.material = material;
-//     return sf;
-// }
+    sf.distance = (length(q-t.xy) - t.z) - round;
+    sf.material = material;
+    return sf;
+}
 
-// fn eval_stroke_vesica_union( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>) -> Surface {
-//     var result_surface : Surface = current_surface;
-//     var tmp_surface : Surface;
-
-//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
-//     let edit_count : u32 = (*curr_stroke).edit_count;
-//     let stroke_material  = (*curr_stroke).material;
-//     let parameters : vec4f = (*curr_stroke).parameters;
+fn eval_stroke_vesica_union( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>, curr_edit_list : ptr<storage, array<Edit>>, edit_starting_idx : u32, edit_count : u32 ) -> Surface
+{
+    var result_surface : Surface = current_surface;
+    var tmp_surface : Surface;
     
-//     let smooth_factor : f32 = parameters.w;
-//     let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let stroke_material = curr_stroke.material;
+    let parameters : vec4f = curr_stroke.parameters;
+    let smooth_factor : f32 = parameters.w;
+    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
 
-//     for(var i : u32 = 0u; i < edit_count; i++) {
-//         let curr_edit : Edit = edit_array[i];
-//         tmp_surface = sdVesica(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
-//         result_surface = opSmoothUnion(result_surface, tmp_surface, smooth_factor);
-//     }
+    let starting_idx : u32 = edit_starting_idx;
+    let ending_idx : u32 = edit_count + edit_starting_idx;
 
-//     return result_surface;
-// }
+    for(var i : u32 = edit_starting_idx; i < ending_idx; i++) {
+        let curr_edit : Edit = curr_edit_list[i];
+        tmp_surface = sdVesica(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
+        result_surface = opSmoothUnion(result_surface, tmp_surface, smooth_factor);
+    }
 
-// fn eval_stroke_vesica_substraction( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>) -> Surface {
-//     var result_surface : Surface = current_surface;
-//     var tmp_surface : Surface;
+    return result_surface;
+}
 
-//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
-//     let edit_count : u32 = (*curr_stroke).edit_count;
-//     let stroke_material = (*curr_stroke).material;
-//     let parameters : vec4f = (*curr_stroke).parameters;
+fn eval_stroke_vesica_substraction( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>, curr_edit_list : ptr<storage, array<Edit>>, edit_starting_idx : u32, edit_count : u32 ) -> Surface
+{
+    var result_surface : Surface = current_surface;
+    var tmp_surface : Surface;
+    
+    let stroke_material = curr_stroke.material;
+    let parameters : vec4f = curr_stroke.parameters;
+    let smooth_factor : f32 = parameters.w;
+    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
 
-//     let smooth_factor : f32 = parameters.w;
-//     let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let starting_idx : u32 = edit_starting_idx;
+    let ending_idx : u32 = edit_count + edit_starting_idx;
 
-//     for(var i : u32 = 0u; i < edit_count; i++) {
-//         let curr_edit : Edit = edit_array[i];
-//         tmp_surface = sdVesica(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
-//         result_surface = opSmoothSubtraction(result_surface, tmp_surface, smooth_factor);
-//     }
+    for(var i : u32 = edit_starting_idx; i < ending_idx; i++) {
+        let curr_edit : Edit = curr_edit_list[i];
+        tmp_surface = sdVesica(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
+        result_surface = opSmoothSubtraction(result_surface, tmp_surface, smooth_factor);
+    }
 
-//     return result_surface;
-// }
+    return result_surface;
+}
 
-// fn eval_stroke_vesica_paint( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>) -> Surface {
-//     var result_surface : Surface = current_surface;
-//     var tmp_surface : Surface;
+fn eval_stroke_vesica_paint( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>, curr_edit_list : ptr<storage, array<Edit>>, edit_starting_idx : u32, edit_count : u32 ) -> Surface
+{
+    var result_surface : Surface = current_surface;
+    var tmp_surface : Surface;
+    
+    let stroke_material = curr_stroke.material;
+    let parameters : vec4f = curr_stroke.parameters;
+    let stroke_blend_mode : u32 = curr_stroke.color_blend_op;
+    let smooth_factor : f32 = parameters.w;
+    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
 
-//     let edit_array : ptr<storage, array<Edit, MAX_EDITS_PER_EVALUATION>> = &((*curr_stroke).edits);
-//     let edit_count : u32 = (*curr_stroke).edit_count;
-//     let stroke_material = (*curr_stroke).material;
-//     let parameters : vec4f = (*curr_stroke).parameters;
-//     let stroke_blend_mode : u32 = (*curr_stroke).color_blend_op;
+    let starting_idx : u32 = edit_starting_idx;
+    let ending_idx : u32 = edit_count + edit_starting_idx;
 
-//     let smooth_factor : f32 = parameters.w;
-//     let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    for(var i : u32 = edit_starting_idx; i < ending_idx; i++) {
+        let curr_edit : Edit = curr_edit_list[i];
+        tmp_surface = sdVesica(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
+        result_surface = opSmoothPaint(result_surface, tmp_surface, stroke_blend_mode, material, smooth_factor);
+    }
 
-//     for(var i : u32 = 0u; i < edit_count; i++) {
-//         let curr_edit : Edit = edit_array[i];
-//         tmp_surface = sdVesica(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
-//         result_surface = opSmoothPaint(result_surface, tmp_surface, stroke_blend_mode, material, smooth_factor);
-//     }
-
-//     return result_surface;
-// }
+    return result_surface;
+}
 
 /*
  _____ _             _          _____           _             _   _             
@@ -1104,42 +1110,42 @@ fn evaluate_stroke( position: vec3f, stroke: ptr<storage, Stroke, read>, curr_ed
             result_surface = eval_stroke_cone_paint(position, result_surface, stroke, curr_edit_list, edit_starting_index, edit_count);
             break;
         }
-        // case SD_CYLINDER_SMOOTH_OP_UNION: {
-        //     result_surface = eval_stroke_cylinder_union(position, result_surface, stroke, curr_edit_list, edit_starting_index, edit_count);
-        //     break;
-        // }
-        // case SD_CYLINDER_SMOOTH_OP_SUBSTRACTION: {
-        //     result_surface = eval_stroke_cylinder_substraction(position, result_surface, stroke, curr_edit_list, edit_starting_index, edit_count);
-        //     break;
-        // }
-        // case SD_CYLINDER_SMOOTH_OP_PAINT: {
-        //     result_surface = eval_stroke_cylinder_paint(position, result_surface, stroke, curr_edit_list, edit_starting_index, edit_count);
-        //     break;
-        // }
-        // case SD_TORUS_SMOOTH_OP_UNION: {
-        //     result_surface = eval_stroke_torus_union(position, result_surface, stroke, curr_edit_list, edit_starting_index, edit_count);
-        //     break;
-        // }
-        // case SD_TORUS_SMOOTH_OP_SUBSTRACTION: {
-        //     result_surface = eval_stroke_torus_substraction(position, result_surface, stroke, curr_edit_list, edit_starting_index, edit_count);
-        //     break;
-        // }
-        // case SD_TORUS_SMOOTH_OP_PAINT: {
-        //     result_surface = eval_stroke_torus_paint(position, result_surface, stroke, curr_edit_list, edit_starting_index, edit_count);
-        //     break;
-        // }
-        // case SD_VESICA_SMOOTH_OP_UNION: {
-        //     result_surface = eval_stroke_vesica_union(position, result_surface, stroke, curr_edit_list, edit_starting_index, edit_count);
-        //     break;
-        // }
-        // case SD_VESICA_SMOOTH_OP_SUBSTRACTION: {
-        //     result_surface = eval_stroke_vesica_substraction(position, result_surface, stroke, curr_edit_list, edit_starting_index, edit_count);
-        //     break;
-        // }
-        // case SD_VESICA_SMOOTH_OP_PAINT: {
-        //     result_surface = eval_stroke_vesica_paint(position, result_surface, stroke, curr_edit_list, edit_starting_index, edit_count);
-        //     break;
-        // }
+        case SD_CYLINDER_SMOOTH_OP_UNION: {
+            result_surface = eval_stroke_cylinder_union(position, result_surface, stroke, curr_edit_list, edit_starting_index, edit_count);
+            break;
+        }
+        case SD_CYLINDER_SMOOTH_OP_SUBSTRACTION: {
+            result_surface = eval_stroke_cylinder_substraction(position, result_surface, stroke, curr_edit_list, edit_starting_index, edit_count);
+            break;
+        }
+        case SD_CYLINDER_SMOOTH_OP_PAINT: {
+            result_surface = eval_stroke_cylinder_paint(position, result_surface, stroke, curr_edit_list, edit_starting_index, edit_count);
+            break;
+        }
+        case SD_TORUS_SMOOTH_OP_UNION: {
+            result_surface = eval_stroke_torus_union(position, result_surface, stroke, curr_edit_list, edit_starting_index, edit_count);
+            break;
+        }
+        case SD_TORUS_SMOOTH_OP_SUBSTRACTION: {
+            result_surface = eval_stroke_torus_substraction(position, result_surface, stroke, curr_edit_list, edit_starting_index, edit_count);
+            break;
+        }
+        case SD_TORUS_SMOOTH_OP_PAINT: {
+            result_surface = eval_stroke_torus_paint(position, result_surface, stroke, curr_edit_list, edit_starting_index, edit_count);
+            break;
+        }
+        case SD_VESICA_SMOOTH_OP_UNION: {
+            result_surface = eval_stroke_vesica_union(position, result_surface, stroke, curr_edit_list, edit_starting_index, edit_count);
+            break;
+        }
+        case SD_VESICA_SMOOTH_OP_SUBSTRACTION: {
+            result_surface = eval_stroke_vesica_substraction(position, result_surface, stroke, curr_edit_list, edit_starting_index, edit_count);
+            break;
+        }
+        case SD_VESICA_SMOOTH_OP_PAINT: {
+            result_surface = eval_stroke_vesica_paint(position, result_surface, stroke, curr_edit_list, edit_starting_index, edit_count);
+            break;
+        }
         default: {}
     }
 
@@ -1194,28 +1200,28 @@ fn evaluate_single_edit( position : vec3f, primitive : u32, operation : u32, par
             pSurface = sdCone(position, edit.position, edit.dimensions, edit_parameters, edit.rotation, stroke_material);
             break;
         }
-        // case SD_CYLINDER: {
-        //     // onion_thickness = map_thickness( onion_thickness, size_param );
-        //     // size_param -= onion_thickness; // Compensate onion size
-        //     pSurface = sdCylinder(position, edit.position, edit.dimensions, edit_parameters, edit.rotation, stroke_material);
-        //     break;
-        // }
-        // case SD_TORUS: {
-        //     // onion_thickness = map_thickness( onion_thickness, size_param );
-        //     // size_param -= onion_thickness; // Compensate onion size
-        //     if(cap_value > 0.0) {
-        //         pSurface = sdCappedTorus(position, edit.position, edit.dimensions, edit_parameters, edit.rotation, stroke_material);
-        //     } else {
-        //         pSurface = sdTorus(position, edit.position, edit.dimensions, edit_parameters, edit.rotation, stroke_material);
-        //     }
-        //     break;
-        // }
-        // case SD_VESICA: {
-        //     // onion_thickness = map_thickness( onion_thickness, size_param );
-        //     // size_param -= onion_thickness; // Compensate onion size
-        //     pSurface = sdVesica(position, edit.position, edit.dimensions, edit_parameters, edit.rotation, stroke_material);
-        //     break;
-        // }
+        case SD_CYLINDER: {
+            // onion_thickness = map_thickness( onion_thickness, size_param );
+            // size_param -= onion_thickness; // Compensate onion size
+            pSurface = sdCylinder(position, edit.position, edit.dimensions, edit_parameters, edit.rotation, stroke_material);
+            break;
+        }
+        case SD_TORUS: {
+            // onion_thickness = map_thickness( onion_thickness, size_param );
+            // size_param -= onion_thickness; // Compensate onion size
+            if(cap_value > 0.0) {
+                pSurface = sdCappedTorus(position, edit.position, edit.dimensions, edit_parameters, edit.rotation, stroke_material);
+            } else {
+                pSurface = sdTorus(position, edit.position, edit.dimensions, edit_parameters, edit.rotation, stroke_material);
+            }
+            break;
+        }
+        case SD_VESICA: {
+            // onion_thickness = map_thickness( onion_thickness, size_param );
+            // size_param -= onion_thickness; // Compensate onion size
+            pSurface = sdVesica(position, edit.position, edit.dimensions, edit_parameters, edit.rotation, stroke_material);
+            break;
+        }
         default: {
             break;
         }
