@@ -146,8 +146,6 @@ glm::vec3 get_edit_world_half_size(const Edit &edit, const sdPrimitive primitive
         return glm::vec3(size.x + size.y, size.y, size.x + size.y) + smooth_margin;
     case SD_VESICA:
         return glm::vec3(size.x, size.y, size.x) + round + smooth_margin;
-    /*case SD_BEZIER:
-        return glm::vec3(0.0f);*/
     default:
         assert(false);
         return {};

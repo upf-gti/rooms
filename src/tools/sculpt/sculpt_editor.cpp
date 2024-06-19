@@ -89,7 +89,6 @@ void SculptEditor::initialize()
         primitive_default_states[SD_CAPSULE]    = { glm::vec4(0.03f, 0.05f, 0.0f,  0.0f) };
         primitive_default_states[SD_TORUS]      = { glm::vec4(0.03f, 0.01f, 0.0f,  0.0f) };
         primitive_default_states[SD_VESICA]     = { glm::vec4(0.03f, 0.05f, 0.0f,  0.0f) };
-        primitive_default_states[SD_BEZIER]     = { glm::vec4(0.0) };
     }
 
     // Edit preview mesh
