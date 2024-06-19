@@ -415,6 +415,7 @@ void RoomsEngine::render_gui()
                     delete main_scene;
                     main_scene = new Scene();
                     main_scene->parse(open_file_name);
+                    scene_editor->set_main_scene(main_scene);
                 }
             }
             if (ImGui::MenuItem("Save room (.room)"))
