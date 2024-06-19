@@ -42,7 +42,6 @@ void SceneEditor::initialize()
 
     SculptInstance* default_sculpt = new SculptInstance();
     default_sculpt->set_name("default_sculpt");
-    RoomsEngine::instance->add_node(default_sculpt);
     RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
     rooms_renderer->get_raymarching_renderer()->set_current_sculpt(default_sculpt);
     main_scene->add_node(default_sculpt);
@@ -441,6 +440,12 @@ bool SceneEditor::is_gizmo_usable()
 void SceneEditor::update_gizmo(float delta_time)
 {
     if (!is_gizmo_usable()) {
+        return;
+    }
+
+    // Only 3D Gizmo for XR needs to update
+
+    if (!renderer->get_openxr_available()) {
         return;
     }
 

@@ -929,32 +929,32 @@ fn eval_stroke_box_paint( position : vec3f, current_surface : Surface, curr_stro
  \___/ \___||___/_|\___\__,_|
 */
 
-fn sdVesica( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f, material : Material) -> Surface
-{
-    var sf : Surface;
+// fn sdVesica( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f, material : Material) -> Surface
+// {
+//     var sf : Surface;
 
-    var radius : f32 = dims.x * 2.0;
-    var height : f32 = dims.y * 2.0;
+//     var radius : f32 = dims.x * 2.0;
+//     var height : f32 = dims.y * 2.0;
 
-    let round : f32 = clamp(dims.w / 0.125, 0.001, 0.99) * min(radius, height);
+//     let round : f32 = clamp(dims.w / 0.125, 0.001, 0.99) * min(radius, height);
 
-    let pos : vec3f = rotate_point_quat(p - c, rotation) + vec3f(0.0, height * 0.5, 0.0);
+//     let pos : vec3f = rotate_point_quat(p - c, rotation) + vec3f(0.0, height * 0.5, 0.0);
 
-    // shape constants
-    let h : f32 = height * 0.5;
-    let w : f32 = radius * 0.5;
-    let d : f32 = 0.5 * (h * h - w * w) / w;
+//     // shape constants
+//     let h : f32 = height * 0.5;
+//     let w : f32 = radius * 0.5;
+//     let d : f32 = 0.5 * (h * h - w * w) / w;
     
-    // project to 2D
-    let q : vec2f = vec2f(length(pos.xz), abs(pos.y - h));
+//     // project to 2D
+//     let q : vec2f = vec2f(length(pos.xz), abs(pos.y - h));
     
-    // feature selection (vertex or body)
-    let t : vec3f = select(vec3f(-d,0.0,d+w), vec3f(0.0,h,0.0), (h*q.x < d*(q.y-h)));
+//     // feature selection (vertex or body)
+//     let t : vec3f = select(vec3f(-d,0.0,d+w), vec3f(0.0,h,0.0), (h*q.x < d*(q.y-h)));
     
-    sf.distance = (length(q-t.xy) - t.z) - round;
-    sf.material = material;
-    return sf;
-}
+//     sf.distance = (length(q-t.xy) - t.z) - round;
+//     sf.material = material;
+//     return sf;
+// }
 
 // fn eval_stroke_vesica_union( position : vec3f, current_surface : Surface, curr_stroke: ptr<storage, Stroke>) -> Surface {
 //     var result_surface : Surface = current_surface;
@@ -1018,47 +1018,6 @@ fn sdVesica( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : 
 //     }
 
 //     return result_surface;
-// }
-
-/*
-______          _           
-| ___ \        (_)          
-| |_/ / ___ _____  ___ _ __ 
-| ___ \/ _ \_  / |/ _ \ '__|
-| |_/ /  __// /| |  __/ |   
-\____/ \___/___|_|\___|_|
-*/
-
-
-// // IQ adaptation to 3d of http://research.microsoft.com/en-us/um/people/hoppe/ravg.pdf
-// // { dist, t, y (above the plane of the curve, x (away from curve in the plane of the curve))
-// fn sdQuadraticBezier(p : vec3f, start : vec3f, cp : vec3f, end : vec3f, thickness : f32, rotation : vec4f, material : Material) -> Surface
-// {
-//     var b0 : vec3f = start - p;
-//     var b1 : vec3f = cp - p;
-//     var b2 : vec3f = end - p;
-    
-//     var b01 : vec3f = cross(b0, b1);
-//     var b12 : vec3f = cross(b1, b2);
-//     var b20 : vec3f = cross(b2, b0);
-    
-//     var n : vec3f =  b01 + b12 + b20;
-    
-//     var a : f32 = -dot(b20, n);
-//     var b : f32 = -dot(b01, n);
-//     var d : f32 = -dot(b12, n);
-
-//     var m : f32 = -dot(n,n);
-    
-//     var g : vec3f =  (d-b)*b1 + (b+a*0.5)*b2 + (-d-a*0.5)*b0;
-//     var f : f32 = a*a*0.25-b*d;
-//     var k : vec3f = b0-2.0*b1+b2;
-//     var t : f32 = clamp((a*0.5+b-0.5*f*dot(g,k)/dot(g,g))/m, 0.0, 1.0 );
-    
-//     var sf : Surface;
-//     sf.distance = length(mix(mix(b0,b1,t), mix(b1,b2,t),t)) - thickness;
-//     sf.material = material;
-//     return sf;
 // }
 
 // STROKE EVALUATION ================
@@ -1205,6 +1164,11 @@ fn evaluate_single_edit( position : vec3f, primitive : u32, operation : u32, par
         //     pSurface = sdCapsule(position, edit.position, edit.dimensions, edit_parameters, edit.rotation, stroke_material);
         //     break;
         // }
+        // case SD_CONE: {
+        //     // onion_thickness = map_thickness( onion_thickness, 0.01 );
+        //     pSurface = sdCone(position, edit.position, edit.dimensions, edit_parameters, edit.rotation, stroke_material);
+        //     break;
+        // }
         // case SD_CYLINDER: {
         //     // onion_thickness = map_thickness( onion_thickness, size_param );
         //     // size_param -= onion_thickness; // Compensate onion size
@@ -1227,36 +1191,6 @@ fn evaluate_single_edit( position : vec3f, primitive : u32, operation : u32, par
         //     pSurface = sdVesica(position, edit.position, edit.dimensions, edit_parameters, edit.rotation, stroke_material);
         //     break;
         // }
-        // case SD_BEZIER: {
-        //     var curve_thickness : f32 = 0.01;
-        //     pSurface = sdQuadraticBezier(position, edit.position, edit.position + vec3f(0.1, 0.2, 0.0), edit.position + vec3f(0.2, 0.0, 0.0), curve_thickness, edit.rotation, stroke_material);
-        //     break;
-        // }
-        // // case SD_PYRAMID: {
-        // //     pSurface = sdPyramid(position, edit.position, edit.rotation, radius, size_param, edit_color);
-        // //     break;
-        // // }
-        // case SD_CYLINDER: {
-        //     // onion_thickness = map_thickness( onion_thickness, size_param );
-        //     // size_param -= onion_thickness; // Compensate onion size
-        //     pSurface = sdCylinder(position, edit.position, edit.dimensions, edit_parameters, edit.rotation, stroke_material);
-        //     break;
-        // }
-        // case SD_TORUS: {
-        //     // onion_thickness = map_thickness( onion_thickness, size_param );
-        //     // size_param -= onion_thickness; // Compensate onion size
-        //     if(cap_value > 0.0) {
-        //         pSurface = sdCappedTorus(position, edit.position, edit.dimensions, edit_parameters, edit.rotation, stroke_material);
-        //     } else {
-        //         pSurface = sdTorus(position, edit.position, edit.dimensions, edit_parameters, edit.rotation, stroke_material);
-        //     }
-        //     break;
-        // }
-        // // case SD_BEZIER: {
-        // //     var curve_thickness : f32 = 0.01;
-        // //     pSurface = sdQuadraticBezier(position, edit.position, edit.position + vec3f(0.1, 0.2, 0.0), edit.position + vec3f(0.2, 0.0, 0.0), curve_thickness, edit.rotation, stroke_material);
-        // //     break;
-        // // }
         default: {
             break;
         }

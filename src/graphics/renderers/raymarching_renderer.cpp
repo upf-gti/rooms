@@ -535,7 +535,7 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder, boo
     }
 
     if (needs_evaluation) {
-        if (stroke_to_compute.in_frame_influence.stroke_count > octree_edit_list_size) {
+        if (stroke_manager.edit_list_count > octree_edit_list_size) {
             spdlog::info("Resized GPU edit buffer from {} to {}", octree_edit_list_size, stroke_manager.edit_list.size());
 
             octree_edit_list_size = stroke_manager.edit_list.size();
@@ -545,6 +545,19 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder, boo
             octree_edit_list.data = webgpu_context->create_buffer(edit_list_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "edit_list");
             octree_edit_list.binding = 7;
             octree_edit_list.buffer_size = edit_list_size;
+
+            std::vector<Uniform*> uniforms = { &sdf_texture_uniform, &octree_edit_list, &stroke_culling_data,
+                                   &octree_stroke_history, &octree_brick_buffers, &sdf_material_texture_uniform };
+
+            wgpuBindGroupRelease(compute_octree_write_to_texture_bind_group);
+            compute_octree_write_to_texture_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_write_to_texture_shader, 0);
+
+
+            uniforms = { &compute_merge_data_uniform, &octree_edit_list,
+                                               &octree_stroke_history, &octree_brick_buffers, &stroke_culling_data };
+
+            wgpuBindGroupRelease(compute_octree_evaluate_bind_group);
+            compute_octree_evaluate_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_evaluate_shader, 0);
         }
 
         webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_edit_list.data), 0, stroke_manager.edit_list.data(), sizeof(Edit) * stroke_manager.edit_list_count);
@@ -598,6 +611,7 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
     // TODO: we dont need to re-upload it each frame, inly when changed in hieraqui.. but the we need to detect changes
     {
         // Index buffer for the sculpt instances and their model matrices
+        // TODO: create big buffer only once
         uint32_t buffer_size = sculpt_count + sculpt_instances_list.size() * sculpt_instances_list.size();
         uint32_t* buffer = new uint32_t[buffer_size];
 
@@ -622,8 +636,8 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
         webgpu_context->update_buffer(std::get<WGPUBuffer>(sculpt_instances_buffer_uniform.data), 0u, buffer, sizeof(uint32_t) * buffer_size);
         webgpu_context->update_buffer(std::get<WGPUBuffer>(sculpt_model_buffer_uniform.data), 0u, matrices_list, sizeof(glm::mat4) * sculpt_instances_count);
 
-        delete matrices_list;
-        delete buffer;
+        delete[] matrices_list;
+        delete[] buffer;
     }
 
 #ifndef NDEBUG
