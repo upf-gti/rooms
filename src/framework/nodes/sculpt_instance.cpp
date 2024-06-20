@@ -7,7 +7,7 @@ SculptInstance::SculptInstance() : Node3D()
 {
     node_type = "SculptInstance";
 
-    SculptureData new_sculpt_data = dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->create_new_sculpture();
+    GPUSculptureData new_sculpt_data = dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->create_new_sculpture();
 
     sculpture_octree_uniform = new_sculpt_data.sculpture_octree_uniform;
     sculpture_octree_bindgroup = new_sculpt_data.sculpture_octree_bindgroup;
@@ -32,12 +32,6 @@ SculptInstance::~SculptInstance()
     // Remove from raymarching renderer
 
     dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->remove_sculpt_instance(this);
-
-    // Destroy instance
-
-    sculpture_octree_uniform.destroy();
-
-    wgpuBindGroupRelease(sculpture_octree_bindgroup);
 
     stroke_history.clear();
 }

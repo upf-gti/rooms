@@ -108,6 +108,14 @@ struct Octree {
     data : array<OctreeNode>
 };
 
+struct Octree_NonAtomic {
+    current_level : u32,
+    atomic_counter : u32,
+    evaluation_mode : u32,
+    octree_id : u32,
+    data : array<OctreeNode>
+};
+
 struct MergeData {
     reevaluation_AABB_min : vec3f,
     reevaluate            : u32,

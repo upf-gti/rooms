@@ -22,6 +22,7 @@
 #include "tools/sculpt/sculpt_editor.h"
 #include "tools/scene/scene_editor.h"
 #include "tools/tutorial_editor.h"
+#include "framework/nodes/sculpt_instance.h"
 
 
 #include "spdlog/spdlog.h"
@@ -570,6 +571,10 @@ bool RoomsEngine::show_tree_recursive(Node* entity)
                 ImGui::CloseCurrentPopup();
                 ImGui::EndPopup();
                 ImGui::TreePop();
+
+                if (static_cast<SculptInstance*>(entity) != nullptr) {
+                    dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->remove_sculpt_instance((SculptInstance*) entity);
+                }
                 return true;
             }
             ImGui::EndPopup();
