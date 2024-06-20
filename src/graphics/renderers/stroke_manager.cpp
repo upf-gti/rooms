@@ -237,7 +237,7 @@ void StrokeManager::change_stroke(const uint32_t index_increment) {
     spdlog::info("change stroke");
 }
 
-void StrokeManager::set_current_sculpt(SculptInstance* sculpt_instance, sToComputeStrokeData& result)
+void StrokeManager::set_current_sculpt(SculptInstance* sculpt_instance)
 {
     history = &sculpt_instance->get_stroke_history();
 
@@ -256,7 +256,7 @@ void StrokeManager::set_current_sculpt(SculptInstance* sculpt_instance, sToCompu
     redo_pop_count_from_history = 0;
     edit_list_count = 0u;
 
-    if (!history->empty()) {
+    /*if (!history->empty()) {
         AABB base_aabb = {};
         for (uint32_t i = 0u; i < history->size(); i++) {
             Stroke& curr_stroke = history->at(i);
@@ -268,7 +268,7 @@ void StrokeManager::set_current_sculpt(SculptInstance* sculpt_instance, sToCompu
 
         result.in_frame_influence.eval_aabb_min = result.in_frame_stroke_aabb.center - result.in_frame_stroke_aabb.half_size;
         result.in_frame_influence.eval_aabb_max = result.in_frame_stroke_aabb.center + result.in_frame_stroke_aabb.half_size;
-    }
+    }*/
 }
 
 void StrokeManager::change_stroke(const StrokeParameters& params, const uint32_t index_increment) {

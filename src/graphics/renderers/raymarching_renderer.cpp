@@ -493,10 +493,7 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder, boo
 
     bool needs_evaluation = true;
 
-    if (needs_context_upload) {
-        stroke_to_compute = context_to_upload;
-        needs_context_upload = false;
-    } else if (incoming_edits.size() > 0u) {
+    if (incoming_edits.size() > 0u) {
         stroke_manager.add(incoming_edits, stroke_to_compute);
     } else if (needs_undo) {
         stroke_manager.undo(stroke_to_compute);
@@ -712,9 +709,7 @@ void RaymarchingRenderer::set_sculpt_rotation(const glm::quat& rotation)
 
 void RaymarchingRenderer::set_current_sculpt(SculptInstance* sculpt_instance)
 {
-    context_to_upload.in_frame_influence.stroke_count = 0u;
-    stroke_manager.set_current_sculpt(sculpt_instance, context_to_upload);
-    needs_context_upload = false;
+    stroke_manager.set_current_sculpt(sculpt_instance);
 
     sculpture_octree_bindgroup = sculpt_instance->get_octree_bindgroup();
     sculpture_octree_uniform = &sculpt_instance->get_octree_uniform();
