@@ -165,40 +165,54 @@ fn brick_create_or_reevaluate(octree_index : u32, is_current_brick_filled : bool
     octant_usage_write[prev_counter] = octree_index;
 }
 
-fn brick_reevaluate(octree_index : u32) {
+fn brick_reevaluate(octree_index : u32)
+{
     let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 1);
     octant_usage_write[prev_counter] = octree_index;
 }
 
-fn preview_brick_create(octree_index : u32, octant_center : vec3f, is_interior_brick : bool, edit_start_index : u32, edit_count : u32) {
+fn preview_brick_create(octree_index : u32, octant_center : vec3f, is_interior_brick : bool, edit_start_index : u32, edit_count : u32)
+{
     let preview_brick : u32 = atomicAdd(&brick_buffers.preview_instance_counter, 1u);
     
     brick_buffers.preview_instance_data[preview_brick].position = octant_center;
     brick_buffers.preview_instance_data[preview_brick].in_use = 0u;
     brick_buffers.preview_instance_data[preview_brick].edit_id_start = edit_start_index;
     brick_buffers.preview_instance_data[preview_brick].edit_count = edit_count;
+
     if (is_interior_brick) {
         brick_buffers.preview_instance_data[preview_brick].in_use = INTERIOR_BRICK_FLAG; 
     }
 }
 
-fn brick_mark_as_preview(octree_index : u32, edit_start_index : u32, edit_count : u32) {
+fn brick_mark_as_preview(octree_index : u32, edit_start_index : u32, edit_count : u32)
+{
     brick_buffers.brick_instance_data[octree.data[octree_index].tile_pointer & OCTREE_TILE_INDEX_MASK].in_use |= BRICK_HAS_PREVIEW_FLAG;
     brick_buffers.brick_instance_data[octree.data[octree_index].tile_pointer & OCTREE_TILE_INDEX_MASK].edit_id_start = edit_start_index;
     brick_buffers.brick_instance_data[octree.data[octree_index].tile_pointer & OCTREE_TILE_INDEX_MASK].edit_count = edit_count;
 }
 
-fn brick_mark_as_hidden(octree_index : u32) {
+fn brick_mark_as_hidden(octree_index : u32)
+{
     brick_buffers.brick_instance_data[octree.data[octree_index].tile_pointer & OCTREE_TILE_INDEX_MASK].in_use |= BRICK_HIDE_FLAG;
 }
 
-fn get_loose_half_size_mat(prim : u32) -> mat4x3f{
+fn get_loose_half_size_mat(prim : u32) -> mat4x3f
+{
     if (prim == SD_SPHERE) {
         return mat4x3f(vec3f(1.0, 1.0, 1.0), vec3f(0.0), vec3f(0.0), vec3f(0.0));
     } else if (prim == SD_BOX) {
         return mat4x3f(vec3f(1.0, 0.0, 0.0), vec3f(0.0, 1.0, 0.0), vec3f(0.0, 0.0, 1.0), vec3f(0.0));
     } else if (prim == SD_CAPSULE) {
-        return mat4x3f(vec3f(1.0, 1.0, 1.0), vec3f(0.0), vec3f(0.0), vec3f(0.50, 0.50, 0.50));
+        return mat4x3f(vec3f(1.0, 1.0, 1.0), vec3f(0.0, 1.0, 0.0), vec3f(0.0), vec3f(0.0));
+    } else if (prim == SD_CONE) {
+        return mat4x3f(vec3f(1.0, 1.0, 1.0), vec3f(0.0, 1.0, 0.0), vec3f(0.0), vec3f(0.0));
+    } else if (prim == SD_CYLINDER) {
+        return mat4x3f(vec3f(1.0, 1.0, 1.0), vec3f(0.0, 0.5, 0.0), vec3f(0.0), vec3f(0.0));
+    } else if (prim == SD_TORUS) {
+        return mat4x3f(vec3f(1.0, 0.0, 1.0), vec3f(1.0, 1.0, 1.0), vec3f(0.0), vec3f(0.0));
+    } else if (prim == SD_VESICA) {
+        return mat4x3f(vec3f(1.0, 1.0, 1.0), vec3f(0.0, 0.5, 0.0), vec3f(0.0), vec3f(1.0));
     }
 
     return mat4x3f();
@@ -328,6 +342,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             // We compare the two intervals,
             // in order to find the goops (where the current stroke is taking affect)
             var curr_stroke_count : u32 = 0u;
+            var brick_has_paint : bool = false;
             for(var i : u32 = 0u; i < octree.data[parent_octree_index].stroke_count; i++) {
                 let index : u32 = culling_get_stroke_index(stroke_culling[prev_culling_layer_index + i]);
                 if (intersection_AABB_AABB(eval_aabb_min, 
@@ -338,7 +353,12 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                     stroke_culling[curr_culling_layer_index + curr_stroke_count] = culling_get_culling_data(index, 0u, 0u);
                     curr_stroke_count++;
 
-                    surface_interval = evaluate_stroke_interval(current_subdivision_interval, &(stroke_history.strokes[index]), &edit_list, surface_interval, octant_center, level_half_size);
+                    if (stroke_history.strokes[index].operation != OP_SMOOTH_PAINT) {
+                        surface_interval = evaluate_stroke_interval(current_subdivision_interval, &(stroke_history.strokes[index]), &edit_list, surface_interval, octant_center, level_half_size);
+                    } else {
+                        brick_has_paint = true;
+                    }
+
                 }
             }
             octree.data[octree_index].stroke_count = curr_stroke_count;
@@ -348,22 +368,28 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             let prev_interval = octree.data[octree_index].octant_center_distance;
             octree.data[octree_index].octant_center_distance = surface_interval;
 
-            let int_distance = abs(distance(prev_interval, surface_interval));
+            if (brick_has_paint) {
+                if (is_current_brick_filled) { 
+                    brick_create_or_reevaluate(octree_index, is_current_brick_filled, false, octant_center);
+                }
+            } else {
+                let int_distance = abs(distance(prev_interval, surface_interval));
             
-            if (int_distance > 0.00001) {
-                if (surface_interval.x > 0.0) {
-                    if (is_current_brick_filled) {
-                        // delete any brick outside surface that was previosly filled
-                        brick_remove(octree_index);
-                    } else {
-                        // reset flags for potential interior bricks
-                        octree.data[octree_index].tile_pointer = 0;
-                        octree.data[octree_index].octant_center_distance = vec2f(10000.0, 10000.0);
+                if (int_distance > 0.00001) {
+                    if (surface_interval.x > 0.0) {
+                        if (is_current_brick_filled) {
+                            // delete any brick outside surface that was previosly filled
+                            brick_remove(octree_index);
+                        } else {
+                            // reset flags for potential interior bricks
+                            octree.data[octree_index].tile_pointer = 0;
+                            octree.data[octree_index].octant_center_distance = vec2f(10000.0, 10000.0);
+                        }
+                    } else if (surface_interval.y < 0.0) {
+                        brick_remove_and_mark_as_inside(octree_index, is_current_brick_filled);
+                    } else if (surface_interval.x < 0.0) {
+                        brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
                     }
-                } else if (surface_interval.y < 0.0) {
-                    brick_remove_and_mark_as_inside(octree_index, is_current_brick_filled);
-                } else if (surface_interval.x < 0.0) {
-                    brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
                 }
             }
         }

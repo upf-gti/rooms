@@ -42,7 +42,7 @@ struct RayIntersectionInfo {
     uint32_t    dummy2 = 0;
 };
 
-struct SculptureData {
+struct GPUSculptureData {
     uint32_t octree_id;
     Uniform sculpture_octree_uniform;
     WGPUBindGroup sculpture_octree_bindgroup = nullptr;
@@ -56,8 +56,11 @@ class RaymarchingRenderer {
     };
 
     uint32_t sculpt_count = 0u;
-
+    std::vector<uint32_t> sculpt_instance_count;
     std::vector<SculptInstance*> sculpt_instances_list;
+
+    std::vector<GPUSculptureData> sculptures_to_delete;
+    std::vector<GPUSculptureData> sculptures_to_clean;
 
     Uniform         linear_sampler_uniform;
 
@@ -77,6 +80,7 @@ class RaymarchingRenderer {
     Uniform         sdf_material_texture_uniform;
 
     // Octree parameters
+    uint32_t        last_octree_level_size = 0u;
     uint32_t        max_brick_count = 0u;
     uint32_t        empty_brick_and_removal_buffer_count = 0u;
     float           brick_world_size = 0.0f;
@@ -103,6 +107,7 @@ class RaymarchingRenderer {
     Pipeline        compute_octree_cleaning_pipeline;
     Pipeline        compute_octree_ray_intersection_pipeline;
     Pipeline        compute_octree_brick_unmark_pipeline;
+    Pipeline        sculpt_delete_pipeline;
     Shader*         compute_octree_evaluate_shader = nullptr;
     Shader*         compute_octree_increment_level_shader = nullptr;
     Shader*         compute_octree_write_to_texture_shader = nullptr;
@@ -112,6 +117,7 @@ class RaymarchingRenderer {
     Shader*         compute_octree_cleaning_shader = nullptr;
     Shader*         compute_octree_ray_intersection_shader = nullptr;
     Shader*         compute_octree_brick_unmark_shader = nullptr;
+    Shader*         sculpt_delete_shader = nullptr;
     WGPUBindGroup   compute_octree_evaluate_bind_group = nullptr;
     WGPUBindGroup   compute_octree_increment_level_bind_group = nullptr;
     WGPUBindGroup   compute_octree_write_to_texture_bind_group = nullptr;
@@ -122,6 +128,7 @@ class RaymarchingRenderer {
     WGPUBindGroup   compute_octree_initialization_bind_group = nullptr;
     WGPUBindGroup   compute_octree_clean_octree_bind_group = nullptr;
     WGPUBindGroup   compute_octree_brick_unmark_bind_group = nullptr;
+    WGPUBindGroup   brick_buffer_bindgroup = nullptr;
 
     Uniform         octant_usage_uniform[4];
     Uniform         octant_usage_initialization_uniform[2];
@@ -133,7 +140,8 @@ class RaymarchingRenderer {
     Uniform         octree_state;
     Uniform         octree_brick_buffers;
     Uniform         octree_preview_stroke;
-    Uniform         octree_stroke_history;
+    uint32_t        stroke_context_size = 0u;
+    Uniform         octree_stroke_context;
     uint32_t        octree_edit_list_size;
     Uniform         octree_edit_list;
     Uniform         octree_brick_copy_buffer;
@@ -199,9 +207,6 @@ class RaymarchingRenderer {
         float dummy1;
     } ray_info;
 
-    bool needs_context_upload = false;
-    sToComputeStrokeData context_to_upload = {};
-
     RayIntersectionInfo ray_intersection_info;
 
     StrokeManager   stroke_manager = {};
@@ -234,6 +239,10 @@ class RaymarchingRenderer {
     void init_raymarching_proxy_pipeline();
     void init_octree_ray_intersection_pipeline();
 
+    void upload_stroke_context_data(sToComputeStrokeData* stroke_to_compute);
+
+    void compute_delete_sculptures(WGPUComputePassEncoder compute_pass, GPUSculptureData& to_delete);
+
     void evaluate_strokes(WGPUComputePassEncoder compute_pass);
 
     void compute_preview_edit(WGPUComputePassEncoder compute_pass);
@@ -242,6 +251,10 @@ class RaymarchingRenderer {
     bool needs_redo = false;
 
     bool performed_evaluation = false;
+
+    // Loading a sculpt from disk
+    sToComputeStrokeData to_compute_on_next_eval;
+    bool needs_compute_on_eval = false;
 
     // DEBUG
     MeshInstance3D *AABB_mesh;
@@ -279,6 +292,7 @@ public:
     /*
     *   Edits
     */
+
     void initialize_stroke();
     void change_stroke(const StrokeParameters& params, const uint32_t index_increment = 1u);
 
@@ -297,9 +311,11 @@ public:
         preview_stroke.edit_list[preview_stroke.stroke.edit_count++] = edit;
     }
 
-    void add_sculpt_instance(SculptInstance* instance) {
-        sculpt_instances_list.push_back(instance);
-    }
 
-    SculptureData create_new_sculpture();
+    void add_sculpt_instance(SculptInstance* instance);
+    void remove_sculpt_instance(SculptInstance* instance);
+
+    GPUSculptureData create_new_sculpture();
+
+    GPUSculptureData create_from_history(std::vector<Stroke>& stroke_history);
 };

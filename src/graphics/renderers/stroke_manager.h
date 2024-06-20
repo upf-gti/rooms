@@ -6,7 +6,8 @@
 
 #define EDIT_BUFFER_INITAL_SIZE 100u
 #define EDIT_BUFFER_INCREASE 64u
-#define STROKE_HISTORY_MAX_SIZE 1000u
+#define STROKE_CONTEXT_INTIAL_SIZE 100u
+#define STROKE_CONTEXT_INCREASE 100u
 
 class SculptInstance;
 
@@ -34,15 +35,21 @@ struct sStrokeInfluence {
     glm::vec3 eval_aabb_max;
     float pad2;
     glm::vec4 pad3;
-    sToUploadStroke strokes[STROKE_HISTORY_MAX_SIZE];
-    glm::vec4 padd; // TODO(Juan): HACK esto no deberia ser necesario
+    std::vector<sToUploadStroke> strokes;
 };
 
 struct sToComputeStrokeData {
     sToUploadStroke in_frame_stroke = {};
     sStrokeInfluence in_frame_influence;
     AABB in_frame_stroke_aabb;
+
+    inline void set_defaults() {
+        in_frame_stroke.edit_count = 0u;
+        in_frame_influence.stroke_count = 0u;
+        in_frame_stroke_aabb = { { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f } };
+    }
 };
+
 
 struct StrokeManager {
     Stroke in_frame_stroke = {
@@ -65,6 +72,8 @@ struct StrokeManager {
     uint32_t dirty_stroke_increment = 0u;
     bool must_change_stroke = false;
 
+    sToComputeStrokeData result_to_compute;
+
     inline void add_edit_to_upload(const Edit& edit) {
         // Expand the edit to upload list by chunks
         if (edit_list.size() == edit_list_count) {
@@ -78,7 +87,7 @@ struct StrokeManager {
 
     void init();
 
-    void set_current_sculpt(SculptInstance* sculpt_instance, sToComputeStrokeData& result);
+    void set_current_sculpt(SculptInstance* sculpt_instance);
 
     void set_brick_world_size(const glm::vec3& new_brick_world_size) {
         brick_world_size = new_brick_world_size;
@@ -93,9 +102,10 @@ struct StrokeManager {
     void change_stroke(const StrokeParameters& params, const uint32_t index_increment = 1u);
     void change_stroke(const uint32_t index_increment = 1u);
 
-    void undo(sToComputeStrokeData& result);
-    void redo(sToComputeStrokeData& result);
-    void add(std::vector<Edit> new_edits, sToComputeStrokeData &result);
+    sToComputeStrokeData* undo();
+    sToComputeStrokeData* redo();
+    sToComputeStrokeData* add(std::vector<Edit> new_edits);
+    sToComputeStrokeData* new_history_add(std::vector<Stroke>* history);
 
     void update();
 

@@ -23,6 +23,7 @@
 #include "tools/sculpt/sculpt_editor.h"
 #include "tools/scene/scene_editor.h"
 #include "tools/tutorial_editor.h"
+#include "framework/nodes/sculpt_instance.h"
 
 
 #include "spdlog/spdlog.h"
@@ -424,6 +425,7 @@ void RoomsEngine::render_gui()
                     delete main_scene;
                     main_scene = new Scene();
                     main_scene->parse(open_file_name);
+                    scene_editor->set_main_scene(main_scene);
                 }
             }
             if (ImGui::MenuItem("Save room (.room)"))
@@ -578,6 +580,10 @@ bool RoomsEngine::show_tree_recursive(Node* entity)
                 ImGui::CloseCurrentPopup();
                 ImGui::EndPopup();
                 ImGui::TreePop();
+
+                if (static_cast<SculptInstance*>(entity) != nullptr) {
+                    dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->remove_sculpt_instance((SculptInstance*) entity);
+                }
                 return true;
             }
             ImGui::EndPopup();

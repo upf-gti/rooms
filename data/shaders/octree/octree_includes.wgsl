@@ -5,7 +5,6 @@
 #define OCTREE_TOTAL_SIZE
 #define PREVIEW_PROXY_BRICKS_COUNT
 #define WORLD_SPACE_SCALE
-#define STROKE_HISTORY_MAX_SIZE
 #define BRICK_REMOVAL_COUNT
 
 const SCULPT_TO_ATLAS_CONVERSION_FACTOR = (WORLD_SPACE_SCALE / SDF_RESOLUTION)  / (SCULPT_MAX_SIZE);
@@ -108,12 +107,16 @@ struct OctreeNode {
 struct Octree {
     current_level : atomic<u32>,
     atomic_counter : atomic<u32>,
-    proxy_instance_counter : atomic<u32>,
     evaluation_mode : u32,
     octree_id : u32,
-    padd0 : u32,
-    padd1 : u32,
-    padd2 : u32,
+    data : array<OctreeNode>
+};
+
+struct Octree_NonAtomic {
+    current_level : u32,
+    atomic_counter : u32,
+    evaluation_mode : u32,
+    octree_id : u32,
     data : array<OctreeNode>
 };
 

@@ -59,19 +59,19 @@ class SceneEditor : public BaseEditor {
     *   UI
     */
 
-    void init_ui();
-    void bind_events();
-
-    void inspector_from_scene();
-    void inspect_node(Node* node, uint32_t flags = NODE_STANDARD, const std::string& texture_path = "");
-    void inspect_light();
-
     static uint64_t node_signal_uid;
 
     bool inspector_dirty = true;
 
     ui::Inspector* inspector = nullptr;
     Viewport3D* inspect_panel_3d = nullptr;
+
+    void init_ui();
+    void bind_events();
+
+    void inspector_from_scene();
+    void inspect_node(Node* node, uint32_t flags = NODE_STANDARD, const std::string& texture_path = "");
+    void inspect_light();
 
 public:
 
@@ -83,4 +83,7 @@ public:
     void update(float delta_time) override;
     void render() override;
     void render_gui() override;
+
+    void set_main_scene(Scene* new_scene) { main_scene = new_scene; };
+    void set_inspector_dirty() { inspector_dirty = true; };
 };
