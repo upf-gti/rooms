@@ -315,6 +315,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             if (subdivide) {
                     // Stroke history culling
                     var curr_stroke_count : u32 = 0u;
+                    var any_stroke_inside : bool = false;
                     for(var i : u32 = 0u; i < octree.data[parent_octree_index].stroke_count; i++) {
                         let index : u32 = culling_get_stroke_index(stroke_culling[prev_culling_layer_index + i]);
                         if (intersection_AABB_AABB(eval_aabb_min, 
@@ -324,17 +325,19 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                             // Added to the current list
                             stroke_culling[curr_culling_layer_index + curr_stroke_count] = culling_get_culling_data(index, 0u, 0u);
                             curr_stroke_count = curr_stroke_count + 1u;
+                            any_stroke_inside = true;
                         }
                     }
                     octree.data[octree_index].stroke_count = curr_stroke_count;
 
-                // Subdivide
-                // Increase the number of children from the current level
-                let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 8);
+                if (any_stroke_inside) {
+                    // Increase the number of children from the current level
+                    let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 8);
 
-                // Add to the index the childres's octant id, and save it for the next pass
-                for (var i : u32 = 0; i < 8; i++) {
-                    octant_usage_write[prev_counter + i] = octant_id | (i << (3 * level));
+                    // Add to the index the childres's octant id, and save it for the next pass
+                    for (var i : u32 = 0; i < 8; i++) {
+                        octant_usage_write[prev_counter + i] = octant_id | (i << (3 * level));
+                    }
                 }
             }
         } else {
