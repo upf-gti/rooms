@@ -274,6 +274,7 @@ public:
     /*
     *   Edits
     */
+
     void initialize_stroke();
     void change_stroke(const StrokeParameters& params, const uint32_t index_increment = 1u);
 
@@ -296,6 +297,14 @@ public:
 
     void add_sculpt_instance(SculptInstance* instance) {
         sculpt_instances_list.push_back(instance);
+    }
+
+    void remove_sculpt_instance(SculptInstance* instance) {
+        auto it = std::find(sculpt_instances_list.begin(), sculpt_instances_list.end(), instance);
+        if (it != sculpt_instances_list.end()) {
+            sculpt_instances_list.erase(it);
+            sculpt_count--;
+        }
     }
 
     SculptureData create_new_sculpture();

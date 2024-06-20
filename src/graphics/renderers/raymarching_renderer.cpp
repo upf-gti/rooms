@@ -69,12 +69,10 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
     stroke_manager.set_brick_world_size(glm::vec3(brick_world_size));
 
 #ifndef DISABLE_RAYMARCHER
-
     init_compute_octree_pipeline();
     init_octree_ray_intersection_pipeline();
     init_raymarching_proxy_pipeline();
     initialize_stroke();
-
 #endif
     
     AABB_mesh = parse_mesh("data/meshes/cube/aabb_cube.obj");

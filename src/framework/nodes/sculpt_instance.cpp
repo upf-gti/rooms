@@ -29,6 +29,17 @@ SculptInstance::SculptInstance(SculptInstance* reference) : Node3D()
 
 SculptInstance::~SculptInstance()
 {
+    // Remove from raymarching renderer
+
+    dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->remove_sculpt_instance(this);
+
+    // Destroy instance
+
+    sculpture_octree_uniform.destroy();
+
+    wgpuBindGroupRelease(sculpture_octree_bindgroup);
+
+    stroke_history.clear();
 }
 
 std::vector<Stroke>& SculptInstance::get_stroke_history()

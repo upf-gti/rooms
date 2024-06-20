@@ -165,40 +165,54 @@ fn brick_create_or_reevaluate(octree_index : u32, is_current_brick_filled : bool
     octant_usage_write[prev_counter] = octree_index;
 }
 
-fn brick_reevaluate(octree_index : u32) {
+fn brick_reevaluate(octree_index : u32)
+{
     let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 1);
     octant_usage_write[prev_counter] = octree_index;
 }
 
-fn preview_brick_create(octree_index : u32, octant_center : vec3f, is_interior_brick : bool, edit_start_index : u32, edit_count : u32) {
+fn preview_brick_create(octree_index : u32, octant_center : vec3f, is_interior_brick : bool, edit_start_index : u32, edit_count : u32)
+{
     let preview_brick : u32 = atomicAdd(&brick_buffers.preview_instance_counter, 1u);
     
     brick_buffers.preview_instance_data[preview_brick].position = octant_center;
     brick_buffers.preview_instance_data[preview_brick].in_use = 0u;
     brick_buffers.preview_instance_data[preview_brick].edit_id_start = edit_start_index;
     brick_buffers.preview_instance_data[preview_brick].edit_count = edit_count;
+
     if (is_interior_brick) {
         brick_buffers.preview_instance_data[preview_brick].in_use = INTERIOR_BRICK_FLAG; 
     }
 }
 
-fn brick_mark_as_preview(octree_index : u32, edit_start_index : u32, edit_count : u32) {
+fn brick_mark_as_preview(octree_index : u32, edit_start_index : u32, edit_count : u32)
+{
     brick_buffers.brick_instance_data[octree.data[octree_index].tile_pointer & OCTREE_TILE_INDEX_MASK].in_use |= BRICK_HAS_PREVIEW_FLAG;
     brick_buffers.brick_instance_data[octree.data[octree_index].tile_pointer & OCTREE_TILE_INDEX_MASK].edit_id_start = edit_start_index;
     brick_buffers.brick_instance_data[octree.data[octree_index].tile_pointer & OCTREE_TILE_INDEX_MASK].edit_count = edit_count;
 }
 
-fn brick_mark_as_hidden(octree_index : u32) {
+fn brick_mark_as_hidden(octree_index : u32)
+{
     brick_buffers.brick_instance_data[octree.data[octree_index].tile_pointer & OCTREE_TILE_INDEX_MASK].in_use |= BRICK_HIDE_FLAG;
 }
 
-fn get_loose_half_size_mat(prim : u32) -> mat4x3f{
+fn get_loose_half_size_mat(prim : u32) -> mat4x3f
+{
     if (prim == SD_SPHERE) {
         return mat4x3f(vec3f(1.0, 1.0, 1.0), vec3f(0.0), vec3f(0.0), vec3f(0.0));
     } else if (prim == SD_BOX) {
         return mat4x3f(vec3f(1.0, 0.0, 0.0), vec3f(0.0, 1.0, 0.0), vec3f(0.0, 0.0, 1.0), vec3f(0.0));
     } else if (prim == SD_CAPSULE) {
-        return mat4x3f(vec3f(1.0, 1.0, 1.0), vec3f(0.0), vec3f(0.0), vec3f(0.50, 0.50, 0.50));
+        return mat4x3f(vec3f(1.0, 1.0, 1.0), vec3f(0.0, 1.0, 0.0), vec3f(0.0), vec3f(0.0));
+    } else if (prim == SD_CONE) {
+        return mat4x3f(vec3f(1.0, 1.0, 1.0), vec3f(0.0, 1.0, 0.0), vec3f(0.0), vec3f(0.0));
+    } else if (prim == SD_CYLINDER) {
+        return mat4x3f(vec3f(1.0, 1.0, 1.0), vec3f(0.0, 0.5, 0.0), vec3f(0.0), vec3f(0.0));
+    } else if (prim == SD_TORUS) {
+        return mat4x3f(vec3f(1.0, 0.0, 1.0), vec3f(1.0, 1.0, 1.0), vec3f(0.0), vec3f(0.0));
+    } else if (prim == SD_VESICA) {
+        return mat4x3f(vec3f(1.0, 1.0, 1.0), vec3f(0.0, 0.5, 0.0), vec3f(0.0), vec3f(1.0));
     }
 
     return mat4x3f();

@@ -46,6 +46,10 @@ void SceneEditor::initialize()
     rooms_renderer->get_raymarching_renderer()->set_current_sculpt(default_sculpt);
     main_scene->add_node(default_sculpt);
 
+    Node::bind(main_scene->get_name() + "@nodes_added", [&](const std::string& sg, void* data) {
+        set_inspector_dirty();
+    });
+
     // debug
     /*intersection_mesh = new MeshInstance3D();
     intersection_mesh->add_surface(RendererStorage::get_surface("box"));

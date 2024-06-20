@@ -1051,16 +1051,24 @@ bool SculptEditor::is_rotation_being_used()
 
 void SculptEditor::start_spline()
 {
-    creating_spline = true;
-    current_spline.clear();
+    if (creating_spline) {
+        reset_spline(false);
+    }
+    else {
+        creating_spline = true;
+        current_spline.clear();
+    }
 }
 
-void SculptEditor::reset_spline()
+void SculptEditor::reset_spline(bool update_ui)
 {
     dirty_spline = false;
     creating_spline = false;
     current_spline.clear();
-    Node::emit_signal("create_spline@pressed", (void*)nullptr);
+
+    if (update_ui) {
+        Node::emit_signal("create_spline@pressed", (void*)nullptr);
+    }
 }
 
 void SculptEditor::end_spline()

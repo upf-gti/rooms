@@ -166,7 +166,7 @@ class SculptEditor : public BaseEditor {
     BezierSpline preview_spline;
 
     void start_spline();
-    void reset_spline();
+    void reset_spline(bool update_ui = true);
     void end_spline();
 
     /*
