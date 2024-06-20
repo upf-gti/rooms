@@ -218,6 +218,9 @@ void RoomsEngine::switch_editor(uint8_t editor)
 
     switch (editor)
     {
+    case TUTORIAL_EDITOR:
+        i->current_editor = i->tutorial_editor;
+        break;
     case SCENE_EDITOR:
         i->current_editor = i->scene_editor;
         break;

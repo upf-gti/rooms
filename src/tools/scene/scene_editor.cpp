@@ -41,11 +41,13 @@ void SceneEditor::initialize()
 
     init_ui();
 
+#ifndef DISABLE_RAYMARCHER
     SculptInstance* default_sculpt = new SculptInstance();
     default_sculpt->set_name("default_sculpt");
     RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
     rooms_renderer->get_raymarching_renderer()->set_current_sculpt(default_sculpt);
     main_scene->add_node(default_sculpt);
+#endif
 
     Node::bind(main_scene->get_name() + "@nodes_added", [&](const std::string& sg, void* data) {
         set_inspector_dirty();
@@ -257,8 +259,8 @@ void SceneEditor::init_ui()
 
     // ** Import/Export scene **
     {
-        second_row->add_child(new ui::TextureButton2D("import", "data/textures/import.png"));
-        second_row->add_child(new ui::TextureButton2D("export", "data/textures/export.png"));
+        second_row->add_child(new ui::TextureButton2D("import", "data/textures/import.png", ui::DISABLED));
+        second_row->add_child(new ui::TextureButton2D("export", "data/textures/export.png", ui::DISABLED));
     }
 
     // ** Display Settings **

@@ -28,6 +28,16 @@ namespace ui {
         cursors[MOUSE_CURSOR_GRAB] = new Image2D("grab_cursor", "data/textures/cursors/hand_small_closed.png", size * 0.5f, CURSOR);
         cursors[MOUSE_CURSOR_DISABLED] = new Image2D("disabled_cursor", "data/textures/cursors/disabled.png", size * 0.75f, CURSOR);
 
+        // Set some offsets
+        {
+            cursors_data[MOUSE_CURSOR_DEFAULT].offset = size * 0.2f;
+            cursors_data[MOUSE_CURSOR_CIRCLE].offset = size * 0.5f;
+            cursors_data[MOUSE_CURSOR_POINTER].offset = { size.x * 0.25f, size.y * 0.15f };
+            cursors_data[MOUSE_CURSOR_RESIZE_EW].offset = { size.x * 0.35f, size.y * 0.3f };
+            cursors_data[MOUSE_CURSOR_RESIZE_NS].offset = { size.x * 0.35f, size.y * 0.3f };
+            cursors_data[MOUSE_CURSOR_DISABLED].offset = size * 0.25f;
+        }
+
         current = cursors[MOUSE_CURSOR_DEFAULT];
 
         // Set all visibility as false by default
@@ -59,6 +69,8 @@ namespace ui {
             current = nullptr;
             return;
         }
+
+        current_type = type;
 
         current = cursors[type];
 
@@ -99,7 +111,7 @@ namespace ui {
             glm::mat4x4 m(1.0f);
             m = glm::translate(m, IO::get_xr_world_position());
             m = m * glm::toMat4(glm::quat_cast(hovered->get_global_viewport_model()));
-            m = glm::translate(m, glm::vec3(-size * 0.5f * hovered->get_scale(), 0.0f));
+            m = glm::translate(m, glm::vec3(-cursors_data[current_type].offset * hovered->get_scale(), 0.0f));
 
             cursor_3d->set_transform(Transform::mat4_to_transform(m));
 
@@ -131,11 +143,7 @@ namespace ui {
             ImGui::SetMouseCursor(ImGuiMouseCursor_None);
 
             glm::vec2 mouse_pos = Input::get_mouse_position();
-            glm::vec2 cursor_position = { mouse_pos.x - size.x * 0.25f, mouse_pos.y };
-
-            if (current == cursors[MOUSE_CURSOR_RESIZE_NS] || current == cursors[MOUSE_CURSOR_RESIZE_EW] || current == cursors[MOUSE_CURSOR_DISABLED]) {
-                cursor_position.y -= size.y * 0.25f;
-            }
+            glm::vec2 cursor_position = mouse_pos - cursors_data[current_type].offset;
 
             current->set_position(cursor_position);
 

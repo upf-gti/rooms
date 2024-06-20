@@ -24,10 +24,15 @@ namespace ui {
         MOUSE_CURSOR_COUNT
     };
 
+    struct CursorData {
+        glm::vec2 offset = { 0.0f, 0.0f };
+    };
+
     class Cursor {
 
         glm::vec2 size = {};
 
+        int current_type = MOUSE_CURSOR_DEFAULT;
         Image2D* current = nullptr;
 
         // Support for vr cursor
@@ -39,6 +44,7 @@ namespace ui {
         // Pre-load different cursors
 
         Image2D* cursors[MOUSE_CURSOR_COUNT];
+        CursorData cursors_data[MOUSE_CURSOR_COUNT];
 
     public:
 
