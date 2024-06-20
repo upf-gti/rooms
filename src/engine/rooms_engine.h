@@ -13,6 +13,7 @@ class BaseEditor;
 class SculptEditor;
 class SceneEditor;
 class TutorialEditor;
+class SculptInstance;
 
 enum EditorType : uint8_t {
     SCENE_EDITOR,
@@ -65,11 +66,17 @@ public:
     static void switch_editor(uint8_t editor);
     static void toggle_use_environment_map();
 
+    void set_current_sculpt(SculptInstance* sculpt_instance);
+
     inline BaseEditor* get_current_editor() const {
         return current_editor;
     }
 
     inline EditorType get_current_editor_type() const {
         return current_editor_type;
+    }
+
+    SculptEditor* get_sculpt_editor() const {
+        return sculpt_editor;
     }
 };

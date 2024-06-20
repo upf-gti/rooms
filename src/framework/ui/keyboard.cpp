@@ -217,7 +217,7 @@ namespace ui {
             static float timer = 0.0f;
             timer += delta_time;
             float x_pos = input_start_position + state.get_caret_position();
-            caret->set_translation({ x_pos - 2.0f, caret->get_local_translation().y });
+            caret->set_position({ x_pos - 2.0f, caret->get_local_translation().y });
             if (timer > 0.5f) {
                 caret->set_visibility(!caret->get_visibility());
                 timer = 0.0f;
@@ -240,7 +240,7 @@ namespace ui {
             // Rotate to have a good perspective
             //m = glm::rotate(m, glm::radians(35.f), { 1.0f, 0.0f, 0.0f });
 
-            xr_keyboard->set_model(m);
+            xr_keyboard->set_transform(Transform::mat4_to_transform(m));
             xr_keyboard->update(delta_time);
         }
         else {

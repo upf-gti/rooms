@@ -149,7 +149,7 @@ class RaymarchingRenderer {
     WGPUBindGroup   octree_ray_intersection_info_bind_group = nullptr;
     WGPUBuffer      ray_intersection_info_read_buffer = nullptr;
 
-    Uniform         sculpt_data_uniform;
+    //Uniform         sculpt_data_uniform;
     Uniform         prev_stroke_uniform_2;
     WGPUBindGroup   sculpt_data_bind_proxy_group = nullptr;
     WGPUBindGroup   sculpt_data_bind_preview_group = nullptr;
@@ -169,12 +169,12 @@ class RaymarchingRenderer {
 
     MeshInstance3D* cube_mesh = nullptr;
 
-    struct sSculptData {
-        glm::vec3 sculpt_start_position = {0.f, 0.f, 0.f};
-        float dummy1 = 0.0f;
-        glm::quat sculpt_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
-        glm::quat sculpt_inv_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
-    } sculpt_data;
+    //struct sSculptData {
+    //    glm::vec3 sculpt_start_position = {0.f, 0.f, 0.f};
+    //    float dummy1 = 0.0f;
+    //    glm::quat sculpt_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
+    //    glm::quat sculpt_inv_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
+    //} sculpt_data;
 
     // Data needed for sdf merging
     struct sMergeData {
@@ -208,6 +208,10 @@ class RaymarchingRenderer {
 
     uint32_t preview_edit_array_length = 0u;
     struct sPreviewStroke {
+        uint32_t current_sculpt_idx;
+        uint32_t dummy0;
+        uint32_t dummy1;
+        uint32_t dummy2;
         sToUploadStroke stroke;
         std::vector<Edit> edit_list;
 
@@ -263,10 +267,8 @@ public:
 
     bool has_performed_evaluation() { return performed_evaluation; }
 
-    void set_sculpt_start_position(const glm::vec3& position);
-    void set_sculpt_rotation(const glm::quat& rotation);
-
     void set_current_sculpt(SculptInstance* sculpt_instance);
+    SculptInstance* get_current_sculpt();
 
     void octree_ray_intersect(const glm::vec3& ray_origin, const glm::vec3& ray_dir, std::function<void(glm::vec3)> callback = nullptr);
 
@@ -294,8 +296,6 @@ public:
         }
         preview_stroke.edit_list[preview_stroke.stroke.edit_count++] = edit;
     }
-
-    const glm::vec3& get_sculpt_start_position() { return sculpt_data.sculpt_start_position; }
 
     void add_sculpt_instance(SculptInstance* instance) {
         sculpt_instances_list.push_back(instance);

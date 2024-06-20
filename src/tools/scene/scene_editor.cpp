@@ -9,6 +9,7 @@
 #include "framework/nodes/spot_light_3d.h"
 #include "framework/nodes/omni_light_3d.h"
 #include "framework/nodes/directional_light_3d.h"
+#include "framework/nodes/sculpt_instance.h"
 #include "framework/math/intersections.h"
 #include "framework/ui/inspector.h"
 #include "framework/ui/keyboard.h"
@@ -74,7 +75,7 @@ void SceneEditor::update(float delta_time)
 
     if (moving_node) {
 
-        static_cast<Node3D*>(selected_node)->set_translation(Input::get_controller_position(HAND_RIGHT, POSE_AIM));
+        static_cast<Node3D*>(selected_node)->set_position(Input::get_controller_position(HAND_RIGHT, POSE_AIM));
 
         if (Input::was_trigger_pressed(HAND_RIGHT)) {
             moving_node = false;
@@ -97,7 +98,7 @@ void SceneEditor::update(float delta_time)
         m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
         m = glm::rotate(m, glm::radians(180.f), { 1.0f, 0.0f, 0.0f });
 
-        inspect_panel_3d->set_model(m);
+        inspect_panel_3d->set_transform(Transform::mat4_to_transform(m));
     }
 
     if (Input::was_key_pressed(GLFW_KEY_T)) {
@@ -163,7 +164,7 @@ void SceneEditor::update(float delta_time)
     //    collision_dist,
     //    true
     //)) {
-    //    intersection_mesh->set_translation(intersection_point);
+    //    intersection_mesh->set_position(intersection_point);
     //    intersection_mesh->scale(glm::vec3(0.01f));
     //}
 }
@@ -401,11 +402,11 @@ void SceneEditor::create_light_node(uint8_t type)
     {
     case LIGHT_OMNI:
         new_light = new OmniLight3D();
-        new_light->set_translation({ 1.0f, 1.f, 0.0f });
+        new_light->set_position({ 1.0f, 1.f, 0.0f });
         break;
     case LIGHT_SPOT:
         new_light = new SpotLight3D();
-        new_light->set_translation({ 0.0f, 1.f, 0.0f });
+        new_light->set_position({ 0.0f, 1.f, 0.0f });
         new_light->rotate(glm::radians(-90.f), { 1.f, 0.0f, 0.f });
         break;
         case LIGHT_DIRECTIONAL:
@@ -451,7 +452,7 @@ void SceneEditor::update_gizmo(float delta_time)
 
     Node3D* node = static_cast<Node3D*>(selected_node);
     glm::vec3 right_controller_pos = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
-    Transform t = mat4ToTransform(node->get_model());
+    Transform t = node->get_transform();
 
     if (gizmo_3d.update(t, right_controller_pos, delta_time)) {
         node->set_transform(t);
@@ -474,7 +475,7 @@ void SceneEditor::render_gizmo()
         glm::mat4x4 m = node->get_model();
 
         if (gizmo_2d.render(camera->get_view(), camera->get_projection(), m)) {
-            node->set_model(m);
+            node->set_transform(Transform::mat4_to_transform(m));
         }
     }
 }
@@ -575,9 +576,8 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
 
             // Set as current sculpt and go to sculpt editor
             if (dynamic_cast<SculptInstance*>(n)) {
-                RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
-                rooms_renderer->get_raymarching_renderer()->set_current_sculpt(static_cast<SculptInstance*>(n));
                 RoomsEngine::switch_editor(SCULPT_EDITOR);
+                static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(static_cast<SculptInstance*>(n));
             }
             else {
                 // ...

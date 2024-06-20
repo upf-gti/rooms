@@ -87,7 +87,6 @@ public:
 
     void resize_window(int width, int height) override;
 
-    inline void set_sculpt_start_position(const glm::vec3& position) { raymarching_renderer.set_sculpt_start_position(position); }
     inline void set_exposure(float new_exposure) { exposure = new_exposure; }
     inline void set_ibl_intensity(float new_intensity) { ibl_intensity = new_intensity; }
 
@@ -126,10 +125,6 @@ public:
             raymarching_renderer.add_preview_edit(edits[i]);
         }
 #endif
-    }
-
-    void set_sculpt_rotation(const glm::quat& rotation) {
-        raymarching_renderer.set_sculpt_rotation(rotation);
     }
 
     void undo() {

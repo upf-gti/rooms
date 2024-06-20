@@ -78,7 +78,7 @@ void TutorialEditor::update(float delta_time)
         m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
         m = glm::rotate(m, glm::radians(180.f), { 1.0f, 0.0f, 0.0f });
 
-        xr_panel_3d->set_model(m);
+        xr_panel_3d->set_transform(Transform::mat4_to_transform(m));
         xr_panel_3d->update(delta_time);
     }
     else {

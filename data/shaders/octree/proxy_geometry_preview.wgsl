@@ -4,6 +4,9 @@
 #include material_packing.wgsl
 #include tonemappers.wgsl
 
+// Add the generic SDF rendering functions
+#include sdf_render_functions.wgsl
+
 #define GAMMA_CORRECTION
 
 struct VertexInput {
@@ -35,9 +38,10 @@ struct CameraData {
     ibl_intensity : f32
 };
 
-@group(1) @binding(0) var<uniform> sculpt_data : SculptData;
+// @group(1) @binding(0) var<uniform> sculpt_data : SculptData;
 @group(1) @binding(1) var<storage, read> preview_stroke : PreviewStroke;
 @group(1) @binding(5) var<storage, read> brick_buffers: BrickBuffers_ReadOnly;
+@group(1) @binding(9) var<storage, read> sculpt_model_buffer: array<mat4x4f>;
 
 #dynamic @group(0) @binding(0) var<uniform> camera_data : CameraData;
 
@@ -47,14 +51,12 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     let instance_data : ptr<storage, ProxyInstanceData, read> = &brick_buffers.preview_instance_data[in.instance_id];
 
     var vertex_in_sculpt_space : vec3f = in.position * BRICK_WORLD_SIZE * 0.5 + instance_data.position;
-    var vertex_in_world_space : vec3f = rotate_point_quat(vertex_in_sculpt_space, sculpt_data.sculpt_rotation);
-    vertex_in_world_space += sculpt_data.sculpt_start_position;
+    var vertex_in_world_space : vec4f = (sculpt_model_buffer[preview_stroke.current_sculpt_idx] * vec4f(vertex_in_sculpt_space, 1.0));
 
     // let model_mat = mat4x4f(vec4f(BOX_SIZE, 0.0, 0.0, 0.0), vec4f(0.0, BOX_SIZE, 0.0, 0.0), vec4f(0.0, 0.0, BOX_SIZE, 0.0), vec4f(instance_pos.x, instance_pos.y, instance_pos.z, 1.0));
 
     var out: VertexOutput;
-    // world_pos = vec4f(rotate_point_quat(world_pos.xyz, sculpt_data.sculpt_rotation), 1.0);
-    out.position = camera_data.view_projection * vec4f(vertex_in_world_space, 1.0);
+    out.position = camera_data.view_projection * vertex_in_world_space;
     out.uv = in.uv; // forward to the fragment shader
     out.is_interior = instance_data.in_use;
     //out.edit_range = vec2u(preview_stroke.stroke.edit_list_index, preview_stroke.stroke.edit_count);
@@ -114,9 +116,6 @@ fn estimate_normal_preview(sculpt_position : vec3f) -> vec3f
                       k.xxx * sample_sdf_preview( sculpt_position + k.xxx * DERIVATIVE_STEP) );
 }
 
-// Add the generic SDF rendering functions
-#include sdf_render_functions.wgsl
-
 fn raymarch_sculpt_space(ray_origin_sculpt_space : vec3f, ray_dir : vec3f, max_distance : f32, view_proj : mat4x4f) -> vec4f
 {
     let ambientColor = vec3f(0.4);
@@ -146,9 +145,10 @@ fn raymarch_sculpt_space(ray_origin_sculpt_space : vec3f, ray_dir : vec3f, max_d
 	}
 
     if (exit == 1u) {
-        let pos_world : vec3f = rotate_point_quat(pos, (sculpt_data.sculpt_rotation)) + sculpt_data.sculpt_start_position;
+        let position_in_world : vec3f = (sculpt_model_buffer[preview_stroke.current_sculpt_idx] * vec4f(pos, 1.0)).xyz;
+
         let epsilon : f32 = 0.000001; // avoids flashing when camera inside sdf
-        let proj_pos : vec4f = view_proj * vec4f(pos_world + ray_dir * epsilon, 1.0);
+        let proj_pos : vec4f = view_proj * vec4f(position_in_world + ray_dir * epsilon, 1.0);
         depth = proj_pos.z / proj_pos.w;
 
         let normal : vec3f = estimate_normal_preview(pos);
@@ -177,8 +177,10 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     edit_range = in.edit_range;
 
+    let inverse_model : mat4x4f = inverse(sculpt_model_buffer[preview_stroke.current_sculpt_idx]);
+
     let ray_dir_world : vec3f = camera_to_vertex / camera_to_vertex_distance;
-    let ray_dir_sculpt : vec3f = rotate_point_quat(ray_dir_world, quat_conj(sculpt_data.sculpt_rotation));
+    let ray_dir_sculpt : vec3f = (inverse_model * vec4f(ray_dir_world, 0.0)).xyz;
 
     let raymarch_distance : f32 = min(
         camera_to_vertex_distance,

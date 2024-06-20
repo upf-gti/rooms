@@ -17,6 +17,7 @@ enum eTool : uint8_t {
 };
 
 class MeshInstance3D;
+class SculptInstance;
 
 struct PrimitiveState {
     glm::vec4 dimensions;
@@ -27,6 +28,8 @@ struct PrimitiveState {
 class SculptEditor : public BaseEditor {
 
     MeshInstance3D* sculpt_area_box = nullptr;
+
+    SculptInstance* current_sculpt = nullptr;
 
     bool sculpt_started = false;
     bool was_tool_used = false;
@@ -84,11 +87,6 @@ class SculptEditor : public BaseEditor {
     bool is_picking_material    = false;
     bool was_material_picked    = false;
 
-    glm::vec3 sculpt_start_position = {};
-    glm::vec3 edit_position_world = {};
-    glm::vec3 initial_hand_translation = {};
-    glm::vec3 translation_diff = {};
-
     struct {
         glm::vec3 prev_controller_pos = {};
         glm::vec3 controller_velocity = {};
@@ -97,17 +95,18 @@ class SculptEditor : public BaseEditor {
         glm::vec3 prev_edit_position = {};
     } controller_position_data;
 
-    // Controller rotations
     glm::quat initial_hand_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
+    glm::vec3 initial_hand_translation = {};
 
     // Sculpt
     glm::quat rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
-    glm::quat sculpt_rotation = { 0.0, 0.0, 0.0, 1.0 };
+    glm::vec3 translation_diff = {};
 
     // Edit
     glm::quat edit_rotation_diff = { 0.0, 0.0, 0.0, 1.0 };
     glm::quat edit_user_rotation = { 0.0, 0.0, 0.0, 1.0 };
     glm::quat edit_rotation_world = {};
+    glm::vec3 edit_position_world = {};
 
     float hand_to_edit_distance = 0.0f;
 
@@ -208,6 +207,9 @@ public:
 
     void enable_tool(eTool tool);
     void set_sculpt_started(bool value);
+
+    void set_current_sculpt(SculptInstance* sculpt_instance);
+    SculptInstance* get_current_sculpt() { return current_sculpt; }
 
     bool is_tool_being_used(bool stamp_enabled);
 

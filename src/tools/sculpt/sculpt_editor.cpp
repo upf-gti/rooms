@@ -4,6 +4,7 @@
 
 #include "framework/input.h"
 #include "framework/nodes/viewport_3d.h"
+#include "framework/nodes/sculpt_instance.h"
 #include "framework/scene/parse_gltf.h"
 #include "framework/scene/parse_scene.h"
 #include "framework/ui/io.h"
@@ -44,9 +45,8 @@ void SculptEditor::initialize()
 
     mirror_mesh->set_surface_material_override(mirror_mesh->get_surface(0), mirror_material);
 
-    axis_lock_gizmo.initialize(TRANSLATION_GIZMO, sculpt_start_position);
-    mirror_gizmo.initialize(TRANSLATION_GIZMO, sculpt_start_position);
-    mirror_origin = sculpt_start_position;
+    axis_lock_gizmo.initialize(TRANSLATION_GIZMO);
+    mirror_gizmo.initialize(TRANSLATION_GIZMO);
 
     // Set maximum number of edits per curve
     current_spline.set_density(MAX_EDITS_PER_EVALUATION);
@@ -529,10 +529,13 @@ void SculptEditor::update(float delta_time)
     {
         // Set center of sculpture and reuse it as mirror center
         if (!sculpt_started) {
-            sculpt_start_position = edit_to_add.position;
-            renderer->set_sculpt_start_position(sculpt_start_position);
-            mirror_origin = sculpt_start_position;
-            axis_lock_origin = sculpt_start_position;
+
+            if (renderer->get_openxr_available()) {
+                current_sculpt->set_position(edit_to_add.position);
+            }
+
+            mirror_origin = current_sculpt->get_translation();
+            axis_lock_origin = current_sculpt->get_translation();
         }
 
         // Mark the start of the sculpture for the origin
@@ -683,10 +686,10 @@ glm::vec3 SculptEditor::world_to_texture3d(const glm::vec3& position, bool skip_
     glm::vec3 pos_texture_space = position;
 
     if (!skip_translation) {
-        pos_texture_space -= (sculpt_start_position + translation_diff);
+        pos_texture_space -= (current_sculpt->get_translation() + translation_diff);
     }
 
-    pos_texture_space = (sculpt_rotation * rotation_diff) * pos_texture_space;
+    pos_texture_space = (current_sculpt->get_rotation()) * pos_texture_space;
 
     return pos_texture_space;
 }
@@ -695,8 +698,8 @@ glm::vec3 SculptEditor::texture3d_to_world(const glm::vec3& position)
 {
     glm::vec3 pos_world_space;
 
-    pos_world_space = glm::inverse(sculpt_rotation * rotation_diff) * position;
-    pos_world_space = pos_world_space + (sculpt_start_position + translation_diff);
+    pos_world_space = glm::inverse(current_sculpt->get_rotation()) * position;
+    pos_world_space = pos_world_space + (current_sculpt->get_translation() + translation_diff);
 
     return pos_world_space;
 }
@@ -714,22 +717,20 @@ void SculptEditor::update_scene_rotation()
         rotation_diff = glm::inverse(initial_hand_rotation) * glm::inverse(Input::get_controller_rotation(HAND_LEFT));
         translation_diff = Input::get_controller_position(HAND_LEFT) - initial_hand_translation;
 
-        renderer->set_sculpt_rotation(sculpt_rotation * rotation_diff);
-        renderer->set_sculpt_start_position(sculpt_start_position + translation_diff);
+        current_sculpt->rotate(rotation_diff);
+        current_sculpt->translate(translation_diff);
 
         rotation_started = true;
 
         // Edit rotation WHILE rotating
-        glm::quat tmp_rotation = sculpt_rotation * rotation_diff;
-        edit_to_add.position -= (sculpt_start_position + translation_diff);
+        glm::quat tmp_rotation = current_sculpt->get_rotation();
+        edit_to_add.position -= (current_sculpt->get_translation());
         edit_to_add.position = tmp_rotation * edit_to_add.position;
         edit_to_add.rotation *= (glm::conjugate(tmp_rotation));
     }
     else {
         // If rotation has stopped
         if (rotation_started && !is_shift_left_pressed) {
-            sculpt_rotation = sculpt_rotation * rotation_diff;
-            sculpt_start_position = sculpt_start_position + translation_diff;
             rotation_started = false;
             rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
             translation_diff = {};
@@ -737,7 +738,7 @@ void SculptEditor::update_scene_rotation()
 
         // Push edits in 3d texture space
         edit_to_add.position = world_to_texture3d(edit_to_add.position);
-        edit_to_add.rotation *= (glm::conjugate(sculpt_rotation) * rotation_diff);
+        edit_to_add.rotation *= (glm::conjugate(current_sculpt->get_rotation()) * rotation_diff);
     }
 }
 
@@ -806,7 +807,7 @@ void SculptEditor::render()
                 mesh_preview->render();
             }
             else {
-                mesh_preview_outline->set_model(mesh_preview->get_model());
+                mesh_preview_outline->set_transform(mesh_preview->get_transform());
                 mesh_preview_outline->render();
             }
         }
@@ -815,7 +816,7 @@ void SculptEditor::render()
     if (axis_lock) {
         axis_lock_gizmo.render();
 
-        mirror_mesh->set_translation(axis_lock_origin);
+        mirror_mesh->set_position(axis_lock_origin);
         if (axis_lock_mode & AXIS_LOCK_X)
             mirror_mesh->rotate(glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         else if (axis_lock_mode & AXIS_LOCK_Y)
@@ -833,7 +834,7 @@ void SculptEditor::render()
     }
     else if (use_mirror) {
         mirror_gizmo.render();
-        mirror_mesh->set_translation(mirror_origin);
+        mirror_mesh->set_position(mirror_origin);
         mirror_mesh->scale(glm::vec3(0.25f));
         mirror_mesh->rotate(mirror_rotation);
         mirror_mesh->render();
@@ -844,9 +845,9 @@ void SculptEditor::render()
     RoomsEngine::render_controllers();
 
     // Render always or only XR?
-    sculpt_area_box->set_translation(sculpt_start_position + translation_diff);
+    sculpt_area_box->set_position(current_sculpt->get_translation());
     sculpt_area_box->scale(glm::vec3(SCULPT_MAX_SIZE * 0.5f));
-    sculpt_area_box->rotate(glm::inverse(sculpt_rotation * rotation_diff));
+    sculpt_area_box->rotate(glm::inverse(current_sculpt->get_rotation()));
     sculpt_area_box->render();
 }
 
@@ -940,7 +941,7 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
     preview_pose *= glm::inverse(glm::toMat4(edit_rotation_world));
 
     // Update edit transform
-    mesh_preview->set_model(preview_pose);
+    mesh_preview->set_transform(Transform::mat4_to_transform(preview_pose));
 
     // Update model depending on the primitive
     switch (stroke_parameters.get_primitive())
@@ -1009,6 +1010,11 @@ void SculptEditor::set_cap_modifier(float value)
     glm::vec4 parameters = stroke_parameters.get_parameters();
     parameters.y = glm::clamp(value, 0.0f, 1.0f);
     stroke_parameters.set_parameters(parameters);
+}
+
+void SculptEditor::set_current_sculpt(SculptInstance* sculpt_instance)
+{
+    current_sculpt = sculpt_instance;
 }
 
 void SculptEditor::enable_tool(eTool tool)
@@ -1100,7 +1106,7 @@ void SculptEditor::init_ui()
                 float angle = pi - pi_2 * i / (float)(child_count - 1);
                 glm::vec2 translation = glm::vec2(radius * cos(angle), radius * sin(angle)) - center;
                 ui::Button2D* child = new ui::Button2D("recent_color_" + std::to_string(i), colors::WHITE, 0, translation, glm::vec2(sample_size));
-                child->set_translation(translation);
+                child->set_position(translation);
                 color_picker->add_child(child);
             }
         }
@@ -1382,10 +1388,10 @@ void SculptEditor::update_controller_flags()
     m = glm::translate(m, glm::vec3(0.02f, 0.0f, 0.02f));
 
     glm::mat4x4 pose = Input::get_controller_pose(HAND_RIGHT);
-    right_hand_ui_3D->set_model(pose * m);
+    right_hand_ui_3D->set_transform(Transform::mat4_to_transform(pose * m));
 
     pose = Input::get_controller_pose(HAND_LEFT);
-    left_hand_ui_3D->set_model(pose * m);
+    left_hand_ui_3D->set_transform(Transform::mat4_to_transform(pose * m));
 
     is_shift_left_pressed = Input::is_grab_pressed(HAND_LEFT);
     is_shift_right_pressed = Input::is_grab_pressed(HAND_RIGHT);

@@ -62,6 +62,10 @@ struct StrokeMaterial {
 };
 
 struct PreviewStroke {
+    current_sculpt_idx : u32,
+    dummy0    : u32,
+    dummy1    : u32,
+    dummy2    : u32,
     stroke    : Stroke,
     edit_list : array<Edit>
 };
@@ -206,12 +210,12 @@ struct BrickBuffers_ReadOnly {
     preview_instance_data : array<ProxyInstanceData, PREVIEW_PROXY_BRICKS_COUNT>
 };
 
-struct SculptData {
-    sculpt_start_position   : vec3f,
-    dummy1                  : f32,
-    sculpt_rotation         : vec4f,
-    sculpt_inv_rotation     : vec4f
-};
+// struct SculptData {
+//     sculpt_start_position   : vec3f,
+//     dummy1                  : f32,
+//     sculpt_rotation         : vec4f,
+//     sculpt_inv_rotation     : vec4f
+// };
 
 struct RayIntersectionInfo
 {

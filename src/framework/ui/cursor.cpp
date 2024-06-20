@@ -101,7 +101,7 @@ namespace ui {
             m = m * glm::toMat4(glm::quat_cast(hovered->get_global_viewport_model()));
             m = glm::translate(m, glm::vec3(-size * 0.5f * hovered->get_scale(), 0.0f));
 
-            cursor_3d->set_model(m);
+            cursor_3d->set_transform(Transform::mat4_to_transform(m));
 
             cursor_3d->update(delta_time);
 
@@ -137,7 +137,7 @@ namespace ui {
                 cursor_position.y -= size.y * 0.25f;
             }
 
-            current->set_translation(cursor_position);
+            current->set_position(cursor_position);
 
             current->render();
         }

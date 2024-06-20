@@ -3,6 +3,7 @@
 #include "framework/nodes/custom_node_factory.h"
 #include "framework/nodes/environment_3d.h"
 #include "framework/nodes/viewport_3d.h"
+#include "framework/nodes/sculpt_instance.h"
 #include "framework/input.h"
 #include "framework/scene/parse_scene.h"
 #include "framework/scene/parse_gltf.h"
@@ -77,7 +78,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
         MeshInstance3D* grid_node = new MeshInstance3D();
         grid_node->set_name("Grid");
         grid_node->add_surface(RendererStorage::get_surface("quad"));
-        grid_node->set_translation(glm::vec3(0.0f));
+        grid_node->set_position(glm::vec3(0.0f));
         grid_node->rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
         grid_node->scale(glm::vec3(10.f));
 
@@ -159,8 +160,8 @@ void RoomsEngine::update(float delta_time)
     main_scene->update(delta_time);
 
     if (is_xr) {
-        controller_mesh_right->set_model(Input::get_controller_pose(HAND_RIGHT));
-        controller_mesh_left->set_model(Input::get_controller_pose(HAND_LEFT));
+        controller_mesh_right->set_transform(Transform::mat4_to_transform(Input::get_controller_pose(HAND_RIGHT)));
+        controller_mesh_left->set_transform(Transform::mat4_to_transform(Input::get_controller_pose(HAND_LEFT)));
     }
 }
 
@@ -183,12 +184,12 @@ void RoomsEngine::render()
     if (Renderer::instance->get_openxr_available()) {
 
         const glm::mat4x4& raycast_transform = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
-        ray_pointer->set_model(raycast_transform);
+        ray_pointer->set_transform(Transform::mat4_to_transform(raycast_transform));
         float xr_ray_distance = IO::get_xr_ray_distance();
         ray_pointer->scale(glm::vec3(1.0f, 1.0f, xr_ray_distance < 0.0f ? 0.5f : xr_ray_distance));
         ray_pointer->render();
 
-        sphere_pointer->set_model(raycast_transform);
+        sphere_pointer->set_transform(Transform::mat4_to_transform(raycast_transform));
         sphere_pointer->scale(glm::vec3(0.1f));
         sphere_pointer->render();
     }
@@ -236,6 +237,14 @@ void RoomsEngine::switch_editor(uint8_t editor)
 void RoomsEngine::toggle_use_environment_map()
 {
     use_environment_map = !use_environment_map;
+}
+
+void RoomsEngine::set_current_sculpt(SculptInstance* sculpt_instance)
+{
+    RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
+    rooms_renderer->get_raymarching_renderer()->set_current_sculpt(sculpt_instance);
+
+    sculpt_editor->set_current_sculpt(sculpt_instance);
 }
 
 bool RoomsEngine::export_scene()

@@ -22,7 +22,7 @@ void BaseEditor::update(float delta_time)
         glm::mat4x4 pose = Input::get_controller_pose(HAND_LEFT, POSE_AIM);
         pose = glm::translate(pose, glm::vec3(0.0f, 0.05f, -0.04f));
         pose = glm::rotate(pose, glm::radians(120.f), glm::vec3(1.0f, 0.0f, 0.0f));
-        main_panel_3d->set_model(pose);
+        main_panel_3d->set_transform(Transform::mat4_to_transform(pose));
         main_panel_3d->update(delta_time);
 
         // Update controller labels if needed
@@ -32,13 +32,13 @@ void BaseEditor::update(float delta_time)
 
         if (right_hand_ui_3D) {
             glm::mat4x4 pose = Input::get_controller_pose(HAND_RIGHT);
-            right_hand_ui_3D->set_model(pose * m);
+            right_hand_ui_3D->set_transform(Transform::mat4_to_transform(pose * m));
             right_hand_ui_3D->update(delta_time);
         }
 
         if (left_hand_ui_3D) {
             pose = Input::get_controller_pose(HAND_LEFT);
-            left_hand_ui_3D->set_model(pose * m);
+            left_hand_ui_3D->set_transform(Transform::mat4_to_transform(pose * m));
             left_hand_ui_3D->update(delta_time);
         }
     }

@@ -11,13 +11,16 @@
 #include "shaders/AABB_shader.wgsl.gen.h"
 #include "framework/nodes/sculpt_instance.h"
 
+#include "tools/sculpt/sculpt_editor.h"
+
 #include <algorithm>
 #include <numeric>
+
+#include "glm/gtx/matrix_decompose.hpp"
 
 #include "spdlog/spdlog.h"
 
 #include "framework/input.h"
-
 
 /*
     Stroke management and lifecylce
@@ -195,11 +198,22 @@ void RaymarchingRenderer::octree_ray_intersect(const glm::vec3& ray_origin, cons
 
     // Convert ray, origin from world to sculpt space
 
-    ray_info.ray_origin = ray_origin - sculpt_data.sculpt_start_position;
-    ray_info.ray_origin = sculpt_data.sculpt_inv_rotation * ray_info.ray_origin;
+    RoomsEngine* engine_instance = static_cast<RoomsEngine*>(RoomsEngine::instance);
+    SculptEditor* sculpt_editor = engine_instance->get_sculpt_editor();
+    SculptInstance* current_sculpt = sculpt_editor->get_current_sculpt();
+
+    if (!current_sculpt) {
+        spdlog::warn("Can not ray intersect without current sculpt");
+        return;
+    }
+
+    glm::quat inv_rotation = glm::inverse(current_sculpt->get_rotation());
+
+    ray_info.ray_origin = ray_origin - current_sculpt->get_translation();
+    ray_info.ray_origin = inv_rotation * ray_info.ray_origin;
 
     ray_info.ray_dir = ray_dir;
-    ray_info.ray_dir = sculpt_data.sculpt_inv_rotation * ray_info.ray_dir;
+    ray_info.ray_dir = inv_rotation * ray_info.ray_dir;
 
     webgpu_context->update_buffer(std::get<WGPUBuffer>(ray_info_uniform.data), 0, &ray_info, sizeof(RayInfo));
 
@@ -320,7 +334,7 @@ void RaymarchingRenderer::compute_preview_edit(WGPUComputePassEncoder compute_pa
         wgpuBindGroupRelease(render_proxy_geometry_bind_group);
         render_proxy_geometry_bind_group = webgpu_context->create_bind_group(uniforms, render_proxy_shader, 0);
 
-        uniforms = { &sculpt_data_uniform, &prev_stroke_uniform_2, &octree_brick_buffers };
+        uniforms = { /*&sculpt_data_uniform,*/ &prev_stroke_uniform_2, &octree_brick_buffers };
         wgpuBindGroupRelease(sculpt_data_bind_preview_group);
         sculpt_data_bind_preview_group = webgpu_context->create_bind_group(uniforms, render_preview_proxy_shader, 1);
 
@@ -330,8 +344,8 @@ void RaymarchingRenderer::compute_preview_edit(WGPUComputePassEncoder compute_pa
     }
 
     // Upload preview data, first the stoke and tehn the edit list, since we are storing it in a vector
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(preview_stroke_uniform.data), 0u, &(preview_stroke.stroke), sizeof(sToUploadStroke));
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(preview_stroke_uniform.data), sizeof(sToUploadStroke), preview_stroke.edit_list.data(), preview_stroke.stroke.edit_count * sizeof(Edit));
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(preview_stroke_uniform.data), 4 * sizeof(uint32_t), &(preview_stroke.stroke), sizeof(sToUploadStroke));
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(preview_stroke_uniform.data), 4 * sizeof(uint32_t) + sizeof(sToUploadStroke), preview_stroke.edit_list.data(), preview_stroke.stroke.edit_count * sizeof(Edit));
 
     // Initializate the evaluator sequence
     compute_octree_initialization_pipeline.set(compute_pass);
@@ -511,7 +525,12 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder, boo
         aabb_pos = stroke_to_compute.in_frame_stroke_aabb;
         compute_merge_data.reevaluation_AABB_min = stroke_to_compute.in_frame_stroke_aabb.center - stroke_to_compute.in_frame_stroke_aabb.half_size;
         compute_merge_data.reevaluation_AABB_max = stroke_to_compute.in_frame_stroke_aabb.center + stroke_to_compute.in_frame_stroke_aabb.half_size;
-        AABB_mesh->set_translation(aabb_pos.center + get_sculpt_start_position());
+
+        RoomsEngine* engine_instance = static_cast<RoomsEngine*>(RoomsEngine::instance);
+        SculptEditor* sculpt_editor = engine_instance->get_sculpt_editor();
+        SculptInstance* current_sculpt = sculpt_editor->get_current_sculpt();
+
+        AABB_mesh->set_position(aabb_pos.center + current_sculpt->get_translation());
         AABB_mesh->scale(aabb_pos.half_size * 2.0f);
     } else {
         AABB preview_aabb = stroke_manager.compute_grid_aligned_AABB(preview_stroke.get_AABB(), glm::vec3(brick_world_size));
@@ -620,11 +639,19 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
 
         const uint32_t sculpt_instances_count = sculpt_instances_list.size();
 
+        RoomsEngine* engine_instance = static_cast<RoomsEngine*>(RoomsEngine::instance);
+        SculptEditor* sculpt_editor = engine_instance->get_sculpt_editor();
+        SculptInstance* current_sculpt = sculpt_editor->get_current_sculpt();
+
         uint32_t prev_start = 0u;
         for (uint32_t i = 0u; i < sculpt_instances_list.size(); i++) {
             uint32_t octree_id = sculpt_instances_list[i]->get_octree_id();
 
             matrices_list[i] = sculpt_instances_list[i]->get_model();
+
+            if (sculpt_instances_list[i] == current_sculpt) {
+                preview_stroke.current_sculpt_idx = i;
+            }
 
             uint32_t number_of_instances = buffer[octree_id] >> 20u;
             uint32_t instances_index = buffer[octree_id] & 0xFFFFF;
@@ -633,6 +660,7 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
             buffer[octree_id] = ((number_of_instances + 1) << 20) | ((octree_id * sculpt_instances_count) + sculpt_count);
         }
 
+        webgpu_context->update_buffer(std::get<WGPUBuffer>(preview_stroke_uniform.data), 0u, &(preview_stroke.current_sculpt_idx), sizeof(uint32_t));
         webgpu_context->update_buffer(std::get<WGPUBuffer>(sculpt_instances_buffer_uniform.data), 0u, buffer, sizeof(uint32_t) * buffer_size);
         webgpu_context->update_buffer(std::get<WGPUBuffer>(sculpt_model_buffer_uniform.data), 0u, matrices_list, sizeof(glm::mat4) * sculpt_instances_count);
 
@@ -649,7 +677,7 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
         render_proxy_geometry_pipeline.set(render_pass);
 
         // Update sculpt data
-        webgpu_context->update_buffer(std::get<WGPUBuffer>(sculpt_data_uniform.data), 0, &sculpt_data, sizeof(sSculptData));
+        //webgpu_context->update_buffer(std::get<WGPUBuffer>(sculpt_data_uniform.data), 0, &sculpt_data, sizeof(sSculptData));
 
         const Surface* surface = cube_mesh->get_surface(0);
 
@@ -697,17 +725,6 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
 #ifndef NDEBUG
     wgpuRenderPassEncoderPopDebugGroup(render_pass);
 #endif
-}
-
-void RaymarchingRenderer::set_sculpt_start_position(const glm::vec3& position)
-{
-    sculpt_data.sculpt_start_position = position;
-}
-
-void RaymarchingRenderer::set_sculpt_rotation(const glm::quat& rotation)
-{
-    sculpt_data.sculpt_rotation = glm::inverse(rotation);
-    sculpt_data.sculpt_inv_rotation = rotation;
 }
 
 void RaymarchingRenderer::set_current_sculpt(SculptInstance* sculpt_instance)
@@ -995,11 +1012,11 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
     }
 
     {
-        sculpt_data_uniform.data = webgpu_context->create_buffer(sizeof(sSculptData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, &sculpt_data, "sculpt_data");
-        sculpt_data_uniform.binding = 0;
-        sculpt_data_uniform.buffer_size = sizeof(sSculptData);
+        //sculpt_data_uniform.data = webgpu_context->create_buffer(sizeof(sSculptData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, &sculpt_data, "sculpt_data");
+        //sculpt_data_uniform.binding = 0;
+        //sculpt_data_uniform.buffer_size = sizeof(sSculptData);
 
-        std::vector<Uniform*> uniforms = { &sculpt_data_uniform, &ray_intersection_info_uniform };
+        std::vector<Uniform*> uniforms = { /*&sculpt_data_uniform,*/ &ray_intersection_info_uniform };
         sculpt_data_bind_proxy_group = webgpu_context->create_bind_group(uniforms, render_proxy_shader, 2);
     }
 
@@ -1021,7 +1038,7 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
         uniforms = { camera_uniform };
         render_preview_camera_bind_group = webgpu_context->create_bind_group(uniforms, render_preview_proxy_shader, 0);
 
-        uniforms = { &sculpt_data_uniform, &prev_stroke_uniform_2, &octree_brick_buffers};
+        uniforms = {/* &sculpt_data_uniform,*/ &prev_stroke_uniform_2, &octree_brick_buffers, &sculpt_model_buffer_uniform };
         sculpt_data_bind_preview_group = webgpu_context->create_bind_group(uniforms, render_preview_proxy_shader, 1);
     }
 
