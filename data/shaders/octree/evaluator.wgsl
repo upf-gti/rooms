@@ -342,6 +342,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             // We compare the two intervals,
             // in order to find the goops (where the current stroke is taking affect)
             var curr_stroke_count : u32 = 0u;
+            var brick_has_paint : bool = false;
             for(var i : u32 = 0u; i < octree.data[parent_octree_index].stroke_count; i++) {
                 let index : u32 = culling_get_stroke_index(stroke_culling[prev_culling_layer_index + i]);
                 if (intersection_AABB_AABB(eval_aabb_min, 
@@ -352,7 +353,12 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                     stroke_culling[curr_culling_layer_index + curr_stroke_count] = culling_get_culling_data(index, 0u, 0u);
                     curr_stroke_count++;
 
-                    surface_interval = evaluate_stroke_interval(current_subdivision_interval, &(stroke_history.strokes[index]), &edit_list, surface_interval, octant_center, level_half_size);
+                    if (stroke_history.strokes[index].operation != OP_SMOOTH_PAINT) {
+                        surface_interval = evaluate_stroke_interval(current_subdivision_interval, &(stroke_history.strokes[index]), &edit_list, surface_interval, octant_center, level_half_size);
+                    } else {
+                        brick_has_paint = true;
+                    }
+
                 }
             }
             octree.data[octree_index].stroke_count = curr_stroke_count;
@@ -362,22 +368,28 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             let prev_interval = octree.data[octree_index].octant_center_distance;
             octree.data[octree_index].octant_center_distance = surface_interval;
 
-            let int_distance = abs(distance(prev_interval, surface_interval));
+            if (brick_has_paint) {
+                if (is_current_brick_filled) { 
+                    brick_create_or_reevaluate(octree_index, is_current_brick_filled, false, octant_center);
+                }
+            } else {
+                let int_distance = abs(distance(prev_interval, surface_interval));
             
-            if (int_distance > 0.00001) {
-                if (surface_interval.x > 0.0) {
-                    if (is_current_brick_filled) {
-                        // delete any brick outside surface that was previosly filled
-                        brick_remove(octree_index);
-                    } else {
-                        // reset flags for potential interior bricks
-                        octree.data[octree_index].tile_pointer = 0;
-                        octree.data[octree_index].octant_center_distance = vec2f(10000.0, 10000.0);
+                if (int_distance > 0.00001) {
+                    if (surface_interval.x > 0.0) {
+                        if (is_current_brick_filled) {
+                            // delete any brick outside surface that was previosly filled
+                            brick_remove(octree_index);
+                        } else {
+                            // reset flags for potential interior bricks
+                            octree.data[octree_index].tile_pointer = 0;
+                            octree.data[octree_index].octant_center_distance = vec2f(10000.0, 10000.0);
+                        }
+                    } else if (surface_interval.y < 0.0) {
+                        brick_remove_and_mark_as_inside(octree_index, is_current_brick_filled);
+                    } else if (surface_interval.x < 0.0) {
+                        brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
                     }
-                } else if (surface_interval.y < 0.0) {
-                    brick_remove_and_mark_as_inside(octree_index, is_current_brick_filled);
-                } else if (surface_interval.x < 0.0) {
-                    brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
                 }
             }
         }
