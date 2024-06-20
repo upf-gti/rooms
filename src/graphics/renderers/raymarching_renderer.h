@@ -133,7 +133,8 @@ class RaymarchingRenderer {
     Uniform         octree_state;
     Uniform         octree_brick_buffers;
     Uniform         octree_preview_stroke;
-    Uniform         octree_stroke_history;
+    uint32_t        stroke_context_size = 0u;
+    Uniform         octree_stroke_context;
     uint32_t        octree_edit_list_size;
     Uniform         octree_edit_list;
     Uniform         octree_brick_copy_buffer;
@@ -226,6 +227,8 @@ class RaymarchingRenderer {
     void init_compute_octree_pipeline();
     void init_raymarching_proxy_pipeline();
     void init_octree_ray_intersection_pipeline();
+
+    void upload_stroke_context_data(sToComputeStrokeData* stroke_to_compute);
 
     void evaluate_strokes(WGPUComputePassEncoder compute_pass);
 
