@@ -104,12 +104,8 @@ struct OctreeNode {
 struct Octree {
     current_level : atomic<u32>,
     atomic_counter : atomic<u32>,
-    proxy_instance_counter : atomic<u32>,
     evaluation_mode : u32,
     octree_id : u32,
-    padd0 : u32,
-    padd1 : u32,
-    padd2 : u32,
     data : array<OctreeNode>
 };
 
