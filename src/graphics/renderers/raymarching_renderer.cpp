@@ -491,7 +491,11 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder, boo
 
     bool needs_evaluation = true;
 
-    if (incoming_edits.size() > 0u) {
+    if (needs_compute_on_eval) {
+        // For loading a sculpt from disk
+        stroke_to_compute = to_compute_on_next_eval;
+        needs_compute_on_eval = false;
+    } else if (incoming_edits.size() > 0u) {
         stroke_manager.add(incoming_edits, stroke_to_compute);
     } else if (needs_undo) {
         stroke_manager.undo(stroke_to_compute);
@@ -1085,4 +1089,14 @@ SculptureData RaymarchingRenderer::create_new_sculpture() {
     WGPUBindGroup octree_buffer_bindgroup = webgpu_context->create_bind_group(uniforms, compute_octree_evaluate_shader, 1);
 
     return { sculpt_count++, octree_uniform, octree_buffer_bindgroup };
+}
+
+
+SculptureData RaymarchingRenderer::create_from_history(std::vector<Stroke>& stroke_history) {
+    SculptureData new_sculpt = create_new_sculpture();
+
+    stroke_manager.new_history_add(&stroke_history, to_compute_on_next_eval);
+    needs_compute_on_eval = true;
+
+    return new_sculpt;
 }

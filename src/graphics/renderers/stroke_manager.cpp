@@ -255,20 +255,6 @@ void StrokeManager::set_current_sculpt(SculptInstance* sculpt_instance)
     pop_count_from_history = 0;
     redo_pop_count_from_history = 0;
     edit_list_count = 0u;
-
-    /*if (!history->empty()) {
-        AABB base_aabb = {};
-        for (uint32_t i = 0u; i < history->size(); i++) {
-            Stroke& curr_stroke = history->at(i);
-            base_aabb = merge_aabbs(base_aabb, curr_stroke.get_world_AABB());
-            add_stroke_to_upload_list(result.in_frame_influence, curr_stroke);
-        }
-
-        result.in_frame_stroke_aabb = base_aabb;
-
-        result.in_frame_influence.eval_aabb_min = result.in_frame_stroke_aabb.center - result.in_frame_stroke_aabb.half_size;
-        result.in_frame_influence.eval_aabb_max = result.in_frame_stroke_aabb.center + result.in_frame_stroke_aabb.half_size;
-    }*/
 }
 
 void StrokeManager::change_stroke(const StrokeParameters& params, const uint32_t index_increment) {
@@ -287,4 +273,29 @@ void StrokeManager::change_stroke(const StrokeParameters& params, const uint32_t
 
     in_frame_stroke = current_stroke;
     spdlog::info("change stroke1");
+}
+
+void StrokeManager::new_history_add(std::vector<Stroke>* new_history, sToComputeStrokeData& result) {
+    history = new_history;
+
+    current_stroke.stroke_id = history->back().stroke_id + 1;
+    in_frame_stroke.stroke_id = history->back().stroke_id + 1;
+
+    redo_history.clear();
+
+    pop_count_from_history = 0;
+    redo_pop_count_from_history = 0;
+    edit_list_count = 0u;
+
+    AABB base_aabb = {};
+    for (uint32_t i = 0u; i < history->size(); i++) {
+        Stroke& curr_stroke = history->at(i);
+        base_aabb = merge_aabbs(base_aabb, curr_stroke.get_world_AABB());
+        add_stroke_to_upload_list(result.in_frame_influence, curr_stroke);
+    }
+
+    result.in_frame_stroke_aabb = base_aabb;
+
+    result.in_frame_influence.eval_aabb_min = result.in_frame_stroke_aabb.center - result.in_frame_stroke_aabb.half_size;
+    result.in_frame_influence.eval_aabb_max = result.in_frame_stroke_aabb.center + result.in_frame_stroke_aabb.half_size;
 }

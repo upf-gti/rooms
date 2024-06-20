@@ -236,6 +236,10 @@ class RaymarchingRenderer {
 
     bool performed_evaluation = false;
 
+    // Loading a sculpt from disk
+    sToComputeStrokeData to_compute_on_next_eval;
+    bool needs_compute_on_eval = false;
+
     // DEBUG
     MeshInstance3D *AABB_mesh;
 
@@ -308,4 +312,6 @@ public:
     }
 
     SculptureData create_new_sculpture();
+
+    SculptureData create_from_history(std::vector<Stroke>& stroke_history);
 };

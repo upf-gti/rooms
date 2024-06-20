@@ -101,4 +101,6 @@ struct StrokeManager {
 
     AABB compute_grid_aligned_AABB(const AABB &base, const glm::vec3 &brick_world_size);
     void compute_history_intersection(sStrokeInfluence &influence, AABB& operation_aabb, uint32_t history_max_index);
+
+    void new_history_add(std::vector<Stroke> *history, sToComputeStrokeData& result);
 };
