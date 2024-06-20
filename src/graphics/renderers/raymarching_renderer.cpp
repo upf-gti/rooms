@@ -146,7 +146,8 @@ void RaymarchingRenderer::update_sculpt(WGPUCommandEncoder command_encoder)
 
 }
 
-AABB RaymarchingRenderer::sPreviewStroke::get_AABB() const {
+AABB RaymarchingRenderer::sPreviewStroke::get_AABB() const
+{
     AABB result = {};
     for (uint32_t i = 0u; i < stroke.edit_count; i++) {
         result = merge_aabbs(result, extern_get_edit_world_AABB(edit_list[i], stroke.primitive, stroke.parameters.w * 2.0f));
@@ -478,7 +479,8 @@ void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass)
 #endif
 }
 
-void RaymarchingRenderer::compute_delete_sculptures(WGPUComputePassEncoder compute_pass, GPUSculptureData& to_delete) {
+void RaymarchingRenderer::compute_delete_sculptures(WGPUComputePassEncoder compute_pass, GPUSculptureData& to_delete)
+{
     sculpt_delete_pipeline.set(compute_pass);
     wgpuComputePassEncoderSetBindGroup(compute_pass, 0, to_delete.sculpture_octree_bindgroup, 0, nullptr);
     wgpuComputePassEncoderSetBindGroup(compute_pass, 1, brick_buffer_bindgroup, 0, nullptr);
@@ -504,8 +506,6 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder, boo
     WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
 
     bool is_openxr_available = RoomsRenderer::instance->get_openxr_available();
-    
-    bool needs_evaluation = true;
 
     sToComputeStrokeData* stroke_to_compute = nullptr;
 
@@ -544,9 +544,9 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder, boo
         stroke_to_compute = stroke_manager.undo();
     } else if (needs_redo) {
         stroke_to_compute = stroke_manager.redo();
-    } else {
-        needs_evaluation = false;
     }
+
+    bool needs_evaluation = (stroke_to_compute != nullptr);
 
     if (!(show_preview && !needs_evaluation)) {
         // rset the brick instance counter
@@ -555,6 +555,7 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder, boo
     }
 
     AABB aabb_pos;
+
     if (needs_evaluation) {
 
         aabb_pos = stroke_to_compute->in_frame_stroke_aabb;
