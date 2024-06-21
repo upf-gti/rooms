@@ -43,11 +43,6 @@ struct RayIntersectionInfo {
     uint32_t    dummy2 = 0;
 };
 
-struct SculptToProcess {
-    sToComputeStrokeData stroke_data;
-    SculptInstance* sculpt_to_fill = nullptr;
-};
-
 class RaymarchingRenderer {
 
     enum eEvaluatorOperationFlags : uint32_t {
@@ -61,7 +56,7 @@ class RaymarchingRenderer {
 
     std::vector<GPUSculptData> sculpts_to_delete;
     std::vector<GPUSculptData> sculpts_to_clean;
-    std::vector<SculptToProcess> sculpt_to_process;
+    std::vector<SculptInstance*> sculpts_to_process;
 
     Uniform         linear_sampler_uniform;
 

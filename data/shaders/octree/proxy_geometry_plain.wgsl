@@ -230,7 +230,7 @@ fn raymarch_with_previews(ray_origin_atlas_space : vec3f, ray_origin_sculpt_spac
         // From atlas position, to sculpt, to world
         //position_in_sculpt = ray_origin_atlas_space + ray_dir * (depth / SCULPT_TO_ATLAS_CONVERSION_FACTOR);
         //position_in_atlas = ray_origin_atlas_space + ray_dir * depth;
-        let position_in_world : vec3f = (sculpt_model_buffer[model_index] * vec4f(position_in_sculpt, 1.0)).xyz;
+        let position_in_world : vec3f = (sculpt_model_buffer[preview_stroke.current_sculpt_idx] * vec4f(position_in_sculpt, 1.0)).xyz;
 
         let epsilon : f32 = 0.000001; // avoids flashing when camera inside sdf
         let proj_pos : vec4f = view_proj * vec4f(position_in_world + ray_dir * epsilon, 1.0);
@@ -311,8 +311,8 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
         depth = proj_pos.z / proj_pos.w;
 
         let normal : vec3f = estimate_normal_atlas(position_in_atlas);
-        let normal_world : vec3f = (sculpt_model_buffer[preview_stroke.current_sculpt_idx] * vec4f(normal, 0.0)).xyz;
-        let ray_dir_world : vec3f = (sculpt_model_buffer[preview_stroke.current_sculpt_idx] * vec4f(ray_dir, 1.0)).xyz;
+        let normal_world : vec3f = (sculpt_model_buffer[model_index] * vec4f(normal, 0.0)).xyz;
+        let ray_dir_world : vec3f = (sculpt_model_buffer[model_index] * vec4f(ray_dir, 1.0)).xyz;
 
         let material : Material = sample_material_atlas(position_in_atlas);
         // let interpolant : f32 = (f32( i ) / f32(MAX_ITERATIONS)) * (M_PI / 2.0);
@@ -323,7 +323,7 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
         // return vec4f(heatmap_color, depth);
         //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
         return vec4f(apply_light(-ray_dir_world, world_space_position, world_space_position, normal_world, lightPos + lightOffset, material), depth);
-        //return vec4f(normal*0.5 + 0.50, depth);
+        //return vec4f(normal_world*0.5 + 0.50, depth);
         //return vec4f(material.albedo, depth);
         //return vec4f(normal, depth);
         //return vec4f(vec3f(material.albedo), depth);
