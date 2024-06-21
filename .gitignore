@@ -4,3 +4,4 @@ build_web/
 .cache/
 .vscode/
 imgui.ini
+data/exports/

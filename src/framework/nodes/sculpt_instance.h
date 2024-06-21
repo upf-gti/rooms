@@ -50,6 +50,10 @@ public:
         return sculpt_gpu_data.octree_id;
     }
 
+    inline void set_sculpt_data(const GPUSculptData& new_data) {
+        sculpt_gpu_data = new_data;
+    }
+
     void initialize();
 
     virtual void serialize(std::ofstream& binary_scene_file);

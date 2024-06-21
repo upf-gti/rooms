@@ -68,11 +68,11 @@ void SculptInstance::parse(std::ifstream& binary_scene_file)
     }
 
     RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
-    sculpt_gpu_data = rooms_renderer->get_raymarching_renderer()->create_from_history(stroke_history);
-    dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->add_sculpt_instance(this);
+    rooms_renderer->get_raymarching_renderer()->create_sculpt_from_history(this, stroke_history);
+    rooms_renderer->get_raymarching_renderer()->add_sculpt_instance(this);
 
     // TODO: Remove current
-    rooms_renderer->get_raymarching_renderer()->set_current_sculpt(this);
+    //rooms_renderer->get_raymarching_renderer()->set_current_sculpt(this);
 
     rooms_renderer->toogle_frame_debug();
 }

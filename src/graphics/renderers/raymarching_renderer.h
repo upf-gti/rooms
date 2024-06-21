@@ -56,6 +56,7 @@ class RaymarchingRenderer {
 
     std::vector<GPUSculptData> sculpts_to_delete;
     std::vector<GPUSculptData> sculpts_to_clean;
+    std::vector<SculptInstance*> sculpts_to_process;
 
     Uniform         linear_sampler_uniform;
 
@@ -247,10 +248,6 @@ class RaymarchingRenderer {
 
     bool performed_evaluation = false;
 
-    // Loading a sculpt from disk
-    sToComputeStrokeData to_compute_on_next_eval;
-    bool needs_compute_on_eval = false;
-
     // DEBUG
     MeshInstance3D *AABB_mesh;
 
@@ -312,5 +309,5 @@ public:
 
     GPUSculptData create_new_sculpt();
 
-    GPUSculptData create_from_history(std::vector<Stroke>& stroke_history);
+    void create_sculpt_from_history(SculptInstance* instance, std::vector<Stroke>& stroke_history);
 };
