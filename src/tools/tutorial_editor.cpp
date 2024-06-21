@@ -17,34 +17,10 @@ void TutorialEditor::initialize()
     {
         xr_panel_2d = new Node2D("tutorial_root", { 0.0f, 0.0f }, { 1.0f, 1.0f });
 
-        auto webgpu_context = Renderer::instance->get_webgpu_context();
-        glm::vec2 size = glm::vec2(static_cast<float>(webgpu_context->render_width), static_cast<float>(webgpu_context->render_height)) * 0.5f;
-        glm::vec2 pos = size * 0.5f;
+        panels[TUTORIAL_WELCOME] = generate_panel("root_welcome", "data/textures/tutorial/welcome_screen.png", TUTORIAL_NONE, TUTORIAL_STAMP_SMEAR);
+        panels[TUTORIAL_WELCOME]->set_visibility(true);
 
-        if (renderer->get_openxr_available()) {
-            size = glm::vec2(1920.f, 1080.0f);
-            pos = -size * 0.5f;
-        }
-
-        const glm::vec2& button_size = { size.x * 0.4f, size.y * 0.25f };
-        const glm::vec2& mini_button_size = { size.x * 0.2f, size.y * 0.125f };
-
-        // Welcome panel
-        {
-            ui::XRPanel* welcome_panel = new ui::XRPanel("root_welcome", "data/textures/tutorial/welcome_screen.png", pos, size);
-            xr_panel_2d->add_child(welcome_panel);
-            welcome_panel->add_button("start_tutorial", "data/textures/tutorial/start_tutorial.png", { button_size.x * 0.75f, button_size.y }, button_size);
-            welcome_panel->add_button("create_button", "data/textures/tutorial/create_now.png", { size.x - button_size.x * 0.75f, button_size.y }, button_size);
-            panels[TUTORIAL_WELCOME] = welcome_panel;
-
-            Node::bind("create_button", [&](const std::string& signal, void* button) { RoomsEngine::switch_editor(SCENE_EDITOR); });
-            Node::bind("start_tutorial", [&](const std::string& signal, void* button) {
-                panels[TUTORIAL_WELCOME]->set_visibility(false);
-                panels[TUTORIAL_STAMP_SMEAR]->set_visibility(true);
-            });
-        }
-
-        panels[TUTORIAL_STAMP_SMEAR] = generate_panel("root_stamp_smear", "data/textures/tutorial/stamp_smear.png", TUTORIAL_NONE, TUTORIAL_PRIMITIVES_OPERATIONS);
+        panels[TUTORIAL_STAMP_SMEAR] = generate_panel("root_stamp_smear", "data/textures/tutorial/stamp_smear.png", TUTORIAL_WELCOME, TUTORIAL_PRIMITIVES_OPERATIONS);
         panels[TUTORIAL_PRIMITIVES_OPERATIONS] = generate_panel("root_primitives_op", "data/textures/tutorial/prims_ops.png", TUTORIAL_STAMP_SMEAR, TUTORIAL_CURVES);
         panels[TUTORIAL_CURVES] = generate_panel("root_curves", "data/textures/tutorial/curves.png", TUTORIAL_PRIMITIVES_OPERATIONS, TUTORIAL_GUIDES);
         panels[TUTORIAL_GUIDES] = generate_panel("root_guides", "data/textures/tutorial/guides.png", TUTORIAL_CURVES, TUTORIAL_MATERIAL);
@@ -117,25 +93,20 @@ ui::XRPanel* TutorialEditor::generate_panel(const std::string& name, const std::
     xr_panel_2d->add_child(new_panel);
 
     if (prev != TUTORIAL_NONE) {
-        new_panel->add_button(name + "_prev", "data/textures/tutorial/back.png", { size.x * 0.25f, mini_button_size.y }, mini_button_size);
+        new_panel->add_button(name + "_prev", "data/textures/tutorial/back.png", { size.x * 0.25f, mini_button_size.y * 1.2f }, mini_button_size);
         Node::bind(name + "_prev", [&, c = new_panel, p = prev](const std::string& signal, void* button) {
             c->set_visibility(false);
             panels[p]->set_visibility(true);
         });
     }
 
-    // There's always next button.. next panel or start creating!
-    new_panel->add_button(name + "_next", "data/textures/tutorial/next.png", { size.x * 0.75f, mini_button_size.y }, mini_button_size);
-
-    Node::bind(name + "_next", [&, c = new_panel, n = next](const std::string& signal, void* button) {
-        c->set_visibility(false);
-        if (n != TUTORIAL_NONE) {
+    if (next != TUTORIAL_NONE) {
+        new_panel->add_button(name + "_next", "data/textures/tutorial/next.png", { size.x * 0.75f, mini_button_size.y * 1.2f }, mini_button_size);
+        Node::bind(name + "_next", [&, c = new_panel, n = next](const std::string& signal, void* button) {
+            c->set_visibility(false);
             panels[n]->set_visibility(true);
-        }
-        else {
-            RoomsEngine::switch_editor(SCENE_EDITOR);
-        }
-    });
+        });
+    }
 
     return new_panel;
 }
