@@ -702,6 +702,7 @@ void SceneEditor::inspect_exports(bool force)
         std::string signal = name + "_import";
         inspector->add_button(signal, "data/textures/add.png");
         Node::bind(signal, [&, str = name](const std::string& sg, void* data) {
+            selected_node = nullptr;
             static_cast<RoomsEngine*>(RoomsEngine::instance)->set_main_scene("data/exports/" + name);
         });
 

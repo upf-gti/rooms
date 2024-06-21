@@ -7,11 +7,7 @@ SculptInstance::SculptInstance() : Node3D()
 {
     node_type = "SculptInstance";
 
-    GPUSculptureData new_sculpt_data = dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->create_new_sculpture();
-
-    sculpture_octree_uniform = new_sculpt_data.sculpture_octree_uniform;
-    sculpture_octree_bindgroup = new_sculpt_data.sculpture_octree_bindgroup;
-    octree_id = new_sculpt_data.octree_id;
+    sculpt_gpu_data = dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->create_new_sculpt();
 
     dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->add_sculpt_instance(this);
 }
@@ -20,9 +16,9 @@ SculptInstance::SculptInstance(SculptInstance* reference) : Node3D()
 {
     node_type = "SculptInstance";
 
-    sculpture_octree_uniform = reference->get_octree_uniform();
-    sculpture_octree_bindgroup = reference->get_octree_bindgroup();
-    octree_id = reference->get_octree_id();
+    sculpt_gpu_data.octree_uniform = reference->get_octree_uniform();
+    sculpt_gpu_data.octree_bindgroup = reference->get_octree_bindgroup();
+    sculpt_gpu_data.octree_id = reference->get_octree_id();
 
     dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->add_sculpt_instance(this);
 }
@@ -63,10 +59,17 @@ void SculptInstance::parse(std::ifstream& binary_scene_file)
     sSculptBinaryHeader header;
     binary_scene_file.read(reinterpret_cast<char*>(&header), sizeof(sSculptBinaryHeader));
 
-    stroke_history.resize(header.stroke_count);
-    binary_scene_file.read(reinterpret_cast<char*>(&stroke_history[0]), header.stroke_count * sizeof(Stroke));
+    if (header.stroke_count > 0u) {
+        stroke_history.resize(header.stroke_count);
+        binary_scene_file.read(reinterpret_cast<char*>(&stroke_history[0]), header.stroke_count * sizeof(Stroke));
+    }
 
     RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
+    rooms_renderer->get_raymarching_renderer()->add_sculpt_instance(this);
+    sculpt_gpu_data = rooms_renderer->get_raymarching_renderer()->create_from_history(stroke_history);
+
+    // TODO: Remove current
     rooms_renderer->get_raymarching_renderer()->set_current_sculpt(this);
+
     rooms_renderer->toogle_frame_debug();
 }

@@ -137,6 +137,8 @@ void RoomsEngine::set_main_scene(const std::string& scene_path)
 {
     delete main_scene;
 
+    sculpt_editor->set_current_sculpt(nullptr);
+
     main_scene = new Scene();
     main_scene->parse(scene_path);
 
