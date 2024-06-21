@@ -110,7 +110,7 @@ void SceneEditor::update(float delta_time)
         inspect_panel_3d->set_transform(Transform::mat4_to_transform(m));
     }
 
-    if (Input::was_key_pressed(GLFW_KEY_T)) {
+    if (Input::was_key_pressed(GLFW_KEY_I)) {
         inspector_from_scene(true);
     }
 

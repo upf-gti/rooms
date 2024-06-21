@@ -159,8 +159,17 @@ void RoomsEngine::update(float delta_time)
 
     ui::Keyboard::update(delta_time);
 
+    if (Input::was_button_pressed(XR_BUTTON_MENU) || Input::was_key_pressed(GLFW_KEY_T)) {
+        tutorial_active = !tutorial_active;
+    }
+
     if (current_editor) {
+
         current_editor->update(delta_time);
+
+        if (tutorial_active) {
+            tutorial_editor->update(delta_time);
+        }
     }
 
     cursor.update(delta_time);
@@ -198,7 +207,12 @@ void RoomsEngine::render()
     main_scene->render();
 
     if (current_editor) {
+
         current_editor->render();
+
+        if (tutorial_active) {
+            tutorial_editor->render();
+        }
     }
 
     if (Renderer::instance->get_openxr_available()) {

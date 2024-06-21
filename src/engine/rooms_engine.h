@@ -30,6 +30,8 @@ class RoomsEngine : public Engine
     static bool use_grid;
 
     // Editors
+
+    bool tutorial_active = false;
     EditorType current_editor_type;
 
     BaseEditor* current_editor = nullptr;
