@@ -110,7 +110,7 @@ void SceneEditor::update(float delta_time)
         inspect_panel_3d->set_transform(Transform::mat4_to_transform(m));
     }
 
-    if (Input::was_key_pressed(GLFW_KEY_T)) {
+    if (Input::was_key_pressed(GLFW_KEY_I)) {
         inspector_from_scene(true);
     }
 
@@ -239,7 +239,7 @@ void SceneEditor::init_ui()
         {
             ui::ItemGroup2D* g_add_node = new ui::ItemGroup2D("g_light_types");
             g_add_node->add_child(new ui::TextureButton2D("omni", "data/textures/light.png"));
-            g_add_node->add_child(new ui::TextureButton2D("spot", "data/textures/spot.png"));
+            //g_add_node->add_child(new ui::TextureButton2D("spot", "data/textures/spot.png"));
             g_add_node->add_child(new ui::TextureButton2D("directional", "data/textures/sun.png"));
             add_node_submenu->add_child(g_add_node);
         }
@@ -581,15 +581,15 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
         inspector->add_icon(texture_path);
     }
 
-    if (flags & NODE_VISIBILITY) {
-        std::string signal = node_name + std::to_string(node_signal_uid++) + "_visibility";
-        inspector->add_button(signal, "data/textures/visibility.png", ui::ALLOW_TOGGLE);
+    //if (flags & NODE_VISIBILITY) {
+    //    std::string signal = node_name + std::to_string(node_signal_uid++) + "_visibility";
+    //    inspector->add_button(signal, "data/textures/visibility.png", ui::ALLOW_TOGGLE);
 
-        Node::bind(signal, [n = node](const std::string& sg, void* data) {
-            // Implement visibility for Node3D
-            // ...
-            });
-    }
+    //    Node::bind(signal, [n = node](const std::string& sg, void* data) {
+    //        // Implement visibility for Node3D
+    //        // ...
+    //        });
+    //}
 
     if (flags & NODE_EDIT) {
         std::string signal = node_name + std::to_string(node_signal_uid++) + "_edit";
@@ -607,7 +607,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
             else {
                 // ...
             }
-            });
+        });
     }
 
     if (flags & NODE_NAME) {
@@ -629,6 +629,25 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
                 ui::Keyboard::request(fn, str);
             });
         }
+    }
+
+    // Remove button
+    {
+        std::string signal = node_name + std::to_string(node_signal_uid++) + "_remove";
+        inspector->add_button(signal, "data/textures/delete.png");
+
+        Node::bind(signal, [&, n = node](const std::string& sg, void* data) {
+
+            if (selected_node == n) {
+                selected_node = nullptr;
+            }
+
+            main_scene->remove_node(n);
+
+            delete n;
+
+            inspector_dirty = true;
+        });
     }
 
     inspector->end_line();
