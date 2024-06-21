@@ -687,6 +687,8 @@ void SceneEditor::inspect_light()
     }
 
     inspector->end_line();
+
+    Node::emit_signal(inspector->get_name() + "@children_changed", (void*)nullptr);
 }
 
 void SceneEditor::inspect_exports(bool force)
@@ -715,11 +717,11 @@ void SceneEditor::inspect_exports(bool force)
         inspector->remove_flag(MATERIAL_2D);
     }
 
-    inspector->end_line();
-
     if (force) {
         inspector->set_visibility(true);
     }
+
+    Node::emit_signal(inspector->get_name() + "@children_changed", (void*)nullptr);
 }
 
 void SceneEditor::get_export_files()
