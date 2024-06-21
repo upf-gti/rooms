@@ -95,12 +95,12 @@ class SculptEditor : public BaseEditor {
         glm::vec3 prev_edit_position = {};
     } controller_position_data;
 
-    glm::quat initial_hand_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
-    glm::vec3 initial_hand_translation = {};
+    glm::quat last_hand_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
+    glm::vec3 last_hand_translation = {};
 
     // Sculpt
-    glm::quat rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
-    glm::vec3 translation_diff = {};
+    //glm::quat rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
+    //glm::vec3 translation_diff = {};
 
     // Edit
     glm::quat edit_rotation_diff = { 0.0, 0.0, 0.0, 1.0 };

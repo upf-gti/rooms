@@ -686,7 +686,7 @@ glm::vec3 SculptEditor::world_to_texture3d(const glm::vec3& position, bool skip_
     glm::vec3 pos_texture_space = position;
 
     if (!skip_translation) {
-        pos_texture_space -= (current_sculpt->get_translation() + translation_diff);
+        pos_texture_space -= (current_sculpt->get_translation());
     }
 
     pos_texture_space = (current_sculpt->get_rotation()) * pos_texture_space;
@@ -699,7 +699,7 @@ glm::vec3 SculptEditor::texture3d_to_world(const glm::vec3& position)
     glm::vec3 pos_world_space;
 
     pos_world_space = glm::inverse(current_sculpt->get_rotation()) * position;
-    pos_world_space = pos_world_space + (current_sculpt->get_translation() + translation_diff);
+    pos_world_space = pos_world_space + (current_sculpt->get_translation());
 
     return pos_world_space;
 }
@@ -709,13 +709,16 @@ void SculptEditor::update_scene_rotation()
     // Do not rotate sculpt if shift -> we might be rotating the edit
     if (is_rotation_being_used() && !is_shift_left_pressed) {
 
+        glm::quat current_hand_rotation = (Input::get_controller_rotation(HAND_LEFT));
+        glm::vec3 current_hand_translation = Input::get_controller_position(HAND_LEFT);
+
         if (!rotation_started) {
-            initial_hand_rotation = glm::inverse(Input::get_controller_rotation(HAND_LEFT));
-            initial_hand_translation = Input::get_controller_position(HAND_LEFT);
+            last_hand_rotation = current_hand_rotation;
+            last_hand_translation = current_hand_translation;
         }
 
-        rotation_diff = glm::inverse(initial_hand_rotation) * glm::inverse(Input::get_controller_rotation(HAND_LEFT));
-        translation_diff = Input::get_controller_position(HAND_LEFT) - initial_hand_translation;
+        glm::quat rotation_diff = (current_hand_rotation * glm::inverse(last_hand_rotation));
+        glm::vec3 translation_diff = current_hand_translation - last_hand_translation;
 
         current_sculpt->rotate(rotation_diff);
         current_sculpt->translate(translation_diff);
@@ -727,18 +730,19 @@ void SculptEditor::update_scene_rotation()
         edit_to_add.position -= (current_sculpt->get_translation());
         edit_to_add.position = tmp_rotation * edit_to_add.position;
         edit_to_add.rotation *= (glm::conjugate(tmp_rotation));
+
+        last_hand_rotation = current_hand_rotation;
+        last_hand_translation = current_hand_translation;
     }
     else {
         // If rotation has stopped
         if (rotation_started && !is_shift_left_pressed) {
             rotation_started = false;
-            rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
-            translation_diff = {};
         }
 
         // Push edits in 3d texture space
         edit_to_add.position = world_to_texture3d(edit_to_add.position);
-        edit_to_add.rotation *= (glm::conjugate(current_sculpt->get_rotation()) * rotation_diff);
+        edit_to_add.rotation *= (glm::conjugate(current_sculpt->get_rotation()));
     }
 }
 
@@ -747,12 +751,15 @@ void SculptEditor::update_edit_rotation()
     // Rotate edit only if pressing shift
     if (is_rotation_being_used() && is_shift_left_pressed) {
 
+        glm::quat current_hand_rotation = glm::inverse(Input::get_controller_rotation(HAND_LEFT));
+        glm::vec3 current_hand_translation = Input::get_controller_position(HAND_LEFT);
+
         if (!rotation_started) {
-            initial_hand_rotation = glm::inverse(Input::get_controller_rotation(HAND_LEFT));
-            initial_hand_translation = Input::get_controller_position(HAND_LEFT);
+            last_hand_rotation = current_hand_rotation;
+            last_hand_translation = current_hand_translation;
         }
 
-        edit_rotation_diff = glm::inverse(initial_hand_rotation) * glm::inverse(Input::get_controller_rotation(HAND_LEFT));
+        edit_rotation_diff = glm::inverse(last_hand_rotation) * current_hand_rotation;
         rotation_started = true;
     }
 
