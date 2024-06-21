@@ -58,7 +58,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 
     let raw_instance_data : u32 = brick_copy_buffer[in.instance_id];
 
-    let instance_index : u32 = raw_instance_data >> 20u;
+    let instance_index : u32 = raw_instance_data >> 12u;
     let model_index : u32 = raw_instance_data & 0xFFF;
 
     let instance_data : ProxyInstanceData = brick_buffers.brick_instance_data[instance_index];
