@@ -43,6 +43,11 @@ struct RayIntersectionInfo {
     uint32_t    dummy2 = 0;
 };
 
+struct SculptToProcess {
+    sToComputeStrokeData stroke_data;
+    SculptInstance* sculpt_to_fill = nullptr;
+};
+
 class RaymarchingRenderer {
 
     enum eEvaluatorOperationFlags : uint32_t {
@@ -56,6 +61,7 @@ class RaymarchingRenderer {
 
     std::vector<GPUSculptData> sculpts_to_delete;
     std::vector<GPUSculptData> sculpts_to_clean;
+    std::vector<SculptToProcess> sculpt_to_process;
 
     Uniform         linear_sampler_uniform;
 
@@ -247,10 +253,6 @@ class RaymarchingRenderer {
 
     bool performed_evaluation = false;
 
-    // Loading a sculpt from disk
-    sToComputeStrokeData to_compute_on_next_eval;
-    bool needs_compute_on_eval = false;
-
     // DEBUG
     MeshInstance3D *AABB_mesh;
 
@@ -312,5 +314,5 @@ public:
 
     GPUSculptData create_new_sculpt();
 
-    GPUSculptData create_from_history(std::vector<Stroke>& stroke_history);
+    void create_sculpt_from_history(SculptInstance* instance, std::vector<Stroke>& stroke_history);
 };

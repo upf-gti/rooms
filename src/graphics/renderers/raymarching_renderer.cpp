@@ -533,10 +533,10 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder, boo
         }
     }
 
-    if (needs_compute_on_eval) {
+    if (sculpt_to_process.size() > 0u) {
         // For loading a sculpt from disk
-        stroke_to_compute = &to_compute_on_next_eval;
-        needs_compute_on_eval = false;
+        stroke_to_compute = &sculpt_to_process.back().stroke_data;
+        set_current_sculpt(sculpt_to_process.back().sculpt_to_fill);
     } else if (incoming_edits.size() > 0u) {
         stroke_to_compute = stroke_manager.add(incoming_edits);
     } else if (needs_undo) {
@@ -630,6 +630,10 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder, boo
 
     needs_undo = false, needs_redo = false;
     incoming_edits.clear();
+
+    if (sculpt_to_process.size() > 0u) {
+        sculpt_to_process.pop_back();
+    }
 }
 
 void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_pass, uint32_t camera_buffer_stride)
@@ -1192,15 +1196,14 @@ GPUSculptData RaymarchingRenderer::create_new_sculpt()
     return { sculpt_count++, octree_uniform, octree_buffer_bindgroup };
 }
 
-GPUSculptData RaymarchingRenderer::create_from_history(std::vector<Stroke>& stroke_history)
+void RaymarchingRenderer::create_sculpt_from_history(SculptInstance* instance, std::vector<Stroke>& stroke_history)
 {
     GPUSculptData new_sculpt = create_new_sculpt();
 
-    // TODO: can this be a pointer??
-    to_compute_on_next_eval = *stroke_manager.new_history_add(&stroke_history);
-    needs_compute_on_eval = true;
-
-    return new_sculpt;
+    sculpt_to_process.push_back({
+        *stroke_manager.new_history_add(&stroke_history),
+        instance
+    });
 }
 
 void RaymarchingRenderer::add_sculpt_instance(SculptInstance* instance)
