@@ -71,10 +71,12 @@ AABB StrokeManager::compute_grid_aligned_AABB(const AABB& base, const glm::vec3&
 }
 
 
-sToComputeStrokeData* StrokeManager::undo() {
-    if (history->size() <= 0u) {
+sToComputeStrokeData* StrokeManager::undo()
+{
+    if (history->empty()) {
         return nullptr;
     }
+
     uint32_t last_stroke_id = 0u;
     uint32_t united_stroke_idx = 0;
     uint32_t last_history_index = 0u;
