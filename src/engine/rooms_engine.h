@@ -37,9 +37,6 @@ class RoomsEngine : public Engine
     SceneEditor* scene_editor = nullptr;
     TutorialEditor* tutorial_editor = nullptr;
 
-    bool export_scene();
-    bool import_scene();
-
     void render_gui();
 
     // Engine meshes
@@ -60,6 +57,8 @@ public:
 
 	void update(float delta_time) override;
 	void render() override;
+
+    void set_main_scene(const std::string& scene_path);
 
     bool show_tree_recursive(Node* entity);
 
