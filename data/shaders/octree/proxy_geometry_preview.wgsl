@@ -152,12 +152,14 @@ fn raymarch_sculpt_space(ray_origin_sculpt_space : vec3f, ray_dir : vec3f, max_d
         depth = proj_pos.z / proj_pos.w;
 
         let normal : vec3f = estimate_normal_preview(pos);
+        let normal_world : vec3f = (sculpt_model_buffer[preview_stroke.current_sculpt_idx] * vec4f(normal, 0.0)).xyz;
+        let ray_dir_world : vec3f = (sculpt_model_buffer[preview_stroke.current_sculpt_idx] * vec4f(ray_dir, 1.0)).xyz;
 
         let material : Material = get_material_preview();
         //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
-		//return vec4f(apply_light(-ray_dir, pos, pos_world, normal, lightPos + lightOffset, material), depth);
+        return vec4f(apply_light(-ray_dir_world, pos, position_in_world, normal_world, lightPos + lightOffset, material), depth);
         //return vec4f(vec3f(material.albedo), depth);
-        return vec4f(normal *0.5 + 0.50, depth);
+        //return vec4f(normal *0.5 + 0.50, depth);
 	}
 
     // Use a two band spherical harmonic as a skymap
@@ -208,16 +210,16 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     heatmap_color.g = sin(interpolant * 2.0);
     heatmap_color.b = cos(interpolant);
 
-    if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
-        if (is_inside_brick) {
-            out.color = vec4f(1.0, 0.0, 1.0, 1.0);
-        } else {
-            out.color = vec4f(heatmap_color.x, heatmap_color.y, heatmap_color.z, 1.0);
-            //out.color = vec4f(0.0, 0.0, f32(edit_range.y) / f32(preview_stroke.stroke.edit_count), 1.0);
-        }
+    // if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
+    //     if (is_inside_brick) {
+    //         out.color = vec4f(1.0, 0.0, 1.0, 1.0);
+    //     } else {
+    //         out.color = vec4f(heatmap_color.x, heatmap_color.y, heatmap_color.z, 1.0);
+    //         //out.color = vec4f(0.0, 0.0, f32(edit_range.y) / f32(preview_stroke.stroke.edit_count), 1.0);
+    //     }
         
-        out.depth = in.position.z;
-    }
+    //     out.depth = in.position.z;
+    // }
 
     // out.color = vec4f(1.0, 0.0, 0.0, 1.0); // Color
     // out.depth = 0.0;
