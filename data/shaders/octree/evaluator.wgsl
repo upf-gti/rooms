@@ -330,7 +330,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                     }
                     octree.data[octree_index].stroke_count = curr_stroke_count;
 
-                if (any_stroke_inside) {
+                if (any_stroke_inside || is_evaluating_undo) {
                     // Increase the number of children from the current level
                     let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 8);
 
