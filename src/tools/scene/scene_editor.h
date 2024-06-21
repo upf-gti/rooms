@@ -69,9 +69,19 @@ class SceneEditor : public BaseEditor {
     void init_ui();
     void bind_events();
 
-    void inspector_from_scene();
+    void inspector_from_scene(bool force = false);
     void inspect_node(Node* node, uint32_t flags = NODE_STANDARD, const std::string& texture_path = "");
     void inspect_light();
+
+    /*
+    *   Filesystem
+    */
+
+    bool exports_dirty = true;
+    std::vector<std::string> exported_scenes;
+
+    void get_export_files();
+    void inspect_exports(bool force = false);
 
 public:
 

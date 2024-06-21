@@ -26,6 +26,8 @@
 #include "spdlog/spdlog.h"
 #include "imgui.h"
 
+#include <filesystem>
+
 // MeshInstance3D* intersection_mesh = nullptr;
 // uint32_t subdivisions = 16;
 
@@ -75,6 +77,10 @@ void SceneEditor::clean()
 
 void SceneEditor::update(float delta_time)
 {
+    if (exports_dirty) {
+        get_export_files();
+    }
+
     if (inspector_dirty) {
         inspector_from_scene();
     }
@@ -90,11 +96,7 @@ void SceneEditor::update(float delta_time)
 
     if (Input::was_button_pressed(XR_BUTTON_B)) {
 
-        // Recreate scene panel
-        inspector_from_scene();
-
-        // Open inspector
-        inspector->set_visibility(true);
+        inspector_from_scene(true);
 
         glm::mat4x4 m(1.0f);
         glm::vec3 eye = renderer->get_camera_eye();
@@ -108,11 +110,7 @@ void SceneEditor::update(float delta_time)
     }
 
     if (Input::was_key_pressed(GLFW_KEY_T)) {
-        // Recreate scene panel
-        inspector_from_scene();
-
-        // Open inspector
-        inspector->set_visibility(true);
+        inspector_from_scene(true);
     }
 
     update_gizmo(delta_time);
@@ -272,8 +270,8 @@ void SceneEditor::init_ui()
 
     // ** Import/Export scene **
     {
-        second_row->add_child(new ui::TextureButton2D("import", "data/textures/import.png", ui::DISABLED));
-        second_row->add_child(new ui::TextureButton2D("export", "data/textures/export.png", ui::DISABLED));
+        second_row->add_child(new ui::TextureButton2D("import", "data/textures/import.png"));
+        second_row->add_child(new ui::TextureButton2D("export", "data/textures/export.png"));
     }
 
     // Create inspection panel (Nodes, properties, etc)
@@ -382,6 +380,17 @@ void SceneEditor::bind_events()
     Node::bind("move", [&](const std::string& signal, void* button) { set_gizmo_translation(); });
     Node::bind("rotate", [&](const std::string& signal, void* button) { set_gizmo_rotation(); });
     Node::bind("scale", [&](const std::string& signal, void* button) { set_gizmo_scale(); });
+
+    // Export / Import (.room)
+    {
+        auto callback = [&](const std::string& output) {
+            main_scene->serialize("data/exports/" + output + ".room");
+            exports_dirty = true;
+        };
+
+        Node::bind("export", [fn = callback](const std::string& signal, void* button) { ui::Keyboard::request(fn, "unnamed"); });
+        Node::bind("import", [&](const std::string& signal, void* button) { inspect_exports(true); });
+    }
 }
 
 void SceneEditor::select_node(Node* node, bool place)
@@ -521,7 +530,7 @@ void SceneEditor::set_gizmo_scale()
     }
 }
 
-void SceneEditor::inspector_from_scene()
+void SceneEditor::inspector_from_scene(bool force)
 {
     inspector->clear();
 
@@ -530,9 +539,9 @@ void SceneEditor::inspector_from_scene()
     for (auto node : nodes) {
 
         // Don't inspect specific stuff..
-        if (node->get_name() == "Grid") {
+        /*if (node->get_name() == "Grid") {
             continue;
-        }
+        }*/
 
         if (dynamic_cast<Light3D*>(node)) {
             inspect_node(node, NODE_LIGHT);
@@ -553,6 +562,10 @@ void SceneEditor::inspector_from_scene()
     }
 
     inspector_dirty = false;
+
+    if (force) {
+        inspector->set_visibility(true);
+    }
 }
 
 void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& texture_path)
@@ -674,4 +687,53 @@ void SceneEditor::inspect_light()
     }
 
     inspector->end_line();
+}
+
+void SceneEditor::inspect_exports(bool force)
+{
+    inspector->clear();
+
+    for (const std::string& name : exported_scenes) {
+
+        inspector->same_line();
+        inspector->add_icon("data/textures/sculpt.png");
+
+        // add unique identifier for signals
+        std::string signal = name + "_import";
+        inspector->add_button(signal, "data/textures/add.png");
+        Node::bind(signal, [&, str = name](const std::string& sg, void* data) {
+            static_cast<RoomsEngine*>(RoomsEngine::instance)->set_main_scene("data/exports/" + name);
+        });
+
+        inspector->add_label("empty", name);
+        inspector->end_line();
+    }
+
+    // Enable xr for the buttons that need it..
+    if (renderer->get_openxr_available()) {
+        inspector->remove_flag(MATERIAL_2D);
+    }
+
+    inspector->end_line();
+
+    if (force) {
+        inspector->set_visibility(true);
+    }
+}
+
+void SceneEditor::get_export_files()
+{
+    exported_scenes.clear();
+
+    std::string path = "data/exports/";
+    for (const auto& entry : std::filesystem::directory_iterator(path)) {
+
+        std::string file_name = entry.path().string();
+        std::string scene_name = file_name.substr(13);
+        exported_scenes.push_back(scene_name);
+    }
+
+    inspect_exports();
+
+    exports_dirty = false;
 }
