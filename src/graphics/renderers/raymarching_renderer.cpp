@@ -567,7 +567,7 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder, boo
         SculptInstance* current_sculpt = sculpt_editor->get_current_sculpt();
 
         AABB_mesh->set_position(aabb_pos.center + current_sculpt->get_translation());
-        AABB_mesh->scale(aabb_pos.half_size * 2.0f);
+        AABB_mesh->set_scale(aabb_pos.half_size * 2.0f);
     } else {
         AABB preview_aabb = stroke_manager.compute_grid_aligned_AABB(preview_stroke.get_AABB(), glm::vec3(brick_world_size));
         aabb_pos = preview_aabb;
@@ -622,7 +622,7 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder, boo
     wgpuCommandEncoderCopyBufferToBuffer(command_encoder, std::get<WGPUBuffer>(octree_brick_buffers.data), 0,
         brick_buffers_counters_read_buffer, 0, sizeof(sBrickBuffers_counters));
 
-    //AABB_mesh->render();
+    AABB_mesh->render();
 
     stroke_manager.update();
 
@@ -1165,6 +1165,9 @@ void RaymarchingRenderer::upload_stroke_context_data(sToComputeStrokeData *strok
     webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_edit_list.data), 0, stroke_manager.edit_list.data(), sizeof(Edit) * stroke_manager.edit_list_count);
     webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_stroke_context.data), 0, &stroke_to_compute->in_frame_influence, sizeof(uint32_t) * 4 * 4);
     webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_stroke_context.data), sizeof(uint32_t) * 4 * 4, stroke_to_compute->in_frame_influence.strokes.data(), stroke_to_compute->in_frame_influence.stroke_count * sizeof(sToUploadStroke));
+
+    //spdlog::info("min aabb: {}, {}, {}", stroke_to_compute->in_frame_influence.eval_aabb_min.x, stroke_to_compute->in_frame_influence.eval_aabb_min.y, stroke_to_compute->in_frame_influence.eval_aabb_min.z);
+    //spdlog::info("max aabb: {}, {}, {}", stroke_to_compute->in_frame_influence.eval_aabb_max.x, stroke_to_compute->in_frame_influence.eval_aabb_max.y, stroke_to_compute->in_frame_influence.eval_aabb_max.z);
 }
 
 GPUSculptureData RaymarchingRenderer::create_new_sculpture() {
