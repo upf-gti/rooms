@@ -6,6 +6,7 @@
 #include "graphics/edit.h"
 #include "graphics/texture.h"
 
+#include "framework/nodes/sculpt_instance.h"
 #include "framework/math/aabb.h"
 
 #include "stroke_manager.h"
@@ -42,12 +43,6 @@ struct RayIntersectionInfo {
     uint32_t    dummy2 = 0;
 };
 
-struct GPUSculptureData {
-    uint32_t octree_id;
-    Uniform sculpture_octree_uniform;
-    WGPUBindGroup sculpture_octree_bindgroup = nullptr;
-};
-
 class RaymarchingRenderer {
 
     enum eEvaluatorOperationFlags : uint32_t {
@@ -59,8 +54,8 @@ class RaymarchingRenderer {
     std::vector<uint32_t> sculpt_instance_count;
     std::vector<SculptInstance*> sculpt_instances_list;
 
-    std::vector<GPUSculptureData> sculptures_to_delete;
-    std::vector<GPUSculptureData> sculptures_to_clean;
+    std::vector<GPUSculptData> sculpts_to_delete;
+    std::vector<GPUSculptData> sculpts_to_clean;
 
     Uniform         linear_sampler_uniform;
 
@@ -94,8 +89,8 @@ class RaymarchingRenderer {
 
     WGPUBuffer     brick_buffers_counters_read_buffer = nullptr;
 
-    Uniform *sculpture_octree_uniform = nullptr;
-    WGPUBindGroup sculpture_octree_bindgroup = nullptr;
+    Uniform* sculpt_octree_uniform = nullptr;
+    WGPUBindGroup sculpt_octree_bindgroup = nullptr;
 
     // Octree creation
     Pipeline        compute_octree_evaluate_pipeline;
@@ -241,7 +236,7 @@ class RaymarchingRenderer {
 
     void upload_stroke_context_data(sToComputeStrokeData* stroke_to_compute);
 
-    void compute_delete_sculptures(WGPUComputePassEncoder compute_pass, GPUSculptureData& to_delete);
+    void compute_delete_sculpts(WGPUComputePassEncoder compute_pass, GPUSculptData& to_delete);
 
     void evaluate_strokes(WGPUComputePassEncoder compute_pass);
 
@@ -315,7 +310,7 @@ public:
     void add_sculpt_instance(SculptInstance* instance);
     void remove_sculpt_instance(SculptInstance* instance);
 
-    GPUSculptureData create_new_sculpture();
+    GPUSculptData create_new_sculpt();
 
-    GPUSculptureData create_from_history(std::vector<Stroke>& stroke_history);
+    GPUSculptData create_from_history(std::vector<Stroke>& stroke_history);
 };

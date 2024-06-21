@@ -88,7 +88,7 @@ void TutorialEditor::update(float delta_time)
 
 void TutorialEditor::render()
 {
-    RoomsEngine::render_controllers();
+    // RoomsEngine::render_controllers();
 
     if (xr_panel_3d) {
         xr_panel_3d->render();

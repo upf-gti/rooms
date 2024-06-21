@@ -30,15 +30,14 @@ class RoomsEngine : public Engine
     static bool use_grid;
 
     // Editors
+
+    bool tutorial_active = false;
     EditorType current_editor_type;
 
     BaseEditor* current_editor = nullptr;
     SculptEditor* sculpt_editor = nullptr;
     SceneEditor* scene_editor = nullptr;
     TutorialEditor* tutorial_editor = nullptr;
-
-    bool export_scene();
-    bool import_scene();
 
     void render_gui();
 
@@ -60,6 +59,9 @@ public:
 
 	void update(float delta_time) override;
 	void render() override;
+
+    void set_main_scene(const std::string& scene_path);
+    void add_to_main_scene(const std::string& scene_path);
 
     bool show_tree_recursive(Node* entity);
 

@@ -26,6 +26,8 @@
 #include "spdlog/spdlog.h"
 #include "imgui.h"
 
+#include <filesystem>
+
 // MeshInstance3D* intersection_mesh = nullptr;
 // uint32_t subdivisions = 16;
 
@@ -44,6 +46,7 @@ void SceneEditor::initialize()
 #ifndef DISABLE_RAYMARCHER
     SculptInstance* default_sculpt = new SculptInstance();
     default_sculpt->set_name("default_sculpt");
+    default_sculpt->initialize();
     RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
     rooms_renderer->get_raymarching_renderer()->set_current_sculpt(default_sculpt);
     main_scene->add_node(default_sculpt);
@@ -75,6 +78,10 @@ void SceneEditor::clean()
 
 void SceneEditor::update(float delta_time)
 {
+    if (exports_dirty) {
+        get_export_files();
+    }
+
     if (inspector_dirty) {
         inspector_from_scene();
     }
@@ -90,11 +97,7 @@ void SceneEditor::update(float delta_time)
 
     if (Input::was_button_pressed(XR_BUTTON_B)) {
 
-        // Recreate scene panel
-        inspector_from_scene();
-
-        // Open inspector
-        inspector->set_visibility(true);
+        inspector_from_scene(true);
 
         glm::mat4x4 m(1.0f);
         glm::vec3 eye = renderer->get_camera_eye();
@@ -107,12 +110,8 @@ void SceneEditor::update(float delta_time)
         inspect_panel_3d->set_transform(Transform::mat4_to_transform(m));
     }
 
-    if (Input::was_key_pressed(GLFW_KEY_T)) {
-        // Recreate scene panel
-        inspector_from_scene();
-
-        // Open inspector
-        inspector->set_visibility(true);
+    if (Input::was_key_pressed(GLFW_KEY_I)) {
+        inspector_from_scene(true);
     }
 
     update_gizmo(delta_time);
@@ -272,8 +271,8 @@ void SceneEditor::init_ui()
 
     // ** Import/Export scene **
     {
-        second_row->add_child(new ui::TextureButton2D("import", "data/textures/import.png", ui::DISABLED));
-        second_row->add_child(new ui::TextureButton2D("export", "data/textures/export.png", ui::DISABLED));
+        second_row->add_child(new ui::TextureButton2D("import", "data/textures/import.png"));
+        second_row->add_child(new ui::TextureButton2D("export", "data/textures/export.png"));
     }
 
     // Create inspection panel (Nodes, properties, etc)
@@ -342,6 +341,7 @@ void SceneEditor::bind_events()
 
     Node::bind("sculpt", [&](const std::string& signal, void* button) {
         SculptInstance* new_sculpt = new SculptInstance();
+        new_sculpt->initialize();
         RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
         rooms_renderer->toogle_frame_debug();
         rooms_renderer->get_raymarching_renderer()->set_current_sculpt(new_sculpt);
@@ -382,6 +382,17 @@ void SceneEditor::bind_events()
     Node::bind("move", [&](const std::string& signal, void* button) { set_gizmo_translation(); });
     Node::bind("rotate", [&](const std::string& signal, void* button) { set_gizmo_rotation(); });
     Node::bind("scale", [&](const std::string& signal, void* button) { set_gizmo_scale(); });
+
+    // Export / Import (.room)
+    {
+        auto callback = [&](const std::string& output) {
+            main_scene->serialize("data/exports/" + output + ".room");
+            exports_dirty = true;
+        };
+
+        Node::bind("export", [fn = callback](const std::string& signal, void* button) { ui::Keyboard::request(fn, "unnamed"); });
+        Node::bind("import", [&](const std::string& signal, void* button) { inspect_exports(true); });
+    }
 }
 
 void SceneEditor::select_node(Node* node, bool place)
@@ -521,7 +532,7 @@ void SceneEditor::set_gizmo_scale()
     }
 }
 
-void SceneEditor::inspector_from_scene()
+void SceneEditor::inspector_from_scene(bool force)
 {
     inspector->clear();
 
@@ -530,9 +541,9 @@ void SceneEditor::inspector_from_scene()
     for (auto node : nodes) {
 
         // Don't inspect specific stuff..
-        if (node->get_name() == "Grid") {
+        /*if (node->get_name() == "Grid") {
             continue;
-        }
+        }*/
 
         if (dynamic_cast<Light3D*>(node)) {
             inspect_node(node, NODE_LIGHT);
@@ -553,6 +564,10 @@ void SceneEditor::inspector_from_scene()
     }
 
     inspector_dirty = false;
+
+    if (force) {
+        inspector->set_visibility(true);
+    }
 }
 
 void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& texture_path)
@@ -560,7 +575,6 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
     inspector->same_line();
 
     // add unique identifier for signals
-    uint64_t signal_id = node_signal_uid++;
     std::string node_name = node->get_name();
 
     if ((flags & NODE_ICON) && texture_path.size()) {
@@ -568,17 +582,17 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
     }
 
     if (flags & NODE_VISIBILITY) {
-        std::string signal = node_name + std::to_string(signal_id++) + "_visibility";
+        std::string signal = node_name + std::to_string(node_signal_uid++) + "_visibility";
         inspector->add_button(signal, "data/textures/visibility.png", ui::ALLOW_TOGGLE);
 
         Node::bind(signal, [n = node](const std::string& sg, void* data) {
             // Implement visibility for Node3D
             // ...
-        });
+            });
     }
 
     if (flags & NODE_EDIT) {
-        std::string signal = node_name + std::to_string(signal_id++) + "_edit";
+        std::string signal = node_name + std::to_string(node_signal_uid++) + "_edit";
         inspector->add_button(signal, "data/textures/tool_wrench.png");
 
         Node::bind(signal, [&, n = node, flags = flags](const std::string& sg, void* data) {
@@ -593,11 +607,11 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
             else {
                 // ...
             }
-        });
+            });
     }
 
     if (flags & NODE_NAME) {
-        std::string signal = node_name + std::to_string(signal_id++) + "_label";
+        std::string signal = node_name + std::to_string(node_signal_uid++) + "_label";
         inspector->add_label(signal, node_name);
 
         // Request keyboard and use the result to set the new node name. Not the nicest code, but anyway..
@@ -626,8 +640,6 @@ void SceneEditor::inspect_light()
 
     Light3D* light = static_cast<Light3D*>(selected_node);
 
-    // add unique identifier for signals
-    uint64_t signal_id = node_signal_uid++;
     std::string node_name = selected_node->get_name();
 
     inspector->same_line();
@@ -637,7 +649,7 @@ void SceneEditor::inspect_light()
 
     // Color
     {
-        std::string signal = node_name + std::to_string(signal_id++) + "_picker";
+        std::string signal = node_name + std::to_string(node_signal_uid++) + "_picker";
         inspector->add_color_picker(signal, Color(light->get_color(), 1.0f));
         Node::bind(signal, [l = light](const std::string& sg, const Color& color) {
             l->set_color(color);
@@ -647,7 +659,7 @@ void SceneEditor::inspect_light()
     // Intensity
     {
         inspector->same_line();
-        std::string signal = node_name + std::to_string(signal_id++) + "_intensity_slider";
+        std::string signal = node_name + std::to_string(node_signal_uid++) + "_intensity_slider";
         inspector->add_slider(signal, light->get_intensity(), 0.0f, 10.0f, 2);
         inspector->add_label("empty", "Intensity");
         inspector->end_line();
@@ -659,7 +671,7 @@ void SceneEditor::inspect_light()
     // Range
     {
         inspector->same_line();
-        std::string signal = node_name + std::to_string(signal_id++) + "_range_slider";
+        std::string signal = node_name + std::to_string(node_signal_uid++) + "_range_slider";
         inspector->add_slider(signal, light->get_intensity(), 0.0f, 5.0f, 2);
         inspector->add_label("empty", "Range");
         inspector->end_line();
@@ -674,4 +686,62 @@ void SceneEditor::inspect_light()
     }
 
     inspector->end_line();
+
+    Node::emit_signal(inspector->get_name() + "@children_changed", (void*)nullptr);
+}
+
+void SceneEditor::inspect_exports(bool force)
+{
+    inspector->clear();
+
+    for (const std::string& name : exported_scenes) {
+
+        std::string full_name = "data/exports/" + name;
+
+        inspector->same_line();
+
+        std::string signal = name + std::to_string(node_signal_uid++) + "_load";
+        inspector->add_button(signal, "data/textures/import.png");
+        Node::bind(signal, [&, str = full_name](const std::string& sg, void* data) {
+            selected_node = nullptr;
+            static_cast<RoomsEngine*>(RoomsEngine::instance)->set_main_scene(str);
+        });
+
+        signal = name + std::to_string(node_signal_uid++) + "_add";
+        inspector->add_button(signal, "data/textures/add.png");
+        Node::bind(signal, [&, str = full_name](const std::string& sg, void* data) {
+            static_cast<RoomsEngine*>(RoomsEngine::instance)->add_to_main_scene(str);
+        });
+
+        inspector->add_label("empty", name);
+        inspector->end_line();
+    }
+
+    // Enable xr for the buttons that need it..
+    if (renderer->get_openxr_available()) {
+        inspector->remove_flag(MATERIAL_2D);
+    }
+
+    if (force) {
+        inspector->set_visibility(true);
+    }
+
+    Node::emit_signal(inspector->get_name() + "@children_changed", (void*)nullptr);
+}
+
+void SceneEditor::get_export_files()
+{
+    exported_scenes.clear();
+
+    std::string path = "data/exports/";
+    for (const auto& entry : std::filesystem::directory_iterator(path)) {
+
+        std::string file_name = entry.path().string();
+        std::string scene_name = file_name.substr(13);
+        exported_scenes.push_back(scene_name);
+    }
+
+    inspect_exports();
+
+    exports_dirty = false;
 }

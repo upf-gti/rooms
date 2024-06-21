@@ -30,7 +30,7 @@ Brick copy buffer u32
 */
 
 fn get_buffer_index(instance_index : u32, model_index : u32) -> u32 {
-    return (instance_index << 20) | model_index;
+    return (instance_index << 12) | model_index;
 }
 
 @compute @workgroup_size(8u, 8u, 8u)
