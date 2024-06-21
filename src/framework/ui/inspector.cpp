@@ -52,6 +52,7 @@ namespace ui {
             // Scroll to max_scroll
             last_grab_position = { 0.0f, 0.0f };
             scroll_top = -glm::max(body_height - body->get_size().y, 0.0f);
+
             for (auto child : b->get_children()) {
                 Node2D* row = static_cast<Node2D*>(child);
                 row->translate({ 0.0f, scroll_top });
@@ -71,7 +72,7 @@ namespace ui {
                 IO::set_focus(root);
             }
 
-            if (data.is_pressed && IO::equals_focus(root)) {
+            if (data.is_pressed && !IO::is_focus_type(Node2DClassType::HSLIDER)) {
                 scroll_dt += (last_grab_position.y - data.local_position.y);
             }
 

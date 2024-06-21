@@ -59,6 +59,7 @@ public:
 	void render() override;
 
     void set_main_scene(const std::string& scene_path);
+    void add_to_main_scene(const std::string& scene_path);
 
     bool show_tree_recursive(Node* entity);
 

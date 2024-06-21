@@ -6,10 +6,6 @@
 SculptInstance::SculptInstance() : Node3D()
 {
     node_type = "SculptInstance";
-
-    sculpt_gpu_data = dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->create_new_sculpt();
-
-    dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->add_sculpt_instance(this);
 }
 
 SculptInstance::SculptInstance(SculptInstance* reference) : Node3D()
@@ -35,6 +31,13 @@ SculptInstance::~SculptInstance()
 std::vector<Stroke>& SculptInstance::get_stroke_history()
 {
     return stroke_history;
+}
+
+void SculptInstance::initialize()
+{
+    sculpt_gpu_data = dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->create_new_sculpt();
+
+    dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->add_sculpt_instance(this);
 }
 
 void SculptInstance::serialize(std::ofstream& binary_scene_file)
@@ -66,7 +69,6 @@ void SculptInstance::parse(std::ifstream& binary_scene_file)
 
     RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
     rooms_renderer->get_raymarching_renderer()->create_sculpt_from_history(this, stroke_history);
-
     rooms_renderer->get_raymarching_renderer()->add_sculpt_instance(this);
 
     // TODO: Remove current

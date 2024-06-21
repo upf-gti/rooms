@@ -145,6 +145,11 @@ void RoomsEngine::set_main_scene(const std::string& scene_path)
     scene_editor->set_main_scene(main_scene);
 }
 
+void RoomsEngine::add_to_main_scene(const std::string& scene_path)
+{
+    main_scene->parse(scene_path);
+}
+
 void RoomsEngine::update(float delta_time)
 {
     bool is_xr = renderer->get_openxr_available();
