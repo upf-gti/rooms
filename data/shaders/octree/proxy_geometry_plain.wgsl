@@ -58,7 +58,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 
     let raw_instance_data : u32 = brick_copy_buffer[in.instance_id];
 
-    let instance_index : u32 = raw_instance_data >> 20u;
+    let instance_index : u32 = raw_instance_data >> 12u;
     let model_index : u32 = raw_instance_data & 0xFFF;
 
     let instance_data : ProxyInstanceData = brick_buffers.brick_instance_data[instance_index];
@@ -347,10 +347,10 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     // TODO: move this to vs!
     // From world to sculpt: make it relative to the sculpt center, and un-apply the rotation.
     let inverse_model : mat4x4f = inverse(sculpt_model_buffer[in.model_index]);
-    let eye_in_world_sculpt = inverse_model * vec4f(camera_data.eye, 1.0);
+    let eye_in_sculpt = inverse_model * vec4f(camera_data.eye, 1.0);
 
     // Get the sculpt space position relative to the current brick
-    var eye_atlas_pos : vec3f = eye_in_world_sculpt.xyz - in.brick_center_in_sculpt_space;
+    var eye_atlas_pos : vec3f = eye_in_sculpt.xyz - in.brick_center_in_sculpt_space;
     // Atlas and sculpt space are aligned, the only difference is a change of scale, depednign on brick size. Now the coordinates are Atlas-brick relative
     eye_atlas_pos *= SCULPT_TO_ATLAS_CONVERSION_FACTOR;
     // make the coordinate accurate to the "global" in-brick position
@@ -358,8 +358,8 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     let ray_dir_atlas : vec3f = normalize(in.in_atlas_pos - eye_atlas_pos);
 
     // watchouttt
-    let ray_dir_world : vec3f = normalize(in.vertex_in_world_space.xyz - eye_in_world_sculpt.xyz);
-    let ray_dir_sculpt : vec3f = (inverse_model * vec4f(ray_dir_world, 0.0)).xyz;
+    let ray_dir_sculpt : vec3f = normalize(in.vertex_in_sculpt_space.xyz - eye_in_sculpt.xyz);
+    let ray_dir_world : vec3f = (sculpt_model_buffer[in.model_index] * vec4f(ray_dir_sculpt, 0.0)).xyz;
     // ray dir in atlas coords :((
 
     let raymarch_distance_sculpt_space : f32 = ray_intersect_AABB_only_near(in.vertex_in_sculpt_space.xyz, -ray_dir_sculpt, in.brick_center_in_sculpt_space, vec3f(BRICK_WORLD_SIZE));
