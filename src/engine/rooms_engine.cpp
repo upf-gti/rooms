@@ -31,6 +31,7 @@
 
 #include <fstream>
 
+bool RoomsEngine::use_grid = true;
 bool RoomsEngine::use_environment_map = true;
 
 int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen)
@@ -76,22 +77,19 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 
     // Grid
     {
-        MeshInstance3D* grid_node = new MeshInstance3D();
-        grid_node->set_name("Grid");
-        grid_node->add_surface(RendererStorage::get_surface("quad"));
-        grid_node->set_position(glm::vec3(0.0f));
-        grid_node->rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-        grid_node->scale(glm::vec3(10.f));
+        grid = new MeshInstance3D();
+        grid->set_name("Grid");
+        grid->add_surface(RendererStorage::get_surface("quad"));
+        grid->set_position(glm::vec3(0.0f));
+        grid->rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+        grid->scale(glm::vec3(10.f));
 
         Material grid_material;
         grid_material.priority = 100;
         grid_material.transparency_type = ALPHA_BLEND;
         grid_material.cull_type = CULL_NONE;
         grid_material.shader = RendererStorage::get_shader_from_source(shaders::mesh_grid::source, shaders::mesh_grid::path, grid_material);
-
-        grid_node->set_surface_material_override(grid_node->get_surface(0), grid_material);
-
-        main_scene->add_node(grid_node);
+        grid->set_surface_material_override(grid->get_surface(0), grid_material);
     }
 
     // Controller pointer
@@ -176,6 +174,10 @@ void RoomsEngine::render()
         environment->render();
     }
 
+    if (use_grid) {
+        grid->render();
+    }
+
     main_scene->render();
 
     if (current_editor) {
@@ -236,6 +238,11 @@ void RoomsEngine::switch_editor(uint8_t editor)
     }
 
     i->current_editor_type = (EditorType) editor;
+}
+
+void RoomsEngine::toggle_use_grid()
+{
+    use_grid = !use_grid;
 }
 
 void RoomsEngine::toggle_use_environment_map()

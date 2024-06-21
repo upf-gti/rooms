@@ -248,6 +248,19 @@ void SceneEditor::init_ui()
         first_row->add_child(add_node_submenu);
     }
 
+    // ** Display Settings **
+    {
+        RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
+        ui::ItemGroup2D* g_display = new ui::ItemGroup2D("g_display");
+        ui::ButtonSubmenu2D* display_submenu = new ui::ButtonSubmenu2D("display", "data/textures/display_settings.png");
+        g_display->add_child(new ui::TextureButton2D("use_grid", "data/textures/grid.png", ui::ALLOW_TOGGLE | ui::SELECTED));
+        g_display->add_child(new ui::TextureButton2D("use_environment", "data/textures/skybox.png", ui::ALLOW_TOGGLE | ui::SELECTED));
+        g_display->add_child(new ui::Slider2D("IBL_intensity", "data/textures/ibl_intensity.png", rooms_renderer->get_ibl_intensity(), ui::SliderMode::VERTICAL, ui::USER_RANGE/*ui::CURVE_INV_POW, 21.f, -6.0f*/, 0.0f, 4.0f, 2));
+        display_submenu->add_child(g_display);
+        display_submenu->add_child(new ui::Slider2D("exposure", "data/textures/exposure.png", rooms_renderer->get_exposure(), ui::SliderMode::VERTICAL, ui::USER_RANGE/*ui::CURVE_INV_POW, 21.f, -6.0f*/, 0.0f, 4.0f, 2));
+        first_row->add_child(display_submenu);
+    }
+
     // ** Gizmo modes **
     {
         ui::ComboButtons2D* combo_gizmo_modes = new ui::ComboButtons2D("combo_gizmo_modes");
@@ -261,18 +274,6 @@ void SceneEditor::init_ui()
     {
         second_row->add_child(new ui::TextureButton2D("import", "data/textures/import.png", ui::DISABLED));
         second_row->add_child(new ui::TextureButton2D("export", "data/textures/export.png", ui::DISABLED));
-    }
-
-    // ** Display Settings **
-    {
-        RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
-        ui::ItemGroup2D* g_display = new ui::ItemGroup2D("g_display");
-        ui::ButtonSubmenu2D* display_submenu = new ui::ButtonSubmenu2D("display", "data/textures/display_settings.png");
-        g_display->add_child(new ui::TextureButton2D("use_environment", "data/textures/skybox.png", ui::ALLOW_TOGGLE | ui::SELECTED));
-        g_display->add_child(new ui::Slider2D("IBL_intensity", "data/textures/ibl_intensity.png", rooms_renderer->get_ibl_intensity(), ui::SliderMode::VERTICAL, ui::USER_RANGE/*ui::CURVE_INV_POW, 21.f, -6.0f*/, 0.0f, 4.0f, 2));
-        display_submenu->add_child(g_display);
-        display_submenu->add_child(new ui::Slider2D("exposure", "data/textures/exposure.png", rooms_renderer->get_exposure(), ui::SliderMode::VERTICAL, ui::USER_RANGE/*ui::CURVE_INV_POW, 21.f, -6.0f*/, 0.0f, 4.0f, 2));
-        second_row->add_child(display_submenu);
     }
 
     // Create inspection panel (Nodes, properties, etc)
@@ -367,6 +368,10 @@ void SceneEditor::bind_events()
 
         Node::bind("use_environment", [&](const std::string& signal, void* button) {
             RoomsEngine::toggle_use_environment_map();
+        });
+
+        Node::bind("use_grid", [&](const std::string& signal, void* button) {
+            RoomsEngine::toggle_use_grid();
         });
     }
 

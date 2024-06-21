@@ -27,7 +27,7 @@ enum EditorType : uint8_t {
 class RoomsEngine : public Engine
 {
     static bool use_environment_map;
-    Environment3D* environment = nullptr;
+    static bool use_grid;
 
     // Editors
     EditorType current_editor_type;
@@ -43,6 +43,8 @@ class RoomsEngine : public Engine
     void render_gui();
 
     // Engine meshes
+    Environment3D* environment = nullptr;
+    MeshInstance3D* grid = nullptr;
     MeshInstance3D* controller_mesh_left = nullptr;
     MeshInstance3D* controller_mesh_right = nullptr;
     MeshInstance3D* ray_pointer = nullptr;
@@ -64,6 +66,7 @@ public:
     static void render_controllers();
 
     static void switch_editor(uint8_t editor);
+    static void toggle_use_grid();
     static void toggle_use_environment_map();
 
     void set_current_sculpt(SculptInstance* sculpt_instance);
