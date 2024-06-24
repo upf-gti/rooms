@@ -238,7 +238,7 @@ fn raymarch_with_previews(ray_origin_atlas_space : vec3f, ray_origin_sculpt_spac
 
         let normal : vec3f = estimate_normal_with_previews(position_in_sculpt, position_in_atlas);
         let normal_world : vec3f = (sculpt_model_buffer[preview_stroke.current_sculpt_idx] * vec4f(normal, 0.0)).xyz;
-        let ray_dir_world : vec3f = (sculpt_model_buffer[preview_stroke.current_sculpt_idx] * vec4f(ray_dir, 1.0)).xyz;
+        let ray_dir_world : vec3f = (sculpt_model_buffer[preview_stroke.current_sculpt_idx] * vec4f(ray_dir, 0.0)).xyz;
 
         // let interpolant : f32 = (f32( i ) / f32(MAX_ITERATIONS)) * (M_PI / 2.0);
         // var heatmap_color : vec3f;
@@ -312,7 +312,7 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
 
         let normal : vec3f = estimate_normal_atlas(position_in_atlas);
         let normal_world : vec3f = (sculpt_model_buffer[model_index] * vec4f(normal, 0.0)).xyz;
-        let ray_dir_world : vec3f = (sculpt_model_buffer[model_index] * vec4f(ray_dir, 1.0)).xyz;
+        let ray_dir_world : vec3f = (sculpt_model_buffer[model_index] * vec4f(ray_dir, 0.0)).xyz;
 
         let material : Material = sample_material_atlas(position_in_atlas);
         // let interpolant : f32 = (f32( i ) / f32(MAX_ITERATIONS)) * (M_PI / 2.0);

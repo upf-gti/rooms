@@ -153,7 +153,7 @@ fn raymarch_sculpt_space(ray_origin_sculpt_space : vec3f, ray_dir : vec3f, max_d
 
         let normal : vec3f = estimate_normal_preview(pos);
         let normal_world : vec3f = (sculpt_model_buffer[preview_stroke.current_sculpt_idx] * vec4f(normal, 0.0)).xyz;
-        let ray_dir_world : vec3f = (sculpt_model_buffer[preview_stroke.current_sculpt_idx] * vec4f(ray_dir, 1.0)).xyz;
+        let ray_dir_world : vec3f = (sculpt_model_buffer[preview_stroke.current_sculpt_idx] * vec4f(ray_dir, 0.0)).xyz;
 
         let material : Material = get_material_preview();
         //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
