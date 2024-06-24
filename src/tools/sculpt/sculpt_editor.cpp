@@ -689,7 +689,7 @@ glm::vec3 SculptEditor::world_to_texture3d(const glm::vec3& position, bool skip_
         pos_texture_space -= (current_sculpt->get_translation());
     }
 
-    pos_texture_space = (current_sculpt->get_rotation()) * pos_texture_space;
+    pos_texture_space = glm::inverse(current_sculpt->get_rotation()) * pos_texture_space;
 
     return pos_texture_space;
 }
@@ -720,16 +720,10 @@ void SculptEditor::update_scene_rotation()
         glm::quat rotation_diff = (current_hand_rotation * glm::inverse(last_hand_rotation));
         glm::vec3 translation_diff = current_hand_translation - last_hand_translation;
 
-        current_sculpt->rotate(rotation_diff);
+        current_sculpt->rotate_world(rotation_diff);
         current_sculpt->translate(translation_diff);
 
         rotation_started = true;
-
-        // Edit rotation WHILE rotating
-        glm::quat tmp_rotation = current_sculpt->get_rotation();
-        edit_to_add.position -= (current_sculpt->get_translation());
-        edit_to_add.position = tmp_rotation * edit_to_add.position;
-        edit_to_add.rotation *= (glm::conjugate(tmp_rotation));
 
         last_hand_rotation = current_hand_rotation;
         last_hand_translation = current_hand_translation;
@@ -739,43 +733,43 @@ void SculptEditor::update_scene_rotation()
         if (rotation_started && !is_shift_left_pressed) {
             rotation_started = false;
         }
-
-        // Push edits in 3d texture space
-        edit_to_add.position = world_to_texture3d(edit_to_add.position);
-        edit_to_add.rotation *= (glm::conjugate(current_sculpt->get_rotation()));
     }
+
+    // Push edits in 3d texture space
+    edit_to_add.position = world_to_texture3d(edit_to_add.position);
+    edit_to_add.rotation *= (current_sculpt->get_rotation());
 }
 
 void SculptEditor::update_edit_rotation()
 {
-    // Rotate edit only if pressing shift
-    if (is_rotation_being_used() && is_shift_left_pressed) {
+    //// Rotate edit only if pressing shift
+    //if (is_rotation_being_used() && is_shift_left_pressed) {
 
-        glm::quat current_hand_rotation = glm::inverse(Input::get_controller_rotation(HAND_LEFT));
-        glm::vec3 current_hand_translation = Input::get_controller_position(HAND_LEFT);
+    //    glm::quat current_hand_rotation = glm::inverse(Input::get_controller_rotation(HAND_LEFT));
+    //    glm::vec3 current_hand_translation = Input::get_controller_position(HAND_LEFT);
 
-        if (!rotation_started) {
-            last_hand_rotation = current_hand_rotation;
-            last_hand_translation = current_hand_translation;
-        }
+    //    if (!rotation_started) {
+    //        last_hand_rotation = current_hand_rotation;
+    //        last_hand_translation = current_hand_translation;
+    //    }
 
-        edit_rotation_diff = glm::inverse(last_hand_rotation) * current_hand_rotation;
-        rotation_started = true;
-    }
+    //    edit_rotation_diff = glm::inverse(last_hand_rotation) * current_hand_rotation;
+    //    rotation_started = true;
+    //}
 
-    // If rotation has stopped
-    else if (rotation_started && is_shift_left_pressed) {
-        edit_user_rotation = edit_user_rotation * edit_rotation_diff;
-        edit_rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
-        rotation_started = false;
+    //// If rotation has stopped
+    //else if (rotation_started && is_shift_left_pressed) {
+    //    edit_user_rotation = edit_user_rotation * edit_rotation_diff;
+    //    edit_rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
+    //    rotation_started = false;
 
-        sdPrimitive primitive = stroke_parameters.get_primitive();
+    //    sdPrimitive primitive = stroke_parameters.get_primitive();
 
-        primitive_default_states[primitive].rotation = edit_user_rotation;
-    }
+    //    primitive_default_states[primitive].rotation = edit_user_rotation;
+    //}
 
-    glm::quat tmp_rotation = glm::inverse(edit_user_rotation * edit_rotation_diff);
-    edit_to_add.rotation = glm::conjugate(tmp_rotation) * edit_to_add.rotation;
+    //glm::quat tmp_rotation = glm::inverse(edit_user_rotation * edit_rotation_diff);
+    //edit_to_add.rotation = glm::conjugate(tmp_rotation) * edit_to_add.rotation;
 }
 
 void SculptEditor::undo()
