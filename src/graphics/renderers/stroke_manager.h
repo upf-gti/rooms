@@ -8,6 +8,7 @@
 #define EDIT_BUFFER_INCREASE 64u
 #define STROKE_CONTEXT_INTIAL_SIZE 100u
 #define STROKE_CONTEXT_INCREASE 100u
+#define AREA_MAX_EVALUATION_SIZE  (1.0f / 4.0f)
 
 class SculptInstance;
 
@@ -109,6 +110,7 @@ struct StrokeManager {
 
     void update();
 
+    uint32_t divide_AABB_on_max_eval_size(const AABB& base, AABB divided_bases[8]);
     AABB compute_grid_aligned_AABB(const AABB &base, const glm::vec3 &brick_world_size);
     void compute_history_intersection(sStrokeInfluence &influence, AABB& operation_aabb, uint32_t history_max_index);
 };

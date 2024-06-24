@@ -3,6 +3,7 @@
 #include "framework/nodes/sculpt_instance.h"
 
 #include "spdlog/spdlog.h"
+#include <glm/detail/compute_vector_relational.hpp>
 
 void StrokeManager::init() {
     result_to_compute.set_defaults();
@@ -323,4 +324,51 @@ sToComputeStrokeData* StrokeManager::new_history_add(std::vector<Stroke>* new_hi
     result_to_compute.in_frame_influence.eval_aabb_max = result_to_compute.in_frame_stroke_aabb.center + result_to_compute.in_frame_stroke_aabb.half_size;
 
     return &result_to_compute;
+}
+
+
+void aabb_split(AABB *container, uint32_t curr_idx, uint32_t *box_pool_top, const float half_max_division_size) {
+    AABB& curr = container[curr_idx];
+    const bool test_axis_x = half_max_division_size < curr.half_size.x;
+    const bool test_axis_y = half_max_division_size < curr.half_size.y;
+    const bool test_axis_z = half_max_division_size < curr.half_size.z;
+
+    if (test_axis_x || test_axis_y || test_axis_z) {
+        glm::vec3 half_size = curr.half_size, delta = { 0.0f, 0.0f, 0.0f };
+        if (test_axis_x) {
+            half_size.x /= 2.0f;
+            delta = glm::vec3{ half_size.x, 0.0, 0.0 };
+        } else if (test_axis_y) {
+            half_size.y /= 2.0f;
+            delta = glm::vec3{ 0.0, half_size.y, 0.0 };
+        } else if (test_axis_z) {
+            half_size.z /= 2.0f;
+            delta = glm::vec3{ 0.0, 0.0, half_size.z };
+        }
+        spdlog::info("{} {}", * box_pool_top, half_size.x);
+        uint32_t new_idx = (*box_pool_top)++;
+        container[curr_idx] = { curr.center + delta, half_size };
+        container[new_idx] = { curr.center - delta*2.0f, half_size};
+
+        aabb_split(container, curr_idx, box_pool_top, half_max_division_size);
+        aabb_split(container, new_idx, box_pool_top, half_max_division_size);
+    }
+
+    // recursion end
+}
+
+uint32_t StrokeManager::divide_AABB_on_max_eval_size(const AABB& base, AABB divided_bases[8]) {
+    const uint32_t index_LUT[8u] = { 0u, 0u,   0u, 1u,   0u, 1u, 2u, 3u };
+
+    uint32_t division_count = 1u;
+    divided_bases[0] = base;
+
+    // TODO send the base size via config
+    const float half_max_division_size = (1.0f * AREA_MAX_EVALUATION_SIZE);
+
+    const glm::vec3 base_min_point = base.center - base.half_size;
+
+    aabb_split(divided_bases, 0u, &division_count, half_max_division_size);
+
+    return division_count;
 }

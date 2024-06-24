@@ -36,7 +36,17 @@
 
 RaymarchingRenderer::RaymarchingRenderer()
 {
-    
+    /*AABB test = { glm::vec3(0.5, 0.0f, 1.0f), glm::vec3(0.50, 0.50f, 0.70f) };
+    AABB result[8u];
+
+    uint32_t count = stroke_manager.divide_AABB_on_max_eval_size(test, result);
+
+    AABB test_f = { glm::vec3(0.0f), glm::vec3(0.0f) };
+    for (uint32_t i = 0u; i < count; i++) {
+        test_f = merge_aabbs(test_f, result[i]);
+    }
+
+    uint32_t p = 0u;*/
 }
 
 int RaymarchingRenderer::initialize(bool use_mirror_screen)
