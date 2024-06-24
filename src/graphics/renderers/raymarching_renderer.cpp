@@ -516,8 +516,6 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder, boo
 
     bool is_openxr_available = RoomsRenderer::instance->get_openxr_available();
 
-    sToComputeStrokeData* stroke_to_compute = nullptr;
-
     // Sculpture deleting and cleaning
     {
         if (sculpts_to_clean.size() > 0u) {
@@ -543,20 +541,37 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder, boo
         }
     }
 
+    sToComputeStrokeData* data_to_process[8u];
+    uint32_t to_process_count = 0u;
+
     if (sculpts_to_process.size() > 0u) {
         // For loading a sculpt from disk
-        sculpt_octree_bindgroup = sculpts_to_process.back()->get_octree_bindgroup();
-        sculpt_octree_uniform = &sculpts_to_process.back()->get_octree_uniform();
-        stroke_to_compute = stroke_manager.new_history_add(&sculpts_to_process.back()->get_stroke_history());
+        current_sculpt = sculpts_to_process.back();
+        to_process_count = stroke_manager.new_history_add(&sculpts_to_process.back()->get_stroke_history(), data_to_process);
     } else if (incoming_edits.size() > 0u) {
-        stroke_to_compute = stroke_manager.add(incoming_edits);
+        to_process_count = stroke_manager.add(incoming_edits, data_to_process);
     } else if (needs_undo) {
-        stroke_to_compute = stroke_manager.undo();
+        to_process_count = stroke_manager.undo(data_to_process);
     } else if (needs_redo) {
-        stroke_to_compute = stroke_manager.redo();
+        to_process_count = stroke_manager.redo(data_to_process);
     }
 
-    bool needs_evaluation = (stroke_to_compute != nullptr);
+    if (current_sculpt != nullptr) {
+        for (uint32_t i = 0u; i < to_process_count; i++) {
+            stroke_to_compute_stack.push_back(SculptStrokesToProcess{ data_to_process[i], current_sculpt });
+        }
+    }
+
+    bool needs_evaluation = stroke_to_compute_stack.size() > 0u;
+
+    SculptStrokesToProcess to_process;
+    if (needs_evaluation) {
+        to_process = stroke_to_compute_stack.back();
+        stroke_to_compute_stack.pop_back();
+
+        sculpt_octree_uniform = &to_process.sculpt_instance->get_octree_uniform();
+        sculpt_octree_bindgroup = to_process.sculpt_instance->get_octree_bindgroup();
+    }
 
     if (!(show_preview && !needs_evaluation)) {
         // rset the brick instance counter
@@ -568,9 +583,9 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder, boo
 
     if (needs_evaluation) {
 
-        aabb_pos = stroke_to_compute->in_frame_stroke_aabb;
-        compute_merge_data.reevaluation_AABB_min = stroke_to_compute->in_frame_stroke_aabb.center - stroke_to_compute->in_frame_stroke_aabb.half_size;
-        compute_merge_data.reevaluation_AABB_max = stroke_to_compute->in_frame_stroke_aabb.center + stroke_to_compute->in_frame_stroke_aabb.half_size;
+        aabb_pos = to_process.stroke_to_compute->in_frame_stroke_aabb;
+        compute_merge_data.reevaluation_AABB_min = to_process.stroke_to_compute->in_frame_stroke_aabb.center - to_process.stroke_to_compute->in_frame_stroke_aabb.half_size;
+        compute_merge_data.reevaluation_AABB_max = to_process.stroke_to_compute->in_frame_stroke_aabb.center + to_process.stroke_to_compute->in_frame_stroke_aabb.half_size;
 
         RoomsEngine* engine_instance = static_cast<RoomsEngine*>(RoomsEngine::instance);
         SculptEditor* sculpt_editor = engine_instance->get_sculpt_editor();
@@ -597,12 +612,12 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder, boo
         wgpuComputePassEncoderDispatchWorkgroups(compute_pass, octants_max_size / (8u * 8u * 8u), 1, 1);
     }
 
-    if (needs_evaluation && stroke_to_compute) {
-        upload_stroke_context_data(stroke_to_compute);
+    if (needs_evaluation) {
+        upload_stroke_context_data(to_process.stroke_to_compute);
         uint32_t set_as_preview = (needs_undo) ? 0x01u : 0u;
         webgpu_context->update_buffer(std::get<WGPUBuffer>(sculpt_octree_uniform->data), sizeof(uint32_t) * 2u, &set_as_preview, sizeof(uint32_t));
 
-        spdlog::info("Evaluate stroke! id: {}, stroke context count: {}", stroke_to_compute->in_frame_stroke.stroke_id, stroke_to_compute->in_frame_influence.stroke_count);
+        spdlog::info("Evaluate stroke! stroke context count: {}", to_process.stroke_to_compute->in_frame_influence.stroke_count);
         evaluate_strokes(compute_pass);
     }
 
@@ -643,6 +658,10 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder, boo
 
     if (sculpts_to_process.size() > 0u) {
         sculpts_to_process.pop_back();
+    }
+
+    if (needs_evaluation) {
+        to_process.stroke_to_compute->clean();
     }
 }
 
@@ -757,6 +776,8 @@ void RaymarchingRenderer::set_current_sculpt(SculptInstance* sculpt_instance)
 
     sculpt_octree_bindgroup = sculpt_instance->get_octree_bindgroup();
     sculpt_octree_uniform = &sculpt_instance->get_octree_uniform();
+
+    current_sculpt = sculpt_instance;
 }
 
 void RaymarchingRenderer::init_compute_octree_pipeline()

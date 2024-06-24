@@ -43,6 +43,11 @@ struct RayIntersectionInfo {
     uint32_t    dummy2 = 0;
 };
 
+struct SculptStrokesToProcess {
+    sToComputeStrokeData*   stroke_to_compute;
+    SculptInstance*         sculpt_instance;
+};
+
 class RaymarchingRenderer {
 
     enum eEvaluatorOperationFlags : uint32_t {
@@ -57,6 +62,12 @@ class RaymarchingRenderer {
     std::vector<GPUSculptData> sculpts_to_delete;
     std::vector<GPUSculptData> sculpts_to_clean;
     std::vector<SculptInstance*> sculpts_to_process;
+
+    std::vector<SculptStrokesToProcess> stroke_to_compute_stack;
+
+    SculptInstance* current_sculpt = nullptr;
+    Uniform         *sculpt_octree_uniform;
+    WGPUBindGroup   sculpt_octree_bindgroup = nullptr;
 
     Uniform         linear_sampler_uniform;
 
@@ -89,9 +100,6 @@ class RaymarchingRenderer {
     };
 
     WGPUBuffer     brick_buffers_counters_read_buffer = nullptr;
-
-    Uniform* sculpt_octree_uniform = nullptr;
-    WGPUBindGroup sculpt_octree_bindgroup = nullptr;
 
     // Octree creation
     Pipeline        compute_octree_evaluate_pipeline;

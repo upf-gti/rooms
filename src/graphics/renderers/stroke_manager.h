@@ -40,14 +40,19 @@ struct sStrokeInfluence {
 };
 
 struct sToComputeStrokeData {
-    sToUploadStroke in_frame_stroke = {};
     sStrokeInfluence in_frame_influence;
     AABB in_frame_stroke_aabb;
 
     inline void set_defaults() {
-        in_frame_stroke.edit_count = 0u;
         in_frame_influence.stroke_count = 0u;
         in_frame_stroke_aabb = { { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f } };
+        if (in_frame_influence.strokes.size() == 0u) {
+            in_frame_influence.strokes.resize(STROKE_CONTEXT_INTIAL_SIZE);
+        }
+    }
+
+    inline void clean() {
+        in_frame_influence.strokes.clear();
     }
 };
 
@@ -72,8 +77,6 @@ struct StrokeManager {
     StrokeParameters dirty_stroke_params;
     uint32_t dirty_stroke_increment = 0u;
     bool must_change_stroke = false;
-
-    sToComputeStrokeData result_to_compute;
 
     inline void add_edit_to_upload(const Edit& edit) {
         // Expand the edit to upload list by chunks
@@ -103,10 +106,10 @@ struct StrokeManager {
     void change_stroke(const StrokeParameters& params, const uint32_t index_increment = 1u);
     void change_stroke(const uint32_t index_increment = 1u);
 
-    sToComputeStrokeData* undo();
-    sToComputeStrokeData* redo();
-    sToComputeStrokeData* add(std::vector<Edit> new_edits);
-    sToComputeStrokeData* new_history_add(std::vector<Stroke>* history);
+    uint32_t undo(sToComputeStrokeData* strokes_to_compute[8u]);
+    uint32_t redo(sToComputeStrokeData* strokes_to_compute[8u]);
+    uint32_t add(std::vector<Edit> new_edits, sToComputeStrokeData* strokes_to_compute[8u]);
+    uint32_t new_history_add(std::vector<Stroke>* history, sToComputeStrokeData* strokes_to_compute[8u]);
 
     void update();
 
