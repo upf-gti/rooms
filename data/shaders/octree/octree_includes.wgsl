@@ -238,12 +238,12 @@ struct CullingStroke {
     edit_count : u32
 };
 /**
-    0-20 bits -> stroke id (0-1048576 # of strokes)
-    21-27 bits -> edit start (0-64)
-    28-32 bits -> edit count (0-64)
+    0-16 bits -> stroke id (0-65535 # of strokes)
+    17-25 bits -> edit start (0-256)
+    26-32 bits -> edit count (0-256)
 */
 fn culling_stroke_get_edit_start_and_count(culling_data : u32, stroke_list : ptr<storage, array<Stroke>, read>) -> CullingStroke {
-    let stroke_id : u32 = (culling_data & 0xFFFF0000u) >> 16;
+    let stroke_id : u32 = culling_data >> 16;
     let edit_start : u32 = (culling_data & 0xFF00u) >> 8;
     let edit_count : u32 = (culling_data & 0xFFu);
 
@@ -254,12 +254,12 @@ fn culling_stroke_get_edit_start_and_count(culling_data : u32, stroke_list : ptr
 
 fn culling_get_culling_data(stroke_pointer : u32, edit_start : u32, edit_count : u32) -> u32 {
     var result : u32 = stroke_pointer << 16;
-    result |= edit_start << 8;
-    result |= edit_count;
+    result |= (edit_start & 0xFFu) << 8;
+    result |= (edit_count & 0xFFu);
 
     return result;
 }
 
 fn culling_get_stroke_index(culling_data : u32) -> u32 {
-    return (culling_data & 0xFFFF0000) >> 16;
+    return (culling_data) >> 16;
 }
