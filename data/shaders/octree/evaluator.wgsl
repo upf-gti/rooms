@@ -371,29 +371,25 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             let prev_interval = octree.data[octree_index].octant_center_distance;
             octree.data[octree_index].octant_center_distance = surface_interval;
 
-            if (brick_has_paint) {
-                if (is_current_brick_filled) { 
-                    brick_create_or_reevaluate(octree_index, is_current_brick_filled, false, octant_center);
-                }
-            } else {
-                let int_distance = abs(distance(prev_interval, surface_interval));
+            let int_distance = abs(distance(prev_interval, surface_interval));
             
-                if (int_distance > 0.00001) {
-                    if (surface_interval.x > 0.0) {
-                        if (is_current_brick_filled) {
-                            // delete any brick outside surface that was previosly filled
-                            brick_remove(octree_index);
-                        } else {
-                            // reset flags for potential interior bricks
-                            octree.data[octree_index].tile_pointer = 0;
-                            octree.data[octree_index].octant_center_distance = vec2f(10000.0, 10000.0);
-                        }
-                    } else if (surface_interval.y < 0.0) {
-                        brick_remove_and_mark_as_inside(octree_index, is_current_brick_filled);
-                    } else if (surface_interval.x < 0.0) {
-                        brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
+            if (int_distance > 0.00001) {
+                if (surface_interval.x > 0.0) {
+                    if (is_current_brick_filled) {
+                        // delete any brick outside surface that was previosly filled
+                        brick_remove(octree_index);
+                    } else {
+                        // reset flags for potential interior bricks
+                        octree.data[octree_index].tile_pointer = 0;
+                        octree.data[octree_index].octant_center_distance = vec2f(10000.0, 10000.0);
                     }
+                } else if (surface_interval.y < 0.0) {
+                    brick_remove_and_mark_as_inside(octree_index, is_current_brick_filled);
+                } else if (surface_interval.x < 0.0) {
+                    brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
                 }
+            } else if (brick_has_paint && is_current_brick_filled) {
+                    brick_reevaluate(octree_index);
             }
         }
     } else {
