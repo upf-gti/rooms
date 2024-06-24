@@ -908,9 +908,7 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
                 mesh_preview->get_surface(0)->create_rounded_box(dims.x, dims.y, dims.z, glm::clamp(dims.w / 0.08f, 0.0f, 1.0f) * glm::min(dims.x, glm::min(dims.y, dims.z)));
             }
             else {
-                // Expand a little bit the edges
-                glm::vec4 grow_dims = dims + 0.00275f;
-                mesh_preview->get_surface(0)->create_box(grow_dims.x, grow_dims.y, grow_dims.z);
+                mesh_preview->get_surface(0)->create_box(dims.x, dims.y, dims.z);
             }
             break;
         case SD_CAPSULE:
@@ -941,20 +939,18 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
     glm::mat4x4 preview_pose = glm::translate(glm::mat4x4(1.0f), edit_position_world);
     preview_pose *= glm::inverse(glm::toMat4(edit_rotation_world));
 
-    // Update edit transform
-    mesh_preview->set_transform(Transform::mat4_to_transform(preview_pose));
-
     // Update model depending on the primitive
     switch (stroke_parameters.get_primitive())
     {
     case SD_CAPSULE:
-        mesh_preview->translate({ 0.f, dims.y * 0.5, 0.f });
+        preview_pose = glm::translate(preview_pose, { 0.f, dims.y * 0.5, 0.f });
         break;
     default:
         break;
     }
 
-    // mesh_preview->rotate(glm::conjugate(edit_user_rotation * edit_rotation_diff) );
+    // Update edit transform
+    mesh_preview->set_transform(Transform::mat4_to_transform(preview_pose));
 }
 
 void SculptEditor::set_sculpt_started(bool value)
