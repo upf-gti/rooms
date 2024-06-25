@@ -862,7 +862,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         stroke_culling_data.buffer_size = culling_size;
 
         // Stroke Edit list
-        octree_edit_list_size = EDIT_BUFFER_INITAL_SIZE;
+        octree_edit_list_size = EDIT_BUFFER_INITIAL_SIZE;
         size_t edit_list_size = sizeof(Edit) * octree_edit_list_size;
         octree_edit_list.data = webgpu_context->create_buffer(edit_list_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "octree_edit_list");
         octree_edit_list.binding = 7;

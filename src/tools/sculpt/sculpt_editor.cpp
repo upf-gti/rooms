@@ -49,7 +49,7 @@ void SculptEditor::initialize()
     mirror_gizmo.initialize(TRANSLATION_GIZMO);
 
     // Set maximum number of edits per curve
-    current_spline.set_density(MAX_EDITS_PER_EVALUATION);
+    current_spline.set_density(MAX_EDITS_PER_SPLINE);
 
     // Sculpt area box
     {

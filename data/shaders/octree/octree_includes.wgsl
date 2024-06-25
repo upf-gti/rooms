@@ -1,6 +1,5 @@
 #define SDF_RESOLUTION
 #define SCULPT_MAX_SIZE
-#define MAX_EDITS_PER_EVALUATION
 #define OCTREE_DEPTH
 #define OCTREE_TOTAL_SIZE
 #define PREVIEW_PROXY_BRICKS_COUNT
@@ -15,7 +14,6 @@ const BRICK_ATLAS_SIZE = 8.0 / SDF_RESOLUTION;
 const PIXEL_WORLD_SIZE_QUARTER = PIXEL_WORLD_SIZE / 2;
 const SQRT_3 = 1.73205080757;
 const BRICK_COUNT = u32(SDF_RESOLUTION / 10.0);
-const PACKED_LIST_SIZE : u32 = (MAX_EDITS_PER_EVALUATION / 4);
 const TOTAL_BRICK_COUNT = BRICK_COUNT * BRICK_COUNT * BRICK_COUNT;
 
 const OCTREE_TILE_INDEX_MASK = 0x3FFFFFFFu;
@@ -254,8 +252,8 @@ fn culling_stroke_get_edit_start_and_count(culling_data : u32, stroke_list : ptr
 
 fn culling_get_culling_data(stroke_pointer : u32, edit_start : u32, edit_count : u32) -> u32 {
     var result : u32 = stroke_pointer << 16;
-    result |= (edit_start & 0xFFu) << 8;
-    result |= (edit_count & 0xFFu);
+    // result |= (edit_start & 0xFFu) << 8;
+    // result |= (edit_count & 0xFFu);
 
     return result;
 }

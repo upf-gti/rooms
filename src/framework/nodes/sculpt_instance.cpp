@@ -62,17 +62,19 @@ void SculptInstance::parse(std::ifstream& binary_scene_file)
     sSculptBinaryHeader header;
     binary_scene_file.read(reinterpret_cast<char*>(&header), sizeof(sSculptBinaryHeader));
 
+    RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
+
     if (header.stroke_count > 0u) {
         stroke_history.resize(header.stroke_count);
         binary_scene_file.read(reinterpret_cast<char*>(&stroke_history[0]), header.stroke_count * sizeof(Stroke));
+        rooms_renderer->get_raymarching_renderer()->create_sculpt_from_history(this, stroke_history);
+    } else {
+        sculpt_gpu_data = rooms_renderer->get_raymarching_renderer()->create_new_sculpt();
     }
 
-    RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
-    rooms_renderer->get_raymarching_renderer()->create_sculpt_from_history(this, stroke_history);
     rooms_renderer->get_raymarching_renderer()->add_sculpt_instance(this);
 
     // TODO: Remove current
     //rooms_renderer->get_raymarching_renderer()->set_current_sculpt(this);
-
     rooms_renderer->toogle_frame_debug();
 }

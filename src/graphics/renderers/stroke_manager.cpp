@@ -8,7 +8,7 @@
 void StrokeManager::init() {
     result_to_compute.set_defaults();
 
-    edit_list.resize(EDIT_BUFFER_INITAL_SIZE);
+    edit_list.resize(EDIT_BUFFER_INITIAL_SIZE);
     result_to_compute.in_frame_influence.strokes.resize(STROKE_CONTEXT_INTIAL_SIZE);
 }
 
