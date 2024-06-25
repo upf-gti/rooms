@@ -221,7 +221,7 @@ AABB Stroke::get_edit_world_AABB(const uint8_t edit_index) const
 AABB Stroke::get_world_AABB() const
 {
     AABB world_aabb;
-    for (uint8_t i = 0u; i < edit_count; i++) {
+    for (uint16_t i = 0u; i < edit_count; i++) {
         AABB aabb = get_edit_world_AABB(i);
         world_aabb = merge_aabbs(world_aabb, aabb);
     }
