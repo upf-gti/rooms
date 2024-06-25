@@ -153,13 +153,15 @@ sToComputeStrokeData* StrokeManager::redo() {
         redo_pop_count_from_history = 1u;
         strokes_to_redo_count = 1u;
         result_to_compute.in_frame_stroke_aabb = redo_history[0u].get_world_AABB();
+
+        add_stroke_to_upload_list(result_to_compute.in_frame_influence, redo_history[0u]);
+
     } else {
         // Get the last edit to redo, and compute the AABB
         for (; strokes_to_redo_count > 0u;) {
             Stroke& curr_stroke = redo_history[strokes_to_redo_count - 1u];
 
             if (united_stroke_idx != curr_stroke.stroke_id) {
-                strokes_to_redo_count++;
                 break;
             }
 
@@ -167,12 +169,13 @@ sToComputeStrokeData* StrokeManager::redo() {
             redo_pop_count_from_history++;
             strokes_to_redo_count--;
             result_to_compute.in_frame_stroke_aabb = merge_aabbs(result_to_compute.in_frame_stroke_aabb, curr_stroke.get_world_AABB());
+
+            add_stroke_to_upload_list(result_to_compute.in_frame_influence, redo_history[strokes_to_redo_count]);
         }
     }
     
     spdlog::info("redo size: {}, to pop {}", redo_history.size(), redo_pop_count_from_history);
 
-    add_stroke_to_upload_list(result_to_compute.in_frame_influence, redo_history[strokes_to_redo_count - 1u]);
 
     result_to_compute.in_frame_influence.eval_aabb_min = result_to_compute.in_frame_stroke_aabb.center - result_to_compute.in_frame_stroke_aabb.half_size;
     result_to_compute.in_frame_influence.eval_aabb_max = result_to_compute.in_frame_stroke_aabb.center + result_to_compute.in_frame_stroke_aabb.half_size;
