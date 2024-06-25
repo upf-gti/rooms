@@ -658,9 +658,9 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
         // Index buffer for the sculpt instances and their model matrices
         // TODO: create big buffer only once
         uint32_t buffer_size = sculpt_count + sculpt_instances_list.size() * sculpt_instances_list.size();
-        uint32_t* buffer = new uint32_t[buffer_size];
+        //uint32_t* buffer = new uint32_t[buffer_size];
 
-        memset(buffer, 0, sizeof(uint32_t) * buffer_size);
+        //memset(buffer, 0, sizeof(uint32_t) * buffer_size);
         glm::mat4* matrices_list = new glm::mat4[sculpt_instances_list.size()];
 
         const uint32_t sculpt_instances_count = sculpt_instances_list.size();
@@ -673,9 +673,9 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
         for (uint32_t i = 0u; i < sculpt_instances_list.size(); i++) {
             uint32_t octree_id = sculpt_instances_list[i]->get_octree_id();
 
-            matrices_list[i] = sculpt_instances_list[i]->get_model();
+            matrices_list[octree_id] = sculpt_instances_list[i]->get_model();
 
-            if (sculpt_instances_list[i] == current_sculpt) {
+            /*if (sculpt_instances_list[i] == current_sculpt) {
                 preview_stroke.current_sculpt_idx = i;
             }
 
@@ -683,15 +683,15 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
             uint32_t instances_index = buffer[octree_id] & 0xFFFFF;
 
             buffer[(octree_id * sculpt_instances_count) + sculpt_count + number_of_instances] = i;
-            buffer[octree_id] = ((number_of_instances + 1) << 20) | ((octree_id * sculpt_instances_count) + sculpt_count);
+            buffer[octree_id] = ((number_of_instances + 1) << 20) | ((octree_id * sculpt_instances_count) + sculpt_count);*/
         }
 
         webgpu_context->update_buffer(std::get<WGPUBuffer>(preview_stroke_uniform.data), 0u, &(preview_stroke.current_sculpt_idx), sizeof(uint32_t));
-        webgpu_context->update_buffer(std::get<WGPUBuffer>(sculpt_instances_buffer_uniform.data), 0u, buffer, sizeof(uint32_t) * buffer_size);
+        //webgpu_context->update_buffer(std::get<WGPUBuffer>(sculpt_instances_buffer_uniform.data), 0u, buffer, sizeof(uint32_t) * buffer_size);
         webgpu_context->update_buffer(std::get<WGPUBuffer>(sculpt_model_buffer_uniform.data), 0u, matrices_list, sizeof(glm::mat4) * sculpt_instances_count);
 
         delete[] matrices_list;
-        delete[] buffer;
+        //delete[] buffer;
     }
 
 #ifndef NDEBUG

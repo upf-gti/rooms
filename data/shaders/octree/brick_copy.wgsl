@@ -42,16 +42,21 @@ fn compute(@builtin(workgroup_id) id: vec3<u32>, @builtin(local_invocation_index
     let current_instance_in_use_flag : u32 = brick_buffers.brick_instance_data[current_instance_index].in_use;
     let current_octree_index : u32 = brick_buffers.brick_instance_data[current_instance_index].octree_id;
 
+    let tmp = sculpt_instances_buffer[0];
+
     if ((current_instance_in_use_flag & BRICK_IN_USE_FLAG) == BRICK_IN_USE_FLAG
      && (current_instance_in_use_flag & BRICK_HIDE_FLAG) == 0)
     {
-        let raw_instance_data : u32 = sculpt_instances_buffer[current_octree_index];
-        let sculpt_instance_count : u32 = (raw_instance_data) >> 20u;
-        let model_buffer_starting_index : u32 = (raw_instance_data & 0xFFFFF);
+        // let raw_instance_data : u32 = sculpt_instances_buffer[current_octree_index];
+        // let sculpt_instance_count : u32 = (raw_instance_data) >> 20u;
+        // let model_buffer_starting_index : u32 = (raw_instance_data & 0xFFFFF);
 
-        for(var i : u32 = 0u; i < sculpt_instance_count; i++) {
-            let prev_value : u32 = atomicAdd(&brick_buffers.brick_instance_counter, 1u);
-            brick_copy_buffer[prev_value] = get_buffer_index(current_instance_index, sculpt_instances_buffer[model_buffer_starting_index + i]);
-        }
+        let prev_value : u32 = atomicAdd(&brick_buffers.brick_instance_counter, 1u);
+        brick_copy_buffer[prev_value] = get_buffer_index(current_instance_index, current_octree_index);
+
+        // for(var i : u32 = 0u; i < sculpt_instance_count; i++) {
+        //     let prev_value : u32 = atomicAdd(&brick_buffers.brick_instance_counter, 1u);
+        //     brick_copy_buffer[prev_value] = get_buffer_index(current_instance_index, sculpt_instances_buffer[model_buffer_starting_index + i]);
+        // }
     }
 }
