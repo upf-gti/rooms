@@ -221,8 +221,8 @@ void SceneEditor::init_ui()
 
     // ** Undo/Redo scene **
     {
-        first_row->add_child(new ui::TextureButton2D("scene_undo", "data/textures/undo.png"));
-        first_row->add_child(new ui::TextureButton2D("scene_redo", "data/textures/redo.png"));
+        // first_row->add_child(new ui::TextureButton2D("scene_undo", "data/textures/undo.png"));
+        // first_row->add_child(new ui::TextureButton2D("scene_redo", "data/textures/redo.png"));
     }
 
     // ** Clone node **
@@ -232,7 +232,7 @@ void SceneEditor::init_ui()
     {
         ui::ButtonSubmenu2D* add_node_submenu = new ui::ButtonSubmenu2D("add_node", "data/textures/add.png");
 
-        add_node_submenu->add_child(new ui::TextureButton2D("gltf", "data/textures/monkey.png"));
+        // add_node_submenu->add_child(new ui::TextureButton2D("gltf", "data/textures/monkey.png"));
         add_node_submenu->add_child(new ui::TextureButton2D("sculpt", "data/textures/sculpt.png"));
 
         // Lights
@@ -271,8 +271,8 @@ void SceneEditor::init_ui()
 
     // ** Import/Export scene **
     {
-        second_row->add_child(new ui::TextureButton2D("import", "data/textures/import.png"));
-        second_row->add_child(new ui::TextureButton2D("export", "data/textures/export.png"));
+        second_row->add_child(new ui::TextureButton2D("load", "data/textures/load.png"));
+        second_row->add_child(new ui::TextureButton2D("save", "data/textures/save.png"));
     }
 
     // Create inspection panel (Nodes, properties, etc)
@@ -390,8 +390,8 @@ void SceneEditor::bind_events()
             exports_dirty = true;
         };
 
-        Node::bind("export", [fn = callback](const std::string& signal, void* button) { ui::Keyboard::request(fn, "unnamed"); });
-        Node::bind("import", [&](const std::string& signal, void* button) { inspect_exports(true); });
+        Node::bind("save", [fn = callback](const std::string& signal, void* button) { ui::Keyboard::request(fn, "unnamed"); });
+        Node::bind("load", [&](const std::string& signal, void* button) { inspect_exports(true); });
     }
 }
 
@@ -593,7 +593,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
 
     if (flags & NODE_EDIT) {
         std::string signal = node_name + std::to_string(node_signal_uid++) + "_edit";
-        inspector->add_button(signal, "data/textures/tool_wrench.png");
+        inspector->add_button(signal, "data/textures/edit.png");
 
         Node::bind(signal, [&, n = node, flags = flags](const std::string& sg, void* data) {
 
@@ -720,7 +720,7 @@ void SceneEditor::inspect_exports(bool force)
         inspector->same_line();
 
         std::string signal = name + std::to_string(node_signal_uid++) + "_load";
-        inspector->add_button(signal, "data/textures/import.png");
+        inspector->add_button(signal, "data/textures/load.png");
         Node::bind(signal, [&, str = full_name](const std::string& sg, void* data) {
             selected_node = nullptr;
             static_cast<RoomsEngine*>(RoomsEngine::instance)->set_main_scene(str);
