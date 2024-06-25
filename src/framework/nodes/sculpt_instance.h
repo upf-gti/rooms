@@ -56,6 +56,8 @@ public:
 
     void initialize();
 
+    void from_history(const std::vector<Stroke>& new_history);
+
     virtual void serialize(std::ofstream& binary_scene_file);
     virtual void parse(std::ifstream& binary_scene_file);
 };

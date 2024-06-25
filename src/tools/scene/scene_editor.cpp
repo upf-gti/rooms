@@ -95,6 +95,13 @@ void SceneEditor::update(float delta_time)
         }
     }
 
+    else if (cloning_node) {
+
+        if (Input::was_trigger_pressed(HAND_RIGHT) || Input::was_key_pressed(GLFW_KEY_SPACE)) {
+            clone_node(selected_node);
+        }
+    }
+
     if (Input::was_button_pressed(XR_BUTTON_B)) {
 
         inspector_from_scene(true);
@@ -226,7 +233,7 @@ void SceneEditor::init_ui()
     }
 
     // ** Clone node **
-    // first_row->add_child(new ui::TextureButton2D("clone", "data/textures/clone.png", ui::DISABLED));
+    first_row->add_child(new ui::TextureButton2D("clone", "data/textures/clone.png", ui::ALLOW_TOGGLE));
 
     // ** Posible scene nodes **
     {
@@ -375,7 +382,7 @@ void SceneEditor::bind_events()
         });
     }
 
-    Node::bind("clone", [&](const std::string& signal, void* button) { clone_node(); });
+    Node::bind("clone", [&](const std::string& signal, void* button) { cloning_node = !cloning_node; });
 
     // Gizmo events
 
@@ -407,13 +414,45 @@ void SceneEditor::select_node(Node* node, bool place)
     }
 }
 
-void SceneEditor::clone_node()
+void SceneEditor::clone_node(Node* node, bool copy)
 {
     if (!selected_node) {
         return;
     }
 
-    // selected_node.clone() ?
+    SculptInstance* current_sculpt = dynamic_cast<SculptInstance*>(node);
+
+    // Only clone sculpt nodes by now
+    if (current_sculpt == nullptr) {
+        return;
+    }
+
+    SculptInstance* new_sculpt = nullptr;
+
+    // raw copy, everything is recreated
+    if (copy) {
+        new_sculpt = new SculptInstance();
+        new_sculpt->from_history(current_sculpt->get_stroke_history());
+    }
+
+    // instance copy, it should have different model, but uses same octree, etc.
+    else {
+        new_sculpt = new SculptInstance(current_sculpt);
+    }
+
+    new_sculpt->set_position(Input::get_controller_position(HAND_RIGHT, POSE_AIM));
+
+    RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
+    rooms_renderer->toogle_frame_debug();
+    rooms_renderer->get_raymarching_renderer()->set_current_sculpt(new_sculpt);
+
+    // Add to scene and select as current
+    main_scene->add_node(new_sculpt);
+    select_node(new_sculpt);
+    inspector_dirty = true;
+
+    Node::emit_signal("clone@pressed", (void*)nullptr);
+    cloning_node = false;
 }
 
 void SceneEditor::create_light_node(uint8_t type)

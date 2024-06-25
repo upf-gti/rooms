@@ -40,6 +40,15 @@ void SculptInstance::initialize()
     dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->add_sculpt_instance(this);
 }
 
+void SculptInstance::from_history(const std::vector<Stroke>& new_history)
+{
+    stroke_history = new_history;
+
+    RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
+    rooms_renderer->get_raymarching_renderer()->create_sculpt_from_history(this, stroke_history);
+    rooms_renderer->get_raymarching_renderer()->add_sculpt_instance(this);
+}
+
 void SculptInstance::serialize(std::ofstream& binary_scene_file)
 {
     Node3D::serialize(binary_scene_file);
