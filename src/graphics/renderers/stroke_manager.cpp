@@ -303,6 +303,9 @@ void StrokeManager::change_stroke(const StrokeParameters& params, const uint32_t
 }
 
 sToComputeStrokeData* StrokeManager::new_history_add(std::vector<Stroke>* new_history) {
+    result_to_compute.set_defaults();
+    edit_list_count = 0u;
+
     history = new_history;
 
     current_stroke.stroke_id = history->back().stroke_id + 1;
@@ -312,7 +315,6 @@ sToComputeStrokeData* StrokeManager::new_history_add(std::vector<Stroke>* new_hi
 
     pop_count_from_history = 0;
     redo_pop_count_from_history = 0;
-    edit_list_count = 0u;
 
     AABB base_aabb = {};
     for (uint32_t i = 0u; i < history->size(); i++) {
