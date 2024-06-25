@@ -14,6 +14,7 @@
 
 #define MAX_EDITS_PER_EVALUATION 64
 #define MAX_EDITS_PER_SPLINE 255u
+
 enum sdPrimitive : uint32_t {
 	SD_SPHERE = 0,
 	SD_BOX,
@@ -124,7 +125,7 @@ struct Stroke {
 
     Edit    edits[MAX_EDITS_PER_EVALUATION] = {};
 
-    AABB get_edit_world_AABB(const uint8_t edit_index) const;
+    AABB get_edit_world_AABB(const uint16_t edit_index) const;
     AABB get_world_AABB() const;
     void get_AABB_intersecting_stroke(const AABB intersection_area, Stroke& resulting_stroke, const uint32_t item_to_exclude = 0u) const;
 };

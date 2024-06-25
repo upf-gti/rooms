@@ -145,7 +145,7 @@ class RaymarchingRenderer {
 
     // Stroke culling data
     Uniform         stroke_culling_data;
-    uint32_t        max_stroke_influence_count = 200u;
+    uint32_t        max_stroke_influence_count = 100u;
 
     Uniform         ray_info_uniform;
     Uniform         ray_intersection_info_uniform;

@@ -76,6 +76,8 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
     Shader::set_custom_define("OCTREE_TOTAL_SIZE", octree_total_size);
     Shader::set_custom_define("PREVIEW_PROXY_BRICKS_COUNT", PREVIEW_PROXY_BRICKS_COUNT);
     Shader::set_custom_define("BRICK_REMOVAL_COUNT", empty_brick_and_removal_buffer_count);
+    Shader::set_custom_define("MAX_SUBDIVISION_SIZE", last_octree_level_size);
+    Shader::set_custom_define("MAX_STROKE_INFLUENCE_COUNT", max_stroke_influence_count);
 
     brick_world_size = (SCULPT_MAX_SIZE / octree_space_scale) * 8.0f;
 
@@ -856,7 +858,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_stroke_context.data), 0, &default_val, sizeof(uint32_t));
 
         // Culling list
-        uint32_t culling_size = sizeof(uint32_t) * (2u * max_brick_count * max_stroke_influence_count);
+        uint32_t culling_size = sizeof(uint32_t) * (2u * last_octree_level_size * max_stroke_influence_count);
         stroke_culling_data.data = webgpu_context->create_buffer(culling_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "stroke_culling_data");
         stroke_culling_data.binding = 9;
         stroke_culling_data.buffer_size = culling_size;

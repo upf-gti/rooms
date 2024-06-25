@@ -245,8 +245,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     let parent_octree_index : u32 = parent_octant_id + u32((pow(8.0, f32(parent_level)) - 1) / 7);
 
     // Culling list indices
-    let curr_culling_layer_index = (octant_id + (level % 2) * BRICK_COUNT) * stroke_history.count;
-    let prev_culling_layer_index = (parent_octant_id + (parent_level % 2) * BRICK_COUNT) * stroke_history.count;
+    let curr_culling_layer_index = octant_id * stroke_history.count + (level % 2) * MAX_SUBDIVISION_SIZE * stroke_history.count;
+    let prev_culling_layer_index = parent_octant_id * stroke_history.count + (parent_level % 2) * MAX_SUBDIVISION_SIZE * stroke_history.count;
 
     var octant_center : vec3f = vec3f(0.0);
     var level_half_size : f32 = 0.5 * SCULPT_MAX_SIZE;
@@ -364,6 +364,11 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
                 }
             }
+
+            // for(var i : u32 = 0u; i < stroke_history.count; i++) {
+            //         surface_interval = evaluate_stroke_interval(current_subdivision_interval, &(stroke_history.strokes[i]), &edit_list, surface_interval, octant_center, level_half_size);
+            // }
+
             octree.data[octree_index].stroke_count = curr_stroke_count;
             octree.data[octree_index].culling_id = curr_culling_layer_index;
 

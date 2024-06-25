@@ -209,7 +209,7 @@ AABB extern_get_edit_world_AABB(const Edit &edit, const sdPrimitive primitive, c
     return { aabb_center, edit_half_size };
 }
 
-AABB Stroke::get_edit_world_AABB(const uint8_t edit_index) const
+AABB Stroke::get_edit_world_AABB(const uint16_t edit_index) const
 {
     const Edit& edit = edits[edit_index];
 

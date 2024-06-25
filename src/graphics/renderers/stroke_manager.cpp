@@ -197,7 +197,7 @@ sToComputeStrokeData* StrokeManager::add(std::vector<Edit> new_edits) {
     result_to_compute.set_defaults();
 
     // Add new edits to the current stroke and the in_frame_stroke
-    for (uint8_t i = 0u; i < new_edits.size(); i++) {
+    for (uint16_t i = 0u; i < new_edits.size(); i++) {
         in_frame_stroke.edits[in_frame_stroke.edit_count++] = new_edits[i];
     }
 
@@ -211,7 +211,7 @@ sToComputeStrokeData* StrokeManager::add(std::vector<Edit> new_edits) {
 
     add_stroke_to_upload_list(result_to_compute.in_frame_influence, in_frame_stroke);
 
-    for (uint8_t i = 0u; i < new_edits.size(); i++) {
+    for (uint16_t i = 0u; i < new_edits.size(); i++) {
         // if exceeds the maximun number of edits per stroke, store the current to the history
         // and add them to a new one, with the same ID
         if (current_stroke.edit_count == MAX_EDITS_PER_EVALUATION) {

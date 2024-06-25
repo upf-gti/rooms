@@ -26,7 +26,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u)
     octant_usage_write_0[0] = 0;
     octant_usage_write_1[0] = 0;
 
-    // TODO(Juan): Noe snecessairo ahora estos atomicstroe sustituir por store normal
+    // TODO(Juan): No es necesario ahora estos atomicstroe sustituir por store normal
     atomicStore(&octree.current_level, 0);
     atomicStore(&octree.atomic_counter, 0);
 
@@ -43,7 +43,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u)
 
         // Store the culling data of the first level
         for(var i = 0u; i < stroke_history.count; i++){
-            stroke_culling[i] = culling_get_culling_data(i, 0u, 0u);
+            stroke_culling[i] = culling_get_culling_data(i, 0, stroke_history.strokes[i].edit_count);
         }
         octree.data[0].stroke_count = stroke_history.count;
     }
