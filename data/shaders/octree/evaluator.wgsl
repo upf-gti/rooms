@@ -428,7 +428,9 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             let in_surface : bool = prev_interval.x < 0.0 && prev_interval.y > 0.0;
             let outside_surface : bool = prev_interval.x > 0.0 && prev_interval.y > 0.0;
 
-            if (int_distance > 0.0001) {
+            let is_paint : bool = preview_stroke.stroke.operation == OP_SMOOTH_PAINT;
+
+            if (int_distance > 0.0001 || is_paint) {
                 // Compute edit margin for preview evaluation
                 var edit_index_start : u32 = 1000u;
                 var edit_count : u32 = 0u;
@@ -454,7 +456,9 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                     }
                 }
 
-                if (in_surface_with_preview) {
+                if (is_paint || is_current_brick_filled) {
+                    brick_mark_as_preview(octree_index, edit_index_start, edit_count);
+                } else if (in_surface_with_preview) {
                     if (fully_inside_surface) {
                         preview_brick_create(octree_index, octant_center, true, edit_index_start, edit_count);
                     } else if (in_surface && is_current_brick_filled) {
