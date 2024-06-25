@@ -440,7 +440,13 @@ void SceneEditor::clone_node(Node* node, bool copy)
         new_sculpt = new SculptInstance(current_sculpt);
     }
 
-    new_sculpt->set_position(Input::get_controller_position(HAND_RIGHT, POSE_AIM));
+    new_sculpt->set_transform(current_sculpt->get_transform());
+    new_sculpt->set_name(current_sculpt->get_name() + "_copy");
+
+    // This should be used once we have the stuff to parent nodes
+    //if (renderer->get_openxr_available()) {
+    //    new_sculpt->set_position(Input::get_controller_position(HAND_RIGHT, POSE_AIM));
+    //}
 
     RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
     rooms_renderer->toogle_frame_debug();
