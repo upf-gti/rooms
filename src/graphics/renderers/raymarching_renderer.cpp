@@ -339,17 +339,17 @@ void RaymarchingRenderer::compute_preview_edit(WGPUComputePassEncoder compute_pa
         prev_stroke_uniform_2.data = preview_stroke_uniform.data;
         prev_stroke_uniform_2.buffer_size = preview_stroke_uniform.buffer_size;
 
-        std::vector<Uniform*> uniforms = { &linear_sampler_uniform, &sdf_texture_uniform, &octree_brick_buffers, &octree_brick_copy_buffer, &sdf_material_texture_uniform, &prev_stroke_uniform_2 };
+        std::vector<Uniform*> uniforms = { &sculpt_model_buffer_uniform, &linear_sampler_uniform, &sdf_texture_uniform, &octree_brick_buffers, &octree_brick_copy_buffer, &sdf_material_texture_uniform, &prev_stroke_uniform_2 };
         wgpuBindGroupRelease(render_proxy_geometry_bind_group);
         render_proxy_geometry_bind_group = webgpu_context->create_bind_group(uniforms, render_proxy_shader, 0);
 
-        uniforms = { /*&sculpt_data_uniform,*/ &prev_stroke_uniform_2, &octree_brick_buffers };
+        uniforms = { &sculpt_model_buffer_uniform, &prev_stroke_uniform_2, &octree_brick_buffers };
         wgpuBindGroupRelease(sculpt_data_bind_preview_group);
         sculpt_data_bind_preview_group = webgpu_context->create_bind_group(uniforms, render_preview_proxy_shader, 1);
 
         uniforms = { &preview_stroke_uniform };
         wgpuBindGroupRelease(preview_stroke_bind_group);
-        preview_stroke_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_evaluate_shader, 2);
+        preview_stroke_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_evaluate_shader, 3);
     }
 
     // Upload preview data, first the stoke and tehn the edit list, since we are storing it in a vector
