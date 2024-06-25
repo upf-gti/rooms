@@ -4,8 +4,8 @@
 
 #include <vector>
 
-#define EDIT_BUFFER_INITIAL_SIZE 256u
-#define EDIT_BUFFER_INCREASE 256u
+#define EDIT_BUFFER_INITIAL_SIZE 512u
+#define EDIT_BUFFER_INCREASE 512u
 #define STROKE_CONTEXT_INTIAL_SIZE 100u
 #define STROKE_CONTEXT_INCREASE 100u
 #define AREA_MAX_EVALUATION_SIZE  (1.0f / 4.0f)
@@ -53,9 +53,6 @@ struct sToComputeStrokeData {
 
 
 struct StrokeManager {
-    Stroke in_frame_stroke = {
-        .stroke_id = 0u
-    };
     Stroke current_stroke = {};
 
     std::vector<Stroke>* history = nullptr;
