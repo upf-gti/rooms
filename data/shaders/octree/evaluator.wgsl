@@ -433,7 +433,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             if (int_distance > 0.0001 || is_paint) {
                 // Compute edit margin for preview evaluation
                 var edit_index_start : u32 = 1000u;
-                var edit_count : u32 = 0u;
+                var edit_index_end : u32 = 0u;
                 let starting_edit_pos : u32 = preview_stroke.stroke.edit_list_index;
 
                 let aabb_half_size : mat4x3f = get_loose_half_size_mat(preview_stroke.stroke.primitive);
@@ -442,7 +442,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
                 for(var i : u32 = 0u; i < preview_stroke.stroke.edit_count; i++) {
                     // WIP get AABB of current edit
-                    let edit_pointer : ptr<storage, Edit> = &(preview_stroke.edit_list[i + starting_edit_pos]);
+                    let current_idx : u32 = i + starting_edit_pos;
+                    let edit_pointer : ptr<storage, Edit> = &(preview_stroke.edit_list[current_idx]);
 
                     let half_size : vec3f = (aabb_half_size * edit_pointer.dimensions) + smooth_margin;
                     let position : vec3f = (edit_pointer.position);
@@ -451,12 +452,14 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                     let aabb_max : vec3f = position + half_size;
 
                     if (intersection_AABB_AABB(aabb_min, aabb_max, eval_aabb_min, eval_aabb_max)) {
-                        edit_index_start = min(edit_index_start, i + starting_edit_pos);
-                        edit_count = max(edit_count, i+1);
+                        edit_index_start = min(edit_index_start, current_idx);
+                        edit_index_end = max(edit_index_end, current_idx + 1u);
                     }
                 }
 
-                if (is_paint || is_current_brick_filled) {
+                let edit_count : u32 = edit_index_end - edit_index_start;
+
+                if (is_paint && is_current_brick_filled) {
                     brick_mark_as_preview(octree_index, edit_index_start, edit_count);
                 } else if (in_surface_with_preview) {
                     if (fully_inside_surface) {
