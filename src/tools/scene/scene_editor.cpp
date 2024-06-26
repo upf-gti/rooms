@@ -592,7 +592,7 @@ bool SceneEditor::is_rotation_being_used()
 void SceneEditor::update_node_rotation()
 {
     // Do not rotate sculpt if shift -> we might be rotating the edit
-    if (is_rotation_being_used() && !is_shift_left_pressed) {
+    if (selected_node && is_rotation_being_used() && !is_shift_left_pressed) {
 
         glm::quat current_hand_rotation = (Input::get_controller_rotation(HAND_LEFT));
         glm::vec3 current_hand_translation = Input::get_controller_position(HAND_LEFT);

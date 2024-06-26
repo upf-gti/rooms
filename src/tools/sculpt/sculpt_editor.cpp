@@ -751,34 +751,34 @@ void SculptEditor::update_sculpt_rotation()
 
 void SculptEditor::update_edit_rotation()
 {
-    //// Rotate edit only if pressing shift
-    //if (is_rotation_being_used() && is_shift_left_pressed) {
+    // Rotate edit only if pressing shift
+    if (is_rotation_being_used() && is_shift_left_pressed) {
 
-    //    glm::quat current_hand_rotation = glm::inverse(Input::get_controller_rotation(HAND_LEFT));
-    //    glm::vec3 current_hand_translation = Input::get_controller_position(HAND_LEFT);
+        glm::quat current_hand_rotation = glm::inverse(Input::get_controller_rotation(HAND_LEFT));
+        glm::vec3 current_hand_translation = Input::get_controller_position(HAND_LEFT);
 
-    //    if (!rotation_started) {
-    //        last_hand_rotation = current_hand_rotation;
-    //        last_hand_translation = current_hand_translation;
-    //    }
+        if (!edit_rotation_started) {
+            last_hand_rotation = current_hand_rotation;
+            last_hand_translation = current_hand_translation;
+        }
 
-    //    edit_rotation_diff = glm::inverse(last_hand_rotation) * current_hand_rotation;
-    //    rotation_started = true;
-    //}
+        edit_rotation_diff = current_hand_rotation * glm::inverse(last_hand_rotation);
+        edit_rotation_started = true;
+    }
 
-    //// If rotation has stopped
-    //else if (rotation_started && is_shift_left_pressed) {
-    //    edit_user_rotation = edit_user_rotation * edit_rotation_diff;
-    //    edit_rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
-    //    rotation_started = false;
+    // If rotation has stopped
+    else if (edit_rotation_started) {
+        edit_user_rotation = edit_user_rotation * edit_rotation_diff;
+        edit_rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
+        edit_rotation_started = false;
 
-    //    sdPrimitive primitive = stroke_parameters.get_primitive();
+        sdPrimitive primitive = stroke_parameters.get_primitive();
 
-    //    primitive_default_states[primitive].rotation = edit_user_rotation;
-    //}
+        primitive_default_states[primitive].rotation = edit_user_rotation;
+    }
 
-    //glm::quat tmp_rotation = glm::inverse(edit_user_rotation * edit_rotation_diff);
-    //edit_to_add.rotation = glm::conjugate(tmp_rotation) * edit_to_add.rotation;
+    glm::quat tmp_rotation = glm::inverse(edit_user_rotation * edit_rotation_diff);
+    edit_to_add.rotation = glm::conjugate(tmp_rotation) * edit_to_add.rotation;
 }
 
 void SculptEditor::undo()

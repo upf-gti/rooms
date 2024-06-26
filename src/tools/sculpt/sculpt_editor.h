@@ -84,6 +84,7 @@ class SculptEditor : public BaseEditor {
     bool force_new_stroke       = false;
     bool stamp_enabled          = false;
     bool rotation_started       = false;
+    bool edit_rotation_started  = false;
     bool snap_to_surface        = false;
     bool is_picking_material    = false;
     bool was_material_picked    = false;
