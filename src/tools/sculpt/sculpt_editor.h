@@ -33,6 +33,7 @@ class SculptEditor : public BaseEditor {
 
     bool sculpt_started = false;
     bool was_tool_used = false;
+    bool was_tutorial_shown = false;
 
     eTool current_tool = eTool::NONE;
 

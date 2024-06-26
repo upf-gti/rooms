@@ -289,6 +289,11 @@ void RoomsEngine::set_current_sculpt(SculptInstance* sculpt_instance)
     sculpt_editor->set_current_sculpt(sculpt_instance);
 }
 
+void RoomsEngine::toggle_tutorial()
+{
+    tutorial_active = !tutorial_active;
+}
+
 void RoomsEngine::render_gui()
 {
     bool active = true;
