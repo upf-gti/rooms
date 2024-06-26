@@ -553,7 +553,7 @@ void SculptEditor::update(float delta_time)
         }
     }
 
-    update_scene_rotation();
+    update_sculpt_rotation();
 
     // Edit & Stroke submission
     {
@@ -713,7 +713,7 @@ glm::vec3 SculptEditor::texture3d_to_world(const glm::vec3& position)
     return pos_world_space;
 }
 
-void SculptEditor::update_scene_rotation()
+void SculptEditor::update_sculpt_rotation()
 {
     // Do not rotate sculpt if shift -> we might be rotating the edit
     if (is_rotation_being_used() && !is_shift_left_pressed) {

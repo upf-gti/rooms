@@ -184,7 +184,7 @@ class SculptEditor : public BaseEditor {
     glm::vec3 world_to_texture3d(const glm::vec3& position, bool skip_translation = false);
     glm::vec3 texture3d_to_world(const glm::vec3& position);
 
-    void update_scene_rotation();
+    void update_sculpt_rotation();
     void update_edit_rotation();
 
     void undo();

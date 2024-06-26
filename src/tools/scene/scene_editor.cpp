@@ -105,6 +105,8 @@ void SceneEditor::update(float delta_time)
 
     update_gizmo(delta_time);
 
+    update_node_rotation();
+
     BaseEditor::update(delta_time);
 
     if (renderer->get_openxr_available()) {
@@ -582,6 +584,45 @@ void SceneEditor::update_panel_transform()
     inspector_transform_dirty = false;
 }
 
+bool SceneEditor::is_rotation_being_used()
+{
+    return Input::get_trigger_value(HAND_LEFT) > 0.5;
+}
+
+void SceneEditor::update_node_rotation()
+{
+    // Do not rotate sculpt if shift -> we might be rotating the edit
+    if (is_rotation_being_used() && !is_shift_left_pressed) {
+
+        glm::quat current_hand_rotation = (Input::get_controller_rotation(HAND_LEFT));
+        glm::vec3 current_hand_translation = Input::get_controller_position(HAND_LEFT);
+
+        if (!rotation_started) {
+            last_hand_rotation = current_hand_rotation;
+            last_hand_translation = current_hand_translation;
+        }
+
+        glm::quat rotation_diff = (current_hand_rotation * glm::inverse(last_hand_rotation));
+        glm::vec3 translation_diff = current_hand_translation - last_hand_translation;
+
+        Node3D* node = static_cast<Node3D*>(selected_node);
+
+        node->rotate_world(rotation_diff);
+        node->translate(translation_diff);
+
+        rotation_started = true;
+
+        last_hand_rotation = current_hand_rotation;
+        last_hand_translation = current_hand_translation;
+    }
+    else {
+        // If rotation has stopped
+        if (rotation_started && !is_shift_left_pressed) {
+            rotation_started = false;
+        }
+    }
+}
+
 void SceneEditor::inspector_from_scene(bool force)
 {
     inspector->clear();
@@ -687,6 +728,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
 
             if (selected_node == n) {
                 selected_node = nullptr;
+                moving_node = false;
             }
 
             main_scene->remove_node(n);
