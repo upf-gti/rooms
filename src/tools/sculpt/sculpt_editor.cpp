@@ -826,25 +826,21 @@ void SculptEditor::render()
     if (axis_lock) {
         axis_lock_gizmo.render();
 
-        mirror_mesh->set_position(axis_lock_origin);
+        mirror_mesh->set_transform(Transform::identity());
+        mirror_mesh->translate(axis_lock_origin);
+
         if (axis_lock_mode & AXIS_LOCK_X)
             mirror_mesh->rotate(glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         else if (axis_lock_mode & AXIS_LOCK_Y)
             mirror_mesh->rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
-        // debug
-        if (Input::was_key_pressed(GLFW_KEY_X))
-            axis_lock_mode = AXIS_LOCK_X;
-        if (Input::was_key_pressed(GLFW_KEY_Y))
-            axis_lock_mode = AXIS_LOCK_Y;
-        if (Input::was_key_pressed(GLFW_KEY_Z))
-            axis_lock_mode = AXIS_LOCK_Z;
-
         mirror_mesh->render();
     }
     else if (use_mirror) {
         mirror_gizmo.render();
-        mirror_mesh->set_position(mirror_origin);
+
+        mirror_mesh->set_transform(Transform::identity());
+        mirror_mesh->translate(mirror_origin);
         mirror_mesh->scale(glm::vec3(0.25f));
         mirror_mesh->rotate(mirror_rotation);
         mirror_mesh->render();

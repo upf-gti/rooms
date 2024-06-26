@@ -655,31 +655,30 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
     // Get the number of sculpt instances and the model
     // TODO: we dont need to re-upload it each frame, inly when changed in hieraqui.. but the we need to detect changes
     {
+        const uint32_t sculpt_instances_count = sculpt_instances_list.size();
+
         // Index buffer for the sculpt instances and their model matrices
         // TODO: create big buffer only once
-        uint32_t buffer_size = sculpt_count + sculpt_instances_list.size() * sculpt_instances_list.size();
+        // uint32_t buffer_size = sculpt_count + sculpt_instances_list.size() * sculpt_instances_list.size();
         //uint32_t* buffer = new uint32_t[buffer_size];
 
         //memset(buffer, 0, sizeof(uint32_t) * buffer_size);
-        glm::mat4* matrices_list = new glm::mat4[sculpt_instances_list.size()];
-
-        const uint32_t sculpt_instances_count = sculpt_instances_list.size();
-
+        glm::mat4* matrices_list = new glm::mat4[sculpt_instances_count];
         RoomsEngine* engine_instance = static_cast<RoomsEngine*>(RoomsEngine::instance);
         SculptEditor* sculpt_editor = engine_instance->get_sculpt_editor();
         SculptInstance* current_sculpt = sculpt_editor->get_current_sculpt();
 
         uint32_t prev_start = 0u;
-        for (uint32_t i = 0u; i < sculpt_instances_list.size(); i++) {
+        for (uint32_t i = 0u; i < sculpt_instances_count; i++) {
             uint32_t octree_id = sculpt_instances_list[i]->get_octree_id();
 
             matrices_list[octree_id] = sculpt_instances_list[i]->get_model();
 
-            /*if (sculpt_instances_list[i] == current_sculpt) {
+            if (sculpt_instances_list[i] == current_sculpt) {
                 preview_stroke.current_sculpt_idx = i;
             }
 
-            uint32_t number_of_instances = buffer[octree_id] >> 20u;
+            /*uint32_t number_of_instances = buffer[octree_id] >> 20u;
             uint32_t instances_index = buffer[octree_id] & 0xFFFFF;
 
             buffer[(octree_id * sculpt_instances_count) + sculpt_count + number_of_instances] = i;
