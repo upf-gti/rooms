@@ -6,12 +6,16 @@ class RoomsRenderer;
 class Viewport3D;
 
 enum : uint8_t {
-    LAYOUT_SCULPT = 1 << 0,
-    LAYOUT_PAINT = 1 << 1,
-    LAYOUT_SPLINES = 1 << 2,
-    LAYOUT_SHIFT = 1 << 3,
+    LAYOUT_SCENE = 1 << 0,
+    LAYOUT_CLONE = 1 << 1,
+    LAYOUT_SCULPT = 1 << 2,
+    LAYOUT_PAINT = 1 << 3,
+    LAYOUT_SPLINES = 1 << 4,
+    LAYOUT_SHIFT = 1 << 5,
     LAYOUT_SCULPT_PAINT = LAYOUT_SCULPT | LAYOUT_PAINT,
-    LAYOUT_ANY = LAYOUT_SCULPT | LAYOUT_PAINT | LAYOUT_SPLINES,
+    LAYOUT_ANY = LAYOUT_SCENE | LAYOUT_SCULPT | LAYOUT_PAINT | LAYOUT_SPLINES,
+    LAYOUT_SCENE_SHIFT = LAYOUT_SCENE | LAYOUT_SHIFT,
+    LAYOUT_CLONE_SHIFT = LAYOUT_CLONE | LAYOUT_SHIFT,
     LAYOUT_SCULPT_SHIFT = LAYOUT_SCULPT | LAYOUT_SHIFT,
     LAYOUT_PAINT_SHIFT = LAYOUT_PAINT | LAYOUT_SHIFT,
     LAYOUT_SCULPT_PAINT_SHIFT = LAYOUT_SCULPT_PAINT | LAYOUT_SHIFT,
@@ -22,6 +26,9 @@ enum : uint8_t {
 
 class BaseEditor {
 protected:
+
+    bool is_shift_left_pressed = false;
+    bool is_shift_right_pressed = false;
 
     RoomsRenderer* renderer = nullptr;
 
@@ -38,6 +45,9 @@ protected:
     // Tutorial
     Node2D* xr_panel_2d = nullptr;
     Viewport3D* xr_panel_3d = nullptr;
+
+    void update_controller_flags(uint8_t current_layout);
+    bool should_render_label(uint8_t mask, uint8_t state);
 
 public:
 

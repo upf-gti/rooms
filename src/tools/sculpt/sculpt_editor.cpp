@@ -430,7 +430,12 @@ void SculptEditor::update(float delta_time)
 
     // Update controller UI
     if (renderer->get_openxr_available()) {
-        update_controller_flags();
+
+        // Create current button layout based on state
+        uint8_t current_layout = (current_tool == SCULPT) ? LAYOUT_SCULPT : LAYOUT_PAINT;
+        if (creating_spline) current_layout = LAYOUT_SPLINES;
+
+        update_controller_flags(current_layout);
     }
 
     preview_tmp_edits.clear();
@@ -1362,78 +1367,6 @@ void SculptEditor::init_ui()
 
     // Bind callbacks
     bind_events();
-}
-
-
-bool SculptEditor::should_render_label(uint8_t mask, uint8_t state)
-{
-    if (mask == LAYOUT_ALL) {
-        return true;
-    }
-
-    bool mask_shift = (mask & LAYOUT_SHIFT) == LAYOUT_SHIFT;
-    bool state_shift = (state & LAYOUT_SHIFT) == LAYOUT_SHIFT;
-
-    // Different shift requirements
-    if (mask_shift != state_shift) {
-        return false;
-    }
-
-    if (mask_shift) { mask ^= LAYOUT_SHIFT; }
-    if (state_shift) { state ^= LAYOUT_SHIFT; }
-
-    // With shifts removed, mask the rest of the flag requirements
-    return state & mask;
-}
-
-void SculptEditor::update_controller_flags()
-{
-    glm::mat4x4 m = glm::rotate(glm::mat4x4(1.0f), glm::radians(-120.f), glm::vec3(1.0f, 0.0f, 0.0f));
-    m = glm::translate(m, glm::vec3(0.02f, 0.0f, 0.02f));
-
-    glm::mat4x4 pose = Input::get_controller_pose(HAND_RIGHT);
-    right_hand_ui_3D->set_transform(Transform::mat4_to_transform(pose * m));
-
-    pose = Input::get_controller_pose(HAND_LEFT);
-    left_hand_ui_3D->set_transform(Transform::mat4_to_transform(pose * m));
-
-    is_shift_left_pressed = Input::is_grab_pressed(HAND_LEFT);
-    is_shift_right_pressed = Input::is_grab_pressed(HAND_RIGHT);
-
-    // Create current button layout based on state
-    uint8_t current_layout = (current_tool == SCULPT) ? LAYOUT_SCULPT : LAYOUT_PAINT;
-    if (creating_spline) current_layout = LAYOUT_SPLINES;
-
-    /*
-        Decide which buttons labels to render
-    */
-
-    // Left controller
-    bool space_dirty = false;
-    uint8_t l_layout = current_layout | (is_shift_left_pressed ? LAYOUT_SHIFT : 0);
-    for (auto label_ptr : left_hand_container->get_children()) {
-        ui::ImageLabel2D* label = dynamic_cast<ui::ImageLabel2D*>(label_ptr);
-        assert(label);
-        space_dirty |= label->set_visibility(should_render_label(label->get_mask(), l_layout));
-    }
-
-    if (space_dirty) {
-        left_hand_container->on_children_changed();
-    }
-
-    // Right controller
-
-    space_dirty = false;
-    uint8_t r_layout = current_layout | (is_shift_right_pressed ? LAYOUT_SHIFT : 0);
-    for (auto label_ptr : right_hand_container->get_children()) {
-        ui::ImageLabel2D* label = dynamic_cast<ui::ImageLabel2D*>(label_ptr);
-        assert(label);
-        space_dirty |= label->set_visibility(should_render_label(label->get_mask(), r_layout));
-    }
-
-    if (space_dirty) {
-        right_hand_container->on_children_changed();
-    }
 }
 
 void SculptEditor::bind_events()
