@@ -573,7 +573,7 @@ void SculptEditor::update(float delta_time)
 
             // Manage splines
             if (creating_spline && stamp_enabled) {
-                current_spline.add_knot( { edit_to_add.position, edit_to_add.dimensions.x } );
+                current_spline.add_knot( { edit_to_add.position, edit_to_add.dimensions } );
             }
             else {
                 new_edits.push_back(edit_to_add);
@@ -599,7 +599,7 @@ void SculptEditor::update(float delta_time)
             current_spline.for_each([&](const Knot& point) {
                 Edit edit;
                 edit.position = point.position;
-                edit.dimensions.x = point.size;
+                edit.dimensions = glm::vec4(point.size, 0.0f);
                 new_edits.push_back(edit);
             });
 
@@ -614,12 +614,12 @@ void SculptEditor::update(float delta_time)
 
         preview_spline = current_spline;
 
-        preview_spline.add_knot({ edit_to_add.position, edit_to_add.dimensions.x });
+        preview_spline.add_knot({ edit_to_add.position, edit_to_add.dimensions });
 
         preview_spline.for_each([&](const Knot& point) {
             Edit edit;
             edit.position = point.position;
-            edit.dimensions.x = point.size;
+            edit.dimensions = glm::vec4(point.size, 0.0f);
             preview_tmp_edits.push_back(edit);
         });
     }
