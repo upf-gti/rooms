@@ -96,18 +96,7 @@ void SceneEditor::update(float delta_time)
     }
 
     if (Input::was_button_pressed(XR_BUTTON_B)) {
-
         inspector_from_scene(true);
-
-        glm::mat4x4 m(1.0f);
-        glm::vec3 eye = renderer->get_camera_eye();
-        glm::vec3 new_pos = eye + renderer->get_camera_front() * 0.6f;
-
-        m = glm::translate(m, new_pos);
-        m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
-        m = glm::rotate(m, glm::radians(180.f), { 1.0f, 0.0f, 0.0f });
-
-        inspect_panel_3d->set_transform(Transform::mat4_to_transform(m));
     }
 
     if (Input::was_key_pressed(GLFW_KEY_I)) {
@@ -119,6 +108,11 @@ void SceneEditor::update(float delta_time)
     BaseEditor::update(delta_time);
 
     if (renderer->get_openxr_available()) {
+
+        if (inspector_transform_dirty) {
+            update_panel_transform();
+        }
+
         inspect_panel_3d->update(delta_time);
 
         // Create current button layout based on state
@@ -573,6 +567,21 @@ void SceneEditor::set_gizmo_scale()
     }
 }
 
+void SceneEditor::update_panel_transform()
+{
+    glm::mat4x4 m(1.0f);
+    glm::vec3 eye = renderer->get_camera_eye();
+    glm::vec3 new_pos = eye + renderer->get_camera_front() * 0.6f;
+
+    m = glm::translate(m, new_pos);
+    m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
+    m = glm::rotate(m, glm::radians(180.f), { 1.0f, 0.0f, 0.0f });
+
+    inspect_panel_3d->set_transform(Transform::mat4_to_transform(m));
+
+    inspector_transform_dirty = false;
+}
+
 void SceneEditor::inspector_from_scene(bool force)
 {
     inspector->clear();
@@ -580,11 +589,6 @@ void SceneEditor::inspector_from_scene(bool force)
     auto& nodes = main_scene->get_nodes();
 
     for (auto node : nodes) {
-
-        // Don't inspect specific stuff..
-        /*if (node->get_name() == "Grid") {
-            continue;
-        }*/
 
         if (dynamic_cast<Light3D*>(node)) {
             inspect_node(node, NODE_LIGHT);
@@ -605,6 +609,8 @@ void SceneEditor::inspector_from_scene(bool force)
     }
 
     inspector_dirty = false;
+
+    inspector_transform_dirty = !inspector->get_visibility();
 
     if (force) {
         inspector->set_visibility(true);
@@ -781,6 +787,8 @@ void SceneEditor::inspect_exports(bool force)
     if (renderer->get_openxr_available()) {
         inspector->remove_flag(MATERIAL_2D);
     }
+
+    inspector_transform_dirty = !inspector->get_visibility();
 
     if (force) {
         inspector->set_visibility(true);
