@@ -95,13 +95,6 @@ void SceneEditor::update(float delta_time)
         }
     }
 
-    else if (cloning_node) {
-
-        if (Input::was_trigger_pressed(HAND_RIGHT) || Input::was_key_pressed(GLFW_KEY_SPACE)) {
-            clone_node(selected_node);
-        }
-    }
-
     if (Input::was_button_pressed(XR_BUTTON_B)) {
 
         inspector_from_scene(true);
@@ -130,7 +123,7 @@ void SceneEditor::update(float delta_time)
 
         // Create current button layout based on state
         uint8_t current_layout = LAYOUT_SCENE;
-        if (cloning_node) current_layout = LAYOUT_CLONE;
+        if (moving_node) current_layout = LAYOUT_CLONE;
 
         update_controller_flags(current_layout);
     }
@@ -239,7 +232,7 @@ void SceneEditor::init_ui()
     }
 
     // ** Clone node **
-    first_row->add_child(new ui::TextureButton2D("clone", "data/textures/clone.png", ui::ALLOW_TOGGLE));
+    first_row->add_child(new ui::TextureButton2D("clone", "data/textures/clone.png"));
 
     // ** Posible scene nodes **
     {
@@ -333,7 +326,7 @@ void SceneEditor::init_ui()
             // right_hand_container->add_child(new ui::ImageLabel2D("Sculpt/Paint", "data/textures/buttons/r_grip_plus_b.png", LAYOUT_ANY_SHIFT_R, double_size));
             right_hand_container->add_child(new ui::ImageLabel2D("Select Node", "data/textures/buttons/a.png", LAYOUT_SCENE));
             // right_hand_container->add_child(new ui::ImageLabel2D("Pick Material", "data/textures/buttons/r_grip_plus_a.png", LAYOUT_ANY_SHIFT_R, double_size));
-            right_hand_container->add_child(new ui::ImageLabel2D("Make Copy", "data/textures/buttons/r_trigger.png", LAYOUT_CLONE));
+            right_hand_container->add_child(new ui::ImageLabel2D("Place Node", "data/textures/buttons/r_trigger.png", LAYOUT_CLONE));
             // right_hand_container->add_child(new ui::ImageLabel2D("Make Instance", "data/textures/buttons/r_grip_plus_r_trigger.png", LAYOUT_CLONE_SHIFT, double_size));
 
             right_hand_ui_3D = new Viewport3D(right_hand_container);
@@ -388,7 +381,7 @@ void SceneEditor::bind_events()
         });
     }
 
-    Node::bind("clone", [&](const std::string& signal, void* button) { cloning_node = !cloning_node; });
+    Node::bind("clone", [&](const std::string& signal, void* button) { clone_node(selected_node); });
 
     // Gizmo events
 
@@ -423,8 +416,6 @@ void SceneEditor::select_node(Node* node, bool place)
 void SceneEditor::clone_node(Node* node, bool copy)
 {
     if (!selected_node) {
-        Node::emit_signal("clone@pressed", (void*)nullptr);
-        cloning_node = false;
         return;
     }
 
@@ -464,9 +455,6 @@ void SceneEditor::clone_node(Node* node, bool copy)
     main_scene->add_node(new_sculpt);
     select_node(new_sculpt);
     inspector_dirty = true;
-
-    Node::emit_signal("clone@pressed", (void*)nullptr);
-    cloning_node = false;
 }
 
 void SceneEditor::create_light_node(uint8_t type)
