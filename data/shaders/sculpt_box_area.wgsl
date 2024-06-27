@@ -83,7 +83,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
         final_color = pow(final_color, vec3f(1.0 / 2.2));
     }
 
-    out.color = vec4f(final_color, color.a * factor);
+    out.color = vec4f(mix(vec3f(0.0), final_color, factor), max(color.a * factor, 0.1));
 
     return out;
 }

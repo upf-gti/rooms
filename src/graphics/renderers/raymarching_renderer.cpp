@@ -636,7 +636,7 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder, boo
     wgpuCommandEncoderCopyBufferToBuffer(command_encoder, std::get<WGPUBuffer>(octree_brick_buffers.data), 0,
         brick_buffers_counters_read_buffer, 0, sizeof(sBrickBuffers_counters));
 
-    AABB_mesh->render();
+    //AABB_mesh->render();
 
     stroke_manager.update();
 
