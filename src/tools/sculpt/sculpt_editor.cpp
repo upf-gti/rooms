@@ -161,7 +161,7 @@ void SculptEditor::clean()
 bool SculptEditor::is_tool_being_used(bool stamp_enabled)
 {
 #ifdef XR_SUPPORT
-    bool is_currently_pressed = !IO::any_hover() && Input::is_trigger_pressed(HAND_RIGHT);
+    bool is_currently_pressed = !is_something_hovered() && Input::is_trigger_pressed(HAND_RIGHT);
     is_released = is_tool_pressed && !is_currently_pressed;
 
     bool add_edit_with_tool = stamp_enabled ? is_released : is_currently_pressed;
@@ -1534,6 +1534,17 @@ void SculptEditor::add_recent_color(const Color& color)
         ui::Button2D* child = static_cast<ui::Button2D*>(color_picker->get_children()[i]);
         child->set_color(recent_colors[i]);
     }
+}
+
+bool SculptEditor::is_something_hovered()
+{
+    if (!IO::any_hover()) {
+        return false;
+    }
+
+    auto xr_panel = dynamic_cast<ui::XRPanel*>(IO::get_hover());
+
+    return !xr_panel || (xr_panel && xr_panel->get_is_button());
 }
 
 void SculptEditor::add_pbr_material_data(const std::string& name, const Color& base_color, float roughness, float metallic,

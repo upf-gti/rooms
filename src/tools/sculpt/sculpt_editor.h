@@ -150,6 +150,8 @@ class SculptEditor : public BaseEditor {
     void bind_events();
     void add_recent_color(const Color& color);
 
+    bool is_something_hovered();
+
     // Stamp slide
     glm::vec3 edit_position_stamp = {};
     glm::vec3 edit_origin_stamp = {};
