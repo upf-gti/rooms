@@ -68,7 +68,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var dummy = camera_data.eye;
 
     var out: FragmentOutput;
-    var color : vec4f = textureSample(albedo_texture, texture_sampler, in.uv);
+    var color : vec4f = textureSample(albedo_texture, texture_sampler, in.uv * 0.75);
 
     var final_color = in.color.rgb;
 
@@ -83,7 +83,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
         final_color = pow(final_color, vec3f(1.0 / 2.2));
     }
 
-    out.color = vec4f(mix(vec3f(0.0), final_color, factor), max(color.a * factor, 0.1));
+    out.color = vec4f(mix(vec3f(color.a), final_color, factor), max(color.a * factor, 0.025));
 
     return out;
 }
