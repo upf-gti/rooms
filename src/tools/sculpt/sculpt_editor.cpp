@@ -854,7 +854,7 @@ void SculptEditor::render()
     sculpt_area_box->set_transform(Transform::identity());
     sculpt_area_box->translate(current_sculpt->get_translation());
     sculpt_area_box->scale(glm::vec3(SCULPT_MAX_SIZE * 0.5f));
-    sculpt_area_box->rotate(glm::inverse(current_sculpt->get_rotation()));
+    sculpt_area_box->rotate(current_sculpt->get_rotation());
     sculpt_area_box->render();
 }
 
