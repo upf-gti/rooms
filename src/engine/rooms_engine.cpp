@@ -105,10 +105,13 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 
         sphere_pointer = parse_mesh("data/meshes/sphere.obj");
 
-        pointer_material = {};
-        pointer_material.shader = RendererStorage::get_shader_from_source(shaders::mesh_color::source, shaders::mesh_color::path, pointer_material);
+        Material sphere_pointer_material;
+        sphere_pointer_material.depth_read = false;
+        sphere_pointer_material.priority = 0;
+        sphere_pointer_material.transparency_type = ALPHA_BLEND;
+        sphere_pointer_material.shader = RendererStorage::get_shader_from_source(shaders::mesh_color::source, shaders::mesh_color::path, sphere_pointer_material);
 
-        sphere_pointer->set_surface_material_override(sphere_pointer->get_surface(0), pointer_material);
+        sphere_pointer->set_surface_material_override(sphere_pointer->get_surface(0), sphere_pointer_material);
     }
 
     cursor.load();
