@@ -91,6 +91,14 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
         curr_surface = evaluate_stroke(pos, &(stroke_history.strokes[index]), &edit_list, curr_surface, stroke_history.strokes[index].edit_list_index, stroke_history.strokes[index].edit_count);
     }
 
+    // Non-culled part
+    let culled_part : u32 = (min(stroke_history.count, MAX_STROKE_INFLUENCE_COUNT));
+    let non_culled_count : u32 = ( (stroke_history.count) - culled_part);
+    for(var i : u32 = 0u; i < non_culled_count; i++) {
+        let index : u32 = i + MAX_STROKE_INFLUENCE_COUNT;
+        curr_surface = evaluate_stroke(pos, &(stroke_history.strokes[index]), &edit_list, curr_surface, stroke_history.strokes[index].edit_list_index, stroke_history.strokes[index].edit_count);
+    }
+
     result_surface = curr_surface;
 
     //wtt: 1563
