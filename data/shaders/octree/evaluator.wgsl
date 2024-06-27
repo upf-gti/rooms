@@ -328,6 +328,19 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                             any_stroke_inside = true;
                         }
                     }
+                    // Non-culled part
+                    let culled_part : u32 = (min(stroke_history.count, MAX_STROKE_INFLUENCE_COUNT));
+                    let non_culled_count : u32 = ( (stroke_history.count) - culled_part);
+                    for(var i : u32 = 0u; i < non_culled_count; i++) {
+                        let index : u32 = i + MAX_STROKE_INFLUENCE_COUNT;
+                        if (intersection_AABB_AABB(eval_aabb_min, 
+                                               eval_aabb_max, 
+                                               stroke_history.strokes[index].aabb_min, 
+                                               stroke_history.strokes[index].aabb_max)) {
+                            any_stroke_inside = true;
+                        }
+                    }
+
                     octree.data[octree_index].stroke_count = curr_stroke_count;
 
                 if (any_stroke_inside || is_evaluating_undo) {
@@ -362,6 +375,24 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                         brick_has_paint = true;
                     }
 
+                }
+            }
+
+            // Non-culled part
+            let culled_part : u32 = (min(stroke_history.count, MAX_STROKE_INFLUENCE_COUNT));
+            let non_culled_count : u32 = ( (stroke_history.count) - culled_part);
+            for(var i : u32 = 0u; i < non_culled_count; i++) {
+                let index : u32 = i + MAX_STROKE_INFLUENCE_COUNT;
+                if (intersection_AABB_AABB(eval_aabb_min, 
+                                            eval_aabb_max, 
+                                            stroke_history.strokes[index].aabb_min, 
+                                            stroke_history.strokes[index].aabb_max)) {
+
+                    if (stroke_history.strokes[index].operation != OP_SMOOTH_PAINT) {
+                        surface_interval = evaluate_stroke_interval(current_subdivision_interval, &(stroke_history.strokes[index]), &edit_list, surface_interval, octant_center, level_half_size);
+                    } else {
+                        brick_has_paint = true;
+                    }
                 }
             }
 

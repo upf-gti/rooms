@@ -42,10 +42,11 @@ fn compute(@builtin(workgroup_id) group_id: vec3u)
         brick_buffers.brick_instance_counter = 0u;
 
         // Store the culling data of the first level
-        for(var i = 0u; i < stroke_history.count; i++){
+        let culling_stroke_size : u32 = min(stroke_history.count, MAX_STROKE_INFLUENCE_COUNT);
+        for(var i = 0u; i < culling_stroke_size; i++){
             stroke_culling[i] = culling_get_culling_data(i, 0, stroke_history.strokes[i].edit_count);
         }
-        octree.data[0].stroke_count = stroke_history.count;
+        octree.data[0].stroke_count = culling_stroke_size;
     }
 
     indirect_buffers.evaluator_subdivision_counter = 1u;
