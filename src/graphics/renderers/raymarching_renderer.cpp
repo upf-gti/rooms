@@ -1001,14 +1001,14 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         brick_buffer_bindgroup = webgpu_context->create_bind_group(uniforms, sculpt_delete_shader, 1u);
     }
 
-    compute_octree_evaluate_pipeline.create_compute(compute_octree_evaluate_shader);
-    compute_octree_increment_level_pipeline.create_compute(compute_octree_increment_level_shader);
-    compute_octree_write_to_texture_pipeline.create_compute(compute_octree_write_to_texture_shader);
-    compute_octree_brick_removal_pipeline.create_compute(compute_octree_brick_removal_shader);
-    compute_octree_brick_copy_pipeline.create_compute(compute_octree_brick_copy_shader);
-    compute_octree_initialization_pipeline.create_compute(compute_octree_initialization_shader);
-    compute_octree_brick_unmark_pipeline.create_compute(compute_octree_brick_unmark_shader);
-    sculpt_delete_pipeline.create_compute(sculpt_delete_shader);
+    compute_octree_evaluate_pipeline.create_compute_async(compute_octree_evaluate_shader);
+    compute_octree_increment_level_pipeline.create_compute_async(compute_octree_increment_level_shader);
+    compute_octree_write_to_texture_pipeline.create_compute_async(compute_octree_write_to_texture_shader);
+    compute_octree_brick_removal_pipeline.create_compute_async(compute_octree_brick_removal_shader);
+    compute_octree_brick_copy_pipeline.create_compute_async(compute_octree_brick_copy_shader);
+    compute_octree_initialization_pipeline.create_compute_async(compute_octree_initialization_shader);
+    compute_octree_brick_unmark_pipeline.create_compute_async(compute_octree_brick_unmark_shader);
+    sculpt_delete_pipeline.create_compute_async(sculpt_delete_shader);
 }
 
 void RaymarchingRenderer::init_raymarching_proxy_pipeline()
@@ -1061,7 +1061,7 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
     color_target.writeMask = WGPUColorWriteMask_All;
 
     PipelineDescription desc = { .cull_mode = WGPUCullMode_Front };
-    render_proxy_geometry_pipeline.create_render(render_proxy_shader, color_target, desc);
+    render_proxy_geometry_pipeline.create_render_async(render_proxy_shader, color_target, desc);
 
     // Proxy for Preview
     render_preview_proxy_shader = RendererStorage::get_shader("data/shaders/octree/proxy_geometry_preview.wgsl");
@@ -1079,7 +1079,7 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
     color_target.format = swapchain_format;
     color_target.blend = nullptr;
     color_target.writeMask = WGPUColorWriteMask_All;
-    render_preview_proxy_geometry_pipeline.create_render(render_preview_proxy_shader, color_target, desc);
+    render_preview_proxy_geometry_pipeline.create_render_async(render_preview_proxy_shader, color_target, desc);
 }
 
 void RaymarchingRenderer::init_octree_ray_intersection_pipeline()
@@ -1118,7 +1118,7 @@ void RaymarchingRenderer::init_octree_ray_intersection_pipeline()
     //    sculpt_data_ray_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_ray_intersection_shader, 2);
     //}
 
-    compute_octree_ray_intersection_pipeline.create_compute(compute_octree_ray_intersection_shader);
+    compute_octree_ray_intersection_pipeline.create_compute_async(compute_octree_ray_intersection_shader);
 }
 
 void RaymarchingRenderer::upload_stroke_context_data(sToComputeStrokeData *stroke_to_compute)
