@@ -10,7 +10,7 @@
 Through VR headsets, users could have the possibility to create full XR experiences involving 3D sculpted assets, 3D animations and scripted element behaviours.
 
 <p align="center" width="100%">
-    <img width="50%" src="./data/images/demo_capture.png"> 
+    <img src="./data/images/demo_capture.png"> 
 </p>
 
 ## Current status
@@ -26,6 +26,7 @@ Rooms is currently in the development stages.
 - [x] GLTF Parsing
 - [x] Physically Based Materials (PBR)
 - [x] VR Color and Material Sculpt Painting
+- [x] Support for Rigid and Skeletal animations
 - [ ] Skeletal Animation Editing in VR
 - [ ] Experience Generation
 - [ ] Experience Sharing
