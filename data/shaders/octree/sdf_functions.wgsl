@@ -1,34 +1,17 @@
 #include ../color_blend_modes.wgsl
 #include sdf_commons.wgsl
+#include sdf_material.wgsl
 
 // Data containers
-struct Material {
-    albedo      : vec3f,
-    roughness   : f32,
-    metalness   : f32
-};
 
 struct Surface {
-    material    : Material,
+    material    : SdfMaterial,
     distance    : f32
 };
 
-// Material operation storages
-fn Material_mult_by(m : Material, v : f32) -> Material {
-    return Material(m.albedo * v, m.roughness * v, m.metalness * v);
-}
-
-fn Material_sum_Material(m1 : Material, m2 : Material) -> Material {
-    return Material(m1.albedo + m2.albedo, m1.roughness + m2.roughness, m1.metalness + m2.metalness);
-}
-
-fn Material_mix(m1 : Material, m2 : Material, t : f32) -> Material {
-    return Material_sum_Material(Material_mult_by(m1, 1.0 - t), Material_mult_by(m2, t));
-}
-
 // Other Primitives
 
-fn sdPlane( p : vec3f, c : vec3f, n : vec3f, h : f32, material : Material) -> Surface
+fn sdPlane( p : vec3f, c : vec3f, n : vec3f, h : f32, material : SdfMaterial) -> Surface
 {
     // n must be normalized
     var sf : Surface;
@@ -37,7 +20,7 @@ fn sdPlane( p : vec3f, c : vec3f, n : vec3f, h : f32, material : Material) -> Su
     return sf;
 }
 
-fn sdPyramid( p : vec3f, c : vec3f, rotation : vec4f, r : f32, h : f32, material : Material) -> Surface
+fn sdPyramid( p : vec3f, c : vec3f, rotation : vec4f, r : f32, h : f32, material : SdfMaterial) -> Surface
 {
     var sf : Surface;
     let m2 : f32 = h * h + 0.25;
@@ -154,10 +137,10 @@ fn opIntersection( s1 : Surface, s2 : Surface ) -> Surface
     return s;
 }
 
-fn opPaint( s1 : Surface, s2 : Surface, material : Material, color_blend_op : u32 ) -> Surface
+fn opPaint( s1 : Surface, s2 : Surface, material : SdfMaterial, color_blend_op : u32 ) -> Surface
 {
     var sColorInter : Surface = opIntersection(s1, s2);
-    var new_mat : Material;
+    var new_mat : SdfMaterial;
 
     var base_color : vec3f = s1.material.albedo;
     var new_layer_color : vec3f = material.albedo;
@@ -214,10 +197,10 @@ fn opSmoothIntersection( s1 : Surface, s2 : Surface, k : f32 ) -> Surface
     return s;
 }
 
-fn opSmoothPaint( s1 : Surface, s2 : Surface, color_blend_op : u32, material : Material, k : f32 ) -> Surface
+fn opSmoothPaint( s1 : Surface, s2 : Surface, color_blend_op : u32, material : SdfMaterial, k : f32 ) -> Surface
 {
     // Permorm the color blending on the incomming material, and then blend it with the other material
-    var tmp_material : Material = material;
+    var tmp_material : SdfMaterial = material;
 
     let base_color : vec3f = s1.material.albedo;
     let new_layer_color : vec3f = material.albedo;
@@ -286,7 +269,7 @@ fn map_thickness( t : f32, v_max : f32 ) -> f32
       |_|
 */
 
-fn sdSphere( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f, material : Material ) -> Surface
+fn sdSphere( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f, material : SdfMaterial ) -> Surface
 {
     let r : f32 = dims.x;
     var sf : Surface;
@@ -295,7 +278,7 @@ fn sdSphere( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : 
     return sf;
 }
 
-fn sdCutSphere( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f, material : Material ) -> Surface
+fn sdCutSphere( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f, material : SdfMaterial ) -> Surface
 {
     var cap_value : f32 = clamp(parameters.y * 0.75, 0.0, 1.0) * 2.0 - 1.0;
     let r : f32 = dims.x;
@@ -330,7 +313,7 @@ fn eval_stroke_sphere_union( position : vec3f, current_surface : Surface, curr_s
     let stroke_material = curr_stroke.material;
     let parameters : vec4f = curr_stroke.parameters;
     let smooth_factor : f32 = parameters.w;
-    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
     let cap_value : f32 = parameters.y;
 
     let starting_idx : u32 = edit_starting_idx;
@@ -361,7 +344,7 @@ fn eval_stroke_sphere_substraction( position : vec3f, current_surface : Surface,
     let stroke_material = curr_stroke.material;
     let parameters : vec4f = curr_stroke.parameters;
     let smooth_factor : f32 = parameters.w;
-    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
     let cap_value : f32 = parameters.y;
 
     let starting_idx : u32 = edit_starting_idx;
@@ -392,7 +375,7 @@ fn eval_stroke_sphere_paint( position : vec3f, current_surface : Surface, curr_s
     let stroke_material = curr_stroke.material;
     let parameters : vec4f = curr_stroke.parameters;
     let stroke_blend_mode : u32 = curr_stroke.color_blend_op;
-    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
     let smooth_factor : f32 = parameters.w;
     let cap_value : f32 = parameters.y;
 
@@ -425,7 +408,7 @@ ______
 \____/ \___/_/\_\
 */
 
-fn sdBox( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f, material : Material ) -> Surface
+fn sdBox( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f, material : SdfMaterial ) -> Surface
 {
     var sf : Surface;
     var size : vec3f = dims.xyz;
@@ -448,7 +431,7 @@ fn eval_stroke_box_union( position : vec3f, current_surface : Surface, curr_stro
     let stroke_material = curr_stroke.material;
     let parameters : vec4f = curr_stroke.parameters;
     let smooth_factor : f32 = parameters.w;
-    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -470,7 +453,7 @@ fn eval_stroke_box_substraction( position : vec3f, current_surface : Surface, cu
     let stroke_material = curr_stroke.material;
     let parameters : vec4f = curr_stroke.parameters;
     let smooth_factor : f32 = parameters.w;
-    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -493,7 +476,7 @@ fn eval_stroke_box_paint( position : vec3f, current_surface : Surface, curr_stro
     let parameters : vec4f = curr_stroke.parameters;
     let stroke_blend_mode : u32 = curr_stroke.color_blend_op;
     let smooth_factor : f32 = parameters.w;
-    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -518,7 +501,7 @@ fn eval_stroke_box_paint( position : vec3f, current_surface : Surface, curr_stro
 //             |_|
 // */
 
-fn sdCapsule( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f, material : Material) -> Surface
+fn sdCapsule( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f, material : SdfMaterial) -> Surface
 {
     var sf : Surface;
     let r : f32 = dims.x;
@@ -545,7 +528,7 @@ fn eval_stroke_capsule_union( position : vec3f, current_surface : Surface, curr_
     let stroke_material = curr_stroke.material;
     let parameters : vec4f = curr_stroke.parameters;
     let smooth_factor : f32 = parameters.w;
-    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -567,7 +550,7 @@ fn eval_stroke_capsule_substraction( position : vec3f, current_surface : Surface
     let stroke_material = curr_stroke.material;
     let parameters : vec4f = curr_stroke.parameters;
     let smooth_factor : f32 = parameters.w;
-    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -590,7 +573,7 @@ fn eval_stroke_capsule_paint( position : vec3f, current_surface : Surface, curr_
     let parameters : vec4f = curr_stroke.parameters;
     let stroke_blend_mode : u32 = curr_stroke.color_blend_op;
     let smooth_factor : f32 = parameters.w;
-    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -613,7 +596,7 @@ fn eval_stroke_capsule_paint( position : vec3f, current_surface : Surface, curr_
 //  \____/\___/|_| |_|\___|
 // */
 
-fn sdCone( p : vec3f, a : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f, material : Material) -> Surface
+fn sdCone( p : vec3f, a : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f, material : SdfMaterial) -> Surface
 {
     var sf : Surface;
 
@@ -650,7 +633,7 @@ fn eval_stroke_cone_union( position : vec3f, current_surface : Surface, curr_str
     let stroke_material = curr_stroke.material;
     let parameters : vec4f = curr_stroke.parameters;
     let smooth_factor : f32 = parameters.w;
-    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -672,7 +655,7 @@ fn eval_stroke_cone_substraction( position : vec3f, current_surface : Surface, c
     let stroke_material = curr_stroke.material;
     let parameters : vec4f = curr_stroke.parameters;
     let smooth_factor : f32 = parameters.w;
-    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -695,7 +678,7 @@ fn eval_stroke_cone_paint( position : vec3f, current_surface : Surface, curr_str
     let parameters : vec4f = curr_stroke.parameters;
     let stroke_blend_mode : u32 = curr_stroke.color_blend_op;
     let smooth_factor : f32 = parameters.w;
-    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -721,7 +704,7 @@ fn eval_stroke_cone_paint( position : vec3f, current_surface : Surface, curr_str
 //        |___/
 // */
 
-fn sdCylinder(p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f, material : Material) -> Surface
+fn sdCylinder(p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f, material : SdfMaterial) -> Surface
 {
     var sf : Surface;
     var r : f32 = dims.x;
@@ -747,7 +730,7 @@ fn eval_stroke_cylinder_union( position : vec3f, current_surface : Surface, curr
     let stroke_material = curr_stroke.material;
     let parameters : vec4f = curr_stroke.parameters;
     let smooth_factor : f32 = parameters.w;
-    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -769,7 +752,7 @@ fn eval_stroke_cylinder_substraction( position : vec3f, current_surface : Surfac
     let stroke_material = curr_stroke.material;
     let parameters : vec4f = curr_stroke.parameters;
     let smooth_factor : f32 = parameters.w;
-    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -792,7 +775,7 @@ fn eval_stroke_cylinder_paint( position : vec3f, current_surface : Surface, curr
     let parameters : vec4f = curr_stroke.parameters;
     let stroke_blend_mode : u32 = curr_stroke.color_blend_op;
     let smooth_factor : f32 = parameters.w;
-    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -815,7 +798,7 @@ fn eval_stroke_cylinder_paint( position : vec3f, current_surface : Surface, curr
 //   \_/\___/|_|   \__,_|___/
 // */
 
-fn sdTorus( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f, material : Material) -> Surface
+fn sdTorus( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f, material : SdfMaterial) -> Surface
 {
     let radius = dims.x;
     let thickness = clamp( dims.y, 0.0001, radius );
@@ -828,7 +811,7 @@ fn sdTorus( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : v
     return sf;
 }
 
-fn sdCappedTorus( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f, material : Material) -> Surface
+fn sdCappedTorus( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f, material : SdfMaterial) -> Surface
 {
     let cap_value : f32 = clamp(parameters.y, 0.0001, 0.999);
     let theta : f32 = M_PI * (1.0 - cap_value);
@@ -855,7 +838,7 @@ fn eval_stroke_torus_union( position : vec3f, current_surface : Surface, curr_st
     let stroke_material = curr_stroke.material;
     let parameters : vec4f = curr_stroke.parameters;
     let smooth_factor : f32 = parameters.w;
-    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
     let cap_value : f32 = parameters.y;
 
     let starting_idx : u32 = edit_starting_idx;
@@ -886,7 +869,7 @@ fn eval_stroke_torus_substraction( position : vec3f, current_surface : Surface, 
     let stroke_material = curr_stroke.material;
     let parameters : vec4f = curr_stroke.parameters;
     let smooth_factor : f32 = parameters.w;
-    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
     let cap_value : f32 = parameters.y;
 
     let starting_idx : u32 = edit_starting_idx;
@@ -917,7 +900,7 @@ fn eval_stroke_torus_paint( position : vec3f, current_surface : Surface, curr_st
     let stroke_material = curr_stroke.material;
     let parameters : vec4f = curr_stroke.parameters;
     let stroke_blend_mode : u32 = curr_stroke.color_blend_op;
-    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
     let smooth_factor : f32 = parameters.w;
     let cap_value : f32 = parameters.y;
 
@@ -950,7 +933,7 @@ fn eval_stroke_torus_paint( position : vec3f, current_surface : Surface, curr_st
  \___/ \___||___/_|\___\__,_|
 */
 
-fn sdVesica( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f, material : Material) -> Surface
+fn sdVesica( p : vec3f, c : vec3f, dims : vec4f, parameters : vec2f, rotation : vec4f, material : SdfMaterial) -> Surface
 {
     var sf : Surface;
 
@@ -985,7 +968,7 @@ fn eval_stroke_vesica_union( position : vec3f, current_surface : Surface, curr_s
     let stroke_material = curr_stroke.material;
     let parameters : vec4f = curr_stroke.parameters;
     let smooth_factor : f32 = parameters.w;
-    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -1007,7 +990,7 @@ fn eval_stroke_vesica_substraction( position : vec3f, current_surface : Surface,
     let stroke_material = curr_stroke.material;
     let parameters : vec4f = curr_stroke.parameters;
     let smooth_factor : f32 = parameters.w;
-    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -1030,7 +1013,7 @@ fn eval_stroke_vesica_paint( position : vec3f, current_surface : Surface, curr_s
     let parameters : vec4f = curr_stroke.parameters;
     let stroke_blend_mode : u32 = curr_stroke.color_blend_op;
     let smooth_factor : f32 = parameters.w;
-    let material : Material = Material(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -1152,7 +1135,7 @@ fn evaluate_stroke( position: vec3f, stroke: ptr<storage, Stroke, read>, curr_ed
     return result_surface;
 }
 
-fn evaluate_single_edit( position : vec3f, primitive : u32, operation : u32, parameters : vec4f, color_blend_op : u32, current_surface : Surface, stroke_material : Material, edit : Edit) -> Surface
+fn evaluate_single_edit( position : vec3f, primitive : u32, operation : u32, parameters : vec4f, color_blend_op : u32, current_surface : Surface, stroke_material : SdfMaterial, edit : Edit) -> Surface
 {
     var pSurface : Surface;
 

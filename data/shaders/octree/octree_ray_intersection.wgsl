@@ -7,6 +7,7 @@ struct RayInfo
     ray_dir    : vec3f,
     dummy1     : f32
 }
+
 @group(0) @binding(3) var read_sdf: texture_3d<f32>;
 @group(0) @binding(4) var texture_sampler : sampler;
 @group(0) @binding(8) var read_material_sdf: texture_3d<u32>;
@@ -61,47 +62,25 @@ fn pop_iteration_data(stack_pointer : ptr<function, u32>) -> IterationData
     return iteration_data_stack[*stack_pointer];
 }
 
-
-
-fn sample_sdf_atlas(atlas_position : vec3f) -> f32
-{
-    return textureSampleLevel(read_sdf, texture_sampler, atlas_position, 0.0).r / SCULPT_MAX_SIZE;
-}
-
 #include sdf_utils.wgsl
-
-// TODO: LOTS of duplication ahead, because current inludes will bloat this file. Need restructuring!
-struct Material {
-    albedo      : vec3f,
-    roughness   : f32,
-    metalness   : f32
-};
-
+#include sdf_material.wgsl
 #include material_packing.wgsl
 
-fn sample_material_raw(pos : vec3u) -> Material {
+// TODO: LOTS of duplication ahead, because current inludes will bloat this file. Need restructuring!
+
+fn sample_material_atlas(atlas_position : vec3f) -> SdfMaterial {
+    return interpolate_material(atlas_position * SDF_RESOLUTION);
+}
+
+fn sample_material_raw(pos : vec3u) -> SdfMaterial {
     let sample : u32 = textureLoad(read_material_sdf, pos, 0).r;
 
     return unpack_material(sample);
 }
 
-// Material operation functions
-fn Material_mult_by(m : Material, v : f32) -> Material {
-    return Material(m.albedo * v, m.roughness * v, m.metalness * v);
-}
-
-fn Material_sum_Material(m1 : Material, m2 : Material) -> Material {
-    return Material(m1.albedo + m2.albedo, m1.roughness + m2.roughness, m1.metalness + m2.metalness);
-}
-
-fn Material_mix(m1 : Material, m2 : Material, t : f32) -> Material {
-    return Material_sum_Material(Material_mult_by(m1, 1.0 - t), Material_mult_by(m2, t));
-}
-
-
 // From: http://paulbourke.net/miscellaneous/interpolation/
-fn interpolate_material(pos : vec3f) -> Material {
-    var result : Material;
+fn interpolate_material(pos : vec3f) -> SdfMaterial {
+    var result : SdfMaterial;
 
     let pos_f_part : vec3f = abs(fract(pos));
     let pos_i_part : vec3u = vec3u(floor(pos));
@@ -127,8 +106,9 @@ fn interpolate_material(pos : vec3f) -> Material {
     return result;
 }
 
-fn sample_material_atlas(atlas_position : vec3f) -> Material {
-    return interpolate_material(atlas_position * SDF_RESOLUTION);
+fn sample_sdf_atlas(atlas_position : vec3f) -> f32
+{
+    return textureSampleLevel(read_sdf, texture_sampler, atlas_position, 0.0).r / SCULPT_MAX_SIZE;
 }
 
 fn raymarch(ray_origin_in_atlas_space : vec3f, ray_dir : vec3f, max_distance : f32, has_hit: ptr<function, bool>) -> f32
@@ -262,7 +242,7 @@ fn compute()
 
                         if (intersected) {
                             let atlas_position : vec3f = in_atlas_position + ray_info.ray_dir * raymarch_result_distance;
-                            let material : Material = sample_material_atlas(atlas_position);
+                            let material : SdfMaterial = sample_material_atlas(atlas_position);
                             ray_intersection_info.tile_pointer = octree.data[octree_index].tile_pointer;
 
                             ray_intersection_info.material_albedo = material.albedo;   

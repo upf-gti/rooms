@@ -74,14 +74,16 @@ struct FragmentOutput {
     @builtin(frag_depth) depth: f32
 }
 
+#define MAX_LIGHTS
+
 @group(2) @binding(0) var irradiance_texture: texture_cube<f32>;
 @group(2) @binding(1) var brdf_lut_texture: texture_2d<f32>;
 @group(2) @binding(2) var sampler_clamp: sampler;
 @group(2) @binding(3) var<uniform> lights : array<Light, MAX_LIGHTS>;
 @group(2) @binding(4) var<uniform> num_lights : u32;
 
-fn get_material_preview() -> Material {
-    var material : Material;
+fn get_material_preview() -> SdfMaterial {
+    var material : SdfMaterial;
     material.albedo = preview_stroke.stroke.material.color.xyz;
     material.roughness = preview_stroke.stroke.material.roughness;
     material.metalness = preview_stroke.stroke.material.metallic;
@@ -91,7 +93,7 @@ fn get_material_preview() -> Material {
 fn sample_sdf_preview(position : vec3f) -> f32
 {
     // TODO: preview edits
-    var material : Material = get_material_preview();
+    var material : SdfMaterial = get_material_preview();
     var surface : Surface;
     if (is_inside_brick) {
         surface.distance = -10000.0;
@@ -155,8 +157,8 @@ fn raymarch_sculpt_space(ray_origin_sculpt_space : vec3f, ray_dir : vec3f, max_d
         let normal_world : vec3f = (sculpt_model_buffer[preview_stroke.current_sculpt_idx] * vec4f(normal, 0.0)).xyz;
         let ray_dir_world : vec3f = (sculpt_model_buffer[preview_stroke.current_sculpt_idx] * vec4f(ray_dir, 0.0)).xyz;
 
-        let material : Material = get_material_preview();
-        //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
+        let material : SdfMaterial = get_material_preview();
+        //let material : SdfMaterial = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
         return vec4f(apply_light(-ray_dir_world, pos, position_in_world, normal_world, lightPos + lightOffset, material), depth);
         //return vec4f(vec3f(material.albedo), depth);
         //return vec4f(normal *0.5 + 0.50, depth);

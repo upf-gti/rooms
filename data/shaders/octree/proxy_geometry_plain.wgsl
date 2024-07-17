@@ -101,22 +101,23 @@ struct FragmentOutput {
 
 // @group(2) @binding(0) var<uniform> sculpt_data : SculptData;
 
+#define MAX_LIGHTS
+
 @group(3) @binding(0) var irradiance_texture: texture_cube<f32>;
 @group(3) @binding(1) var brdf_lut_texture: texture_2d<f32>;
 @group(3) @binding(2) var sampler_clamp: sampler;
 @group(3) @binding(3) var<uniform> lights : array<Light, MAX_LIGHTS>;
 @group(3) @binding(4) var<uniform> num_lights : u32;
 
-fn sample_material_raw(pos : vec3u) -> Material {
+fn sample_material_raw(pos : vec3u) -> SdfMaterial {
     let sample : u32 = textureLoad(read_material_sdf, pos, 0).r;
 
     return unpack_material(sample);
 }
 
-
 // From: http://paulbourke.net/miscellaneous/interpolation/
-fn interpolate_material(pos : vec3f) -> Material {
-    var result : Material;
+fn interpolate_material(pos : vec3f) -> SdfMaterial {
+    var result : SdfMaterial;
 
     let pos_f_part : vec3f = abs(fract(pos));
     let pos_i_part : vec3u = vec3u(floor(pos));
@@ -142,10 +143,6 @@ fn interpolate_material(pos : vec3f) -> Material {
     return result;
 }
 
-fn sample_material_atlas(atlas_position : vec3f) -> Material {
-    return interpolate_material(atlas_position * SDF_RESOLUTION);
-}
-
 fn sample_sdf_atlas(atlas_position : vec3f) -> f32
 {
     return textureSampleLevel(read_sdf, texture_sampler, atlas_position, 0.0).r / SCULPT_MAX_SIZE;
@@ -153,7 +150,7 @@ fn sample_sdf_atlas(atlas_position : vec3f) -> f32
 
 fn sample_sdf_with_preview(sculpt_position : vec3f, atlas_position : vec3f) -> Surface
 {
-    var material : Material;
+    var material : SdfMaterial;
     material.albedo = preview_stroke.stroke.material.color.xyz;
     material.roughness = preview_stroke.stroke.material.roughness;
     material.metalness = preview_stroke.stroke.material.metallic;
@@ -169,7 +166,7 @@ fn sample_sdf_with_preview(sculpt_position : vec3f, atlas_position : vec3f) -> S
 
 fn sample_sdf_with_preview_without_material(sculpt_position : vec3f, atlas_position : vec3f) -> f32
 {
-    var material : Material;
+    var material : SdfMaterial;
 
     var surface : Surface;
     surface.distance = sample_sdf_atlas(atlas_position);
@@ -178,6 +175,10 @@ fn sample_sdf_with_preview_without_material(sculpt_position : vec3f, atlas_posit
 
     
     return surface.distance;
+}
+
+fn sample_material_atlas(atlas_position : vec3f) -> SdfMaterial {
+    return interpolate_material(atlas_position * SDF_RESOLUTION);
 }
 
 // https://iquilezles.org/articles/normalsSDF/
@@ -246,7 +247,7 @@ fn raymarch_with_previews(ray_origin_atlas_space : vec3f, ray_origin_sculpt_spac
         // heatmap_color.g = sin(interpolant * 2.0);
         // heatmap_color.b = cos(interpolant);
         // return vec4f(heatmap_color, depth);
-        //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
+        //let material : SdfMaterial = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
 		return vec4f(apply_light(-ray_dir_world, position_in_world, position_in_world, normal_world, lightPos + lightOffset, surface.material), depth);
         //return vec4f(normal*0.5 + 0.50, depth);
         //return vec4f(material.albedo, depth);
@@ -314,14 +315,14 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
         let normal_world : vec3f = (sculpt_model_buffer[model_index] * vec4f(normal, 0.0)).xyz;
         let ray_dir_world : vec3f = (sculpt_model_buffer[model_index] * vec4f(ray_dir, 0.0)).xyz;
 
-        let material : Material = sample_material_atlas(position_in_atlas);
+        let material : SdfMaterial = sample_material_atlas(position_in_atlas);
         // let interpolant : f32 = (f32( i ) / f32(MAX_ITERATIONS)) * (M_PI / 2.0);
         // var heatmap_color : vec3f;
         // heatmap_color.r = sin(interpolant);
         // heatmap_color.g = sin(interpolant * 2.0);
         // heatmap_color.b = cos(interpolant);
         // return vec4f(heatmap_color, depth);
-        //let material : Material = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
+        //let material : SdfMaterial = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
         return vec4f(apply_light(-ray_dir_world, world_space_position, world_space_position, normal_world, lightPos + lightOffset, material), depth);
         //return vec4f(normal_world*0.5 + 0.50, depth);
         //return vec4f(material.albedo, depth);

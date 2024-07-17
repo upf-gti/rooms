@@ -17,7 +17,7 @@
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/renderer_storage.h"
 
-#include "shaders/mesh_color.wgsl.gen.h"
+#include "shaders/mesh_forward.wgsl.gen.h"
 #include "shaders/ui/ui_xr_panel.wgsl.gen.h"
 
 #include "engine/rooms_engine.h"
@@ -54,7 +54,7 @@ void SceneEditor::initialize()
 
     Node::bind(main_scene->get_name() + "@nodes_added", [&](const std::string& sg, void* data) {
         set_inspector_dirty();
-    });
+        });
 
     // debug
     /*intersection_mesh = new MeshInstance3D();
@@ -63,7 +63,7 @@ void SceneEditor::initialize()
 
     Material intersection_mesh_material;
     intersection_mesh_material.color = colors::CYAN;
-    intersection_mesh_material.shader = RendererStorage::get_shader_from_source(shaders::mesh_color::source, shaders::mesh_color::path, intersection_mesh_material);
+    intersection_mesh_material.shader = RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, intersection_mesh_material);
     intersection_mesh->set_surface_material_override(intersection_mesh->get_surface(0), intersection_mesh_material);
 
     main_scene->add_node(intersection_mesh);*/
@@ -646,7 +646,7 @@ void SceneEditor::inspector_from_scene(bool force)
 
     // Enable xr for the buttons that need it..
     if (renderer->get_openxr_available()) {
-        inspector->remove_flag(MATERIAL_2D);
+        inspector->disable_2d();
     }
 
     inspector_dirty = false;
@@ -790,7 +790,7 @@ void SceneEditor::inspect_light()
 
     // Enable xr for the buttons that need it..
     if (renderer->get_openxr_available()) {
-        inspector->remove_flag(MATERIAL_2D);
+        inspector->disable_2d();
     }
 
     inspector->end_line();
@@ -827,7 +827,7 @@ void SceneEditor::inspect_exports(bool force)
 
     // Enable xr for the buttons that need it..
     if (renderer->get_openxr_available()) {
-        inspector->remove_flag(MATERIAL_2D);
+        inspector->disable_2d();
     }
 
     inspector_transform_dirty = !inspector->get_visibility();

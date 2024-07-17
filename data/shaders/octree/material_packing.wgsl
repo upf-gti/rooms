@@ -12,8 +12,8 @@ const ROUGHNESS_MASK : u32 = 0x1fu << 5u;
 const METALNESS_MASK : u32 = 0x1fu;
 
 
-fn unpack_material(packed_material : u32) -> Material {
-    var resulting_material : Material;
+fn unpack_material(packed_material : u32) -> SdfMaterial {
+    var resulting_material : SdfMaterial;
 
     let red_val : u32 = (packed_material & RED_MASK) >> 25u;
     let green_val : u32 = (packed_material & GREEN_MASK) >> 17u;
@@ -29,7 +29,7 @@ fn unpack_material(packed_material : u32) -> Material {
     return resulting_material;
 }
 
-fn pack_material(material : Material) -> u32 {
+fn pack_material(material : SdfMaterial) -> u32 {
     var packed_material : u32 = 0u;
 
     let red : u32 = u32(material.albedo.r * 127.0);

@@ -16,7 +16,7 @@
 
 #include "graphics/renderers/rooms_renderer.h"
 
-#include "shaders/mesh_color.wgsl.gen.h"
+#include "shaders/mesh_forward.wgsl.gen.h"
 #include "shaders/mesh_grid.wgsl.gen.h"
 #include "shaders/ui/ui_ray_pointer.wgsl.gen.h"
 
@@ -88,6 +88,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
         grid_material.priority = 100;
         grid_material.transparency_type = ALPHA_BLEND;
         grid_material.cull_type = CULL_NONE;
+        grid_material.type = MATERIAL_UNLIT;
         grid_material.shader = RendererStorage::get_shader_from_source(shaders::mesh_grid::source, shaders::mesh_grid::path, grid_material);
         grid->set_surface_material_override(grid->get_surface(0), grid_material);
     }
@@ -109,7 +110,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
         sphere_pointer_material.depth_read = false;
         sphere_pointer_material.priority = 0;
         sphere_pointer_material.transparency_type = ALPHA_BLEND;
-        sphere_pointer_material.shader = RendererStorage::get_shader_from_source(shaders::mesh_color::source, shaders::mesh_color::path, sphere_pointer_material);
+        sphere_pointer_material.shader = RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, sphere_pointer_material);
 
         sphere_pointer->set_surface_material_override(sphere_pointer->get_surface(0), sphere_pointer_material);
     }

@@ -1,4 +1,5 @@
 #include pbr_functions.wgsl
+#include pbr_material.wgsl
 #include pbr_light.wgsl
 
 #include sdf_utils.wgsl
@@ -20,14 +21,14 @@ fn irradiance_spherical_harmonics(n : vec3f) -> vec3f {
         + vec3f(-0.033, -0.033, -0.037) * (n.x * n.x - n.y * n.y);
 }
 
-fn apply_light(toEye : vec3f, position : vec3f, position_world : vec3f, normal_i : vec3f, lightPosition : vec3f, material : Material) -> vec3f
+fn apply_light(toEye : vec3f, position : vec3f, position_world : vec3f, normal_i : vec3f, lightPosition : vec3f, material : SdfMaterial) -> vec3f
 {
     //var normal : vec3f = estimate_normal(position, position_world);
     let normal : vec3f = normalize(normal_i);
 
     let toLight : vec3f = normalize(lightPosition - position_world);
 
-    var m : LitMaterial;
+    var m : PbrMaterial;
 
     m.pos = position_world;
     m.normal = normal;

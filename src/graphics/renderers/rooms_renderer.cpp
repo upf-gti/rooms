@@ -15,14 +15,14 @@
 #include "spdlog/spdlog.h"
 
 #include "shaders/mesh_pbr.wgsl.gen.h"
-#include "shaders/mesh_color.wgsl.gen.h"
+#include "shaders/mesh_forward.wgsl.gen.h"
 #include "shaders/quad_mirror.wgsl.gen.h"
 
 #include "backends/imgui_impl_wgpu.h"
 
 RoomsRenderer::RoomsRenderer() : Renderer()
 {
-    
+
 }
 
 RoomsRenderer::~RoomsRenderer()
@@ -69,7 +69,7 @@ int RoomsRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
     camera_2d->set_orthographic(0.0f, w, h, 0.0f, -1.0f, 1.0f);
 
     uniforms = { &camera_2d_uniform };
-    render_bind_group_camera_2d = webgpu_context->create_bind_group(uniforms, RendererStorage::get_shader_from_source(shaders::mesh_color::source, shaders::mesh_color::path), 1);
+    render_bind_group_camera_2d = webgpu_context->create_bind_group(uniforms, RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path), 1);
 
     return 0;
 }

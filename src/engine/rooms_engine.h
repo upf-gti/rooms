@@ -31,7 +31,7 @@ class RoomsEngine : public Engine
 
     // Editors
 
-    bool tutorial_active = true;
+    bool tutorial_active = false;
     EditorType current_editor_type;
 
     BaseEditor* current_editor = nullptr;
