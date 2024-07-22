@@ -14,7 +14,7 @@
 
 #include "spdlog/spdlog.h"
 
-#include "shaders/mesh_pbr.wgsl.gen.h"
+#include "shaders/mesh_forward.wgsl.gen.h"
 #include "shaders/mesh_forward.wgsl.gen.h"
 #include "shaders/quad_mirror.wgsl.gen.h"
 
@@ -58,7 +58,7 @@ int RoomsRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
     camera->set_speed(0.5f);
 
     std::vector<Uniform*> uniforms = { &camera_uniform };
-    render_bind_group_camera = webgpu_context->create_bind_group(uniforms, RendererStorage::get_shader_from_source(shaders::mesh_pbr::source, shaders::mesh_pbr::path), 1);
+    render_bind_group_camera = webgpu_context->create_bind_group(uniforms, RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path), 1);
 
     // Orthographic camera for ui rendering
 
