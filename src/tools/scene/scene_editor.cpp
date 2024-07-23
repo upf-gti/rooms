@@ -54,7 +54,7 @@ void SceneEditor::initialize()
 
     Node::bind(main_scene->get_name() + "@nodes_added", [&](const std::string& sg, void* data) {
         set_inspector_dirty();
-        });
+    });
 
     // debug
     /*intersection_mesh = new MeshInstance3D();
@@ -279,7 +279,7 @@ void SceneEditor::init_ui()
 
     // Create inspection panel (Nodes, properties, etc)
     {
-        inspector = new ui::Inspector({ .name = "inspector_root", .position = { 32.0f, 32.f } });
+        inspector = new ui::Inspector({ .name = "inspector_root", .title = "Scene Nodes",.position = {32.0f, 32.f}});
         inspector->set_visibility(false);
     }
 

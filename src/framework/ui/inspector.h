@@ -23,7 +23,7 @@ namespace ui {
         static uint32_t row_id;
 
         glm::vec2 panel_size = {};
-        Color panel_color = { 0.0f, 0.0f, 0.0f, 0.8f };
+        Color panel_color = { 0.01f, 0.01f, 0.01f, 0.95f };
 
         float body_height = 0.0f;
         float padding = 0.0f;
