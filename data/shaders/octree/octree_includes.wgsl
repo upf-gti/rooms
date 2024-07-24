@@ -69,7 +69,6 @@ struct PreviewStroke {
     edit_list : array<Edit>
 };
 
-//TODO(Juan): revisit the padding, and avoid using vec2/3/4 as padding
 struct Stroke {
     stroke_id       : u32,
     edit_count      : u32,
@@ -81,6 +80,60 @@ struct Stroke {
     aabb_max        : vec3f,
     edit_list_index : u32, //4
     material        : StrokeMaterial   // 48 bytes
+};
+
+/**
+    pkd_edit_count_params
+        edit count -> 16 bits
+        SDF parameters -> 5 + 5 + 6 = 16 bits
+    pkd_ops_prim_blending
+        ops -> 3 bits
+        primitive - > 8 bits
+        color blending -> 4 bits
+*/
+// struct Stroke {
+//     start_edit_idx          : u32,
+//     pkd_edit_count_params   : u32,
+//     pkd_ops_prim_blending   : u32,
+//     pkd_material            : u32
+// };
+
+// fn stroke_is_smooth_paint(stroke : ptr<Stroke, storage>) -> bool {
+//     return (stroke.pkd_ops_prim_blending & 0x60000000u) == 0x60000000u;
+// }
+
+// fn stroke_get_edit_data(stroke : ptr<Stroke, storage>) -> vec2u {
+//     return { stroke.start_edit_idx, (stroke.pkd_edit_count_params >> 16u)};
+// }
+
+// fn stroke_get_params(stroke : ptr<Stroke, storage>) -> vec3f {
+//     let blend_raw : u32 = stroke.pkd_edit_count_params;
+//     let x : f32 = f32((blend_raw & 0xF800u) >> 11u);
+//     let y : f32 = f32((blend_raw & 0x7C0u) >> 6u);
+//     let z : f32 = f32(blend_raw & 0x3Fu);
+
+//     return vec3f(x / 32.0, y / 32.0, z / 64.0);
+// }
+
+// fn stroke_get_color_blending_option(stroke : ptr<Stroke, storage>) -> u32 {
+//     return (stroke.pkd_ops_prim_blending & 0x1E0000u) >> 17u;
+// }
+
+// fn stroke_get_op_and_prim(stroke : ptr<Stroke, storage>) -> vec2u {
+//     let ops_prim : u32 = stroke.pkd_ops_prim_blending;
+//     return { (ops_prim & 0xE0000000u) >> 29u, (ops_prim & 0x1FE00000u) >> 21u};
+// }
+
+struct AABB {
+    min : vec3f,
+    max : vec3f,
+    padding : vec2u
+};
+
+struct AABB_List {
+    stroke_count : u32,
+    padd : vec3u,
+    aabbs : array<AABB>
 };
 
 struct StrokeHistory {

@@ -30,6 +30,9 @@
 #define PREVIEW_BASE_EDIT_LIST 200u
 #define PREVIEW_EDIT_LIST_INCREMENT 200u
 
+// TODO(Juan): Expand this buffer
+#define MAX_STROKE_EVALUATION_COUNT 2000u
+
 class MeshInstance3D;
 
 struct RayIntersectionInfo {
@@ -93,8 +96,16 @@ class RaymarchingRenderer {
     Uniform* sculpt_octree_uniform = nullptr;
     WGPUBindGroup sculpt_octree_bindgroup = nullptr;
 
+    // Evaluator
+    Shader*         compute_octree_evaluate_subdivide_shader = nullptr;
+    Pipeline        compute_octree_evaluate_subdivide_pipeline;
+    WGPUBindGroup   compute_octree_evaluate_subdivide_bind_group = nullptr;
+
+    Shader*         compute_octree_evaluate_last_level_shader = nullptr;
+    Pipeline        compute_octree_evaluate_last_level_pipeline;
+    WGPUBindGroup   compute_octree_evaluate_last_level_bind_group = nullptr;
+
     // Octree creation
-    Pipeline        compute_octree_evaluate_pipeline;
     Pipeline        compute_octree_increment_level_pipeline;
     Pipeline        compute_octree_write_to_texture_pipeline;
     Pipeline        compute_octree_brick_removal_pipeline;
@@ -104,7 +115,6 @@ class RaymarchingRenderer {
     Pipeline        compute_octree_ray_intersection_pipeline;
     Pipeline        compute_octree_brick_unmark_pipeline;
     Pipeline        sculpt_delete_pipeline;
-    Shader*         compute_octree_evaluate_shader = nullptr;
     Shader*         compute_octree_increment_level_shader = nullptr;
     Shader*         compute_octree_write_to_texture_shader = nullptr;
     Shader*         compute_octree_brick_removal_shader = nullptr;
@@ -114,7 +124,7 @@ class RaymarchingRenderer {
     Shader*         compute_octree_ray_intersection_shader = nullptr;
     Shader*         compute_octree_brick_unmark_shader = nullptr;
     Shader*         sculpt_delete_shader = nullptr;
-    WGPUBindGroup   compute_octree_evaluate_bind_group = nullptr;
+
     WGPUBindGroup   compute_octree_increment_level_bind_group = nullptr;
     WGPUBindGroup   compute_octree_write_to_texture_bind_group = nullptr;
     WGPUBindGroup   compute_octree_indirect_brick_removal_bind_group = nullptr;
@@ -126,6 +136,7 @@ class RaymarchingRenderer {
     WGPUBindGroup   compute_octree_brick_unmark_bind_group = nullptr;
     WGPUBindGroup   brick_buffer_bindgroup = nullptr;
 
+    Uniform         aabb_buffer;
     Uniform         octant_usage_uniform[4];
     Uniform         octant_usage_initialization_uniform[2];
     uint8_t         octree_depth = 0;

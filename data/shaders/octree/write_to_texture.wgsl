@@ -42,9 +42,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     let id : u32 = group_id.x;
     let octree_leaf_id : u32 = octant_usage_read[id];
 
-    let culling_count : u32 = octree.data[octree_leaf_id].stroke_count;
-    let curr_culling_layer_index = octree.data[octree_leaf_id].culling_id;
-
     let brick_pointer : u32 = octree.data[octree_leaf_id].tile_pointer;
 
     // Get the brick index, without the MSb that signals if it has an already initialized brick
@@ -86,17 +83,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
     // Evaluating the edit context
     //let p = stroke_culling[0];
-    for (var j : u32 = 0; j < culling_count; j++) {
-        let index : u32 = culling_get_stroke_index(stroke_culling[j + curr_culling_layer_index]);
-        curr_surface = evaluate_stroke(pos, &(stroke_history.strokes[index]), &edit_list, curr_surface, stroke_history.strokes[index].edit_list_index, stroke_history.strokes[index].edit_count);
-    }
-
-    // Non-culled part
-    let culled_part : u32 = (min(stroke_history.count, MAX_STROKE_INFLUENCE_COUNT));
-    let non_culled_count : u32 = ( (stroke_history.count) - culled_part);
-    for(var i : u32 = 0u; i < non_culled_count; i++) {
-        let index : u32 = i + MAX_STROKE_INFLUENCE_COUNT;
-        curr_surface = evaluate_stroke(pos, &(stroke_history.strokes[index]), &edit_list, curr_surface, stroke_history.strokes[index].edit_list_index, stroke_history.strokes[index].edit_count);
+    for (var j : u32 = 0; j < stroke_history.count; j++) {
+        curr_surface = evaluate_stroke(pos, &(stroke_history.strokes[j]), &edit_list, curr_surface, stroke_history.strokes[j].edit_list_index, stroke_history.strokes[j].edit_count);
     }
 
     result_surface = curr_surface;
@@ -105,8 +93,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     if (result_surface.distance < MIN_HIT_DIST) {
         atomicAdd(&used_pixels, 1);
     }
-
-    //result_surface.material.albedo = vec3f(f32(culling_count)/ 15.0);
 
     // Duplicate the texture Store, becuase then we have a branch depeding on an uniform!
     textureStore(write_sdf, texture_coordinates, vec4f(result_surface.distance));
