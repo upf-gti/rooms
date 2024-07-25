@@ -267,7 +267,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     // in order to find the goops (where the current stroke is taking affect)
     var curr_stroke_count : u32 = 0u;
     var brick_has_paint : bool = false;
-    for(var i : u32 = 0u; i < stroke_history.count; i++) {
+    for(var i : u32 = 0u; i < stroke_aabbs.stroke_count; i++) {
         if (intersection_AABB_AABB(eval_aabb_min, 
                                     eval_aabb_max, 
                                     stroke_aabbs.aabbs[i].min, 
@@ -278,7 +278,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             let curr_stroke : ptr<storage, Stroke> = &(stroke_history.strokes[i]);
 
             ///if (stroke_is_smooth_paint(curr_stroke)) {
-            if (stroke_history.strokes[i].operation != OP_SMOOTH_PAINT) {
+            if (!stroke_is_smooth_paint(curr_stroke)) {
                 surface_interval = evaluate_stroke_interval(current_subdivision_interval, curr_stroke, &edit_list, surface_interval, octant_center, level_half_size);
             } else {
                 brick_has_paint = true;

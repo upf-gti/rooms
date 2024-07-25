@@ -29,14 +29,15 @@ enum sdPrimitive : uint32_t {
 };
 
 enum sdOperation : uint32_t {
-	OP_UNION = 0,
-	OP_SUBSTRACTION,
-	OP_INTERSECTION,
-	OP_PAINT,
-	OP_SMOOTH_UNION,
+	OP_SMOOTH_UNION = 0u,
 	OP_SMOOTH_SUBSTRACTION,
 	OP_SMOOTH_INTERSECTION,
 	OP_SMOOTH_PAINT,
+    // Unused, for legacy options
+    OP_UNION,
+    OP_SUBSTRACTION,
+    OP_INTERSECTION,
+    OP_PAINT,
 	ALL_OPERATIONS
 };
 

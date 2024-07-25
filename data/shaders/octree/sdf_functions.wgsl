@@ -310,10 +310,10 @@ fn eval_stroke_sphere_union( position : vec3f, current_surface : Surface, curr_s
     var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
 
-    let stroke_material = curr_stroke.material;
-    let parameters : vec4f = curr_stroke.parameters;
+    let material = unpack_material(curr_stroke.pkd_material);
+    let parameters : vec4f = stroke_get_params(curr_stroke);
     let smooth_factor : f32 = parameters.w;
-    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    
     let cap_value : f32 = parameters.y;
 
     let starting_idx : u32 = edit_starting_idx;
@@ -341,10 +341,10 @@ fn eval_stroke_sphere_substraction( position : vec3f, current_surface : Surface,
     var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
 
-    let stroke_material = curr_stroke.material;
-    let parameters : vec4f = curr_stroke.parameters;
+    let material = unpack_material(curr_stroke.pkd_material);
+    let parameters : vec4f = stroke_get_params(curr_stroke);
     let smooth_factor : f32 = parameters.w;
-    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    
     let cap_value : f32 = parameters.y;
 
     let starting_idx : u32 = edit_starting_idx;
@@ -372,10 +372,10 @@ fn eval_stroke_sphere_paint( position : vec3f, current_surface : Surface, curr_s
     var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
 
-    let stroke_material = curr_stroke.material;
-    let parameters : vec4f = curr_stroke.parameters;
-    let stroke_blend_mode : u32 = curr_stroke.color_blend_op;
-    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let material = unpack_material(curr_stroke.pkd_material);
+    let parameters : vec4f = stroke_get_params(curr_stroke);
+    let stroke_blend_mode : u32 = stroke_get_color_blending_option(curr_stroke);
+    
     let smooth_factor : f32 = parameters.w;
     let cap_value : f32 = parameters.y;
 
@@ -428,10 +428,10 @@ fn eval_stroke_box_union( position : vec3f, current_surface : Surface, curr_stro
     var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
     
-    let stroke_material = curr_stroke.material;
-    let parameters : vec4f = curr_stroke.parameters;
+    let material = unpack_material(curr_stroke.pkd_material);
+    let parameters : vec4f = stroke_get_params(curr_stroke);
     let smooth_factor : f32 = parameters.w;
-    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -450,10 +450,10 @@ fn eval_stroke_box_substraction( position : vec3f, current_surface : Surface, cu
     var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
     
-    let stroke_material = curr_stroke.material;
-    let parameters : vec4f = curr_stroke.parameters;
+    let material = unpack_material(curr_stroke.pkd_material);
+    let parameters : vec4f = stroke_get_params(curr_stroke);
     let smooth_factor : f32 = parameters.w;
-    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -472,11 +472,11 @@ fn eval_stroke_box_paint( position : vec3f, current_surface : Surface, curr_stro
     var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
     
-    let stroke_material = curr_stroke.material;
-    let parameters : vec4f = curr_stroke.parameters;
-    let stroke_blend_mode : u32 = curr_stroke.color_blend_op;
+    let material = unpack_material(curr_stroke.pkd_material);
+    let parameters : vec4f = stroke_get_params(curr_stroke);
+    let stroke_blend_mode : u32 = stroke_get_color_blending_option(curr_stroke);
     let smooth_factor : f32 = parameters.w;
-    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -525,10 +525,10 @@ fn eval_stroke_capsule_union( position : vec3f, current_surface : Surface, curr_
     var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
     
-    let stroke_material = curr_stroke.material;
-    let parameters : vec4f = curr_stroke.parameters;
+    let material = unpack_material(curr_stroke.pkd_material);
+    let parameters : vec4f = stroke_get_params(curr_stroke);
     let smooth_factor : f32 = parameters.w;
-    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -547,10 +547,10 @@ fn eval_stroke_capsule_substraction( position : vec3f, current_surface : Surface
     var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
     
-    let stroke_material = curr_stroke.material;
-    let parameters : vec4f = curr_stroke.parameters;
+    let material = unpack_material(curr_stroke.pkd_material);
+    let parameters : vec4f = stroke_get_params(curr_stroke);
     let smooth_factor : f32 = parameters.w;
-    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -569,11 +569,11 @@ fn eval_stroke_capsule_paint( position : vec3f, current_surface : Surface, curr_
     var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
     
-    let stroke_material = curr_stroke.material;
-    let parameters : vec4f = curr_stroke.parameters;
-    let stroke_blend_mode : u32 = curr_stroke.color_blend_op;
+    let material = unpack_material(curr_stroke.pkd_material);
+    let parameters : vec4f = stroke_get_params(curr_stroke);
+    let stroke_blend_mode : u32 = stroke_get_color_blending_option(curr_stroke);
     let smooth_factor : f32 = parameters.w;
-    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -630,10 +630,10 @@ fn eval_stroke_cone_union( position : vec3f, current_surface : Surface, curr_str
     var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
     
-    let stroke_material = curr_stroke.material;
-    let parameters : vec4f = curr_stroke.parameters;
+    let material = unpack_material(curr_stroke.pkd_material);
+    let parameters : vec4f = stroke_get_params(curr_stroke);
     let smooth_factor : f32 = parameters.w;
-    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -652,10 +652,10 @@ fn eval_stroke_cone_substraction( position : vec3f, current_surface : Surface, c
     var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
     
-    let stroke_material = curr_stroke.material;
-    let parameters : vec4f = curr_stroke.parameters;
+    let material = unpack_material(curr_stroke.pkd_material);
+    let parameters : vec4f = stroke_get_params(curr_stroke);
     let smooth_factor : f32 = parameters.w;
-    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -674,11 +674,11 @@ fn eval_stroke_cone_paint( position : vec3f, current_surface : Surface, curr_str
     var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
     
-    let stroke_material = curr_stroke.material;
-    let parameters : vec4f = curr_stroke.parameters;
-    let stroke_blend_mode : u32 = curr_stroke.color_blend_op;
+    let material = unpack_material(curr_stroke.pkd_material);
+    let parameters : vec4f = stroke_get_params(curr_stroke);
+    let stroke_blend_mode : u32 = stroke_get_color_blending_option(curr_stroke);
     let smooth_factor : f32 = parameters.w;
-    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -727,10 +727,10 @@ fn eval_stroke_cylinder_union( position : vec3f, current_surface : Surface, curr
     var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
     
-    let stroke_material = curr_stroke.material;
-    let parameters : vec4f = curr_stroke.parameters;
+    let material = unpack_material(curr_stroke.pkd_material);
+    let parameters : vec4f = stroke_get_params(curr_stroke);
     let smooth_factor : f32 = parameters.w;
-    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -749,10 +749,10 @@ fn eval_stroke_cylinder_substraction( position : vec3f, current_surface : Surfac
     var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
     
-    let stroke_material = curr_stroke.material;
-    let parameters : vec4f = curr_stroke.parameters;
+    let material = unpack_material(curr_stroke.pkd_material);
+    let parameters : vec4f = stroke_get_params(curr_stroke);
     let smooth_factor : f32 = parameters.w;
-    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -771,11 +771,11 @@ fn eval_stroke_cylinder_paint( position : vec3f, current_surface : Surface, curr
     var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
     
-    let stroke_material = curr_stroke.material;
-    let parameters : vec4f = curr_stroke.parameters;
-    let stroke_blend_mode : u32 = curr_stroke.color_blend_op;
+    let material = unpack_material(curr_stroke.pkd_material);
+    let parameters : vec4f = stroke_get_params(curr_stroke);
+    let stroke_blend_mode : u32 = stroke_get_color_blending_option(curr_stroke);
     let smooth_factor : f32 = parameters.w;
-    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -835,10 +835,10 @@ fn eval_stroke_torus_union( position : vec3f, current_surface : Surface, curr_st
     var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
 
-    let stroke_material = curr_stroke.material;
-    let parameters : vec4f = curr_stroke.parameters;
+    let material = unpack_material(curr_stroke.pkd_material);
+    let parameters : vec4f = stroke_get_params(curr_stroke);
     let smooth_factor : f32 = parameters.w;
-    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    
     let cap_value : f32 = parameters.y;
 
     let starting_idx : u32 = edit_starting_idx;
@@ -866,10 +866,10 @@ fn eval_stroke_torus_substraction( position : vec3f, current_surface : Surface, 
     var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
 
-    let stroke_material = curr_stroke.material;
-    let parameters : vec4f = curr_stroke.parameters;
+    let material = unpack_material(curr_stroke.pkd_material);
+    let parameters : vec4f = stroke_get_params(curr_stroke);
     let smooth_factor : f32 = parameters.w;
-    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    
     let cap_value : f32 = parameters.y;
 
     let starting_idx : u32 = edit_starting_idx;
@@ -897,10 +897,10 @@ fn eval_stroke_torus_paint( position : vec3f, current_surface : Surface, curr_st
     var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
 
-    let stroke_material = curr_stroke.material;
-    let parameters : vec4f = curr_stroke.parameters;
-    let stroke_blend_mode : u32 = curr_stroke.color_blend_op;
-    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let material = unpack_material(curr_stroke.pkd_material);
+    let parameters : vec4f = stroke_get_params(curr_stroke);
+    let stroke_blend_mode : u32 = stroke_get_color_blending_option(curr_stroke);
+    
     let smooth_factor : f32 = parameters.w;
     let cap_value : f32 = parameters.y;
 
@@ -965,10 +965,10 @@ fn eval_stroke_vesica_union( position : vec3f, current_surface : Surface, curr_s
     var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
     
-    let stroke_material = curr_stroke.material;
-    let parameters : vec4f = curr_stroke.parameters;
+    let material = unpack_material(curr_stroke.pkd_material);
+    let parameters : vec4f = stroke_get_params(curr_stroke);
     let smooth_factor : f32 = parameters.w;
-    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -987,10 +987,10 @@ fn eval_stroke_vesica_substraction( position : vec3f, current_surface : Surface,
     var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
     
-    let stroke_material = curr_stroke.material;
-    let parameters : vec4f = curr_stroke.parameters;
+    let material = unpack_material(curr_stroke.pkd_material);
+    let parameters : vec4f = stroke_get_params(curr_stroke);
     let smooth_factor : f32 = parameters.w;
-    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -1009,11 +1009,11 @@ fn eval_stroke_vesica_paint( position : vec3f, current_surface : Surface, curr_s
     var result_surface : Surface = current_surface;
     var tmp_surface : Surface;
     
-    let stroke_material = curr_stroke.material;
-    let parameters : vec4f = curr_stroke.parameters;
-    let stroke_blend_mode : u32 = curr_stroke.color_blend_op;
+    let material = unpack_material(curr_stroke.pkd_material);
+    let parameters : vec4f = stroke_get_params(curr_stroke);
+    let stroke_blend_mode : u32 = stroke_get_color_blending_option(curr_stroke);
     let smooth_factor : f32 = parameters.w;
-    let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -1037,8 +1037,9 @@ fn eval_stroke_vesica_paint( position : vec3f, current_surface : Surface, curr_s
 */
 
 fn evaluate_stroke( position: vec3f, stroke: ptr<storage, Stroke, read>, curr_edit_list : ptr<storage, array<Edit>, read>, current_surface : Surface, edit_starting_index : u32, edit_count : u32) -> Surface {
-    let stroke_operation : u32 = (*stroke).operation;
-    let stroke_primitive : u32 = (*stroke).primitive;
+    let stroke_op_and_prim : vec2u = stroke_get_op_and_prim(stroke);
+    let stroke_operation : u32 = stroke_op_and_prim.x;
+    let stroke_primitive : u32 = stroke_op_and_prim.y;
 
     let curr_stroke_code : u32 = stroke_primitive | (stroke_operation << 4u);
 

@@ -69,19 +69,6 @@ struct PreviewStroke {
     edit_list : array<Edit>
 };
 
-struct Stroke {
-    stroke_id       : u32,
-    edit_count      : u32,
-    primitive       : u32,
-    operation       : u32,//4
-    parameters      : vec4f,//4
-    aabb_min        : vec3f,//4
-    color_blend_op  : u32,
-    aabb_max        : vec3f,
-    edit_list_index : u32, //4
-    material        : StrokeMaterial   // 48 bytes
-};
-
 /**
     pkd_edit_count_params
         edit count -> 16 bits
@@ -91,38 +78,38 @@ struct Stroke {
         primitive - > 8 bits
         color blending -> 4 bits
 */
-// struct Stroke {
-//     start_edit_idx          : u32,
-//     pkd_edit_count_params   : u32,
-//     pkd_ops_prim_blending   : u32,
-//     pkd_material            : u32
-// };
+struct Stroke {
+    start_edit_idx          : u32,
+    pkd_edit_count_params   : u32,
+    pkd_ops_prim_blending   : u32,
+    pkd_material            : u32
+};
 
-// fn stroke_is_smooth_paint(stroke : ptr<Stroke, storage>) -> bool {
-//     return (stroke.pkd_ops_prim_blending & 0x60000000u) == 0x60000000u;
-// }
+fn stroke_is_smooth_paint(stroke : ptr<storage, Stroke>) -> bool {
+    return (stroke.pkd_ops_prim_blending & 0x60000000u) == 0x60000000u;
+}
 
-// fn stroke_get_edit_data(stroke : ptr<Stroke, storage>) -> vec2u {
-//     return { stroke.start_edit_idx, (stroke.pkd_edit_count_params >> 16u)};
-// }
+fn stroke_get_edit_data(stroke : ptr<storage, Stroke>) -> vec2u {
+    return vec2u(stroke.start_edit_idx, (stroke.pkd_edit_count_params >> 16u));
+}
 
-// fn stroke_get_params(stroke : ptr<Stroke, storage>) -> vec3f {
-//     let blend_raw : u32 = stroke.pkd_edit_count_params;
-//     let x : f32 = f32((blend_raw & 0xF800u) >> 11u);
-//     let y : f32 = f32((blend_raw & 0x7C0u) >> 6u);
-//     let z : f32 = f32(blend_raw & 0x3Fu);
+fn stroke_get_params(stroke : ptr<storage, Stroke>) -> vec4f {
+    let blend_raw : u32 = stroke.pkd_edit_count_params;
+    let x : f32 = f32((blend_raw & 0xF800u) >> 11u);
+    let y : f32 = f32((blend_raw & 0x7C0u) >> 6u);
+    let z : f32 = f32(blend_raw & 0x3Fu);
 
-//     return vec3f(x / 32.0, y / 32.0, z / 64.0);
-// }
+    return vec4f(x / 31.0, y / 31.0, z / 63.0, 0.0);
+}
 
-// fn stroke_get_color_blending_option(stroke : ptr<Stroke, storage>) -> u32 {
-//     return (stroke.pkd_ops_prim_blending & 0x1E0000u) >> 17u;
-// }
+fn stroke_get_color_blending_option(stroke : ptr<storage, Stroke>) -> u32 {
+    return (stroke.pkd_ops_prim_blending & 0x1E0000u) >> 17u;
+}
 
-// fn stroke_get_op_and_prim(stroke : ptr<Stroke, storage>) -> vec2u {
-//     let ops_prim : u32 = stroke.pkd_ops_prim_blending;
-//     return { (ops_prim & 0xE0000000u) >> 29u, (ops_prim & 0x1FE00000u) >> 21u};
-// }
+fn stroke_get_op_and_prim(stroke : ptr<storage, Stroke>) -> vec2u {
+    let ops_prim : u32 = stroke.pkd_ops_prim_blending;
+    return vec2u((ops_prim & 0xE0000000u) >> 29u, (ops_prim & 0x1FE00000u) >> 21u);
+}
 
 struct AABB {
     min : vec3f,
@@ -298,15 +285,15 @@ struct CullingStroke {
     17-25 bits -> edit start (0-256)
     26-32 bits -> edit count (0-256)
 */
-fn culling_stroke_get_edit_start_and_count(culling_data : u32, stroke_list : ptr<storage, array<Stroke>, read>) -> CullingStroke {
-    let stroke_id : u32 = culling_data >> 16;
-    let edit_start : u32 = (culling_data & 0xFF00u) >> 8;
-    let edit_count : u32 = (culling_data & 0xFFu);
+// fn culling_stroke_get_edit_start_and_count(culling_data : u32, stroke_list : ptr<storage, array<Stroke>, read>) -> CullingStroke {
+//     let stroke_id : u32 = culling_data >> 16;
+//     let edit_start : u32 = (culling_data & 0xFF00u) >> 8;
+//     let edit_count : u32 = (culling_data & 0xFFu);
 
-    let stroke_pointer : ptr<storage, Stroke, read> = &stroke_list[stroke_id];
+//     let stroke_pointer : ptr<storage, Stroke, read> = &stroke_list[stroke_id];
 
-    return CullingStroke(stroke_id, edit_start + stroke_pointer.edit_list_index, stroke_pointer.edit_count);
-}
+//     return CullingStroke(stroke_id, edit_start + stroke_pointer.edit_list_index, stroke_pointer.edit_count);
+// }
 
 fn culling_get_culling_data(stroke_pointer : u32, edit_start : u32, edit_count : u32) -> u32 {
     var result : u32 = stroke_pointer << 16;

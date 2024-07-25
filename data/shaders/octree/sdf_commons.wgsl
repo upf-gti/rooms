@@ -12,18 +12,10 @@ const SD_PYRAMID        = 8;
 
 // SD Operations
 
-const OP_UNION                  = 0;
-const OP_SUBSTRACTION           = 1;
-const OP_INTERSECTION           = 2;
-const OP_PAINT                  = 3;
-const OP_SMOOTH_UNION           = 4;
-const OP_SMOOTH_SUBSTRACTION    = 5;
-const OP_SMOOTH_INTERSECTION    = 6;
-const OP_SMOOTH_PAINT           = 7;
-// const OP_SMOOTH_UNION           = 0;
-// const OP_SMOOTH_SUBSTRACTION    = 1;
-// const OP_SMOOTH_INTERSECTION    = 2;
-// const OP_SMOOTH_PAINT           = 3;
+const OP_SMOOTH_UNION           = 0;
+const OP_SMOOTH_SUBSTRACTION    = 1;
+const OP_SMOOTH_INTERSECTION    = 2;
+const OP_SMOOTH_PAINT           = 3;
 
 const SD_SPHERE_SMOOTH_OP_UNION = SD_SPHERE | (OP_SMOOTH_UNION << 4);
 const SD_SPHERE_SMOOTH_OP_SUBSTRACTION = SD_SPHERE | (OP_SMOOTH_SUBSTRACTION << 4);

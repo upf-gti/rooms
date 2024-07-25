@@ -149,15 +149,15 @@ fn sample_sdf_atlas(atlas_position : vec3f) -> f32
 fn sample_sdf_with_preview(sculpt_position : vec3f, atlas_position : vec3f) -> Surface
 {
     var material : SdfMaterial;
-    material.albedo = preview_stroke.stroke.material.color.xyz;
-    material.roughness = preview_stroke.stroke.material.roughness;
-    material.metalness = preview_stroke.stroke.material.metallic;
+    // material.albedo = preview_stroke.stroke.material.color.xyz;
+    // material.roughness = preview_stroke.stroke.material.roughness;
+    // material.metalness = preview_stroke.stroke.material.metallic;
 
     var surface : Surface;
     surface.distance = sample_sdf_atlas(atlas_position);
     surface.material = interpolate_material(atlas_position * SDF_RESOLUTION);
     
-    surface = evaluate_stroke(sculpt_position, &(preview_stroke.stroke), &(preview_stroke.edit_list), surface, edit_range.x, edit_range.y);
+    //surface = evaluate_stroke(sculpt_position, &(preview_stroke.stroke), &(preview_stroke.edit_list), surface, edit_range.x, edit_range.y);
     
     return surface;
 }

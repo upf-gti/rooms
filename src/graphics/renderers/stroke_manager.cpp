@@ -19,18 +19,14 @@ void StrokeManager::add_stroke_to_upload_list(sStrokeInfluence& influence, const
         result_to_compute.in_frame_influence.strokes.resize(influence.strokes.size() + STROKE_CONTEXT_INCREASE);
     }
 
-    memcpy(&influence.strokes[influence.stroke_count], &stroke, sizeof(sToUploadStroke));
-    influence.strokes[influence.stroke_count].edit_list_index = edit_list_count;
+    influence.strokes[influence.stroke_count].fill(stroke, edit_list_count);
 
     AABB stroke_aabb = stroke.get_world_AABB();
 
-    influence.strokes[influence.stroke_count].aabb_max = stroke_aabb.center + stroke_aabb.half_size;
-    influence.strokes[influence.stroke_count].aabb_min = stroke_aabb.center - stroke_aabb.half_size;
-
     aabb_to_upload_list[influence.stroke_count] = {
-            influence.strokes[influence.stroke_count].aabb_min,
+            stroke_aabb.center - stroke_aabb.half_size,
             0u,
-            influence.strokes[influence.stroke_count].aabb_max,
+            stroke_aabb.center + stroke_aabb.half_size,
             0u
     };
 
@@ -385,4 +381,45 @@ uint32_t StrokeManager::divide_AABB_on_max_eval_size(const AABB& base, AABB divi
     aabb_split(divided_bases, 0u, &division_count, half_max_division_size);
 
     return division_count;
+}
+
+void sToUploadStroke::fill( const Stroke& cpu_stroke,
+                            const uint32_t starting_id) {
+    starting_edit_idx = starting_id;
+    // Pack edit count & params
+    {
+        uint32_t result = 0u;
+        result |= cpu_stroke.edit_count << 16u;
+        result |= ((uint32_t)(cpu_stroke.parameters.x * 31) & 0x1Fu) << 11u; // 5 bits
+        result |= ((uint32_t)(cpu_stroke.parameters.y * 31) & 0x1Fu) << 6u; // 5 bits
+        result |= ((uint32_t)(cpu_stroke.parameters.z * 63) & 0x3Fu); // 6 bits
+        pkd_edit_count_and_params = result;
+    }
+
+    // Primitive, operations and blending options
+    {
+        uint32_t result = 0u;
+        result |= (cpu_stroke.operation & 0x7u) << 29u;
+        result |= (cpu_stroke.primitive & 0xFFu) << 21u;
+        result |= (cpu_stroke.color_blending_op & 0x1Fu) << 17u;
+    }
+
+    // Material packing
+    {
+        uint32_t result = 0u;
+        const uint32_t red = ((uint32_t)cpu_stroke.material.color.r * 127.0f);
+        const uint32_t green = ((uint32_t)cpu_stroke.material.color.g * 255.0f);
+        const uint32_t blue = ((uint32_t)cpu_stroke.material.color.b * 127.0f);
+
+        const uint32_t roughness = ((uint32_t)cpu_stroke.material.roughness * 31.0f);
+        const uint32_t metalness = ((uint32_t)cpu_stroke.material.metallic * 31.0f);
+
+        result |= (red & 0x7Fu) << 25u;
+        result |= (green & 0xFFu) << 17u;
+        result |= (blue & 0x7Fu) << 10u;
+        result |= (roughness & 0x1Fu) << 5u;
+        result |= (metalness & 0x1Fu);
+
+        pkd_material = result;
+    }
 }

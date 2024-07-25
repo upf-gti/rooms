@@ -5,11 +5,11 @@
     Roughness: 5 bits
 */
 
-const RED_MASK : u32 = 0x7f << 25u;//0xFE000000u;
+const RED_MASK : u32 = 0x7F << 25u;//0xFE000000u;
 const GREEN_MASK : u32 = 0xFF << 17u; // 0x1FE0000u;
-const BLUE_MASK : u32 = 0x7f << 10u; // 0x1FC00u;
-const ROUGHNESS_MASK : u32 = 0x1fu << 5u;
-const METALNESS_MASK : u32 = 0x1fu;
+const BLUE_MASK : u32 = 0x7F << 10u; // 0x1FC00u;
+const ROUGHNESS_MASK : u32 = 0x1Fu << 5u;
+const METALNESS_MASK : u32 = 0x1Fu;
 
 
 fn unpack_material(packed_material : u32) -> SdfMaterial {

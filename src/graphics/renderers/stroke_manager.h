@@ -20,17 +20,12 @@ struct sToUploadAABB {
 };
 
 struct sToUploadStroke {
-    uint32_t        stroke_id = 0u;
-    uint32_t        edit_count = 0u;
-    sdPrimitive     primitive;
-    sdOperation     operation;//4
-    glm::vec4	    parameters = { 0.f, -1.f, 0.f, 0.f }; // 4
-    glm::vec3	    aabb_min;// 4
-    ColorBlendOp    color_blending_op = ColorBlendOp::COLOR_OP_REPLACE;
-    glm::vec3	    aabb_max;
-    uint32_t        edit_list_index = 0u;// 4
-    // 48 bytes
-    StrokeMaterial material;
+    uint32_t        starting_edit_idx = 0u;
+    uint32_t        pkd_edit_count_and_params;
+    uint32_t        pkd_ops_prim_blendding;
+    uint32_t        pkd_material;
+
+    void fill(const Stroke& cpu_stroke, const uint32_t starting_id);
 };
 
 struct sStrokeInfluence {
@@ -52,7 +47,8 @@ struct sToComputeStrokeData {
     AABB in_frame_stroke_aabb;
 
     inline void set_defaults() {
-        in_frame_stroke.edit_count = 0u;
+        in_frame_stroke.starting_edit_idx = 0u;
+        in_frame_stroke.pkd_edit_count_and_params = 0u;
         in_frame_influence.stroke_count = 0u;
         in_frame_stroke_aabb = { { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f } };
     }

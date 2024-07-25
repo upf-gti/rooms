@@ -783,22 +783,21 @@ fn eval_interval_stroke_sphere_smooth_union(position : mat3x3f, current_surface 
     var result_surface : vec2f = current_surface;
     var tmp_surface : vec2f;
 
-    let edit_count : u32 = curr_stroke.edit_count;
-    let parameters : vec4f = curr_stroke.parameters;
+    let edit_start_and_count : vec2u = stroke_get_edit_data(curr_stroke);
+    let parameters : vec4f = stroke_get_params(curr_stroke);;
     let smooth_factor : f32 = parameters.w;
     let cap_value : f32 = parameters.y;
 
-    let starting_idx : u32 = curr_stroke.edit_list_index;
-    let ending_idx : u32 = curr_stroke.edit_count + starting_idx;
+    let ending_idx : u32 = edit_start_and_count.x + edit_start_and_count.y;
 
     if(cap_value > 0.0) {
-        for(var i : u32 = starting_idx; i < ending_idx; i++) {
+        for(var i : u32 = edit_start_and_count.x; i < ending_idx; i++) {
             let curr_edit : Edit = curr_edit_list[i];
             tmp_surface = cut_sphere_interval(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation);
             result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
         }
     } else {
-        for(var i : u32 = starting_idx; i < ending_idx; i++) {
+        for(var i : u32 = edit_start_and_count.x; i < ending_idx; i++) {
             let curr_edit : Edit = curr_edit_list[i];
             tmp_surface = sphere_interval(position, curr_edit.position, curr_edit.dimensions, curr_edit.rotation);
             result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
@@ -813,22 +812,21 @@ fn eval_interval_stroke_sphere_smooth_substract(position : mat3x3f, current_surf
     var result_surface : vec2f = current_surface;
     var tmp_surface : vec2f;
 
-    let edit_count : u32 = curr_stroke.edit_count;
-    let parameters : vec4f = curr_stroke.parameters;
+    let edit_start_and_count : vec2u = stroke_get_edit_data(curr_stroke);
+        let parameters : vec4f = stroke_get_params(curr_stroke);;
     let smooth_factor : f32 = parameters.w;
     let cap_value : f32 = parameters.y;
 
-    let starting_idx : u32 = curr_stroke.edit_list_index;
-    let ending_idx : u32 = curr_stroke.edit_count + starting_idx;
+    let ending_idx : u32 = edit_start_and_count.x + edit_start_and_count.y;
 
     if(cap_value > 0.0) {
-        for(var i : u32 = starting_idx; i < ending_idx; i++) {
+        for(var i : u32 = edit_start_and_count.x; i < ending_idx; i++) {
             let curr_edit : Edit = curr_edit_list[i];
             tmp_surface = cut_sphere_interval(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation);
             result_surface = opSmoothSubtractionInterval(result_surface, tmp_surface, smooth_factor);
         }
     } else {
-        for(var i : u32 = starting_idx; i < ending_idx; i++) {
+        for(var i : u32 = edit_start_and_count.x; i < ending_idx; i++) {
             let curr_edit : Edit = curr_edit_list[i];
             tmp_surface = sphere_interval(position, curr_edit.position, curr_edit.dimensions, curr_edit.rotation);
             result_surface = opSmoothSubtractionInterval(result_surface, tmp_surface, smooth_factor);
@@ -874,14 +872,13 @@ fn eval_interval_stroke_box_smooth_union(position : mat3x3f, current_surface : v
     var result_surface : vec2f = current_surface;
     var tmp_surface : vec2f;
 
-    let edit_count : u32 = curr_stroke.edit_count;
-    let parameters : vec4f = curr_stroke.parameters;
+    let edit_start_and_count : vec2u = stroke_get_edit_data(curr_stroke);
+        let parameters : vec4f = stroke_get_params(curr_stroke);;
     let smooth_factor : f32 = parameters.w;
 
-    let starting_idx : u32 = curr_stroke.edit_list_index;
-    let ending_idx : u32 = curr_stroke.edit_count + starting_idx;
+    let ending_idx : u32 = edit_start_and_count.x + edit_start_and_count.y;
 
-    for(var i : u32 = starting_idx; i < ending_idx; i++) {
+    for(var i : u32 = edit_start_and_count.x; i < ending_idx; i++) {
         let curr_edit : Edit = curr_edit_list[i];
         tmp_surface = box_interval(position, curr_edit.position, curr_edit.dimensions, curr_edit.rotation);
         result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
@@ -916,14 +913,13 @@ fn eval_interval_stroke_capsule_smooth_union(position : mat3x3f, current_surface
     var result_surface : vec2f = current_surface;
     var tmp_surface : vec2f;
 
-    let edit_count : u32 = curr_stroke.edit_count;
-    let parameters : vec4f = curr_stroke.parameters;
+    let edit_start_and_count : vec2u = stroke_get_edit_data(curr_stroke);
+        let parameters : vec4f = stroke_get_params(curr_stroke);;
     let smooth_factor : f32 = parameters.w;
 
-    let starting_idx : u32 = curr_stroke.edit_list_index;
-    let ending_idx : u32 = curr_stroke.edit_count + starting_idx;
+    let ending_idx : u32 = edit_start_and_count.x + edit_start_and_count.y;
 
-    for(var i : u32 = starting_idx; i < ending_idx; i++) {
+    for(var i : u32 = edit_start_and_count.x; i < ending_idx; i++) {
         let curr_edit : Edit = curr_edit_list[i];
         tmp_surface = capsule_interval(position, curr_edit.position, curr_edit.dimensions.x, curr_edit.dimensions.y, curr_edit.rotation);
         result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
@@ -981,14 +977,13 @@ fn eval_interval_stroke_cone_smooth_union(position : mat3x3f, current_surface : 
     var result_surface : vec2f = current_surface;
     var tmp_surface : vec2f;
 
-    let edit_count : u32 = curr_stroke.edit_count;
-    let parameters : vec4f = curr_stroke.parameters;
+    let edit_start_and_count : vec2u = stroke_get_edit_data(curr_stroke);
+        let parameters : vec4f = stroke_get_params(curr_stroke);;
     let smooth_factor : f32 = parameters.w;
 
-    let starting_idx : u32 = curr_stroke.edit_list_index;
-    let ending_idx : u32 = curr_stroke.edit_count + starting_idx;
+    let ending_idx : u32 = edit_start_and_count.x + edit_start_and_count.y;
 
-    for(var i : u32 = starting_idx; i < ending_idx; i++) {
+    for(var i : u32 = edit_start_and_count.x; i < ending_idx; i++) {
         let curr_edit : Edit = curr_edit_list[i];
         tmp_surface = cone_interval(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation);
         result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
@@ -1033,14 +1028,13 @@ fn eval_interval_stroke_cylinder_smooth_union(position : mat3x3f, current_surfac
     var result_surface : vec2f = current_surface;
     var tmp_surface : vec2f;
 
-    let edit_count : u32 = curr_stroke.edit_count;
-    let parameters : vec4f = curr_stroke.parameters;
+    let edit_start_and_count : vec2u = stroke_get_edit_data(curr_stroke);
+        let parameters : vec4f = stroke_get_params(curr_stroke);;
     let smooth_factor : f32 = parameters.w;
 
-    let starting_idx : u32 = curr_stroke.edit_list_index;
-    let ending_idx : u32 = curr_stroke.edit_count + starting_idx;
+    let ending_idx : u32 = edit_start_and_count.x + edit_start_and_count.y;
 
-    for(var i : u32 = starting_idx; i < ending_idx; i++) {
+    for(var i : u32 = edit_start_and_count.x; i < ending_idx; i++) {
         let curr_edit : Edit = curr_edit_list[i];
         tmp_surface = cylinder_interval(position, curr_edit.position, curr_edit.dimensions, curr_edit.rotation);
         result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
@@ -1101,22 +1095,21 @@ fn eval_interval_stroke_torus_smooth_union(position : mat3x3f, current_surface :
     var result_surface : vec2f = current_surface;
     var tmp_surface : vec2f;
 
-    let edit_count : u32 = curr_stroke.edit_count;
-    let parameters : vec4f = curr_stroke.parameters;
+    let edit_start_and_count : vec2u = stroke_get_edit_data(curr_stroke);
+        let parameters : vec4f = stroke_get_params(curr_stroke);;
     let smooth_factor : f32 = parameters.w;
     let cap_value : f32 = parameters.y;
 
-    let starting_idx : u32 = curr_stroke.edit_list_index;
-    let ending_idx : u32 = curr_stroke.edit_count + starting_idx;
+    let ending_idx : u32 = edit_start_and_count.x + edit_start_and_count.y;
 
     if(cap_value > 0.0) {
-        for(var i : u32 = starting_idx; i < ending_idx; i++) {
+        for(var i : u32 = edit_start_and_count.x; i < ending_idx; i++) {
             let curr_edit : Edit = curr_edit_list[i];
             tmp_surface = capped_torus_interval(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation);
             result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
         }
     } else {
-        for(var i : u32 = starting_idx; i < ending_idx; i++) {
+        for(var i : u32 = edit_start_and_count.x; i < ending_idx; i++) {
             let curr_edit : Edit = curr_edit_list[i];
             tmp_surface = torus_interval(position, curr_edit.position, curr_edit.dimensions, curr_edit.rotation);
             result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
@@ -1175,15 +1168,14 @@ fn eval_interval_stroke_vesica_smooth_union(position : mat3x3f, current_surface 
     var result_surface : vec2f = current_surface;
     var tmp_surface : vec2f;
 
-    let edit_count : u32 = curr_stroke.edit_count;
-    let parameters : vec4f = curr_stroke.parameters;
+    let edit_start_and_count : vec2u = stroke_get_edit_data(curr_stroke);
+    let parameters : vec4f = stroke_get_params(curr_stroke);
     let smooth_factor : f32 = parameters.w;
     let cap_value : f32 = parameters.y;
 
-    let starting_idx : u32 = curr_stroke.edit_list_index;
-    let ending_idx : u32 = curr_stroke.edit_count + starting_idx;
+    let ending_idx : u32 = edit_start_and_count.x + edit_start_and_count.y;
 
-    for(var i : u32 = starting_idx; i < ending_idx; i++) {
+    for(var i : u32 = edit_start_and_count.x; i < ending_idx; i++) {
         let curr_edit : Edit = curr_edit_list[i];
         tmp_surface = vesica_interval(position, curr_edit.position, curr_edit.dimensions, curr_edit.rotation);
         result_surface = opSmoothUnionInterval(result_surface, tmp_surface, smooth_factor);
@@ -1203,16 +1195,17 @@ fn eval_interval_stroke_vesica_smooth_union(position : mat3x3f, current_surface 
 
 fn evaluate_stroke_interval( position: mat3x3f, stroke: ptr<storage, Stroke, read>, curr_edit_list : ptr<storage, array<Edit>, read>, current_surface : vec2f, center : vec3f, half_size : f32) -> vec2f
 {
-    let stroke_operation : u32 = (*stroke).operation;
-    let stroke_primitive : u32 = (*stroke).primitive;
+    let stroke_op_and_prim : vec2u = stroke_get_op_and_prim(stroke);
+    let stroke_operation : u32 = stroke_op_and_prim.x;
+    let stroke_primitive : u32 = stroke_op_and_prim.y;
 
     let curr_stroke_code : u32 = stroke_primitive | (stroke_operation << 4u);
 
     var result_surface : vec2f = current_surface;
     let initial_surface : vec2f = vec2f(10000.0, 10000.0);
 
-    let edit_count : u32 = (*stroke).edit_count;
-    let parameters : vec4f = (*stroke).parameters;
+    let edit_count : u32 = stroke_get_edit_data(stroke).y;
+    let parameters : vec4f = stroke_get_params(stroke);
 
     let smooth_factor : f32 = parameters.w;
 

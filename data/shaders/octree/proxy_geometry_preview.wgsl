@@ -84,9 +84,9 @@ struct FragmentOutput {
 
 fn get_material_preview() -> SdfMaterial {
     var material : SdfMaterial;
-    material.albedo = preview_stroke.stroke.material.color.xyz;
-    material.roughness = preview_stroke.stroke.material.roughness;
-    material.metalness = preview_stroke.stroke.material.metallic;
+    // material.albedo = preview_stroke.stroke.material.color.xyz;
+    // material.roughness = preview_stroke.stroke.material.roughness;
+    // material.metalness = preview_stroke.stroke.material.metallic;
     return material;
 }
 
@@ -101,7 +101,7 @@ fn sample_sdf_preview(position : vec3f) -> f32
         surface.distance = 10000.0;
     }
     
-    surface = evaluate_stroke(position, &(preview_stroke.stroke), &(preview_stroke.edit_list), surface, edit_range.x, edit_range.y);
+    //surface = evaluate_stroke(position, &(preview_stroke.stroke), &(preview_stroke.edit_list), surface, edit_range.x, edit_range.y);
     
     return surface.distance;
 }
@@ -206,11 +206,11 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     out.color = vec4f(final_color, 1.0); // Color
     out.depth = ray_result.a;
 
-    let interpolant : f32 = (f32( edit_range.y ) / f32(preview_stroke.stroke.edit_count)) * (M_PI / 2.0);
-    var heatmap_color : vec3f;
-    heatmap_color.r = sin(interpolant);
-    heatmap_color.g = sin(interpolant * 2.0);
-    heatmap_color.b = cos(interpolant);
+    // let interpolant : f32 = (f32( edit_range.y ) / f32(preview_stroke.stroke.edit_count)) * (M_PI / 2.0);
+    // var heatmap_color : vec3f;
+    // heatmap_color.r = sin(interpolant);
+    // heatmap_color.g = sin(interpolant * 2.0);
+    // heatmap_color.b = cos(interpolant);
 
     // if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
     //     if (is_inside_brick) {

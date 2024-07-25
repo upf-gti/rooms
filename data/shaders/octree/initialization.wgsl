@@ -43,9 +43,10 @@ fn compute(@builtin(workgroup_id) group_id: vec3u)
 
         // Store the culling data of the first level
         let culling_stroke_size : u32 = min(stroke_history.count, MAX_STROKE_INFLUENCE_COUNT);
-        for(var i = 0u; i < culling_stroke_size; i++){
-            stroke_culling[i] = culling_get_culling_data(i, 0, stroke_history.strokes[i].edit_count);
-        }
+        stroke_culling[0] = 0u;
+        // for(var i = 0u; i < culling_stroke_size; i++){
+        //     stroke_culling[i] = culling_get_culling_data(i, 0, stroke_history.strokes[i].edit_count);
+        // }
         octree.data[0].stroke_count = culling_stroke_size;
     }
 

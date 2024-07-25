@@ -629,7 +629,7 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder, boo
         uint32_t set_as_preview = (needs_undo) ? 0x01u : 0u;
         webgpu_context->update_buffer(std::get<WGPUBuffer>(sculpt_octree_uniform->data), sizeof(uint32_t) * 2u, &set_as_preview, sizeof(uint32_t));
 
-        spdlog::info("Evaluate stroke! id: {}, stroke context count: {}", stroke_to_compute->in_frame_stroke.stroke_id, stroke_to_compute->in_frame_influence.stroke_count);
+        spdlog::info("Evaluate stroke! stroke context count: {}", stroke_to_compute->in_frame_influence.stroke_count);
         evaluate_strokes(compute_pass);
     }
 
