@@ -8,6 +8,7 @@
 #include "framework/scene/parse_gltf.h"
 #include "framework/scene/parse_scene.h"
 #include "framework/ui/io.h"
+#include "framework/ui/keyboard.h"
 
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/renderer_storage.h"
@@ -1486,11 +1487,11 @@ void SculptEditor::bind_events()
 
     Node::bind("save_material", [&](const std::string& signal, void* button) {
         generate_material_from_stroke(button);
-        });
+    });
 
     Node::bind("shuffle_material", [&](const std::string& signal, void* button) {
         generate_random_material();
-        });
+    });
 
     // Bind color blendind operations for painting
     {
@@ -1574,24 +1575,30 @@ void SculptEditor::generate_material_from_stroke(void* button)
     assert(mat_samples);
 
     std::string name = "new_material_" + std::to_string(last_generated_material_uid++);
-    ui::TextureButton2D* new_button = new ui::TextureButton2D(name, "data/textures/material_samples.png", ui::UNIQUE_SELECTION);
-    mat_samples->add_child(new_button);
 
-    // Set button as 3d
-    if (main_panel_3d) {
-        new_button->disable_2d();
-    }
+    auto callback = [&, p = mat_samples](const std::string& output) {
 
-    num_generated_materials++;
+        ui::TextureButton2D* new_button = new ui::TextureButton2D(output, "data/textures/material_samples.png", ui::UNIQUE_SELECTION);
+        p->add_child(new_button);
 
-    // Add data to existing samples..
-    const StrokeMaterial& mat = stroke_parameters.get_material();
-    add_pbr_material_data(name, mat.color, mat.roughness, mat.metallic);
-        // mat.noise_params.x, mat.noise_color, mat.noise_params.y, static_cast<int>(mat.noise_params.z));
+        // Set button as 3d
+        if (main_panel_3d) {
+            new_button->disable_2d();
+        }
 
-    Node::bind(name, [&](const std::string& signal, void* button) {
-        update_stroke_from_material(signal);
-    });
+        num_generated_materials++;
+
+        // Add data to existing samples..
+        const StrokeMaterial& mat = stroke_parameters.get_material();
+        add_pbr_material_data(output, mat.color, mat.roughness, mat.metallic);
+            // mat.noise_params.x, mat.noise_color, mat.noise_params.y, static_cast<int>(mat.noise_params.z));
+
+        Node::bind(output, [&](const std::string& signal, void* button) {
+            update_stroke_from_material(signal);
+        });
+    };
+
+    ui::Keyboard::request(callback, name);
 }
 
 void SculptEditor::generate_random_material()
