@@ -714,7 +714,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
             };
 
             Node::bind(signal + "@long_click", [fn = callback, str = node_name](const std::string& sg, void* data) {
-                ui::Keyboard::request(fn, str);
+                ui::Keyboard::request(fn, str, 32);
             });
         }
     }

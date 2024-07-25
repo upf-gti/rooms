@@ -28,6 +28,7 @@ namespace ui {
         bool layout_dirty = false;
         bool symbols = false;
         uint32_t p_caret = 1u;
+        uint32_t max_length = 256u;
         std::string input = ":";
         ui::Text2D* text = nullptr;
         std::function<void(const std::string&)> callback;
@@ -80,7 +81,7 @@ namespace ui {
         static void render();
         static void update(float delta_time);
 
-        static void request(std::function<void(const std::string&)> fn, const std::string& str = "");
+        static void request(std::function<void(const std::string&)> fn, const std::string& str = "", uint32_t max_length = 256);
         static void close() { active = false; };
     };
 }
