@@ -27,7 +27,7 @@ namespace ui {
         float title_y_corrected = desc.title_height * 0.5f - title_text_scale * 0.5f;
         ui::Container2D* title_container = new ui::Container2D(name + "_title", { 0.0f, 0.0f }, { inner_width - padding * 0.4f, desc.title_height }, colors::BLUE);
         title_container->add_child(new ui::Text2D(desc.title.empty() ? "Inspector": desc.title, { 0.0f, title_y_corrected }, title_text_scale, ui::TEXT_CENTERED | ui::SKIP_TEXT_SHADOW));
-        title_container->add_child(new ui::TextureButton2D("close_button", "data/textures/buttons/x.png", ui::SKIP_NAME, { inner_width - padding * 4.0f, title_y_corrected }, glm::vec2(32.0f)));
+        title_container->add_child(new ui::TextureButton2D("close_button", "data/textures/buttons/x.png", ui::SKIP_NAME, { inner_width - padding * 3.0f, title_y_corrected }, glm::vec2(32.0f)));
         column->add_child(title_container);
 
         Node::bind("close_button", [&](const std::string& sg, void* data) {
@@ -36,7 +36,7 @@ namespace ui {
 
         // Body row
         body = new ui::VContainer2D(name + "_body", { 0.0f, 0.0f }, colors::RED);
-        body->set_fixed_size({ inner_width, panel_size.y - desc.title_height - padding * 5.0f });
+        body->set_fixed_size({ inner_width, panel_size.y - desc.title_height - padding * 3.0f });
         column->add_child(body);
 
         // Listen for body children changes to update size
@@ -46,7 +46,7 @@ namespace ui {
 
             for (auto child : b->get_children()) {
                 Node2D* row = static_cast<Node2D*>(child);
-                body_height += row->get_size().y + padding * 0.5f;
+                body_height += row->get_size().y + 6.0f;
             }
 
             // Scroll to max_scroll
@@ -131,7 +131,7 @@ namespace ui {
             flex_container = create_row();
         }
 
-        auto w = new ui::Text2D(label, 16.f, ui::SCROLLABLE | ui::TEXT_EVENTS | ui::DBL_CLICK | ui::LONG_CLICK);
+        auto w = new ui::Text2D(label, 17.f, ui::SCROLLABLE | ui::TEXT_EVENTS | ui::DBL_CLICK | ui::LONG_CLICK);
         w->set_signal(name);
         flex_container->add_child(w);
         items[name] = w;

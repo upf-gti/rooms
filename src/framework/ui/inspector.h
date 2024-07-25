@@ -13,8 +13,8 @@ namespace ui {
         std::string name = "";
         std::string title = "";
         float title_height = 48.0f;
-        float padding = 12.0f;
-        glm::vec2 size = { 344.f, 512.f };
+        float padding = 18.0f;
+        glm::vec2 size = { 420.f, 600.f };
         glm::vec2 position = { 0.0f, 0.0f };
     };
 
