@@ -79,7 +79,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     var subdivide : bool = false;
     var margin : vec4f = vec4f(0.0);
 
-    subdivide = intersection_AABB_AABB(eval_aabb_min, eval_aabb_max, stroke_history.eval_aabb_min, stroke_history.eval_aabb_max);
+    subdivide = intersection_AABB_AABB(eval_aabb_min, eval_aabb_max, merge_data.evaluation_AABB_min, merge_data.evaluation_AABB_max);
             
     if (subdivide) {
         // Stroke history culling
@@ -90,7 +90,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                                    eval_aabb_max, 
                                    stroke_aabbs.aabbs[i].min, 
                                    stroke_aabbs.aabbs[i].max)) {
-                curr_stroke_count = curr_stroke_count + 1u;
+                //curr_stroke_count = curr_stroke_count + 1u;
                 any_stroke_inside = true;
             }
         }

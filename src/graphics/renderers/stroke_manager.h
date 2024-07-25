@@ -12,6 +12,13 @@
 
 class SculptInstance;
 
+struct sToUploadAABB {
+    glm::vec3 min;
+    uint32_t padd1;
+    glm::vec3 max;
+    uint32_t padd;
+};
+
 struct sToUploadStroke {
     uint32_t        stroke_id = 0u;
     uint32_t        edit_count = 0u;
@@ -68,6 +75,7 @@ struct StrokeManager {
 
     uint32_t edit_list_count = 0u;
     std::vector<Edit> edit_list;
+    std::vector<sToUploadAABB> aabb_to_upload_list;
 
     StrokeParameters dirty_stroke_params;
     uint32_t dirty_stroke_increment = 0u;

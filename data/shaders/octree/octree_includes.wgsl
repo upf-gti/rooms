@@ -126,13 +126,16 @@ struct Stroke {
 
 struct AABB {
     min : vec3f,
+    padd0 : u32,
     max : vec3f,
-    padding : vec2u
+    padd1 : u32
 };
 
 struct AABB_List {
     stroke_count : u32,
-    padd : vec3u,
+    padd0 : u32,
+    padd1 : u32,
+    padd2 : u32,
     aabbs : array<AABB>
 };
 
@@ -174,9 +177,9 @@ struct Octree_NonAtomic {
 };
 
 struct MergeData {
-    reevaluation_AABB_min : vec3f,
+    evaluation_AABB_min : vec3f,
     reevaluate            : u32,
-    reevaluation_AABB_max : vec3f,
+    evaluation_AABB_max : vec3f,
     padding               : u32
 };
 

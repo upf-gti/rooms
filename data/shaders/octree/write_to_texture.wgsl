@@ -66,11 +66,11 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
     let is_interior_brick : bool = (INTERIOR_BRICK_FLAG & brick_pointer) == INTERIOR_BRICK_FLAG;
 
-    if (is_interior_brick) {
-        sSurface.distance = -100.0;
-    } else {
+    // if (is_interior_brick) {
+    //     sSurface.distance = -100.0;
+    // } else {
         sSurface.distance = 10000.0;
-    }
+    //}
     // Offset for a 10 pixel wide brick
     let pixel_offset : vec3f = (local_id_vec - 4.5) * PIXEL_WORLD_SIZE;
 
@@ -82,7 +82,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     let pos = octant_center + pixel_offset;
 
     // Evaluating the edit context
-    //let p = stroke_culling[0];
+    let p = stroke_culling[0];
     for (var j : u32 = 0; j < stroke_history.count; j++) {
         curr_surface = evaluate_stroke(pos, &(stroke_history.strokes[j]), &edit_list, curr_surface, stroke_history.strokes[j].edit_list_index, stroke_history.strokes[j].edit_count);
     }

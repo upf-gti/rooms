@@ -10,6 +10,8 @@ void StrokeManager::init() {
 
     edit_list.resize(EDIT_BUFFER_INITIAL_SIZE);
     result_to_compute.in_frame_influence.strokes.resize(STROKE_CONTEXT_INTIAL_SIZE);
+
+    aabb_to_upload_list.resize(2000u);
 }
 
 void StrokeManager::add_stroke_to_upload_list(sStrokeInfluence& influence, const Stroke& stroke) {
@@ -24,6 +26,13 @@ void StrokeManager::add_stroke_to_upload_list(sStrokeInfluence& influence, const
 
     influence.strokes[influence.stroke_count].aabb_max = stroke_aabb.center + stroke_aabb.half_size;
     influence.strokes[influence.stroke_count].aabb_min = stroke_aabb.center - stroke_aabb.half_size;
+
+    aabb_to_upload_list[influence.stroke_count] = {
+            influence.strokes[influence.stroke_count].aabb_min,
+            0u,
+            influence.strokes[influence.stroke_count].aabb_max,
+            0u
+    };
 
     for (uint32_t j = 0u; j < stroke.edit_count; j++) {
         add_edit_to_upload(stroke.edits[j]);

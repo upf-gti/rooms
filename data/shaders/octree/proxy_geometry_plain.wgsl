@@ -99,8 +99,6 @@ struct FragmentOutput {
     @builtin(frag_depth) depth: f32
 }
 
-// @group(2) @binding(0) var<uniform> sculpt_data : SculptData;
-
 #define MAX_LIGHTS
 
 @group(3) @binding(0) var irradiance_texture: texture_cube<f32>;

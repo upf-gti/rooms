@@ -2,12 +2,10 @@
 #include octree_includes.wgsl
 #include sdf_commons.wgsl
 
-@group(0) @binding(1) var<uniform> merge_data : MergeData;
+@group(0) @binding(2) var<storage, read> stroke_aabbs : AABB_List;
 @group(0) @binding(5) var<storage, read_write> brick_buffers: BrickBuffers;
 @group(0) @binding(6) var<storage, read> stroke_history : StrokeHistory;
-@group(0) @binding(6) var<storage, read> stroke_aabbs : array<AABB>;
 @group(0) @binding(7) var<storage, read> edit_list : array<Edit>;
-//@group(0) @binding(9) var<storage, read_write> stroke_culling : array<u32>;
 
 @group(1) @binding(0) var<storage, read_write> octree : Octree;
 
@@ -272,12 +270,12 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     for(var i : u32 = 0u; i < stroke_history.count; i++) {
         if (intersection_AABB_AABB(eval_aabb_min, 
                                     eval_aabb_max, 
-                                    stroke_aabbs.aabbs[i].aabb_min, 
-                                    stroke_aabbs.aabbs[i].aabb_max)) {
+                                    stroke_aabbs.aabbs[i].min, 
+                                    stroke_aabbs.aabbs[i].max)) {
             // Added to the current list
             curr_stroke_count++;
 
-            let curr_stroke : ptr<Stroke, storage> = &(stroke_history.strokes[i]);
+            let curr_stroke : ptr<storage, Stroke> = &(stroke_history.strokes[i]);
 
             ///if (stroke_is_smooth_paint(curr_stroke)) {
             if (stroke_history.strokes[i].operation != OP_SMOOTH_PAINT) {
@@ -291,28 +289,30 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     octree.data[octree_index].stroke_count = curr_stroke_count;
     octree.data[octree_index].culling_id = curr_culling_layer_index;
 
-    // Do not evaluate all the bricks, only the ones whose distance interval has changed
-    let prev_interval = octree.data[octree_index].octant_center_distance;
-    octree.data[octree_index].octant_center_distance = surface_interval;
+    if (curr_stroke_count > 0u) {
+         // Do not evaluate all the bricks, only the ones whose distance interval has changed
+        let prev_interval = octree.data[octree_index].octant_center_distance;
+        octree.data[octree_index].octant_center_distance = surface_interval;
 
-    let int_distance = abs(distance(prev_interval, surface_interval));
-            
-    if (int_distance > 0.00001) {
-        if (surface_interval.x > 0.0) {
-            if (is_current_brick_filled) {
-                // delete any brick outside surface that was previosly filled
-                brick_remove(octree_index);
-            } else {
-                // reset flags for potential interior bricks
-                octree.data[octree_index].tile_pointer = 0;
-                octree.data[octree_index].octant_center_distance = vec2f(10000.0, 10000.0);
+        let int_distance = abs(distance(prev_interval, surface_interval));
+
+        if (int_distance > 0.00001) {
+            if (surface_interval.x > 0.0) {
+                if (is_current_brick_filled) {
+                    // delete any brick outside surface that was previosly filled
+                    brick_remove(octree_index);
+                } else {
+                    // reset flags for potential interior bricks
+                    octree.data[octree_index].tile_pointer = 0;
+                    octree.data[octree_index].octant_center_distance = vec2f(10000.0, 10000.0);
+                }
+            } else if (surface_interval.y < 0.0) {
+                brick_remove_and_mark_as_inside(octree_index, is_current_brick_filled);
+            } else if (surface_interval.x < 0.0) {
+                brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
             }
-        } else if (surface_interval.y < 0.0) {
-            brick_remove_and_mark_as_inside(octree_index, is_current_brick_filled);
-        } else if (surface_interval.x < 0.0) {
-            brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
+        } else if (brick_has_paint && is_current_brick_filled) {
+                brick_reevaluate(octree_index);
         }
-    } else if (brick_has_paint && is_current_brick_filled) {
-            brick_reevaluate(octree_index);
     }
 }
