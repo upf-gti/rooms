@@ -661,7 +661,7 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder, boo
     wgpuCommandEncoderCopyBufferToBuffer(command_encoder, std::get<WGPUBuffer>(octree_brick_buffers.data), 0,
         brick_buffers_counters_read_buffer, 0, sizeof(sBrickBuffers_counters));
 
-    //AABB_mesh->render();
+    AABB_mesh->render();
 
     stroke_manager.update();
 
@@ -883,7 +883,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_stroke_context.data), 0, &default_val, sizeof(uint32_t));
 
         // Culling list
-        uint32_t culling_size = sizeof(uint32_t) * (2u * last_octree_level_size * max_stroke_influence_count);
+        uint32_t culling_size = sizeof(uint32_t) * (4u + (last_octree_level_size / 4u) * max_stroke_influence_count + last_octree_level_size * 2u);
         stroke_culling_data.data = webgpu_context->create_buffer(culling_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "stroke_culling_data");
         stroke_culling_data.binding = 9;
         stroke_culling_data.buffer_size = culling_size;
@@ -915,11 +915,11 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_indirect_buffer_struct.data), 0, default_indirect_values, sizeof(uint32_t) * 16u);
 
 
-        std::vector<Uniform*> uniforms = { &compute_merge_data_uniform, &aabb_buffer };
+        std::vector<Uniform*> uniforms = { &compute_merge_data_uniform, &aabb_buffer, &stroke_culling_data };
 
         compute_octree_evaluate_subdivide_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_evaluate_subdivide_shader, 0);
 
-        uniforms = { &octree_brick_buffers, &octree_stroke_context, &aabb_buffer, &octree_edit_list };
+        uniforms = { &octree_brick_buffers, &octree_stroke_context, &aabb_buffer, &octree_edit_list, &stroke_culling_data };
 
         compute_octree_evaluate_last_level_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_evaluate_last_level_shader, 0);
     }
@@ -932,7 +932,7 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
 
     // Octree increment iteration pass
     {
-        std::vector<Uniform*> uniforms = { &octree_indirect_buffer_struct, &octree_brick_buffers };
+        std::vector<Uniform*> uniforms = { &octree_indirect_buffer_struct, &octree_brick_buffers, &stroke_culling_data };
 
         compute_octree_increment_level_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_increment_level_shader, 0);
     }
@@ -961,14 +961,14 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
 
     // Ping pong buffers for read & write octants for the octree compute
     for (int i = 0; i < 2; ++i) {
-        octant_usage_buffers[i] = webgpu_context->create_buffer(octants_max_size * sizeof(uint32_t), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "octant_usage");
+        octant_usage_buffers[i] = webgpu_context->create_buffer(octants_max_size * sizeof(uint32_t) * 2u, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "octant_usage");
         webgpu_context->update_buffer(octant_usage_buffers[i], 0, &default_val, sizeof(uint32_t));
     }
 
     for (int i = 0; i < 4; ++i) {
         octant_usage_uniform[i].data = octant_usage_buffers[i / 2];
         octant_usage_uniform[i].binding = i % 2;
-        octant_usage_uniform[i].buffer_size = octants_max_size * sizeof(uint32_t);
+        octant_usage_uniform[i].buffer_size = octants_max_size * sizeof(uint32_t) * 2u;
     }
 
     for (int i = 0; i < 2; ++i) {

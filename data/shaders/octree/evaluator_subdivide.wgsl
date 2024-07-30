@@ -4,12 +4,14 @@
 
 @group(0) @binding(1) var<uniform> merge_data : MergeData;
 @group(0) @binding(2) var<storage, read> stroke_aabbs : AABB_List;
-//@group(0) @binding(9) var<storage, read_write> stroke_culling : array<u32>;
+@group(0) @binding(9) var<storage, read_write> stroke_culling : StrokeCullingBuffers;
 
 @group(1) @binding(0) var<storage, read_write> octree : Octree;
 
 @group(2) @binding(0) var<storage, read> octant_usage_read : array<u32>;
 @group(2) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
+
+#include stroke_culling.wgsl
 
 fn intersection_AABB_AABB(b1_min : vec3f, b1_max : vec3f, b2_min : vec3f, b2_max : vec3f) -> bool {
     return (b1_min.x <= b2_max.x && b1_min.y <= b2_max.y && b1_min.z <= b2_max.z) && (b1_max.x >= b2_min.x && b1_max.y >= b2_min.y && b1_max.z >= b2_min.z);
@@ -77,17 +79,22 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     var margin : vec4f = vec4f(0.0);
 
     subdivide = intersection_AABB_AABB(eval_aabb_min, eval_aabb_max, merge_data.evaluation_AABB_min, merge_data.evaluation_AABB_max);
+
+    // .x = starting index of the index array
+    // .y = # of indices in teh index array AKA # of strokes
+    let stroke_culling_bounds : vec2u = StrokeCulling_get_index_bounds_of_node(parent_octant_id, parent_level);
             
     if (subdivide) {
         // Stroke history culling
         var curr_stroke_count : u32 = 0u;
         var any_stroke_inside : bool = false;
-        for(var i : u32 = 0u; i < stroke_aabbs.stroke_count; i++) {
+        for(var i : u32 = 0u; i < stroke_culling_bounds.y; i++) {
+            let index : u32 = StrokeCulling_get_stroke_index_at(stroke_culling_bounds.x + i, parent_level);
             if (intersection_AABB_AABB(eval_aabb_min, 
                                    eval_aabb_max, 
-                                   stroke_aabbs.aabbs[i].min, 
-                                   stroke_aabbs.aabbs[i].max)) {
-                //curr_stroke_count = curr_stroke_count + 1u;
+                                   stroke_aabbs.aabbs[index].min, 
+                                   stroke_aabbs.aabbs[index].max)) {
+                add_index_to_thread_index_buffer(index);
                 any_stroke_inside = true;
             }
         }
@@ -100,6 +107,10 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             for (var i : u32 = 0; i < 8; i++) {
                 octant_usage_write[prev_counter + i] = octant_id | (i << (3 * level));
             }
+
+            StrokeCulling_copy_thread_stroke_buffer_to_common_buffer(octant_id, level);
+        } else {
+            StrokeCulling_set_index_bounds_of_node(octant_id, 0u, 0u, level);
         }
     }
 }

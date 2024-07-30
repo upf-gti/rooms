@@ -8,6 +8,9 @@
 #define MAX_SUBDIVISION_SIZE
 #define MAX_STROKE_INFLUENCE_COUNT
 
+const HALF_MAX_STROKE_INFLUENCE_COUNT = (MAX_STROKE_INFLUENCE_COUNT / 2u);
+const QUARTER_MAX_SUBDIVISION_SIZE = (MAX_SUBDIVISION_SIZE / 4u);
+
 const SCULPT_TO_ATLAS_CONVERSION_FACTOR = (WORLD_SPACE_SCALE / SDF_RESOLUTION)  / (SCULPT_MAX_SIZE);
 const PIXEL_WORLD_SIZE = SCULPT_MAX_SIZE / WORLD_SPACE_SCALE;
 const PIXEL_ATLAS_SIZE = PIXEL_WORLD_SIZE * SCULPT_TO_ATLAS_CONVERSION_FACTOR;
@@ -275,34 +278,23 @@ struct RayIntersectionInfo
     dummy1 : u32,
 };
 
-struct CullingStroke {
-    stroke_idx : u32,
-    edit_start_idx : u32,
-    edit_count : u32
+const STROKE_INDEX_SIZE = MAX_STROKE_INFLUENCE_COUNT * QUARTER_MAX_SUBDIVISION_SIZE;
+const STROKE_INDEX_HALF_SIZE = STROKE_INDEX_SIZE / 2u;
+// NOTE: dont access the index buffer as is, since it is u16 packed into u32
+struct StrokeCullingBuffers {
+    stroke_index_count : atomic<u32>,
+    padd0 : u32,
+    padd1 : u32,
+    padd2 : u32,
+    stroke_index_buffer : array<u32, STROKE_INDEX_SIZE>,
+    stroke_indices_per_node_buffer : array<u32, MAX_SUBDIVISION_SIZE * 2u>
 };
-/**
-    0-16 bits -> stroke id (0-65535 # of strokes)
-    17-25 bits -> edit start (0-256)
-    26-32 bits -> edit count (0-256)
-*/
-// fn culling_stroke_get_edit_start_and_count(culling_data : u32, stroke_list : ptr<storage, array<Stroke>, read>) -> CullingStroke {
-//     let stroke_id : u32 = culling_data >> 16;
-//     let edit_start : u32 = (culling_data & 0xFF00u) >> 8;
-//     let edit_count : u32 = (culling_data & 0xFFu);
 
-//     let stroke_pointer : ptr<storage, Stroke, read> = &stroke_list[stroke_id];
-
-//     return CullingStroke(stroke_id, edit_start + stroke_pointer.edit_list_index, stroke_pointer.edit_count);
-// }
-
-fn culling_get_culling_data(stroke_pointer : u32, edit_start : u32, edit_count : u32) -> u32 {
-    var result : u32 = stroke_pointer << 16;
-    // result |= (edit_start & 0xFFu) << 8;
-    // result |= (edit_count & 0xFFu);
-
-    return result;
-}
-
-fn culling_get_stroke_index(culling_data : u32) -> u32 {
-    return (culling_data) >> 16;
-}
+struct StrokeCullingBuffers_NonAtomic {
+    stroke_index_count : u32,
+    padd0 : u32,
+    padd1 : u32,
+    padd2 : u32,
+    stroke_index_buffer : array<u32, STROKE_INDEX_SIZE>,
+    stroke_indices_per_node_buffer : array<u32, MAX_SUBDIVISION_SIZE * 2u>
+};

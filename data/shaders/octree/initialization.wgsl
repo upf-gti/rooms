@@ -3,13 +3,14 @@
 @group(0) @binding(1) var<storage, read_write> octant_usage_write_0 : array<u32>;
 @group(0) @binding(2) var<storage, read_write> octant_usage_write_1: array<u32>;
 @group(0) @binding(5) var<storage, read_write> brick_buffers: BrickBuffers_ReadOnly;
-@group(0) @binding(6) var<storage, read> stroke_history : StrokeHistory;
+@group(0) @binding(6) var<storage, read> stroke_history : StrokeHistory; 
 @group(0) @binding(8) var<storage, read_write> indirect_buffers : IndirectBuffers_ReadOnly;
-@group(0) @binding(9) var<storage, read_write> stroke_culling : array<u32>;
+@group(0) @binding(9) var<storage, read_write> stroke_culling : StrokeCullingBuffers;
+
 
 @group(1) @binding(0) var<storage, read_write> octree : Octree;
 
-
+#include stroke_culling.wgsl
 
 /**
     Este shader prepara los buffers para la evaluacion de strokes, que vienen de la CPU.
@@ -42,12 +43,14 @@ fn compute(@builtin(workgroup_id) group_id: vec3u)
         brick_buffers.brick_instance_counter = 0u;
 
         // Store the culling data of the first level
-        let culling_stroke_size : u32 = min(stroke_history.count, MAX_STROKE_INFLUENCE_COUNT);
-        stroke_culling[0] = 0u;
-        // for(var i = 0u; i < culling_stroke_size; i++){
-        //     stroke_culling[i] = culling_get_culling_data(i, 0, stroke_history.strokes[i].edit_count);
-        // }
-        octree.data[0].stroke_count = culling_stroke_size;
+        //let culling_stroke_size : u32 = min(stroke_history.count, MAX_STROKE_INFLUENCE_COUNT);
+        atomicStore(&stroke_culling.stroke_index_count, 0u);
+        for(var i = 0u; i < stroke_history.count; i++){
+            add_index_to_thread_index_buffer(i);
+        }
+
+        StrokeCulling_copy_thread_stroke_buffer_to_common_buffer(0u, 0u);
+        //octree.data[0].stroke_count = culling_stroke_size;
     }
 
     indirect_buffers.evaluator_subdivision_counter = 1u;

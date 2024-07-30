@@ -6,11 +6,14 @@
 @group(0) @binding(5) var<storage, read_write> brick_buffers: BrickBuffers;
 @group(0) @binding(6) var<storage, read> stroke_history : StrokeHistory;
 @group(0) @binding(7) var<storage, read> edit_list : array<Edit>;
+@group(0) @binding(9) var<storage, read_write> stroke_culling : StrokeCullingBuffers;
 
 @group(1) @binding(0) var<storage, read_write> octree : Octree;
 
 @group(2) @binding(0) var<storage, read> octant_usage_read : array<u32>;
 @group(2) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
+
+#include stroke_culling.wgsl
 
 #include sdf_interval_functions.wgsl
 
@@ -143,8 +146,8 @@ fn brick_remove_and_mark_as_inside(octree_index : u32, is_current_brick_filled :
     octree.data[octree_index].octant_center_distance = vec2f(-10000.0, -10000.0);
 }
 
-fn brick_create_or_reevaluate(octree_index : u32, is_current_brick_filled : bool, is_interior_brick : bool, octant_center : vec3f) {
-    let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 1);
+fn brick_create_or_reevaluate(octree_index : u32, is_current_brick_filled : bool, is_interior_brick : bool, octant_center : vec3f, octant_id : u32) {
+    let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 2u);
 
     if (!is_current_brick_filled) {
         // Last level, more coarse culling
@@ -157,14 +160,17 @@ fn brick_create_or_reevaluate(octree_index : u32, is_current_brick_filled : bool
 
         octree.data[octree_index].tile_pointer = instance_index | FILLED_BRICK_FLAG;
     }
-                
+
+    // Send the octree index and the octant ID, in order to avoid computing it           
     octant_usage_write[prev_counter] = octree_index;
+    octant_usage_write[prev_counter+1u] = octant_id;
 }
 
-fn brick_reevaluate(octree_index : u32)
+fn brick_reevaluate(octree_index : u32, octant_id : u32)
 {
-    let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 1);
+    let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 2u);
     octant_usage_write[prev_counter] = octree_index;
+    octant_usage_write[prev_counter+1u] = octant_id;
 }
 
 fn preview_brick_create(octree_index : u32, octant_center : vec3f, is_interior_brick : bool, edit_start_index : u32, edit_count : u32)
@@ -201,6 +207,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     let id : u32 = group_id.x;
 
     let parent_level : u32 = level - 1;
+
+    thread_stroke_index_count = 0u;
 
     let octant_id : u32 = octant_usage_read[id];
     let parent_mask : u32 = u32(pow(2, f32(OCTREE_DEPTH * 3))) - 1;
@@ -277,6 +285,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
             let curr_stroke : ptr<storage, Stroke> = &(stroke_history.strokes[i]);
 
+            add_index_to_thread_index_buffer(i);
+
             ///if (stroke_is_smooth_paint(curr_stroke)) {
             if (!stroke_is_smooth_paint(curr_stroke)) {
                 surface_interval = evaluate_stroke_interval(current_subdivision_interval, curr_stroke, &edit_list, surface_interval, octant_center, level_half_size);
@@ -288,6 +298,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
     octree.data[octree_index].stroke_count = curr_stroke_count;
     octree.data[octree_index].culling_id = curr_culling_layer_index;
+
+    // TODO: The StrokeCulling set bounds of the non-write2tex needs to be setted?? 
 
     if (curr_stroke_count > 0u) {
          // Do not evaluate all the bricks, only the ones whose distance interval has changed
@@ -301,18 +313,25 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 if (is_current_brick_filled) {
                     // delete any brick outside surface that was previosly filled
                     brick_remove(octree_index);
+                    StrokeCulling_set_index_bounds_of_node(octant_id, 0u, 0u, level);
                 } else {
                     // reset flags for potential interior bricks
                     octree.data[octree_index].tile_pointer = 0;
                     octree.data[octree_index].octant_center_distance = vec2f(10000.0, 10000.0);
+                    StrokeCulling_set_index_bounds_of_node(octant_id, 0u, 0u, level);
                 }
             } else if (surface_interval.y < 0.0) {
                 brick_remove_and_mark_as_inside(octree_index, is_current_brick_filled);
+                StrokeCulling_set_index_bounds_of_node(octant_id, 0u, 0u, level);
             } else if (surface_interval.x < 0.0) {
-                brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
+                brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center, octant_id);
+                StrokeCulling_copy_thread_stroke_buffer_to_common_buffer(octant_id, level);
             }
         } else if (brick_has_paint && is_current_brick_filled) {
-                brick_reevaluate(octree_index);
+            brick_reevaluate(octree_index, octant_id);
+            StrokeCulling_copy_thread_stroke_buffer_to_common_buffer(octant_id, level);
         }
+    } else {
+        StrokeCulling_set_index_bounds_of_node(octant_id, 0u, 0u, level);
     }
 }

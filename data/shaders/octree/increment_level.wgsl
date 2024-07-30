@@ -2,6 +2,7 @@
 
 @group(0) @binding(5) var<storage, read_write> brick_buffers: BrickBuffers_ReadOnly;
 @group(0) @binding(8) var<storage, read_write> indirect_buffers : IndirectBuffers_ReadOnly;
+@group(0) @binding(9) var<storage, read_write> stroke_culling : StrokeCullingBuffers_NonAtomic;
 
 @group(1) @binding(0) var<storage, read_write> octree : Octree;
 
@@ -29,11 +30,14 @@ fn compute(@builtin(global_invocation_id) id: vec3<u32>)
     indirect_buffers.brick_instance_count = brick_buffers.brick_instance_counter;
     indirect_buffers.brick_removal_counter = brick_buffers.brick_removal_counter;
 
+    stroke_culling.stroke_index_count = 0u;
+
     if (level == 0u) {
         brick_buffers.brick_instance_counter = 0u;
     }
 
     if (level == OCTREE_DEPTH) {
+        indirect_buffers.evaluator_subdivision_counter >>= 1u;
         // If we evaluated the preview in the prev subdivision pass, we set it back.
         if ((octree.evaluation_mode & EVALUATE_PREVIEW_STROKE_FLAG) == EVALUATE_PREVIEW_STROKE_FLAG) {
             

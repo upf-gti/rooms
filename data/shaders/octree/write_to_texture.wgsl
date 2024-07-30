@@ -9,12 +9,14 @@
 @group(0) @binding(6) var<storage, read> stroke_history : StrokeHistory; 
 @group(0) @binding(7) var<storage, read> edit_list : array<Edit>;
 @group(0) @binding(8) var write_material_sdf: texture_storage_3d<r32uint, write>;
-@group(0) @binding(9) var<storage, read_write> stroke_culling : array<u32>;
+@group(0) @binding(9) var<storage, read_write> stroke_culling : StrokeCullingBuffers;
 
 @group(1) @binding(0) var<storage, read_write> octree : Octree;
 
 @group(2) @binding(0) var<storage, read> octant_usage_read : array<u32>;
 @group(2) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
+
+#include stroke_culling.wgsl
 
 #include sdf_functions.wgsl
 
@@ -39,8 +41,10 @@ var<workgroup> used_pixels : atomic<u32>;
 @compute @workgroup_size(10,10,10)
 fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation_id) local_id: vec3<u32>)
 {
+    let prev_level : u32 = atomicLoad(&octree.current_level) - 1u;
     let id : u32 = group_id.x;
-    let octree_leaf_id : u32 = octant_usage_read[id];
+    let octree_leaf_id : u32 = octant_usage_read[id * 2u];
+    let prev_octant_id : u32 = octant_usage_read[(id * 2u) + 1u];
 
     let brick_pointer : u32 = octree.data[octree_leaf_id].tile_pointer;
 
@@ -81,10 +85,14 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     var curr_surface : Surface = sSurface;
     let pos = octant_center + pixel_offset;
 
+    // .x = starting index of the index array
+    // .y = # of indices in teh index array AKA # of strokes
+    let stroke_culling_bounds : vec2u = StrokeCulling_get_index_bounds_of_node(prev_octant_id, prev_level);
+
     // Evaluating the edit context
-    let p = stroke_culling[0];
-    for (var j : u32 = 0; j < stroke_history.count; j++) {
-        let curr_stroke : ptr<storage, Stroke> = &(stroke_history.strokes[j]);
+    for (var j : u32 = 0; j < stroke_culling_bounds.y; j++) {
+        let index : u32 = StrokeCulling_get_stroke_index_at(stroke_culling_bounds.x + j, prev_level);
+        let curr_stroke : ptr<storage, Stroke> = &(stroke_history.strokes[index]);
         let edit_strating_count : vec2u = stroke_get_edit_data(curr_stroke);
         curr_surface = evaluate_stroke(pos, curr_stroke, &edit_list, curr_surface, edit_strating_count.x, edit_strating_count.y);
     }
