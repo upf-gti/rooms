@@ -84,12 +84,12 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
         grid->rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
         grid->scale(glm::vec3(10.f));
 
-        Material grid_material;
-        grid_material.priority = 100;
-        grid_material.transparency_type = ALPHA_BLEND;
-        grid_material.cull_type = CULL_NONE;
-        grid_material.type = MATERIAL_UNLIT;
-        grid_material.shader = RendererStorage::get_shader_from_source(shaders::mesh_grid::source, shaders::mesh_grid::path, grid_material);
+        Material* grid_material = new Material();
+        grid_material->priority = 100;
+        grid_material->transparency_type = ALPHA_BLEND;
+        grid_material->cull_type = CULL_NONE;
+        grid_material->type = MATERIAL_UNLIT;
+        grid_material->shader = RendererStorage::get_shader_from_source(shaders::mesh_grid::source, shaders::mesh_grid::path, grid_material);
         grid->set_surface_material_override(grid->get_surface(0), grid_material);
     }
 
@@ -97,20 +97,20 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     {
         ray_pointer = parse_mesh("data/meshes/raycast.obj");
 
-        Material pointer_material;
-        pointer_material.transparency_type = ALPHA_BLEND;
-        pointer_material.cull_type = CULL_NONE;
-        pointer_material.shader = RendererStorage::get_shader_from_source(shaders::ui_ray_pointer::source, shaders::ui_ray_pointer::path, pointer_material);
+        Material* pointer_material = new Material();
+        pointer_material->transparency_type = ALPHA_BLEND;
+        pointer_material->cull_type = CULL_NONE;
+        pointer_material->shader = RendererStorage::get_shader_from_source(shaders::ui_ray_pointer::source, shaders::ui_ray_pointer::path, pointer_material);
 
         ray_pointer->set_surface_material_override(ray_pointer->get_surface(0), pointer_material);
 
         sphere_pointer = parse_mesh("data/meshes/sphere.obj");
 
-        Material sphere_pointer_material;
-        sphere_pointer_material.depth_read = false;
-        sphere_pointer_material.priority = 0;
-        sphere_pointer_material.transparency_type = ALPHA_BLEND;
-        sphere_pointer_material.shader = RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, sphere_pointer_material);
+        Material* sphere_pointer_material = new Material();
+        sphere_pointer_material->depth_read = false;
+        sphere_pointer_material->priority = 0;
+        sphere_pointer_material->transparency_type = ALPHA_BLEND;
+        sphere_pointer_material->shader = RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, sphere_pointer_material);
 
         sphere_pointer->set_surface_material_override(sphere_pointer->get_surface(0), sphere_pointer_material);
     }
@@ -388,6 +388,7 @@ void RoomsEngine::render_gui()
                 while (it != nodes.end())
                 {
                     if (show_tree_recursive(*it)) {
+                        delete *it;
                         it = nodes.erase(it);
                     }
                     else {
@@ -480,7 +481,7 @@ bool RoomsEngine::show_tree_recursive(Node* entity)
                 ImGui::EndPopup();
                 ImGui::TreePop();
 
-                if (static_cast<SculptInstance*>(entity) != nullptr) {
+                if (dynamic_cast<SculptInstance*>(entity) != nullptr) {
                     dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->remove_sculpt_instance((SculptInstance*) entity);
                 }
                 return true;
@@ -506,6 +507,7 @@ bool RoomsEngine::show_tree_recursive(Node* entity)
         while (it != children.end())
         {
             if (show_tree_recursive(*it)) {
+                delete* it;
                 it = children.erase(it);
             }
             else {
