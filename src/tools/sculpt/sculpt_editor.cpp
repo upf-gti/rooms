@@ -38,12 +38,12 @@ void SculptEditor::initialize()
     mirror_mesh->scale(glm::vec3(0.25f));
 
     Material* mirror_material = new Material();
-    mirror_material->priority = 0;
-    mirror_material->transparency_type = ALPHA_BLEND;
-    mirror_material->cull_type = CULL_NONE;
-    mirror_material->diffuse_texture = RendererStorage::get_texture("data/textures/mirror_quad_texture.png");
-    mirror_material->type = MATERIAL_UNLIT;
-    mirror_material->shader = RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, mirror_material);
+    mirror_material->set_priority(0);
+    mirror_material->set_transparency_type(ALPHA_BLEND);
+    mirror_material->set_cull_type(CULL_NONE);
+    mirror_material->set_diffuse_texture(RendererStorage::get_texture("data/textures/mirror_quad_texture.png"));
+    mirror_material->set_type(MATERIAL_UNLIT);
+    mirror_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, mirror_material));
 
     mirror_mesh->set_surface_material_override(mirror_mesh->get_surface(0), mirror_material);
 
@@ -58,13 +58,13 @@ void SculptEditor::initialize()
         sculpt_area_box = parse_mesh("data/meshes/cube.obj");
 
         Material* sculpt_area_box_material = new Material();
-        sculpt_area_box_material->priority = 0;
-        sculpt_area_box_material->transparency_type = ALPHA_BLEND;
-        sculpt_area_box_material->cull_type = CULL_FRONT;
-        sculpt_area_box_material->type = MATERIAL_UNLIT;
-        sculpt_area_box_material->diffuse_texture = RendererStorage::get_texture("data/textures/grid_texture.png");
-        sculpt_area_box_material->color = colors::RED;
-        sculpt_area_box_material->shader = RendererStorage::get_shader("data/shaders/sculpt_box_area.wgsl", sculpt_area_box_material);
+        sculpt_area_box_material->set_priority(0);
+        sculpt_area_box_material->set_transparency_type(ALPHA_BLEND);
+        sculpt_area_box_material->set_cull_type(CULL_FRONT);
+        sculpt_area_box_material->set_type(MATERIAL_UNLIT);
+        sculpt_area_box_material->set_diffuse_texture(RendererStorage::get_texture("data/textures/grid_texture.png"));
+        sculpt_area_box_material->set_color(colors::RED);
+        sculpt_area_box_material->set_shader(RendererStorage::get_shader("data/shaders/sculpt_box_area.wgsl", sculpt_area_box_material));
 
         sculpt_area_box->set_surface_material_override(sculpt_area_box->get_surface(0), sculpt_area_box_material);
 
@@ -74,11 +74,11 @@ void SculptEditor::initialize()
         s->create_axis(0.08f);
 
         Material* ref_mat = new Material();
-        ref_mat->priority = 0;
-        ref_mat->topology_type = TOPOLOGY_LINE_LIST;
-        ref_mat->transparency_type = ALPHA_BLEND;
-        ref_mat->type = MATERIAL_UNLIT;
-        ref_mat->shader = RendererStorage::get_shader("data/shaders/axis.wgsl", ref_mat);
+        ref_mat->set_priority(0);
+        ref_mat->set_topology_type(TOPOLOGY_LINE_LIST);
+        ref_mat->set_transparency_type(ALPHA_BLEND);
+        ref_mat->set_type(MATERIAL_UNLIT);
+        ref_mat->set_shader(RendererStorage::get_shader("data/shaders/axis.wgsl", ref_mat));
 
         sculpt_area_box->set_surface_material_override(s, ref_mat);
         sculpt_area_box->add_surface(s);
@@ -104,9 +104,9 @@ void SculptEditor::initialize()
         mesh_preview->add_surface(sphere_surface);
 
         Material* preview_material = new Material();
-        preview_material->priority = 1;
-        preview_material->transparency_type = ALPHA_BLEND;
-        preview_material->shader = RendererStorage::get_shader_from_source(shaders::mesh_transparent::source, shaders::mesh_transparent::path, preview_material);
+        preview_material->set_priority(1);
+        preview_material->set_transparency_type(ALPHA_BLEND);
+        preview_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_transparent::source, shaders::mesh_transparent::path, preview_material));
 
         mesh_preview->set_surface_material_override(sphere_surface, preview_material);
 
@@ -114,8 +114,8 @@ void SculptEditor::initialize()
         mesh_preview_outline->add_surface(sphere_surface);
 
         Material* outline_material = new Material();
-        outline_material->cull_type = CULL_FRONT;
-        outline_material->shader = RendererStorage::get_shader_from_source(shaders::mesh_outline::source, shaders::mesh_outline::path, outline_material);
+        outline_material->set_cull_type(CULL_FRONT);
+        outline_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_outline::source, shaders::mesh_outline::path, outline_material));
 
         mesh_preview_outline->set_surface_material_override(sphere_surface, outline_material);
     }
