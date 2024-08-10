@@ -111,8 +111,3 @@ endif()
 # wgpuEngine
 add_subdirectory(libraries/wgpuEngine)
 target_link_libraries(${PROJECT_NAME} webgpuEngine)
-
-# vulkan
-include_directories(${Vulkan_INCLUDE_DIR})
-
-
