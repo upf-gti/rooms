@@ -123,14 +123,22 @@ void RoomsRenderer::render()
 {
     prepare_instancing();
 
-    WGPUTextureView swapchain_view;
+    WGPUTextureView screen_surface_texture_view;
+    WGPUSurfaceTexture screen_surface_texture;
 
     if (!is_openxr_available || use_mirror_screen) {
-        swapchain_view = wgpuSwapChainGetCurrentTextureView(webgpu_context->screen_swapchain);
+
+        wgpuSurfaceGetCurrentTexture(webgpu_context->surface, &screen_surface_texture);
+        if (screen_surface_texture.status != WGPUSurfaceGetCurrentTextureStatus_Success) {
+            spdlog::error("Error getting swapchain texture");
+            return;
+        }
+
+        screen_surface_texture_view = webgpu_context->create_texture_view(screen_surface_texture.texture, WGPUTextureViewDimension_2D, webgpu_context->swapchain_format);
     }
 
     if (!is_openxr_available) {
-        render_screen(swapchain_view);
+        render_screen(screen_surface_texture_view);
     }
 
 #if defined(XR_SUPPORT)
@@ -138,7 +146,7 @@ void RoomsRenderer::render()
         render_xr();
 
         if (use_mirror_screen) {
-            render_mirror(swapchain_view);
+            render_mirror(screen_surface_texture_view);
         }
     }
 #endif
@@ -162,7 +170,7 @@ void RoomsRenderer::render()
     }
 
     if (!is_openxr_available) {
-        wgpuTextureViewRelease(swapchain_view);
+        wgpuTextureViewRelease(screen_surface_texture_view);
     }
 #ifdef XR_SUPPORT
     else {
@@ -172,7 +180,7 @@ void RoomsRenderer::render()
 
 #ifndef __EMSCRIPTEN__
     if (!is_openxr_available || use_mirror_screen) {
-        wgpuSwapChainPresent(webgpu_context->screen_swapchain);
+        wgpuSurfacePresent(webgpu_context->surface);
     }
 #endif
 
@@ -185,7 +193,7 @@ void RoomsRenderer::render()
     clear_renderables();
 }
 
-void RoomsRenderer::render_screen(WGPUTextureView swapchain_view)
+void RoomsRenderer::render_screen(WGPUTextureView screen_surface_texture_view)
 {
     // Update main 3d camera
 
@@ -214,10 +222,10 @@ void RoomsRenderer::render_screen(WGPUTextureView swapchain_view)
         WGPURenderPassColorAttachment render_pass_color_attachment = {};
         if (msaa_count > 1) {
             render_pass_color_attachment.view = multisample_textures_views[0];
-            render_pass_color_attachment.resolveTarget = swapchain_view;
+            render_pass_color_attachment.resolveTarget = screen_surface_texture_view;
         }
         else {
-            render_pass_color_attachment.view = swapchain_view;
+            render_pass_color_attachment.view = screen_surface_texture_view;
         }
 
         render_pass_color_attachment.loadOp = WGPULoadOp_Clear;
@@ -273,7 +281,7 @@ void RoomsRenderer::render_screen(WGPUTextureView swapchain_view)
         // render imgui
         {
             WGPURenderPassColorAttachment color_attachments = {};
-            color_attachments.view = swapchain_view;
+            color_attachments.view = screen_surface_texture_view;
             color_attachments.loadOp = WGPULoadOp_Load;
             color_attachments.storeOp = WGPUStoreOp_Store;
             color_attachments.clearValue = { 0.0, 0.0, 0.0, 0.0 };
@@ -377,7 +385,7 @@ void RoomsRenderer::render_xr()
 
 #if defined(XR_SUPPORT) && defined(USE_MIRROR_WINDOW)
 
-void RoomsRenderer::render_mirror(WGPUTextureView swapchain_view)
+void RoomsRenderer::render_mirror(WGPUTextureView screen_surface_texture_view)
 {
     ImGui::Render();
 
@@ -385,7 +393,7 @@ void RoomsRenderer::render_mirror(WGPUTextureView swapchain_view)
     {
         // Prepare the color attachment
         WGPURenderPassColorAttachment render_pass_color_attachment = {};
-        render_pass_color_attachment.view = swapchain_view;
+        render_pass_color_attachment.view = screen_surface_texture_view;
         render_pass_color_attachment.loadOp = WGPULoadOp_Clear;
         render_pass_color_attachment.storeOp = WGPUStoreOp_Store;
         render_pass_color_attachment.clearValue = WGPUColor(clear_color.x, clear_color.y, clear_color.z, 1.0f);
@@ -420,7 +428,7 @@ void RoomsRenderer::render_mirror(WGPUTextureView swapchain_view)
     // render imgui
     {
         WGPURenderPassColorAttachment color_attachments = {};
-        color_attachments.view = swapchain_view;
+        color_attachments.view = screen_surface_texture_view;
         color_attachments.loadOp = WGPULoadOp_Load;
         color_attachments.storeOp = WGPUStoreOp_Store;
         color_attachments.clearValue = { 0.0, 0.0, 0.0, 0.0 };

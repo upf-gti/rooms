@@ -254,73 +254,20 @@ void RaymarchingRenderer::octree_ray_intersect(const glm::vec3& ray_origin, cons
     wgpuComputePassEncoderRelease(compute_pass);
     wgpuCommandEncoderRelease(command_encoder);
 
-    // Print output
-    struct UserData {
-        WGPUBuffer read_buffer;
-        RayIntersectionInfo* info;
-        bool finished = false;
-    } user_data;
-
-    user_data.read_buffer = ray_intersection_info_read_buffer;
-    user_data.info = &ray_intersection_info;
-
-    wgpuBufferMapAsync(ray_intersection_info_read_buffer, WGPUMapMode_Read, 0, sizeof(RayIntersectionInfo), [](WGPUBufferMapAsyncStatus status, void* user_data_ptr) {
-
-        UserData* user_data = static_cast<UserData*>(user_data_ptr);
-
-        if (status == WGPUBufferMapAsyncStatus_Success) {
-            *user_data->info = *(const RayIntersectionInfo*)wgpuBufferGetConstMappedRange(user_data->read_buffer, 0, sizeof(RayIntersectionInfo));
-            wgpuBufferUnmap(user_data->read_buffer);
-        }
-
-        user_data->finished = true;
-
-    }, &user_data);
-
-    while (!user_data.finished) {
-        // Checks for ongoing asynchronous operations and call their callbacks if needed
-        webgpu_context->process_events();
-
-        if (user_data.info->intersected > 0 && callback) {
-            callback(user_data.info->intersection_position);
-        }
-    }
+    webgpu_context->read_buffer(ray_intersection_info_read_buffer, sizeof(RayIntersectionInfo), &ray_intersection_info);
 }
 
 void RaymarchingRenderer::get_brick_usage(std::function<void(float, uint32_t)> callback)
 {
-    struct UserData {
-        WGPUBuffer read_buffer;
-        sBrickBuffers_counters info;
-        bool finished = false;
-    } user_data;
-
-    user_data.read_buffer = brick_buffers_counters_read_buffer;
-
-    wgpuBufferMapAsync(user_data.read_buffer, WGPUMapMode_Read, 0, sizeof(sBrickBuffers_counters), [](WGPUBufferMapAsyncStatus status, void* user_data_ptr) {
-
-        UserData* user_data = static_cast<UserData*>(user_data_ptr);
-
-        if (status == WGPUBufferMapAsyncStatus_Success) {
-            user_data->info = *(const sBrickBuffers_counters*)wgpuBufferGetConstMappedRange(user_data->read_buffer, 0, sizeof(sBrickBuffers_counters));
-            wgpuBufferUnmap(user_data->read_buffer);
-        }
-
-        user_data->finished = true;
-
-        }, &user_data);
-
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
 
-    while (!user_data.finished) {
-        // Checks for ongoing asynchronous operations and call their callbacks if needed
-        webgpu_context->process_events();
+    sBrickBuffers_counters brick_usage_info;
+    webgpu_context->read_buffer(brick_buffers_counters_read_buffer, sizeof(sBrickBuffers_counters), &brick_usage_info);
 
-        uint32_t brick_count = user_data.info.brick_instance_counter;
-        float pct = brick_count / (float)max_brick_count;
+    uint32_t brick_count = brick_usage_info.brick_instance_counter;
+    float pct = brick_count / (float)max_brick_count;
 
-        callback(pct, brick_count);
-    }
+    callback(pct, brick_count);
 }
 
 void RaymarchingRenderer::compute_preview_edit(WGPUComputePassEncoder compute_pass)
