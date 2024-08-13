@@ -121,6 +121,20 @@ void RoomsRenderer::update(float delta_time)
 
 void RoomsRenderer::render()
 {
+    //if (selected_mesh_aabb) {
+
+    //    AABB aabb_transformed = aabb.transform(get_global_model());
+
+    //    selected_mesh_aabb->set_position(aabb_transformed.center);
+    //    selected_mesh_aabb->set_scale(aabb_transformed.half_size * 2.0f);
+
+    //    selected_mesh_aabb->render();
+    //}
+
+    if (!frustum_camera_paused) {
+        frustum_cull.set_view_projection(camera->get_view_projection());
+    }
+
     prepare_instancing();
 
     WGPUTextureView screen_surface_texture_view;

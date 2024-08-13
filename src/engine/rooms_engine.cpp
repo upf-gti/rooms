@@ -84,6 +84,8 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
         grid->rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
         grid->scale(glm::vec3(10.f));
 
+        grid->set_frustum_culling_enabled(false);
+
         Material* grid_material = new Material();
         grid_material->set_priority(100);
         grid_material->set_transparency_type(ALPHA_BLEND);
@@ -431,6 +433,12 @@ void RoomsEngine::render_gui()
                 else {
                     Renderer::instance->set_msaa_count(1);
                 }
+            }
+
+            bool pause_frustum_culling_camera = Renderer::instance->get_frustum_camera_paused();
+
+            if (ImGui::Checkbox("Pause frustum culling camera", &pause_frustum_culling_camera)) {
+                Renderer::instance->set_frustum_camera_paused(pause_frustum_culling_camera);
             }
 
             ImGui::Separator();
