@@ -22,6 +22,127 @@ Node3D* root = nullptr;
 MeshInstance3D* node = nullptr;
 AnimationPlayer* player = nullptr;
 
+
+sAnimationState create_animation_state_from_node(const Node* scene_node) {
+    sAnimationState new_state;
+
+    const std::unordered_map<std::string, Node::AnimatableProperty>& properties = scene_node->get_animatable_properties();
+
+    for (auto prop_it : properties) {
+
+        switch (prop_it.second.property_type) {
+        case Node::AnimatablePropertyType::INT8:
+            new_state.properties[prop_it.first] = { *((int8_t*)prop_it.second.property) };
+            break;
+        case Node::AnimatablePropertyType::INT16:
+            new_state.properties[prop_it.first] = { *((int16_t*)prop_it.second.property) };
+            break;
+        case Node::AnimatablePropertyType::INT32:
+            new_state.properties[prop_it.first] = { *((int32_t*)prop_it.second.property) };
+            break;
+        case Node::AnimatablePropertyType::INT64:
+            //new_state.properties[prop_it.first] = { *((int64_t*)prop_it.second.property) };
+            break;
+        case Node::AnimatablePropertyType::UINT8:
+            new_state.properties[prop_it.first] = { *((uint8_t*)prop_it.second.property) };
+            break;
+        case Node::AnimatablePropertyType::UINT16:
+            new_state.properties[prop_it.first] = { *((uint16_t*)prop_it.second.property) };
+            break;
+        case Node::AnimatablePropertyType::UINT32:
+            new_state.properties[prop_it.first] = { *((uint32_t*)prop_it.second.property) };
+            break;
+        case Node::AnimatablePropertyType::UINT64:
+            //new_state.properties[prop_it.first] = { *((uint64_t*)prop_it.second.property) };
+            break;
+        case Node::AnimatablePropertyType::FLOAT32:
+            new_state.properties[prop_it.first] = { *((float*)prop_it.second.property) };
+            break;
+        case Node::AnimatablePropertyType::FLOAT64:
+            //new_state.properties[prop_it.first] = { *((long float*)prop_it.second.property) };
+            break;
+        case Node::AnimatablePropertyType::IVEC2:
+            new_state.properties[prop_it.first] = { *((glm::ivec2*)prop_it.second.property) };
+            break;
+        case Node::AnimatablePropertyType::UVEC2:
+            new_state.properties[prop_it.first] = { *((glm::uvec2*)prop_it.second.property) };
+            break;
+        case Node::AnimatablePropertyType::FVEC2:
+            new_state.properties[prop_it.first] = { *((glm::vec2*)prop_it.second.property) };
+            break;
+        case Node::AnimatablePropertyType::IVEC3:
+            new_state.properties[prop_it.first] = { *((glm::ivec3*)prop_it.second.property) };
+            break;
+        case Node::AnimatablePropertyType::UVEC3:
+            new_state.properties[prop_it.first] = { *((glm::uvec3*)prop_it.second.property) };
+            break;
+        case Node::AnimatablePropertyType::FVEC3:
+            new_state.properties[prop_it.first] = { *((glm::vec3*)prop_it.second.property) };
+            break;
+        case Node::AnimatablePropertyType::IVEC4:
+            new_state.properties[prop_it.first] = { *((glm::ivec4*)prop_it.second.property) };
+            break;
+        case Node::AnimatablePropertyType::UVEC4:
+            new_state.properties[prop_it.first] = { *((glm::uvec4*)prop_it.second.property) };
+            break;
+        case Node::AnimatablePropertyType::FVEC4:
+            new_state.properties[prop_it.first] = { *((glm::vec4*)prop_it.second.property) };
+            break;
+        case Node::AnimatablePropertyType::QUAT:
+            new_state.properties[prop_it.first] = { *((glm::quat*)prop_it.second.property) };
+            break;
+        case Node::AnimatablePropertyType::UNDEFINED:
+            break;
+        }
+    }
+
+    return new_state;
+}
+
+uint32_t get_changed_properties_from_states(const sAnimationState& prev_state,
+                                            const sAnimationState& current_state,
+                                            std::string* changed_properties_list) {
+    uint32_t changed_properties_count = 0u;
+    // Compare the properties of one state to another
+    for (auto it_base : prev_state.properties) {
+        if (it_base.second.value != current_state.properties.at(it_base.first).value) {
+            changed_properties_list[changed_properties_count++] = it_base.first;
+        }
+    }
+
+    return changed_properties_count;
+}
+
+void AnimationEditor::process_keyframe() {
+    // Read the properties in order to see if there is any change
+    sAnimationState new_anim_state = create_animation_state_from_node(node);
+
+    std::string* changed_properties = new std::string[new_anim_state.properties.size()];
+
+    uint32_t changed_properties_count = get_changed_properties_from_states(current_animation_properties, new_anim_state, changed_properties);
+
+    if (changed_properties_count > 0u) {
+        // Keyframe changes state
+
+        for (uint32_t i = 0u; i < changed_properties_count; i++) {
+            if (current_animation_properties.properties[changed_properties[i]].track_id == -1) {
+                // Add new track and set track id in struct
+                std::cout << "Create new track on property " << changed_properties[i] << std::endl;
+                current_animation_properties.properties[changed_properties[i]].track_id = 0u;
+            }
+
+            // Create, and add keypoint to track
+            std::cout << "Add keypoint to track " << changed_properties[i] << std::endl;
+
+            // Update value
+            current_animation_properties.properties[changed_properties[i]].value = new_anim_state.properties[changed_properties[i]].value;
+        }
+
+    }
+
+    delete[] changed_properties;
+}
+
 void AnimationEditor::initialize()
 {
     renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
@@ -44,6 +165,15 @@ void AnimationEditor::initialize()
     root->add_child(player);
 
     init_ui();
+
+    // Get the current state of the animateble properties of the node
+    current_animation_properties = create_animation_state_from_node(node);
+
+    // Test the keyframe creation
+    /*node->set_position({ 0.0f, 1.0f, 0.0 });
+    process_keyframe();
+    node->set_position({ 1.0f, 1.0f, 0.0 });
+    process_keyframe();*/
 }
 
 void AnimationEditor::clean()
