@@ -9,6 +9,8 @@
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/renderer_storage.h"
 
+#include "shaders/mesh_forward.wgsl.gen.h"
+
 #include "engine/rooms_engine.h"
 
 #include "spdlog/spdlog.h"
@@ -33,7 +35,7 @@ void AnimationEditor::initialize()
     Material* cube_material = new Material();
     cube_material->set_color(colors::PURPLE);
     cube_material->set_type(MATERIAL_PBR);
-    cube_material->set_shader(RendererStorage::get_shader("data/shaders/mesh_pbr.wgsl"));
+    cube_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path));
 
     node->set_surface_material_override(node->get_surface(0), cube_material);
 

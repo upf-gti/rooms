@@ -112,10 +112,19 @@ namespace ui {
             to_delete.push_back(node);
         }
 
+        std::function<void(Node*)> delete_node = [&](Node* node) {
+            if (node == nullptr) return;
+            while (!node->get_children().empty()) {
+                auto child = node->get_children().back();
+                delete_node(child);
+            }
+            delete node;
+        };
+
         for (auto node : to_delete) {
             Node2D* node_2d = static_cast<Node2D*>(node);
             body->remove_child(node_2d);
-            delete node;
+            delete_node(node_2d);
         }
 
         items.clear();
