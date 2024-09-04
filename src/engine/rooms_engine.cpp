@@ -20,8 +20,8 @@
 #include "shaders/mesh_grid.wgsl.gen.h"
 #include "shaders/ui/ui_ray_pointer.wgsl.gen.h"
 
-#include "tools/sculpt/sculpt_editor.h"
-#include "tools/scene/scene_editor.h"
+#include "tools/sculpt_editor.h"
+#include "tools/scene_editor.h"
 #include "tools/animation_editor.h"
 #include "tools/tutorial_editor.h"
 #include "framework/nodes/sculpt_instance.h"
@@ -143,6 +143,14 @@ void RoomsEngine::clean()
 
     if (sculpt_editor) {
         sculpt_editor->clean();
+    }
+
+    if (animation_editor) {
+        animation_editor->clean();
+    }
+
+    if (tutorial_editor) {
+        tutorial_editor->clean();
     }
 }
 
@@ -272,6 +280,9 @@ void RoomsEngine::switch_editor(uint8_t editor)
         break;
     case SCULPT_EDITOR:
         i->current_editor = i->sculpt_editor;
+        break;
+    case ANIMATION_EDITOR:
+        i->current_editor = i->animation_editor;
         break;
     case SHAPE_EDITOR:
         // ...

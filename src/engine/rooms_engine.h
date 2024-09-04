@@ -19,6 +19,7 @@ class SculptInstance;
 enum EditorType : uint8_t {
     SCENE_EDITOR,
     SCULPT_EDITOR,
+    ANIMATION_EDITOR,
     SHAPE_EDITOR,
     TUTORIAL_EDITOR
 };
