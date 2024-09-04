@@ -57,25 +57,25 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 
     // Tutorial
     {
-        tutorial_editor = new TutorialEditor();
+        tutorial_editor = new TutorialEditor("Tutorial Editor");
         tutorial_editor->initialize();
     }
 
     // Scenes
     {
-        scene_editor = new SceneEditor();
+        scene_editor = new SceneEditor("Scene Editor");
         scene_editor->initialize();
     }
 
     // Sculpting
     {
-        sculpt_editor = new SculptEditor();
+        sculpt_editor = new SculptEditor("Sculpt Editor");
         sculpt_editor->initialize();
     }
 
     // Animation
     {
-        animation_editor = new AnimationEditor();
+        animation_editor = new AnimationEditor("Animation Editor");
         animation_editor->initialize();
     }
 
@@ -420,14 +420,9 @@ void RoomsEngine::render_gui()
             }
             ImGui::EndTabItem();
         }
-        if (scene_editor && ImGui::BeginTabItem("Scene Editor"))
+        if(current_editor && ImGui::BeginTabItem(current_editor->get_name().c_str()))
         {
-            scene_editor->render_gui();
-            ImGui::EndTabItem();
-        }
-        if (sculpt_editor && ImGui::BeginTabItem("Sculpt Editor"))
-        {
-            sculpt_editor->render_gui();
+            current_editor->render_gui();
             ImGui::EndTabItem();
         }
         if (ImGui::BeginTabItem("Debugger"))

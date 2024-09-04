@@ -8,6 +8,10 @@ class RoomsRenderer;
 class Animation;
 class Track;
 
+namespace ui {
+    class Inspector;
+}
+
 class AnimationEditor : public BaseEditor {
 
     Gizmo2D gizmo;
@@ -18,9 +22,25 @@ class AnimationEditor : public BaseEditor {
 
     float current_time = 0.0f;
 
+    /*
+        UI
+    */
+
+    static uint64_t node_signal_uid;
+
+    bool inspector_dirty = true;
+    bool inspector_transform_dirty = false;
+
+    ui::Inspector* inspector = nullptr;
+    Viewport3D* inspect_panel_3d = nullptr;
+
+    void init_ui();
+    void bind_events();
+
 public:
 
     AnimationEditor() {};
+    AnimationEditor(const std::string& name) : BaseEditor(name) {};
 
     void initialize() override;
     void clean() override;

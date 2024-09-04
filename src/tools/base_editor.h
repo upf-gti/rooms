@@ -25,6 +25,9 @@ enum : uint8_t {
 };
 
 class BaseEditor {
+
+    std::string name;
+
 protected:
 
     bool is_shift_left_pressed = false;
@@ -52,6 +55,7 @@ protected:
 public:
 
     BaseEditor() {};
+    BaseEditor(const std::string& name) : name(name) {};
 
     virtual void initialize() {};
     virtual void clean();
@@ -59,4 +63,7 @@ public:
     virtual void update(float delta_time);
     virtual void render();
     virtual void render_gui() {};
+
+    void set_name(const std::string& new_name) { name = new_name; }
+    const std::string& get_name() { return name; }
 };

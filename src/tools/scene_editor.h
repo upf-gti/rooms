@@ -97,6 +97,7 @@ class SceneEditor : public BaseEditor {
 public:
 
     SceneEditor() {};
+    SceneEditor(const std::string& name) : BaseEditor(name) {};
 
     void initialize() override;
     void clean() override;
