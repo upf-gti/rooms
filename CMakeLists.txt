@@ -12,9 +12,10 @@ endif()
 
 project(rooms LANGUAGES C CXX)
 
-# Enable multicore compile on VS solution
+# Enable multicore and simd compile on VS solution
 if(MSVC)
-  add_definitions(/MP)
+    add_definitions(/MP)
+    add_definitions(/arch:AVX2)
 endif()
 
 add_definitions(-D_SILENCE_STDEXT_ARR_ITERS_DEPRECATION_WARNING)

@@ -1118,7 +1118,7 @@ void SculptEditor::init_ui()
 
             for (size_t i = 0; i < child_count; ++i)
             {
-                float angle = pi - pi_2 * i / (float)(child_count - 1);
+                float angle = PI - PI_2 * i / (float)(child_count - 1);
                 glm::vec2 translation = glm::vec2(radius * cos(angle), radius * sin(angle)) - center;
                 ui::Button2D* child = new ui::Button2D("recent_color_" + std::to_string(i), colors::WHITE, 0, translation, glm::vec2(sample_size));
                 child->set_position(translation);
