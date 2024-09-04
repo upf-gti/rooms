@@ -185,7 +185,9 @@ void RoomsRenderer::render()
 
     if (!is_openxr_available) {
         wgpuTextureViewRelease(screen_surface_texture_view);
+        wgpuTextureRelease(screen_surface_texture.texture);
     }
+
 #ifdef XR_SUPPORT
     else {
         xr_context->end_frame();
