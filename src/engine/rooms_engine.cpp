@@ -22,6 +22,7 @@
 
 #include "tools/sculpt/sculpt_editor.h"
 #include "tools/scene/scene_editor.h"
+#include "tools/animation_editor.h"
 #include "tools/tutorial_editor.h"
 #include "framework/nodes/sculpt_instance.h"
 
@@ -70,6 +71,12 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
     {
         sculpt_editor = new SculptEditor();
         sculpt_editor->initialize();
+    }
+
+    // Animation
+    {
+        animation_editor = new AnimationEditor();
+        animation_editor->initialize();
     }
 
     // Set default editor..
