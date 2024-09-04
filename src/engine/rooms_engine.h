@@ -13,11 +13,13 @@ class BaseEditor;
 class SculptEditor;
 class SceneEditor;
 class TutorialEditor;
+class AnimationEditor;
 class SculptInstance;
 
 enum EditorType : uint8_t {
     SCENE_EDITOR,
     SCULPT_EDITOR,
+    ANIMATION_EDITOR,
     SHAPE_EDITOR,
     TUTORIAL_EDITOR
 };
@@ -38,6 +40,7 @@ class RoomsEngine : public Engine
     SculptEditor* sculpt_editor = nullptr;
     SceneEditor* scene_editor = nullptr;
     TutorialEditor* tutorial_editor = nullptr;
+    AnimationEditor* animation_editor = nullptr;
 
     void render_gui();
 

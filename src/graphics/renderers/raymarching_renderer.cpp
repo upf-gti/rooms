@@ -11,7 +11,7 @@
 
 #include "shaders/AABB_shader.wgsl.gen.h"
 
-#include "tools/sculpt/sculpt_editor.h"
+#include "tools/sculpt_editor.h"
 
 #include <algorithm>
 #include <numeric>

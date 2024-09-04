@@ -20,8 +20,9 @@
 #include "shaders/mesh_grid.wgsl.gen.h"
 #include "shaders/ui/ui_ray_pointer.wgsl.gen.h"
 
-#include "tools/sculpt/sculpt_editor.h"
-#include "tools/scene/scene_editor.h"
+#include "tools/sculpt_editor.h"
+#include "tools/scene_editor.h"
+#include "tools/animation_editor.h"
 #include "tools/tutorial_editor.h"
 #include "framework/nodes/sculpt_instance.h"
 
@@ -56,20 +57,26 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 
     // Tutorial
     {
-        tutorial_editor = new TutorialEditor();
+        tutorial_editor = new TutorialEditor("Tutorial Editor");
         tutorial_editor->initialize();
     }
 
     // Scenes
     {
-        scene_editor = new SceneEditor();
+        scene_editor = new SceneEditor("Scene Editor");
         scene_editor->initialize();
     }
 
     // Sculpting
     {
-        sculpt_editor = new SculptEditor();
+        sculpt_editor = new SculptEditor("Sculpt Editor");
         sculpt_editor->initialize();
+    }
+
+    // Animation
+    {
+        animation_editor = new AnimationEditor("Animation Editor");
+        animation_editor->initialize();
     }
 
     // Set default editor..
@@ -136,6 +143,14 @@ void RoomsEngine::clean()
 
     if (sculpt_editor) {
         sculpt_editor->clean();
+    }
+
+    if (animation_editor) {
+        animation_editor->clean();
+    }
+
+    if (tutorial_editor) {
+        tutorial_editor->clean();
     }
 }
 
@@ -265,6 +280,9 @@ void RoomsEngine::switch_editor(uint8_t editor)
         break;
     case SCULPT_EDITOR:
         i->current_editor = i->sculpt_editor;
+        break;
+    case ANIMATION_EDITOR:
+        i->current_editor = i->animation_editor;
         break;
     case SHAPE_EDITOR:
         // ...
@@ -402,14 +420,9 @@ void RoomsEngine::render_gui()
             }
             ImGui::EndTabItem();
         }
-        if (scene_editor && ImGui::BeginTabItem("Scene Editor"))
+        if(current_editor && ImGui::BeginTabItem(current_editor->get_name().c_str()))
         {
-            scene_editor->render_gui();
-            ImGui::EndTabItem();
-        }
-        if (sculpt_editor && ImGui::BeginTabItem("Sculpt Editor"))
-        {
-            sculpt_editor->render_gui();
+            current_editor->render_gui();
             ImGui::EndTabItem();
         }
         if (ImGui::BeginTabItem("Debugger"))

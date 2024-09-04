@@ -698,6 +698,25 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
         });
     }
 
+    if (flags & NODE_ANIMATE) {
+        std::string signal = node_name + std::to_string(node_signal_uid++) + "_animate";
+        inspector->add_button(signal, "data/textures/animate.png");
+
+        Node::bind(signal, [&, n = node, flags = flags](const std::string& sg, void* data) {
+
+            select_node(n, false);
+
+            // Set as current node to animate and go to animation editor
+            if (dynamic_cast<SculptInstance*>(n)) {
+                RoomsEngine::switch_editor(ANIMATION_EDITOR);
+                static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(static_cast<SculptInstance*>(n));
+            }
+            else {
+                // ...
+            }
+        });
+    }
+
     if (flags & NODE_NAME) {
         std::string signal = node_name + std::to_string(node_signal_uid++) + "_label";
         inspector->add_label(signal, node_name);

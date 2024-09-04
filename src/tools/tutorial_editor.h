@@ -40,6 +40,7 @@ protected:
 public:
 
     TutorialEditor() {};
+    TutorialEditor(const std::string& name) : BaseEditor(name) {};
 
     void initialize() override;
     void clean() override;
