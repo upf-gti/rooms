@@ -168,11 +168,11 @@ namespace ui {
         keyboard_2d->add_child(title_container);
 
         input_start_position = start_pos.x + 12.0f;
-        state.text = new ui::Text2D(":", { input_start_position, start_pos.y + 8.0f }, 18.0f, ui::SKIP_TEXT_SHADOW);
+        state.text = new ui::Text2D(":", { input_start_position, start_pos.y + 8.0f }, 18.0f, ui::SKIP_TEXT_RECT);
         title_container->add_child(state.text);
 
         // Create caret (will blink and be moved at the desired position)
-        caret = new ui::Text2D("|", { input_start_position, start_pos.y + 8.0f }, 18.0f, ui::SKIP_TEXT_SHADOW);
+        caret = new ui::Text2D("|", { input_start_position, start_pos.y + 8.0f }, 18.0f, ui::SKIP_TEXT_RECT);
         title_container->add_child(caret);
 
         // Crete and bind events for each key
