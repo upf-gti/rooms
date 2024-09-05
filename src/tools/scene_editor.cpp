@@ -784,7 +784,7 @@ void SceneEditor::inspect_light()
     {
         inspector->same_line();
         std::string signal = node_name + std::to_string(node_signal_uid++) + "_intensity_slider";
-        inspector->add_slider(signal, light->get_intensity(), 0.0f, 10.0f, 2);
+        inspector->add_slider(signal, light->get_intensity(), nullptr, 0.0f, 10.0f, 2);
         inspector->add_label("empty", "Intensity");
         inspector->end_line();
         Node::bind(signal, [l = light](const std::string& sg, float value) {
@@ -796,7 +796,7 @@ void SceneEditor::inspect_light()
     {
         inspector->same_line();
         std::string signal = node_name + std::to_string(node_signal_uid++) + "_range_slider";
-        inspector->add_slider(signal, light->get_intensity(), 0.0f, 5.0f, 2);
+        inspector->add_slider(signal, light->get_intensity(), nullptr, 0.0f, 5.0f, 2);
         inspector->add_label("empty", "Range");
         inspector->end_line();
         Node::bind(signal, [l = light](const std::string& sg, float value) {
