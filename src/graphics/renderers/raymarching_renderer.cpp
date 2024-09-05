@@ -199,6 +199,15 @@ void RaymarchingRenderer::octree_ray_intersect(const glm::vec3& ray_origin, cons
 {
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
 
+    RoomsEngine* engine_instance = static_cast<RoomsEngine*>(RoomsEngine::instance);
+    SculptEditor* sculpt_editor = engine_instance->get_sculpt_editor();
+    SculptInstance* current_sculpt = sculpt_editor->get_current_sculpt();
+
+    if (!current_sculpt) {
+        spdlog::warn("Can not ray intersect without current sculpt");
+        return;
+    }
+
     // Initialize a command encoder
     WGPUCommandEncoderDescriptor encoder_desc = {};
     WGPUCommandEncoder command_encoder = wgpuDeviceCreateCommandEncoder(webgpu_context->device, &encoder_desc);
@@ -209,15 +218,6 @@ void RaymarchingRenderer::octree_ray_intersect(const glm::vec3& ray_origin, cons
     WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
 
     // Convert ray, origin from world to sculpt space
-
-    RoomsEngine* engine_instance = static_cast<RoomsEngine*>(RoomsEngine::instance);
-    SculptEditor* sculpt_editor = engine_instance->get_sculpt_editor();
-    SculptInstance* current_sculpt = sculpt_editor->get_current_sculpt();
-
-    if (!current_sculpt) {
-        spdlog::warn("Can not ray intersect without current sculpt");
-        return;
-    }
 
     glm::quat inv_rotation = glm::inverse(current_sculpt->get_rotation());
 

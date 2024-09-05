@@ -520,8 +520,9 @@ bool RoomsEngine::show_tree_recursive(Node* entity)
             const std::vector<Surface*>& surfaces = entity_mesh->get_surfaces();
 
             for (int i = 0; i < surfaces.size(); ++i) {
-
-                ImGui::TreeNodeEx(("Surface " + std::to_string(i)).c_str(), ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Leaf);
+                std::string surface_name = surfaces[i]->get_name();
+                std::string final_surface_name = surface_name.empty() ? ("Surface " + std::to_string(i)).c_str() : surface_name;
+                ImGui::TreeNodeEx(final_surface_name.c_str(), ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Leaf);
                 ImGui::TreePop();
             }
         }

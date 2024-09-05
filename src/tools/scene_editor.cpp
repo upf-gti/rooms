@@ -860,6 +860,11 @@ void SceneEditor::get_export_files()
     exported_scenes.clear();
 
     std::string path = "data/exports/";
+
+    if (!std::filesystem::is_directory(path)) {
+        std::filesystem::create_directory(path);
+    }
+
     for (const auto& entry : std::filesystem::directory_iterator(path)) {
 
         std::string file_name = entry.path().string();
