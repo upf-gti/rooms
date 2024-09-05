@@ -690,6 +690,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
             // Set as current sculpt and go to sculpt editor
             if (dynamic_cast<SculptInstance*>(n)) {
                 RoomsEngine::switch_editor(SCULPT_EDITOR);
+                // TODO: do this in the on_enter of the sculpt editor passing the current node
                 static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(static_cast<SculptInstance*>(n));
             }
             else {
@@ -704,16 +705,12 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
 
         Node::bind(signal, [&, n = node, flags = flags](const std::string& sg, void* data) {
 
-            select_node(n, false);
+            selected_node = n;
 
-            // Set as current node to animate and go to animation editor
-            if (dynamic_cast<SculptInstance*>(n)) {
-                RoomsEngine::switch_editor(ANIMATION_EDITOR);
-                static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(static_cast<SculptInstance*>(n));
-            }
-            else {
-                // ...
-            }
+            // TODO CHECK: This corrupts the pointer to the node "n"
+            // select_node(n, false);
+
+            RoomsEngine::switch_editor(ANIMATION_EDITOR, n);
         });
     }
 

@@ -19,11 +19,10 @@
 #include "spdlog/spdlog.h"
 #include "imgui.h"
 
-Node3D* root = nullptr;
-MeshInstance3D* node = nullptr;
 AnimationPlayer* player = nullptr;
 
 uint64_t AnimationEditor::keyframe_signal_uid = 0;
+uint64_t AnimationEditor::node_signal_uid = 0;
 
 sAnimationState create_animation_state_from_node(const Node* scene_node)
 {
@@ -32,7 +31,6 @@ sAnimationState create_animation_state_from_node(const Node* scene_node)
     const std::unordered_map<std::string, Node::AnimatableProperty>& properties = scene_node->get_animatable_properties();
 
     for (auto prop_it : properties) {
-
         switch (prop_it.second.property_type) {
         case Node::AnimatablePropertyType::INT8:
             new_state.properties[prop_it.first] = { *((int8_t*)prop_it.second.property) };
@@ -121,27 +119,9 @@ void AnimationEditor::initialize()
 {
     renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
 
-    root = new Node3D();
-
-    node = new MeshInstance3D();
-    parse_obj("data/meshes/sphere.obj", node);
-    node->set_name("node_0");
-
-    Material* cube_material = new Material();
-    cube_material->set_color(colors::PURPLE);
-    cube_material->set_type(MATERIAL_PBR);
-    cube_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path));
-
-    node->set_surface_material_override(node->get_surface(0), cube_material);
-    root->add_child(node);
-
     player = new AnimationPlayer("Animation Player");
-    root->add_child(player);
 
     init_ui();
-
-    // Get the current state of the animateble properties of the node
-    current_animation_properties = create_animation_state_from_node(node);
 
     // Test the keyframe creation
     /*node->set_position({ 0.0f, 1.0f, 0.0 });
@@ -152,12 +132,36 @@ void AnimationEditor::initialize()
 
 void AnimationEditor::clean()
 {
+    
+}
 
+void AnimationEditor::on_enter(void* data)
+{
+    current_node = reinterpret_cast<Node3D*>(data);
+
+    // Create animation for current node
+    // TODO: Use the uuid for registering the animation
+    std::string animation_name = current_node->get_name() + "@animation";
+    current_animation = RendererStorage::get_animation(animation_name);
+
+    if (!current_animation) {
+        current_animation = new Animation();
+        current_animation->set_name(animation_name);
+        RendererStorage::register_animation(animation_name, current_animation);
+    }
 }
 
 void AnimationEditor::update(float delta_time)
 {
-    root->update(delta_time);
+    if (adding_keyframe && Input::was_key_pressed(GLFW_KEY_ENTER)) {
+        process_keyframe();
+    }
+
+    player->update(delta_time);
+
+    if (current_node) {
+        current_node->update(delta_time);
+    }
 
     BaseEditor::update(delta_time);
 
@@ -192,57 +196,107 @@ void AnimationEditor::render()
         inspector->render();
     }
 
-    root->render();
+    if (current_node) {
+        current_node->render();
 
-    {
-        static glm::mat4x4 test_model = node->get_model();
+        /*static glm::mat4x4 test_model = current_node->get_model();
         Camera* camera = RoomsRenderer::instance->get_camera();
         bool changed = gizmo.render(camera->get_view(), camera->get_projection(), test_model);
 
         if (changed)
         {
-            // node->set_model(test_model);
-        }
+            current_node->set_model(test_model);
+        }*/
     }
+}
+
+void AnimationEditor::add_keyframe()
+{
+    // Get the current state of the animatable properties of the node
+    current_animation_properties = create_animation_state_from_node(current_node);
+
+    adding_keyframe = true;
+
+    // Inspect useful data
+    inspector->clear();
+
+    inspect_keyframe_properties();
+    inspect_node(current_node);
+
+    // Enable xr for the buttons that need it..
+    if (renderer->get_openxr_available()) {
+        inspector->disable_2d();
+    }
+
+    inspector->set_visibility(true);
 }
 
 void AnimationEditor::process_keyframe()
 {
+    if (!current_node) {
+        assert(0);
+    }
+
     // Read the properties in order to see if there is any change
-    sAnimationState new_anim_state = create_animation_state_from_node(node);
+    sAnimationState new_anim_state = create_animation_state_from_node(current_node);
 
     std::string* changed_properties = new std::string[new_anim_state.properties.size()];
 
     uint32_t changed_properties_count = get_changed_properties_from_states(current_animation_properties, new_anim_state, changed_properties);
 
+    // Keyframe changes state
     if (changed_properties_count > 0u) {
-        // Keyframe changes state
 
         for (uint32_t i = 0u; i < changed_properties_count; i++) {
-            if (current_animation_properties.properties[changed_properties[i]].track_id == -1) {
+
+            std::string property_name = changed_properties[i];
+
+            sAnimationState::sPropertyState& current_property_state = current_animation_properties.properties[property_name];
+
+            if (current_property_state.track_id == -1) {
                 // Add new track and set track id in struct
-                std::cout << "Create new track on property " << changed_properties[i] << std::endl;
-                current_animation_properties.properties[changed_properties[i]].track_id = 0u;
+                std::cout << "Create new track on property " << property_name << std::endl;
+                current_property_state.track_id = current_animation->get_track_count();
+
+                current_track = current_animation->add_track(current_property_state.track_id);
+                current_track->set_name(property_name);
+                current_track->set_path(current_node->get_name() + "/" + property_name);
             }
 
-            // Create, and add keypoint to track
-            std::cout << "Add keypoint to track " << changed_properties[i] << std::endl;
+            // Create and add keypoint to track
+            std::cout << "Add keypoint to track " << property_name << std::endl;
+
+            uint32_t num_keys = current_track->size();
+            current_track->resize(num_keys + 1);
+
+            Keyframe& frame = current_track->get_keyframe(num_keys);
+
+            frame.time = current_time;
+            frame.in = 0.0f;
+            frame.value = current_property_state.value;
+            frame.out = 0.0f;
+
+            current_time += 0.5f;
+
+            current_animation->recalculate_duration();
 
             // Update value
-            current_animation_properties.properties[changed_properties[i]].value = new_anim_state.properties[changed_properties[i]].value;
+            current_property_state.value = new_anim_state.properties[property_name].value;
         }
 
     }
+
+    adding_keyframe = false;
 
     delete[] changed_properties;
 }
 
 void AnimationEditor::render_gui()
 {
-    if (animation)
+    if (current_animation)
     {
-        ImGui::Text("Animation %s", animation->get_name().c_str());
-        ImGui::Text("Num Tracks %d", animation->get_track_count());
+        ImGui::Text("Animation %s", current_animation->get_name().c_str());
+        ImGui::Text("Num Tracks %d", current_animation->get_track_count());
 
         if (ImGui::Button("Create keyframe")) {
 
@@ -254,12 +308,12 @@ void AnimationEditor::render_gui()
             frame.time = current_time;
 
             frame.in = 0.0f;
-            frame.value = node->get_translation();
+            frame.value = current_node->get_translation();
             frame.out = 0.0f;
 
             current_time += 0.5f;
 
-            animation->recalculate_duration();
+            current_animation->recalculate_duration();
         }
 
         if (current_track) {
@@ -274,9 +328,9 @@ void AnimationEditor::render_gui()
         else {
             if (ImGui::Button("Create position track")) {
 
-                current_track = animation->add_track();
+                current_track = current_animation->add_track();
                 current_track->set_name("translation");
-                current_track->set_path(node->get_name() + "/" + "translation");
+                current_track->set_path(current_node->get_name() + "/" + "translation");
             }
         }
 
@@ -285,16 +339,10 @@ void AnimationEditor::render_gui()
             player->play("anim_test");
         }
     }
-    else {
-        if (ImGui::Button("Create animation")) {
-            animation = new Animation();
-            animation->set_name("anim_test");
-            RendererStorage::register_animation(animation->get_name(), animation);
-        }
-    }
 
     auto engine = dynamic_cast<RoomsEngine*>(RoomsEngine::instance);
-    engine->show_tree_recursive(root);
+    engine->show_tree_recursive(player);
+    engine->show_tree_recursive(current_node);
 }
 
 void AnimationEditor::init_ui()
@@ -391,7 +439,7 @@ void AnimationEditor::bind_events()
     // Keyframe actions events
 
     Node::bind("record_action", [&](const std::string& signal, void* button) { });
-    Node::bind("add_keyframe", [&](const std::string& signal, void* button) { });
+    Node::bind("add_keyframe", [&](const std::string& signal, void* button) { add_keyframe(); });
 }
 
 void AnimationEditor::inspect_keyframe()
@@ -405,17 +453,7 @@ void AnimationEditor::inspect_keyframe()
     inspector->add_label("empty", key_name);
     inspector->end_line();
 
-    // Keyframe properties
-    {
-        inspector->same_line();
-        /*std::string signal = node_name + std::to_string(node_signal_uid++) + "_intensity_slider";
-        inspector->add_slider(signal, light->get_intensity(), 0.0f, 10.0f, 2);*/
-        inspector->add_label("empty", "Interpolation");
-        inspector->end_line();
-        /*Node::bind(signal, [l = light](const std::string& sg, float value) {
-            l->set_intensity(value);
-        });*/
-    }
+    inspect_keyframe_properties();
 
     // Enable xr for the buttons that need it..
     if (renderer->get_openxr_available()) {
@@ -425,6 +463,82 @@ void AnimationEditor::inspect_keyframe()
     Node::emit_signal(inspector->get_name() + "@children_changed", (void*)nullptr);
 
     keyframe_dirty = false;
+}
+
+void AnimationEditor::inspect_keyframe_properties()
+{
+    inspector->add_label("empty", "Keyframe Properties");
+    inspector->same_line();
+    /*std::string signal = node_name + std::to_string(node_signal_uid++) + "_intensity_slider";
+    inspector->add_slider(signal, light->get_intensity(), 0.0f, 10.0f, 2);*/
+    inspector->add_label("empty", "Interpolation");
+    inspector->end_line();
+    /*Node::bind(signal, [l = light](const std::string& sg, float value) {
+        l->set_intensity(value);
+    });*/
+}
+
+void AnimationEditor::inspect_node(Node* node)
+{
+    // Add identifier for signals
+    std::string node_name = node->get_name();
+
+    std::string signal = node_name + std::to_string(node_signal_uid++) + "_label";
+    inspector->add_label(signal, node_name);
+
+    // Inspect node properties
+
+    const std::unordered_map<std::string, Node::AnimatableProperty>& properties = node->get_animatable_properties();
+
+    for (auto prop_it : properties) {
+        switch (prop_it.second.property_type) {
+        case Node::AnimatablePropertyType::INT8:
+            break;
+        case Node::AnimatablePropertyType::INT16:
+            break;
+        case Node::AnimatablePropertyType::INT32:
+            break;
+        case Node::AnimatablePropertyType::INT64:
+            break;
+        case Node::AnimatablePropertyType::UINT8:
+            break;
+        case Node::AnimatablePropertyType::UINT16:
+            break;
+        case Node::AnimatablePropertyType::UINT32:
+            break;
+        case Node::AnimatablePropertyType::UINT64:
+            break;
+        case Node::AnimatablePropertyType::FLOAT32:
+            signal = node_name + std::to_string(node_signal_uid++) + "_FLOAT32";
+            inspector->add_slider(signal, *((float*)prop_it.second.property));
+            break;
+        case Node::AnimatablePropertyType::FLOAT64:
+            break;
+        case Node::AnimatablePropertyType::IVEC2:
+            break;
+        case Node::AnimatablePropertyType::UVEC2:
+            break;
+        case Node::AnimatablePropertyType::FVEC2:
+            break;
+        case Node::AnimatablePropertyType::IVEC3:
+            break;
+        case Node::AnimatablePropertyType::UVEC3:
+            break;
+        case Node::AnimatablePropertyType::FVEC3:
+            break;
+        case Node::AnimatablePropertyType::IVEC4:
+            break;
+        case Node::AnimatablePropertyType::UVEC4:
+            break;
+        case Node::AnimatablePropertyType::FVEC4:
+            break;
+        case Node::AnimatablePropertyType::QUAT:
+            break;
+        case Node::AnimatablePropertyType::UNDEFINED:
+            break;
+        }
+    }
+
 }
 
 void AnimationEditor::inspect_keyframes_list(bool force)
@@ -459,7 +573,7 @@ void AnimationEditor::inspect_keyframes_list(bool force)
             std::string signal = key_name + std::to_string(keyframe_signal_uid++) + "_remove";
             inspector->add_button(signal, "data/textures/delete.png");
 
-            Node::bind(signal, [&, n = node](const std::string& sg, void* data) {
+            Node::bind(signal, [&, n = current_node](const std::string& sg, void* data) {
                 // TODO
             });
         }
@@ -473,8 +587,6 @@ void AnimationEditor::inspect_keyframes_list(bool force)
     if (renderer->get_openxr_available()) {
         inspector->disable_2d();
     }
-
-    inspector_dirty = false;
 
     inspector_transform_dirty = !inspector->get_visibility();
 
