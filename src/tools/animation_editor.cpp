@@ -24,82 +24,6 @@ AnimationPlayer* player = nullptr;
 uint64_t AnimationEditor::keyframe_signal_uid = 0;
 uint64_t AnimationEditor::node_signal_uid = 0;
 
-sAnimationState create_animation_state_from_node(const Node* scene_node)
-{
-    sAnimationState new_state;
-
-    const std::unordered_map<std::string, Node::AnimatableProperty>& properties = scene_node->get_animatable_properties();
-
-    for (auto prop_it : properties) {
-        switch (prop_it.second.property_type) {
-        case Node::AnimatablePropertyType::INT8:
-            new_state.properties[prop_it.first] = { *((int8_t*)prop_it.second.property) };
-            break;
-        case Node::AnimatablePropertyType::INT16:
-            new_state.properties[prop_it.first] = { *((int16_t*)prop_it.second.property) };
-            break;
-        case Node::AnimatablePropertyType::INT32:
-            new_state.properties[prop_it.first] = { *((int32_t*)prop_it.second.property) };
-            break;
-        case Node::AnimatablePropertyType::INT64:
-            //new_state.properties[prop_it.first] = { *((int64_t*)prop_it.second.property) };
-            break;
-        case Node::AnimatablePropertyType::UINT8:
-            new_state.properties[prop_it.first] = { *((uint8_t*)prop_it.second.property) };
-            break;
-        case Node::AnimatablePropertyType::UINT16:
-            new_state.properties[prop_it.first] = { *((uint16_t*)prop_it.second.property) };
-            break;
-        case Node::AnimatablePropertyType::UINT32:
-            new_state.properties[prop_it.first] = { *((uint32_t*)prop_it.second.property) };
-            break;
-        case Node::AnimatablePropertyType::UINT64:
-            //new_state.properties[prop_it.first] = { *((uint64_t*)prop_it.second.property) };
-            break;
-        case Node::AnimatablePropertyType::FLOAT32:
-            new_state.properties[prop_it.first] = { *((float*)prop_it.second.property) };
-            break;
-        case Node::AnimatablePropertyType::FLOAT64:
-            //new_state.properties[prop_it.first] = { *((long float*)prop_it.second.property) };
-            break;
-        case Node::AnimatablePropertyType::IVEC2:
-            new_state.properties[prop_it.first] = { *((glm::ivec2*)prop_it.second.property) };
-            break;
-        case Node::AnimatablePropertyType::UVEC2:
-            new_state.properties[prop_it.first] = { *((glm::uvec2*)prop_it.second.property) };
-            break;
-        case Node::AnimatablePropertyType::FVEC2:
-            new_state.properties[prop_it.first] = { *((glm::vec2*)prop_it.second.property) };
-            break;
-        case Node::AnimatablePropertyType::IVEC3:
-            new_state.properties[prop_it.first] = { *((glm::ivec3*)prop_it.second.property) };
-            break;
-        case Node::AnimatablePropertyType::UVEC3:
-            new_state.properties[prop_it.first] = { *((glm::uvec3*)prop_it.second.property) };
-            break;
-        case Node::AnimatablePropertyType::FVEC3:
-            new_state.properties[prop_it.first] = { *((glm::vec3*)prop_it.second.property) };
-            break;
-        case Node::AnimatablePropertyType::IVEC4:
-            new_state.properties[prop_it.first] = { *((glm::ivec4*)prop_it.second.property) };
-            break;
-        case Node::AnimatablePropertyType::UVEC4:
-            new_state.properties[prop_it.first] = { *((glm::uvec4*)prop_it.second.property) };
-            break;
-        case Node::AnimatablePropertyType::FVEC4:
-            new_state.properties[prop_it.first] = { *((glm::vec4*)prop_it.second.property) };
-            break;
-        case Node::AnimatablePropertyType::QUAT:
-            new_state.properties[prop_it.first] = { *((glm::quat*)prop_it.second.property) };
-            break;
-        case Node::AnimatablePropertyType::UNDEFINED:
-            break;
-        }
-    }
-
-    return new_state;
-}
-
 uint32_t get_changed_properties_from_states(const sAnimationState& prev_state,
                                             const sAnimationState& current_state,
                                             std::string* changed_properties_list)
@@ -138,6 +62,8 @@ void AnimationEditor::clean()
 void AnimationEditor::on_enter(void* data)
 {
     current_node = reinterpret_cast<Node3D*>(data);
+
+    player->set_root_node(current_node);
 
     // Create animation for current node
     // TODO: Use the uuid for registering the animation
@@ -198,22 +124,13 @@ void AnimationEditor::render()
 
     if (current_node) {
         current_node->render();
-
-        /*static glm::mat4x4 test_model = current_node->get_model();
-        Camera* camera = RoomsRenderer::instance->get_camera();
-        bool changed = gizmo.render(camera->get_view(), camera->get_projection(), test_model);
-
-        if (changed)
-        {
-            current_node->set_model(test_model);
-        }*/
     }
 }
 
 void AnimationEditor::add_keyframe()
 {
     // Get the current state of the animatable properties of the node
-    current_animation_properties = create_animation_state_from_node(current_node);
+    store_animation_state(current_animation_properties);
 
     adding_keyframe = true;
 
@@ -238,7 +155,8 @@ void AnimationEditor::process_keyframe()
     }
 
     // Read the properties in order to see if there is any change
-    sAnimationState new_anim_state = create_animation_state_from_node(current_node);
+    sAnimationState new_anim_state;
+    store_animation_state(new_anim_state);
 
     std::string* changed_properties = new std::string[new_anim_state.properties.size()];
 
@@ -291,6 +209,85 @@ void AnimationEditor::process_keyframe()
     delete[] changed_properties;
 }
 
+void AnimationEditor::store_animation_state(sAnimationState& state)
+{
+    if (!current_node) {
+        assert(0);
+    }
+
+    const std::unordered_map<std::string, Node::AnimatableProperty>& properties = current_node->get_animatable_properties();
+
+    for (auto prop_it : properties) {
+
+        void* data = prop_it.second.property;
+
+        switch (prop_it.second.property_type) {
+        case Node::AnimatablePropertyType::INT8:
+            state.properties[prop_it.first].value = *((int8_t*)data);
+            break;
+        case Node::AnimatablePropertyType::INT16:
+            state.properties[prop_it.first].value = *((int16_t*)data);
+            break;
+        case Node::AnimatablePropertyType::INT32:
+            state.properties[prop_it.first].value = *((int32_t*)data);
+            break;
+        case Node::AnimatablePropertyType::INT64:
+            //state.properties[prop_it.first].value = *((int64_t*)data);
+            break;
+        case Node::AnimatablePropertyType::UINT8:
+            state.properties[prop_it.first].value = *((uint8_t*)data);
+            break;
+        case Node::AnimatablePropertyType::UINT16:
+            state.properties[prop_it.first].value = *((uint16_t*)data);
+            break;
+        case Node::AnimatablePropertyType::UINT32:
+            state.properties[prop_it.first].value = *((uint32_t*)data);
+            break;
+        case Node::AnimatablePropertyType::UINT64:
+            //state.properties[prop_it.first].value = *((uint64_t*)data);
+            break;
+        case Node::AnimatablePropertyType::FLOAT32:
+            state.properties[prop_it.first].value = *((float*)data);
+            break;
+        case Node::AnimatablePropertyType::FLOAT64:
+            //state.properties[prop_it.first].value = *((long float*)data);
+            break;
+        case Node::AnimatablePropertyType::IVEC2:
+            state.properties[prop_it.first].value = *((glm::ivec2*)data);
+            break;
+        case Node::AnimatablePropertyType::UVEC2:
+            state.properties[prop_it.first].value = *((glm::uvec2*)data);
+            break;
+        case Node::AnimatablePropertyType::FVEC2:
+            state.properties[prop_it.first].value = *((glm::vec2*)data);
+            break;
+        case Node::AnimatablePropertyType::IVEC3:
+            state.properties[prop_it.first].value = *((glm::ivec3*)data);
+            break;
+        case Node::AnimatablePropertyType::UVEC3:
+            state.properties[prop_it.first].value = *((glm::uvec3*)data);
+            break;
+        case Node::AnimatablePropertyType::FVEC3:
+            state.properties[prop_it.first].value = *((glm::vec3*)data);
+            break;
+        case Node::AnimatablePropertyType::IVEC4:
+            state.properties[prop_it.first].value = *((glm::ivec4*)data);
+            break;
+        case Node::AnimatablePropertyType::UVEC4:
+            state.properties[prop_it.first].value = *((glm::uvec4*)data);
+            break;
+        case Node::AnimatablePropertyType::FVEC4:
+            state.properties[prop_it.first].value = *((glm::vec4*)data);
+            break;
+        case Node::AnimatablePropertyType::QUAT:
+            state.properties[prop_it.first].value = *((glm::quat*)data);
+            break;
+        case Node::AnimatablePropertyType::UNDEFINED:
+            break;
+        }
+    }
+}
+
 void AnimationEditor::render_gui()
 {
     if (current_animation)
@@ -298,45 +295,12 @@ void AnimationEditor::render_gui()
         ImGui::Text("Animation %s", current_animation->get_name().c_str());
         ImGui::Text("Num Tracks %d", current_animation->get_track_count());
 
-        if (ImGui::Button("Create keyframe")) {
-
-            uint32_t num_keys = current_track->size();
-            current_track->resize(num_keys + 1);
-
-            Keyframe& frame = current_track->get_keyframe(num_keys);
-
-            frame.time = current_time;
-
-            frame.in = 0.0f;
-            frame.value = current_node->get_translation();
-            frame.out = 0.0f;
-
-            current_time += 0.5f;
-
-            current_animation->recalculate_duration();
-        }
-
         if (current_track) {
-
             ImGui::Text("Num Keyframes %d", current_track->size());
-            for (uint32_t i = 0; i < current_track->size(); ++i) {
-                const Keyframe& key = current_track->get_keyframe(i);
-                const glm::vec3& value = std::get<glm::vec3>(key.value);
-                ImGui::Text("%d (%f) [%f %f %f]", i, key.time, value.x, value.y, value.z);
-            }
-        }
-        else {
-            if (ImGui::Button("Create position track")) {
-
-                current_track = current_animation->add_track();
-                current_track->set_name("translation");
-                current_track->set_path(current_node->get_name() + "/" + "translation");
-            }
         }
 
-        if (ImGui::Button("Play")) {
-
-            player->play("anim_test");
+        if (current_animation && ImGui::Button("Play")) {
+            player->play(current_animation);
         }
     }
 
@@ -371,10 +335,7 @@ void AnimationEditor::init_ui()
     first_row->add_child(new ui::TextureButton2D("play_animation", "data/textures/a.png"));
 
     // Create inspection panel (Nodes, properties, etc)
-    {
-        inspector = new ui::Inspector({ .name = "inspector_root", .title = "Animation",.position = { 32.0f, 32.f } });
-        inspector->set_visibility(false);
-    }
+    inspector = new ui::Inspector({ .name = "inspector_root", .title = "Animation",.position = { 32.0f, 32.f } });
 
     if (renderer->get_openxr_available())
     {
@@ -471,11 +432,8 @@ void AnimationEditor::inspect_keyframe_properties()
     inspector->same_line();
     /*std::string signal = node_name + std::to_string(node_signal_uid++) + "_intensity_slider";
     inspector->add_slider(signal, light->get_intensity(), 0.0f, 10.0f, 2);*/
-    inspector->add_label("empty", "Interpolation");
+    inspector->add_label("empty", "Interpolation", ui::SKIP_TEXT_RECT);
     inspector->end_line();
-    /*Node::bind(signal, [l = light](const std::string& sg, float value) {
-        l->set_intensity(value);
-    });*/
 }
 
 void AnimationEditor::inspect_node(Node* node)
@@ -490,7 +448,16 @@ void AnimationEditor::inspect_node(Node* node)
 
     const std::unordered_map<std::string, Node::AnimatableProperty>& properties = node->get_animatable_properties();
 
+    void* data = nullptr;
+
     for (auto prop_it : properties) {
+
+        signal = node_name + std::to_string(node_signal_uid++);
+        data = prop_it.second.property;
+
+        inspector->same_line();
+        inspector->add_label("empty", prop_it.first, ui::SKIP_TEXT_RECT);
+
         switch (prop_it.second.property_type) {
         case Node::AnimatablePropertyType::INT8:
             break;
@@ -509,8 +476,7 @@ void AnimationEditor::inspect_node(Node* node)
         case Node::AnimatablePropertyType::UINT64:
             break;
         case Node::AnimatablePropertyType::FLOAT32:
-            signal = node_name + std::to_string(node_signal_uid++) + "_FLOAT32";
-            inspector->add_slider(signal, *((float*)prop_it.second.property));
+            inspector->add_slider(signal, *((float*)data), (float*)data);
             break;
         case Node::AnimatablePropertyType::FLOAT64:
             break;
@@ -537,6 +503,8 @@ void AnimationEditor::inspect_node(Node* node)
         case Node::AnimatablePropertyType::UNDEFINED:
             break;
         }
+
+        inspector->end_line();
     }
 
 }

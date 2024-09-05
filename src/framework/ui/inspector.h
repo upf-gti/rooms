@@ -48,10 +48,10 @@ namespace ui {
         /*void render(); */
         void clear();
 
-        void add_label(const std::string& name, const std::string& label);
+        void add_label(const std::string& name, const std::string& label, uint32_t flags = 0);
         void add_icon(const std::string& texture_path);
         void add_button(const std::string& name, const std::string& texture_path, uint32_t flags = 0);
-        void add_slider(const std::string& name, float value, float min = 0.0f, float max = 1.0f, int precision = 1);
+        void add_slider(const std::string& name, float value, float* result = nullptr, float min = 0.0f, float max = 1.0f, int precision = 1);
         void add_color_picker(const std::string& name, const Color& c);
 
         void same_line();
