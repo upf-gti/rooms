@@ -7,6 +7,7 @@
 class RoomsRenderer;
 class Animation;
 class Track;
+class Keyframe;
 
 namespace ui {
     class Inspector;
@@ -28,16 +29,20 @@ class AnimationEditor : public BaseEditor {
     Animation* animation = nullptr;
 
     Track* current_track = nullptr;
-
+    Keyframe* current_keyframe = nullptr;
+    uint32_t current_keyframe_idx = 0u;
     sAnimationState current_animation_properties;
 
     float current_time = 0.0f;
+    bool keyframe_dirty = false;
+
+    void process_keyframe();
 
     /*
         UI
     */
 
-    static uint64_t node_signal_uid;
+    static uint64_t keyframe_signal_uid;
 
     bool inspector_dirty = true;
     bool inspector_transform_dirty = false;
@@ -48,7 +53,8 @@ class AnimationEditor : public BaseEditor {
     void init_ui();
     void bind_events();
 
-    void process_keyframe();
+    void inspect_keyframes_list(bool force = false);
+    void inspect_keyframe();
 
 public:
 

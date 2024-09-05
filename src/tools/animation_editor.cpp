@@ -7,6 +7,7 @@
 #include "framework/nodes/animation_player.h"
 #include "framework/nodes/viewport_3d.h"
 #include "framework/ui/inspector.h"
+#include "framework/animation/track.h"
 
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/renderer_storage.h"
@@ -22,8 +23,10 @@ Node3D* root = nullptr;
 MeshInstance3D* node = nullptr;
 AnimationPlayer* player = nullptr;
 
+uint64_t AnimationEditor::keyframe_signal_uid = 0;
 
-sAnimationState create_animation_state_from_node(const Node* scene_node) {
+sAnimationState create_animation_state_from_node(const Node* scene_node)
+{
     sAnimationState new_state;
 
     const std::unordered_map<std::string, Node::AnimatableProperty>& properties = scene_node->get_animatable_properties();
@@ -101,7 +104,8 @@ sAnimationState create_animation_state_from_node(const Node* scene_node) {
 
 uint32_t get_changed_properties_from_states(const sAnimationState& prev_state,
                                             const sAnimationState& current_state,
-                                            std::string* changed_properties_list) {
+                                            std::string* changed_properties_list)
+{
     uint32_t changed_properties_count = 0u;
     // Compare the properties of one state to another
     for (auto it_base : prev_state.properties) {
@@ -111,36 +115,6 @@ uint32_t get_changed_properties_from_states(const sAnimationState& prev_state,
     }
 
     return changed_properties_count;
-}
-
-void AnimationEditor::process_keyframe() {
-    // Read the properties in order to see if there is any change
-    sAnimationState new_anim_state = create_animation_state_from_node(node);
-
-    std::string* changed_properties = new std::string[new_anim_state.properties.size()];
-
-    uint32_t changed_properties_count = get_changed_properties_from_states(current_animation_properties, new_anim_state, changed_properties);
-
-    if (changed_properties_count > 0u) {
-        // Keyframe changes state
-
-        for (uint32_t i = 0u; i < changed_properties_count; i++) {
-            if (current_animation_properties.properties[changed_properties[i]].track_id == -1) {
-                // Add new track and set track id in struct
-                std::cout << "Create new track on property " << changed_properties[i] << std::endl;
-                current_animation_properties.properties[changed_properties[i]].track_id = 0u;
-            }
-
-            // Create, and add keypoint to track
-            std::cout << "Add keypoint to track " << changed_properties[i] << std::endl;
-
-            // Update value
-            current_animation_properties.properties[changed_properties[i]].value = new_anim_state.properties[changed_properties[i]].value;
-        }
-
-    }
-
-    delete[] changed_properties;
 }
 
 void AnimationEditor::initialize()
@@ -187,6 +161,11 @@ void AnimationEditor::update(float delta_time)
 
     BaseEditor::update(delta_time);
 
+    // Update inspector for keyframes
+    if(keyframe_dirty) {
+        inspect_keyframe();
+    }
+
     if (renderer->get_openxr_available()) {
 
         if (inspector_transform_dirty) {
@@ -225,6 +204,37 @@ void AnimationEditor::render()
             // node->set_model(test_model);
         }
     }
+}
+
+void AnimationEditor::process_keyframe()
+{
+    // Read the properties in order to see if there is any change
+    sAnimationState new_anim_state = create_animation_state_from_node(node);
+
+    std::string* changed_properties = new std::string[new_anim_state.properties.size()];
+
+    uint32_t changed_properties_count = get_changed_properties_from_states(current_animation_properties, new_anim_state, changed_properties);
+
+    if (changed_properties_count > 0u) {
+        // Keyframe changes state
+
+        for (uint32_t i = 0u; i < changed_properties_count; i++) {
+            if (current_animation_properties.properties[changed_properties[i]].track_id == -1) {
+                // Add new track and set track id in struct
+                std::cout << "Create new track on property " << changed_properties[i] << std::endl;
+                current_animation_properties.properties[changed_properties[i]].track_id = 0u;
+            }
+
+            // Create, and add keypoint to track
+            std::cout << "Add keypoint to track " << changed_properties[i] << std::endl;
+
+            // Update value
+            current_animation_properties.properties[changed_properties[i]].value = new_anim_state.properties[changed_properties[i]].value;
+        }
+
+    }
+
+    delete[] changed_properties;
 }
 
 void AnimationEditor::render_gui()
@@ -371,7 +381,7 @@ void AnimationEditor::init_ui()
 void AnimationEditor::bind_events()
 {
     Node::bind("toggle_list", [&](const std::string& signal, void* button) {
-        
+        inspect_keyframes_list(true);
     });
 
     Node::bind("play_animation", [&](const std::string& signal, void* button) {
@@ -382,4 +392,93 @@ void AnimationEditor::bind_events()
 
     Node::bind("record_action", [&](const std::string& signal, void* button) { });
     Node::bind("add_keyframe", [&](const std::string& signal, void* button) { });
+}
+
+void AnimationEditor::inspect_keyframe()
+{
+    inspector->clear();
+
+    std::string key_name = "Keyframe" + std::to_string(current_keyframe_idx);
+
+    inspector->same_line();
+    inspector->add_icon("data/textures/pattern.png");
+    inspector->add_label("empty", key_name);
+    inspector->end_line();
+
+    // Keyframe properties
+    {
+        inspector->same_line();
+        /*std::string signal = node_name + std::to_string(node_signal_uid++) + "_intensity_slider";
+        inspector->add_slider(signal, light->get_intensity(), 0.0f, 10.0f, 2);*/
+        inspector->add_label("empty", "Interpolation");
+        inspector->end_line();
+        /*Node::bind(signal, [l = light](const std::string& sg, float value) {
+            l->set_intensity(value);
+        });*/
+    }
+
+    // Enable xr for the buttons that need it..
+    if (renderer->get_openxr_available()) {
+        inspector->disable_2d();
+    }
+
+    Node::emit_signal(inspector->get_name() + "@children_changed", (void*)nullptr);
+
+    keyframe_dirty = false;
+}
+
+void AnimationEditor::inspect_keyframes_list(bool force)
+{
+    inspector->clear();
+
+    if (!current_track) {
+        return;
+    }
+
+    for (uint32_t i = 0; i < current_track->size(); ++i) {
+        Keyframe* key = &current_track->get_keyframe(i);
+
+        inspector->same_line();
+
+        // add unique identifier for signals
+        std::string key_name = "Keyframe" + std::to_string(i);
+
+        inspector->add_icon("data/textures/pattern.png");
+
+        std::string signal = key_name + std::to_string(keyframe_signal_uid++) + "_label";
+        inspector->add_label(signal, key_name);
+
+        Node::bind(signal, [&, k = key, i](const std::string& sg, void* data) {
+            current_keyframe_idx = i;
+            current_keyframe = k;
+            keyframe_dirty = true;
+        });
+
+        // Remove button
+        {
+            std::string signal = key_name + std::to_string(keyframe_signal_uid++) + "_remove";
+            inspector->add_button(signal, "data/textures/delete.png");
+
+            Node::bind(signal, [&, n = node](const std::string& sg, void* data) {
+                // TODO
+            });
+        }
+
+        inspector->end_line();
+    }
+
+    Node::emit_signal(inspector->get_name() + "@children_changed", (void*)nullptr);
+
+    // Enable xr for the buttons that need it..
+    if (renderer->get_openxr_available()) {
+        inspector->disable_2d();
+    }
+
+    inspector_dirty = false;
+
+    inspector_transform_dirty = !inspector->get_visibility();
+
+    if (force) {
+        inspector->set_visibility(true);
+    }
 }
