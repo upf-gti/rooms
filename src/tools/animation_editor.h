@@ -40,6 +40,8 @@ class AnimationEditor : public BaseEditor {
     void add_keyframe();
     void process_keyframe();
 
+    void store_animation_state(sAnimationState& state);
+
     /*
         UI
     */
