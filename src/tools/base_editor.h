@@ -64,6 +64,9 @@ public:
     virtual void render();
     virtual void render_gui() {};
 
+    virtual void on_enter(void* data) {};
+    virtual void on_exit() {};
+
     void set_name(const std::string& new_name) { name = new_name; }
     const std::string& get_name() { return name; }
 };

@@ -266,9 +266,13 @@ void RoomsEngine::render_controllers()
     }
 }
 
-void RoomsEngine::switch_editor(uint8_t editor)
+void RoomsEngine::switch_editor(uint8_t editor, void* data)
 {
     RoomsEngine* i = static_cast<RoomsEngine*>(instance);
+
+    if (i->current_editor) {
+        i->current_editor->on_exit();
+    }
 
     switch (editor)
     {
@@ -293,6 +297,7 @@ void RoomsEngine::switch_editor(uint8_t editor)
     }
 
     i->current_editor_type = (EditorType) editor;
+    i->current_editor->on_enter(data);
 }
 
 void RoomsEngine::toggle_use_grid()

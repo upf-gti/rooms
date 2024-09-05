@@ -70,7 +70,7 @@ public:
 
     static void render_controllers();
 
-    static void switch_editor(uint8_t editor);
+    static void switch_editor(uint8_t editor, void* data = nullptr);
     static void toggle_use_grid();
     static void toggle_use_environment_map();
 
