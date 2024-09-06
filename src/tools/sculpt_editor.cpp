@@ -1166,17 +1166,17 @@ void SculptEditor::init_ui()
             // Edit sizes
             {
                 ui::ItemGroup2D* g_edit_sizes = new ui::ItemGroup2D("g_edit_sizes");
-                g_edit_sizes->add_child(new ui::Slider2D("main_size", edit_to_add.dimensions.x, ui::SliderMode::HORIZONTAL, 0, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE, 3));
-                g_edit_sizes->add_child(new ui::Slider2D("secondary_size", edit_to_add.dimensions.y, ui::SliderMode::HORIZONTAL, 0, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE, 3));
-                g_edit_sizes->add_child(new ui::Slider2D("round_size", "data/textures/rounding.png", edit_to_add.dimensions.w, ui::SliderMode::VERTICAL, 0, 0.0f, MAX_PRIMITIVE_SIZE, 2));
+                g_edit_sizes->add_child(new ui::FloatSlider2D("main_size", edit_to_add.dimensions.x, ui::SliderMode::HORIZONTAL, 0, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE, 3));
+                g_edit_sizes->add_child(new ui::FloatSlider2D("secondary_size", edit_to_add.dimensions.y, ui::SliderMode::HORIZONTAL, 0, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE, 3));
+                g_edit_sizes->add_child(new ui::FloatSlider2D("round_size", "data/textures/rounding.png", edit_to_add.dimensions.w, ui::SliderMode::VERTICAL, 0, 0.0f, MAX_PRIMITIVE_SIZE, 2));
                 shape_editor_submenu->add_child(g_edit_sizes);
             }
 
             // Edit modifiers
             {
                 ui::ItemGroup2D* g_edit_modifiers = new ui::ItemGroup2D("g_edit_modifiers");
-                //g_edit_modifiers->add_child(new ui::Slider2D("onion_value", "data/textures/onion.png", 0.0f, ui::SliderMode::VERTICAL));
-                g_edit_modifiers->add_child(new ui::Slider2D("cap_value", "data/textures/capped.png", 0.0f, ui::SliderMode::VERTICAL));
+                //g_edit_modifiers->add_child(new ui::FloatSlider2D("onion_value", "data/textures/onion.png", 0.0f, ui::SliderMode::VERTICAL));
+                g_edit_modifiers->add_child(new ui::FloatSlider2D("cap_value", "data/textures/capped.png", 0.0f, ui::SliderMode::VERTICAL));
                 shape_editor_submenu->add_child(g_edit_modifiers);
             }
 
@@ -1193,16 +1193,16 @@ void SculptEditor::init_ui()
 
                 {
                     ui::ItemGroup2D* g_edit_pbr = new ui::ItemGroup2D("g_edit_pbr");
-                    g_edit_pbr->add_child(new ui::Slider2D("roughness", 0.7f));
-                    g_edit_pbr->add_child(new ui::Slider2D("metallic", 0.2f));
+                    g_edit_pbr->add_child(new ui::FloatSlider2D("roughness", 0.7f));
+                    g_edit_pbr->add_child(new ui::FloatSlider2D("metallic", 0.2f));
                     shading_submenu->add_child(g_edit_pbr);
                 }
 
                 {
                     ui::ItemGroup2D* g_edit_pattern = new ui::ItemGroup2D("g_edit_pattern");
-                    g_edit_pattern->add_child(new ui::Slider2D("noise_intensity", 0.0f, ui::SliderMode::VERTICAL, 0.0f, 10.0f));
-                    g_edit_pattern->add_child(new ui::Slider2D("noise_frequency", 20.0f, ui::SliderMode::VERTICAL, 0.0f, 50.0f));
-                    g_edit_pattern->add_child(new ui::Slider2D("noise_octaves", 8.0f, ui::SliderMode::VERTICAL, 0.0f, 16.0f, 1.0f));
+                    g_edit_pattern->add_child(new ui::FloatSlider2D("noise_intensity", 0.0f, ui::SliderMode::VERTICAL, 0.0f, 10.0f));
+                    g_edit_pattern->add_child(new ui::FloatSlider2D("noise_frequency", 20.0f, ui::SliderMode::VERTICAL, 0.0f, 50.0f));
+                    g_edit_pattern->add_child(new ui::FloatSlider2D("noise_octaves", 8.0f, ui::SliderMode::VERTICAL, 0.0f, 16.0f, 1.0f));
                     g_edit_pattern->add_child(new ui::ColorPicker2D("noise_color_picker", colors::WHITE));
                     material_editor_submenu->add_child(g_edit_pattern);
                 }
@@ -1211,8 +1211,8 @@ void SculptEditor::init_ui()
             }*/
 
             // Put directly these two props until there are more pbr props to show
-            material_editor_submenu->add_child(new ui::Slider2D("roughness", "data/textures/roughness.png", stroke_material.roughness));
-            material_editor_submenu->add_child(new ui::Slider2D("metallic", "data/textures/metallic.png", stroke_material.metallic));
+            material_editor_submenu->add_child(new ui::FloatSlider2D("roughness", "data/textures/roughness.png", stroke_material.roughness));
+            material_editor_submenu->add_child(new ui::FloatSlider2D("metallic", "data/textures/metallic.png", stroke_material.metallic));
 
             // Shuffle
             {
@@ -1318,7 +1318,7 @@ void SculptEditor::init_ui()
 
     // Smooth factor
     {
-        ui::Slider2D* smooth_factor_slider = new ui::Slider2D("smooth_factor", "data/textures/smooth.png", stroke_parameters.get_smooth_factor(), ui::SliderMode::VERTICAL, ui::SKIP_VALUE, MIN_SMOOTH_FACTOR, MAX_SMOOTH_FACTOR, 3);
+        ui::Slider2D* smooth_factor_slider = new ui::FloatSlider2D("smooth_factor", "data/textures/smooth.png", stroke_parameters.get_smooth_factor(), ui::SliderMode::VERTICAL, ui::SKIP_VALUE, MIN_SMOOTH_FACTOR, MAX_SMOOTH_FACTOR, 3);
         second_row->add_child(smooth_factor_slider);
     }
 
@@ -1403,12 +1403,12 @@ void SculptEditor::bind_events()
 
     Node::bind("create_spline", [&](const std::string& signal, void* button) { start_spline(); });
 
-    Node::bind("main_size", [&](const std::string& signal, float value) { set_edit_size(value); });
-    Node::bind("secondary_size", [&](const std::string& signal, float value) { set_edit_size(-1.0f, value); });
-    Node::bind("round_size", [&](const std::string& signal, float value) { set_edit_size(-1.0f, -1.0f, value); });
+    Node::bind("main_size", (FuncFloat)[&](const std::string& signal, float value) { set_edit_size(value); });
+    Node::bind("secondary_size", (FuncFloat)[&](const std::string& signal, float value) { set_edit_size(-1.0f, value); });
+    Node::bind("round_size", (FuncFloat)[&](const std::string& signal, float value) { set_edit_size(-1.0f, -1.0f, value); });
 
     //Node::bind("onion_value", [&](const std::string& signal, float value) { set_onion_modifier(value); });
-    Node::bind("cap_value", [&](const std::string& signal, float value) { set_cap_modifier(value); });
+    Node::bind("cap_value", (FuncFloat)[&](const std::string& signal, float value) { set_cap_modifier(value); });
 
     Node::bind("mirror_toggle", [&](const std::string& signal, void* button) { use_mirror = !use_mirror; });
     Node::bind("mirror_translation", [&](const std::string& signal, void* button) { mirror_gizmo.set_operation(eGizmoType::TRANSLATION_GIZMO); });
@@ -1421,8 +1421,8 @@ void SculptEditor::bind_events()
     Node::bind("lock_axis_y", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_Y; });
     Node::bind("lock_axis_z", [&](const std::string& signal, void* button) { axis_lock_mode = AXIS_LOCK_Z; });
 
-    Node::bind("roughness", [&](const std::string& signal, float value) { stroke_parameters.set_material_roughness(value); });
-    Node::bind("metallic", [&](const std::string& signal, float value) { stroke_parameters.set_material_metallic(value); });
+    Node::bind("roughness", (FuncFloat)[&](const std::string& signal, float value) { stroke_parameters.set_material_roughness(value); });
+    Node::bind("metallic", (FuncFloat)[&](const std::string& signal, float value) { stroke_parameters.set_material_metallic(value); });
     /*Node::bind("noise_intensity", [&](const std::string& signal, float value) { stroke_parameters.set_material_noise(value); });
     Node::bind("noise_frequency", [&](const std::string& signal, float value) { stroke_parameters.set_material_noise(-1.0f, value); });
     Node::bind("noise_octaves", [&](const std::string& signal, float value) { stroke_parameters.set_material_noise(-1.0f, -1.0f, static_cast<int>(value)); });
@@ -1434,7 +1434,7 @@ void SculptEditor::bind_events()
     Node::bind("undo", [&](const std::string& signal, void* button) { undo(); });
     Node::bind("redo", [&](const std::string& signal, void* button) { redo(); });
 
-    Node::bind("smooth_factor", [&](const std::string& signal, float value) { stroke_parameters.set_smooth_factor(value); });
+    Node::bind("smooth_factor", (FuncFloat)[&](const std::string& signal, float value) { stroke_parameters.set_smooth_factor(value); });
 
     // Bind colors callback...
 

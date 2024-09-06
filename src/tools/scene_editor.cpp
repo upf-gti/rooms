@@ -256,9 +256,10 @@ void SceneEditor::init_ui()
         ui::ButtonSubmenu2D* display_submenu = new ui::ButtonSubmenu2D("display", "data/textures/display_settings.png");
         g_display->add_child(new ui::TextureButton2D("use_grid", "data/textures/grid.png", ui::ALLOW_TOGGLE | ui::SELECTED));
         g_display->add_child(new ui::TextureButton2D("use_environment", "data/textures/skybox.png", ui::ALLOW_TOGGLE | ui::SELECTED));
-        g_display->add_child(new ui::Slider2D("IBL_intensity", "data/textures/ibl_intensity.png", rooms_renderer->get_ibl_intensity(), ui::SliderMode::VERTICAL, ui::USER_RANGE/*ui::CURVE_INV_POW, 21.f, -6.0f*/, 0.0f, 4.0f, 2));
+        g_display->add_child(new ui::FloatSlider2D("IBL_intensity", "data/textures/ibl_intensity.png", rooms_renderer->get_ibl_intensity(), ui::SliderMode::VERTICAL, ui::USER_RANGE/*ui::CURVE_INV_POW, 21.f, -6.0f*/, 0.0f, 4.0f, 2));
+        g_display->add_child(new ui::IntSlider2D("TEST", "data/textures/ibl_intensity.png", 5));
         display_submenu->add_child(g_display);
-        display_submenu->add_child(new ui::Slider2D("exposure", "data/textures/exposure.png", rooms_renderer->get_exposure(), ui::SliderMode::VERTICAL, ui::USER_RANGE/*ui::CURVE_INV_POW, 21.f, -6.0f*/, 0.0f, 4.0f, 2));
+        display_submenu->add_child(new ui::FloatSlider2D("exposure", "data/textures/exposure.png", rooms_renderer->get_exposure(), ui::SliderMode::VERTICAL, ui::USER_RANGE/*ui::CURVE_INV_POW, 21.f, -6.0f*/, 0.0f, 4.0f, 2));
         first_row->add_child(display_submenu);
     }
 
@@ -358,12 +359,12 @@ void SceneEditor::bind_events()
         Node::bind("spot", [&](const std::string& signal, void* button) { create_light_node(LIGHT_SPOT); });
         Node::bind("directional", [&](const std::string& signal, void* button) { create_light_node(LIGHT_DIRECTIONAL); });
 
-        Node::bind("exposure", [&](const std::string& signal, float value) {
+        Node::bind("exposure", (FuncFloat)[&](const std::string& signal, float value) {
             RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
             rooms_renderer->set_exposure(value);
         });
 
-        Node::bind("IBL_intensity", [&](const std::string& signal, float value) {
+        Node::bind("IBL_intensity", (FuncFloat)[&](const std::string& signal, float value) {
             RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
             rooms_renderer->set_ibl_intensity(value);
         });
@@ -666,12 +667,12 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
     std::string node_name = node->get_name();
 
     if ((flags & NODE_ICON) && texture_path.size()) {
-        inspector->add_icon(texture_path);
+        inspector->icon(texture_path);
     }
 
     //if (flags & NODE_VISIBILITY) {
     //    std::string signal = node_name + std::to_string(node_signal_uid++) + "_visibility";
-    //    inspector->add_button(signal, "data/textures/visibility.png", ui::ALLOW_TOGGLE);
+    //    inspector->button(signal, "data/textures/visibility.png", ui::ALLOW_TOGGLE);
 
     //    Node::bind(signal, [n = node](const std::string& sg, void* data) {
     //        // Implement visibility for Node3D
@@ -681,7 +682,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
 
     if (flags & NODE_EDIT) {
         std::string signal = node_name + std::to_string(node_signal_uid++) + "_edit";
-        inspector->add_button(signal, "data/textures/edit.png");
+        inspector->button(signal, "data/textures/edit.png");
 
         Node::bind(signal, [&, n = node, flags = flags](const std::string& sg, void* data) {
 
@@ -701,7 +702,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
 
     if (flags & NODE_ANIMATE) {
         std::string signal = node_name + std::to_string(node_signal_uid++) + "_animate";
-        inspector->add_button(signal, "data/textures/animate.png");
+        inspector->button(signal, "data/textures/animate.png");
 
         Node::bind(signal, [&, n = node, flags = flags](const std::string& sg, void* data) {
 
@@ -716,7 +717,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
 
     if (flags & NODE_NAME) {
         std::string signal = node_name + std::to_string(node_signal_uid++) + "_label";
-        inspector->add_label(signal, node_name);
+        inspector->label(signal, node_name);
 
         // Request keyboard and use the result to set the new node name. Not the nicest code, but anyway..
         {
@@ -738,7 +739,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
     // Remove button
     {
         std::string signal = node_name + std::to_string(node_signal_uid++) + "_remove";
-        inspector->add_button(signal, "data/textures/delete.png");
+        inspector->button(signal, "data/textures/delete.png");
 
         Node::bind(signal, [&, n = node](const std::string& sg, void* data) {
 
@@ -767,14 +768,14 @@ void SceneEditor::inspect_light()
     std::string node_name = selected_node->get_name();
 
     inspector->same_line();
-    inspector->add_icon("data/textures/light.png");
-    inspector->add_label("empty", node_name);
+    inspector->icon("data/textures/light.png");
+    inspector->label("empty", node_name);
     inspector->end_line();
 
     // Color
     {
         std::string signal = node_name + std::to_string(node_signal_uid++) + "_picker";
-        inspector->add_color_picker(signal, Color(light->get_color(), 1.0f));
+        inspector->color_picker(signal, Color(light->get_color(), 1.0f));
         Node::bind(signal, [l = light](const std::string& sg, const Color& color) {
             l->set_color(color);
         });
@@ -784,10 +785,10 @@ void SceneEditor::inspect_light()
     {
         inspector->same_line();
         std::string signal = node_name + std::to_string(node_signal_uid++) + "_intensity_slider";
-        inspector->add_slider(signal, light->get_intensity(), nullptr, 0.0f, 10.0f, 2);
-        inspector->add_label("empty", "Intensity");
+        inspector->fslider(signal, light->get_intensity(), nullptr, 0.0f, 10.0f, 2);
+        inspector->label("empty", "Intensity");
         inspector->end_line();
-        Node::bind(signal, [l = light](const std::string& sg, float value) {
+        Node::bind(signal, (FuncFloat)[l = light](const std::string& sg, float value) {
             l->set_intensity(value);
         });
     }
@@ -796,10 +797,10 @@ void SceneEditor::inspect_light()
     {
         inspector->same_line();
         std::string signal = node_name + std::to_string(node_signal_uid++) + "_range_slider";
-        inspector->add_slider(signal, light->get_intensity(), nullptr, 0.0f, 5.0f, 2);
-        inspector->add_label("empty", "Range");
+        inspector->fslider(signal, light->get_intensity(), nullptr, 0.0f, 5.0f, 2);
+        inspector->label("empty", "Range");
         inspector->end_line();
-        Node::bind(signal, [l = light](const std::string& sg, float value) {
+        Node::bind(signal, (FuncFloat)[l = light](const std::string& sg, float value) {
             l->set_range(value);
         });
     }
@@ -825,19 +826,19 @@ void SceneEditor::inspect_exports(bool force)
         inspector->same_line();
 
         std::string signal = name + std::to_string(node_signal_uid++) + "_load";
-        inspector->add_button(signal, "data/textures/load.png");
+        inspector->button(signal, "data/textures/load.png");
         Node::bind(signal, [&, str = full_name](const std::string& sg, void* data) {
             selected_node = nullptr;
             static_cast<RoomsEngine*>(RoomsEngine::instance)->set_main_scene(str);
         });
 
         signal = name + std::to_string(node_signal_uid++) + "_add";
-        inspector->add_button(signal, "data/textures/add.png");
+        inspector->button(signal, "data/textures/add.png");
         Node::bind(signal, [&, str = full_name](const std::string& sg, void* data) {
             static_cast<RoomsEngine*>(RoomsEngine::instance)->add_to_main_scene(str);
         });
 
-        inspector->add_label("empty", name);
+        inspector->label("empty", name);
         inspector->end_line();
     }
 

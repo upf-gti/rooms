@@ -410,8 +410,8 @@ void AnimationEditor::inspect_keyframe()
     std::string key_name = "Keyframe" + std::to_string(current_keyframe_idx);
 
     inspector->same_line();
-    inspector->add_icon("data/textures/pattern.png");
-    inspector->add_label("empty", key_name);
+    inspector->icon("data/textures/pattern.png");
+    inspector->label("empty", key_name);
     inspector->end_line();
 
     inspect_keyframe_properties();
@@ -428,11 +428,11 @@ void AnimationEditor::inspect_keyframe()
 
 void AnimationEditor::inspect_keyframe_properties()
 {
-    inspector->add_label("empty", "Keyframe Properties");
+    inspector->label("empty", "Keyframe Properties");
     inspector->same_line();
     /*std::string signal = node_name + std::to_string(node_signal_uid++) + "_intensity_slider";
     inspector->add_slider(signal, light->get_intensity(), 0.0f, 10.0f, 2);*/
-    inspector->add_label("empty", "Interpolation", ui::SKIP_TEXT_RECT);
+    inspector->label("empty", "Interpolation", ui::SKIP_TEXT_RECT);
     inspector->end_line();
 }
 
@@ -442,7 +442,7 @@ void AnimationEditor::inspect_node(Node* node)
     std::string node_name = node->get_name();
 
     std::string signal = node_name + std::to_string(node_signal_uid++) + "_label";
-    inspector->add_label(signal, node_name);
+    inspector->label(signal, node_name);
 
     // Inspect node properties
 
@@ -456,30 +456,29 @@ void AnimationEditor::inspect_node(Node* node)
         data = prop_it.second.property;
 
         inspector->same_line();
-        inspector->add_label("empty", prop_it.first, ui::SKIP_TEXT_RECT);
+        inspector->label("empty", prop_it.first, ui::SKIP_TEXT_RECT);
 
         switch (prop_it.second.property_type) {
         case Node::AnimatablePropertyType::INT8:
-            break;
         case Node::AnimatablePropertyType::INT16:
-            break;
         case Node::AnimatablePropertyType::INT32:
+            inspector->islider(signal, *((int*)data), (int*)data);
             break;
-        case Node::AnimatablePropertyType::INT64:
-            break;
+        /*case Node::AnimatablePropertyType::INT64:
+            break;*/
         case Node::AnimatablePropertyType::UINT8:
             break;
         case Node::AnimatablePropertyType::UINT16:
             break;
         case Node::AnimatablePropertyType::UINT32:
             break;
-        case Node::AnimatablePropertyType::UINT64:
-            break;
+        /*case Node::AnimatablePropertyType::UINT64:
+            break;*/
         case Node::AnimatablePropertyType::FLOAT32:
-            inspector->add_slider(signal, *((float*)data), (float*)data);
+            inspector->fslider(signal, *((float*)data), (float*)data);
             break;
-        case Node::AnimatablePropertyType::FLOAT64:
-            break;
+        /*case Node::AnimatablePropertyType::FLOAT64:
+            break;*/
         case Node::AnimatablePropertyType::IVEC2:
             break;
         case Node::AnimatablePropertyType::UVEC2:
@@ -491,22 +490,26 @@ void AnimationEditor::inspect_node(Node* node)
         case Node::AnimatablePropertyType::UVEC3:
             break;
         case Node::AnimatablePropertyType::FVEC3:
+            inspector->float3(signal, *((glm::vec3*)data), (glm::vec3*)data);
             break;
         case Node::AnimatablePropertyType::IVEC4:
             break;
         case Node::AnimatablePropertyType::UVEC4:
             break;
         case Node::AnimatablePropertyType::FVEC4:
+            if (prop_it.first.find("color") != std::string::npos) {
+                inspector->color_picker(signal, *((Color*)data), (Color*)data);
+            }
             break;
         case Node::AnimatablePropertyType::QUAT:
             break;
         case Node::AnimatablePropertyType::UNDEFINED:
+            assert(0);
             break;
         }
 
         inspector->end_line();
     }
-
 }
 
 void AnimationEditor::inspect_keyframes_list(bool force)
@@ -525,10 +528,10 @@ void AnimationEditor::inspect_keyframes_list(bool force)
         // add unique identifier for signals
         std::string key_name = "Keyframe" + std::to_string(i);
 
-        inspector->add_icon("data/textures/pattern.png");
+        inspector->icon("data/textures/pattern.png");
 
         std::string signal = key_name + std::to_string(keyframe_signal_uid++) + "_label";
-        inspector->add_label(signal, key_name);
+        inspector->label(signal, key_name);
 
         Node::bind(signal, [&, k = key, i](const std::string& sg, void* data) {
             current_keyframe_idx = i;
@@ -539,7 +542,7 @@ void AnimationEditor::inspect_keyframes_list(bool force)
         // Remove button
         {
             std::string signal = key_name + std::to_string(keyframe_signal_uid++) + "_remove";
-            inspector->add_button(signal, "data/textures/delete.png");
+            inspector->button(signal, "data/textures/delete.png");
 
             Node::bind(signal, [&, n = current_node](const std::string& sg, void* data) {
                 // TODO

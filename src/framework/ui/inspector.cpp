@@ -132,7 +132,7 @@ namespace ui {
         IO::set_hover(nullptr, {});
     }
 
-    void Inspector::add_label(const std::string& name, const std::string& label, uint32_t flags)
+    void Inspector::label(const std::string& name, const std::string& label, uint32_t flags)
     {
         ui::HContainer2D* flex_container = current_row;
 
@@ -148,7 +148,7 @@ namespace ui {
         items[name] = w;
     }
 
-    void Inspector::add_icon(const std::string& texture_path)
+    void Inspector::icon(const std::string& texture_path)
     {
         ui::HContainer2D* flex_container = current_row;
 
@@ -161,7 +161,7 @@ namespace ui {
         items[name] = w;
     }
 
-    void Inspector::add_button(const std::string& name, const std::string& texture_path, uint32_t flags)
+    void Inspector::button(const std::string& name, const std::string& texture_path, uint32_t flags)
     {
         ui::HContainer2D* flex_container = current_row;
 
@@ -174,7 +174,7 @@ namespace ui {
         items[name] = w;
     }
 
-    void Inspector::add_slider(const std::string& name, float value, float* result, float min, float max, int precision)
+    void Inspector::fslider(const std::string& name, float value, float* result, float min, float max, int precision)
     {
         ui::HContainer2D* flex_container = current_row;
 
@@ -182,18 +182,47 @@ namespace ui {
             flex_container = create_row();
         }
 
-        auto w = new ui::Slider2D(name, "", value, { 0.0f, 0.0f }, glm::vec2(panel_size.x / 4.0f, 24.f), ui::SliderMode::HORIZONTAL, ui::SKIP_NAME | ui::SKIP_VALUE | ui::SCROLLABLE, min, max, precision);
+        auto w = new ui::FloatSlider2D(name, "", value, { 0.0f, 0.0f }, glm::vec2(panel_size.x / 4.0f, 24.f), ui::SliderMode::HORIZONTAL, ui::SKIP_NAME | ui::SKIP_VALUE | ui::SCROLLABLE, min, max, precision);
         flex_container->add_child(w);
         items[name] = w;
 
         if (result != nullptr) {
-            Node::bind(name, [result = result](const std::string& signal, float value){
+            Node::bind(name, (FuncFloat)[result = result](const std::string& signal, float value){
                 *result = value;
             });
         }
     }
 
-    void Inspector::add_color_picker(const std::string& name, const Color& c)
+    void Inspector::islider(const std::string& name, int value, int* result, int min, int max)
+    {
+        ui::HContainer2D* flex_container = current_row;
+
+        if (!flex_container) {
+            flex_container = create_row();
+        }
+
+        auto w = new ui::IntSlider2D(name, "", value, { 0.0f, 0.0f }, glm::vec2(panel_size.x / 4.0f, 24.f), ui::SliderMode::HORIZONTAL, ui::SKIP_NAME | ui::SKIP_VALUE | ui::SCROLLABLE, min, max);
+        flex_container->add_child(w);
+        items[name] = w;
+
+        if (result != nullptr) {
+            Node::bind(name, (FuncInt)[result = result](const std::string& signal, int value) {
+                *result = value;
+            });
+        }
+    }
+
+    void Inspector::float2(const std::string& name, glm::vec2 value, glm::vec2* result, float min, float max)
+    {
+
+    }
+
+    void Inspector::float3(const std::string& name, glm::vec3 value, glm::vec3* result, float min, float max)
+    {
+        
+    }
+
+    void Inspector::color_picker(const std::string& name, const Color& c, Color* result)
     {
         ui::HContainer2D* flex_container = current_row;
 
@@ -207,6 +236,12 @@ namespace ui {
         // Translate after being added to the container
         w->translate({ (body->get_size().x - padding * 2.0f) * 0.5f - picker_size * 0.5f, 0.0f });
         items[name] = w;
+
+        if (result != nullptr) {
+            Node::bind(name, [result = result](const std::string& signal, Color value){
+                *result = value;
+            });
+        }
     }
 
     void Inspector::same_line()
