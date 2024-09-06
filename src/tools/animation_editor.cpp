@@ -74,6 +74,28 @@ void AnimationEditor::on_enter(void* data)
         current_animation = new Animation();
         current_animation->set_name(animation_name);
         RendererStorage::register_animation(animation_name, current_animation);
+
+        store_animation_state(current_animation_properties);
+
+        for (auto& it_property : current_animation_properties.properties) {
+            it_property.second.track_id = current_animation->get_track_count();
+
+            current_track = current_animation->add_track(it_property.second.track_id);
+            current_track->set_name(it_property.first);
+            current_track->set_path(current_node->get_name() + "/" + it_property.first);
+            current_track->set_type(current_track->get_type());
+
+            current_track->resize(1u);
+
+            Keyframe& frame = current_track->get_keyframe(0u);
+
+            frame.time = 0.0001f;
+            frame.in = 0.0f;
+            frame.value = it_property.second.value;
+            frame.out = 0.0f;
+        }
+        current_time += 0.1f;
+        current_animation->recalculate_duration();
     }
 }
 
@@ -191,14 +213,7 @@ void AnimationEditor::process_keyframe()
             sAnimationState::sPropertyState& current_property_state = current_animation_properties.properties[property_name];
 
             if (current_property_state.track_id == -1) {
-                // Add new track and set track id in struct
-                std::cout << "Create new track on property " << property_name << std::endl;
-                current_property_state.track_id = current_animation->get_track_count();
-
-                current_track = current_animation->add_track(current_property_state.track_id);
-                current_track->set_name(property_name);
-                current_track->set_path(current_node->get_name() + "/" + property_name);
-                current_track->set_type(current_track->get_type());
+                assert(0u);
             }
             else {
                 current_track = current_animation->get_track_by_id(current_property_state.track_id);
@@ -418,7 +433,7 @@ void AnimationEditor::bind_events()
     });
 
     Node::bind("play_animation", [&](const std::string& signal, void* button) {
-        
+        player->play(current_animation);
     });
 
     // Keyframe actions events
