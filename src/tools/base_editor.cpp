@@ -1,6 +1,8 @@
 #include "base_editor.h"
 
 #include "framework/nodes/viewport_3d.h"
+#include "framework/nodes/container_2d.h"
+#include "framework/nodes/viewport_3d.h"
 #include "framework/input.h"
 
 #include "graphics/renderers/rooms_renderer.h"

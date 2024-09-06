@@ -2,6 +2,10 @@
 
 #include "framework/input.h"
 #include "framework/ui/io.h"
+#include "framework/nodes/panel_2d.h"
+#include "framework/nodes/slider_2d.h"
+#include "framework/nodes/container_2d.h"
+#include "framework/nodes/button_2d.h"
 
 #include "spdlog/spdlog.h"
 

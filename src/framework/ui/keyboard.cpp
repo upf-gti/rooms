@@ -1,6 +1,8 @@
 #include "keyboard.h"
 
-#include "framework/nodes/ui.h"
+#include "framework/nodes/panel_2d.h"
+#include "framework/nodes/container_2d.h"
+#include "framework/nodes/button_2d.h"
 #include "framework/nodes/viewport_3d.h"
 #include "framework/input.h"
 

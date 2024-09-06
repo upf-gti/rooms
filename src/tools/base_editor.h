@@ -1,9 +1,15 @@
 #pragma once
 
-#include "framework/nodes/ui.h"
+#include <string>
 
 class RoomsRenderer;
+class Node2D;
 class Viewport3D;
+
+namespace ui {
+    class HContainer2D;
+    class VContainer2D;
+}
 
 enum : uint8_t {
     LAYOUT_SCENE = 1 << 0,

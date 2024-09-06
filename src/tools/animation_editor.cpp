@@ -6,6 +6,8 @@
 #include "framework/nodes/mesh_instance_3d.h"
 #include "framework/nodes/animation_player.h"
 #include "framework/nodes/viewport_3d.h"
+#include "framework/nodes/container_2d.h"
+#include "framework/nodes/button_2d.h"
 #include "framework/ui/inspector.h"
 #include "framework/animation/track.h"
 

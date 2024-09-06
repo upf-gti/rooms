@@ -3,8 +3,11 @@
 #include "includes.h"
 
 #include "framework/input.h"
-#include "framework/nodes/viewport_3d.h"
 #include "framework/nodes/sculpt_instance.h"
+#include "framework/nodes/viewport_3d.h"
+#include "framework/nodes/slider_2d.h"
+#include "framework/nodes/container_2d.h"
+#include "framework/nodes/button_2d.h"
 #include "framework/scene/parse_gltf.h"
 #include "framework/scene/parse_scene.h"
 #include "framework/ui/io.h"

@@ -7,12 +7,15 @@
 #include "framework/ui/gizmo_3d.h"
 
 class RoomsRenderer;
+class Node;
+class Node3D;
 class Animation;
 class Keyframe;
+class Viewport3D;
 
 namespace ui {
     class Inspector;
-}
+};
 
 struct sAnimationState {
     struct sPropertyState {

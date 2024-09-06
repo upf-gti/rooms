@@ -1,5 +1,6 @@
 #include "tutorial_editor.h"
 
+#include "framework/nodes/panel_2d.h"
 #include "framework/nodes/viewport_3d.h"
 #include "framework/input.h"
 

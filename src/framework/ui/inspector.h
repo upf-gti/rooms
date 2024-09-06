@@ -2,12 +2,16 @@
 
 #include "includes.h"
 
+#include "framework/colors.h"
 #include "framework/nodes/node_2d.h"
-#include "framework/nodes/ui.h"
 
 #include "glm/vec2.hpp"
 
 namespace ui {
+
+    class XRPanel;
+    class VContainer2D;
+    class HContainer2D;
 
     struct InspectorDesc {
         std::string name = "";
@@ -29,7 +33,7 @@ namespace ui {
         float padding = 0.0f;
         float scroll_top = 0.0f;
 
-        ui::XRPanel* root = nullptr;
+        XRPanel* root = nullptr;
         VContainer2D* body = nullptr;
         HContainer2D* current_row = nullptr;
 

@@ -2,10 +2,11 @@
 
 #include "base_editor.h"
 
-#include "framework/nodes/ui.h"
-
 class RoomsRenderer;
-class Viewport3D;
+
+namespace ui {
+    class XRPanel;
+};
 
 enum : uint8_t {
     TUTORIAL_NONE,
