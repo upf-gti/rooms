@@ -74,6 +74,28 @@ void AnimationEditor::on_enter(void* data)
         current_animation = new Animation();
         current_animation->set_name(animation_name);
         RendererStorage::register_animation(animation_name, current_animation);
+
+        store_animation_state(current_animation_properties);
+
+        for (auto& it_property : current_animation_properties.properties) {
+            it_property.second.track_id = current_animation->get_track_count();
+
+            current_track = current_animation->add_track(it_property.second.track_id);
+            current_track->set_name(it_property.first);
+            current_track->set_path(current_node->get_name() + "/" + it_property.first);
+            current_track->set_type(current_track->get_type());
+
+            current_track->resize(1u);
+
+            Keyframe& frame = current_track->get_keyframe(0u);
+
+            frame.time = 0.0001f;
+            frame.in = 0.0f;
+            frame.value = it_property.second.value;
+            frame.out = 0.0f;
+        }
+        current_time += 0.1f;
+        current_animation->recalculate_duration();
     }
 }
 
@@ -125,6 +147,19 @@ void AnimationEditor::render()
     if (current_node) {
         current_node->render();
     }
+
+    if (adding_keyframe) {
+        if (renderer->get_openxr_available()) {
+            gizmo_3d.render();
+        } else {
+            Camera* camera = renderer->get_camera();
+            glm::mat4x4 m = current_node->get_model();
+
+            if (gizmo_2d.render(camera->get_view(), camera->get_projection(), m)) {
+                current_node->set_transform(Transform::mat4_to_transform(m));
+            }
+        }
+    }
 }
 
 void AnimationEditor::add_keyframe()
@@ -146,6 +181,12 @@ void AnimationEditor::add_keyframe()
     }
 
     inspector->set_visibility(true);
+
+    if (renderer->get_openxr_available()) {
+        gizmo_3d.initialize(POSITION_SCALE_ROTATION_GIZMO, current_node->get_translation());
+    } else {
+        gizmo_2d.set_operation(ImGuizmo::TRANSLATE | ImGuizmo::SCALE | ImGuizmo::ROTATE);
+    }
 }
 
 void AnimationEditor::process_keyframe()
@@ -172,13 +213,10 @@ void AnimationEditor::process_keyframe()
             sAnimationState::sPropertyState& current_property_state = current_animation_properties.properties[property_name];
 
             if (current_property_state.track_id == -1) {
-                // Add new track and set track id in struct
-                std::cout << "Create new track on property " << property_name << std::endl;
-                current_property_state.track_id = current_animation->get_track_count();
-
-                current_track = current_animation->add_track(current_property_state.track_id);
-                current_track->set_name(property_name);
-                current_track->set_path(current_node->get_name() + "/" + property_name);
+                assert(0u);
+            }
+            else {
+                current_track = current_animation->get_track_by_id(current_property_state.track_id);
             }
 
             // Create and add keypoint to track
@@ -328,6 +366,7 @@ void AnimationEditor::init_ui()
         ui::ItemGroup2D* g_keyframes = new ui::ItemGroup2D("g_keyframes");
         g_keyframes->add_child(new ui::TextureButton2D("record_action", "data/textures/l.png"));
         g_keyframes->add_child(new ui::TextureButton2D("add_keyframe", "data/textures/add.png"));
+        g_keyframes->add_child(new ui::TextureButton2D("submit_keyframe", "data/textures/s.png"));
         first_row->add_child(g_keyframes);
     }
 
@@ -394,13 +433,14 @@ void AnimationEditor::bind_events()
     });
 
     Node::bind("play_animation", [&](const std::string& signal, void* button) {
-        
+        player->play(current_animation);
     });
 
     // Keyframe actions events
 
     Node::bind("record_action", [&](const std::string& signal, void* button) { });
     Node::bind("add_keyframe", [&](const std::string& signal, void* button) { add_keyframe(); });
+    Node::bind("submit_keyframe", [&](const std::string& signal, void* button) { if (adding_keyframe) { process_keyframe(); } });
 }
 
 void AnimationEditor::inspect_keyframe()
