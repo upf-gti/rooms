@@ -2,7 +2,6 @@
 
 #include "framework/input.h"
 #include "framework/ui/io.h"
-#include "framework/nodes/panel_2d.h"
 #include "framework/nodes/slider_2d.h"
 #include "framework/nodes/container_2d.h"
 #include "framework/nodes/button_2d.h"
@@ -136,7 +135,7 @@ namespace ui {
         IO::set_hover(nullptr, {});
     }
 
-    void Inspector::label(const std::string& name, const std::string& label, uint32_t flags)
+    void Inspector::label(const std::string& name, const std::string& text, uint32_t flags)
     {
         ui::HContainer2D* flex_container = current_row;
 
@@ -146,7 +145,7 @@ namespace ui {
 
         flags |= (ui::SCROLLABLE | ui::TEXT_EVENTS | ui::DBL_CLICK | ui::LONG_CLICK);
 
-        auto w = new ui::Text2D(label, 17.f, flags);
+        auto w = new ui::Text2D(text, 17.f, flags);
         w->set_signal(name);
         flex_container->add_child(w);
         items[name] = w;
@@ -214,16 +213,6 @@ namespace ui {
                 *result = value;
             });
         }
-    }
-
-    void Inspector::float2(const std::string& name, glm::vec2 value, glm::vec2* result, float min, float max)
-    {
-
-    }
-
-    void Inspector::float3(const std::string& name, glm::vec3 value, glm::vec3* result, float min, float max)
-    {
-        
     }
 
     void Inspector::color_picker(const std::string& name, const Color& c, Color* result)

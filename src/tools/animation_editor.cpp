@@ -532,7 +532,8 @@ void AnimationEditor::inspect_node(Node* node)
         case Node::AnimatablePropertyType::UVEC3:
             break;
         case Node::AnimatablePropertyType::FVEC3:
-            inspector->float3(signal, *((glm::vec3*)data), (glm::vec3*)data);
+            inspector->vector3<float>(signal, *((glm::fvec3*)data), 0.0f, 1.0f, (glm::fvec3*)data);
+            Node::bind(signal + "@changed", [node = current_node](const std::string& signal, void* data) { node->set_transform_dirty(true); });
             break;
         case Node::AnimatablePropertyType::IVEC4:
             break;
