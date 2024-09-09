@@ -17,12 +17,14 @@ namespace ui {
     class Inspector;
 };
 
-struct sAnimationState {
-    struct sPropertyState {
-        TrackType value;
-        int track_id = -1;
-    };
+struct sPropertyState {
+    TrackType value;
+    int track_id = -1;
+    Keyframe* keyframe = nullptr;
+};
 
+struct sAnimationState {
+    float time = 0.0f;
     std::unordered_map<std::string, sPropertyState> properties;
 };
 
@@ -34,15 +36,18 @@ class AnimationEditor : public BaseEditor {
     Node3D* current_node = nullptr;
     Animation* current_animation = nullptr;
     Track* current_track = nullptr;
-    Keyframe* current_keyframe = nullptr;
-    uint32_t current_keyframe_idx = 0u;
-    sAnimationState current_animation_properties;
+
+    sAnimationState* current_animation_state = nullptr;
+
+    std::vector<sAnimationState> animation_states;
 
     float current_time = 0.0f;
-    bool keyframe_dirty = false;
-    bool adding_keyframe = false;
+    bool show_keyframe_dirty = false;
+    bool editing_keyframe = false;
 
-    void add_keyframe();
+    bool  is_editing = false;
+
+    void create_keyframe();
     void process_keyframe();
 
     void store_animation_state(sAnimationState& state);
