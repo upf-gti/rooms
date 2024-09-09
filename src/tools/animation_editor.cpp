@@ -111,10 +111,6 @@ void AnimationEditor::on_enter(void* data)
 
 void AnimationEditor::update(float delta_time)
 {
-    if (editing_keyframe && Input::was_key_pressed(GLFW_KEY_ENTER)) {
-        process_keyframe();
-    }
-
     player->update(delta_time);
 
     if (current_node) {
@@ -231,7 +227,7 @@ void AnimationEditor::render()
         current_node->render();
     }
 
-    if (editing_keyframe) {
+    if (keyframe_dirty) {
         if (renderer->get_openxr_available()) {
             gizmo_3d.render();
         } else {
@@ -253,7 +249,7 @@ void AnimationEditor::create_keyframe()
     // Get the last state to check changes later when adding new keyframes
     current_animation_state = &animation_states.back();
 
-    editing_keyframe = true;
+    keyframe_dirty = true;
 
     // Inspect useful data
     inspector->clear();
@@ -298,6 +294,7 @@ void AnimationEditor::process_keyframe()
     // Keyframe changes state
     if (changed_properties_count == 0u) {
         editing_keyframe = false;
+        keyframe_dirty = false;
         delete[] changed_properties;
         inspect_keyframes_list();
         return;
@@ -313,7 +310,7 @@ void AnimationEditor::process_keyframe()
         current_track = current_animation->get_track_by_id(c_state.track_id);
 
         // Check if keyframe exists: modify value
-        if (is_editing && c_state.keyframe) {
+        if (editing_keyframe && c_state.keyframe) {
             c_state.value = c_state.keyframe->value = n_state.value;
         }
 
@@ -323,7 +320,7 @@ void AnimationEditor::process_keyframe()
             std::cout << "Add keypoint to track " << property_name << std::endl;
 
             // Create and update keyframe in the state
-            if (is_editing) {
+            if (editing_keyframe) {
                 c_state.keyframe = &current_track->add_keyframe({ .value = n_state.value, .in = 0.0f, .out = 0.0f, .time = current_time });
             }
             else {
@@ -336,12 +333,12 @@ void AnimationEditor::process_keyframe()
         }
     }
 
-    if (!is_editing) {
+    if (!editing_keyframe) {
         animation_states.push_back(new_anim_state);
     }
 
-    is_editing = false;
     editing_keyframe = false;
+    keyframe_dirty = false;
     delete[] changed_properties;
     inspect_keyframes_list();
 }
@@ -541,7 +538,7 @@ void AnimationEditor::bind_events()
 
     Node::bind("record_action", [&](const std::string& signal, void* button) { });
     Node::bind("create_keyframe", [&](const std::string& signal, void* button) { create_keyframe(); });
-    Node::bind("submit_keyframe", [&](const std::string& signal, void* button) { if (editing_keyframe) { process_keyframe(); } });
+    Node::bind("submit_keyframe", [&](const std::string& signal, void* button) { if (keyframe_dirty) { process_keyframe(); } });
 }
 
 void AnimationEditor::inspect_keyframe()
@@ -681,8 +678,8 @@ void AnimationEditor::inspect_keyframes_list(bool force)
 
         Node::bind(signal, [&, i](const std::string& sg, void* data) {
             show_keyframe_dirty = true;
+            keyframe_dirty = true;
             editing_keyframe = true;
-            is_editing = true;
             current_animation_state = &animation_states[i];
         });
 

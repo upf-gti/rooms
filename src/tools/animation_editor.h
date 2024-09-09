@@ -43,9 +43,8 @@ class AnimationEditor : public BaseEditor {
 
     float current_time = 0.0f;
     bool show_keyframe_dirty = false;
+    bool keyframe_dirty = false;
     bool editing_keyframe = false;
-
-    bool  is_editing = false;
 
     void create_keyframe();
     void process_keyframe();
