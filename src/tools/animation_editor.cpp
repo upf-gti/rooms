@@ -508,12 +508,12 @@ void AnimationEditor::inspect_node(Node* node)
             break;
         /*case Node::AnimatablePropertyType::INT64:
             break;*/
-        case Node::AnimatablePropertyType::UINT8:
+        /*case Node::AnimatablePropertyType::UINT8:
             break;
         case Node::AnimatablePropertyType::UINT16:
             break;
         case Node::AnimatablePropertyType::UINT32:
-            break;
+            break;*/
         /*case Node::AnimatablePropertyType::UINT64:
             break;*/
         case Node::AnimatablePropertyType::FLOAT32:
@@ -522,31 +522,35 @@ void AnimationEditor::inspect_node(Node* node)
         /*case Node::AnimatablePropertyType::FLOAT64:
             break;*/
         case Node::AnimatablePropertyType::IVEC2:
+            inspector->vector2<int>(signal, *((glm::ivec2*)data), 0, 64, (glm::ivec2*)data);
             break;
-        case Node::AnimatablePropertyType::UVEC2:
-            break;
+        /*case Node::AnimatablePropertyType::UVEC2:
+            break;*/
         case Node::AnimatablePropertyType::FVEC2:
+            inspector->vector2<float>(signal, *((glm::fvec2*)data), 0.0f, 1.0f, (glm::fvec2*)data);
             break;
         case Node::AnimatablePropertyType::IVEC3:
+            inspector->vector3<int>(signal, *((glm::ivec3*)data), 0, 64, (glm::ivec3*)data);
             break;
-        case Node::AnimatablePropertyType::UVEC3:
-            break;
+        /*case Node::AnimatablePropertyType::UVEC3:
+            break;*/
         case Node::AnimatablePropertyType::FVEC3:
             inspector->vector3<float>(signal, *((glm::fvec3*)data), 0.0f, 1.0f, (glm::fvec3*)data);
-                Node::bind(signal + "@changed", [node = current_node](const std::string& signal, void* data) {
-                node->set_transform_dirty(true);
-                });
+            // this is done everytime a vector3 is modified, move to another place!!
+            Node::bind(signal + "@changed", [node = current_node](const std::string& signal, void* data) { node->set_transform_dirty(true); });
             break;
         case Node::AnimatablePropertyType::IVEC4:
+            inspector->vector4<int>(signal, *((glm::ivec4*)data), 0, 64, (glm::ivec4*)data);
             break;
-        case Node::AnimatablePropertyType::UVEC4:
-            break;
+        /*case Node::AnimatablePropertyType::UVEC4:
+            break;*/
         case Node::AnimatablePropertyType::FVEC4:
+        case Node::AnimatablePropertyType::QUAT: // Using vector4 for showing quats
             if (prop_it.first.find("color") != std::string::npos) {
                 inspector->color_picker(signal, *((Color*)data), (Color*)data);
+            } else {
+                inspector->vector4<float>(signal, *((glm::fvec4*)data), 0.0f, 1.0f, (glm::fvec4*)data);
             }
-            break;
-        case Node::AnimatablePropertyType::QUAT:
             break;
         case Node::AnimatablePropertyType::UNDEFINED:
             assert(0);

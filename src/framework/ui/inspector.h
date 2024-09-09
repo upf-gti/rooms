@@ -44,7 +44,7 @@ namespace ui {
         glm::vec2 last_grab_position = {};
 
         std::map<std::string, Node2D*> items;
-        std::map<std::string, std::variant<glm::fvec2, glm::fvec3>> inner_data;
+        std::map<std::string, std::variant<glm::fvec2, glm::fvec3, glm::fvec4, glm::ivec2, glm::ivec3, glm::ivec4>> inner_data;
 
     public:
 
@@ -147,6 +147,66 @@ namespace ui {
                     (*result).z += dt;
                     std::string new_value = std::to_string((*result).z);
                     Text2D* w = static_cast<Text2D*>(items[name + "_z"]);
+                    w->set_text(new_value.substr(0, new_value.find('.') + 3));
+                    Node::emit_signal(name + "@changed", (void*)nullptr);
+                });
+            }
+        }
+
+        template <typename T>
+        void vector4(const std::string& name, glm::vec<4, T> value, T min, T max, glm::vec<4, T>* result = nullptr)
+        {
+            ui::HContainer2D* flex_container = current_row;
+
+            if (!flex_container) {
+                flex_container = create_row();
+            }
+
+            create_vector_component(flex_container, name, std::to_string(value.x), 'x');
+            create_vector_component(flex_container, name, std::to_string(value.y), 'y');
+            create_vector_component(flex_container, name, std::to_string(value.z), 'z');
+            create_vector_component(flex_container, name, std::to_string(value.w), 'w');
+
+            // Store value in inner data
+            inner_data[name] = value;
+
+            if (result != nullptr) {
+                Node::bind(name + "_x@stick_moved", (FuncFloat)[&, result = result](const std::string& signal, float dt) {
+                    std::string name = signal.substr(0, signal.find('@') - 2);
+                    glm::vec<4, T> value = std::get<glm::vec<4, T>>(inner_data[name]);
+                    (*result).x += dt;
+                    std::string new_value = std::to_string((*result).x);
+                    Text2D* w = static_cast<Text2D*>(items[name + "_x"]);
+                    w->set_text(new_value.substr(0, new_value.find('.') + 3));
+                    Node::emit_signal(name + "@changed", (void*)nullptr);
+                });
+
+                Node::bind(name + "_y@stick_moved", (FuncFloat)[&, result = result](const std::string& signal, float dt) {
+                    std::string name = signal.substr(0, signal.find('@') - 2);
+                    glm::vec<4, T> value = std::get<glm::vec<4, T>>(inner_data[name]);
+                    (*result).y += dt;
+                    std::string new_value = std::to_string((*result).y);
+                    Text2D* w = static_cast<Text2D*>(items[name + "_y"]);
+                    w->set_text(new_value.substr(0, new_value.find('.') + 3));
+                    Node::emit_signal(name + "@changed", (void*)nullptr);
+                });
+
+                Node::bind(name + "_z@stick_moved", (FuncFloat)[&, result = result](const std::string& signal, float dt) {
+                    std::string name = signal.substr(0, signal.find('@') - 2);
+                    glm::vec<4, T> value = std::get<glm::vec<4, T>>(inner_data[name]);
+                    (*result).z += dt;
+                    std::string new_value = std::to_string((*result).z);
+                    Text2D* w = static_cast<Text2D*>(items[name + "_z"]);
+                    w->set_text(new_value.substr(0, new_value.find('.') + 3));
+                    Node::emit_signal(name + "@changed", (void*)nullptr);
+                });
+
+                Node::bind(name + "_w@stick_moved", (FuncFloat)[&, result = result](const std::string& signal, float dt) {
+                    std::string name = signal.substr(0, signal.find('@') - 2);
+                    glm::vec<4, T> value = std::get<glm::vec<4, T>>(inner_data[name]);
+                    (*result).w += dt;
+                    std::string new_value = std::to_string((*result).w);
+                    Text2D* w = static_cast<Text2D*>(items[name + "_w"]);
                     w->set_text(new_value.substr(0, new_value.find('.') + 3));
                     Node::emit_signal(name + "@changed", (void*)nullptr);
                 });
