@@ -189,9 +189,19 @@ namespace ui {
         flex_container->add_child(w);
         items[name] = w;
 
+        create_vector_component(flex_container, name, std::to_string(value), 'x', ui::SKIP_TEXT_RECT);
+
+        Node::bind(name + "_x", (FuncFloat)[&](const std::string& signal, float value) {
+            std::string new_value = std::to_string(value);
+            Text2D* w = static_cast<Text2D*>(items[signal]);
+            w->set_text(new_value.substr(0, new_value.find('.') + 3));
+        });
+
+
         if (result != nullptr) {
-            Node::bind(name, (FuncFloat)[result = result](const std::string& signal, float value){
+            Node::bind(name, (FuncFloat)[result = result, n  = name](const std::string& signal, float value){
                 *result = value;
+                Node::emit_signal(n + "_x", value);
             });
         }
     }
@@ -207,6 +217,14 @@ namespace ui {
         auto w = new ui::IntSlider2D(name, "", value, { 0.0f, 0.0f }, glm::vec2(panel_size.x / 4.0f, 24.f), ui::SliderMode::HORIZONTAL, ui::SKIP_NAME | ui::SKIP_VALUE | ui::SCROLLABLE, min, max);
         flex_container->add_child(w);
         items[name] = w;
+
+        create_vector_component(flex_container, name, std::to_string(value), 'x', ui::SKIP_TEXT_RECT);
+
+        Node::bind(name + "_x", (FuncInt)[&](const std::string& signal, int value) {
+            std::string new_value = std::to_string(value);
+            Text2D* w = static_cast<Text2D*>(items[signal]);
+            w->set_text(new_value.substr(0, new_value.find('.') + 3));
+        });
 
         if (result != nullptr) {
             Node::bind(name, (FuncInt)[result = result](const std::string& signal, int value) {
@@ -235,6 +253,16 @@ namespace ui {
                 *result = value;
             });
         }
+    }
+
+    void Inspector::create_vector_component(ui::HContainer2D* container, const std::string& name, const std::string& value, char component, uint32_t flags)
+    {
+        flags |= (ui::SCROLLABLE | ui::TEXT_EVENTS);
+        std::string new_name = name + "_" + component;
+        auto wx = new ui::Text2D(value.substr(0, value.find('.') + 3), 17.f, flags);
+        wx->set_signal(new_name);
+        container->add_child(wx);
+        items[new_name] = wx;
     }
 
     void Inspector::same_line()
