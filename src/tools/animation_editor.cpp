@@ -91,12 +91,12 @@ void AnimationEditor::on_enter(void* data)
 
             Keyframe& frame = current_track->get_keyframe(0u);
 
-            frame.time = 0.0001f;
+            frame.time = 0.00f;
             frame.in = 0.0f;
             frame.value = it_property.second.value;
             frame.out = 0.0f;
         }
-        current_time += 0.1f;
+        current_time += 0.5f;
         current_animation->recalculate_duration();
     }
 }
@@ -227,6 +227,9 @@ void AnimationEditor::process_keyframe()
             uint32_t num_keys = current_track->size();
             current_track->resize(num_keys + 1);
 
+            // Update value
+            current_property_state.value = new_anim_state.properties[property_name].value;
+
             Keyframe& frame = current_track->get_keyframe(num_keys);
 
             frame.time = current_time;
@@ -237,9 +240,6 @@ void AnimationEditor::process_keyframe()
             current_time += 0.5f;
 
             current_animation->recalculate_duration();
-
-            // Update value
-            current_property_state.value = new_anim_state.properties[property_name].value;
         }
 
     }
@@ -533,7 +533,9 @@ void AnimationEditor::inspect_node(Node* node)
             break;
         case Node::AnimatablePropertyType::FVEC3:
             inspector->vector3<float>(signal, *((glm::fvec3*)data), 0.0f, 1.0f, (glm::fvec3*)data);
-            Node::bind(signal + "@changed", [node = current_node](const std::string& signal, void* data) { node->set_transform_dirty(true); });
+                Node::bind(signal + "@changed", [node = current_node](const std::string& signal, void* data) {
+                node->set_transform_dirty(true);
+                });
             break;
         case Node::AnimatablePropertyType::IVEC4:
             break;
