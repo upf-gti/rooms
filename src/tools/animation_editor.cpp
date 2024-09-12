@@ -48,12 +48,6 @@ void AnimationEditor::initialize()
     player = new AnimationPlayer("Animation Player");
 
     init_ui();
-
-    // Test the keyframe creation
-    /*node->set_position({ 0.0f, 1.0f, 0.0 });
-    process_keyframe();
-    node->set_position({ 1.0f, 1.0f, 0.0 });
-    process_keyframe();*/
 }
 
 void AnimationEditor::clean()
@@ -135,64 +129,7 @@ void AnimationEditor::update(float delta_time)
             current_node->set_transform_dirty(true);
 
             // TODO: now the conversion void -> TYPE is done in the sample, but only supports 3 types
-            /*Keyframe& frame = t->get_keyframe(current_keyframe_idx);
-
-            switch (node_property.property_type) {
-            case Node::AnimatablePropertyType::INT8:
-                *((int8_t*)data) = std::get<int8_t>(frame.value);
-                break;
-            case Node::AnimatablePropertyType::INT16:
-                *((int16_t*)data) = std::get<int16_t>(frame.value);
-                break;
-            case Node::AnimatablePropertyType::INT32:
-                *((int32_t*)data) = std::get<int32_t>(frame.value);
-                break;
-            case Node::AnimatablePropertyType::UINT8:
-                *((uint8_t*)data) = std::get<uint8_t>(frame.value);
-                break;
-            case Node::AnimatablePropertyType::UINT16:
-                *((uint16_t*)data) = std::get<uint16_t>(frame.value);
-                break;
-            case Node::AnimatablePropertyType::UINT32:
-                *((uint32_t*)data) = std::get<uint32_t>(frame.value);
-                break;
-            case Node::AnimatablePropertyType::FLOAT32:
-                *((float*)data) = std::get<float>(frame.value);
-                break;
-            case Node::AnimatablePropertyType::IVEC2:
-                *((glm::ivec2*)data) = std::get<glm::ivec2>(frame.value);
-                break;
-            case Node::AnimatablePropertyType::UVEC2:
-                *((glm::uvec2*)data) = std::get<glm::uvec2>(frame.value);
-                break;
-            case Node::AnimatablePropertyType::FVEC2:
-                *((glm::vec2*)data) = std::get<glm::vec2>(frame.value);
-                break;
-            case Node::AnimatablePropertyType::IVEC3:
-                *((glm::ivec3*)data) = std::get<glm::ivec3>(frame.value);
-                break;
-            case Node::AnimatablePropertyType::UVEC3:
-                *((glm::uvec3*)data) = std::get<glm::uvec3>(frame.value);
-                break;
-            case Node::AnimatablePropertyType::FVEC3:
-                *((glm::vec3*)data) = std::get<glm::vec3>(frame.value);
-                break;
-            case Node::AnimatablePropertyType::IVEC4:
-                *((glm::ivec4*)data) = std::get<glm::ivec4>(frame.value);
-                break;
-            case Node::AnimatablePropertyType::UVEC4:
-                *((glm::uvec4*)data) = std::get<glm::uvec4>(frame.value);
-                break;
-            case Node::AnimatablePropertyType::FVEC4:
-                *((glm::vec4*)data) = std::get<glm::vec4>(frame.value);
-                break;
-            case Node::AnimatablePropertyType::QUAT:
-                *((glm::quat*)data) = std::get<glm::quat>(frame.value);
-                break;
-            case Node::AnimatablePropertyType::UNDEFINED:
-                assert(0 && "No type!!");
-                break;
-            }*/
+            // ...
         }
 
         current_animation->set_looping(is_looping);
@@ -206,6 +143,14 @@ void AnimationEditor::update(float delta_time)
         }
 
         inspect_panel_3d->update(delta_time);
+
+        // Create current button layout based on state
+        uint8_t current_layout = LAYOUT_ANIMATION;
+        if (keyframe_dirty) {
+            current_layout |= LAYOUT_KEYFRAME;
+        }
+
+        update_controller_flags(current_layout);
     }
     else {
         inspector->update(delta_time);
@@ -271,6 +216,20 @@ void AnimationEditor::create_keyframe()
         gizmo_3d.initialize(POSITION_SCALE_ROTATION_GIZMO, current_node->get_translation());
     } else {
         gizmo_2d.set_operation(ImGuizmo::TRANSLATE | ImGuizmo::SCALE | ImGuizmo::ROTATE);
+    }
+
+    // Manage other buttons
+    {
+        // Hide create_keyframe button
+        auto w = Node2D::get_widget_from_name("create_keyframe");
+        w->set_visibility(false);
+
+        // Show submit_keyframe button
+        w = Node2D::get_widget_from_name("submit_keyframe");
+        w->set_visibility(true);
+
+        w = Node2D::get_widget_from_name("open_list");
+        static_cast<ui::Button2D*>(w)->set_disabled(true);
     }
 }
 
@@ -486,14 +445,14 @@ void AnimationEditor::init_ui()
     main_panel_2d->add_child(first_row);
 
     // ** Clone node **
-    first_row->add_child(new ui::TextureButton2D("toggle_list", "data/textures/clone.png"));
+    first_row->add_child(new ui::TextureButton2D("open_list", "data/textures/clone.png"));
 
     // ** Keyframe actions
     {
         ui::ItemGroup2D* g_keyframes = new ui::ItemGroup2D("g_keyframes");
         g_keyframes->add_child(new ui::TextureButton2D("record_action", "data/textures/l.png"));
         g_keyframes->add_child(new ui::TextureButton2D("create_keyframe", "data/textures/add.png"));
-        g_keyframes->add_child(new ui::TextureButton2D("submit_keyframe", "data/textures/s.png"));
+        g_keyframes->add_child(new ui::TextureButton2D("submit_keyframe", "data/textures/s.png", ui::HIDDEN));
         first_row->add_child(g_keyframes);
     }
 
@@ -541,9 +500,10 @@ void AnimationEditor::init_ui()
 
             // right_hand_container->add_child(new ui::ImageLabel2D("Main size", "data/textures/buttons/r_thumbstick.png", LAYOUT_ANY_NO_SHIFT_R));
             // right_hand_container->add_child(new ui::ImageLabel2D("Sec size", "data/textures/buttons/r_grip_plus_r_thumbstick.png", LAYOUT_ANY_SHIFT_R, double_size));
-            // right_hand_container->add_child(new ui::ImageLabel2D("Scene Panel", "data/textures/buttons/b.png", LAYOUT_SCENE));
+            right_hand_container->add_child(new ui::ImageLabel2D("Keyframe List", "data/textures/buttons/b.png", LAYOUT_ANIMATION));
             // right_hand_container->add_child(new ui::ImageLabel2D("Sculpt/Paint", "data/textures/buttons/r_grip_plus_b.png", LAYOUT_ANY_SHIFT_R, double_size));
-            // right_hand_container->add_child(new ui::ImageLabel2D("Select Node", "data/textures/buttons/a.png", LAYOUT_SCENE));
+            right_hand_container->add_child(new ui::ImageLabel2D("Create keyframe", "data/textures/buttons/a.png", LAYOUT_ANIMATION));
+            right_hand_container->add_child(new ui::ImageLabel2D("Submit keyframe", "data/textures/buttons/a.png", LAYOUT_ANIMATION_KEYFRAME));
             // right_hand_container->add_child(new ui::ImageLabel2D("Pick Material", "data/textures/buttons/r_grip_plus_a.png", LAYOUT_ANY_SHIFT_R, double_size));
             // right_hand_container->add_child(new ui::ImageLabel2D("Place Node", "data/textures/buttons/r_trigger.png", LAYOUT_CLONE));
             // right_hand_container->add_child(new ui::ImageLabel2D("Make Instance", "data/textures/buttons/r_grip_plus_r_trigger.png", LAYOUT_CLONE_SHIFT, double_size));
@@ -560,7 +520,7 @@ void AnimationEditor::bind_events()
 {
     // Keyframe events
     {
-        Node::bind("toggle_list", [&](const std::string& signal, void* button) { inspect_keyframes_list(true); });
+        Node::bind("open_list", [&](const std::string& signal, void* button) { inspect_keyframes_list(true); });
         Node::bind("record_action", [&](const std::string& signal, void* button) { });
         Node::bind("create_keyframe", [&](const std::string& signal, void* button) { create_keyframe(); });
         Node::bind("submit_keyframe", [&](const std::string& signal, void* button) { if (keyframe_dirty) { process_keyframe(); } });
@@ -595,6 +555,9 @@ void AnimationEditor::inspect_keyframe()
     Node::emit_signal(inspector->get_name() + "@children_changed", (void*)nullptr);
 
     show_keyframe_dirty = false;
+
+    auto w = Node2D::get_widget_from_name("open_list");
+    static_cast<ui::Button2D*>(w)->set_disabled(true);
 }
 
 void AnimationEditor::inspect_keyframe_properties()
@@ -751,6 +714,18 @@ bool AnimationEditor::on_close()
     if (!should_close) {
         inspect_keyframes_list();
     }
+
+    // Hide submit_keyframe button
+    auto w = Node2D::get_widget_from_name("submit_keyframe");
+    w->set_visibility(false);
+
+    // Show create_keyframe button
+    w = Node2D::get_widget_from_name("create_keyframe");
+    w->set_visibility(true);
+
+    // Reactivate open list
+    w = Node2D::get_widget_from_name("open_list");
+    static_cast<ui::Button2D*>(w)->set_disabled(false);
 
     editing_keyframe = false;
     keyframe_dirty = false;
