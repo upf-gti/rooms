@@ -52,6 +52,13 @@ class AnimationEditor : public BaseEditor {
     void store_animation_state(sAnimationState& state);
 
     /*
+        Animation Player
+    */
+
+    void play_animation();
+    void stop_animation();
+
+    /*
         UI
     */
 

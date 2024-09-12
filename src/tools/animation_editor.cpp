@@ -424,6 +424,38 @@ void AnimationEditor::store_animation_state(sAnimationState& state)
     }
 }
 
+void AnimationEditor::play_animation()
+{
+    player->play(current_animation);
+
+    // Manage menu player buttons
+    {
+        // Hide play button
+        auto w = Node2D::get_widget_from_name("play_animation");
+        w->set_visibility(false);
+
+        // Show stop button
+        w = Node2D::get_widget_from_name("stop_animation");
+        w->set_visibility(true);
+    }
+}
+
+void AnimationEditor::stop_animation()
+{
+    player->stop(false);
+
+    // Manage menu player buttons
+    {
+        // Show play button
+        auto w = Node2D::get_widget_from_name("play_animation");
+        w->set_visibility(true);
+
+        // Hide stop button
+        w = Node2D::get_widget_from_name("stop_animation");
+        w->set_visibility(false);
+    }
+}
+
 void AnimationEditor::render_gui()
 {
     if (current_animation)
@@ -467,7 +499,7 @@ void AnimationEditor::init_ui()
 
     // ** Play animation **
     first_row->add_child(new ui::TextureButton2D("play_animation", "data/textures/a.png"));
-    first_row->add_child(new ui::TextureButton2D("stop_animation", "data/textures/cube.png"));
+    first_row->add_child(new ui::TextureButton2D("stop_animation", "data/textures/cube.png", ui::HIDDEN));
 
     // Create inspection panel (Nodes, properties, etc)
     inspector = new ui::Inspector({ .name = "inspector_root", .title = "Animation",.position = { 32.0f, 32.f } }, [&](ui::Inspector* scope) {
@@ -526,23 +558,19 @@ void AnimationEditor::init_ui()
 
 void AnimationEditor::bind_events()
 {
-    Node::bind("toggle_list", [&](const std::string& signal, void* button) {
-        inspect_keyframes_list(true);
-    });
+    // Keyframe events
+    {
+        Node::bind("toggle_list", [&](const std::string& signal, void* button) { inspect_keyframes_list(true); });
+        Node::bind("record_action", [&](const std::string& signal, void* button) { });
+        Node::bind("create_keyframe", [&](const std::string& signal, void* button) { create_keyframe(); });
+        Node::bind("submit_keyframe", [&](const std::string& signal, void* button) { if (keyframe_dirty) { process_keyframe(); } });
+    }
 
-    Node::bind("play_animation", [&](const std::string& signal, void* button) {
-        player->play(current_animation);
-    });
-
-    Node::bind("stop_animation", [&](const std::string& signal, void* button) {
-        player->stop(false);
-    });
-
-    // Keyframe actions events
-
-    Node::bind("record_action", [&](const std::string& signal, void* button) { });
-    Node::bind("create_keyframe", [&](const std::string& signal, void* button) { create_keyframe(); });
-    Node::bind("submit_keyframe", [&](const std::string& signal, void* button) { if (keyframe_dirty) { process_keyframe(); } });
+    // Animation player events
+    {
+        Node::bind("play_animation", [&](const std::string& signal, void* button) { play_animation(); });
+        Node::bind("stop_animation", [&](const std::string& signal, void* button) { stop_animation(); });
+    }
 }
 
 void AnimationEditor::inspect_keyframe()
