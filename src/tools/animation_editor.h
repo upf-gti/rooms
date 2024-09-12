@@ -75,6 +75,7 @@ class AnimationEditor : public BaseEditor {
 
     void init_ui();
     void bind_events();
+    void update_panel_transform();
 
     void inspect_keyframes_list(bool force = false);
     void inspect_keyframe();

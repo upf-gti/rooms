@@ -21,6 +21,8 @@
 #include "spdlog/spdlog.h"
 #include "imgui.h"
 
+#include "glm/gtx/quaternion.hpp"
+
 AnimationPlayer* player = nullptr;
 
 uint64_t AnimationEditor::keyframe_signal_uid = 0;
@@ -122,6 +124,10 @@ void AnimationEditor::update(float delta_time)
 
     update_gizmo(delta_time);
 
+    if (Input::was_button_pressed(XR_BUTTON_B)) {
+        inspect_keyframes_list(true);
+    }
+
     // Update inspector for keyframes
     if(show_keyframe_dirty) {
 
@@ -148,7 +154,7 @@ void AnimationEditor::update(float delta_time)
     if (renderer->get_openxr_available()) {
 
         if (inspector_transform_dirty) {
-            // update_panel_transform();
+            update_panel_transform();
         }
 
         inspect_panel_3d->update(delta_time);
@@ -564,6 +570,21 @@ void AnimationEditor::bind_events()
     }
 }
 
+void AnimationEditor::update_panel_transform()
+{
+    glm::mat4x4 m(1.0f);
+    glm::vec3 eye = renderer->get_camera_eye();
+    glm::vec3 new_pos = eye + renderer->get_camera_front() * 0.6f;
+
+    m = glm::translate(m, new_pos);
+    m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
+    m = glm::rotate(m, glm::radians(180.f), { 1.0f, 0.0f, 0.0f });
+
+    inspect_panel_3d->set_transform(Transform::mat4_to_transform(m));
+
+    inspector_transform_dirty = false;
+}
+
 void AnimationEditor::inspect_keyframe()
 {
     inspector->clear();
@@ -731,7 +752,7 @@ void AnimationEditor::inspect_keyframes_list(bool force)
         inspector->disable_2d();
     }
 
-    inspector_transform_dirty = !inspector->get_visibility();
+    inspector_transform_dirty = !inspector->get_visibility() || force;
 
     if (force) {
         inspector->set_visibility(true);
