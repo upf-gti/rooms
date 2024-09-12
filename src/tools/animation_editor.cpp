@@ -297,6 +297,7 @@ void AnimationEditor::process_keyframe()
         keyframe_dirty = false;
         delete[] changed_properties;
         inspect_keyframes_list();
+        current_animation_state = nullptr;
         return;
     }
 
@@ -327,13 +328,15 @@ void AnimationEditor::process_keyframe()
                 n_state.keyframe = &current_track->add_keyframe({ .value = n_state.value, .in = 0.0f, .out = 0.0f, .time = current_time });
             }
 
-            current_time += 0.5f;
-
-            current_animation->recalculate_duration();
+           
         }
     }
 
     if (!editing_keyframe) {
+        new_anim_state.time = current_time;
+        current_time += 0.5f;
+        current_animation->recalculate_duration();
+
         animation_states.push_back(new_anim_state);
     }
 
@@ -470,6 +473,7 @@ void AnimationEditor::init_ui()
 
     // ** Play animation **
     first_row->add_child(new ui::TextureButton2D("play_animation", "data/textures/a.png"));
+    first_row->add_child(new ui::TextureButton2D("stop_animation", "data/textures/cube.png"));
 
     // Create inspection panel (Nodes, properties, etc)
     inspector = new ui::Inspector({ .name = "inspector_root", .title = "Animation",.position = { 32.0f, 32.f } });
@@ -532,6 +536,10 @@ void AnimationEditor::bind_events()
 
     Node::bind("play_animation", [&](const std::string& signal, void* button) {
         player->play(current_animation);
+    });
+
+    Node::bind("stop_animation", [&](const std::string& signal, void* button) {
+        player->stop(false);
     });
 
     // Keyframe actions events
@@ -676,11 +684,11 @@ void AnimationEditor::inspect_keyframes_list(bool force)
         std::string signal = key_name + std::to_string(keyframe_signal_uid++) + "_label";
         inspector->label(signal, key_name);
 
-        Node::bind(signal, [&, i](const std::string& sg, void* data) {
+        Node::bind(signal, [&, it = i](const std::string& sg, void* data) {
             show_keyframe_dirty = true;
             keyframe_dirty = true;
             editing_keyframe = true;
-            current_animation_state = &animation_states[i];
+            current_animation_state = &animation_states[it];
         });
 
         inspector->label("empty", std::to_string(s.time), ui::SKIP_TEXT_RECT);
