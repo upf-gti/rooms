@@ -47,6 +47,13 @@ void AnimationEditor::initialize()
 
     player = new AnimationPlayer("Animation Player");
 
+    if (renderer->get_openxr_available()) {
+        gizmo_3d.initialize(POSITION_SCALE_ROTATION_GIZMO);
+    }
+    else {
+        gizmo_2d.set_operation(ImGuizmo::TRANSLATE | /*ImGuizmo::SCALE |*/ ImGuizmo::ROTATE);
+    }
+
     init_ui();
 }
 
@@ -113,6 +120,8 @@ void AnimationEditor::update(float delta_time)
 
     BaseEditor::update(delta_time);
 
+    update_gizmo(delta_time);
+
     // Update inspector for keyframes
     if(show_keyframe_dirty) {
 
@@ -170,21 +179,49 @@ void AnimationEditor::render()
         inspector->render();
     }
 
+    render_gizmo();
+
     if (current_node) {
         current_node->render();
     }
+}
 
-    if (keyframe_dirty) {
-        if (renderer->get_openxr_available()) {
-            gizmo_3d.render();
-        } else {
-            Camera* camera = renderer->get_camera();
-            glm::mat4x4 m = current_node->get_model();
+void AnimationEditor::render_gizmo()
+{
+    if (!keyframe_dirty || !current_node) {
+        return;
+    }
 
-            if (gizmo_2d.render(camera->get_view(), camera->get_projection(), m)) {
-                current_node->set_transform(Transform::mat4_to_transform(m));
-            }
+    if (renderer->get_openxr_available()) {
+        gizmo_3d.render();
+    }
+    else {
+        Camera* camera = renderer->get_camera();
+        glm::mat4x4 m = current_node->get_model();
+
+        if (gizmo_2d.render(camera->get_view(), camera->get_projection(), m)) {
+            current_node->set_transform(Transform::mat4_to_transform(m));
         }
+    }
+}
+
+void AnimationEditor::update_gizmo(float delta_time)
+{
+    if (!keyframe_dirty || !current_node) {
+        return;
+    }
+
+    // Only 3D Gizmo for XR needs to update
+
+    if (!renderer->get_openxr_available()) {
+        return;
+    }
+
+    glm::vec3 right_controller_pos = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
+    Transform t = current_node->get_transform();
+
+    if (gizmo_3d.update(t, right_controller_pos, delta_time)) {
+        current_node->set_transform(t);
     }
 }
 
@@ -211,12 +248,6 @@ void AnimationEditor::create_keyframe()
     }
 
     inspector->set_visibility(true);
-
-    if (renderer->get_openxr_available()) {
-        gizmo_3d.initialize(POSITION_SCALE_ROTATION_GIZMO, current_node->get_translation());
-    } else {
-        gizmo_2d.set_operation(ImGuizmo::TRANSLATE | ImGuizmo::SCALE | ImGuizmo::ROTATE);
-    }
 
     // Manage other buttons
     {

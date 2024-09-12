@@ -51,6 +51,9 @@ class AnimationEditor : public BaseEditor {
 
     void store_animation_state(sAnimationState& state);
 
+    void render_gizmo();
+    void update_gizmo(float delta_time);
+
     /*
         Animation Player
     */
