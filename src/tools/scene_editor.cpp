@@ -653,8 +653,7 @@ void SceneEditor::inspector_from_scene(bool force)
     }
 
     inspector_dirty = false;
-
-    inspector_transform_dirty = !inspector->get_visibility();
+    inspector_transform_dirty = !inspector->get_visibility() || force;
 
     if (force) {
         inspector->set_visibility(true);
