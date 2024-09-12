@@ -71,6 +71,8 @@ class AnimationEditor : public BaseEditor {
     void inspect_keyframe_properties();
     void inspect_node(Node* node);
 
+    bool on_close();
+
 public:
 
     AnimationEditor() {};

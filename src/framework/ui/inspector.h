@@ -41,6 +41,8 @@ namespace ui {
 
         HContainer2D* create_row();
 
+        std::function<bool(Inspector*)> on_close = nullptr;
+
         glm::vec2 last_grab_position = {};
 
         std::map<std::string, Node2D*> items;
@@ -49,7 +51,7 @@ namespace ui {
     public:
 
         Inspector() {};
-        Inspector(const InspectorDesc& desc);
+        Inspector(const InspectorDesc& desc, std::function<bool(Inspector*)> close_fn = nullptr);
 
         void update(float delta_time);
         /*void render(); */

@@ -12,11 +12,13 @@ namespace ui {
 
     uint32_t Inspector::row_id = 0;
 
-    Inspector::Inspector(const InspectorDesc& desc)
+    Inspector::Inspector(const InspectorDesc& desc, std::function<bool(Inspector*)> close_fn)
         : Node2D(name, desc.position, { 0.0f, 0.0f }), panel_size(desc.size), padding(desc.padding)
     {
         float inner_width = panel_size.x - padding * 2.0f;
         float inner_height = panel_size.y - padding * 2.0f;
+
+        on_close = close_fn;
 
         root = new ui::XRPanel(name + "_background", panel_color, { 0.0f, 0.f }, panel_size);
         add_child(root);
@@ -34,7 +36,13 @@ namespace ui {
         column->add_child(title_container);
 
         Node::bind("close_button", [&](const std::string& sg, void* data) {
-            set_visibility(false);
+            bool should_close = true;
+            if (on_close) {
+                should_close = on_close(this);
+            }
+            if (should_close) {
+                set_visibility(false);
+            }
         });
 
         // Body row

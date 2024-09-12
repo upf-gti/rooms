@@ -293,11 +293,8 @@ void AnimationEditor::process_keyframe()
 
     // Keyframe changes state
     if (changed_properties_count == 0u) {
-        editing_keyframe = false;
-        keyframe_dirty = false;
         delete[] changed_properties;
-        inspect_keyframes_list();
-        current_animation_state = nullptr;
+        on_close();
         return;
     }
 
@@ -327,8 +324,6 @@ void AnimationEditor::process_keyframe()
             else {
                 n_state.keyframe = &current_track->add_keyframe({ .value = n_state.value, .in = 0.0f, .out = 0.0f, .time = current_time });
             }
-
-           
         }
     }
 
@@ -336,14 +331,11 @@ void AnimationEditor::process_keyframe()
         new_anim_state.time = current_time;
         current_time += 0.5f;
         current_animation->recalculate_duration();
-
         animation_states.push_back(new_anim_state);
     }
 
-    editing_keyframe = false;
-    keyframe_dirty = false;
     delete[] changed_properties;
-    inspect_keyframes_list();
+    on_close();
 }
 
 void AnimationEditor::store_animation_state(sAnimationState& state)
@@ -476,7 +468,9 @@ void AnimationEditor::init_ui()
     first_row->add_child(new ui::TextureButton2D("stop_animation", "data/textures/cube.png"));
 
     // Create inspection panel (Nodes, properties, etc)
-    inspector = new ui::Inspector({ .name = "inspector_root", .title = "Animation",.position = { 32.0f, 32.f } });
+    inspector = new ui::Inspector({ .name = "inspector_root", .title = "Animation",.position = { 32.0f, 32.f } }, [&](ui::Inspector* scope) {
+        return on_close();
+    });
 
     if (renderer->get_openxr_available())
     {
@@ -718,4 +712,19 @@ void AnimationEditor::inspect_keyframes_list(bool force)
     if (force) {
         inspector->set_visibility(true);
     }
+}
+
+bool AnimationEditor::on_close()
+{
+    bool should_close = !keyframe_dirty;
+
+    if (!should_close) {
+        inspect_keyframes_list();
+    }
+
+    editing_keyframe = false;
+    keyframe_dirty = false;
+    current_animation_state = nullptr;
+
+    return should_close;
 }
