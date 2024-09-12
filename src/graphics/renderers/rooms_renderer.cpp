@@ -254,7 +254,7 @@ void RoomsRenderer::render_screen(WGPUTextureView screen_surface_texture_view)
         // Prepate the depth attachment
         WGPURenderPassDepthStencilAttachment render_pass_depth_attachment = {};
         render_pass_depth_attachment.view = eye_depth_texture_view[EYE_LEFT];
-        render_pass_depth_attachment.depthClearValue = 1.0f;
+        render_pass_depth_attachment.depthClearValue = 0.0f;
         render_pass_depth_attachment.depthLoadOp = WGPULoadOp_Clear;
         render_pass_depth_attachment.depthStoreOp = WGPUStoreOp_Store;
         render_pass_depth_attachment.depthReadOnly = false;
@@ -363,7 +363,7 @@ void RoomsRenderer::render_xr()
             // Prepate the depth attachment
             WGPURenderPassDepthStencilAttachment render_pass_depth_attachment = {};
             render_pass_depth_attachment.view = eye_depth_texture_view[i];
-            render_pass_depth_attachment.depthClearValue = 1.0f;
+            render_pass_depth_attachment.depthClearValue = 0.0f;
             render_pass_depth_attachment.depthLoadOp = WGPULoadOp_Clear;
             render_pass_depth_attachment.depthStoreOp = WGPUStoreOp_Store;
             render_pass_depth_attachment.depthReadOnly = false;
