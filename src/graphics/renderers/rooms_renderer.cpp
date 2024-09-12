@@ -131,17 +131,22 @@ void RoomsRenderer::render()
     //    selected_mesh_aabb->render();
     //}
 
+    glm::vec3 camera_position;
+
     if (!is_openxr_available) {
         if (!frustum_camera_paused) {
             frustum_cull.set_view_projection(camera->get_view_projection());
         }
+
+        camera_position = camera->get_eye();
     }
     else {
         // TODO: use both eyes, only left eye for now
         frustum_cull.set_view_projection(xr_context->per_view_data[0].view_projection_matrix);
+        camera_position = xr_context->per_view_data[0].position;
     }
 
-    prepare_instancing();
+    prepare_instancing(camera_position);
 
     WGPUTextureView screen_surface_texture_view;
     WGPUSurfaceTexture screen_surface_texture;
