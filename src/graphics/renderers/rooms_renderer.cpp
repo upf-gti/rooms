@@ -131,8 +131,14 @@ void RoomsRenderer::render()
     //    selected_mesh_aabb->render();
     //}
 
-    if (!frustum_camera_paused) {
-        frustum_cull.set_view_projection(camera->get_view_projection());
+    if (!is_openxr_available) {
+        if (!frustum_camera_paused) {
+            frustum_cull.set_view_projection(camera->get_view_projection());
+        }
+    }
+    else {
+        // TODO: use both eyes, only left eye for now
+        frustum_cull.set_view_projection(xr_context->per_view_data[0].view_projection_matrix);
     }
 
     prepare_instancing();

@@ -109,6 +109,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
         Material* pointer_material = new Material();
         pointer_material->set_transparency_type(ALPHA_BLEND);
         pointer_material->set_cull_type(CULL_NONE);
+        pointer_material->set_type(MATERIAL_UNLIT);
         pointer_material->set_shader(RendererStorage::get_shader_from_source(shaders::ui_ray_pointer::source, shaders::ui_ray_pointer::path, pointer_material));
 
         ray_pointer->set_surface_material_override(ray_pointer->get_surface(0), pointer_material);
@@ -119,6 +120,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
         sphere_pointer_material->set_depth_read(false);
         sphere_pointer_material->set_priority(0);
         sphere_pointer_material->set_transparency_type(ALPHA_BLEND);
+        sphere_pointer_material->set_type(MATERIAL_UNLIT);
         sphere_pointer_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, sphere_pointer_material));
 
         sphere_pointer->set_surface_material_override(sphere_pointer->get_surface(0), sphere_pointer_material);

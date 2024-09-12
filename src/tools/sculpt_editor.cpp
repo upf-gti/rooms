@@ -109,6 +109,7 @@ void SculptEditor::initialize()
         Material* preview_material = new Material();
         preview_material->set_priority(1);
         preview_material->set_transparency_type(ALPHA_BLEND);
+        preview_material->set_type(MATERIAL_UNLIT);
         preview_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_transparent::source, shaders::mesh_transparent::path, preview_material));
 
         mesh_preview->set_surface_material_override(sphere_surface, preview_material);
@@ -118,6 +119,7 @@ void SculptEditor::initialize()
 
         Material* outline_material = new Material();
         outline_material->set_cull_type(CULL_FRONT);
+        outline_material->set_type(MATERIAL_UNLIT);
         outline_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_outline::source, shaders::mesh_outline::path, outline_material));
 
         mesh_preview_outline->set_surface_material_override(sphere_surface, outline_material);
