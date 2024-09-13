@@ -8,6 +8,8 @@
 
 #include "engine/rooms_engine.h"
 
+#include "framework/math/math_utils.h"
+
 #include "glm/gtx/quaternion.hpp"
 
 void TutorialEditor::initialize()

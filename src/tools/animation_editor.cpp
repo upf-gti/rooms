@@ -10,6 +10,8 @@
 #include "framework/nodes/button_2d.h"
 #include "framework/ui/inspector.h"
 #include "framework/animation/track.h"
+#include "framework/math/math_utils.h"
+#include "framework/camera/camera.h"
 
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/renderer_storage.h"

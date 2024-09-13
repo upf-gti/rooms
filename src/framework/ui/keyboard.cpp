@@ -6,6 +6,8 @@
 #include "framework/nodes/viewport_3d.h"
 #include "framework/input.h"
 
+#include "framework/math/math_utils.h"
+
 #include "graphics/renderers/rooms_renderer.h"
 
 #include "glm/gtx/quaternion.hpp"

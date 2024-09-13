@@ -12,6 +12,7 @@
 #include "framework/scene/parse_scene.h"
 #include "framework/ui/io.h"
 #include "framework/ui/keyboard.h"
+#include "framework/camera/camera.h"
 
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/renderer_storage.h"

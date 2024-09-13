@@ -2,10 +2,13 @@
 
 #include "engine/rooms_engine.h"
 #include "rooms_renderer.h"
+
 #include "framework/scene/parse_scene.h"
 #include "framework/math/intersections.h"
 #include "framework/nodes/mesh_instance_3d.h"
 #include "framework/input.h"
+#include "framework/camera/camera.h"
+
 #include "graphics/shader.h"
 #include "graphics/renderer_storage.h"
 
@@ -19,7 +22,6 @@
 #include "glm/gtx/matrix_decompose.hpp"
 
 #include "spdlog/spdlog.h"
-
 
 /*
     Stroke management and lifecylce

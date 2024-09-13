@@ -15,6 +15,8 @@
 #include "framework/math/intersections.h"
 #include "framework/ui/inspector.h"
 #include "framework/ui/keyboard.h"
+#include "framework/math/math_utils.h"
+#include "framework/camera/camera.h"
 
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/renderer_storage.h"

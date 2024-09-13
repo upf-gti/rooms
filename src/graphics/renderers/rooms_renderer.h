@@ -5,12 +5,8 @@
 #include "graphics/renderer.h"
 #include "graphics/edit.h"
 #include "graphics/texture.h"
-#include "graphics/surface.h"
 
 #include "raymarching_renderer.h"
-
-#include "framework/camera/flyover_camera.h"
-#include "framework/camera/orbit_camera.h"
 
 // #define DISABLE_RAYMARCHER
 
@@ -18,57 +14,16 @@ class RoomsRenderer : public Renderer {
 
     RaymarchingRenderer raymarching_renderer;
 
-    Surface quad_surface;
-
-    Uniform camera_uniform;
-    Uniform camera_2d_uniform;
-    Uniform linear_sampler_uniform;
-
-    uint32_t camera_buffer_stride = 0;
-
-    WGPUCommandEncoder global_command_encoder;
-
-    struct sCameraData {
-        glm::mat4x4 mvp;
-
-        glm::vec3 eye;
-        float exposure;
-
-        glm::vec3 right_controller_position;
-        float ibl_intensity;
-    };
-
-    sCameraData camera_data;
-    sCameraData camera_2d_data;
-
     float exposure = 1.0f;
     float ibl_intensity = 1.0f;
 
     void render_screen(WGPUTextureView swapchain_view);
 
-    // Render meshes with material color
-    WGPUBindGroup render_bind_group_camera = nullptr;
-    WGPUBindGroup render_bind_group_camera_2d = nullptr;
-
     float last_evaluation_time = 0.0f;
-
-    void init_camera_bind_group();
 
 #if defined(XR_SUPPORT)
 
     void render_xr();
-
-    // For the XR mirror screen
-#if defined(USE_MIRROR_WINDOW)
-    void render_mirror(WGPUTextureView swapchain_view);
-    void init_mirror_pipeline();
-
-    Pipeline mirror_pipeline;
-    Shader* mirror_shader = nullptr;
-
-    std::vector<Uniform> swapchain_uniforms;
-    std::vector<WGPUBindGroup> swapchain_bind_groups;
-#endif // USE_MIRROR_WINDOW
 
 #endif // XR_SUPPORT
 
