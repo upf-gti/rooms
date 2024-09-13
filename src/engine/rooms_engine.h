@@ -57,7 +57,7 @@ class RoomsEngine : public Engine
 
 public:
 
-	int initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen) override;
+	int initialize(Renderer* renderer) override;
     void clean() override;
 
 	void update(float delta_time) override;
@@ -65,8 +65,6 @@ public:
 
     void set_main_scene(const std::string& scene_path);
     void add_to_main_scene(const std::string& scene_path);
-
-    bool show_tree_recursive(Node* entity);
 
     static void render_controllers();
 

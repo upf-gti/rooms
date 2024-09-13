@@ -466,8 +466,8 @@ void AnimationEditor::render_gui()
     }
 
     auto engine = dynamic_cast<RoomsEngine*>(RoomsEngine::instance);
-    engine->show_tree_recursive(player);
-    engine->show_tree_recursive(current_node);
+    engine->render_scene_tree_recursive(player);
+    engine->render_scene_tree_recursive(current_node);
 }
 
 void AnimationEditor::init_ui()

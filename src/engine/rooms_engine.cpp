@@ -7,7 +7,6 @@
 #include "framework/input.h"
 #include "framework/scene/parse_scene.h"
 #include "framework/scene/parse_gltf.h"
-#include "framework/utils/tinyfiledialogs.h"
 #include "framework/utils/utils.h"
 #include "framework/ui/io.h"
 #include "framework/ui/keyboard.h"
@@ -26,7 +25,6 @@
 #include "tools/tutorial_editor.h"
 #include "framework/nodes/sculpt_instance.h"
 
-
 #include "spdlog/spdlog.h"
 #include "imgui.h"
 
@@ -35,9 +33,11 @@
 bool RoomsEngine::use_grid = true;
 bool RoomsEngine::use_environment_map = true;
 
-int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen)
+int RoomsEngine::initialize(Renderer* renderer)
 {
-    int error = Engine::initialize(renderer, window, use_glfw, use_mirror_screen);
+    int error = Engine::initialize(renderer);
+
+    if (error) return error;
 
     node_factory = custom_node_factory;
 
@@ -130,7 +130,7 @@ int RoomsEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glf
 
     ui::Keyboard::initialize();
 
-	return error;
+	return 0;
 }
 
 void RoomsEngine::clean()
@@ -158,13 +158,9 @@ void RoomsEngine::clean()
 
 void RoomsEngine::set_main_scene(const std::string& scene_path)
 {
-    delete main_scene;
+    Engine::set_main_scene(scene_path);
 
     sculpt_editor->set_current_sculpt(nullptr);
-
-    main_scene = new Scene();
-    main_scene->parse(scene_path);
-
     scene_editor->set_main_scene(main_scene);
 }
 
@@ -327,138 +323,31 @@ void RoomsEngine::toggle_tutorial()
 
 void RoomsEngine::render_gui()
 {
-    bool active = true;
+    render_default_gui();
 
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
 
-    // ImGui::SetNextWindowSize({ 300, 400 });
+    bool active = true;
     ImGui::Begin("Debug panel", &active, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoFocusOnAppearing);
-
-    if (ImGui::BeginMenuBar())
-    {
-        if (ImGui::BeginMenu("File"))
-        {
-            if (ImGui::MenuItem("Open room (.room)"))
-            {
-                std::vector<const char*> filter_patterns = { "*.room" };
-                char const* open_file_name = tinyfd_openFileDialog(
-                    "Room loader",
-                    "",
-                    filter_patterns.size(),
-                    filter_patterns.data(),
-                    "Rooms format",
-                    0
-                );
-
-                if (open_file_name) {
-                    set_main_scene(open_file_name);
-                }
-            }
-            if (ImGui::MenuItem("Save room (.room)"))
-            {
-                std::vector<const char*> filter_patterns = { "*.room" };
-
-                char const* save_file_name = tinyfd_saveFileDialog(
-                    "Room loader",
-                    "",
-                    filter_patterns.size(),
-                    filter_patterns.data(),
-                    "Rooms format"
-                );
-
-                if (save_file_name) {
-                    main_scene->serialize(save_file_name);
-                }
-            }
-            if (ImGui::MenuItem("Open scene (.gltf, .glb, .obj)"))
-            {
-                std::vector<const char*> filter_patterns = { "*.gltf", "*.glb", "*.obj" };
-                char const* open_file_name = tinyfd_openFileDialog(
-                    "Scene loader",
-                    "",
-                    filter_patterns.size(),
-                    filter_patterns.data(),
-                    "Scene formats",
-                    0
-                );
-
-                if (open_file_name) {
-                    std::vector<Node*> entities;
-                    parse_scene(open_file_name, entities);
-                    main_scene->add_nodes(entities);
-                }
-            }
-            ImGui::EndMenu();
-        }
-        ImGui::EndMenuBar();
-    }
 
     ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
     if (ImGui::BeginTabBar("TabBar", tab_bar_flags))
     {
-        if (ImGui::BeginTabItem("Scene"))
-        {
-            if (ImGui::TreeNodeEx("Root", ImGuiTreeNodeFlags_DefaultOpen))
-            {
-                if (ImGui::BeginPopupContextItem()) // <-- use last item id as popup id
-                {
-                    if (ImGui::Button("Delete All")) {
-                        main_scene->delete_all();
-                        ImGui::CloseCurrentPopup();
-                    }
-
-                    ImGui::EndPopup();
-                }
-
-                std::vector<Node*>& nodes = main_scene->get_nodes();
-                std::vector<Node*>::iterator it = nodes.begin();
-                while (it != nodes.end())
-                {
-                    if (show_tree_recursive(*it)) {
-                        delete *it;
-                        it = nodes.erase(it);
-                    }
-                    else {
-                        it++;
-                    }
-                }
-
-                ImGui::TreePop();
-            }
-            ImGui::EndTabItem();
-        }
-        if(current_editor && ImGui::BeginTabItem(current_editor->get_name().c_str()))
+        if (current_editor && ImGui::BeginTabItem(current_editor->get_name().c_str()))
         {
             current_editor->render_gui();
             ImGui::EndTabItem();
         }
-        if (ImGui::BeginTabItem("Debugger"))
+        if (ImGui::BeginTabItem("Rooms Debugger"))
         {
             const RayIntersectionInfo& info = rooms_renderer->get_raymarching_renderer()->get_ray_intersection_info();
             std::string intersected = info.intersected ? "yes" : "no";
             ImGui::Text(("Ray Intersection: " + intersected).c_str());
             ImGui::Text(("Tile pointer: " + std::to_string(info.tile_pointer)).c_str());
-            ImGui::ColorEdit3("Picked albedo:", (float*) &info.material_albedo);
+            ImGui::ColorEdit3("Picked albedo:", (float*)&info.material_albedo);
             if (info.intersected) {
                 ImGui::Text("Intersection position :");
                 ImGui::Text("   : %.3f, %.3f, %.3f", info.intersection_position.x, info.intersection_position.y, info.intersection_position.z);
-            }
-
-            bool msaa_enabled = Renderer::instance->get_msaa_count() != 1;
-
-            if (ImGui::Checkbox("Enable MSAAx4", &msaa_enabled)) {
-                if (msaa_enabled) {
-                    Renderer::instance->set_msaa_count(4);
-                }
-                else {
-                    Renderer::instance->set_msaa_count(1);
-                }
-            }
-
-            bool pause_frustum_culling_camera = Renderer::instance->get_frustum_camera_paused();
-
-            if (ImGui::Checkbox("Pause frustum culling camera", &pause_frustum_culling_camera)) {
-                Renderer::instance->set_frustum_camera_paused(pause_frustum_culling_camera);
             }
 
             ImGui::Separator();
@@ -483,69 +372,8 @@ void RoomsEngine::render_gui()
         }
         ImGui::EndTabBar();
     }
-    ImGui::Separator();
 
     ImGui::End();
 }
 
-bool RoomsEngine::show_tree_recursive(Node* entity)
-{
-    std::vector<Node*>& children = entity->get_children();
 
-    MeshInstance3D* entity_mesh = dynamic_cast<MeshInstance3D*>(entity);
-
-    ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
-
-    if ((entity_mesh && children.empty() && entity_mesh->get_surfaces().empty())) {
-        flags |= ImGuiTreeNodeFlags_Leaf;
-    }
-
-    if (ImGui::TreeNodeEx(entity->get_name().c_str(), flags))
-    {
-        if (ImGui::BeginPopupContextItem()) // <-- use last item id as popup id
-        {
-            if (ImGui::Button("Delete")) {
-                ImGui::CloseCurrentPopup();
-                ImGui::EndPopup();
-                ImGui::TreePop();
-
-                if (dynamic_cast<SculptInstance*>(entity) != nullptr) {
-                    dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->remove_sculpt_instance((SculptInstance*) entity);
-                }
-                return true;
-            }
-            ImGui::EndPopup();
-        }
-
-        if (entity_mesh) {
-
-            const std::vector<Surface*>& surfaces = entity_mesh->get_surfaces();
-
-            for (int i = 0; i < surfaces.size(); ++i) {
-                std::string surface_name = surfaces[i]->get_name();
-                std::string final_surface_name = surface_name.empty() ? ("Surface " + std::to_string(i)).c_str() : surface_name;
-                ImGui::TreeNodeEx(final_surface_name.c_str(), ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Leaf);
-                ImGui::TreePop();
-            }
-        }
-
-        entity->render_gui();
-
-        std::vector<Node*>::iterator it = children.begin();
-
-        while (it != children.end())
-        {
-            if (show_tree_recursive(*it)) {
-                delete* it;
-                it = children.erase(it);
-            }
-            else {
-                it++;
-            }
-        }
-
-        ImGui::TreePop();
-    }
-
-    return false;
-}
