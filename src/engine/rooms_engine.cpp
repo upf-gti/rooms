@@ -137,8 +137,6 @@ void RoomsEngine::clean()
 {
     Engine::clean();
 
-    Node2D::clean();
-
     if (scene_editor) {
         scene_editor->clean();
     }
