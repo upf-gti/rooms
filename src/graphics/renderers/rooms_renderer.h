@@ -4,7 +4,6 @@
 
 #include "graphics/renderer.h"
 #include "graphics/edit.h"
-#include "graphics/texture.h"
 
 #include "raymarching_renderer.h"
 
@@ -14,20 +13,7 @@ class RoomsRenderer : public Renderer {
 
     RaymarchingRenderer raymarching_renderer;
 
-    float exposure = 1.0f;
-    float ibl_intensity = 1.0f;
-
-    void render_screen(WGPUTextureView swapchain_view);
-
     float last_evaluation_time = 0.0f;
-
-#if defined(XR_SUPPORT)
-
-    void render_xr();
-
-#endif // XR_SUPPORT
-
-    bool debug_this_frame = false;
 
 public:
 
@@ -40,20 +26,8 @@ public:
     void update(float delta_time) override;
     void render() override;
 
-    void resize_window(int width, int height) override;
-
-    inline void set_exposure(float new_exposure) { exposure = new_exposure; }
-    inline void set_ibl_intensity(float new_intensity) { ibl_intensity = new_intensity; }
-
-    inline void toogle_frame_debug() { debug_this_frame = true; }
-
     RaymarchingRenderer* get_raymarching_renderer() { return &raymarching_renderer; }
-    inline Uniform* get_current_camera_uniform() { return &camera_uniform; }
-    glm::vec3 get_camera_eye();
-    glm::vec3 get_camera_front();
     float get_last_evaluation_time() { return last_evaluation_time; }
-    float get_exposure() { return exposure; }
-    float get_ibl_intensity() { return ibl_intensity; }
 
     /*
     *   Edits

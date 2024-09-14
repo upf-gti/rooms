@@ -5,9 +5,6 @@
 
 int main()
 {
-    spdlog::set_pattern("[%^%l%$] %v");
-    spdlog::set_level(spdlog::level::debug);
-
     RoomsEngine* engine = new RoomsEngine();
     RoomsRenderer* renderer = new RoomsRenderer();
 
