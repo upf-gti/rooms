@@ -489,15 +489,15 @@ void AnimationEditor::init_ui()
     // ** Keyframe actions
     {
         ui::ItemGroup2D* g_keyframes = new ui::ItemGroup2D("g_keyframes");
-        g_keyframes->add_child(new ui::TextureButton2D("record_action", "data/textures/l.png"));
-        g_keyframes->add_child(new ui::TextureButton2D("create_keyframe", "data/textures/add.png"));
-        g_keyframes->add_child(new ui::TextureButton2D("submit_keyframe", "data/textures/s.png", ui::HIDDEN));
+        g_keyframes->add_child(new ui::TextureButton2D("record_action", "data/textures/record_action.png", ui::DISABLED));
+        g_keyframes->add_child(new ui::TextureButton2D("create_keyframe", "data/textures/add_key.png"));
+        g_keyframes->add_child(new ui::TextureButton2D("submit_keyframe", "data/textures/submit_key.png", ui::HIDDEN));
         first_row->add_child(g_keyframes);
     }
 
     // ** Play animation **
-    first_row->add_child(new ui::TextureButton2D("play_animation", "data/textures/a.png"));
-    first_row->add_child(new ui::TextureButton2D("stop_animation", "data/textures/cube.png", ui::HIDDEN));
+    first_row->add_child(new ui::TextureButton2D("play_animation", "data/textures/play.png"));
+    first_row->add_child(new ui::TextureButton2D("stop_animation", "data/textures/stop.png", ui::HIDDEN));
 
     // Create inspection panel (Nodes, properties, etc)
     inspector = new ui::Inspector({ .name = "inspector_root", .title = "Animation",.position = { 32.0f, 32.f } }, [&](ui::Inspector* scope) {
