@@ -57,7 +57,7 @@ class RoomsEngine : public Engine
 
 public:
 
-	int initialize(Renderer* renderer, sEngineConfiguration configuration) override;
+    int initialize(Renderer* renderer, sEngineConfiguration configuration = {}) override;
     void clean() override;
 
 	void update(float delta_time) override;
