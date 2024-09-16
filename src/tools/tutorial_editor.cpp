@@ -97,7 +97,7 @@ ui::XRPanel* TutorialEditor::generate_panel(const std::string& name, const std::
     xr_panel_2d->add_child(new_panel);
 
     if (prev != TUTORIAL_NONE) {
-        new_panel->add_button(name + "_prev", "data/textures/tutorial/back.png", { size.x * 0.25f, mini_button_size.y * 1.2f }, mini_button_size);
+        new_panel->add_button(name + "_prev", "data/textures/tutorial/back.png", { size.x * 0.25f, size.y - mini_button_size.y * 1.2f }, mini_button_size);
         Node::bind(name + "_prev", [&, c = new_panel, p = prev](const std::string& signal, void* button) {
             c->set_visibility(false);
             panels[p]->set_visibility(true);
@@ -105,7 +105,7 @@ ui::XRPanel* TutorialEditor::generate_panel(const std::string& name, const std::
     }
 
     if (next != TUTORIAL_NONE) {
-        new_panel->add_button(name + "_next", "data/textures/tutorial/next.png", { size.x * 0.75f, mini_button_size.y * 1.2f }, mini_button_size);
+        new_panel->add_button(name + "_next", "data/textures/tutorial/next.png", { size.x * 0.75f, size.y - mini_button_size.y * 1.2f }, mini_button_size);
         Node::bind(name + "_next", [&, c = new_panel, n = next](const std::string& signal, void* button) {
             c->set_visibility(false);
             panels[n]->set_visibility(true);
@@ -118,7 +118,7 @@ ui::XRPanel* TutorialEditor::generate_panel(const std::string& name, const std::
     }
     // close button
     else {
-        new_panel->add_button(name + "_next", "data/textures/tutorial/close.png", { size.x * 0.75f, mini_button_size.y * 1.2f }, mini_button_size);
+        new_panel->add_button(name + "_next", "data/textures/tutorial/close.png", { size.x * 0.75f, size.y - mini_button_size.y * 1.2f }, mini_button_size);
         Node::bind(name + "_next", [&, c = new_panel, n = next](const std::string& signal, void* button) {
             auto engine = static_cast<RoomsEngine*>(Engine::instance);
             engine->toggle_tutorial();
