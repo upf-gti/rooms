@@ -483,6 +483,9 @@ void AnimationEditor::init_ui()
     ui::HContainer2D* first_row = new ui::HContainer2D("row_0", { 0.0f, 0.0f });
     main_panel_2d->add_child(first_row);
 
+    // ** Go back to scene editor **
+    first_row->add_child(new ui::TextureButton2D("go_back", "data/textures/back.png"));
+
     // ** Clone node **
     first_row->add_child(new ui::TextureButton2D("open_list", "data/textures/clone.png"));
 
