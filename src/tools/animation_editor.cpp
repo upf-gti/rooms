@@ -59,11 +59,47 @@ void AnimationEditor::initialize()
     }
 
     init_ui();
+
+    // Animation UI visualizations
+    keyframe_markers_render_intstance = new MeshInstance3D();
+
+    Material* joint_material = new Material();
+    joint_material->set_depth_read(false);
+    joint_material->set_priority(0);
+    joint_material->set_transparency_type(ALPHA_BLEND);
+    joint_material->set_color(glm::vec4(1.0f, 0.0f, 0.0f, 0.50f));
+    joint_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path));
+
+    keyframe_markers_render_intstance->set_frustum_culling_enabled(false);
+
+    keyframe_markers_render_intstance->add_surface(RendererStorage::get_surface("sphere"));
+    keyframe_markers_render_intstance->set_surface_material_override(keyframe_markers_render_intstance->get_surface(0), joint_material);
+
+    // Trjacoetry line
+    animation_trajectory_instance = new MeshInstance3D();
+    animation_trajectory_mesh = new Surface();
+    animation_trajectory_mesh->set_name("Animation trajecotry");
+    animation_trajectory_instance->set_frustum_culling_enabled(false);
+
+    InterleavedData empty;
+    const std::vector<InterleavedData> empty_vertex = std::vector<InterleavedData>{ empty };
+    animation_trajectory_mesh->update_vertex_buffer(empty_vertex);
+
+    animation_trajectory_instance->add_surface(animation_trajectory_mesh);
+
+    Material* skeleton_material = new Material();
+    skeleton_material->set_color({ 1.0f, 0.0f, 0.0f, 1.0f });
+    skeleton_material->set_depth_read(false);
+    skeleton_material->set_priority(0);
+    skeleton_material->set_topology_type(eTopologyType::TOPOLOGY_LINE_LIST);
+    skeleton_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, skeleton_material));
+
+    animation_trajectory_instance->set_surface_material_override(animation_trajectory_mesh, skeleton_material);
 }
 
 void AnimationEditor::clean()
 {
-    
+    delete keyframe_markers_render_intstance;
 }
 
 void AnimationEditor::on_enter(void* data)
@@ -112,6 +148,8 @@ void AnimationEditor::on_enter(void* data)
     }
 
     inspect_keyframes_list();
+
+    update_animation_trajectory();
 }
 
 void AnimationEditor::update(float delta_time)
@@ -192,6 +230,16 @@ void AnimationEditor::render()
     if (current_node) {
         current_node->render();
     }
+
+    for (uint32_t i = 0u; i < animation_states.size(); i++) {
+        const glm::vec3 position = std::get<glm::vec3>(animation_states[i].properties["translation"].value);
+
+        const glm::mat4 anim_position_model = glm::scale(glm::translate(glm::mat4(1.0f), position), glm::vec3(0.006f));
+
+        Renderer::instance->add_renderable(keyframe_markers_render_intstance, anim_position_model);
+    }
+
+    animation_trajectory_instance->render();
 }
 
 void AnimationEditor::render_gizmo()
@@ -231,6 +279,26 @@ void AnimationEditor::update_gizmo(float delta_time)
     if (gizmo_3d.update(t, right_controller_pos, delta_time)) {
         current_node->set_transform(t);
     }
+}
+
+void AnimationEditor::update_animation_trajectory() {
+    std::vector<InterleavedData> vertieces_to_upload;
+
+    if (animation_states.size() <= 1u) {
+        return;
+    }
+
+    for (uint32_t i = 0u; i < animation_states.size(); i++) {
+        vertieces_to_upload.push_back({ std::get<glm::vec3>(animation_states[i].properties["translation"].value)});
+
+        if (i + 1 >= animation_states.size()) {
+            vertieces_to_upload.push_back({ std::get<glm::vec3>(animation_states[i].properties["translation"].value) });
+        } else {
+            vertieces_to_upload.push_back({ std::get<glm::vec3>(animation_states[i + 1].properties["translation"].value) });
+        }
+    }
+
+    animation_trajectory_mesh->update_vertex_buffer(vertieces_to_upload);
 }
 
 /*
@@ -787,6 +855,8 @@ bool AnimationEditor::on_close()
     editing_keyframe = false;
     keyframe_dirty = false;
     current_animation_state = nullptr;
+
+    update_animation_trajectory();
 
     return should_close;
 }

@@ -28,6 +28,9 @@ struct sAnimationState {
     std::unordered_map<std::string, sPropertyState> properties;
 };
 
+class MeshInstance3d;
+class Surface;
+
 class AnimationEditor : public BaseEditor {
 
     Gizmo2D gizmo_2d;
@@ -41,6 +44,10 @@ class AnimationEditor : public BaseEditor {
 
     std::vector<sAnimationState> animation_states;
 
+    Surface* animation_trajectory_mesh = nullptr;
+    MeshInstance3D* animation_trajectory_instance = nullptr;
+    MeshInstance3D* keyframe_markers_render_intstance;
+
     float current_time = 0.0f;
     bool show_keyframe_dirty = false;
     bool keyframe_dirty = false;
@@ -53,6 +60,8 @@ class AnimationEditor : public BaseEditor {
 
     void render_gizmo();
     void update_gizmo(float delta_time);
+
+    void update_animation_trajectory();
 
     /*
         Animation Player
