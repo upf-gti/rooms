@@ -89,7 +89,7 @@ int RoomsEngine::initialize(Renderer* renderer, sEngineConfiguration configurati
         grid->add_surface(RendererStorage::get_surface("quad"));
         grid->set_position(glm::vec3(0.0f));
         grid->rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-        grid->scale(glm::vec3(10.f));
+        grid->scale(glm::vec3(25.f));
 
         grid->set_frustum_culling_enabled(false);
 

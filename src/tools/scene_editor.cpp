@@ -245,7 +245,7 @@ void SceneEditor::init_ui()
         {
             ui::ItemGroup2D* g_add_node = new ui::ItemGroup2D("g_light_types");
             g_add_node->add_child(new ui::TextureButton2D("omni", "data/textures/light.png"));
-            //g_add_node->add_child(new ui::TextureButton2D("spot", "data/textures/spot.png"));
+            g_add_node->add_child(new ui::TextureButton2D("spot", "data/textures/spot.png"));
             g_add_node->add_child(new ui::TextureButton2D("directional", "data/textures/sun.png"));
             add_node_submenu->add_child(g_add_node);
         }
@@ -539,7 +539,10 @@ void SceneEditor::render_gizmo()
         glm::mat4x4 m = node->get_model();
 
         if (gizmo_2d.render(camera->get_view(), camera->get_projection(), m)) {
-            node->set_transform(Transform::mat4_to_transform(m));
+            Transform temp_transform = Transform::mat4_to_transform(m);
+            node->set_position(temp_transform.get_position());
+            node->set_rotation(temp_transform.get_rotation());
+            node->set_scale(temp_transform.get_scale());
         }
     }
 }
