@@ -410,8 +410,6 @@ void SceneEditor::select_node(Node* node, bool place)
 
     // To allow the user to move the node at the beginning
     moving_node = place && is_gizmo_usable() && renderer->get_openxr_available();
-
-    inspector_dirty = true;
 }
 
 void SceneEditor::clone_node(Node* node, bool copy)
@@ -487,6 +485,7 @@ void SceneEditor::create_light_node(uint8_t type)
     new_light->set_range(5.0f);
 
     main_scene->add_node(new_light);
+    select_node(new_light);
     inspector_dirty = true;
 }
 
@@ -656,7 +655,6 @@ void SceneEditor::inspector_from_scene(bool force)
         inspector->disable_2d();
     }
 
-    selected_node = nullptr;
     inspector_dirty = false;
     inspector_transform_dirty = !inspector->get_visibility() || force;
 
