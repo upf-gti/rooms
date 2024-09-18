@@ -191,6 +191,10 @@ void AnimationEditor::update(float delta_time)
         inspect_keyframe();
     }
 
+    if (keyframe_dirty) {
+        update_animation_trajectory();
+    }
+
     if (renderer->get_openxr_available()) {
 
         if (inspector_transform_dirty) {
@@ -296,6 +300,11 @@ void AnimationEditor::update_animation_trajectory() {
         } else {
             vertieces_to_upload.push_back({ std::get<glm::vec3>(animation_states[i + 1].properties["translation"].value) });
         }
+    }
+
+    if (keyframe_dirty && current_node) {
+        vertieces_to_upload.push_back(vertieces_to_upload.back());
+        vertieces_to_upload.push_back({ current_node->get_translation()});
     }
 
     animation_trajectory_mesh->update_vertex_buffer(vertieces_to_upload);
