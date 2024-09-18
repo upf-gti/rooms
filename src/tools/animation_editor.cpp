@@ -147,17 +147,20 @@ void AnimationEditor::on_enter(void* data)
         current_animation->recalculate_duration();
     }
 
-    glm::mat4x4 m(1.0f);
-    glm::vec3 eye = dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_camera_eye();
-    glm::vec3 new_pos = eye + dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_camera_front() * 0.6f;
+    // Set inspector in front on VR mode
+    if (renderer->get_openxr_available()) {
 
-    m = glm::translate(m, new_pos);
-    m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
-    m = glm::rotate(m, glm::radians(180.f), { 1.0f, 0.0f, 0.0f });
+        glm::mat4x4 m(1.0f);
+        glm::vec3 eye = dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_camera_eye();
+        glm::vec3 new_pos = eye + dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_camera_front() * 0.6f;
 
-    inspect_panel_3d->set_transform(Transform::mat4_to_transform(m));
+        m = glm::translate(m, new_pos);
+        m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
+        m = glm::rotate(m, glm::radians(180.f), { 1.0f, 0.0f, 0.0f });
 
-    inspector_transform_dirty = false;
+        inspect_panel_3d->set_transform(Transform::mat4_to_transform(m));
+        inspector_transform_dirty = false;
+    }
 
     inspect_keyframes_list();
 
