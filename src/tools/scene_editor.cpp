@@ -816,6 +816,8 @@ void SceneEditor::inspect_light()
 
     inspector->end_line();
 
+    inspector_dirty = false;
+
     Node::emit_signal(inspector->get_name() + "@children_changed", (void*)nullptr);
 }
 
