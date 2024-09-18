@@ -246,7 +246,9 @@ void RoomsEngine::render()
     }
 
 #ifndef __EMSCRIPTEN__
-    render_gui();
+    if (show_imgui) {
+        render_gui();
+    }
 #endif
 
     Engine::render();
