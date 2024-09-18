@@ -87,7 +87,13 @@ void SceneEditor::update(float delta_time)
     }
 
     if (inspector_dirty) {
-        inspector_from_scene();
+
+        if (selected_node && dynamic_cast<Light3D*>(selected_node)) {
+            inspect_light();
+        }
+        else {
+            inspector_from_scene();
+        }
     }
 
     if (moving_node) {
@@ -99,11 +105,7 @@ void SceneEditor::update(float delta_time)
         }
     }
 
-    if (Input::was_button_pressed(XR_BUTTON_B)) {
-        inspector_from_scene(true);
-    }
-
-    if (Input::was_key_pressed(GLFW_KEY_I)) {
+    if (Input::was_button_pressed(XR_BUTTON_B) || Input::was_key_pressed(GLFW_KEY_I)) {
         inspector_from_scene(true);
     }
 
@@ -409,9 +411,7 @@ void SceneEditor::select_node(Node* node, bool place)
     // To allow the user to move the node at the beginning
     moving_node = place && is_gizmo_usable() && renderer->get_openxr_available();
 
-    if (!place && dynamic_cast<Light3D*>(node)) {
-        inspect_light();
-    }
+    inspector_dirty = true;
 }
 
 void SceneEditor::clone_node(Node* node, bool copy)
@@ -487,7 +487,6 @@ void SceneEditor::create_light_node(uint8_t type)
     new_light->set_range(5.0f);
 
     main_scene->add_node(new_light);
-    select_node(new_light);
     inspector_dirty = true;
 }
 
@@ -657,6 +656,7 @@ void SceneEditor::inspector_from_scene(bool force)
         inspector->disable_2d();
     }
 
+    selected_node = nullptr;
     inspector_dirty = false;
     inspector_transform_dirty = !inspector->get_visibility() || force;
 
