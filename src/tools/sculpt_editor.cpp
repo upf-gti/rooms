@@ -450,7 +450,7 @@ void SculptEditor::update(float delta_time)
         uint8_t current_layout = (current_tool == SCULPT) ? LAYOUT_SCULPT : LAYOUT_PAINT;
         if (creating_spline) current_layout = LAYOUT_SPLINES;
 
-        update_controller_flags(current_layout);
+        update_controller_flags(current_layout, current_layout);
     }
 
     preview_tmp_edits.clear();
@@ -1361,10 +1361,10 @@ void SculptEditor::init_ui()
         {
             right_hand_container = new ui::VContainer2D("right_controller_root", { 0.0f, 0.0f });
 
-            right_hand_container->add_child(new ui::ImageLabel2D("Main size", "data/textures/buttons/r_thumbstick.png", LAYOUT_ANY));
-            right_hand_container->add_child(new ui::ImageLabel2D("Sec size", "data/textures/buttons/r_grip_plus_r_thumbstick.png", LAYOUT_ANY_SHIFT, double_size));
+            right_hand_container->add_child(new ui::ImageLabel2D("Main size", "data/textures/buttons/r_thumbstick.png", LAYOUT_SCULPT));
+            right_hand_container->add_child(new ui::ImageLabel2D("Sec size", "data/textures/buttons/r_grip_plus_r_thumbstick.png", LAYOUT_SCULPT | LAYOUT_SHIFT, double_size));
             right_hand_container->add_child(new ui::ImageLabel2D("Add/Substract", "data/textures/buttons/b.png", LAYOUT_SCULPT));
-            right_hand_container->add_child(new ui::ImageLabel2D("Cancel Spline", "data/textures/buttons/b.png", LAYOUT_SPLINES));
+            right_hand_container->add_child(new ui::ImageLabel2D("Cancel Spline", "data/textures/buttons/b.png", LAYOUT_SCULPT | LAYOUT_SPLINES));
             right_hand_container->add_child(new ui::ImageLabel2D("Sculpt/Paint", "data/textures/buttons/r_grip_plus_b.png", LAYOUT_SCULPT_PAINT_SHIFT, double_size));
             right_hand_container->add_child(new ui::ImageLabel2D("Select UI", "data/textures/buttons/a.png", LAYOUT_SCULPT_PAINT));
             right_hand_container->add_child(new ui::ImageLabel2D("Confirm Spline", "data/textures/buttons/a.png", LAYOUT_SPLINES));

@@ -70,7 +70,7 @@ void BaseEditor::render()
     }
 }
 
-void BaseEditor::update_controller_flags(uint8_t current_layout)
+void BaseEditor::update_controller_flags(uint32_t current_left_layout, uint32_t current_right_layout)
 {
     glm::mat4x4 m = glm::rotate(glm::mat4x4(1.0f), glm::radians(-120.f), glm::vec3(1.0f, 0.0f, 0.0f));
     m = glm::translate(m, glm::vec3(0.02f, 0.0f, 0.02f));
@@ -90,11 +90,11 @@ void BaseEditor::update_controller_flags(uint8_t current_layout)
 
     // Left controller
     bool space_dirty = false;
-    uint8_t l_layout = current_layout | (is_shift_left_pressed ? LAYOUT_SHIFT : 0);
+    uint32_t l_layout = current_left_layout | (is_shift_left_pressed ? LAYOUT_SHIFT : 0);
     for (auto label_ptr : left_hand_container->get_children()) {
         ui::ImageLabel2D* label = dynamic_cast<ui::ImageLabel2D*>(label_ptr);
         assert(label);
-        space_dirty |= label->set_visibility(should_render_label(label->get_mask(), l_layout));
+        space_dirty |= label->set_visibility(label->get_mask() == l_layout);
     }
 
     if (space_dirty) {
@@ -104,35 +104,14 @@ void BaseEditor::update_controller_flags(uint8_t current_layout)
     // Right controller
 
     space_dirty = false;
-    uint8_t r_layout = current_layout | (is_shift_right_pressed ? LAYOUT_SHIFT : 0);
+    uint32_t r_layout = current_right_layout | (is_shift_right_pressed ? LAYOUT_SHIFT : 0);
     for (auto label_ptr : right_hand_container->get_children()) {
         ui::ImageLabel2D* label = dynamic_cast<ui::ImageLabel2D*>(label_ptr);
         assert(label);
-        space_dirty |= label->set_visibility(should_render_label(label->get_mask(), r_layout));
+        space_dirty |= label->set_visibility(label->get_mask() == r_layout);
     }
 
     if (space_dirty) {
         right_hand_container->on_children_changed();
     }
-}
-
-bool BaseEditor::should_render_label(uint8_t mask, uint8_t state)
-{
-    if (mask == LAYOUT_ALL) {
-        return true;
-    }
-
-    bool mask_shift = (mask & LAYOUT_SHIFT) == LAYOUT_SHIFT;
-    bool state_shift = (state & LAYOUT_SHIFT) == LAYOUT_SHIFT;
-
-    // Different shift requirements
-    if (mask_shift != state_shift) {
-        return false;
-    }
-
-    if (mask_shift) { mask ^= LAYOUT_SHIFT; }
-    if (state_shift) { state ^= LAYOUT_SHIFT; }
-
-    // With shifts removed, mask the rest of the flag requirements
-    return state & mask;
 }

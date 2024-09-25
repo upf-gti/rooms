@@ -11,27 +11,36 @@ namespace ui {
     class VContainer2D;
 }
 
-enum : uint8_t {
+enum : uint32_t {
     LAYOUT_SCENE = 1 << 0,
-    LAYOUT_CLONE = 1 << 1,
-    LAYOUT_SCULPT = 1 << 2,
-    LAYOUT_PAINT = 1 << 3,
-    LAYOUT_SPLINES = 1 << 4,
-    LAYOUT_ANIMATION = 1 << 5,
-    LAYOUT_KEYFRAME = 1 << 6,
-    LAYOUT_SHIFT = 1 << 7,
+    LAYOUT_MOVE_NODE = 1 << 1,
+    LAYOUT_HOVER_NODE = 1 << 2,
+    LAYOUT_SCULPT_NODE = 1 << 3,
+
+    LAYOUT_SCULPT = 1 << 8,
+    LAYOUT_PAINT = 1 << 9,
+    LAYOUT_SPLINES = 1 << 10,
+
+    LAYOUT_ANIMATION = 1 << 13,
+    LAYOUT_KEYFRAME = 1 << 14,
+
+    LAYOUT_SHIFT = 1 << 16,
+
+    LAYOUT_SCENE_HOVER = LAYOUT_SCENE | LAYOUT_HOVER_NODE,
+
+    //  to delete from here..
+
     LAYOUT_SCULPT_PAINT = LAYOUT_SCULPT | LAYOUT_PAINT,
     LAYOUT_ANIMATION_KEYFRAME = LAYOUT_ANIMATION | LAYOUT_KEYFRAME,
     LAYOUT_ANY = LAYOUT_SCENE | LAYOUT_SCULPT | LAYOUT_PAINT | LAYOUT_SPLINES | LAYOUT_ANIMATION,
     LAYOUT_SCENE_SHIFT = LAYOUT_SCENE | LAYOUT_SHIFT,
-    LAYOUT_CLONE_SHIFT = LAYOUT_CLONE | LAYOUT_SHIFT,
     LAYOUT_SCULPT_SHIFT = LAYOUT_SCULPT | LAYOUT_SHIFT,
     LAYOUT_PAINT_SHIFT = LAYOUT_PAINT | LAYOUT_SHIFT,
     LAYOUT_SCULPT_PAINT_SHIFT = LAYOUT_SCULPT_PAINT | LAYOUT_SHIFT,
     LAYOUT_SPLINES_SHIFT = LAYOUT_SPLINES | LAYOUT_SHIFT,
     LAYOUT_ANIMATION_SHIFT = LAYOUT_ANIMATION | LAYOUT_SHIFT,
     LAYOUT_ANY_SHIFT = LAYOUT_SCULPT_SHIFT | LAYOUT_PAINT_SHIFT | LAYOUT_SCULPT_PAINT_SHIFT | LAYOUT_ANIMATION_SHIFT,
-    LAYOUT_ALL = 0xFF
+    LAYOUT_ALL = 0xFFFFFFFF
 };
 
 class BaseEditor {
@@ -59,8 +68,7 @@ protected:
     Node2D* xr_panel_2d = nullptr;
     Viewport3D* xr_panel_3d = nullptr;
 
-    void update_controller_flags(uint8_t current_layout);
-    bool should_render_label(uint8_t mask, uint8_t state);
+    void update_controller_flags(uint32_t current_left_layout, uint32_t current_right_layout);
 
 public:
 

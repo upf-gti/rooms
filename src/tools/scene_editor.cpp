@@ -32,9 +32,6 @@
 
 #include <filesystem>
 
-// MeshInstance3D* intersection_mesh = nullptr;
-// uint32_t subdivisions = 16;
-
 uint64_t SceneEditor::node_signal_uid = 0;
 
 void SceneEditor::initialize()
@@ -86,13 +83,30 @@ void SceneEditor::update(float delta_time)
         get_export_files();
     }
 
-    if (inspector_dirty) {
+    const bool sculpt_hovered = hovered_node && dynamic_cast<SculptInstance*>(hovered_node);
 
-        if (selected_node && dynamic_cast<Light3D*>(selected_node)) {
-            inspect_light();
+    // Clone if hovering the node
+    if (hovered_node && Input::was_button_pressed(XR_BUTTON_A)) {
+
+        if (is_shift_right_pressed) {
+            group_node(hovered_node);
         }
         else {
-            inspector_from_scene();
+            clone_node(hovered_node);
+        }
+    }
+    else if (hovered_node && Input::was_button_pressed(XR_BUTTON_B)) {
+
+        // Animate
+        if (is_shift_right_pressed) {
+            selected_node = hovered_node;
+            RoomsEngine::switch_editor(ANIMATION_EDITOR, hovered_node);
+        }
+        // Sculpt
+        else if (sculpt_hovered) {
+            select_node(hovered_node, false);
+            RoomsEngine::switch_editor(SCULPT_EDITOR);
+            static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(static_cast<SculptInstance*>(hovered_node));
         }
     }
 
@@ -105,7 +119,17 @@ void SceneEditor::update(float delta_time)
         }
     }
 
-    if (Input::was_button_pressed(XR_BUTTON_B) || Input::was_key_pressed(GLFW_KEY_I)) {
+    if (inspector_dirty) {
+
+        if (selected_node && dynamic_cast<Light3D*>(selected_node)) {
+            inspect_light();
+        }
+        else {
+            inspector_from_scene();
+        }
+    }
+
+    if (Input::was_button_pressed(XR_BUTTON_Y) || Input::was_key_pressed(GLFW_KEY_I)) {
         inspector_from_scene(true);
     }
 
@@ -124,10 +148,13 @@ void SceneEditor::update(float delta_time)
         inspect_panel_3d->update(delta_time);
 
         // Create current button layout based on state
-        uint8_t current_layout = LAYOUT_SCENE;
-        if (moving_node) current_layout = LAYOUT_CLONE;
+        uint8_t right_layout = LAYOUT_SCENE;
+        if (moving_node) { right_layout |= LAYOUT_MOVE_NODE; }
+        else if (hovered_node) {
+            right_layout |= LAYOUT_HOVER_NODE;
+        }
 
-        update_controller_flags(current_layout);
+        update_controller_flags(LAYOUT_SCENE, right_layout);
     }
     else {
         inspector->update(delta_time);
@@ -338,7 +365,7 @@ void SceneEditor::init_ui()
 
             // left_hand_container->add_child(new ui::ImageLabel2D("Round Shape", "data/textures/buttons/l_thumbstick.png", LAYOUT_ANY_NO_SHIFT_L));
             // left_hand_container->add_child(new ui::ImageLabel2D("Smooth", "data/textures/buttons/l_grip_plus_l_thumbstick.png", LAYOUT_ANY_SHIFT_L, double_size));
-            // left_hand_container->add_child(new ui::ImageLabel2D("Redo", "data/textures/buttons/y.png", LAYOUT_ANY));
+            left_hand_container->add_child(new ui::ImageLabel2D("Scene Panel", "data/textures/buttons/y.png", LAYOUT_SCENE));
             // left_hand_container->add_child(new ui::ImageLabel2D("Guides", "data/textures/buttons/l_grip_plus_y.png", LAYOUT_ANY_SHIFT_L, double_size));
             // left_hand_container->add_child(new ui::ImageLabel2D("Undo", "data/textures/buttons/x.png", LAYOUT_ANY));
             // left_hand_container->add_child(new ui::ImageLabel2D("PBR", "data/textures/buttons/l_grip_plus_x.png", LAYOUT_ANY_SHIFT_L, double_size));
@@ -350,16 +377,11 @@ void SceneEditor::init_ui()
         // Right hand
         {
             right_hand_container = new ui::VContainer2D("right_controller_root", { 0.0f, 0.0f });
-
-            // right_hand_container->add_child(new ui::ImageLabel2D("Main size", "data/textures/buttons/r_thumbstick.png", LAYOUT_ANY_NO_SHIFT_R));
-            // right_hand_container->add_child(new ui::ImageLabel2D("Sec size", "data/textures/buttons/r_grip_plus_r_thumbstick.png", LAYOUT_ANY_SHIFT_R, double_size));
-            right_hand_container->add_child(new ui::ImageLabel2D("Scene Panel", "data/textures/buttons/b.png", LAYOUT_SCENE));
-            // right_hand_container->add_child(new ui::ImageLabel2D("Sculpt/Paint", "data/textures/buttons/r_grip_plus_b.png", LAYOUT_ANY_SHIFT_R, double_size));
-            right_hand_container->add_child(new ui::ImageLabel2D("Select Node", "data/textures/buttons/a.png", LAYOUT_SCENE));
-            // right_hand_container->add_child(new ui::ImageLabel2D("Pick Material", "data/textures/buttons/r_grip_plus_a.png", LAYOUT_ANY_SHIFT_R, double_size));
-            right_hand_container->add_child(new ui::ImageLabel2D("Place Node", "data/textures/buttons/r_trigger.png", LAYOUT_CLONE));
-            // right_hand_container->add_child(new ui::ImageLabel2D("Make Instance", "data/textures/buttons/r_grip_plus_r_trigger.png", LAYOUT_CLONE_SHIFT, double_size));
-
+            right_hand_container->add_child(new ui::ImageLabel2D("Edit Sculpt", "data/textures/buttons/b.png", LAYOUT_SCENE_HOVER));
+            right_hand_container->add_child(new ui::ImageLabel2D("Animate", "data/textures/buttons/r_grip_plus_b.png", LAYOUT_SCENE_HOVER | LAYOUT_SHIFT, double_size));
+            right_hand_container->add_child(new ui::ImageLabel2D("Clone Node", "data/textures/buttons/a.png", LAYOUT_SCENE_HOVER));
+            right_hand_container->add_child(new ui::ImageLabel2D("Group Node", "data/textures/buttons/r_grip_plus_a.png", LAYOUT_SCENE_HOVER | LAYOUT_SHIFT, double_size));
+            right_hand_container->add_child(new ui::ImageLabel2D("Place Node", "data/textures/buttons/r_trigger.png", LAYOUT_SCENE | LAYOUT_MOVE_NODE));
             right_hand_ui_3D = new Viewport3D(right_hand_container);
         }
     }
@@ -482,6 +504,11 @@ void SceneEditor::clone_node(Node* node, bool copy)
     main_scene->add_node(new_sculpt);
     select_node(new_sculpt);
     inspector_dirty = true;
+}
+
+void SceneEditor::group_node(Node* node)
+{
+    // TODO..
 }
 
 void SceneEditor::create_light_node(uint8_t type)

@@ -224,7 +224,7 @@ void AnimationEditor::update(float delta_time)
             current_layout |= LAYOUT_KEYFRAME;
         }
 
-        update_controller_flags(current_layout);
+        update_controller_flags(current_layout, current_layout);
     }
     else {
         inspector->update(delta_time);
