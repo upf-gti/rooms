@@ -133,25 +133,7 @@ void SceneEditor::update(float delta_time)
         inspector->update(delta_time);
     }
 
-    // debug
-
-    //glm::vec3 ray_origin;
-    //glm::vec3 ray_direction;
-
-    //if (Renderer::instance->get_openxr_available())
-    //{
-    //    ray_origin = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
-    //    glm::mat4x4 select_hand_pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
-    //    ray_direction = get_front(select_hand_pose);
-    //}
-    //else
-    //{
-    //    Camera* camera = Renderer::instance->get_camera();
-    //    glm::vec3 ray_dir = camera->screen_to_ray(Input::get_mouse_position());
-
-    //    ray_origin = camera->get_eye();
-    //    ray_direction = glm::normalize(ray_dir);
-    //}
+    update_hovered_node();
 
     //// Quad
     //glm::mat4x4 model = curved_quad->get_model();
@@ -199,7 +181,53 @@ void SceneEditor::render()
 
 void SceneEditor::render_gui()
 {
+    ImGui::Text("Hovered Node");
+    if (hovered_node) {
+        ImGui::Text("%s", hovered_node->get_name().c_str());
+    }
+}
 
+void SceneEditor::update_hovered_node()
+{
+    glm::vec3 ray_origin;
+    glm::vec3 ray_direction;
+
+    if (Renderer::instance->get_openxr_available())
+    {
+        ray_origin = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
+        glm::mat4x4 select_hand_pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
+        ray_direction = get_front(select_hand_pose);
+    }
+    else
+    {
+        Camera* camera = Renderer::instance->get_camera();
+        glm::vec3 ray_dir = camera->screen_to_ray(Input::get_mouse_position());
+
+        ray_origin = camera->get_eye();
+        ray_direction = glm::normalize(ray_dir);
+    }
+
+    float distance = 1e10f;
+
+    hovered_node = nullptr;
+
+    for (auto node : main_scene->get_nodes()) {
+
+        Node3D* node_3d = dynamic_cast<Node3D*>(node);
+
+        if (!node_3d) {
+            continue;
+        }
+
+        float node_distance = 1e10f;
+
+        if (node_3d->test_ray_collision(ray_origin, ray_direction, node_distance)) {
+
+            if (node_distance < distance) {
+                hovered_node = node;
+            }
+        }
+    }
 }
 
 void SceneEditor::init_ui()

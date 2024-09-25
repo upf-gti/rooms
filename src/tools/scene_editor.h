@@ -28,7 +28,9 @@ enum InspectNodeFlags {
 class SceneEditor : public BaseEditor {
 
     Scene* main_scene = nullptr;
+
     Node* selected_node = nullptr;
+    Node* hovered_node = nullptr;
 
     /*
     *   Gizmo stuff
@@ -108,4 +110,6 @@ public:
 
     void set_main_scene(Scene* new_scene) { main_scene = new_scene; };
     void set_inspector_dirty() { inspector_dirty = true; };
+
+    void update_hovered_node();
 };
