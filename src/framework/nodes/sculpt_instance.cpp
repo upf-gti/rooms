@@ -1,4 +1,6 @@
 #include "sculpt_instance.h"
+
+#include "framework/math/intersections.h"
 #include "graphics/renderers/rooms_renderer.h"
 
 #include <fstream>
@@ -6,11 +8,13 @@
 SculptInstance::SculptInstance() : Node3D()
 {
     node_type = "SculptInstance";
+    collider_shape = COLLIDER_SHAPE_CUSTOM;
 }
 
 SculptInstance::SculptInstance(SculptInstance* reference) : Node3D()
 {
     node_type = "SculptInstance";
+    collider_shape = COLLIDER_SHAPE_CUSTOM;
 
     sculpt_gpu_data.octree_uniform = reference->get_octree_uniform();
     sculpt_gpu_data.octree_bindgroup = reference->get_octree_bindgroup();
@@ -90,4 +94,19 @@ void SculptInstance::parse(std::ifstream& binary_scene_file)
     // TODO: Remove current
     //rooms_renderer->get_raymarching_renderer()->set_current_sculpt(this);
     rooms_renderer->toogle_frame_debug();
+}
+
+bool SculptInstance::test_ray_collision(const glm::vec3& ray_origin, const glm::vec3& ray_direction, float& distance)
+{
+    // wip... maybe this instance "aabb" is correct and we don't have to compute this every time
+
+    AABB current_aabb;
+
+    for (const auto& stroke : stroke_history) {
+        current_aabb = merge_aabbs(current_aabb, stroke.get_world_AABB());
+    }
+
+    glm::vec3 center = current_aabb.center + transform.get_position();
+
+    return intersection::ray_AABB(ray_origin, ray_direction, center, current_aabb.half_size, distance);
 }
