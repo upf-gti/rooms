@@ -9,6 +9,7 @@
 #include "framework/nodes/spot_light_3d.h"
 #include "framework/nodes/omni_light_3d.h"
 #include "framework/nodes/directional_light_3d.h"
+#include "framework/nodes/group_3d.h"
 #include "framework/nodes/slider_2d.h"
 #include "framework/nodes/container_2d.h"
 #include "framework/nodes/button_2d.h"
@@ -80,7 +81,10 @@ void SceneEditor::update(float delta_time)
     // Clone if hovering the node
     if (hovered_node && Input::was_button_pressed(XR_BUTTON_A)) {
 
-        if (is_shift_right_pressed) {
+        if (grouping_node) {
+            process_group();
+        }
+        else if (is_shift_right_pressed) {
             group_node(hovered_node);
         }
         else {
@@ -326,8 +330,11 @@ void SceneEditor::init_ui()
         {
             right_hand_box = new ui::VContainer2D("right_controller_root", { 0.0f, 0.0f });
             right_hand_box->add_child(new ui::ImageLabel2D("Edit Sculpt", shortcuts::B_BUTTON_PATH, shortcuts::EDIT_SCULPT_NODE));
+            right_hand_box->add_child(new ui::ImageLabel2D("Edit Group", shortcuts::B_BUTTON_PATH, shortcuts::EDIT_GROUP));
             right_hand_box->add_child(new ui::ImageLabel2D("Animate", "data/textures/buttons/r_grip_plus_b.png", shortcuts::ANIMATE_NODE, double_size));
             right_hand_box->add_child(new ui::ImageLabel2D("Clone Node", shortcuts::A_BUTTON_PATH, shortcuts::CLONE_NODE));
+            right_hand_box->add_child(new ui::ImageLabel2D("Create Group", shortcuts::A_BUTTON_PATH, shortcuts::CREATE_GROUP));
+            right_hand_box->add_child(new ui::ImageLabel2D("Add to Group", shortcuts::A_BUTTON_PATH, shortcuts::ADD_TO_GROUP));
             right_hand_box->add_child(new ui::ImageLabel2D("Group Node", "data/textures/buttons/r_grip_plus_a.png", shortcuts::GROUP_NODE, double_size));
             right_hand_box->add_child(new ui::ImageLabel2D("Place Node", "data/textures/buttons/r_trigger.png", shortcuts::PLACE_NODE));
             right_hand_ui_3D = new Viewport3D(right_hand_box);
@@ -456,7 +463,34 @@ void SceneEditor::clone_node(Node* node, bool copy)
 
 void SceneEditor::group_node(Node* node)
 {
-    // TODO..
+    /*
+    *   The idea is now to hover and accept another node:
+    *   - If it does not have a group, create and group both nodes into it
+    *   - If it already has group, put the first node in the second one's group
+    */
+
+    grouping_node = true;
+    node_to_group = hovered_node;
+}
+
+void SceneEditor::process_group()
+{
+    //TODO: Get this right..
+    bool group_exists = false;
+
+    if (group_exists) {
+        // Add to group
+        // TODO: cHANGE THIS to get the correct group...
+        Group3D* group = new Group3D();
+        //  ....
+        group->add_child(static_cast<Node3D*>(hovered_node));
+    }
+    else {
+        // Create new group
+        Group3D* new_group = new Group3D();
+        new_group->add_child(static_cast<Node3D*>(node_to_group));
+        new_group->add_child(static_cast<Node3D*>(hovered_node));
+    }
 }
 
 void SceneEditor::create_light_node(uint8_t type)
@@ -585,14 +619,22 @@ void SceneEditor::generate_shortcuts()
     shortcuts[shortcuts::TOGGLE_SCENE_INSPECTOR] = true;
 
     if (hovered_node) {
-        shortcuts[shortcuts::CLONE_NODE] = !is_shift_right_pressed;
-        shortcuts[shortcuts::GROUP_NODE] = is_shift_right_pressed;
-        shortcuts[shortcuts::ANIMATE_NODE] = is_shift_right_pressed;
 
-        bool hovered_sculpt = !!dynamic_cast<SculptInstance*>(hovered_node);
+        if (grouping_node) {
+            //TODO: Get this right..
+            bool group_exists = false;
+            shortcuts[group_exists ? shortcuts::ADD_TO_GROUP : shortcuts::CREATE_GROUP] = true;
+        }
+        else {
+            shortcuts[shortcuts::CLONE_NODE] = !is_shift_right_pressed;
+            shortcuts[shortcuts::GROUP_NODE] = is_shift_right_pressed;
+            shortcuts[shortcuts::ANIMATE_NODE] = is_shift_right_pressed;
 
-        if (hovered_sculpt) {
-            shortcuts[shortcuts::EDIT_SCULPT_NODE] = !is_shift_right_pressed;
+            bool hovered_sculpt = !!dynamic_cast<SculptInstance*>(hovered_node);
+
+            if (hovered_sculpt) {
+                shortcuts[shortcuts::EDIT_SCULPT_NODE] = !is_shift_right_pressed;
+            }
         }
     }
     else if (moving_node) {

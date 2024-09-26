@@ -29,10 +29,13 @@ namespace shortcuts {
     enum : uint8_t {
         TOGGLE_SCENE_INSPECTOR,
         EDIT_SCULPT_NODE,
+        EDIT_GROUP,
         ANIMATE_NODE,
         CLONE_NODE,
+        PLACE_NODE,
         GROUP_NODE,
-        PLACE_NODE
+        ADD_TO_GROUP,
+        CREATE_GROUP
     };
 }
 
@@ -63,10 +66,13 @@ class SceneEditor : public BaseEditor {
     */
 
     bool moving_node = false;
+    bool grouping_node = false;
+    Node* node_to_group = nullptr;
 
     void select_node(Node* node, bool place = true);
     void clone_node(Node* node, bool copy = true);
     void group_node(Node* node);
+    void process_group();
 
     void create_light_node(uint8_t type);
 
