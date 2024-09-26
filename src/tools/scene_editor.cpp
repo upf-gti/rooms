@@ -56,18 +56,6 @@ void SceneEditor::initialize()
     Node::bind(main_scene->get_name() + "@nodes_added", [&](const std::string& sg, void* data) {
         set_inspector_dirty();
     });
-
-    // debug
-    /*intersection_mesh = new MeshInstance3D();
-    intersection_mesh->add_surface(RendererStorage::get_surface("box"));
-    intersection_mesh->scale(glm::vec3(0.01f));
-
-    Material intersection_mesh_material;
-    intersection_mesh_material.color = colors::CYAN;
-    intersection_mesh_material.shader = RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, intersection_mesh_material);
-    intersection_mesh->set_surface_material_override(intersection_mesh->get_surface(0), intersection_mesh_material);
-
-    main_scene->add_node(intersection_mesh);*/
 }
 
 void SceneEditor::clean()
@@ -79,6 +67,8 @@ void SceneEditor::clean()
 
 void SceneEditor::update(float delta_time)
 {
+    BaseEditor::update(delta_time);
+
     if (exports_dirty) {
         get_export_files();
     }
@@ -109,8 +99,7 @@ void SceneEditor::update(float delta_time)
             static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(static_cast<SculptInstance*>(hovered_node));
         }
     }
-
-    if (moving_node) {
+    else if (moving_node) {
 
         static_cast<Node3D*>(selected_node)->set_position(Input::get_controller_position(HAND_RIGHT, POSE_AIM));
 
@@ -137,7 +126,7 @@ void SceneEditor::update(float delta_time)
 
     update_node_rotation();
 
-    BaseEditor::update(delta_time);
+    update_hovered_node();
 
     if (renderer->get_openxr_available()) {
 
@@ -147,48 +136,11 @@ void SceneEditor::update(float delta_time)
 
         inspect_panel_3d->update(delta_time);
 
-        // Create current button layout based on state
-        uint8_t right_layout = LAYOUT_SCENE;
-        if (moving_node) { right_layout |= LAYOUT_MOVE_NODE; }
-        else if (hovered_node) {
-            right_layout |= LAYOUT_HOVER_NODE;
-        }
-
-        update_controller_flags(LAYOUT_SCENE, right_layout);
+        generate_shortcuts();
     }
     else {
         inspector->update(delta_time);
     }
-
-    update_hovered_node();
-
-    //// Quad
-    //glm::mat4x4 model = curved_quad->get_model();
-
-    //glm::vec3 quad_position = model[3];
-    //glm::quat quad_rotation = glm::quat_cast(model);
-    //glm::vec2 quad_size = { 2.0f, 1.0f };
-
-    //float collision_dist;
-    //glm::vec3 intersection_point;
-    //glm::vec3 local_intersection_point;
-
-    //if (intersection::ray_curved_quad(
-    //    ray_origin,
-    //    ray_direction,
-    //    quad_position,
-    //    quad_size * 0.5f,
-    //    quad_rotation,
-    //    subdivisions,
-    //    0.25f,
-    //    intersection_point,
-    //    local_intersection_point,
-    //    collision_dist,
-    //    true
-    //)) {
-    //    intersection_mesh->set_position(intersection_point);
-    //    intersection_mesh->scale(glm::vec3(0.01f));
-    //}
 }
 
 void SceneEditor::render()
@@ -216,6 +168,12 @@ void SceneEditor::render_gui()
 
 void SceneEditor::update_hovered_node()
 {
+    hovered_node = nullptr;
+
+    if (moving_node) {
+        return;
+    }
+
     glm::vec3 ray_origin;
     glm::vec3 ray_direction;
 
@@ -235,8 +193,6 @@ void SceneEditor::update_hovered_node()
     }
 
     float distance = 1e10f;
-
-    hovered_node = nullptr;
 
     for (auto node : main_scene->get_nodes()) {
 
@@ -318,7 +274,7 @@ void SceneEditor::init_ui()
         g_display->add_child(new ui::TextureButton2D("use_grid", "data/textures/grid.png", ui::ALLOW_TOGGLE | ui::SELECTED));
         g_display->add_child(new ui::TextureButton2D("use_environment", "data/textures/skybox.png", ui::ALLOW_TOGGLE | ui::SELECTED));
         g_display->add_child(new ui::FloatSlider2D("IBL_intensity", "data/textures/ibl_intensity.png", rooms_renderer->get_ibl_intensity(), ui::SliderMode::VERTICAL, ui::USER_RANGE/*ui::CURVE_INV_POW, 21.f, -6.0f*/, 0.0f, 4.0f, 2));
-        g_display->add_child(new ui::IntSlider2D("TEST", "data/textures/ibl_intensity.png", 5));
+        //g_display->add_child(new ui::IntSlider2D("TEST", "data/textures/ibl_intensity.png", 5));
         display_submenu->add_child(g_display);
         display_submenu->add_child(new ui::FloatSlider2D("exposure", "data/textures/exposure.png", rooms_renderer->get_exposure(), ui::SliderMode::VERTICAL, ui::USER_RANGE/*ui::CURVE_INV_POW, 21.f, -6.0f*/, 0.0f, 4.0f, 2));
         first_row->add_child(display_submenu);
@@ -361,28 +317,20 @@ void SceneEditor::init_ui()
 
         // Left hand
         {
-            left_hand_container = new ui::VContainer2D("left_controller_root", { 0.0f, 0.0f });
-
-            // left_hand_container->add_child(new ui::ImageLabel2D("Round Shape", "data/textures/buttons/l_thumbstick.png", LAYOUT_ANY_NO_SHIFT_L));
-            // left_hand_container->add_child(new ui::ImageLabel2D("Smooth", "data/textures/buttons/l_grip_plus_l_thumbstick.png", LAYOUT_ANY_SHIFT_L, double_size));
-            left_hand_container->add_child(new ui::ImageLabel2D("Scene Panel", "data/textures/buttons/y.png", LAYOUT_SCENE));
-            // left_hand_container->add_child(new ui::ImageLabel2D("Guides", "data/textures/buttons/l_grip_plus_y.png", LAYOUT_ANY_SHIFT_L, double_size));
-            // left_hand_container->add_child(new ui::ImageLabel2D("Undo", "data/textures/buttons/x.png", LAYOUT_ANY));
-            // left_hand_container->add_child(new ui::ImageLabel2D("PBR", "data/textures/buttons/l_grip_plus_x.png", LAYOUT_ANY_SHIFT_L, double_size));
-            // left_hand_container->add_child(new ui::ImageLabel2D("Manipulate Sculpt", "data/textures/buttons/l_trigger.png", LAYOUT_ALL));
-
-            left_hand_ui_3D = new Viewport3D(left_hand_container);
+            left_hand_box = new ui::VContainer2D("left_controller_root", { 0.0f, 0.0f });
+            left_hand_box->add_child(new ui::ImageLabel2D("Scene Panel", shortcuts::Y_BUTTON_PATH, shortcuts::TOGGLE_SCENE_INSPECTOR));
+            left_hand_ui_3D = new Viewport3D(left_hand_box);
         }
 
         // Right hand
         {
-            right_hand_container = new ui::VContainer2D("right_controller_root", { 0.0f, 0.0f });
-            right_hand_container->add_child(new ui::ImageLabel2D("Edit Sculpt", "data/textures/buttons/b.png", LAYOUT_SCENE_HOVER));
-            right_hand_container->add_child(new ui::ImageLabel2D("Animate", "data/textures/buttons/r_grip_plus_b.png", LAYOUT_SCENE_HOVER | LAYOUT_SHIFT, double_size));
-            right_hand_container->add_child(new ui::ImageLabel2D("Clone Node", "data/textures/buttons/a.png", LAYOUT_SCENE_HOVER));
-            right_hand_container->add_child(new ui::ImageLabel2D("Group Node", "data/textures/buttons/r_grip_plus_a.png", LAYOUT_SCENE_HOVER | LAYOUT_SHIFT, double_size));
-            right_hand_container->add_child(new ui::ImageLabel2D("Place Node", "data/textures/buttons/r_trigger.png", LAYOUT_SCENE | LAYOUT_MOVE_NODE));
-            right_hand_ui_3D = new Viewport3D(right_hand_container);
+            right_hand_box = new ui::VContainer2D("right_controller_root", { 0.0f, 0.0f });
+            right_hand_box->add_child(new ui::ImageLabel2D("Edit Sculpt", shortcuts::B_BUTTON_PATH, shortcuts::EDIT_SCULPT_NODE));
+            right_hand_box->add_child(new ui::ImageLabel2D("Animate", "data/textures/buttons/r_grip_plus_b.png", shortcuts::ANIMATE_NODE, double_size));
+            right_hand_box->add_child(new ui::ImageLabel2D("Clone Node", shortcuts::A_BUTTON_PATH, shortcuts::CLONE_NODE));
+            right_hand_box->add_child(new ui::ImageLabel2D("Group Node", "data/textures/buttons/r_grip_plus_a.png", shortcuts::GROUP_NODE, double_size));
+            right_hand_box->add_child(new ui::ImageLabel2D("Place Node", "data/textures/buttons/r_trigger.png", shortcuts::PLACE_NODE));
+            right_hand_ui_3D = new Viewport3D(right_hand_box);
         }
     }
 
@@ -628,6 +576,30 @@ void SceneEditor::set_gizmo_scale()
     else {
         gizmo_2d.set_operation(ImGuizmo::SCALE);
     }
+}
+
+void SceneEditor::generate_shortcuts()
+{
+    std::unordered_map<uint8_t, bool> shortcuts;
+
+    shortcuts[shortcuts::TOGGLE_SCENE_INSPECTOR] = true;
+
+    if (hovered_node) {
+        shortcuts[shortcuts::CLONE_NODE] = !is_shift_right_pressed;
+        shortcuts[shortcuts::GROUP_NODE] = is_shift_right_pressed;
+        shortcuts[shortcuts::ANIMATE_NODE] = is_shift_right_pressed;
+
+        bool hovered_sculpt = !!dynamic_cast<SculptInstance*>(hovered_node);
+
+        if (hovered_sculpt) {
+            shortcuts[shortcuts::EDIT_SCULPT_NODE] = !is_shift_right_pressed;
+        }
+    }
+    else if (moving_node) {
+        shortcuts[shortcuts::PLACE_NODE] = true;
+    }
+
+    BaseEditor::update_shortcuts(shortcuts);
 }
 
 void SceneEditor::update_panel_transform()

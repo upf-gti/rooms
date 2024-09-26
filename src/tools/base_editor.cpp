@@ -19,6 +19,9 @@ void BaseEditor::update(float delta_time)
 {
     if (renderer->get_openxr_available()) {
 
+        is_shift_left_pressed = Input::is_grab_pressed(HAND_LEFT);
+        is_shift_right_pressed = Input::is_grab_pressed(HAND_RIGHT);
+
         // Update main UI
 
         glm::mat4x4 pose = Input::get_controller_pose(HAND_LEFT, POSE_AIM);
@@ -70,7 +73,7 @@ void BaseEditor::render()
     }
 }
 
-void BaseEditor::update_controller_flags(uint32_t current_left_layout, uint32_t current_right_layout)
+void BaseEditor::update_shortcuts(const std::unordered_map<uint8_t, bool>& active_shortcuts)
 {
     glm::mat4x4 m = glm::rotate(glm::mat4x4(1.0f), glm::radians(-120.f), glm::vec3(1.0f, 0.0f, 0.0f));
     m = glm::translate(m, glm::vec3(0.02f, 0.0f, 0.02f));
@@ -81,37 +84,25 @@ void BaseEditor::update_controller_flags(uint32_t current_left_layout, uint32_t 
     pose = Input::get_controller_pose(HAND_LEFT);
     left_hand_ui_3D->set_transform(Transform::mat4_to_transform(pose * m));
 
-    is_shift_left_pressed = Input::is_grab_pressed(HAND_LEFT);
-    is_shift_right_pressed = Input::is_grab_pressed(HAND_RIGHT);
-
     /*
-        Decide which buttons labels to render
+        Change label visibility
     */
 
     // Left controller
-    bool space_dirty = false;
-    uint32_t l_layout = current_left_layout | (is_shift_left_pressed ? LAYOUT_SHIFT : 0);
-    for (auto label_ptr : left_hand_container->get_children()) {
+    for (auto label_ptr : left_hand_box->get_children()) {
         ui::ImageLabel2D* label = dynamic_cast<ui::ImageLabel2D*>(label_ptr);
         assert(label);
-        space_dirty |= label->set_visibility(label->get_mask() == l_layout);
-    }
-
-    if (space_dirty) {
-        left_hand_container->on_children_changed();
+        uint8_t mask = label->get_mask();
+        bool value = active_shortcuts.contains(mask) ? active_shortcuts.at(mask) : false;
+        label->set_visibility(value);
     }
 
     // Right controller
-
-    space_dirty = false;
-    uint32_t r_layout = current_right_layout | (is_shift_right_pressed ? LAYOUT_SHIFT : 0);
-    for (auto label_ptr : right_hand_container->get_children()) {
+    for (auto label_ptr : right_hand_box->get_children()) {
         ui::ImageLabel2D* label = dynamic_cast<ui::ImageLabel2D*>(label_ptr);
         assert(label);
-        space_dirty |= label->set_visibility(label->get_mask() == r_layout);
-    }
-
-    if (space_dirty) {
-        right_hand_container->on_children_changed();
+        uint8_t mask = label->get_mask();
+        bool value = active_shortcuts.contains(mask) ? active_shortcuts.at(mask) : false;
+        label->set_visibility(value);
     }
 }

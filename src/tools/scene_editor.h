@@ -25,6 +25,17 @@ enum InspectNodeFlags {
     NODE_SCULPT = NODE_STANDARD | NODE_EDIT
 };
 
+namespace shortcuts {
+    enum : uint8_t {
+        TOGGLE_SCENE_INSPECTOR,
+        EDIT_SCULPT_NODE,
+        ANIMATE_NODE,
+        CLONE_NODE,
+        GROUP_NODE,
+        PLACE_NODE
+    };
+}
+
 class SceneEditor : public BaseEditor {
 
     Scene* main_scene = nullptr;
@@ -78,6 +89,7 @@ class SceneEditor : public BaseEditor {
     void inspect_node(Node* node, uint32_t flags = NODE_STANDARD, const std::string& texture_path = "");
     void inspect_light();
     void update_panel_transform();
+    void generate_shortcuts() override;
 
     bool rotation_started = false;
     glm::quat last_hand_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };

@@ -25,6 +25,29 @@ struct PrimitiveState {
     // modifiers?
 };
 
+namespace shortcuts {
+    enum : uint8_t {
+        ROUND_SHAPE,
+        MODIFY_SMOOTH,
+        REDO,
+        UNDO,
+        OPEN_GUIDES_MENU,
+        OPEN_PBR_MENU,
+        MANIPULATE_SCULPT,
+        MAIN_SIZE,
+        SECONDARY_SIZE,
+        ADD_SUBSTRACT,
+        CONFIRM_SPLINE,
+        CANCEL_SPLINE,
+        ADD_KNOT,
+        SCULPT_PAINT,
+        PICK_MATERIAL,
+        STAMP,
+        SMEAR,
+        BACK_TO_SCENE
+    };
+}
+
 class SculptEditor : public BaseEditor {
 
     MeshInstance3D* sculpt_area_box = nullptr;
@@ -66,18 +89,14 @@ class SculptEditor : public BaseEditor {
     MeshInstance3D* mesh_preview = nullptr;
     MeshInstance3D* mesh_preview_outline = nullptr;
 
+    void set_edit_size(float main = -1.0f, float secondary = -1.0f, float round = -1.0f);
     void set_primitive(sdPrimitive primitive);
     void set_operation(sdOperation operation);
-
-    void set_edit_size(float main = -1.0f, float secondary = -1.0f, float round = -1.0f);
-
-    void update_edit_preview(const glm::vec4& dims);
-
     void set_onion_modifier(float value);
     void set_cap_modifier(float value);
 
+    void update_edit_preview(const glm::vec4& dims);
     bool must_render_mesh_preview_outline();
-
     bool can_snap_to_surface();
 
     bool dimensions_dirty       = true;
@@ -149,7 +168,7 @@ class SculptEditor : public BaseEditor {
     void init_ui();
     void bind_events();
     void add_recent_color(const Color& color);
-
+    void generate_shortcuts() override;
     bool is_something_hovered();
 
     // Stamp slide

@@ -49,4 +49,6 @@ public:
     void update(float delta_time) override;
     void render() override;
     void render_gui()  override {};
+
+    void generate_shortcuts() override {};
 };

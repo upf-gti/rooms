@@ -179,10 +179,6 @@ void AnimationEditor::update(float delta_time)
 
     update_gizmo(delta_time);
 
-    if (Input::was_button_pressed(XR_BUTTON_B)) {
-        inspect_keyframes_list(true);
-    }
-
     // Update inspector for keyframes
     if(show_keyframe_dirty) {
 
@@ -212,19 +208,26 @@ void AnimationEditor::update(float delta_time)
 
     if (renderer->get_openxr_available()) {
 
+        if (!keyframe_dirty) {
+            if (Input::was_button_pressed(XR_BUTTON_Y)) {
+                inspect_keyframes_list(true);
+            }
+            else if (Input::was_button_pressed(XR_BUTTON_A)) {
+                create_keyframe();
+            }
+        }
+        // Creating keyframe
+        else if (Input::was_button_pressed(XR_BUTTON_A)) {
+            process_keyframe();
+        }
+
         if (inspector_transform_dirty) {
             update_panel_transform();
         }
 
         inspect_panel_3d->update(delta_time);
 
-        // Create current button layout based on state
-        uint8_t current_layout = LAYOUT_ANIMATION;
-        if (keyframe_dirty) {
-            current_layout |= LAYOUT_KEYFRAME;
-        }
-
-        update_controller_flags(current_layout, current_layout);
+        generate_shortcuts();
     }
     else {
         inspector->update(delta_time);
@@ -615,34 +618,18 @@ void AnimationEditor::init_ui()
 
         // Left hand
         {
-            left_hand_container = new ui::VContainer2D("left_controller_root", { 0.0f, 0.0f });
-
-            // left_hand_container->add_child(new ui::ImageLabel2D("Round Shape", "data/textures/buttons/l_thumbstick.png", LAYOUT_ANY_NO_SHIFT_L));
-            // left_hand_container->add_child(new ui::ImageLabel2D("Smooth", "data/textures/buttons/l_grip_plus_l_thumbstick.png", LAYOUT_ANY_SHIFT_L, double_size));
-            // left_hand_container->add_child(new ui::ImageLabel2D("Redo", "data/textures/buttons/y.png", LAYOUT_ANY));
-            // left_hand_container->add_child(new ui::ImageLabel2D("Guides", "data/textures/buttons/l_grip_plus_y.png", LAYOUT_ANY_SHIFT_L, double_size));
-            // left_hand_container->add_child(new ui::ImageLabel2D("Undo", "data/textures/buttons/x.png", LAYOUT_ANY));
-            // left_hand_container->add_child(new ui::ImageLabel2D("PBR", "data/textures/buttons/l_grip_plus_x.png", LAYOUT_ANY_SHIFT_L, double_size));
-            // left_hand_container->add_child(new ui::ImageLabel2D("Manipulate Sculpt", "data/textures/buttons/l_trigger.png", LAYOUT_ALL));
-
-            left_hand_ui_3D = new Viewport3D(left_hand_container);
+            left_hand_box = new ui::VContainer2D("left_controller_root", { 0.0f, 0.0f });
+            left_hand_box->add_child(new ui::ImageLabel2D("Keyframe List", shortcuts::Y_BUTTON_PATH, shortcuts::OPEN_KEYFRAME_LIST));
+            left_hand_ui_3D = new Viewport3D(left_hand_box);
         }
 
         // Right hand
         {
-            right_hand_container = new ui::VContainer2D("right_controller_root", { 0.0f, 0.0f });
-
-            // right_hand_container->add_child(new ui::ImageLabel2D("Main size", "data/textures/buttons/r_thumbstick.png", LAYOUT_ANY_NO_SHIFT_R));
-            // right_hand_container->add_child(new ui::ImageLabel2D("Sec size", "data/textures/buttons/r_grip_plus_r_thumbstick.png", LAYOUT_ANY_SHIFT_R, double_size));
-            right_hand_container->add_child(new ui::ImageLabel2D("Keyframe List", "data/textures/buttons/b.png", LAYOUT_ANIMATION));
-            // right_hand_container->add_child(new ui::ImageLabel2D("Sculpt/Paint", "data/textures/buttons/r_grip_plus_b.png", LAYOUT_ANY_SHIFT_R, double_size));
-            right_hand_container->add_child(new ui::ImageLabel2D("Create keyframe", "data/textures/buttons/a.png", LAYOUT_ANIMATION));
-            right_hand_container->add_child(new ui::ImageLabel2D("Submit keyframe", "data/textures/buttons/a.png", LAYOUT_ANIMATION_KEYFRAME));
-            // right_hand_container->add_child(new ui::ImageLabel2D("Pick Material", "data/textures/buttons/r_grip_plus_a.png", LAYOUT_ANY_SHIFT_R, double_size));
-            // right_hand_container->add_child(new ui::ImageLabel2D("Place Node", "data/textures/buttons/r_trigger.png", LAYOUT_CLONE));
-            // right_hand_container->add_child(new ui::ImageLabel2D("Make Instance", "data/textures/buttons/r_grip_plus_r_trigger.png", LAYOUT_CLONE_SHIFT, double_size));
-
-            right_hand_ui_3D = new Viewport3D(right_hand_container);
+            right_hand_box = new ui::VContainer2D("right_controller_root", { 0.0f, 0.0f });
+            right_hand_box->add_child(new ui::ImageLabel2D("Play Animation", shortcuts::B_BUTTON_PATH, shortcuts::PLAY_ANIMATION));
+            right_hand_box->add_child(new ui::ImageLabel2D("Create keyframe", shortcuts::A_BUTTON_PATH, shortcuts::CREATE_KEYFRAME));
+            right_hand_box->add_child(new ui::ImageLabel2D("Submit keyframe", shortcuts::A_BUTTON_PATH, shortcuts::SUBMIT_KEYFRAME));
+            right_hand_ui_3D = new Viewport3D(right_hand_box);
         }
     }
 
@@ -665,6 +652,23 @@ void AnimationEditor::bind_events()
         Node::bind("play_animation", [&](const std::string& signal, void* button) { play_animation(); });
         Node::bind("stop_animation", [&](const std::string& signal, void* button) { stop_animation(); });
     }
+}
+
+void AnimationEditor::generate_shortcuts()
+{
+    std::unordered_map<uint8_t, bool> shortcuts;
+
+    shortcuts[shortcuts::OPEN_KEYFRAME_LIST] = true;
+
+    if (keyframe_dirty) {
+        shortcuts[shortcuts::SUBMIT_KEYFRAME] = true;
+    }
+    else {
+        shortcuts[shortcuts::CREATE_KEYFRAME] = true;
+        shortcuts[shortcuts::PLAY_ANIMATION] = true;
+    }
+
+    BaseEditor::update_shortcuts(shortcuts);
 }
 
 void AnimationEditor::update_panel_transform()
