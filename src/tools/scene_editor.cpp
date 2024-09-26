@@ -73,6 +73,8 @@ void SceneEditor::update(float delta_time)
         get_export_files();
     }
 
+    update_hovered_node();
+
     const bool sculpt_hovered = hovered_node && dynamic_cast<SculptInstance*>(hovered_node);
 
     // Clone if hovering the node
@@ -125,8 +127,6 @@ void SceneEditor::update(float delta_time)
     update_gizmo(delta_time);
 
     update_node_rotation();
-
-    update_hovered_node();
 
     if (renderer->get_openxr_available()) {
 
