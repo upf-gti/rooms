@@ -25,10 +25,26 @@ enum InspectNodeFlags {
     NODE_SCULPT = NODE_STANDARD | NODE_EDIT
 };
 
+namespace shortcuts {
+    enum : uint8_t {
+        TOGGLE_SCENE_INSPECTOR,
+        EDIT_SCULPT_NODE,
+        EDIT_GROUP,
+        ANIMATE_NODE,
+        CLONE_NODE,
+        PLACE_NODE,
+        GROUP_NODE,
+        ADD_TO_GROUP,
+        CREATE_GROUP
+    };
+}
+
 class SceneEditor : public BaseEditor {
 
     Scene* main_scene = nullptr;
+
     Node* selected_node = nullptr;
+    Node* hovered_node = nullptr;
 
     /*
     *   Gizmo stuff
@@ -50,9 +66,13 @@ class SceneEditor : public BaseEditor {
     */
 
     bool moving_node = false;
+    bool grouping_node = false;
+    Node* node_to_group = nullptr;
 
     void select_node(Node* node, bool place = true);
     void clone_node(Node* node, bool copy = true);
+    void group_node(Node* node);
+    void process_group();
 
     void create_light_node(uint8_t type);
 
@@ -75,6 +95,7 @@ class SceneEditor : public BaseEditor {
     void inspect_node(Node* node, uint32_t flags = NODE_STANDARD, const std::string& texture_path = "");
     void inspect_light();
     void update_panel_transform();
+    void generate_shortcuts() override;
 
     bool rotation_started = false;
     glm::quat last_hand_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -108,4 +129,6 @@ public:
 
     void set_main_scene(Scene* new_scene) { main_scene = new_scene; };
     void set_inspector_dirty() { inspector_dirty = true; };
+
+    void update_hovered_node();
 };

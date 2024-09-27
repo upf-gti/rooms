@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <unordered_map>
 
 class RoomsRenderer;
 class Node2D;
@@ -11,28 +12,15 @@ namespace ui {
     class VContainer2D;
 }
 
-enum : uint8_t {
-    LAYOUT_SCENE = 1 << 0,
-    LAYOUT_CLONE = 1 << 1,
-    LAYOUT_SCULPT = 1 << 2,
-    LAYOUT_PAINT = 1 << 3,
-    LAYOUT_SPLINES = 1 << 4,
-    LAYOUT_ANIMATION = 1 << 5,
-    LAYOUT_KEYFRAME = 1 << 6,
-    LAYOUT_SHIFT = 1 << 7,
-    LAYOUT_SCULPT_PAINT = LAYOUT_SCULPT | LAYOUT_PAINT,
-    LAYOUT_ANIMATION_KEYFRAME = LAYOUT_ANIMATION | LAYOUT_KEYFRAME,
-    LAYOUT_ANY = LAYOUT_SCENE | LAYOUT_SCULPT | LAYOUT_PAINT | LAYOUT_SPLINES | LAYOUT_ANIMATION,
-    LAYOUT_SCENE_SHIFT = LAYOUT_SCENE | LAYOUT_SHIFT,
-    LAYOUT_CLONE_SHIFT = LAYOUT_CLONE | LAYOUT_SHIFT,
-    LAYOUT_SCULPT_SHIFT = LAYOUT_SCULPT | LAYOUT_SHIFT,
-    LAYOUT_PAINT_SHIFT = LAYOUT_PAINT | LAYOUT_SHIFT,
-    LAYOUT_SCULPT_PAINT_SHIFT = LAYOUT_SCULPT_PAINT | LAYOUT_SHIFT,
-    LAYOUT_SPLINES_SHIFT = LAYOUT_SPLINES | LAYOUT_SHIFT,
-    LAYOUT_ANIMATION_SHIFT = LAYOUT_ANIMATION | LAYOUT_SHIFT,
-    LAYOUT_ANY_SHIFT = LAYOUT_SCULPT_SHIFT | LAYOUT_PAINT_SHIFT | LAYOUT_SCULPT_PAINT_SHIFT | LAYOUT_ANIMATION_SHIFT,
-    LAYOUT_ALL = 0xFF
-};
+namespace shortcuts {
+    // Left hand
+    const std::string X_BUTTON_PATH = "data/textures/buttons/x.png";
+    const std::string Y_BUTTON_PATH = "data/textures/buttons/y.png";
+
+    // Right hand
+    const std::string A_BUTTON_PATH = "data/textures/buttons/a.png";
+    const std::string B_BUTTON_PATH = "data/textures/buttons/b.png";
+}
 
 class BaseEditor {
 
@@ -46,8 +34,8 @@ protected:
     RoomsRenderer* renderer = nullptr;
 
     // Controller UI
-    ui::VContainer2D* right_hand_container = nullptr;
-    ui::VContainer2D* left_hand_container = nullptr;
+    ui::VContainer2D* right_hand_box = nullptr;
+    ui::VContainer2D* left_hand_box = nullptr;
     Viewport3D* right_hand_ui_3D = nullptr;
     Viewport3D* left_hand_ui_3D = nullptr;
 
@@ -59,8 +47,9 @@ protected:
     Node2D* xr_panel_2d = nullptr;
     Viewport3D* xr_panel_3d = nullptr;
 
-    void update_controller_flags(uint8_t current_layout);
-    bool should_render_label(uint8_t mask, uint8_t state);
+    // Shortcuts
+    virtual void generate_shortcuts() = 0;
+    void update_shortcuts(const std::unordered_map<uint8_t, bool>& active_shortcuts);
 
 public:
 

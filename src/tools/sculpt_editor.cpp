@@ -445,12 +445,7 @@ void SculptEditor::update(float delta_time)
 
     // Update controller UI
     if (renderer->get_openxr_available()) {
-
-        // Create current button layout based on state
-        uint8_t current_layout = (current_tool == SCULPT) ? LAYOUT_SCULPT : LAYOUT_PAINT;
-        if (creating_spline) current_layout = LAYOUT_SPLINES;
-
-        update_controller_flags(current_layout);
+        generate_shortcuts();
     }
 
     preview_tmp_edits.clear();
@@ -473,9 +468,25 @@ void SculptEditor::update(float delta_time)
             if (creating_spline) {
                 reset_spline();
             }
+            // Sculpt/Paint toggle
+            else if (is_shift_right_pressed) {
+                enable_tool(current_tool == PAINT ? SCULPT : PAINT);
+            }
+            else {
+                RoomsEngine::switch_editor(SCENE_EDITOR);
+            }
+        }
 
+        if (Input::was_button_pressed(XR_BUTTON_A)) {
+
+            if (creating_spline) {
+                end_spline();
+            }
+            else if (is_shift_right_pressed) {
+                pick_material();
+            }
             // Add/Substract toggle
-            else if (!is_shift_right_pressed) {
+            else {
 
                 sdOperation op = stroke_parameters.get_operation();
 
@@ -496,20 +507,6 @@ void SculptEditor::update(float delta_time)
 
                     stroke_parameters.set_operation(op);
                 }
-            }
-            else {
-                // Sculpt/Paint toggle
-                enable_tool(current_tool == PAINT ? SCULPT : PAINT);
-            }
-        }
-
-        if (Input::was_button_pressed(XR_BUTTON_A)) {
-
-            if (creating_spline) {
-                end_spline();
-            }
-            else if (is_shift_right_pressed) {
-                pick_material();
             }
         }
     }
@@ -1099,6 +1096,37 @@ void SculptEditor::end_spline()
 *   UI stuff
 */
 
+void SculptEditor::generate_shortcuts()
+{
+    std::unordered_map<uint8_t, bool> shortcuts;
+
+    shortcuts[shortcuts::MANIPULATE_SCULPT] = true;
+    shortcuts[shortcuts::ROUND_SHAPE] = !is_shift_left_pressed;
+    shortcuts[shortcuts::MODIFY_SMOOTH] = is_shift_left_pressed;
+    shortcuts[shortcuts::REDO] = !is_shift_left_pressed;
+    shortcuts[shortcuts::UNDO] = !is_shift_left_pressed;
+    shortcuts[shortcuts::OPEN_GUIDES_MENU] = is_shift_left_pressed;
+    shortcuts[shortcuts::OPEN_PBR_MENU] = is_shift_left_pressed;
+
+    if (creating_spline) {
+        shortcuts[shortcuts::ADD_KNOT] = true;
+        shortcuts[shortcuts::CONFIRM_SPLINE] = true;
+        shortcuts[shortcuts::CANCEL_SPLINE] = true;
+    }
+    else {
+        shortcuts[shortcuts::MAIN_SIZE] = !is_shift_right_pressed;
+        shortcuts[shortcuts::SECONDARY_SIZE] = is_shift_right_pressed;
+        shortcuts[shortcuts::ADD_SUBSTRACT] = !is_shift_right_pressed;
+        shortcuts[shortcuts::SCULPT_PAINT] = is_shift_right_pressed;
+        shortcuts[shortcuts::PICK_MATERIAL] = is_shift_right_pressed;
+        shortcuts[shortcuts::STAMP] = !is_shift_right_pressed;
+        shortcuts[shortcuts::SMEAR] = is_shift_right_pressed;
+        shortcuts[shortcuts::BACK_TO_SCENE] = true;
+    }
+
+    BaseEditor::update_shortcuts(shortcuts);
+}
+
 void SculptEditor::init_ui()
 {
     auto webgpu_context = Renderer::instance->get_webgpu_context();
@@ -1344,36 +1372,32 @@ void SculptEditor::init_ui()
 
         // Left hand
         {
-            left_hand_container = new ui::VContainer2D("left_controller_root", { 0.0f, 0.0f });
-
-            left_hand_container->add_child(new ui::ImageLabel2D("Round Shape", "data/textures/buttons/l_thumbstick.png", LAYOUT_ANY));
-            left_hand_container->add_child(new ui::ImageLabel2D("Smooth", "data/textures/buttons/l_grip_plus_l_thumbstick.png", LAYOUT_ANY_SHIFT, double_size));
-            left_hand_container->add_child(new ui::ImageLabel2D("Redo", "data/textures/buttons/y.png", LAYOUT_ANY));
-            left_hand_container->add_child(new ui::ImageLabel2D("Guides", "data/textures/buttons/l_grip_plus_y.png", LAYOUT_ANY_SHIFT, double_size));
-            left_hand_container->add_child(new ui::ImageLabel2D("Undo", "data/textures/buttons/x.png", LAYOUT_ANY));
-            left_hand_container->add_child(new ui::ImageLabel2D("PBR", "data/textures/buttons/l_grip_plus_x.png", LAYOUT_SCULPT_PAINT_SHIFT, double_size));
-            left_hand_container->add_child(new ui::ImageLabel2D("Manipulate Sculpt", "data/textures/buttons/l_trigger.png", LAYOUT_ANY));
-
-            left_hand_ui_3D = new Viewport3D(left_hand_container);
+            left_hand_box = new ui::VContainer2D("left_controller_root", { 0.0f, 0.0f });
+            left_hand_box->add_child(new ui::ImageLabel2D("Round Shape", "data/textures/buttons/l_thumbstick.png", shortcuts::ROUND_SHAPE));
+            left_hand_box->add_child(new ui::ImageLabel2D("Smooth", "data/textures/buttons/l_grip_plus_l_thumbstick.png", shortcuts::MODIFY_SMOOTH, double_size));
+            left_hand_box->add_child(new ui::ImageLabel2D("Redo", shortcuts::Y_BUTTON_PATH, shortcuts::REDO));
+            left_hand_box->add_child(new ui::ImageLabel2D("Guides", "data/textures/buttons/l_grip_plus_y.png", shortcuts::OPEN_GUIDES_MENU, double_size));
+            left_hand_box->add_child(new ui::ImageLabel2D("Undo", shortcuts::X_BUTTON_PATH, shortcuts::UNDO));
+            left_hand_box->add_child(new ui::ImageLabel2D("PBR", "data/textures/buttons/l_grip_plus_x.png", shortcuts::OPEN_PBR_MENU, double_size));
+            left_hand_box->add_child(new ui::ImageLabel2D("Manipulate Sculpt", "data/textures/buttons/l_trigger.png", shortcuts::MANIPULATE_SCULPT));
+            left_hand_ui_3D = new Viewport3D(left_hand_box);
         }
 
         // Right hand
         {
-            right_hand_container = new ui::VContainer2D("right_controller_root", { 0.0f, 0.0f });
-
-            right_hand_container->add_child(new ui::ImageLabel2D("Main size", "data/textures/buttons/r_thumbstick.png", LAYOUT_ANY));
-            right_hand_container->add_child(new ui::ImageLabel2D("Sec size", "data/textures/buttons/r_grip_plus_r_thumbstick.png", LAYOUT_ANY_SHIFT, double_size));
-            right_hand_container->add_child(new ui::ImageLabel2D("Add/Substract", "data/textures/buttons/b.png", LAYOUT_SCULPT));
-            right_hand_container->add_child(new ui::ImageLabel2D("Cancel Spline", "data/textures/buttons/b.png", LAYOUT_SPLINES));
-            right_hand_container->add_child(new ui::ImageLabel2D("Sculpt/Paint", "data/textures/buttons/r_grip_plus_b.png", LAYOUT_SCULPT_PAINT_SHIFT, double_size));
-            right_hand_container->add_child(new ui::ImageLabel2D("Select UI", "data/textures/buttons/a.png", LAYOUT_SCULPT_PAINT));
-            right_hand_container->add_child(new ui::ImageLabel2D("Confirm Spline", "data/textures/buttons/a.png", LAYOUT_SPLINES));
-            right_hand_container->add_child(new ui::ImageLabel2D("Pick Material", "data/textures/buttons/r_grip_plus_a.png", LAYOUT_SCULPT_PAINT_SHIFT, double_size));
-            right_hand_container->add_child(new ui::ImageLabel2D("Stamp", "data/textures/buttons/r_trigger.png", LAYOUT_SCULPT_PAINT));
-            right_hand_container->add_child(new ui::ImageLabel2D("Add Knot", "data/textures/buttons/r_trigger.png", LAYOUT_SPLINES));
-            right_hand_container->add_child(new ui::ImageLabel2D("Smear", "data/textures/buttons/r_grip_plus_r_trigger.png", LAYOUT_SCULPT_PAINT_SHIFT, double_size));
-
-            right_hand_ui_3D = new Viewport3D(right_hand_container);
+            right_hand_box = new ui::VContainer2D("right_controller_root", { 0.0f, 0.0f });
+            right_hand_box->add_child(new ui::ImageLabel2D("Main size", "data/textures/buttons/r_thumbstick.png", shortcuts::MAIN_SIZE));
+            right_hand_box->add_child(new ui::ImageLabel2D("Sec size", "data/textures/buttons/r_grip_plus_r_thumbstick.png", shortcuts::SECONDARY_SIZE, double_size));
+            right_hand_box->add_child(new ui::ImageLabel2D("Back to scene", shortcuts::B_BUTTON_PATH, shortcuts::BACK_TO_SCENE));
+            right_hand_box->add_child(new ui::ImageLabel2D("Cancel Spline", shortcuts::B_BUTTON_PATH, shortcuts::CANCEL_SPLINE));
+            right_hand_box->add_child(new ui::ImageLabel2D("Sculpt/Paint", "data/textures/buttons/r_grip_plus_b.png", shortcuts::SCULPT_PAINT, double_size));
+            right_hand_box->add_child(new ui::ImageLabel2D("Confirm Spline", shortcuts::A_BUTTON_PATH, shortcuts::CONFIRM_SPLINE));
+            right_hand_box->add_child(new ui::ImageLabel2D("Add/Substract", shortcuts::A_BUTTON_PATH, shortcuts::ADD_SUBSTRACT));
+            right_hand_box->add_child(new ui::ImageLabel2D("Pick Material", "data/textures/buttons/r_grip_plus_a.png", shortcuts::PICK_MATERIAL, double_size));
+            right_hand_box->add_child(new ui::ImageLabel2D("Stamp", "data/textures/buttons/r_trigger.png", shortcuts::STAMP));
+            right_hand_box->add_child(new ui::ImageLabel2D("Add Knot", "data/textures/buttons/r_trigger.png", shortcuts::ADD_KNOT));
+            right_hand_box->add_child(new ui::ImageLabel2D("Smear", "data/textures/buttons/r_grip_plus_r_trigger.png", shortcuts::SMEAR, double_size));
+            right_hand_ui_3D = new Viewport3D(right_hand_box);
         }
     }
 
@@ -1383,9 +1407,7 @@ void SculptEditor::init_ui()
 
 void SculptEditor::bind_events()
 {
-    Node::bind("go_back", [&](const std::string& signal, void* button) {
-        RoomsEngine::switch_editor(SCENE_EDITOR);
-    });
+    Node::bind("go_back", [&](const std::string& signal, void* button) { RoomsEngine::switch_editor(SCENE_EDITOR); });
 
     Node::bind("add", [&](const std::string& signal, void* button) {
         enable_tool(SCULPT);

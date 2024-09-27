@@ -17,6 +17,15 @@ namespace ui {
     class Inspector;
 };
 
+namespace shortcuts {
+    enum : uint8_t {
+        OPEN_KEYFRAME_LIST,
+        CREATE_KEYFRAME,
+        SUBMIT_KEYFRAME,
+        PLAY_ANIMATION
+    };
+}
+
 struct sPropertyState {
     TrackType value;
     int track_id = -1;
@@ -85,6 +94,7 @@ class AnimationEditor : public BaseEditor {
     void init_ui();
     void bind_events();
     void update_panel_transform();
+    void generate_shortcuts() override;
 
     void inspect_keyframes_list(bool force = false);
     void inspect_keyframe();
