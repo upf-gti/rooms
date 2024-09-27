@@ -39,6 +39,8 @@ int RoomsEngine::initialize(Renderer* renderer, sEngineConfiguration configurati
 
     if (error) return error;
 
+    glfwSetWindowTitle(renderer->get_glfw_window(), "ROOMS");
+
     node_factory = custom_node_factory;
 
     main_scene = new Scene("main_scene");
@@ -342,8 +344,8 @@ void RoomsEngine::render_gui()
         {
             const RayIntersectionInfo& info = rooms_renderer->get_raymarching_renderer()->get_ray_intersection_info();
             std::string intersected = info.intersected ? "yes" : "no";
-            ImGui::Text(("Ray Intersection: " + intersected).c_str());
-            ImGui::Text(("Tile pointer: " + std::to_string(info.tile_pointer)).c_str());
+            ImGui::Text("Ray Intersection: %s", intersected.c_str());
+            ImGui::Text("Tile pointer: %d", info.tile_pointer);
             ImGui::ColorEdit3("Picked albedo:", (float*)&info.material_albedo);
             if (info.intersected) {
                 ImGui::Text("Intersection position :");

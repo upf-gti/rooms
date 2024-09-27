@@ -552,7 +552,7 @@ void AnimationEditor::render_gui()
     {
         ImGui::Text("Animation %s", current_animation->get_name().c_str());
         ImGui::Text("Num Tracks %d", current_animation->get_track_count());
-        ImGui::Text("Num States %d", animation_states.size());
+        ImGui::Text("Num States %zu", animation_states.size());
 
         if (current_animation && ImGui::Button("Play")) {
             player->play(current_animation);

@@ -16,6 +16,18 @@ project(rooms LANGUAGES C CXX)
 if(MSVC)
     add_definitions(/MP)
     add_definitions(/arch:AVX2)
+
+    # enable link time optimization
+    if (CMAKE_BUILD_TYPE STREQUAL "Release")
+        add_definitions(/GL)
+        add_definitions(/LTCG)
+    endif()
+
+    # disable RTTI (dynamic cast)
+#    string(REGEX REPLACE "/GR" "/GR-" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+
+    # disable exceptions
+	string(REGEX REPLACE "/EHsc" "/EHs-c-" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 endif()
 
 add_definitions(-D_SILENCE_STDEXT_ARR_ITERS_DEPRECATION_WARNING)
@@ -88,9 +100,10 @@ if (EMSCRIPTEN)
         -sSTACK_SIZE=5MB
         -lembind # to bind functions from c++ to javascript
 #        -O3
+        -sWASM_BIGINT
         # only for dev
 #        -sERROR_ON_WASM_CHANGES_AFTER_LINK
-#        -sWASM_BIGINT
+        -O0
         # ------------
         --shell-file "${ROOMS_DIR_ROOT}/${SHELL_FILE}"
         --preload-file "${ROOMS_DIR_ROOT}/data@/data"
