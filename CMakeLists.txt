@@ -71,6 +71,8 @@ ROOMS_SOURCES_APPEND(${ROOMS_DIR_SOURCES}/framework/ui)
 
 add_executable(${PROJECT_NAME} ${ROOMS_SOURCES})
 
+add_compile_definitions(_HAS_EXCEPTIONS=0)
+
 target_include_directories(${PROJECT_NAME} PUBLIC ${ROOMS_DIR_SOURCES})
 
 set_target_properties(${PROJECT_NAME} PROPERTIES VS_DEBUGGER_ENVIRONMENT "DAWN_DEBUG_BREAK_ON_ERROR=1")
