@@ -1,9 +1,4 @@
 #include octree_includes.wgsl
-
-struct SculptInstanceData {
-    model_instances : array<mat4x4f>,
-};
-
 /*
 Sculpt intances u32
     12 -> n number of instances (0-4096)

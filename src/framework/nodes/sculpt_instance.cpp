@@ -32,6 +32,11 @@ SculptInstance::~SculptInstance()
     stroke_history.clear();
 }
 
+
+void SculptInstance::update(float delta_time) {
+
+}
+
 std::vector<Stroke>& SculptInstance::get_stroke_history()
 {
     return stroke_history;
@@ -108,5 +113,23 @@ bool SculptInstance::test_ray_collision(const glm::vec3& ray_origin, const glm::
 
     glm::vec3 center = current_aabb.center + transform.get_position();
 
-    return intersection::ray_AABB(ray_origin, ray_direction, center, current_aabb.half_size, distance);
+    const bool intersecting = intersection::ray_AABB(ray_origin, ray_direction, center, current_aabb.half_size, distance);
+
+    if (intersecting) {
+        sculpt_flags |= SCULPT_IS_POINTED;
+    } else {
+        sculpt_flags &= ~SCULPT_IS_POINTED;
+    }
+
+    return intersecting;
+}
+
+
+void SculptInstance::set_out_of_focus(const bool oof) {
+    if (oof) {
+        sculpt_flags |= eSculptInstanceFlags::SCULPT_IS_OUT_OF_FOCUS;
+    }
+    else {
+        sculpt_flags &= ~eSculptInstanceFlags::SCULPT_IS_OUT_OF_FOCUS;
+    }
 }

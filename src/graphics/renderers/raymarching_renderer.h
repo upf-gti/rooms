@@ -43,6 +43,21 @@ struct RayIntersectionInfo {
     uint32_t    dummy2 = 0;
 };
 
+enum eSculptInstanceFlags : uint32_t {
+    SCULPT_NOT_SELECTED = 0u,
+    SCULPT_IS_OUT_OF_FOCUS = 0b1u,
+    SCULPT_IS_POINTED = 0b10u,
+    SCULPT_IS_SELECTED = 0b100u
+};
+
+struct sSculptInstanceData {
+    uint32_t flags = 0u;
+    uint32_t pad0;
+    uint32_t pad1;
+    uint32_t pad2;
+    glm::mat4x4 model;
+};
+
 class RaymarchingRenderer {
 
     enum eEvaluatorOperationFlags : uint32_t {
@@ -69,17 +84,9 @@ class RaymarchingRenderer {
     WGPUBindGroup   render_preview_proxy_geometry_bind_group = nullptr;
     WGPUBindGroup   render_preview_camera_bind_group = nullptr;
 
-    Texture         sdf_texture;
-    Uniform         sdf_texture_uniform;
-
-    Texture         sdf_material_texture;
-    Uniform         sdf_material_texture_uniform;
 
     // Octree parameters
-    uint32_t        last_octree_level_size = 0u;
-    uint32_t        max_brick_count = 0u;
-    uint32_t        empty_brick_and_removal_buffer_count = 0u;
-    float           brick_world_size = 0.0f;
+    
 
     struct sBrickBuffers_counters {
         uint32_t atlas_empty_bricks_counter;
@@ -92,59 +99,27 @@ class RaymarchingRenderer {
 
     Uniform* sculpt_octree_uniform = nullptr;
     WGPUBindGroup sculpt_octree_bindgroup = nullptr;
+    uint32_t current_sculpt_id;
 
     // Octree creation
-    Pipeline        compute_octree_evaluate_pipeline;
-    Pipeline        compute_octree_increment_level_pipeline;
-    Pipeline        compute_octree_write_to_texture_pipeline;
-    Pipeline        compute_octree_brick_removal_pipeline;
-    Pipeline        compute_octree_brick_copy_pipeline;
-    Pipeline        compute_octree_initialization_pipeline;
-    Pipeline        compute_octree_cleaning_pipeline;
+    
     Pipeline        compute_octree_ray_intersection_pipeline;
     Pipeline        compute_octree_brick_unmark_pipeline;
-    Pipeline        sculpt_delete_pipeline;
-    Shader*         compute_octree_evaluate_shader = nullptr;
-    Shader*         compute_octree_increment_level_shader = nullptr;
-    Shader*         compute_octree_write_to_texture_shader = nullptr;
-    Shader*         compute_octree_brick_removal_shader = nullptr;
-    Shader*         compute_octree_brick_copy_shader = nullptr;
-    Shader*         compute_octree_initialization_shader = nullptr;
-    Shader*         compute_octree_cleaning_shader = nullptr;
+    
     Shader*         compute_octree_ray_intersection_shader = nullptr;
     Shader*         compute_octree_brick_unmark_shader = nullptr;
-    Shader*         sculpt_delete_shader = nullptr;
-    WGPUBindGroup   compute_octree_evaluate_bind_group = nullptr;
-    WGPUBindGroup   compute_octree_increment_level_bind_group = nullptr;
-    WGPUBindGroup   compute_octree_write_to_texture_bind_group = nullptr;
-    WGPUBindGroup   compute_octree_indirect_brick_removal_bind_group = nullptr;
-    WGPUBindGroup   compute_octree_brick_copy_bind_group = nullptr;
-    WGPUBindGroup   compute_octant_usage_bind_groups[2] = {};
+    
     WGPUBindGroup   compute_stroke_buffer_bind_group = nullptr;
-    WGPUBindGroup   compute_octree_initialization_bind_group = nullptr;
-    WGPUBindGroup   compute_octree_clean_octree_bind_group = nullptr;
     WGPUBindGroup   compute_octree_brick_unmark_bind_group = nullptr;
     WGPUBindGroup   brick_buffer_bindgroup = nullptr;
-
-    Uniform         octant_usage_uniform[4];
-    Uniform         octant_usage_initialization_uniform[2];
-    uint8_t         octree_depth = 0;
-    uint32_t        octants_max_size = 0;
-    uint32_t        octree_total_size = 0;
-    Uniform         octree_indirect_buffer_struct;
-    Uniform         octree_indirect_buffer_struct_2;
-    Uniform         octree_state;
-    Uniform         octree_brick_buffers;
+    
+    
     Uniform         octree_preview_stroke;
-    uint32_t        stroke_context_size = 0u;
-    Uniform         octree_stroke_context;
-    uint32_t        octree_edit_list_size;
-    Uniform         octree_edit_list;
+    
     Uniform         octree_brick_copy_buffer;
     WGPUBindGroup   render_camera_bind_group = nullptr;
 
     // Stroke culling data
-    Uniform         stroke_culling_data;
     uint32_t        max_stroke_influence_count = 100u;
 
     Uniform         ray_info_uniform;
@@ -163,10 +138,9 @@ class RaymarchingRenderer {
     Uniform         preview_stroke_uniform;
     WGPUBindGroup   preview_stroke_bind_group = nullptr;
 
-    Uniform         compute_merge_data_uniform;
     Uniform         compute_stroke_buffer_uniform;
 
-    Uniform         sculpt_model_buffer_uniform;
+    Uniform         sculpts_instance_data_uniform;
 
     Uniform         sculpt_instances_buffer_uniform;
     WGPUBindGroup   sculpt_instances_bindgroup = nullptr;
@@ -188,13 +162,7 @@ class RaymarchingRenderer {
         uint32_t   padding;
     } compute_merge_data;
 
-    struct sOctreeNode {
-        glm::vec2 octant_center_distance = glm::vec2(10000.0f, 10000.0f);
-        uint32_t dummy = 0.0f;
-        uint32_t tile_pointer = 0;
-        glm::vec3 padding;
-        uint32_t culling_data = 0u;
-    };
+    
 
     struct RayInfo {
         glm::vec3 ray_origin;
@@ -303,11 +271,12 @@ public:
         preview_stroke.edit_list[preview_stroke.stroke.edit_count++] = edit;
     }
 
+    /*
+    *   Sculpt management
+    */
 
     void add_sculpt_instance(SculptInstance* instance);
     void remove_sculpt_instance(SculptInstance* instance);
-
-    GPUSculptData create_new_sculpt();
 
     void create_sculpt_from_history(SculptInstance* instance, std::vector<Stroke>& stroke_history);
 };

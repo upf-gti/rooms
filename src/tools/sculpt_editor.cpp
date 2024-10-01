@@ -1407,7 +1407,7 @@ void SculptEditor::init_ui()
 
 void SculptEditor::bind_events()
 {
-    Node::bind("go_back", [&](const std::string& signal, void* button) { RoomsEngine::switch_editor(SCENE_EDITOR); });
+    Node::bind("go_back", [&](const std::string& signal, void* button) {renderer->get_raymarching_renderer()->set_current_sculpt(nullptr); RoomsEngine::switch_editor(SCENE_EDITOR); });
 
     Node::bind("add", [&](const std::string& signal, void* button) {
         enable_tool(SCULPT);

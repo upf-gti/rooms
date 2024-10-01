@@ -56,32 +56,10 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
     bool is_openxr_available = RoomsRenderer::instance->get_openxr_available();
 
-    octree_depth = static_cast<uint8_t>(OCTREE_DEPTH);
-
-    // total size considering leaves and intermediate levels
-    octree_total_size = (pow(8, octree_depth + 1) - 1) / 7;
-
-    last_octree_level_size = octree_total_size - (pow(8, octree_depth) - 1) / 7;
-
-    uint32_t s = sizeof(ProxyInstanceData);
+    
 
     // Compute constants
-    uint32_t brick_count_in_axis = static_cast<uint32_t>(SDF_RESOLUTION / BRICK_SIZE);
-    max_brick_count = brick_count_in_axis * brick_count_in_axis * brick_count_in_axis;
-
-    empty_brick_and_removal_buffer_count = max_brick_count + (max_brick_count % 4);
-    float octree_space_scale = powf(2.0, octree_depth + 3);
-
-    // Scale the size of a brick
-    Shader::set_custom_define("WORLD_SPACE_SCALE", octree_space_scale); // Worldspace scale is 1/octree_max_width
-    Shader::set_custom_define("OCTREE_DEPTH", octree_depth);
-    Shader::set_custom_define("OCTREE_TOTAL_SIZE", octree_total_size);
-    Shader::set_custom_define("PREVIEW_PROXY_BRICKS_COUNT", PREVIEW_PROXY_BRICKS_COUNT);
-    Shader::set_custom_define("BRICK_REMOVAL_COUNT", empty_brick_and_removal_buffer_count);
-    Shader::set_custom_define("MAX_SUBDIVISION_SIZE", last_octree_level_size);
-    Shader::set_custom_define("MAX_STROKE_INFLUENCE_COUNT", max_stroke_influence_count);
-
-    brick_world_size = (SCULPT_MAX_SIZE / octree_space_scale) * 8.0f;
+    
 
     stroke_manager.set_brick_world_size(glm::vec3(brick_world_size));
 
@@ -291,11 +269,11 @@ void RaymarchingRenderer::compute_preview_edit(WGPUComputePassEncoder compute_pa
         prev_stroke_uniform_2.data = preview_stroke_uniform.data;
         prev_stroke_uniform_2.buffer_size = preview_stroke_uniform.buffer_size;
 
-        std::vector<Uniform*> uniforms = { &sculpt_model_buffer_uniform, &linear_sampler_uniform, &sdf_texture_uniform, &octree_brick_buffers, &octree_brick_copy_buffer, &sdf_material_texture_uniform, &prev_stroke_uniform_2 };
+        std::vector<Uniform*> uniforms = { &sculpts_instance_data_uniform, &linear_sampler_uniform, &sdf_texture_uniform, &octree_brick_buffers, &octree_brick_copy_buffer, &sdf_material_texture_uniform, &prev_stroke_uniform_2 };
         wgpuBindGroupRelease(render_proxy_geometry_bind_group);
         render_proxy_geometry_bind_group = webgpu_context->create_bind_group(uniforms, render_proxy_shader, 0);
 
-        uniforms = { &sculpt_model_buffer_uniform, &prev_stroke_uniform_2, &octree_brick_buffers };
+        uniforms = { &sculpts_instance_data_uniform, &prev_stroke_uniform_2, &octree_brick_buffers };
         wgpuBindGroupRelease(sculpt_data_bind_preview_group);
         sculpt_data_bind_preview_group = webgpu_context->create_bind_group(uniforms, render_preview_proxy_shader, 1);
 
@@ -348,96 +326,7 @@ void RaymarchingRenderer::compute_preview_edit(WGPUComputePassEncoder compute_pa
 
 void RaymarchingRenderer::evaluate_strokes(WGPUComputePassEncoder compute_pass)
 {
-    WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
 
-    performed_evaluation = true;
-
-#ifndef NDEBUG
-    wgpuComputePassEncoderPushDebugGroup(compute_pass, "Stroke Evaluation");
-#endif
-
-    //TODO: the evaluator only handle ONE stroke, the other should be added to the history/context
-    // First pass: evaluate the incomming strokes
-    // Must be updated per stroke, also make sure the area is reevaluated on undo
-    uint16_t eval_steps = 1;//(is_undo && strokes.empty()) ? 1 : strokes.size();
-    for (uint16_t i = 0; i < eval_steps; ++i)
-    {
-#ifndef NDEBUG
-        wgpuComputePassEncoderPushDebugGroup(compute_pass, "Octree evaluation");
-#endif
-        compute_octree_initialization_pipeline.set(compute_pass);
-
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_initialization_bind_group, 0, nullptr);
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 1, sculpt_octree_bindgroup, 0u, nullptr);
-
-        //uint32_t stroke_dynamic_offset = i * sizeof(Stroke);
-
-        //wgpuComputePassEncoderSetBindGroup(compute_pass, 1, compute_stroke_buffer_bind_group, 1, &stroke_dynamic_offset);
-
-        //wgpuComputePassEncoderSetBindGroup(compute_pass, 1, preview_stroke_bind_group, 0, nullptr);
-
-        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
-
-        int ping_pong_idx = 0;
-
-        for (int j = 0; j <= octree_depth; ++j) {
-
-            compute_octree_evaluate_pipeline.set(compute_pass);
-
-            wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_evaluate_bind_group, 0, nullptr);
-            wgpuComputePassEncoderSetBindGroup(compute_pass, 1, sculpt_octree_bindgroup, 0u, nullptr);
-            wgpuComputePassEncoderSetBindGroup(compute_pass, 2, compute_octant_usage_bind_groups[ping_pong_idx], 0, nullptr);
-            wgpuComputePassEncoderSetBindGroup(compute_pass, 3, preview_stroke_bind_group, 0, nullptr);
-
-            wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(octree_indirect_buffer_struct.data), sizeof(uint32_t) * 12u);
-
-            compute_octree_increment_level_pipeline.set(compute_pass);
-
-            wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_increment_level_bind_group, 0, nullptr);
-            wgpuComputePassEncoderSetBindGroup(compute_pass, 1, sculpt_octree_bindgroup, 0u, nullptr);
-
-            wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
-
-            ping_pong_idx = (ping_pong_idx + 1) % 2;
-        }
-
-#ifndef NDEBUG
-        wgpuComputePassEncoderPopDebugGroup(compute_pass);
-#endif
-
-#ifndef NDEBUG
-        wgpuComputePassEncoderPushDebugGroup(compute_pass, "Write to texture");
-#endif
-        // Write to texture dispatch
-        compute_octree_write_to_texture_pipeline.set(compute_pass);
-
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_write_to_texture_bind_group, 0, nullptr);
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 1, sculpt_octree_bindgroup, 0u, nullptr);
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 2, compute_octant_usage_bind_groups[ping_pong_idx], 0, nullptr);
-
-        wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(octree_indirect_buffer_struct.data), sizeof(uint32_t) * 12u);
-
-#ifndef NDEBUG
-        wgpuComputePassEncoderPopDebugGroup(compute_pass);
-#endif
-
-        compute_octree_increment_level_pipeline.set(compute_pass);
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_increment_level_bind_group, 0, nullptr);
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 1, sculpt_octree_bindgroup, 0u, nullptr);
-        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
-
-        // Clean the texture atlas bricks dispatch
-        compute_octree_brick_removal_pipeline.set(compute_pass);
-
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_indirect_brick_removal_bind_group, 0, nullptr);
-
-        wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(octree_indirect_buffer_struct.data), sizeof(uint32_t) * 8u);
-
-    }
-
-#ifndef NDEBUG
-    wgpuComputePassEncoderPopDebugGroup(compute_pass);
-#endif
 }
 
 void RaymarchingRenderer::compute_delete_sculpts(WGPUComputePassEncoder compute_pass, GPUSculptData& to_delete)
@@ -495,6 +384,7 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder, boo
         }
     }
 
+    // TODO to sculpt editor
     if (sculpts_to_process.size() > 0u) {
         // For loading a sculpt from disk
         sculpt_octree_bindgroup = sculpts_to_process.back()->get_octree_bindgroup();
@@ -511,14 +401,12 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder, boo
     bool needs_evaluation = (stroke_to_compute != nullptr);
 
     if (!(show_preview && !needs_evaluation)) {
-        // rset the brick instance counter
-        uint32_t zero = 0u;
-        webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_brick_buffers.data), sizeof(uint32_t), &(zero), sizeof(uint32_t));
+        
     }
 
     AABB aabb_pos;
 
-    if (needs_evaluation) {
+    /*if (needs_evaluation) {
 
         aabb_pos = stroke_to_compute->in_frame_stroke_aabb;
         compute_merge_data.reevaluation_AABB_min = stroke_to_compute->in_frame_stroke_aabb.center - stroke_to_compute->in_frame_stroke_aabb.half_size;
@@ -538,9 +426,9 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder, boo
         aabb_pos = preview_aabb;
         compute_merge_data.reevaluation_AABB_min = preview_aabb.center - preview_aabb.half_size;
         compute_merge_data.reevaluation_AABB_max = preview_aabb.center + preview_aabb.half_size;
-    }
+    }*/
 
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(compute_merge_data_uniform.data), 0, &(compute_merge_data), sizeof(sMergeData));
+    //webgpu_context->update_buffer(std::get<WGPUBuffer>(compute_merge_data_uniform.data), 0, &(compute_merge_data), sizeof(sMergeData));
 
     // Remove the preview tag from all the bricks
     {
@@ -550,7 +438,7 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder, boo
     }
 
     if (needs_evaluation && stroke_to_compute) {
-        upload_stroke_context_data(stroke_to_compute);
+        //upload_stroke_context_data(stroke_to_compute);
         uint32_t set_as_preview = (needs_undo) ? 0x01u : 0u;
         webgpu_context->update_buffer(std::get<WGPUBuffer>(sculpt_octree_uniform->data), sizeof(uint32_t) * 2u, &set_as_preview, sizeof(uint32_t));
 
@@ -568,15 +456,6 @@ void RaymarchingRenderer::compute_octree(WGPUCommandEncoder command_encoder, boo
     if (show_preview) {
         compute_preview_edit(compute_pass);
     }
-
-    compute_octree_brick_copy_pipeline.set(compute_pass);
-    wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_brick_copy_bind_group, 0, nullptr);
-    wgpuComputePassEncoderSetBindGroup(compute_pass, 1, sculpt_instances_bindgroup, 0, nullptr);
-    wgpuComputePassEncoderDispatchWorkgroups(compute_pass, octants_max_size / (8u * 8u * 8u), 1, 1);
-
-    compute_octree_increment_level_pipeline.set(compute_pass);
-    wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_increment_level_bind_group, 0, nullptr);
-    wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
 
     // Finalize compute_raymarching pass
     wgpuComputePassEncoderEnd(compute_pass);
@@ -609,11 +488,12 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
 
         // Index buffer for the sculpt instances and their model matrices
         // TODO: create big buffer only once
+        // TODO: this need to be mannaged better, not once per frame ALWAYS
         // uint32_t buffer_size = sculpt_count + sculpt_instances_list.size() * sculpt_instances_list.size();
         //uint32_t* buffer = new uint32_t[buffer_size];
 
         //memset(buffer, 0, sizeof(uint32_t) * buffer_size);
-        glm::mat4* matrices_list = new glm::mat4[sculpt_count];
+        sSculptInstanceData* instance_data_lists = new sSculptInstanceData[sculpt_count];
         RoomsEngine* engine_instance = static_cast<RoomsEngine*>(RoomsEngine::instance);
         SculptEditor* sculpt_editor = engine_instance->get_sculpt_editor();
         SculptInstance* current_sculpt = sculpt_editor->get_current_sculpt();
@@ -622,11 +502,19 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
         for (uint32_t i = 0u; i < sculpt_instances_count; i++) {
             uint32_t octree_id = sculpt_instances_list[i]->get_octree_id();
 
-            matrices_list[octree_id] = sculpt_instances_list[i]->get_model();
-
             if (sculpt_instances_list[i] == current_sculpt) {
                 preview_stroke.current_sculpt_idx = octree_id;
             }
+
+            // Only set the out of focus as false if we are in teh sculpt editor
+            if (current_sculpt) {
+                sculpt_instances_list[i]->set_out_of_focus(sculpt_instances_list[i] != current_sculpt);
+            } else {
+                sculpt_instances_list[i]->set_out_of_focus(false);
+            }
+
+            instance_data_lists[octree_id].model = sculpt_instances_list[i]->get_model();
+            instance_data_lists[octree_id].flags = sculpt_instances_list[i]->get_flags();
 
             /*uint32_t number_of_instances = buffer[octree_id] >> 20u;
             uint32_t instances_index = buffer[octree_id] & 0xFFFFF;
@@ -637,9 +525,9 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
 
         webgpu_context->update_buffer(std::get<WGPUBuffer>(preview_stroke_uniform.data), 0u, &(preview_stroke.current_sculpt_idx), sizeof(uint32_t));
         //webgpu_context->update_buffer(std::get<WGPUBuffer>(sculpt_instances_buffer_uniform.data), 0u, buffer, sizeof(uint32_t) * buffer_size);
-        webgpu_context->update_buffer(std::get<WGPUBuffer>(sculpt_model_buffer_uniform.data), 0u, matrices_list, sizeof(glm::mat4) * sculpt_count);
+        webgpu_context->update_buffer(std::get<WGPUBuffer>(sculpts_instance_data_uniform.data), 0u, instance_data_lists, sizeof(sSculptInstanceData) * sculpt_count);
 
-        delete[] matrices_list;
+        delete[] instance_data_lists;
         //delete[] buffer;
     }
 
@@ -704,10 +592,16 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
 
 void RaymarchingRenderer::set_current_sculpt(SculptInstance* sculpt_instance)
 {
+    if (!sculpt_instance) {
+
+    }
+
     stroke_manager.set_current_sculpt(sculpt_instance);
 
     sculpt_octree_bindgroup = sculpt_instance->get_octree_bindgroup();
     sculpt_octree_uniform = &sculpt_instance->get_octree_uniform();
+
+    current_sculpt_id = sculpt_instance->get_octree_id();
 }
 
 void RaymarchingRenderer::init_compute_octree_pipeline()
@@ -726,7 +620,6 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
     compute_octree_brick_removal_shader = RendererStorage::get_shader("data/shaders/octree/brick_removal.wgsl");
     compute_octree_brick_copy_shader = RendererStorage::get_shader("data/shaders/octree/brick_copy.wgsl");
     compute_octree_initialization_shader = RendererStorage::get_shader("data/shaders/octree/initialization.wgsl");
-    compute_octree_cleaning_shader = RendererStorage::get_shader("data/shaders/octree/clean_octree.wgsl");
     compute_octree_brick_unmark_shader = RendererStorage::get_shader("data/shaders/octree/brick_unmark.wgsl");
     sculpt_delete_shader = RendererStorage::get_shader("data/shaders/octree/sculpture_delete.wgsl");
 
@@ -752,8 +645,8 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
     sdf_material_texture_uniform.data = sdf_material_texture.get_view(WGPUTextureViewDimension_3D);
     sdf_material_texture_uniform.binding = 8; // TODO: set as 4
 
-    // Size of penultimate level
-    octants_max_size = pow(floorf(SDF_RESOLUTION / 10.0f), 3.0f);
+    //// Size of penultimate level
+    //octants_max_size = pow(floorf(SDF_RESOLUTION / 10.0f), 3.0f);
 
     // Uniforms & buffers for octree generation
     {
@@ -762,11 +655,6 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
         compute_merge_data_uniform.binding = 1;
         compute_merge_data_uniform.buffer_size = sizeof(sMergeData);
 
-        // Counters for octree merge
-        uint32_t default_vals_zero[4] = { 0, 0, 0, 0 };
-        octree_state.data = webgpu_context->create_buffer(sizeof(uint32_t) * 4, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, default_vals_zero, "octree_state");
-        octree_state.binding = 4;
-        octree_state.buffer_size = sizeof(uint32_t) * 4;
 
         // Create the brick Buffers
         // An struct that contines: a empty brick counter in the atlas, the empty brick buffer, and the data off all the instances
@@ -972,10 +860,11 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
 
     // Sculpt model buffer
     {
-        uint32_t size = sizeof(glm::mat4) * 4096u; // The current max size of instances
-        sculpt_model_buffer_uniform.data = webgpu_context->create_buffer(size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, 0u, "sculpt instance data");
-        sculpt_model_buffer_uniform.binding = 9u;
-        sculpt_model_buffer_uniform.buffer_size = size;
+        // TODO(Juan): make this array dinamic
+        uint32_t size = sizeof(sSculptInstanceData) * 1024u; // The current max size of instances
+        sculpts_instance_data_uniform.data = webgpu_context->create_buffer(size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, 0u, "sculpt instance data");
+        sculpts_instance_data_uniform.binding = 9u;
+        sculpts_instance_data_uniform.buffer_size = size;
     }
 
     {
@@ -987,7 +876,7 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
         prev_stroke_uniform_2.binding = 1u;
         prev_stroke_uniform_2.buffer_size = preview_stroke_uniform.buffer_size;
 
-        std::vector<Uniform*> uniforms = { &sculpt_model_buffer_uniform, &linear_sampler_uniform, &sdf_texture_uniform, &octree_brick_buffers, &octree_brick_copy_buffer, &sdf_material_texture_uniform, &prev_stroke_uniform_2 };
+        std::vector<Uniform*> uniforms = { &sculpts_instance_data_uniform, &linear_sampler_uniform, &sdf_texture_uniform, &octree_brick_buffers, &octree_brick_copy_buffer, &sdf_material_texture_uniform, &prev_stroke_uniform_2 };
 
         render_proxy_geometry_bind_group = webgpu_context->create_bind_group(uniforms, render_proxy_shader, 0);
         uniforms = { camera_uniform };
@@ -1021,7 +910,7 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
         uniforms = { camera_uniform };
         render_preview_camera_bind_group = webgpu_context->create_bind_group(uniforms, render_preview_proxy_shader, 0);
 
-        uniforms = {/* &sculpt_data_uniform,*/ &prev_stroke_uniform_2, &octree_brick_buffers, &sculpt_model_buffer_uniform };
+        uniforms = {/* &sculpt_data_uniform,*/ &prev_stroke_uniform_2, &octree_brick_buffers, &sculpts_instance_data_uniform };
         sculpt_data_bind_preview_group = webgpu_context->create_bind_group(uniforms, render_preview_proxy_shader, 1);
     }
 
@@ -1073,91 +962,7 @@ void RaymarchingRenderer::init_octree_ray_intersection_pipeline()
 
 void RaymarchingRenderer::upload_stroke_context_data(sToComputeStrokeData *stroke_to_compute)
 {
-    WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
-    bool recreated_edit_buffer = false, recreated_stroke_context_buffer = false;
-
-    // First check if the GPU buffers need to be resized
-    if (stroke_manager.edit_list_count > octree_edit_list_size) {
-        spdlog::info("Resized GPU edit buffer from {} to {}", octree_edit_list_size, stroke_manager.edit_list.size());
-
-        octree_edit_list_size = stroke_manager.edit_list.size();
-        octree_edit_list.destroy();
-
-        size_t edit_list_size = sizeof(Edit) * octree_edit_list_size;
-        octree_edit_list.data = webgpu_context->create_buffer(edit_list_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "edit_list");
-        octree_edit_list.binding = 7;
-        octree_edit_list.buffer_size = edit_list_size;
-
-        recreated_edit_buffer = true;
-    }
-
-    if (stroke_to_compute->in_frame_influence.strokes.size() > stroke_context_size) {
-        spdlog::info("Resized GPU stroke context buffer from {} to {}", stroke_context_size, stroke_to_compute->in_frame_influence.strokes.size());
-
-        stroke_context_size = stroke_to_compute->in_frame_influence.strokes.size();
-
-        octree_stroke_context.destroy();
-
-        size_t stroke_history_size = sizeof(uint32_t) * 4u * 4u + sizeof(sToUploadStroke) * stroke_context_size;
-        octree_stroke_context.data = webgpu_context->create_buffer(stroke_history_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "stroke_history");
-        octree_stroke_context.binding = 6;
-        octree_stroke_context.buffer_size = stroke_history_size;
-
-        recreated_stroke_context_buffer = true;
-    }
-
-    // If one of the buffers was recreated/resized, then recreate the necessary bindgroups
-    if (recreated_stroke_context_buffer || recreated_edit_buffer) {
-        std::vector<Uniform*> uniforms = { &sdf_texture_uniform, &octree_edit_list, &stroke_culling_data,
-                                           &octree_stroke_context, &octree_brick_buffers, &sdf_material_texture_uniform };
-
-        wgpuBindGroupRelease(compute_octree_write_to_texture_bind_group);
-        compute_octree_write_to_texture_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_write_to_texture_shader, 0);
-
-
-        uniforms = { &compute_merge_data_uniform, &octree_edit_list,
-                     &octree_stroke_context, &octree_brick_buffers, &stroke_culling_data };
-
-        wgpuBindGroupRelease(compute_octree_evaluate_bind_group);
-        compute_octree_evaluate_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_evaluate_shader, 0);
-    }
-
-    if (recreated_stroke_context_buffer) {
-        std::vector<Uniform*> uniforms = { &octree_indirect_buffer_struct, &octant_usage_initialization_uniform[0], &octant_usage_initialization_uniform[1],
-                                        &octree_brick_buffers, &stroke_culling_data, &octree_stroke_context };
-
-        compute_octree_initialization_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_initialization_shader, 0);
-    }
-
-    // Upload the data to the GPU
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_edit_list.data), 0, stroke_manager.edit_list.data(), sizeof(Edit) * stroke_manager.edit_list_count);
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_stroke_context.data), 0, &stroke_to_compute->in_frame_influence, sizeof(uint32_t) * 4 * 4);
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_stroke_context.data), sizeof(uint32_t) * 4 * 4, stroke_to_compute->in_frame_influence.strokes.data(), stroke_to_compute->in_frame_influence.stroke_count * sizeof(sToUploadStroke));
-
-    //spdlog::info("min aabb: {}, {}, {}", stroke_to_compute->in_frame_influence.eval_aabb_min.x, stroke_to_compute->in_frame_influence.eval_aabb_min.y, stroke_to_compute->in_frame_influence.eval_aabb_min.z);
-    //spdlog::info("max aabb: {}, {}, {}", stroke_to_compute->in_frame_influence.eval_aabb_max.x, stroke_to_compute->in_frame_influence.eval_aabb_max.y, stroke_to_compute->in_frame_influence.eval_aabb_max.z);
-}
-
-GPUSculptData RaymarchingRenderer::create_new_sculpt()
-{
-    WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
-
-    Uniform octree_uniform;
-    std::vector<sOctreeNode> octree_default(octree_total_size + 1);
-    octree_uniform.data = webgpu_context->create_buffer(sizeof(uint32_t) * 4 + octree_total_size * sizeof(sOctreeNode), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "octree");
-    octree_uniform.binding = 0;
-    octree_uniform.buffer_size = sizeof(uint32_t) * 4u + octree_total_size * sizeof(sOctreeNode);
-    // Set the id of the octree
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_uniform.data), sizeof(uint32_t) * 3, &sculpt_count, sizeof(uint32_t));
-    // Set default values of the octree
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_uniform.data), sizeof(uint32_t) * 4, octree_default.data(), sizeof(sOctreeNode) * octree_total_size);
-
-    std::vector<Uniform*> uniforms = { &octree_uniform };
-    WGPUBindGroup octree_buffer_bindgroup = webgpu_context->create_bind_group(uniforms, compute_octree_evaluate_shader, 1);
-
-    sculpt_instance_count.push_back(1u);
-
-    return { sculpt_count++, octree_uniform, octree_buffer_bindgroup };
+   
 }
 
 void RaymarchingRenderer::create_sculpt_from_history(SculptInstance* instance, std::vector<Stroke>& stroke_history)

@@ -51,6 +51,20 @@ enum ColorBlendOp : uint32_t {
     ALL_COLOR_BLENDING_OPERATIONS
 };
 
+struct sToUploadStroke {
+    uint32_t        stroke_id = 0u;
+    uint32_t        edit_count = 0u;
+    sdPrimitive     primitive;
+    sdOperation     operation;//4
+    glm::vec4	    parameters = { 0.f, -1.f, 0.f, 0.f }; // 4
+    glm::vec3	    aabb_min;// 4
+    ColorBlendOp    color_blending_op = ColorBlendOp::COLOR_OP_REPLACE;
+    glm::vec3	    aabb_max;
+    uint32_t        edit_list_index = 0u;// 4
+    // 48 bytes
+    StrokeMaterial material;
+};
+
 struct Edit {
     glm::vec3	position;
     float       dummy0;

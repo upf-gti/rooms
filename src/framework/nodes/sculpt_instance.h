@@ -10,23 +10,28 @@ struct GPUSculptData {
     uint32_t octree_id;
     Uniform octree_uniform;
     WGPUBindGroup octree_bindgroup = nullptr;
+
+    void init();
+    void clean();
 };
 
 class SculptInstance : public Node3D {
-
-    std::vector<Stroke> stroke_history;
-
     struct sSculptBinaryHeader {
         size_t stroke_count = 0;
     };
 
+    uint32_t sculpt_flags = 0u;
+    bool are_sculpt_flags_dirty = false;
+
     GPUSculptData sculpt_gpu_data;
 
-public:
+public: 
 
     SculptInstance();
     SculptInstance(SculptInstance *reference);
     ~SculptInstance();
+
+    void update(float delta_time);
 
     std::vector<Stroke>& get_stroke_history();
 
@@ -53,6 +58,12 @@ public:
     inline void set_sculpt_data(const GPUSculptData& new_data) {
         sculpt_gpu_data = new_data;
     }
+
+    inline uint32_t get_flags() {
+        return sculpt_flags;
+    }
+
+    void set_out_of_focus(const bool oof);
 
     void initialize();
 
