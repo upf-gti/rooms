@@ -5,6 +5,9 @@
 #include <vector>
 
 class Group3D : public Node3D {
+
+    static uint32_t last_uid;
+
 public:
 
     Group3D();

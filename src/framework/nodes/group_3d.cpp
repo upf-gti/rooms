@@ -2,9 +2,12 @@
 
 #include "framework/math/intersections.h"
 
+uint32_t Group3D::last_uid = 0;
+
 Group3D::Group3D()
 {
     node_type = "Group3D";
+    name = "Group" + std::to_string(last_uid++);
 }
 
 bool Group3D::test_ray_collision(const glm::vec3& ray_origin, const glm::vec3& ray_direction, float& distance)
@@ -17,9 +20,7 @@ bool Group3D::test_ray_collision(const glm::vec3& ray_origin, const glm::vec3& r
             continue;
         }
 
-        float node_distance = 1e10f;
-
-        if (node_3d->test_ray_collision(ray_origin, ray_direction, node_distance)) {
+        if (node_3d->test_ray_collision(ray_origin, ray_direction, distance)) {
             return true;
         }
     }

@@ -77,11 +77,17 @@ void SceneEditor::update(float delta_time)
     update_hovered_node();
 
     const bool sculpt_hovered = hovered_node && dynamic_cast<SculptInstance*>(hovered_node);
+    const bool group_hovered = hovered_node && dynamic_cast<Group3D*>(hovered_node);
 
     // Clone if hovering the node
-    if (hovered_node && Input::was_button_pressed(XR_BUTTON_A)) {
+    bool a_or_click = Input::was_button_pressed(XR_BUTTON_A) || Input::was_mouse_pressed(GLFW_MOUSE_BUTTON_LEFT);
+    if (hovered_node && a_or_click){
 
-        if (grouping_node) {
+        if (group_hovered) {
+            // TODO: Edit group functionality
+            // ...
+        }
+        else if (grouping_node) {
             process_group();
         }
         else if (is_shift_right_pressed) {
@@ -165,8 +171,21 @@ void SceneEditor::render()
 void SceneEditor::render_gui()
 {
     ImGui::Text("Hovered Node");
+
     if (hovered_node) {
-        ImGui::Text("%s", hovered_node->get_name().c_str());
+
+        ImGui::OpenPopup("context_menu_popup");
+
+        if (ImGui::BeginPopup("context_menu_popup")) {
+            if (ImGui::MenuItem("Clone")) {
+                // Handle clone action..
+            }
+            if (ImGui::MenuItem("Delete")) {
+                // Handle delete action..
+            }
+
+            ImGui::EndPopup();
+        }
     }
 }
 
@@ -211,6 +230,7 @@ void SceneEditor::update_hovered_node()
         if (node_3d->test_ray_collision(ray_origin, ray_direction, node_distance)) {
 
             if (node_distance < distance) {
+                distance = node_distance;
                 hovered_node = node;
             }
         }
@@ -475,22 +495,39 @@ void SceneEditor::group_node(Node* node)
 
 void SceneEditor::process_group()
 {
-    //TODO: Get this right..
-    bool group_exists = false;
+    Node3D* hovered_3d = static_cast<Node3D*>(hovered_node);
+    Node3D* to_group_3d = static_cast<Node3D*>(node_to_group);
 
-    if (group_exists) {
-        // Add to group
-        // TODO: cHANGE THIS to get the correct group...
-        Group3D* group = new Group3D();
-        //  ....
-        group->add_child(static_cast<Node3D*>(hovered_node));
+    // Check if current hover has group... (parent)
+    Group3D* group = dynamic_cast<Group3D*>(hovered_3d->get_parent());
+
+    if (group) {
+        // Add first node to the same group as the current hover
+        main_scene->remove_node(to_group_3d);
+        group->add_child(to_group_3d);
     }
     else {
-        // Create new group
+
+        // Remove nodes from main scene
+        main_scene->remove_node(to_group_3d);
+        main_scene->remove_node(hovered_3d);
+
+        // Create new group and add the nodes
         Group3D* new_group = new Group3D();
-        new_group->add_child(static_cast<Node3D*>(node_to_group));
-        new_group->add_child(static_cast<Node3D*>(hovered_node));
+        new_group->add_child(to_group_3d);
+        new_group->add_child(hovered_3d);
+        main_scene->add_node(new_group);
+
+        spdlog::info("group processed. {} nodes in scene. {} nodes in group", main_scene->get_nodes().size(), new_group->get_children().size());
     }
+
+    grouping_node = false;
+    inspector_dirty = true;
+}
+
+void SceneEditor::edit_group()
+{
+    editing_group = true;
 }
 
 void SceneEditor::create_light_node(uint8_t type)
@@ -620,10 +657,15 @@ void SceneEditor::generate_shortcuts()
 
     if (hovered_node) {
 
+        Node3D* hover_3d = static_cast<Node3D*>(hovered_node);
+        bool group_exists = !!hover_3d->get_parent();
+
         if (grouping_node) {
-            //TODO: Get this right..
-            bool group_exists = false;
             shortcuts[group_exists ? shortcuts::ADD_TO_GROUP : shortcuts::CREATE_GROUP] = true;
+        }
+        // If hovering a node with group
+        else if (group_exists) {
+            shortcuts[shortcuts::EDIT_GROUP] = !is_shift_right_pressed;
         }
         else {
             shortcuts[shortcuts::CLONE_NODE] = !is_shift_right_pressed;
@@ -669,7 +711,7 @@ void SceneEditor::update_node_rotation()
     // Do not rotate sculpt if shift -> we might be rotating the edit
     if (selected_node && is_rotation_being_used() && !is_shift_left_pressed) {
 
-        glm::quat current_hand_rotation = (Input::get_controller_rotation(HAND_LEFT));
+        glm::quat current_hand_rotation = Input::get_controller_rotation(HAND_LEFT);
         glm::vec3 current_hand_translation = Input::get_controller_position(HAND_LEFT);
 
         if (!rotation_started) {
@@ -711,6 +753,9 @@ void SceneEditor::inspector_from_scene(bool force)
         }
         else if (dynamic_cast<SculptInstance*>(node)) {
             inspect_node(node, NODE_SCULPT);
+        }
+        else if (dynamic_cast<Group3D*>(node)) {
+            inspect_node(node, NODE_GROUP);
         }
         else {
             inspect_node(node);
@@ -767,7 +812,8 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
                 // TODO: do this in the on_enter of the sculpt editor passing the current node
                 static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(static_cast<SculptInstance*>(n));
             }
-            else {
+            else if (dynamic_cast<Group3D*>(n)) {
+                // TODO: Open group scene
                 // ...
             }
         });
@@ -810,7 +856,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
     }
 
     // Remove button
-    {
+    if (flags & NODE_DELETE) {
         std::string signal = node_name + std::to_string(node_signal_uid++) + "_remove";
         inspector->button(signal, "data/textures/delete.png");
 
