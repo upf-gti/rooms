@@ -23,8 +23,6 @@ public:
     void clean();
 };
 
-
-
 class SculptManager {
     uint32_t        sculpt_count = 0u;
 
@@ -38,9 +36,9 @@ class SculptManager {
 
     // Sculpt evaluation
     //TODO: Rename Evaluator intialization 
-    Pipeline        compute_octree_initialization_pipeline;
-    Shader* compute_octree_initialization_shader = nullptr;
-    WGPUBindGroup   compute_octree_initialization_bind_group = nullptr;
+    Pipeline        evaluation_initialization_pipeline;
+    Shader* evaluation_initialization_shader = nullptr;
+    WGPUBindGroup   evaluation_initialization_bind_group = nullptr;
 
     Pipeline evaluate_pipeline;
     Pipeline increment_level_pipeline;
@@ -59,6 +57,8 @@ class SculptManager {
     WGPUBindGroup   write_to_texture_bind_group = nullptr;
     WGPUBindGroup   indirect_brick_removal_bind_group = nullptr;
     WGPUBindGroup   brick_copy_bind_group = nullptr;
+    WGPUBindGroup   sculpt_delete_bindgroup = nullptr;
+
 
     // Evaluator uniforms
     Uniform         merge_data_uniform;
@@ -73,16 +73,17 @@ class SculptManager {
 
 
     // TODO: Same buffers with diferent bidings 
-    Uniform         octant_usage_uniform[4];
+    Uniform         octant_usage_ping_pong_uniforms[4];
     Uniform         octant_usage_initialization_uniform[2];
-    WGPUBindGroup   octant_usage_bind_groups[2] = {};
+    WGPUBindGroup   octant_usage_ping_pong_bind_groups[2] = {};
 
 
     Uniform         octree_indirect_buffer_struct;
     Uniform         octree_indirect_buffer_struct_2;
 
     struct {
-        Uniform         octree_brick_buffers;
+        Uniform         brick_buffers;
+        Uniform         brick_copy_buffer;
 
         Texture         sdf_texture;
         Uniform         sdf_texture_uniform;
@@ -109,7 +110,19 @@ class SculptManager {
         uint32_t culling_data = 0u;
     };
 
+    // Data needed for sdf merging
+    struct sMergeData {
+        glm::vec3  reevaluation_AABB_min;
+        uint32_t   reevaluate = 0u;
+        glm::vec3  reevaluation_AABB_max;
+        uint32_t   padding;
+    } compute_merge_data;
+
     void upload_strokes_and_edits(const std::vector<sToUploadStroke>& strokes_to_compute, const std::vector<Edit>& edits_to_upload);
+
+    void init_uniforms();
+    void load_shaders();
+    void init_pipelines_and_bindgroups();
 
 public:
     void init();

@@ -111,16 +111,13 @@ class RaymarchingRenderer {
     
     WGPUBindGroup   compute_stroke_buffer_bind_group = nullptr;
     WGPUBindGroup   compute_octree_brick_unmark_bind_group = nullptr;
-    WGPUBindGroup   brick_buffer_bindgroup = nullptr;
     
     
     Uniform         octree_preview_stroke;
     
-    Uniform         octree_brick_copy_buffer;
     WGPUBindGroup   render_camera_bind_group = nullptr;
 
-    // Stroke culling data
-    uint32_t        max_stroke_influence_count = 100u;
+    
 
     Uniform         ray_info_uniform;
     Uniform         ray_intersection_info_uniform;
@@ -154,13 +151,7 @@ class RaymarchingRenderer {
     //    glm::quat sculpt_inv_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
     //} sculpt_data;
 
-    // Data needed for sdf merging
-    struct sMergeData {
-        glm::vec3  reevaluation_AABB_min;
-        uint32_t   reevaluate = 0u;
-        glm::vec3  reevaluation_AABB_max;
-        uint32_t   padding;
-    } compute_merge_data;
+    
 
     
 
