@@ -9,7 +9,7 @@ void StrokeManager::init() {
     result_to_compute.set_defaults();
 
     edit_list.resize(EDIT_BUFFER_INITIAL_SIZE);
-    result_to_compute.in_frame_influence.strokes.resize(STROKE_CONTEXT_INTIAL_SIZE);
+    result_to_compute.in_frame_influence.strokes.resize(STROKE_CONTEXT_INITIAL_SIZE);
 }
 
 void StrokeManager::add_stroke_to_upload_list(sStrokeInfluence& influence, const Stroke& stroke) {
@@ -302,7 +302,8 @@ void StrokeManager::change_stroke(const StrokeParameters& params, const uint32_t
     spdlog::info("change stroke1");
 }
 
-sToComputeStrokeData* StrokeManager::new_history_add(std::vector<Stroke>* new_history) {
+sToComputeStrokeData* StrokeManager::new_history_add(std::vector<Stroke>* new_history)
+{
     result_to_compute.set_defaults();
     edit_list_count = 0u;
 

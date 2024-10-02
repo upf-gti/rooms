@@ -6,14 +6,7 @@
 
 #include <vector>
 
-struct GPUSculptData {
-    uint32_t octree_id;
-    Uniform octree_uniform;
-    WGPUBindGroup octree_bindgroup = nullptr;
-
-    void init();
-    void clean();
-};
+class Sculpt;
 
 class SculptInstance : public Node3D {
     struct sSculptBinaryHeader {
@@ -23,7 +16,7 @@ class SculptInstance : public Node3D {
     uint32_t sculpt_flags = 0u;
     bool are_sculpt_flags_dirty = false;
 
-    GPUSculptData sculpt_gpu_data;
+    Sculpt* sculpt_gpu_data;
 
 public: 
 
@@ -35,28 +28,12 @@ public:
 
     std::vector<Stroke>& get_stroke_history();
 
-    inline Uniform& get_octree_uniform() {
-        return sculpt_gpu_data.octree_uniform;
-    }
-
-    inline WGPUBindGroup get_octree_bindgroup() const {
-        return sculpt_gpu_data.octree_bindgroup;
-    }
-
-    inline void set_octree_uniform(const Uniform& uni) {
-        sculpt_gpu_data.octree_uniform = uni;
-    }
-
-    inline void set_octree_bindgroup(const WGPUBindGroup bindgroup) {
-        sculpt_gpu_data.octree_bindgroup = bindgroup;
-    }
-
-    inline uint32_t get_octree_id() const {
-        return sculpt_gpu_data.octree_id;
-    }
-
-    inline void set_sculpt_data(const GPUSculptData& new_data) {
+    inline void set_sculpt_data(Sculpt* new_data) {
         sculpt_gpu_data = new_data;
+    }
+
+    inline Sculpt* get_sculpt_data() {
+        return sculpt_gpu_data;
     }
 
     inline uint32_t get_flags() {

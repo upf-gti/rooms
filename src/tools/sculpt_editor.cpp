@@ -37,6 +37,10 @@ void SculptEditor::initialize()
 {
     renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
 
+    sSDFGlobals& sdf_globals = renderer->get_sdf_globals();
+
+    stroke_manager.set_brick_world_size(glm::vec3(sdf_globals.brick_world_size));
+
     mirror_mesh = new MeshInstance3D();
     mirror_mesh->add_surface(RendererStorage::get_surface("quad"));
     mirror_mesh->scale(glm::vec3(0.25f));
@@ -642,12 +646,15 @@ void SculptEditor::update(float delta_time)
     // Push to the renderer the edits and the previews
     renderer->push_preview_edit_list(preview_tmp_edits);
     renderer->push_edit_list(new_edits);
+    stroke_manager.add(new_edits);
 
     if (is_tool_used) {
         renderer->toogle_frame_debug();
     }
 
     was_tool_used = is_tool_used;
+
+    stroke_manager.update();
 
     /*if (was_tool_used) {
         renderer->get_raymarching_renderer()->get_brick_usage([](float pct, uint32_t brick_count) {
@@ -796,7 +803,7 @@ void SculptEditor::undo()
     }
     else {
         renderer->toogle_frame_debug();
-        renderer->undo();
+        stroke_manager.undo();
     }
 }
 
@@ -807,7 +814,7 @@ void SculptEditor::redo()
     }
 
     renderer->toogle_frame_debug();
-    renderer->redo();
+    stroke_manager.redo();
 }
 
 void SculptEditor::render()

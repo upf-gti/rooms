@@ -7,13 +7,45 @@
 
 #include "raymarching_renderer.h"
 
-// #define DISABLE_RAYMARCHER
+#define DISABLE_RAYMARCHER
+
+class SculptManager;
+
+struct sSDFGlobals {
+    Uniform         brick_buffers;
+    Uniform         brick_copy_buffer;
+
+    Texture         sdf_texture;
+    Uniform         sdf_texture_uniform;
+
+    Texture         sdf_material_texture;
+    Uniform         sdf_material_texture_uniform;
+
+    // Octree creation params
+    uint8_t         octree_depth = 0;
+    uint32_t        octants_max_size = 0;
+    uint32_t        octree_total_size = 0;
+    uint32_t        octree_last_level_size = 0u;
+    uint32_t        max_brick_count = 0u;
+    uint32_t        empty_brick_and_removal_buffer_count = 0u;
+    float           brick_world_size = 0.0f;
+};
 
 class RoomsRenderer : public Renderer {
 
     RaymarchingRenderer raymarching_renderer;
+    SculptManager*      sculpt_manager = nullptr;
 
     float last_evaluation_time = 0.0f;
+
+    sSDFGlobals sdf_globals;
+
+    struct ProxyInstanceData {
+        glm::vec3 position;
+        uint32_t atlas_index;
+        uint32_t octree_parent_index;
+        uint32_t padding[3];
+    };
 
 public:
 
@@ -23,10 +55,18 @@ public:
     int initialize(GLFWwindow* window, bool use_mirror_screen = false) override;
     void clean() override;
 
+    void init_sdf_globals();
+
     void update(float delta_time) override;
     void render() override;
 
     RaymarchingRenderer* get_raymarching_renderer() { return &raymarching_renderer; }
+    SculptManager* get_sculpt_manager() { return sculpt_manager; }
+
+    sSDFGlobals& get_sdf_globals() {
+        return sdf_globals;
+    }
+
     float get_last_evaluation_time() { return last_evaluation_time; }
 
     /*
@@ -37,10 +77,6 @@ public:
         raymarching_renderer.change_stroke(params, index);
 
     }
-
-    void push_edit(Edit edit) {
-        raymarching_renderer.push_edit(edit);
-    };
 
     void push_edit_list(std::vector<Edit> &edits) {
 #ifndef DISABLE_RAYMARCHER
@@ -54,14 +90,6 @@ public:
             raymarching_renderer.add_preview_edit(edits[i]);
         }
 #endif
-    }
-
-    void undo() {
-        raymarching_renderer.undo();
-    }
-
-    void redo() {
-        raymarching_renderer.redo();
     }
 
     inline void set_preview_edit(const Edit& stroke) {

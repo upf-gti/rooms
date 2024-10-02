@@ -1,6 +1,7 @@
 #pragma once
 
 #include "includes.h"
+#include "rooms_includes.h"
 
 #include "graphics/pipeline.h"
 #include "graphics/edit.h"
@@ -12,23 +13,6 @@
 #include "stroke_manager.h"
 
 #include <list>
-
-#define OCTREE_DEPTH 6
-#define BRICK_SIZE 10u
-#define SSAA_SDF_WRITE_TO_TEXTURE false
-#define PREVIEW_EDITS_MAX 128
-#define SDF_RESOLUTION 400
-#define SCULPT_MAX_SIZE 1 // meters
-#define PREVIEW_PROXY_BRICKS_COUNT 7000u
-
-#define MIN_SMOOTH_FACTOR 0.0001f
-#define MAX_SMOOTH_FACTOR 0.02f
-
-#define MIN_PRIMITIVE_SIZE 0.005f
-#define MAX_PRIMITIVE_SIZE 0.08f
-
-#define PREVIEW_BASE_EDIT_LIST 200u
-#define PREVIEW_EDIT_LIST_INCREMENT 200u
 
 class MeshInstance3D;
 
@@ -69,8 +53,6 @@ class RaymarchingRenderer {
     std::vector<uint32_t> sculpt_instance_count;
     std::vector<SculptInstance*> sculpt_instances_list;
 
-    std::vector<GPUSculptData> sculpts_to_delete;
-    std::vector<GPUSculptData> sculpts_to_clean;
     std::vector<SculptInstance*> sculpts_to_process;
 
     Uniform         linear_sampler_uniform;
@@ -95,7 +77,7 @@ class RaymarchingRenderer {
         uint32_t preview_instance_counter;
     };
 
-    WGPUBuffer     brick_buffers_counters_read_buffer = nullptr;
+    //WGPUBuffer     brick_buffers_counters_read_buffer = nullptr;
 
     Uniform* sculpt_octree_uniform = nullptr;
     WGPUBindGroup sculpt_octree_bindgroup = nullptr;
@@ -164,8 +146,6 @@ class RaymarchingRenderer {
 
     RayIntersectionInfo ray_intersection_info;
 
-    StrokeManager   stroke_manager = {};
-
     uint32_t preview_edit_array_length = 0u;
     struct sPreviewStroke {
         uint32_t current_sculpt_idx;
@@ -178,15 +158,6 @@ class RaymarchingRenderer {
         AABB get_AABB() const;
     } preview_stroke;
 
-    std::vector<Edit> incoming_edits;
-
-    struct ProxyInstanceData {
-        glm::vec3 position;
-        uint32_t atlas_index;
-        uint32_t octree_parent_index;
-        uint32_t padding[3];
-    };
-
     // Timestepping counters
     float updated_time = 0.0f;
 
@@ -196,14 +167,7 @@ class RaymarchingRenderer {
 
     void upload_stroke_context_data(sToComputeStrokeData* stroke_to_compute);
 
-    void compute_delete_sculpts(WGPUComputePassEncoder compute_pass, GPUSculptData& to_delete);
-
-    void evaluate_strokes(WGPUComputePassEncoder compute_pass);
-
     void compute_preview_edit(WGPUComputePassEncoder compute_pass);
-
-    bool needs_undo = false;
-    bool needs_redo = false;
 
     bool performed_evaluation = false;
 
@@ -221,13 +185,6 @@ public:
 
     void compute_octree(WGPUCommandEncoder command_encoder, bool show_previews = false);
     void render_raymarching_proxy(WGPURenderPassEncoder render_pass, uint32_t camera_buffer_stride = 0);
-
-    inline void redo() {
-        needs_redo = true;
-    }
-    inline void undo() {
-        needs_undo = true;
-    }
 
     bool has_performed_evaluation() { return performed_evaluation; }
 
@@ -247,14 +204,6 @@ public:
     void initialize_stroke();
     void change_stroke(const StrokeParameters& params, const uint32_t index_increment = 1u);
 
-    void push_edit(const Edit edit);
-
-    void push_edit_list(std::vector<Edit> &new_edits) {
-        for (const Edit &edit : new_edits) {
-            push_edit(edit);
-        }
-    }
-
     inline void add_preview_edit(const Edit& edit) {
         if (preview_stroke.stroke.edit_count == preview_stroke.edit_list.size()) {
             preview_stroke.edit_list.resize(preview_stroke.edit_list.size() + PREVIEW_EDIT_LIST_INCREMENT);
@@ -268,6 +217,4 @@ public:
 
     void add_sculpt_instance(SculptInstance* instance);
     void remove_sculpt_instance(SculptInstance* instance);
-
-    void create_sculpt_from_history(SculptInstance* instance, std::vector<Stroke>& stroke_history);
 };

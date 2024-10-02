@@ -5,6 +5,8 @@
 
 #include <fstream>
 
+#include "framework/resources/sculpt.h"
+
 SculptInstance::SculptInstance() : Node3D()
 {
     node_type = "SculptInstance";
@@ -16,9 +18,8 @@ SculptInstance::SculptInstance(SculptInstance* reference) : Node3D()
     node_type = "SculptInstance";
     collider_shape = COLLIDER_SHAPE_CUSTOM;
 
-    sculpt_gpu_data.octree_uniform = reference->get_octree_uniform();
-    sculpt_gpu_data.octree_bindgroup = reference->get_octree_bindgroup();
-    sculpt_gpu_data.octree_id = reference->get_octree_id();
+    sculpt_gpu_data = reference->get_sculpt_data();
+    sculpt_gpu_data->ref();
 
     dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->add_sculpt_instance(this);
 }
@@ -29,7 +30,7 @@ SculptInstance::~SculptInstance()
 
     dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->remove_sculpt_instance(this);
 
-    stroke_history.clear();
+    sculpt_gpu_data->unref();
 }
 
 
@@ -37,14 +38,9 @@ void SculptInstance::update(float delta_time) {
 
 }
 
-std::vector<Stroke>& SculptInstance::get_stroke_history()
-{
-    return stroke_history;
-}
-
 void SculptInstance::initialize()
 {
-    sculpt_gpu_data = dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->create_new_sculpt();
+    sculpt_gpu_data = dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_sculpt_manager()->create_sculpt();
 
     dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->add_sculpt_instance(this);
 }
@@ -52,9 +48,8 @@ void SculptInstance::initialize()
 void SculptInstance::from_history(const std::vector<Stroke>& new_history)
 {
     if (!new_history.empty()) {
-        stroke_history = new_history;
         RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
-        rooms_renderer->get_raymarching_renderer()->create_sculpt_from_history(this, stroke_history);
+        sculpt_gpu_data = rooms_renderer->get_sculpt_manager()->create_sculpt_from_history(new_history);
         rooms_renderer->get_raymarching_renderer()->add_sculpt_instance(this);
     }
     else {
@@ -87,7 +82,7 @@ void SculptInstance::parse(std::ifstream& binary_scene_file)
     RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
 
     if (header.stroke_count > 0u) {
-        stroke_history.resize(header.stroke_count);
+        sculpt->stroke_history.resize(header.stroke_count);
         binary_scene_file.read(reinterpret_cast<char*>(&stroke_history[0]), header.stroke_count * sizeof(Stroke));
         rooms_renderer->get_raymarching_renderer()->create_sculpt_from_history(this, stroke_history);
     } else {

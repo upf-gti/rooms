@@ -7,6 +7,8 @@
 #include "framework/ui/gizmo_3d.h"
 #include "framework/math/spline.h"
 
+#include "graphics/managers/stroke_manager.h"
+
 #include <map>
 
 enum eTool : uint8_t {
@@ -53,6 +55,8 @@ class SculptEditor : public BaseEditor {
     MeshInstance3D* sculpt_area_box = nullptr;
 
     SculptInstance* current_sculpt = nullptr;
+
+    StrokeManager   stroke_manager = {};
 
     bool sculpt_started = false;
     bool was_tool_used = false;

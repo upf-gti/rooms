@@ -30,6 +30,7 @@ fn compute(@builtin(global_invocation_id) id: vec3<u32>)
     indirect_buffers.brick_removal_counter = brick_buffers.brick_removal_counter;
 
     if (level == 0u) {
+        // TODO: check what happens with preview
         brick_buffers.brick_instance_counter = 0u;
     }
 

@@ -4,12 +4,6 @@
 
 #include <vector>
 
-#define EDIT_BUFFER_INITIAL_SIZE 256u
-#define EDIT_BUFFER_INCREASE 256u
-#define STROKE_CONTEXT_INTIAL_SIZE 100u
-#define STROKE_CONTEXT_INCREASE 100u
-#define AREA_MAX_EVALUATION_SIZE  (1.0f / 4.0f)
-
 class SculptInstance;
 
 struct sStrokeInfluence {

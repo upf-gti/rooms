@@ -85,9 +85,9 @@ struct Stroke {
 
 struct StrokeHistory {
     count : u32,
-    pad0:u32,
-    pad1:u32,
-    pad2:u32,
+    pad0: u32,
+    pad1: u32,
+    pad2: u32,
     eval_aabb_min : vec3f,
     pad3 : f32,
     eval_aabb_max : vec3f,

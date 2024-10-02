@@ -45,6 +45,10 @@ int RoomsEngine::initialize(Renderer* renderer, sEngineConfiguration configurati
 
     main_scene = new Scene("main_scene");
 
+    std::vector<Node*> controller;
+    parse_gltf("data/meshes/controllers/left_controller.glb", controller);
+    main_scene->add_nodes(controller);
+
     environment = new Environment3D();
 
     // Meta Quest Controllers
@@ -325,6 +329,8 @@ void RoomsEngine::toggle_tutorial()
 
 void RoomsEngine::render_gui()
 {
+    ImGui::ShowDemoWindow();
+
     render_default_gui();
 
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
