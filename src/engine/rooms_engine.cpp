@@ -5,8 +5,8 @@
 #include "framework/nodes/viewport_3d.h"
 #include "framework/nodes/sculpt_instance.h"
 #include "framework/input.h"
-#include "framework/scene/parse_scene.h"
-#include "framework/scene/parse_gltf.h"
+#include "framework/parsers/parse_scene.h"
+#include "framework/parsers/parse_gltf.h"
 #include "framework/utils/utils.h"
 #include "framework/ui/io.h"
 #include "framework/ui/keyboard.h"
@@ -211,6 +211,13 @@ void RoomsEngine::update(float delta_time)
 
 void RoomsEngine::render()
 {
+
+#ifndef __EMSCRIPTEN__
+    if (show_imgui) {
+        render_gui();
+    }
+#endif
+
     cursor.render();
 
     ui::Keyboard::render();
@@ -246,12 +253,6 @@ void RoomsEngine::render()
         sphere_pointer->scale(glm::vec3(0.1f));
         sphere_pointer->render();
     }
-
-#ifndef __EMSCRIPTEN__
-    if (show_imgui) {
-        render_gui();
-    }
-#endif
 
     Engine::render();
 }

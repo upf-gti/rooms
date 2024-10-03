@@ -32,24 +32,6 @@ endif()
 
 add_definitions(-D_SILENCE_STDEXT_ARR_ITERS_DEPRECATION_WARNING)
 
-# Macro to map filters to folder structure for MSVC projects
-macro(GroupSources curdir)
-    if(MSVC)
-		file(GLOB children RELATIVE ${PROJECT_SOURCE_DIR}/${curdir} ${PROJECT_SOURCE_DIR}/${curdir}/*)
-
-        foreach(child ${children})
-            if(IS_DIRECTORY ${PROJECT_SOURCE_DIR}/${curdir}/${child})
-                GroupSources(${curdir}/${child})
-            else()
-                string(REPLACE "/" "\\" groupname ${curdir})
-                source_group(${groupname} FILES ${PROJECT_SOURCE_DIR}/${curdir}/${child})
-            endif()
-        endforeach()
-    endif()
-endmacro()
-
-GroupSources(src)
-
 # Sources
 macro(ROOMS_FILES_APPEND)
     file(GLOB FILES_APPEND CONFIGURE_DEPENDS ${ARGV})
@@ -68,6 +50,8 @@ ROOMS_SOURCES_APPEND(${ROOMS_DIR_SOURCES}/tools)
 ROOMS_SOURCES_APPEND(${ROOMS_DIR_SOURCES}/framework)
 ROOMS_SOURCES_APPEND(${ROOMS_DIR_SOURCES}/framework/nodes)
 ROOMS_SOURCES_APPEND(${ROOMS_DIR_SOURCES}/framework/ui)
+
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${ROOMS_SOURCES} ${ROOMS_SOURCES})
 
 add_executable(${PROJECT_NAME} ${ROOMS_SOURCES})
 
