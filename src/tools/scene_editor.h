@@ -19,10 +19,12 @@ enum InspectNodeFlags {
     NODE_ICON = 1 << 1,
     NODE_VISIBILITY = 1 << 2,
     NODE_EDIT = 1 << 3,
-    NODE_ANIMATE = 1 << 4,
-    NODE_STANDARD = NODE_NAME | NODE_VISIBILITY | NODE_ANIMATE,
+    NODE_DELETE = 1 << 4,
+    NODE_ANIMATE = 1 << 5,
+    NODE_STANDARD = NODE_NAME | NODE_VISIBILITY | NODE_ANIMATE | NODE_DELETE,
     NODE_LIGHT = NODE_STANDARD,
-    NODE_SCULPT = NODE_STANDARD | NODE_EDIT
+    NODE_SCULPT = NODE_STANDARD | NODE_EDIT,
+    NODE_GROUP = NODE_NAME | NODE_VISIBILITY | NODE_EDIT
 };
 
 namespace shortcuts {
@@ -62,19 +64,27 @@ class SceneEditor : public BaseEditor {
     void set_gizmo_scale();
 
     /*
-    *   Node actions
+    *   Node stuff
     */
 
     bool moving_node = false;
-    bool grouping_node = false;
-    Node* node_to_group = nullptr;
 
     void select_node(Node* node, bool place = true);
     void clone_node(Node* node, bool copy = true);
     void group_node(Node* node);
-    void process_group();
-
     void create_light_node(uint8_t type);
+    void process_node_hovered();
+
+    /*
+    *   Group stuff
+    */
+
+    bool grouping_node = false;
+    bool editing_group = false;
+    Node* node_to_group = nullptr;
+
+    void process_group();
+    void edit_group();
 
     /*
     *   UI
@@ -88,6 +98,8 @@ class SceneEditor : public BaseEditor {
     ui::Inspector* inspector = nullptr;
     Viewport3D* inspect_panel_3d = nullptr;
 
+    std::unordered_map<uint8_t, bool> shortcuts;
+
     void init_ui();
     void bind_events();
 
@@ -95,7 +107,6 @@ class SceneEditor : public BaseEditor {
     void inspect_node(Node* node, uint32_t flags = NODE_STANDARD, const std::string& texture_path = "");
     void inspect_light();
     void update_panel_transform();
-    void generate_shortcuts() override;
 
     bool rotation_started = false;
     glm::quat last_hand_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -103,6 +114,7 @@ class SceneEditor : public BaseEditor {
 
     bool is_rotation_being_used();
     void update_node_rotation();
+    void update_hovered_node();
 
 
     /*
@@ -129,6 +141,4 @@ public:
 
     void set_main_scene(Scene* new_scene) { main_scene = new_scene; };
     void set_inspector_dirty() { inspector_dirty = true; };
-
-    void update_hovered_node();
 };

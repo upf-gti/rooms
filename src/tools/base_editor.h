@@ -48,7 +48,7 @@ protected:
     Viewport3D* xr_panel_3d = nullptr;
 
     // Shortcuts
-    virtual void generate_shortcuts() = 0;
+    virtual void generate_shortcuts() {}
     void update_shortcuts(const std::unordered_map<uint8_t, bool>& active_shortcuts);
 
 public:
