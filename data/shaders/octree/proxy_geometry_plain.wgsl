@@ -66,7 +66,8 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     let tile_pointer : u32 = ray_intersection_info.tile_pointer;
 
     var vertex_in_sculpt_space : vec3f = in.position * BRICK_WORLD_SIZE * 0.5 + instance_data.position;
-    var vertex_in_world_space : vec4f = (sculpt_instance_data[model_index].model * vec4f(vertex_in_sculpt_space, 1.0));
+    //var vertex_in_world_space : vec4f = (sculpt_instance_data[model_index].model * vec4f(vertex_in_sculpt_space, 1.0));
+    var vertex_in_world_space : vec4f = (mat4x4f(1.0, 0.0, 0.0, 0.0,  0.0, 1.0, 0.0, 0.0,   0.0, 0.0, 1.0, 0.0,     0.0, 0.0, 0.0, 1.0) * vec4f(vertex_in_sculpt_space, 1.0));
 
     // let model_mat = mat4x4f(vec4f(BOX_SIZE, 0.0, 0.0, 0.0), vec4f(0.0, BOX_SIZE, 0.0, 0.0), vec4f(0.0, 0.0, BOX_SIZE, 0.0), vec4f(instance_pos.x, instance_pos.y, instance_pos.z, 1.0));
 
@@ -305,15 +306,15 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
     if (exit == 1u ) {
         // From atlas position, to sculpt, to world
         let position_in_sculpt : vec3f = ray_origin_in_sculpt_space + ray_dir * (depth / SCULPT_TO_ATLAS_CONVERSION_FACTOR);
-        let world_space_position : vec3f = (sculpt_instance_data[model_index].model * vec4f(position_in_sculpt, 1.0)).xyz;
+        let world_space_position : vec3f = (mat4x4f(1.0, 0.0, 0.0, 0.0,  0.0, 1.0, 0.0, 0.0,   0.0, 0.0, 1.0, 0.0,     0.0, 0.0, 0.0, 1.0) * vec4f(position_in_sculpt, 1.0)).xyz;
 
         let epsilon : f32 = 0.000001; // avoids flashing when camera inside sdf
         let proj_pos : vec4f = view_proj * vec4f(world_space_position + ray_dir * epsilon, 1.0);
         depth = proj_pos.z / proj_pos.w;
 
         let normal : vec3f = estimate_normal_atlas(position_in_atlas);
-        let normal_world : vec3f = (sculpt_instance_data[model_index].model * vec4f(normal, 0.0)).xyz;
-        let ray_dir_world : vec3f = (sculpt_instance_data[model_index].model * vec4f(ray_dir, 0.0)).xyz;
+        let normal_world : vec3f = (mat4x4f(1.0, 0.0, 0.0, 0.0,  0.0, 1.0, 0.0, 0.0,   0.0, 0.0, 1.0, 0.0,     0.0, 0.0, 0.0, 1.0) * vec4f(normal, 0.0)).xyz;
+        let ray_dir_world : vec3f = (mat4x4f(1.0, 0.0, 0.0, 0.0,  0.0, 1.0, 0.0, 0.0,   0.0, 0.0, 1.0, 0.0,     0.0, 0.0, 0.0, 1.0) * vec4f(ray_dir, 0.0)).xyz;
 
         let material : SdfMaterial = sample_material_atlas(position_in_atlas);
 

@@ -647,12 +647,15 @@ void SculptEditor::update(float delta_time)
     // Push to the renderer the edits and the previews
     renderer->push_preview_edit_list(preview_tmp_edits);
     //renderer->push_edit_list(new_edits);
-    stroke_manager.add(new_edits);
 
-    renderer->get_sculpt_manager()->update_sculpt(
-        current_sculpt->get_sculpt_data(),
-        stroke_manager.result_to_compute.in_frame_influence,
-        stroke_manager.edit_list);
+    if (new_edits.size() > 0u) {
+        stroke_manager.add(new_edits);
+
+        renderer->get_sculpt_manager()->update_sculpt(
+            current_sculpt->get_sculpt_data(),
+            stroke_manager.result_to_compute.in_frame_influence,
+            stroke_manager.edit_list);
+    }
     
     if (is_tool_used) {
         renderer->toogle_frame_debug();

@@ -31,6 +31,8 @@ fn compute(@builtin(global_invocation_id) id: vec3<u32>)
 
     if (level == 0u) {
         // TODO: check what happens with preview
+        // This is for the brick copy. This restes the counter
+        // (could go in initiliazation)
         brick_buffers.brick_instance_counter = 0u;
     }
 
@@ -41,7 +43,7 @@ fn compute(@builtin(global_invocation_id) id: vec3<u32>)
             indirect_buffers.preview_instance_count = brick_buffers.preview_instance_counter;
         } else {
             octree.evaluation_mode = EVALUATE_PREVIEW_STROKE_FLAG;
-           // octree.evaluation_mode = EVALUATE_PREVIEW_STROKE_FLAG;
+            // octree.evaluation_mode = EVALUATE_PREVIEW_STROKE_FLAG;
             indirect_buffers.preview_instance_count = brick_buffers.preview_instance_counter;
         }
     }

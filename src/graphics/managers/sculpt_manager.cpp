@@ -149,6 +149,8 @@ void SculptManager::evaluate(WGPUComputePassEncoder compute_pass, const sEvaluat
     WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
     sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();
 
+    spdlog::info("Evaluating sculpt {} with a context size of {}", evaluate_request.sculpt->get_sculpt_id(), evaluate_request.strokes_to_process.stroke_count);
+
     // Prepare for evaluation
     // Reset the brick instance counter
     uint32_t zero = 0u;
@@ -339,6 +341,7 @@ void SculptManager::upload_strokes_and_edits(const std::vector<sToUploadStroke>&
         evaluation_initialization_bind_group = webgpu_context->create_bind_group(uniforms, evaluation_initialization_shader, 0);
     }
 
+    // TODO: This is sending all the edits & strokes from the buffer. The array is created once
     // Upload the data to the GPU
     webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_edit_list.data), 0, edits_to_upload.data(), sizeof(Edit) * edits_to_upload.size());
     webgpu_context->update_buffer(std::get<WGPUBuffer>(stroke_context_list.data), sizeof(uint32_t) * 4 * 4, strokes_to_compute.data(), sizeof(sToUploadStroke) * strokes_to_compute.size());
@@ -346,7 +349,6 @@ void SculptManager::upload_strokes_and_edits(const std::vector<sToUploadStroke>&
     //spdlog::info("min aabb: {}, {}, {}", stroke_to_compute->in_frame_influence.eval_aabb_min.x, stroke_to_compute->in_frame_influence.eval_aabb_min.y, stroke_to_compute->in_frame_influence.eval_aabb_min.z);
     //spdlog::info("max aabb: {}, {}, {}", stroke_to_compute->in_frame_influence.eval_aabb_max.x, stroke_to_compute->in_frame_influence.eval_aabb_max.y, stroke_to_compute->in_frame_influence.eval_aabb_max.z);
 }
-
 
 
 void SculptManager::init_uniforms()

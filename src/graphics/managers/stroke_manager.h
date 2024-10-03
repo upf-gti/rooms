@@ -23,9 +23,12 @@ struct sToComputeStrokeData {
 
 struct StrokeManager {
     Stroke in_frame_stroke = {
-        .stroke_id = 0u
+        .stroke_id = 0u,
+        .operation = OP_SMOOTH_UNION,
     };
-    Stroke current_stroke = {};
+    Stroke current_stroke = {
+        .operation = OP_SMOOTH_UNION
+    };
 
     std::vector<Stroke>* history = nullptr;
     std::vector<Stroke> redo_history;

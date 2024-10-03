@@ -265,6 +265,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     // Note: the preview evaluation only happens at the end of the frame, so it must wait for
     //       any reevaluation and evaluation
     // TODO(Juan): fix undo redo reeval
+    let aabb_half_size : mat4x3f = get_loose_half_size_mat(preview_stroke.stroke.primitive);
+    let tmp = merge_data.padding;
     let is_evaluating_preview : bool = ((octree.evaluation_mode & EVALUATE_PREVIEW_STROKE_FLAG) == EVALUATE_PREVIEW_STROKE_FLAG);
     let is_evaluating_undo : bool = (octree.evaluation_mode & UNDO_EVAL_FLAG) == UNDO_EVAL_FLAG;
 
@@ -359,7 +361,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             // in order to find the goops (where the current stroke is taking affect)
             var curr_stroke_count : u32 = 0u;
             var brick_has_paint : bool = false;
-            for(var i : u32 = 0u; i < octree.data[parent_octree_index].stroke_count; i++) {
+            let stroke_count : u32 = octree.data[parent_octree_index].stroke_count;
+            for(var i : u32 = 0u; i < stroke_count; i++) {
                 let index : u32 = culling_get_stroke_index(stroke_culling[prev_culling_layer_index + i]);
                 if (intersection_AABB_AABB(eval_aabb_min, 
                                                eval_aabb_max, 
