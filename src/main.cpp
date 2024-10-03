@@ -1,8 +1,6 @@
 #include "engine/rooms_engine.h"
 #include "graphics/renderers/rooms_renderer.h"
 
-#include "spdlog/spdlog.h"
-
 int main()
 {
     RoomsEngine* engine = new RoomsEngine();

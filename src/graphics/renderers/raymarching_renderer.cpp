@@ -8,6 +8,7 @@
 #include "framework/nodes/mesh_instance_3d.h"
 #include "framework/input.h"
 #include "framework/camera/camera.h"
+#include "framework/resources/sculpt.h"
 
 #include "graphics/shader.h"
 #include "graphics/renderer_storage.h"
@@ -90,30 +91,19 @@ void RaymarchingRenderer::clean()
 {
 #ifndef DISABLE_RAYMARCHER
     wgpuBindGroupRelease(render_proxy_geometry_bind_group);
-    wgpuBindGroupRelease(compute_octree_evaluate_bind_group);
-    wgpuBindGroupRelease(compute_octree_increment_level_bind_group);
-    wgpuBindGroupRelease(compute_octree_write_to_texture_bind_group);
-    wgpuBindGroupRelease(compute_octant_usage_bind_groups[0]);
-    wgpuBindGroupRelease(compute_octant_usage_bind_groups[1]);
     wgpuBindGroupRelease(render_camera_bind_group);
     wgpuBindGroupRelease(sculpt_data_bind_preview_group);
     wgpuBindGroupRelease(sculpt_data_bind_proxy_group);
-    wgpuBindGroupRelease(preview_stroke_bind_group);
 
     delete render_proxy_shader;
-    delete compute_octree_evaluate_shader;
-    delete compute_octree_increment_level_shader;
-    delete compute_octree_write_to_texture_shader;
     delete render_preview_proxy_shader;
 #endif
 }
 
 void RaymarchingRenderer::update_sculpt(WGPUCommandEncoder command_encoder)
 {
-    performed_evaluation = false;
-
-    RoomsEngine* engine_instance = static_cast<RoomsEngine*>(RoomsEngine::instance);
-    compute_octree(command_encoder, engine_instance->get_current_editor_type() == EditorType::SCULPT_EDITOR);
+    //RoomsEngine* engine_instance = static_cast<RoomsEngine*>(RoomsEngine::instance);
+    //compute_octree(command_encoder, engine_instance->get_current_editor_type() == EditorType::SCULPT_EDITOR);
 
 #ifndef DISABLE_RAYMARCHER
     if (Input::is_mouse_pressed(GLFW_MOUSE_BUTTON_RIGHT))
@@ -150,17 +140,17 @@ void RaymarchingRenderer::initialize_stroke()
 
 }
 
-void RaymarchingRenderer::change_stroke(const StrokeParameters& params, const uint32_t index_increment)
-{
-    stroke_manager.request_new_stroke(params, index_increment);
-    
-    preview_stroke.stroke.primitive = params.get_primitive();
-    preview_stroke.stroke.operation = params.get_operation();
-    preview_stroke.stroke.color_blending_op = params.get_color_blend_operation();
-    preview_stroke.stroke.parameters = params.get_parameters();
-    preview_stroke.stroke.material = params.get_material();
-    preview_stroke.stroke.edit_count = 0u;
-}
+//void RaymarchingRenderer::change_stroke(const StrokeParameters& params, const uint32_t index_increment)
+//{
+//    stroke_manager.request_new_stroke(params, index_increment);
+//    
+//    preview_stroke.stroke.primitive = params.get_primitive();
+//    preview_stroke.stroke.operation = params.get_operation();
+//    preview_stroke.stroke.color_blending_op = params.get_color_blend_operation();
+//    preview_stroke.stroke.parameters = params.get_parameters();
+//    preview_stroke.stroke.material = params.get_material();
+//    preview_stroke.stroke.edit_count = 0u;
+//}
 
 void RaymarchingRenderer::octree_ray_intersect(const glm::vec3& ray_origin, const glm::vec3& ray_dir, std::function<void(glm::vec3)> callback)
 {
@@ -253,14 +243,14 @@ void RaymarchingRenderer::compute_preview_edit(WGPUComputePassEncoder compute_pa
 //        preview_stroke_uniform.binding = 0;
 //        preview_stroke_uniform.buffer_size = struct_size;
 //
-//        prev_stroke_uniform_2.data = preview_stroke_uniform.data;
-//        prev_stroke_uniform_2.buffer_size = preview_stroke_uniform.buffer_size;
+//        preview_stroke_uniform_2.data = preview_stroke_uniform.data;
+//        preview_stroke_uniform_2.buffer_size = preview_stroke_uniform.buffer_size;
 //
-//        std::vector<Uniform*> uniforms = { &sculpts_instance_data_uniform, &linear_sampler_uniform, &sdf_texture_uniform, &octree_brick_buffers, &octree_brick_copy_buffer, &sdf_material_texture_uniform, &prev_stroke_uniform_2 };
+//        std::vector<Uniform*> uniforms = { &sculpts_instance_data_uniform, &linear_sampler_uniform, &sdf_texture_uniform, &octree_brick_buffers, &octree_brick_copy_buffer, &sdf_material_texture_uniform, &preview_stroke_uniform_2 };
 //        wgpuBindGroupRelease(render_proxy_geometry_bind_group);
 //        render_proxy_geometry_bind_group = webgpu_context->create_bind_group(uniforms, render_proxy_shader, 0);
 //
-//        uniforms = { &sculpts_instance_data_uniform, &prev_stroke_uniform_2, &octree_brick_buffers };
+//        uniforms = { &sculpts_instance_data_uniform, &preview_stroke_uniform_2, &octree_brick_buffers };
 //        wgpuBindGroupRelease(sculpt_data_bind_preview_group);
 //        sculpt_data_bind_preview_group = webgpu_context->create_bind_group(uniforms, render_preview_proxy_shader, 1);
 //
@@ -313,11 +303,13 @@ void RaymarchingRenderer::compute_preview_edit(WGPUComputePassEncoder compute_pa
 
 void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_pass, uint32_t camera_buffer_stride)
 {
-    WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
+    RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
+    sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();
+    WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
 
     // Get the number of sculpt instances and the model
     // TODO: we dont need to re-upload it each frame, inly when changed in hieraqui.. but the we need to detect changes
-    {
+    if (!sculpt_instances_list.empty()) {
         const uint32_t sculpt_instances_count = sculpt_instances_list.size();
 
         // Index buffer for the sculpt instances and their model matrices
@@ -327,14 +319,14 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
         //uint32_t* buffer = new uint32_t[buffer_size];
 
         //memset(buffer, 0, sizeof(uint32_t) * buffer_size);
-        sSculptInstanceData* instance_data_lists = new sSculptInstanceData[sculpt_count];
+        sSculptInstanceData* instance_data_lists = new sSculptInstanceData[sculpt_instances_list.size()];
         RoomsEngine* engine_instance = static_cast<RoomsEngine*>(RoomsEngine::instance);
         SculptEditor* sculpt_editor = engine_instance->get_sculpt_editor();
         SculptInstance* current_sculpt = sculpt_editor->get_current_sculpt();
 
         uint32_t prev_start = 0u;
         for (uint32_t i = 0u; i < sculpt_instances_count; i++) {
-            uint32_t octree_id = sculpt_instances_list[i]->get_octree_id();
+            uint32_t octree_id = sculpt_instances_list[i]->get_sculpt_data()->get_sculpt_id();
 
             if (sculpt_instances_list[i] == current_sculpt) {
                 preview_stroke.current_sculpt_idx = octree_id;
@@ -357,7 +349,7 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
             buffer[octree_id] = ((number_of_instances + 1) << 20) | ((octree_id * sculpt_instances_count) + sculpt_count);*/
         }
 
-        webgpu_context->update_buffer(std::get<WGPUBuffer>(preview_stroke_uniform.data), 0u, &(preview_stroke.current_sculpt_idx), sizeof(uint32_t));
+        webgpu_context->update_buffer(std::get<WGPUBuffer>(sdf_globals.preview_stroke_uniform.data), 0u, &(preview_stroke.current_sculpt_idx), sizeof(uint32_t));
         //webgpu_context->update_buffer(std::get<WGPUBuffer>(sculpt_instances_buffer_uniform.data), 0u, buffer, sizeof(uint32_t) * buffer_size);
         webgpu_context->update_buffer(std::get<WGPUBuffer>(sculpts_instance_data_uniform.data), 0u, instance_data_lists, sizeof(sSculptInstanceData) * sculpt_count);
 
@@ -388,7 +380,7 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
         wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, surface->get_vertex_buffer(), 0, surface->get_byte_size());
 
         // Submit indirect drawcalls
-        wgpuRenderPassEncoderDrawIndirect(render_pass, std::get<WGPUBuffer>(octree_indirect_buffer_struct.data), 0u);
+        wgpuRenderPassEncoderDrawIndirect(render_pass, std::get<WGPUBuffer>(sdf_globals.indirect_buffers.data), 0u);
     }
 
 
@@ -416,7 +408,7 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
         wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, surface->get_vertex_buffer(), 0, surface->get_byte_size());
 
         // Submit indirect drawcalls
-        wgpuRenderPassEncoderDrawIndirect(render_pass, std::get<WGPUBuffer>(octree_indirect_buffer_struct.data), sizeof(uint32_t) * 4u);
+        wgpuRenderPassEncoderDrawIndirect(render_pass, std::get<WGPUBuffer>(sdf_globals.indirect_buffers.data), sizeof(uint32_t) * 4u);
     }
 
 #ifndef NDEBUG
@@ -429,56 +421,48 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
     // Load shaders
     compute_octree_brick_unmark_shader = RendererStorage::get_shader("data/shaders/octree/brick_unmark.wgsl");
 
-    WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
+
+    RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
+    sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();
+
+    WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
 
     //// Size of penultimate level
     //octants_max_size = pow(floorf(SDF_RESOLUTION / 10.0f), 3.0f);
 
     // Uniforms & buffers for octree generation
-    {
-        // Edit count & other merger data
-        compute_merge_data_uniform.data = webgpu_context->create_buffer(sizeof(sMergeData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "merge_data");
-        compute_merge_data_uniform.binding = 1;
-        compute_merge_data_uniform.buffer_size = sizeof(sMergeData);
-    }
+    //{
+    //    // Edit count & other merger data
+    //    compute_merge_data_uniform.data = webgpu_context->create_buffer(sizeof(sMergeData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "merge_data");
+    //    compute_merge_data_uniform.binding = 1;
+    //    compute_merge_data_uniform.buffer_size = sizeof(sMergeData);
+    //}
 
-    // TODO HOY
-    {
-        // Brick unmarking bindgroup
-        std::vector<Uniform*> uniforms = { &octree_brick_buffers };
+    //// TODO HOY
+    //{
+    //    // Brick unmarking bindgroup
+    //    std::vector<Uniform*> uniforms = { &octree_brick_buffers };
 
-        compute_octree_brick_unmark_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_brick_unmark_shader, 0);
-    }
+    //    compute_octree_brick_unmark_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_brick_unmark_shader, 0);
+    //}
 
     uint32_t default_val = 0;
 
     uint32_t size = sizeof(Edit);
     size = sizeof(Stroke);
 
-    // Preview data bindgroup
-    {
-        uint32_t struct_size = sizeof(sToUploadStroke) + sizeof(Edit) * PREVIEW_BASE_EDIT_LIST;
-        preview_stroke_uniform.data = webgpu_context->create_buffer(struct_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "preview_stroke_buffer");
-        preview_stroke_uniform.binding = 0;
-        preview_stroke_uniform.buffer_size = struct_size;
-
-        std::vector<Uniform*> uniforms = { &preview_stroke_uniform };
-
-        preview_stroke_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_evaluate_shader, 3);
-    }
-
     // TODO HOY
     // Model and sculpt isntances bindgroups
-    {
+    //{
 
-        uint32_t size = sizeof(uint32_t) * 4096u * 4096u; // The current max size of instances
-        sculpt_instances_buffer_uniform.data = webgpu_context->create_buffer(size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, 0u, "sculpt instance data");
-        sculpt_instances_buffer_uniform.binding = 0u;
-        sculpt_instances_buffer_uniform.buffer_size = size;
+    //    uint32_t size = sizeof(uint32_t) * 4096u * 4096u; // The current max size of instances
+    //    sculpt_instances_buffer_uniform.data = webgpu_context->create_buffer(size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, 0u, "sculpt instance data");
+    //    sculpt_instances_buffer_uniform.binding = 0u;
+    //    sculpt_instances_buffer_uniform.buffer_size = size;
 
-        std::vector<Uniform*> uniforms = { &sculpt_instances_buffer_uniform };
-        sculpt_instances_bindgroup = webgpu_context->create_bind_group(uniforms, compute_octree_brick_copy_shader, 1u);
-    }
+    //    std::vector<Uniform*> uniforms = { &sculpt_instances_buffer_uniform };
+    //    sculpt_instances_bindgroup = webgpu_context->create_bind_group(uniforms, compute_octree_brick_copy_shader, 1u);
+    //}
 
     compute_octree_brick_unmark_pipeline.create_compute_async(compute_octree_brick_unmark_shader);
 }
@@ -487,6 +471,9 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
 {
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
     bool is_openxr_available = RoomsRenderer::instance->get_openxr_available();
+
+    RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
+    sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();
 
     cube_mesh = parse_mesh("data/meshes/cube.obj");
 
@@ -502,15 +489,11 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
     }
 
     {
-        RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
-
         camera_uniform = rooms_renderer->get_current_camera_uniform();
 
-        prev_stroke_uniform_2.data = preview_stroke_uniform.data;
-        prev_stroke_uniform_2.binding = 1u;
-        prev_stroke_uniform_2.buffer_size = preview_stroke_uniform.buffer_size;
-
-        std::vector<Uniform*> uniforms = { &sculpts_instance_data_uniform, &linear_sampler_uniform, &sdf_texture_uniform, &octree_brick_buffers, &octree_brick_copy_buffer, &sdf_material_texture_uniform, &prev_stroke_uniform_2 };
+        std::vector<Uniform*> uniforms = { &sculpts_instance_data_uniform, &linear_sampler_uniform,
+            &sdf_globals.sdf_texture_uniform, & sdf_globals.brick_buffers,
+            & sdf_globals.brick_copy_buffer, & sdf_globals.sdf_material_texture_uniform, &sdf_globals.preview_stroke_uniform_2 };
 
         render_proxy_geometry_bind_group = webgpu_context->create_bind_group(uniforms, render_proxy_shader, 0);
         uniforms = { camera_uniform };
@@ -544,7 +527,7 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
         uniforms = { camera_uniform };
         render_preview_camera_bind_group = webgpu_context->create_bind_group(uniforms, render_preview_proxy_shader, 0);
 
-        uniforms = {/* &sculpt_data_uniform,*/ &prev_stroke_uniform_2, &octree_brick_buffers, &sculpts_instance_data_uniform };
+        uniforms = {/* &sculpt_data_uniform,*/ &sdf_globals.preview_stroke_uniform_2, &sdf_globals.brick_buffers, &sculpts_instance_data_uniform };
         sculpt_data_bind_preview_group = webgpu_context->create_bind_group(uniforms, render_preview_proxy_shader, 1);
     }
 
@@ -559,14 +542,16 @@ void RaymarchingRenderer::init_octree_ray_intersection_pipeline()
 {
     compute_octree_ray_intersection_shader = RendererStorage::get_shader("data/shaders/octree/octree_ray_intersection.wgsl");
 
-    WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
+    RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
+    sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();
+    WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
 
     // Ray Octree intersection bindgroup
     {
         linear_sampler_uniform.data = webgpu_context->create_sampler(WGPUAddressMode_ClampToEdge, WGPUAddressMode_ClampToEdge, WGPUAddressMode_ClampToEdge, WGPUFilterMode_Linear, WGPUFilterMode_Linear);
         linear_sampler_uniform.binding = 4;
 
-        std::vector<Uniform*> uniforms = { &sdf_texture_uniform, &linear_sampler_uniform, &sdf_material_texture_uniform };
+        std::vector<Uniform*> uniforms = { &sdf_globals.sdf_texture_uniform, &linear_sampler_uniform, &sdf_globals.sdf_material_texture_uniform };
         octree_ray_intersection_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_ray_intersection_shader, 0);
     }
 
@@ -602,25 +587,27 @@ void RaymarchingRenderer::upload_stroke_context_data(sToComputeStrokeData *strok
 void RaymarchingRenderer::add_sculpt_instance(SculptInstance* instance)
 {
     sculpt_instances_list.push_back(instance);
-    sculpt_instance_count[instance->get_octree_id()] = 1u;
+    //sculpt_instance_count[instance->get_sculpt_data()->get_sculpt_id()] = 1u;
 }
 
 void RaymarchingRenderer::remove_sculpt_instance(SculptInstance* instance)
 {
-    auto it = std::find(sculpt_instances_list.begin(), sculpt_instances_list.end(), instance);
-    if (it != sculpt_instances_list.end()) {
-        sculpt_instances_list.erase(it);
-        //sculpt_count--;
-    }
+    //auto it = std::find(sculpt_instances_list.begin(), sculpt_instances_list.end(), instance);
+    //if (it != sculpt_instances_list.end()) {
+    //    sculpt_instances_list.erase(it);
+    //    //sculpt_count--;
+    //}
 
-    if (sculpt_instance_count[instance->get_octree_id()] == 1u) {
-        sculpts_to_delete.push_back({
-                instance->get_octree_id(),
-                instance->get_octree_uniform(),
-                instance->get_octree_bindgroup()
-            });
-        sculpt_instance_count[instance->get_octree_id()] = 0u;
-    } else {
-        sculpt_instance_count[instance->get_octree_id()]--;
-    }
+    //uint32_t octree_id = instance->get_sculpt_data()->get_sculpt_id();
+
+    //if (sculpt_instance_count[octree_id] == 1u) {
+    //    sculpts_to_delete.push_back({
+    //            octree_id,
+    //            instance->get_sculpt_data()->get_octree_uniform(),
+    //            instance->get_sculpt_data()->get_octree_bindgroup()
+    //        });
+    //    sculpt_instance_count[octree_id] = 0u;
+    //} else {
+    //    sculpt_instance_count[octree_id]--;
+    //}
 }

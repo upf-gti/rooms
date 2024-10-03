@@ -16,6 +16,7 @@
 
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/renderer_storage.h"
+#include "graphics/managers/sculpt_manager.h"
 
 #include "shaders/mesh_forward.wgsl.gen.h"
 #include "shaders/mesh_transparent.wgsl.gen.h"
@@ -149,7 +150,7 @@ void SculptEditor::initialize()
     init_ui();
 
     enable_tool(SCULPT);
-    renderer->change_stroke(stroke_parameters, 0u);
+    //renderer->change_stroke(stroke_parameters, 0u);
 
     /*ui::VContainer2D* test_root = new ui::VContainer2D("test_root", { 0.0f, 0.0f });
     test_root->set_centered(true);
@@ -574,7 +575,7 @@ void SculptEditor::update(float delta_time)
         must_change_stroke |= force_new_stroke;
 
         if (must_change_stroke) {
-            renderer->change_stroke(stroke_parameters);
+            //renderer->change_stroke(stroke_parameters);
             stroke_parameters.set_dirty(false);
             force_new_stroke = false;
         }
@@ -645,9 +646,14 @@ void SculptEditor::update(float delta_time)
 
     // Push to the renderer the edits and the previews
     renderer->push_preview_edit_list(preview_tmp_edits);
-    renderer->push_edit_list(new_edits);
+    //renderer->push_edit_list(new_edits);
     stroke_manager.add(new_edits);
 
+    renderer->get_sculpt_manager()->update_sculpt(
+        current_sculpt->get_sculpt_data(),
+        stroke_manager.result_to_compute.in_frame_influence,
+        stroke_manager.edit_list);
+    
     if (is_tool_used) {
         renderer->toogle_frame_debug();
     }
@@ -1032,6 +1038,7 @@ void SculptEditor::set_cap_modifier(float value)
 void SculptEditor::set_current_sculpt(SculptInstance* sculpt_instance)
 {
     current_sculpt = sculpt_instance;
+    stroke_manager.new_history_add(&current_sculpt->get_sculpt_data()->get_stroke_history());
 }
 
 void SculptEditor::enable_tool(eTool tool)
@@ -1414,7 +1421,10 @@ void SculptEditor::init_ui()
 
 void SculptEditor::bind_events()
 {
-    Node::bind("go_back", [&](const std::string& signal, void* button) {renderer->get_raymarching_renderer()->set_current_sculpt(nullptr); RoomsEngine::switch_editor(SCENE_EDITOR); });
+    Node::bind("go_back", [&](const std::string& signal, void* button) {
+        static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(nullptr);
+        RoomsEngine::switch_editor(SCENE_EDITOR);
+    });
 
     Node::bind("add", [&](const std::string& signal, void* button) {
         enable_tool(SCULPT);

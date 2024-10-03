@@ -2,6 +2,7 @@
 
 #include "framework/math/intersections.h"
 #include "graphics/renderers/rooms_renderer.h"
+#include "graphics/managers/sculpt_manager.h"
 
 #include <fstream>
 
@@ -41,6 +42,7 @@ void SculptInstance::update(float delta_time) {
 void SculptInstance::initialize()
 {
     sculpt_gpu_data = dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_sculpt_manager()->create_sculpt();
+    sculpt_gpu_data->ref();
 
     dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->add_sculpt_instance(this);
 }
@@ -50,6 +52,7 @@ void SculptInstance::from_history(const std::vector<Stroke>& new_history)
     if (!new_history.empty()) {
         RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
         sculpt_gpu_data = rooms_renderer->get_sculpt_manager()->create_sculpt_from_history(new_history);
+        sculpt_gpu_data->ref();
         rooms_renderer->get_raymarching_renderer()->add_sculpt_instance(this);
     }
     else {
@@ -62,12 +65,12 @@ void SculptInstance::serialize(std::ofstream& binary_scene_file)
     Node3D::serialize(binary_scene_file);
 
     sSculptBinaryHeader header = {
-        .stroke_count = stroke_history.size(),
+        .stroke_count = sculpt_gpu_data->get_stroke_history().size(),
     };
 
     binary_scene_file.write(reinterpret_cast<char*>(&header), sizeof(sSculptBinaryHeader));
 
-    for (auto& stroke : stroke_history) {
+    for (auto& stroke : sculpt_gpu_data->get_stroke_history()) {
         binary_scene_file.write(reinterpret_cast<char*>(&stroke), sizeof(Stroke));
     }
 }
@@ -82,12 +85,15 @@ void SculptInstance::parse(std::ifstream& binary_scene_file)
     RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
 
     if (header.stroke_count > 0u) {
-        sculpt->stroke_history.resize(header.stroke_count);
+        std::vector<Stroke> stroke_history;
+        stroke_history.resize(header.stroke_count);
         binary_scene_file.read(reinterpret_cast<char*>(&stroke_history[0]), header.stroke_count * sizeof(Stroke));
-        rooms_renderer->get_raymarching_renderer()->create_sculpt_from_history(this, stroke_history);
+        sculpt_gpu_data = rooms_renderer->get_sculpt_manager()->create_sculpt_from_history(stroke_history);
     } else {
-        sculpt_gpu_data = rooms_renderer->get_raymarching_renderer()->create_new_sculpt();
+        sculpt_gpu_data = rooms_renderer->get_sculpt_manager()->create_sculpt();
     }
+
+    sculpt_gpu_data->ref();
 
     rooms_renderer->get_raymarching_renderer()->add_sculpt_instance(this);
 
@@ -102,7 +108,7 @@ bool SculptInstance::test_ray_collision(const glm::vec3& ray_origin, const glm::
 
     AABB current_aabb;
 
-    for (const auto& stroke : stroke_history) {
+    for (const auto& stroke : sculpt_gpu_data->get_stroke_history()) {
         current_aabb = merge_aabbs(current_aabb, stroke.get_world_AABB());
     }
 

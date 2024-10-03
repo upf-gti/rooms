@@ -7,7 +7,7 @@
 
 #include "raymarching_renderer.h"
 
-#define DISABLE_RAYMARCHER
+// #define DISABLE_RAYMARCHER
 
 class SculptManager;
 
@@ -15,11 +15,16 @@ struct sSDFGlobals {
     Uniform         brick_buffers;
     Uniform         brick_copy_buffer;
 
+    Uniform         indirect_buffers;
+
     Texture         sdf_texture;
     Uniform         sdf_texture_uniform;
 
     Texture         sdf_material_texture;
     Uniform         sdf_material_texture_uniform;
+
+    Uniform         preview_stroke_uniform_2;
+    Uniform         preview_stroke_uniform;
 
     // Octree creation params
     uint8_t         octree_depth = 0;
@@ -73,16 +78,15 @@ public:
     *   Edits
     */
 
-    void change_stroke(const StrokeParameters& params, const uint32_t index = 1u) {
-        raymarching_renderer.change_stroke(params, index);
+    //void change_stroke(const StrokeParameters& params, const uint32_t index = 1u) {
+    //    raymarching_renderer.change_stroke(params, index);
+    //}
 
-    }
-
-    void push_edit_list(std::vector<Edit> &edits) {
-#ifndef DISABLE_RAYMARCHER
-        raymarching_renderer.push_edit_list(edits);
-#endif
-    };
+//    void push_edit_list(std::vector<Edit> &edits) {
+//#ifndef DISABLE_RAYMARCHER
+//        raymarching_renderer.push_edit_list(edits);
+//#endif
+//    };
 
     void push_preview_edit_list(std::vector<Edit>& edits) {
 #ifndef DISABLE_RAYMARCHER

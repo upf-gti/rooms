@@ -1,23 +1,12 @@
 #pragma once
 
+#include "rooms_includes.h"
+
 #include "graphics/edit.h"
 
 #include <vector>
 
 class SculptInstance;
-
-struct sStrokeInfluence {
-    uint32_t stroke_count = 0u;
-    uint32_t pad_1 = UINT32_MAX; // aligment issues when using vec3
-    uint32_t pad_0 = 0u;
-    uint32_t pad_2 = UINT32_MAX;
-    glm::vec3 eval_aabb_min;
-    float pad1;
-    glm::vec3 eval_aabb_max;
-    float pad2;
-    glm::vec4 pad3;
-    std::vector<sToUploadStroke> strokes;
-};
 
 struct sToComputeStrokeData {
     sToUploadStroke in_frame_stroke = {};

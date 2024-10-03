@@ -26,8 +26,6 @@ public:
 
     void update(float delta_time);
 
-    std::vector<Stroke>& get_stroke_history();
-
     inline void set_sculpt_data(Sculpt* new_data) {
         sculpt_gpu_data = new_data;
     }

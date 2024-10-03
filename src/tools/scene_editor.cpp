@@ -18,6 +18,7 @@
 #include "framework/ui/keyboard.h"
 #include "framework/math/math_utils.h"
 #include "framework/camera/camera.h"
+#include "framework/resources/sculpt.h"
 
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/renderer_storage.h"
@@ -50,7 +51,7 @@ void SceneEditor::initialize()
     default_sculpt->set_name("default_sculpt");
     default_sculpt->initialize();
     RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
-    rooms_renderer->get_raymarching_renderer()->set_current_sculpt(default_sculpt);
+    //static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(default_sculpt);
     main_scene->add_node(default_sculpt);
 #endif
 
@@ -358,7 +359,8 @@ void SceneEditor::bind_events()
         new_sculpt->initialize();
         RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
         rooms_renderer->toogle_frame_debug();
-        rooms_renderer->get_raymarching_renderer()->set_current_sculpt(new_sculpt);
+        
+        static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(new_sculpt);
         main_scene->add_node(new_sculpt);
         select_node(new_sculpt);
         inspector_dirty = true;
@@ -435,7 +437,7 @@ void SceneEditor::clone_node(Node* node, bool copy)
     // raw copy, everything is recreated
     if (copy) {
         new_sculpt = new SculptInstance();
-        new_sculpt->from_history(current_sculpt->get_stroke_history());
+        new_sculpt->from_history(current_sculpt->get_sculpt_data()->get_stroke_history());
     }
 
     // instance copy, it should have different model, but uses same octree, etc.
@@ -453,7 +455,7 @@ void SceneEditor::clone_node(Node* node, bool copy)
 
     RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
     rooms_renderer->toogle_frame_debug();
-    rooms_renderer->get_raymarching_renderer()->set_current_sculpt(new_sculpt);
+    static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(new_sculpt);
 
     // Add to scene and select as current
     main_scene->add_node(new_sculpt);

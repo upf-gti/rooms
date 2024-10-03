@@ -10,7 +10,7 @@
 #include "framework/nodes/sculpt_instance.h"
 #include "framework/math/aabb.h"
 
-#include "stroke_manager.h"
+#include "graphics/managers/stroke_manager.h"
 
 #include <list>
 
@@ -108,14 +108,10 @@ class RaymarchingRenderer {
     WGPUBuffer      ray_intersection_info_read_buffer = nullptr;
 
     //Uniform         sculpt_data_uniform;
-    Uniform         prev_stroke_uniform_2;
     WGPUBindGroup   sculpt_data_bind_proxy_group = nullptr;
     WGPUBindGroup   sculpt_data_bind_preview_group = nullptr;
 
     Uniform         *camera_uniform;
-
-    Uniform         preview_stroke_uniform;
-    WGPUBindGroup   preview_stroke_bind_group = nullptr;
 
     Uniform         compute_stroke_buffer_uniform;
 
@@ -169,8 +165,6 @@ class RaymarchingRenderer {
 
     void compute_preview_edit(WGPUComputePassEncoder compute_pass);
 
-    bool performed_evaluation = false;
-
     // DEBUG
     MeshInstance3D *AABB_mesh;
 
@@ -185,11 +179,6 @@ public:
 
     void compute_octree(WGPUCommandEncoder command_encoder, bool show_previews = false);
     void render_raymarching_proxy(WGPURenderPassEncoder render_pass, uint32_t camera_buffer_stride = 0);
-
-    bool has_performed_evaluation() { return performed_evaluation; }
-
-    void set_current_sculpt(SculptInstance* sculpt_instance);
-    SculptInstance* get_current_sculpt();
 
     void octree_ray_intersect(const glm::vec3& ray_origin, const glm::vec3& ray_dir, std::function<void(glm::vec3)> callback = nullptr);
 

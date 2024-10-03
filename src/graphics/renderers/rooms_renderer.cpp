@@ -18,9 +18,10 @@ int RoomsRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
 {
     Renderer::initialize(window, use_mirror_screen);
 
-    sculpt_manager = new SculptManager();
-
     init_sdf_globals();
+
+    sculpt_manager = new SculptManager();
+    sculpt_manager->init();
 
     clear_color = glm::vec4(0.22f, 0.22f, 0.22f, 1.0);
 
@@ -42,6 +43,7 @@ void RoomsRenderer::clean()
 {
     Renderer::clean();
 
+    sculpt_manager->clean();
     raymarching_renderer.clean();
 
     if (sculpt_manager) {
@@ -142,6 +144,35 @@ void RoomsRenderer::init_sdf_globals()
     }
 
     {
+        // Preview
+        uint32_t struct_size = sizeof(sToUploadStroke) + sizeof(Edit) * PREVIEW_BASE_EDIT_LIST;
+        sdf_globals.preview_stroke_uniform.data = webgpu_context->create_buffer(struct_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "preview_stroke_buffer");
+        sdf_globals.preview_stroke_uniform.binding = 0;
+        sdf_globals.preview_stroke_uniform.buffer_size = struct_size;
+
+        sdf_globals.preview_stroke_uniform_2.data = sdf_globals.preview_stroke_uniform.data;
+        sdf_globals.preview_stroke_uniform_2.binding = 1u;
+        sdf_globals.preview_stroke_uniform_2.buffer_size = sdf_globals.preview_stroke_uniform.buffer_size;
+    }
+
+
+    // Indirect dispatch buffer
+    {
+        uint32_t buffer_size = sizeof(uint32_t) * 4u * 4u;
+        sdf_globals.indirect_buffers.data = webgpu_context->create_buffer(buffer_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Indirect | WGPUBufferUsage_Storage, nullptr, "indirect_buffers_struct");
+        sdf_globals.indirect_buffers.binding = 8u;
+        sdf_globals.indirect_buffers.buffer_size = buffer_size;
+
+        uint32_t default_indirect_values[16u] = {
+            36u, 0u, 0u, 0u, // bricks indirect call
+            36u, 0u, 0u, 0u,// preview bricks indirect call
+            0u, 1u, 1u, 0u, // brick removal call (1 padding)
+            1u, 1u, 1u, 0u // octree subdivision
+        };
+        webgpu_context->update_buffer(std::get<WGPUBuffer>(sdf_globals.indirect_buffers.data), 0, default_indirect_values, sizeof(uint32_t) * 16u);
+    }
+
+    {
         // Indirect buffer for octree generation compute
         sdf_globals.brick_copy_buffer.data = webgpu_context->create_buffer(sizeof(uint32_t) * sdf_globals.octants_max_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "brick_copy_buffer");
         sdf_globals.brick_copy_buffer.binding = 0;
@@ -153,7 +184,7 @@ void RoomsRenderer::update(float delta_time)
 {
     Renderer::update(delta_time);
 
-    raymarching_renderer.update_sculpt(global_command_encoder);
+    sculpt_manager->update(global_command_encoder);
 }
 
 void RoomsRenderer::render()
@@ -162,7 +193,7 @@ void RoomsRenderer::render()
 
     last_frame_timestamps = get_timestamps();
 
-    if (!last_frame_timestamps.empty() && raymarching_renderer.has_performed_evaluation()) {
+    if (!last_frame_timestamps.empty() && sculpt_manager->has_performed_evaluation()) {
         last_evaluation_time = last_frame_timestamps[0];
     }
 }

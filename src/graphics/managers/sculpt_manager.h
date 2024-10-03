@@ -4,11 +4,22 @@
 #include "graphics/texture.h"
 
 class SculptManager {
+
+    struct sEvaluateRequest {
+        Sculpt* sculpt;
+        sStrokeInfluence strokes_to_process; // context and new strokes in GPU format
+        std::vector<Edit> edit_to_process; // context and new edits
+    };
+
     uint32_t        sculpt_count = 0u;
+
+    bool performed_evaluation = false;
 
     std::vector<Sculpt*> sculpts_to_delete;
     std::vector<Sculpt*> sculpts_to_clean;
     std::vector<Sculpt*> sculpts_to_create;
+
+    std::vector<sEvaluateRequest> evaluations_to_process;
 
     bool needs_evaluation = false;
 
@@ -41,6 +52,7 @@ class SculptManager {
     WGPUBindGroup   indirect_brick_removal_bind_group = nullptr;
     WGPUBindGroup   brick_copy_bind_group = nullptr;
     WGPUBindGroup   sculpt_delete_bindgroup = nullptr;
+    WGPUBindGroup   preview_stroke_bind_group = nullptr;
 
     // Evaluator uniforms
     Uniform         merge_data_uniform;
@@ -56,8 +68,6 @@ class SculptManager {
     Uniform         octant_usage_ping_pong_uniforms[4];
     Uniform         octant_usage_initialization_uniform[2];
     WGPUBindGroup   octant_usage_ping_pong_bind_groups[2] = {};
-
-    Uniform         octree_indirect_buffer_struct;
 
     // Octree struct reference
     struct sOctreeNode {
@@ -78,27 +88,26 @@ class SculptManager {
 
     void upload_strokes_and_edits(const std::vector<sToUploadStroke>& strokes_to_compute, const std::vector<Edit>& edits_to_upload);
 
+    void init_shaders();
     void init_uniforms();
-    void load_shaders();
     void init_pipelines_and_bindgroups();
-    //struct sTodo{
-    //    Sculpt
-    //    AABB
-    //    list<Stroke>
-    //};
+
 public:
     void init();
     void clean();
 
-    // TODO cleaning and delteing in frames
-    void update();
+    // TODO cleaning and deleting in frames
+    void update(WGPUCommandEncoder command_encoder);
 
-    void compute_octree(WGPUCommandEncoder command_encoder, bool show_preview);
+    void update_sculpt(Sculpt* sculpt, const sStrokeInfluence& strokes_to_process, const std::vector<Edit>& edits_to_process);
 
     Sculpt* create_sculpt();
     Sculpt* create_sculpt_from_history(const std::vector<Stroke>& stroke_history);
 
+    bool has_performed_evaluation() { return performed_evaluation; }
+
     void delete_sculpt(WGPUComputePassEncoder compute_pass, Sculpt* to_delete);
 
-    void evaluate(WGPUComputePassEncoder compute_pass, Sculpt* sculpt, const std::vector<sToUploadStroke>& stroke_to_eval, const std::vector<Edit>& edits_to_upload, const AABB& stroke_aabb);
+    void evaluate(WGPUComputePassEncoder compute_pass, const sEvaluateRequest& evaluate_request);
+    void evaluate_preview(WGPUComputePassEncoder compute_pass, const Stroke& stroke_to_preview);
 };

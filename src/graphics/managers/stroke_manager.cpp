@@ -2,6 +2,8 @@
 
 #include "framework/nodes/sculpt_instance.h"
 
+#include "framework/resources/sculpt.h"
+
 #include "spdlog/spdlog.h"
 #include <glm/detail/compute_vector_relational.hpp>
 
@@ -266,7 +268,7 @@ void StrokeManager::change_stroke(const uint32_t index_increment) {
 
 void StrokeManager::set_current_sculpt(SculptInstance* sculpt_instance)
 {
-    history = &sculpt_instance->get_stroke_history();
+    history = &(sculpt_instance->get_sculpt_data()->get_stroke_history());
 
     if (!history->empty()) {
         current_stroke.stroke_id = history->back().stroke_id + 1;
@@ -308,6 +310,10 @@ sToComputeStrokeData* StrokeManager::new_history_add(std::vector<Stroke>* new_hi
     edit_list_count = 0u;
 
     history = new_history;
+
+    if (history->empty()) {
+        return &result_to_compute;
+    }
 
     current_stroke.stroke_id = history->back().stroke_id + 1;
     in_frame_stroke.stroke_id = history->back().stroke_id + 1;
