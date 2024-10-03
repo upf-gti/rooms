@@ -76,42 +76,15 @@ void SceneEditor::update(float delta_time)
 
     update_hovered_node();
 
-    const bool sculpt_hovered = hovered_node && dynamic_cast<SculptInstance*>(hovered_node);
-    const bool group_hovered = hovered_node && dynamic_cast<Group3D*>(hovered_node);
+    shortcuts.clear();
+    shortcuts[shortcuts::TOGGLE_SCENE_INSPECTOR] = true;
 
-    // Clone if hovering the node
-    bool a_or_click = Input::was_button_pressed(XR_BUTTON_A) || Input::was_mouse_pressed(GLFW_MOUSE_BUTTON_LEFT);
-    if (hovered_node && a_or_click){
-
-        if (group_hovered) {
-            // TODO: Edit group functionality
-            // ...
-        }
-        else if (grouping_node) {
-            process_group();
-        }
-        else if (is_shift_right_pressed) {
-            group_node(hovered_node);
-        }
-        else {
-            clone_node(hovered_node);
-        }
-    }
-    else if (hovered_node && Input::was_button_pressed(XR_BUTTON_B)) {
-
-        // Animate
-        if (is_shift_right_pressed) {
-            selected_node = hovered_node;
-            RoomsEngine::switch_editor(ANIMATION_EDITOR, hovered_node);
-        }
-        // Sculpt
-        else if (sculpt_hovered) {
-            select_node(hovered_node, false);
-            RoomsEngine::switch_editor(SCULPT_EDITOR);
-            static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(static_cast<SculptInstance*>(hovered_node));
-        }
+    if (hovered_node) {
+        process_node_hovered();
     }
     else if (moving_node) {
+
+        shortcuts[shortcuts::PLACE_NODE] = true;
 
         static_cast<Node3D*>(selected_node)->set_position(Input::get_controller_position(HAND_RIGHT, POSE_AIM));
 
@@ -146,7 +119,7 @@ void SceneEditor::update(float delta_time)
 
         inspect_panel_3d->update(delta_time);
 
-        generate_shortcuts();
+        BaseEditor::update_shortcuts(shortcuts);
     }
     else {
         inspector->update(delta_time);
@@ -177,6 +150,7 @@ void SceneEditor::render_gui()
         ImGui::OpenPopup("context_menu_popup");
 
         if (ImGui::BeginPopup("context_menu_popup")) {
+
             if (ImGui::MenuItem("Clone")) {
                 // Handle clone action..
             }
@@ -200,17 +174,14 @@ void SceneEditor::update_hovered_node()
     glm::vec3 ray_origin;
     glm::vec3 ray_direction;
 
-    if (Renderer::instance->get_openxr_available())
-    {
+    if (Renderer::instance->get_openxr_available()) {
         ray_origin = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
         glm::mat4x4 select_hand_pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
         ray_direction = get_front(select_hand_pose);
     }
-    else
-    {
+    else {
         Camera* camera = Renderer::instance->get_camera();
         glm::vec3 ray_dir = camera->screen_to_ray(Input::get_mouse_position());
-
         ray_origin = camera->get_eye();
         ray_direction = glm::normalize(ray_dir);
     }
@@ -233,6 +204,55 @@ void SceneEditor::update_hovered_node()
                 distance = node_distance;
                 hovered_node = node;
             }
+        }
+    }
+}
+
+void SceneEditor::process_node_hovered()
+{
+    const bool sculpt_hovered = !!dynamic_cast<SculptInstance*>(hovered_node);
+    const bool group_hovered = !sculpt_hovered && !!dynamic_cast<Group3D*>(hovered_node);
+    const bool a_pressed = Input::was_button_pressed(XR_BUTTON_A) || Input::was_mouse_pressed(GLFW_MOUSE_BUTTON_LEFT);
+    const bool b_pressed = Input::was_button_pressed(XR_BUTTON_B);
+
+    if (group_hovered) {
+        if (grouping_node) {
+            shortcuts[shortcuts::ADD_TO_GROUP] = true;
+        }
+        else {
+            shortcuts[shortcuts::EDIT_GROUP] = !is_shift_right_pressed;
+            if (a_pressed) {
+                edit_group();
+            }
+        }
+    }
+    else if (grouping_node) {
+        shortcuts[shortcuts::CREATE_GROUP] = true;
+        if (a_pressed) {
+            process_group();
+        }
+    }
+    else if (true || is_shift_right_pressed) {
+        shortcuts[shortcuts::ANIMATE_NODE] = true;
+        shortcuts[shortcuts::GROUP_NODE] = true;
+        if (a_pressed) {
+            group_node(hovered_node);
+        }
+        else if (b_pressed) {
+            selected_node = hovered_node;
+            RoomsEngine::switch_editor(ANIMATION_EDITOR, hovered_node);
+        }
+    }
+    else {
+        shortcuts[shortcuts::CLONE_NODE] = true;
+        shortcuts[shortcuts::EDIT_SCULPT_NODE] = sculpt_hovered;
+        if (a_pressed) {
+            clone_node(hovered_node);
+        }
+        else if (b_pressed) {
+            select_node(hovered_node, false);
+            RoomsEngine::switch_editor(SCULPT_EDITOR);
+            static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(static_cast<SculptInstance*>(hovered_node));
         }
     }
 }
@@ -647,43 +667,6 @@ void SceneEditor::set_gizmo_scale()
     else {
         gizmo_2d.set_operation(ImGuizmo::SCALE);
     }
-}
-
-void SceneEditor::generate_shortcuts()
-{
-    std::unordered_map<uint8_t, bool> shortcuts;
-
-    shortcuts[shortcuts::TOGGLE_SCENE_INSPECTOR] = true;
-
-    if (hovered_node) {
-
-        Node3D* hover_3d = static_cast<Node3D*>(hovered_node);
-        bool group_exists = !!hover_3d->get_parent();
-
-        if (grouping_node) {
-            shortcuts[group_exists ? shortcuts::ADD_TO_GROUP : shortcuts::CREATE_GROUP] = true;
-        }
-        // If hovering a node with group
-        else if (group_exists) {
-            shortcuts[shortcuts::EDIT_GROUP] = !is_shift_right_pressed;
-        }
-        else {
-            shortcuts[shortcuts::CLONE_NODE] = !is_shift_right_pressed;
-            shortcuts[shortcuts::GROUP_NODE] = is_shift_right_pressed;
-            shortcuts[shortcuts::ANIMATE_NODE] = is_shift_right_pressed;
-
-            bool hovered_sculpt = !!dynamic_cast<SculptInstance*>(hovered_node);
-
-            if (hovered_sculpt) {
-                shortcuts[shortcuts::EDIT_SCULPT_NODE] = !is_shift_right_pressed;
-            }
-        }
-    }
-    else if (moving_node) {
-        shortcuts[shortcuts::PLACE_NODE] = true;
-    }
-
-    BaseEditor::update_shortcuts(shortcuts);
 }
 
 void SceneEditor::update_panel_transform()
