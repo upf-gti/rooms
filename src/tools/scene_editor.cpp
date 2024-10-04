@@ -232,7 +232,7 @@ void SceneEditor::process_node_hovered()
             process_group();
         }
     }
-    else if (true || is_shift_right_pressed) {
+    else if (is_shift_right_pressed) {
         shortcuts[shortcuts::ANIMATE_NODE] = true;
         shortcuts[shortcuts::GROUP_NODE] = true;
         if (a_pressed) {

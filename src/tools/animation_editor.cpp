@@ -183,14 +183,13 @@ void AnimationEditor::update(float delta_time)
     if(show_keyframe_dirty) {
 
         // Set current node in keyframe state
-        bool is_looping = current_animation->get_looping();
-        current_animation->set_looping(false);
+
         for (auto& p : current_animation_state->properties) {
 
             Node::AnimatableProperty node_property = current_node->get_animatable_property(p.first);
             void* data = node_property.property;
 
-            current_animation->sample(current_animation_state->time, p.second.track_id, data);
+            current_animation->sample(current_animation_state->time, p.second.track_id, ANIMATION_LOOP_NONE, data);
 
             current_node->set_transform_dirty(true);
 
@@ -198,7 +197,6 @@ void AnimationEditor::update(float delta_time)
             // ...
         }
 
-        current_animation->set_looping(is_looping);
         inspect_keyframe();
     }
 
