@@ -3,7 +3,7 @@
 #include "engine/rooms_engine.h"
 #include "rooms_renderer.h"
 
-#include "framework/scene/parse_scene.h"
+#include "framework/parsers/parse_scene.h"
 #include "framework/math/intersections.h"
 #include "framework/nodes/mesh_instance_3d.h"
 #include "framework/input.h"
@@ -377,7 +377,7 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
         wgpuRenderPassEncoderSetBindGroup(render_pass, 3, Renderer::instance->get_lighting_bind_group(), 0, nullptr);
 
         // Set vertex buffer while encoding the render pass
-        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, surface->get_vertex_buffer(), 0, surface->get_byte_size());
+        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, surface->get_vertex_buffer(), 0, surface->get_vertices_byte_size());
 
         // Submit indirect drawcalls
         wgpuRenderPassEncoderDrawIndirect(render_pass, std::get<WGPUBuffer>(sdf_globals.indirect_buffers.data), 0u);
@@ -405,7 +405,7 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
         wgpuRenderPassEncoderSetBindGroup(render_pass, 2, Renderer::instance->get_lighting_bind_group(), 0, nullptr);
 
         // Set vertex buffer while encoding the render pass
-        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, surface->get_vertex_buffer(), 0, surface->get_byte_size());
+        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, surface->get_vertex_buffer(), 0, surface->get_vertices_byte_size());
 
         // Submit indirect drawcalls
         wgpuRenderPassEncoderDrawIndirect(render_pass, std::get<WGPUBuffer>(sdf_globals.indirect_buffers.data), sizeof(uint32_t) * 4u);
