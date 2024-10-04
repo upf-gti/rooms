@@ -55,7 +55,7 @@ class AnimationEditor : public BaseEditor {
 
     Surface* animation_trajectory_mesh = nullptr;
     MeshInstance3D* animation_trajectory_instance = nullptr;
-    MeshInstance3D* keyframe_markers_render_intstance;
+    MeshInstance3D* keyframe_markers_render_instance = nullptr;
 
     float current_time = 0.0f;
     bool show_keyframe_dirty = false;
@@ -75,6 +75,8 @@ class AnimationEditor : public BaseEditor {
     /*
         Animation Player
     */
+
+    void set_loop_type(uint8_t type);
 
     void play_animation();
     void stop_animation();
