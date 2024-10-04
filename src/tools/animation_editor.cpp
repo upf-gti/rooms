@@ -2,7 +2,7 @@
 
 #include "framework/utils/utils.h"
 #include "framework/input.h"
-#include "framework/scene/parse_obj.h"
+#include "framework/parsers/parse_obj.h"
 #include "framework/nodes/mesh_instance_3d.h"
 #include "framework/nodes/animation_player.h"
 #include "framework/nodes/viewport_3d.h"
