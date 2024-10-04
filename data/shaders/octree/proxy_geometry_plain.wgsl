@@ -14,7 +14,7 @@ struct VertexInput {
     @location(0) position: vec3f,
     @location(1) uv: vec2f,
     @location(2) normal: vec3f,
-    @location(3) tangent: vec3f,
+    @location(3) tangent: vec4f,
     @location(4) color: vec3f,
     @location(5) weights: vec4f,
     @location(6) joints: vec4i
@@ -387,12 +387,14 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     let ray_origin : vec3f = in.in_atlas_pos.xyz + raymarch_distance * (-ray_dir_atlas);
 
     var ray_result : vec4f;
-    if (in.has_previews == 1) {
-        ray_result = raymarch_with_previews(ray_origin, ray_origin_sculpt_space, ray_dir_atlas, raymarch_distance, camera_data.view_projection);
-    } else {
+    let tmp = preview_stroke.stroke.material.color.x;
+    // if (in.has_previews == 1) {
+    //     ray_result = raymarch_with_previews(ray_origin, ray_origin_sculpt_space, ray_dir_atlas, raymarch_distance, camera_data.view_projection);
+    // } else {
         ray_result = raymarch(ray_origin, ray_origin_sculpt_space, ray_dir_atlas, raymarch_distance, camera_data.view_projection);
-    }
+    //}
     var final_color : vec3f = ray_result.rgb; 
+    
 
     if (GAMMA_CORRECTION == 1) {
         final_color = pow(final_color, vec3(1.0 / 2.2));
@@ -401,15 +403,15 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     out.color = vec4f(final_color, 1.0); // Color
     out.depth = ray_result.a;
 
-    // if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
-    //     if (in.has_previews == 1u) {
-    //         out.color = vec4f(0.0, 1.0, 0.0, 1.0);
-    //     } else {
-    //         out.color = vec4f(0.0, 0.0, 0.0, 1.0);
-    //     }
+    if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
+        if (in.has_previews == 1u) {
+            out.color = vec4f(0.0, 1.0, 0.0, 1.0);
+        } else {
+            out.color = vec4f(0.0, 0.0, 0.0, 1.0);
+        }
         
-    //     out.depth = in.position.z;
-    // }
+        out.depth = in.position.z;
+    }
 
     // out.color = vec4f(raymarch_distance / (SQRT_3 * BRICK_WORLD_SIZE), 0.0, 0.0, 0.0); // Color
     // out.depth = in.position.z / in.position.w;

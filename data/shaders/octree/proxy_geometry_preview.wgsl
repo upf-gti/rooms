@@ -14,7 +14,7 @@ struct VertexInput {
     @location(0) position: vec3f,
     @location(1) uv: vec2f,
     @location(2) normal: vec3f,
-    @location(3) tangent: vec3f,
+    @location(3) tangent: vec4f,
     @location(4) color: vec3f,
     @location(5) weights: vec4f,
     @location(6) joints: vec4i
