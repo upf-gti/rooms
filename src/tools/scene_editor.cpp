@@ -55,6 +55,9 @@ void SceneEditor::initialize()
 #endif
 
     /*auto e = parse_mesh("data/meshes/torus/torus.obj");
+    main_scene->add_node(e);
+
+    e = parse_mesh("data/meshes/cube/cube.obj");
     main_scene->add_node(e);*/
 
     Node::bind(main_scene->get_name() + "@nodes_added", [&](const std::string& sg, void* data) {
@@ -541,8 +544,7 @@ void SceneEditor::process_group()
 
         // Create new group and add the nodes
         Group3D* new_group = new Group3D();
-        new_group->add_child(to_group_3d);
-        new_group->add_child(hovered_3d);
+        new_group->add_nodes({ to_group_3d, hovered_3d });
         main_scene->add_node(new_group);
 
         spdlog::info("group processed. {} nodes in scene. {} nodes in group", main_scene->get_nodes().size(), new_group->get_children().size());
