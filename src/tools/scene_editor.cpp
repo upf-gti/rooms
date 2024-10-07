@@ -452,10 +452,11 @@ void SceneEditor::bind_events()
     {
         auto callback = [&](const std::string& output) {
             main_scene->serialize("data/exports/" + output + ".room");
+            main_scene->set_name(output);
             exports_dirty = true;
         };
 
-        Node::bind("save", [fn = callback](const std::string& signal, void* button) { ui::Keyboard::request(fn, "unnamed"); });
+        Node::bind("save", [&, fn = callback](const std::string& signal, void* button) { ui::Keyboard::request(fn, main_scene->get_name()); });
         Node::bind("load", [&](const std::string& signal, void* button) { inspect_exports(true); });
     }
 }
@@ -496,11 +497,6 @@ void SceneEditor::clone_node(Node* node, bool copy)
 
     new_sculpt->set_transform(current_sculpt->get_transform());
     new_sculpt->set_name(current_sculpt->get_name() + "_copy");
-
-    // This should be used once we have the stuff to parent nodes
-    //if (renderer->get_openxr_available()) {
-    //    new_sculpt->set_position(Input::get_controller_position(HAND_RIGHT, POSE_AIM));
-    //}
 
     RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
     rooms_renderer->toogle_frame_debug();
