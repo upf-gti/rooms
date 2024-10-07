@@ -54,6 +54,9 @@ void SceneEditor::initialize()
     main_scene->add_node(default_sculpt);
 #endif
 
+    /*auto e = parse_mesh("data/meshes/torus/torus.obj");
+    main_scene->add_node(e);*/
+
     Node::bind(main_scene->get_name() + "@nodes_added", [&](const std::string& sg, void* data) {
         set_inspector_dirty();
     });
@@ -109,7 +112,7 @@ void SceneEditor::update(float delta_time)
 
     update_gizmo(delta_time);
 
-    update_node_rotation();
+    update_node_transform();
 
     if (renderer->get_openxr_available()) {
 
@@ -689,37 +692,53 @@ bool SceneEditor::is_rotation_being_used()
     return Input::get_trigger_value(HAND_LEFT) > 0.5;
 }
 
-void SceneEditor::update_node_rotation()
+void SceneEditor::update_node_transform()
 {
     // Do not rotate sculpt if shift -> we might be rotating the edit
     if (selected_node && is_rotation_being_used() && !is_shift_left_pressed) {
 
-        glm::quat current_hand_rotation = Input::get_controller_rotation(HAND_LEFT);
-        glm::vec3 current_hand_translation = Input::get_controller_position(HAND_LEFT);
+        glm::quat left_hand_rotation = Input::get_controller_rotation(HAND_LEFT);
+        glm::vec3 left_hand_translation = Input::get_controller_position(HAND_LEFT);
+        glm::vec3 right_hand_translation = Input::get_controller_position(HAND_RIGHT);
+        float hand_distance = glm::length2(left_hand_translation - right_hand_translation);
 
         if (!rotation_started) {
-            last_hand_rotation = current_hand_rotation;
-            last_hand_translation = current_hand_translation;
+            last_left_hand_rotation = left_hand_rotation;
+            last_left_hand_translation = left_hand_translation;
         }
 
-        glm::quat rotation_diff = (current_hand_rotation * glm::inverse(last_hand_rotation));
-        glm::vec3 translation_diff = current_hand_translation - last_hand_translation;
+        glm::quat rotation_diff = (left_hand_rotation * glm::inverse(last_left_hand_rotation));
+        glm::vec3 translation_diff = left_hand_translation - last_left_hand_translation;
 
         Node3D* node = static_cast<Node3D*>(selected_node);
 
         node->rotate_world(rotation_diff);
         node->translate(translation_diff);
 
+        if (Input::get_trigger_value(HAND_RIGHT) > 0.5) {
+
+            if (!scale_started) {
+                last_hand_distance = hand_distance;
+                scale_started = true;
+            }
+
+            float hand_distance_diff = hand_distance / last_hand_distance;
+            node->scale(glm::vec3(hand_distance_diff));
+            last_hand_distance = hand_distance;
+        }
+        else if (scale_started) {
+            scale_started = false;
+        }
+
         rotation_started = true;
 
-        last_hand_rotation = current_hand_rotation;
-        last_hand_translation = current_hand_translation;
+        last_left_hand_rotation = left_hand_rotation;
+        last_left_hand_translation = left_hand_translation;
     }
-    else {
-        // If rotation has stopped
-        if (rotation_started && !is_shift_left_pressed) {
-            rotation_started = false;
-        }
+
+    // If rotation has stopped
+    else if (rotation_started && !is_shift_left_pressed) {
+        rotation_started = false;
     }
 }
 

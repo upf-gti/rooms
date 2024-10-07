@@ -109,11 +109,13 @@ class SceneEditor : public BaseEditor {
     void update_panel_transform();
 
     bool rotation_started = false;
-    glm::quat last_hand_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
-    glm::vec3 last_hand_translation = {};
+    bool scale_started = false;
+    glm::quat last_left_hand_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
+    glm::vec3 last_left_hand_translation = {};
+    float last_hand_distance = 0.0f;
 
     bool is_rotation_being_used();
-    void update_node_rotation();
+    void update_node_transform();
     void update_hovered_node();
 
 
