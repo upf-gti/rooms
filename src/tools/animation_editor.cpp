@@ -61,7 +61,7 @@ void AnimationEditor::initialize()
     init_ui();
 
     // Animation UI visualizations
-    keyframe_markers_render_intstance = new MeshInstance3D();
+    keyframe_markers_render_instance = new MeshInstance3D();
 
     Material* joint_material = new Material();
     joint_material->set_depth_read(false);
@@ -70,10 +70,10 @@ void AnimationEditor::initialize()
     joint_material->set_color(glm::vec4(1.0f, 0.0f, 0.0f, 0.50f));
     joint_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path));
 
-    keyframe_markers_render_intstance->set_frustum_culling_enabled(false);
+    keyframe_markers_render_instance->set_frustum_culling_enabled(false);
 
-    keyframe_markers_render_intstance->add_surface(RendererStorage::get_surface("sphere"));
-    keyframe_markers_render_intstance->set_surface_material_override(keyframe_markers_render_intstance->get_surface(0), joint_material);
+    keyframe_markers_render_instance->add_surface(RendererStorage::get_surface("sphere"));
+    keyframe_markers_render_instance->set_surface_material_override(keyframe_markers_render_instance->get_surface(0), joint_material);
 
     // Trjacoetry line
     animation_trajectory_instance = new MeshInstance3D();
@@ -99,7 +99,7 @@ void AnimationEditor::initialize()
 
 void AnimationEditor::clean()
 {
-    delete keyframe_markers_render_intstance;
+    delete keyframe_markers_render_instance;
 }
 
 void AnimationEditor::on_enter(void* data)
@@ -183,14 +183,13 @@ void AnimationEditor::update(float delta_time)
     if(show_keyframe_dirty) {
 
         // Set current node in keyframe state
-        bool is_looping = current_animation->get_looping();
-        current_animation->set_looping(false);
+
         for (auto& p : current_animation_state->properties) {
 
             Node::AnimatableProperty node_property = current_node->get_animatable_property(p.first);
             void* data = node_property.property;
 
-            current_animation->sample(current_animation_state->time, p.second.track_id, data);
+            current_animation->sample(current_animation_state->time, p.second.track_id, ANIMATION_LOOP_NONE, data);
 
             current_node->set_transform_dirty(true);
 
@@ -198,7 +197,6 @@ void AnimationEditor::update(float delta_time)
             // ...
         }
 
-        current_animation->set_looping(is_looping);
         inspect_keyframe();
     }
 
@@ -258,7 +256,7 @@ void AnimationEditor::render()
 
         const glm::mat4 anim_position_model = glm::scale(glm::translate(glm::mat4(1.0f), position), glm::vec3(0.006f));
 
-        Renderer::instance->add_renderable(keyframe_markers_render_intstance, anim_position_model);
+        Renderer::instance->add_renderable(keyframe_markers_render_instance, anim_position_model);
     }
 
     animation_trajectory_instance->render();
@@ -517,6 +515,16 @@ void AnimationEditor::store_animation_state(sAnimationState& state)
     }
 }
 
+void AnimationEditor::set_loop_type(uint8_t type)
+{
+    if (!current_animation) {
+        assert(0);
+        return;
+    }
+
+    player->set_loop_type(type);
+}
+
 void AnimationEditor::play_animation()
 {
     player->play(current_animation);
@@ -584,6 +592,23 @@ void AnimationEditor::init_ui()
     // ** Clone node **
     first_row->add_child(new ui::TextureButton2D("open_list", "data/textures/clone.png"));
 
+    // Animation settings
+    {
+        ui::ButtonSubmenu2D* loop_mode = new ui::ButtonSubmenu2D("loop_mode", "data/textures/loop.png");
+
+        // ** Loop modes
+        {
+            ui::ComboButtons2D* combo_loops = new ui::ComboButtons2D("combo_loops");
+            combo_loops->add_child(new ui::TextureButton2D("loop_none", "data/textures/cross.png"));
+            combo_loops->add_child(new ui::TextureButton2D("loop_default", "data/textures/loop.png", ui::SELECTED));
+            combo_loops->add_child(new ui::TextureButton2D("loop_reverse", "data/textures/reverse_loop.png"));
+            combo_loops->add_child(new ui::TextureButton2D("loop_ping_pong", "data/textures/ping_pong_loop.png"));
+            loop_mode->add_child(combo_loops);
+        }
+
+        first_row->add_child(loop_mode);
+    }
+
     // ** Keyframe actions
     {
         ui::ItemGroup2D* g_keyframes = new ui::ItemGroup2D("g_keyframes");
@@ -639,6 +664,14 @@ void AnimationEditor::init_ui()
 
 void AnimationEditor::bind_events()
 {
+    // Loop mode events
+    {
+        Node::bind("loop_none", [&](const std::string& signal, void* button) { set_loop_type(ANIMATION_LOOP_NONE); });
+        Node::bind("loop_default", [&](const std::string& signal, void* button) { set_loop_type(ANIMATION_LOOP_DEFAULT); });
+        Node::bind("loop_reverse", [&](const std::string& signal, void* button) { set_loop_type(ANIMATION_LOOP_REVERSE); });
+        Node::bind("loop_ping_pong", [&](const std::string& signal, void* button) { set_loop_type(ANIMATION_LOOP_PING_PONG); });
+    }
+
     // Keyframe events
     {
         Node::bind("open_list", [&](const std::string& signal, void* button) { inspect_keyframes_list(true); });

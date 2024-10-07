@@ -8,6 +8,7 @@
 #include "framework/parsers/parse_scene.h"
 #include "framework/parsers/parse_gltf.h"
 #include "framework/utils/utils.h"
+#include "framework/utils/tinyfiledialogs.h"
 #include "framework/ui/io.h"
 #include "framework/ui/keyboard.h"
 
@@ -324,6 +325,47 @@ void RoomsEngine::toggle_tutorial()
 void RoomsEngine::render_gui()
 {
     render_default_gui();
+
+    if (ImGui::BeginMainMenuBar())
+    {
+        if (ImGui::BeginMenu("File"))
+        {
+            if (ImGui::MenuItem("Open room (.room)"))
+            {
+                std::vector<const char*> filter_patterns = { "*.room" };
+                char const* open_file_name = tinyfd_openFileDialog(
+                    "Room loader",
+                    "",
+                    filter_patterns.size(),
+                    filter_patterns.data(),
+                    "Rooms format",
+                    0
+                );
+
+                if (open_file_name) {
+                    set_main_scene(open_file_name);
+                }
+            }
+            if (ImGui::MenuItem("Save room (.room)"))
+            {
+                std::vector<const char*> filter_patterns = { "*.room" };
+
+                char const* save_file_name = tinyfd_saveFileDialog(
+                    "Room loader",
+                    "",
+                    filter_patterns.size(),
+                    filter_patterns.data(),
+                    "Rooms format"
+                );
+
+                if (save_file_name) {
+                    main_scene->serialize(save_file_name);
+                }
+            }
+            ImGui::EndMenu();
+        }
+        ImGui::EndMainMenuBar();
+    }
 
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
 

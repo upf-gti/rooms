@@ -55,6 +55,12 @@ void SceneEditor::initialize()
     main_scene->add_node(default_sculpt);
 #endif
 
+    /*auto e = parse_mesh("data/meshes/torus/torus.obj");
+    main_scene->add_node(e);
+
+    e = parse_mesh("data/meshes/cube/cube.obj");
+    main_scene->add_node(e);*/
+
     Node::bind(main_scene->get_name() + "@nodes_added", [&](const std::string& sg, void* data) {
         set_inspector_dirty();
     });
@@ -93,6 +99,9 @@ void SceneEditor::update(float delta_time)
             moving_node = false;
         }
     }
+    else {
+        shortcuts[shortcuts::SELECT_NODE] = true;
+    }
 
     if (inspector_dirty) {
 
@@ -110,7 +119,7 @@ void SceneEditor::update(float delta_time)
 
     update_gizmo(delta_time);
 
-    update_node_rotation();
+    update_node_transform();
 
     if (renderer->get_openxr_available()) {
 
@@ -215,6 +224,7 @@ void SceneEditor::process_node_hovered()
     const bool group_hovered = !sculpt_hovered && !!dynamic_cast<Group3D*>(hovered_node);
     const bool a_pressed = Input::was_button_pressed(XR_BUTTON_A) || Input::was_mouse_pressed(GLFW_MOUSE_BUTTON_LEFT);
     const bool b_pressed = Input::was_button_pressed(XR_BUTTON_B);
+    const bool r_trigger_pressed = Input::was_trigger_pressed(HAND_RIGHT);
 
     if (group_hovered) {
         if (grouping_node) {
@@ -233,7 +243,7 @@ void SceneEditor::process_node_hovered()
             process_group();
         }
     }
-    else if (true || is_shift_right_pressed) {
+    else if (is_shift_right_pressed) {
         shortcuts[shortcuts::ANIMATE_NODE] = true;
         shortcuts[shortcuts::GROUP_NODE] = true;
         if (a_pressed) {
@@ -254,6 +264,9 @@ void SceneEditor::process_node_hovered()
             select_node(hovered_node, false);
             RoomsEngine::switch_editor(SCULPT_EDITOR);
             static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(static_cast<SculptInstance*>(hovered_node));
+        }
+        else if (r_trigger_pressed) {
+            select_node(hovered_node, false);
         }
     }
 }
@@ -378,6 +391,7 @@ void SceneEditor::init_ui()
             right_hand_box->add_child(new ui::ImageLabel2D("Add to Group", shortcuts::A_BUTTON_PATH, shortcuts::ADD_TO_GROUP));
             right_hand_box->add_child(new ui::ImageLabel2D("Group Node", "data/textures/buttons/r_grip_plus_a.png", shortcuts::GROUP_NODE, double_size));
             right_hand_box->add_child(new ui::ImageLabel2D("Place Node", "data/textures/buttons/r_trigger.png", shortcuts::PLACE_NODE));
+            right_hand_box->add_child(new ui::ImageLabel2D("Select Node", "data/textures/buttons/r_trigger.png", shortcuts::SELECT_NODE));
             right_hand_ui_3D = new Viewport3D(right_hand_box);
         }
     }
@@ -443,10 +457,11 @@ void SceneEditor::bind_events()
     {
         auto callback = [&](const std::string& output) {
             main_scene->serialize("data/exports/" + output + ".room");
+            main_scene->set_name(output);
             exports_dirty = true;
         };
 
-        Node::bind("save", [fn = callback](const std::string& signal, void* button) { ui::Keyboard::request(fn, "unnamed"); });
+        Node::bind("save", [&, fn = callback](const std::string& signal, void* button) { ui::Keyboard::request(fn, main_scene->get_name()); });
         Node::bind("load", [&](const std::string& signal, void* button) { inspect_exports(true); });
     }
 }
@@ -487,11 +502,6 @@ void SceneEditor::clone_node(Node* node, bool copy)
 
     new_sculpt->set_transform(current_sculpt->get_transform());
     new_sculpt->set_name(current_sculpt->get_name() + "_copy");
-
-    // This should be used once we have the stuff to parent nodes
-    //if (renderer->get_openxr_available()) {
-    //    new_sculpt->set_position(Input::get_controller_position(HAND_RIGHT, POSE_AIM));
-    //}
 
     RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
     rooms_renderer->toogle_frame_debug();
@@ -536,8 +546,7 @@ void SceneEditor::process_group()
 
         // Create new group and add the nodes
         Group3D* new_group = new Group3D();
-        new_group->add_child(to_group_3d);
-        new_group->add_child(hovered_3d);
+        new_group->add_nodes({ to_group_3d, hovered_3d });
         main_scene->add_node(new_group);
 
         spdlog::info("group processed. {} nodes in scene. {} nodes in group", main_scene->get_nodes().size(), new_group->get_children().size());
@@ -691,37 +700,53 @@ bool SceneEditor::is_rotation_being_used()
     return Input::get_trigger_value(HAND_LEFT) > 0.5;
 }
 
-void SceneEditor::update_node_rotation()
+void SceneEditor::update_node_transform()
 {
     // Do not rotate sculpt if shift -> we might be rotating the edit
     if (selected_node && is_rotation_being_used() && !is_shift_left_pressed) {
 
-        glm::quat current_hand_rotation = Input::get_controller_rotation(HAND_LEFT);
-        glm::vec3 current_hand_translation = Input::get_controller_position(HAND_LEFT);
+        glm::quat left_hand_rotation = Input::get_controller_rotation(HAND_LEFT);
+        glm::vec3 left_hand_translation = Input::get_controller_position(HAND_LEFT);
+        glm::vec3 right_hand_translation = Input::get_controller_position(HAND_RIGHT);
+        float hand_distance = glm::length2(left_hand_translation - right_hand_translation);
 
         if (!rotation_started) {
-            last_hand_rotation = current_hand_rotation;
-            last_hand_translation = current_hand_translation;
+            last_left_hand_rotation = left_hand_rotation;
+            last_left_hand_translation = left_hand_translation;
         }
 
-        glm::quat rotation_diff = (current_hand_rotation * glm::inverse(last_hand_rotation));
-        glm::vec3 translation_diff = current_hand_translation - last_hand_translation;
+        glm::quat rotation_diff = (left_hand_rotation * glm::inverse(last_left_hand_rotation));
+        glm::vec3 translation_diff = left_hand_translation - last_left_hand_translation;
 
         Node3D* node = static_cast<Node3D*>(selected_node);
 
         node->rotate_world(rotation_diff);
         node->translate(translation_diff);
 
+        if (Input::get_trigger_value(HAND_RIGHT) > 0.5) {
+
+            if (!scale_started) {
+                last_hand_distance = hand_distance;
+                scale_started = true;
+            }
+
+            float hand_distance_diff = hand_distance / last_hand_distance;
+            node->scale(glm::vec3(hand_distance_diff));
+            last_hand_distance = hand_distance;
+        }
+        else if (scale_started) {
+            scale_started = false;
+        }
+
         rotation_started = true;
 
-        last_hand_rotation = current_hand_rotation;
-        last_hand_translation = current_hand_translation;
+        last_left_hand_rotation = left_hand_rotation;
+        last_left_hand_translation = left_hand_translation;
     }
-    else {
-        // If rotation has stopped
-        if (rotation_started && !is_shift_left_pressed) {
-            rotation_started = false;
-        }
+
+    // If rotation has stopped
+    else if (rotation_started && !is_shift_left_pressed) {
+        rotation_started = false;
     }
 }
 
