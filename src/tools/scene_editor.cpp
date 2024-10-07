@@ -95,6 +95,9 @@ void SceneEditor::update(float delta_time)
             moving_node = false;
         }
     }
+    else {
+        shortcuts[shortcuts::SELECT_NODE] = true;
+    }
 
     if (inspector_dirty) {
 
@@ -217,6 +220,7 @@ void SceneEditor::process_node_hovered()
     const bool group_hovered = !sculpt_hovered && !!dynamic_cast<Group3D*>(hovered_node);
     const bool a_pressed = Input::was_button_pressed(XR_BUTTON_A) || Input::was_mouse_pressed(GLFW_MOUSE_BUTTON_LEFT);
     const bool b_pressed = Input::was_button_pressed(XR_BUTTON_B);
+    const bool r_trigger_pressed = Input::was_trigger_pressed(HAND_RIGHT);
 
     if (group_hovered) {
         if (grouping_node) {
@@ -256,6 +260,9 @@ void SceneEditor::process_node_hovered()
             select_node(hovered_node, false);
             RoomsEngine::switch_editor(SCULPT_EDITOR);
             static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(static_cast<SculptInstance*>(hovered_node));
+        }
+        else if (r_trigger_pressed) {
+            select_node(hovered_node, false);
         }
     }
 }
@@ -380,6 +387,7 @@ void SceneEditor::init_ui()
             right_hand_box->add_child(new ui::ImageLabel2D("Add to Group", shortcuts::A_BUTTON_PATH, shortcuts::ADD_TO_GROUP));
             right_hand_box->add_child(new ui::ImageLabel2D("Group Node", "data/textures/buttons/r_grip_plus_a.png", shortcuts::GROUP_NODE, double_size));
             right_hand_box->add_child(new ui::ImageLabel2D("Place Node", "data/textures/buttons/r_trigger.png", shortcuts::PLACE_NODE));
+            right_hand_box->add_child(new ui::ImageLabel2D("Select Node", "data/textures/buttons/r_trigger.png", shortcuts::SELECT_NODE));
             right_hand_ui_3D = new Viewport3D(right_hand_box);
         }
     }

@@ -33,6 +33,7 @@ namespace shortcuts {
         EDIT_SCULPT_NODE,
         EDIT_GROUP,
         ANIMATE_NODE,
+        SELECT_NODE,
         CLONE_NODE,
         PLACE_NODE,
         GROUP_NODE,
