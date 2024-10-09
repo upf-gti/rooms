@@ -196,8 +196,6 @@ void RoomsEngine::update(float delta_time)
 
     Node::check_controller_signals();
 
-    Engine::update(delta_time);
-
     if (use_environment_map) {
         environment->update(delta_time);
     }
@@ -208,6 +206,8 @@ void RoomsEngine::update(float delta_time)
         controller_mesh_right->set_transform(Transform::mat4_to_transform(Input::get_controller_pose(HAND_RIGHT)));
         controller_mesh_left->set_transform(Transform::mat4_to_transform(Input::get_controller_pose(HAND_LEFT)));
     }
+
+    Engine::update(delta_time);
 }
 
 void RoomsEngine::render()

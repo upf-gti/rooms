@@ -14,6 +14,13 @@
 
 #include <list>
 
+
+/*
+    TODO:
+        - Make dynamic the instance data buffers
+        - Preview
+*/
+
 class MeshInstance3D;
 
 struct RayIntersectionInfo {
@@ -34,13 +41,7 @@ enum eSculptInstanceFlags : uint32_t {
     SCULPT_IS_SELECTED = 0b100u
 };
 
-struct sSculptInstanceData {
-    uint32_t flags = 0u;
-    uint32_t pad0;
-    uint32_t pad1;
-    uint32_t pad2;
-    glm::mat4x4 model;
-};
+#define MAX_INSTANCES_PER_SCULPT 20u
 
 class RaymarchingRenderer {
 
@@ -49,11 +50,34 @@ class RaymarchingRenderer {
         EVALUATE_PREVIEW_STROKE = 0x0002u
     };
 
-    uint32_t sculpt_count = 0u;
-    std::vector<uint32_t> sculpt_instance_count;
-    std::vector<SculptInstance*> sculpt_instances_list;
+    // Render pipelines
+    struct sSculptInstanceData {
+        uint32_t flags = 0u;
+        uint32_t pad0;
+        uint32_t pad1;
+        uint32_t pad2;
+        glm::mat4x4 model;
+    };
 
-    std::vector<SculptInstance*> sculpts_to_process;
+    struct sSculptRenderInstances {
+        Sculpt* sculpt = nullptr;
+        uint16_t instance_count = 0u;
+        sSculptInstanceData models[MAX_INSTANCES_PER_SCULPT];
+    };
+
+    std::unordered_map<uint32_t, sSculptRenderInstances*> sculpts_render_lists;
+    std::vector<sSculptInstanceData> models_for_upload;
+    Uniform         global_sculpts_instance_data_uniform;
+
+    struct {
+        uint32_t                count = 20u;
+        std::vector<uint32_t>   count_buffer;
+        Uniform                 uniform_count_buffer;
+        WGPUBindGroup           count_bindgroup = nullptr;
+
+        Pipeline                prepare_indirect;
+        Shader*                 prepare_indirect_shader = nullptr;
+    } sculpt_instances;
 
     Uniform         linear_sampler_uniform;
 
@@ -66,73 +90,30 @@ class RaymarchingRenderer {
     WGPUBindGroup   render_preview_proxy_geometry_bind_group = nullptr;
     WGPUBindGroup   render_preview_camera_bind_group = nullptr;
 
-
-    // Octree parameters
-    
-
-    struct sBrickBuffers_counters {
-        uint32_t atlas_empty_bricks_counter;
-        uint32_t brick_instance_counter;
-        uint32_t brick_removal_counter;
-        uint32_t preview_instance_counter;
-    };
-
-    //WGPUBuffer     brick_buffers_counters_read_buffer = nullptr;
-
-    Uniform* sculpt_octree_uniform = nullptr;
-    WGPUBindGroup sculpt_octree_bindgroup = nullptr;
-    uint32_t current_sculpt_id;
-
-    // Octree creation
-    
-    Pipeline        compute_octree_ray_intersection_pipeline;
-    Pipeline        compute_octree_brick_unmark_pipeline;
-    
-    Shader*         compute_octree_ray_intersection_shader = nullptr;
-    Shader*         compute_octree_brick_unmark_shader = nullptr;
-    
-    WGPUBindGroup   compute_stroke_buffer_bind_group = nullptr;
-    WGPUBindGroup   compute_octree_brick_unmark_bind_group = nullptr;
-    
-    
-    Uniform         octree_preview_stroke;
-    
-    WGPUBindGroup   render_camera_bind_group = nullptr;
-
-    
-
-    Uniform         ray_info_uniform;
+    /* Uniform         ray_info_uniform;
     Uniform         ray_intersection_info_uniform;
     WGPUBindGroup   octree_ray_intersection_bind_group = nullptr;
     WGPUBindGroup   octree_ray_intersection_info_bind_group = nullptr;
-    WGPUBuffer      ray_intersection_info_read_buffer = nullptr;
+    WGPUBuffer      ray_intersection_info_read_buffer = nullptr;*/
 
-    //Uniform         sculpt_data_uniform;
-    WGPUBindGroup   sculpt_data_bind_proxy_group = nullptr;
+    //Pipeline        compute_octree_ray_intersection_pipeline;
+    //Shader*         compute_octree_ray_intersection_shader = nullptr;
+
+    Pipeline        compute_octree_brick_unmark_pipeline;
+    Shader*         compute_octree_brick_unmark_shader = nullptr;
+    WGPUBindGroup   compute_octree_brick_unmark_bind_group = nullptr;
+
+    Uniform         octree_preview_stroke;
     WGPUBindGroup   sculpt_data_bind_preview_group = nullptr;
 
-    Uniform         *camera_uniform;
+    Uniform*        camera_uniform;
+    WGPUBindGroup   render_camera_bind_group = nullptr;
 
     Uniform         compute_stroke_buffer_uniform;
 
-    Uniform         sculpts_instance_data_uniform;
-
-    Uniform         sculpt_instances_buffer_uniform;
-    WGPUBindGroup   sculpt_instances_bindgroup = nullptr;
-
     MeshInstance3D* cube_mesh = nullptr;
 
-    //struct sSculptData {
-    //    glm::vec3 sculpt_start_position = {0.f, 0.f, 0.f};
-    //    float dummy1 = 0.0f;
-    //    glm::quat sculpt_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
-    //    glm::quat sculpt_inv_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
-    //} sculpt_data;
-
-    
-
-    
-
+ 
     struct RayInfo {
         glm::vec3 ray_origin;
         float dummy0;
@@ -161,8 +142,6 @@ class RaymarchingRenderer {
     void init_raymarching_proxy_pipeline();
     void init_octree_ray_intersection_pipeline();
 
-    void upload_stroke_context_data(sToComputeStrokeData* stroke_to_compute);
-
     void compute_preview_edit(WGPUComputePassEncoder compute_pass);
 
     // DEBUG
@@ -173,11 +152,13 @@ public:
     RaymarchingRenderer();
 
     int initialize(bool use_mirror_screen);
+
     void clean();
 
-    void update_sculpt(WGPUCommandEncoder command_encoder);
+    void add_rendercall_to_sculpt(Sculpt* sculpt, const glm::mat4& model, const uint32_t flags = 0u);
 
-    void compute_octree(WGPUCommandEncoder command_encoder, bool show_previews = false);
+    void update_sculpts_and_instances(WGPUCommandEncoder command_encoder);
+
     void render_raymarching_proxy(WGPURenderPassEncoder render_pass, uint32_t camera_buffer_stride = 0);
 
     void octree_ray_intersect(const glm::vec3& ray_origin, const glm::vec3& ray_dir, std::function<void(glm::vec3)> callback = nullptr);
@@ -190,9 +171,6 @@ public:
     *   Edits
     */
 
-    void initialize_stroke();
-    void change_stroke(const StrokeParameters& params, const uint32_t index_increment = 1u);
-
     inline void add_preview_edit(const Edit& edit) {
         if (preview_stroke.stroke.edit_count == preview_stroke.edit_list.size()) {
             preview_stroke.edit_list.resize(preview_stroke.edit_list.size() + PREVIEW_EDIT_LIST_INCREMENT);
@@ -204,6 +182,6 @@ public:
     *   Sculpt management
     */
 
-    void add_sculpt_instance(SculptInstance* instance);
-    void remove_sculpt_instance(SculptInstance* instance);
+    //void add_sculpt_instance(SculptInstance* instance);
+    //void remove_sculpt_instance(SculptInstance* instance);
 };

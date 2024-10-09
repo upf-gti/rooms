@@ -3,8 +3,17 @@
 #include "framework/resources/sculpt.h"
 #include "graphics/texture.h"
 
+
+/*
+    TODO:
+        - Import mutiple sculpts
+        - Delete sculpts
+        - Raycasting
+        - Compute preview
+*/
 class SculptManager {
 
+    // Sculpt instances
     struct sEvaluateRequest {
         Sculpt* sculpt;
         sStrokeInfluence strokes_to_process; // context and new strokes in GPU format
@@ -25,12 +34,12 @@ class SculptManager {
 
     // Sculpt deletion
     Pipeline        sculpt_delete_pipeline;
-    Shader* sculpt_delete_shader = nullptr;
+    Shader*         sculpt_delete_shader = nullptr;
     WGPUBindGroup   compute_octree_clean_octree_bind_group = nullptr;
 
     // Evaluation initialization
     Pipeline        evaluation_initialization_pipeline;
-    Shader* evaluation_initialization_shader = nullptr;
+    Shader*         evaluation_initialization_shader = nullptr;
     WGPUBindGroup   evaluation_initialization_bind_group = nullptr;
 
     // Sculpt evaluation
@@ -71,11 +80,11 @@ class SculptManager {
 
     // Octree struct reference
     struct sOctreeNode {
-        glm::vec2 octant_center_distance = glm::vec2(10000.0f, 10000.0f);
-        uint32_t dummy = 0.0f;
-        uint32_t tile_pointer = 0;
-        glm::vec3 padding;
-        uint32_t culling_data = 0u;
+        glm::vec2   octant_center_distance = glm::vec2(10000.0f, 10000.0f);
+        uint32_t    dummy = 0.0f;
+        uint32_t    tile_pointer = 0;
+        glm::vec3   padding;
+        uint32_t    culling_data = 0u;
     };
 
     // Data needed for sdf merging

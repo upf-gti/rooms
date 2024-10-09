@@ -41,7 +41,6 @@ struct CameraData {
     ibl_intensity : f32
 };
 
-@group(0) @binding(0) var<storage, read> brick_copy_buffer : array<u32>;
 @group(0) @binding(1) var<storage, read> preview_stroke : PreviewStroke;
 @group(0) @binding(3) var read_sdf: texture_3d<f32>;
 @group(0) @binding(4) var texture_sampler : sampler;
@@ -51,25 +50,25 @@ struct CameraData {
 
 #dynamic @group(1) @binding(0) var<uniform> camera_data : CameraData;
 
-@group(2) @binding(3) var<storage, read> ray_intersection_info: RayIntersectionInfo;
+//@group(2) @binding(0) var<storage, read> octree : Octree_NonAtomic;
+@group(2) @binding(1) var<storage, read> brick_index_buffer : array<u32>;
+@group(2) @binding(2) var<storage, read> sculpt_indirect : SculptIndirectCall_NonAtomic;
+
+//@group(2) @binding(3) var<storage, read> ray_intersection_info: RayIntersectionInfo;
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
+    // Revsar estoo
+    let sculpt_instance_count : u32 = sculpt_indirect.instance_count / sculpt_indirect.brick_count;
+    let brick_idx : u32 = brick_index_buffer[in.instance_id / sculpt_instance_count];
+    let model_idx : u32 = in.instance_id % sculpt_instance_count;
 
-    let raw_instance_data : u32 = brick_copy_buffer[in.instance_id];
-
-    let instance_index : u32 = raw_instance_data >> 12u;
-    let model_index : u32 = raw_instance_data & 0xFFF;
-
-    let instance_data : ProxyInstanceData = brick_buffers.brick_instance_data[instance_index];
-
-    let tile_pointer : u32 = ray_intersection_info.tile_pointer;
+    let instance_data : ProxyInstanceData = brick_buffers.brick_instance_data[brick_idx];
 
     var vertex_in_sculpt_space : vec3f = in.position * BRICK_WORLD_SIZE * 0.5 + instance_data.position;
-    //var vertex_in_world_space : vec4f = (sculpt_instance_data[model_index].model * vec4f(vertex_in_sculpt_space, 1.0));
-    var vertex_in_world_space : vec4f = (mat4x4f(1.0, 0.0, 0.0, 0.0,  0.0, 1.0, 0.0, 0.0,   0.0, 0.0, 1.0, 0.0,     0.0, 0.0, 0.0, 1.0) * vec4f(vertex_in_sculpt_space, 1.0));
+    var vertex_in_world_space : vec4f = (sculpt_instance_data[model_idx].model * vec4f(vertex_in_sculpt_space, 1.0));
 
-    // let model_mat = mat4x4f(vec4f(BOX_SIZE, 0.0, 0.0, 0.0), vec4f(0.0, BOX_SIZE, 0.0, 0.0), vec4f(0.0, 0.0, BOX_SIZE, 0.0), vec4f(instance_pos.x, instance_pos.y, instance_pos.z, 1.0));
+    //let o = octree.current_level;
 
     var out: VertexOutput;
     out.position = camera_data.view_projection * vertex_in_world_space;
@@ -91,7 +90,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     out.vertex_in_world_space = vertex_in_world_space.xyz; 
     // From mesh space -1 to 1, -> 0 to 8.0/SDF_RESOLUTION (plus a voxel for padding)
     out.in_atlas_pos = (in.position * 0.5 + 0.5) * 8.0/SDF_RESOLUTION + 1.0/SDF_RESOLUTION + out.atlas_tile_coordinate;
-    out.model_index = model_index;
+    out.model_index = model_idx;
     return out;
 }
 
@@ -99,8 +98,6 @@ struct FragmentOutput {
     @location(0) color: vec4f,
     @builtin(frag_depth) depth: f32
 }
-
-// @group(2) @binding(0) var<uniform> sculpt_data : SculptData;
 
 #define MAX_LIGHTS
 

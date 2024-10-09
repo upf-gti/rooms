@@ -26,6 +26,8 @@ public:
 
     void update(float delta_time);
 
+    void render() override;
+
     inline void set_sculpt_data(Sculpt* new_data) {
         sculpt_gpu_data = new_data;
     }

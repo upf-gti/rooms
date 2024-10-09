@@ -111,12 +111,30 @@ Sculpt* SculptManager::create_sculpt()
     // Set default values of the octree
     webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_uniform.data), sizeof(uint32_t) * 4, octree_default.data(), sizeof(sOctreeNode) * sdf_globals.octree_total_size);
 
-    std::vector<Uniform*> uniforms = { &octree_uniform };
-    WGPUBindGroup octree_buffer_bindgroup = webgpu_context->create_bind_group(uniforms, evaluate_shader, 1);
+    Uniform brick_index_buffer;
+    const size_t brick_index_size = sizeof(uint32_t) * sdf_globals.octree_last_level_size;
+    brick_index_buffer.data = webgpu_context->create_buffer(brick_index_size, WGPUBufferUsage_Storage, nullptr, "brick index buffer");
+    brick_index_buffer.binding = 1u;
+    brick_index_buffer.buffer_size = brick_index_size;
 
-    //sculpt_instance_count.push_back(1u);
+    Uniform indirect_buffer;
+    const size_t indirect_buffer_size = sizeof(uint32_t) * 5;
+    uint32_t values[5] = {36u, 0u, 0u, 0u, 0u};
+    indirect_buffer.data = webgpu_context->create_buffer(indirect_buffer_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage | WGPUBufferUsage_Indirect, values, "brick indirect buffer");
+    indirect_buffer.binding = 2u;
+    indirect_buffer.buffer_size = indirect_buffer_size;
 
-    return new Sculpt(sculpt_count++, octree_uniform, octree_buffer_bindgroup);
+    std::vector<Uniform*> uniforms = { &octree_uniform, &brick_index_buffer, &indirect_buffer };
+    WGPUBindGroup evaluate_sculpt_bindgroup = webgpu_context->create_bind_group(uniforms, brick_copy_shader, 0u, "Write read octree bindgroup");
+
+    uniforms = { &octree_uniform };
+    WGPUBindGroup octree_bindgroup = webgpu_context->create_bind_group(uniforms, evaluate_shader, 1u, "Octree bindgroup");
+
+    WGPUBindGroup readonly_sculpt_buffer_bindgroup;
+    uniforms = { &brick_index_buffer, &indirect_buffer };
+    readonly_sculpt_buffer_bindgroup = webgpu_context->create_bind_group(uniforms, RendererStorage::get_shader("data/shaders/octree/proxy_geometry_plain.wgsl"), 2u, "Read only octree bindgroup");
+
+    return new Sculpt(sculpt_count++, octree_uniform, indirect_buffer, brick_index_buffer, octree_bindgroup, evaluate_sculpt_bindgroup, readonly_sculpt_buffer_bindgroup);
 }
 
 Sculpt* SculptManager::create_sculpt_from_history(const std::vector<Stroke>& stroke_history)
@@ -260,12 +278,14 @@ void SculptManager::evaluate(WGPUComputePassEncoder compute_pass, const sEvaluat
 #endif
 
         brick_copy_pipeline.set(compute_pass);
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 0, brick_copy_bind_group, 0, nullptr);
+        wgpuComputePassEncoderSetBindGroup(compute_pass, 0u, evaluate_request.sculpt->get_sculpt_bindgroup(), 0u, nullptr);
+
         //wgpuComputePassEncoderSetBindGroup(compute_pass, 1, sculpt.octree_bindgroup, 0, nullptr);
-        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, sdf_globals.octants_max_size / (8u * 8u * 8u), 1, 1);
+        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, sdf_globals.octree_last_level_size / (8u * 8u * 8u), 1, 1);
 
         increment_level_pipeline.set(compute_pass);
         wgpuComputePassEncoderSetBindGroup(compute_pass, 0, increment_level_bind_group, 0, nullptr);
+        wgpuComputePassEncoderSetBindGroup(compute_pass, 1, evaluate_request.sculpt->get_octree_bindgroup(), 0u, nullptr);
         wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
 
     }
@@ -345,9 +365,6 @@ void SculptManager::upload_strokes_and_edits(const std::vector<sToUploadStroke>&
     // Upload the data to the GPU
     webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_edit_list.data), 0, edits_to_upload.data(), sizeof(Edit) * edits_to_upload.size());
     webgpu_context->update_buffer(std::get<WGPUBuffer>(stroke_context_list.data), sizeof(uint32_t) * 4 * 4, strokes_to_compute.data(), sizeof(sToUploadStroke) * strokes_to_compute.size());
-
-    //spdlog::info("min aabb: {}, {}, {}", stroke_to_compute->in_frame_influence.eval_aabb_min.x, stroke_to_compute->in_frame_influence.eval_aabb_min.y, stroke_to_compute->in_frame_influence.eval_aabb_min.z);
-    //spdlog::info("max aabb: {}, {}, {}", stroke_to_compute->in_frame_influence.eval_aabb_max.x, stroke_to_compute->in_frame_influence.eval_aabb_max.y, stroke_to_compute->in_frame_influence.eval_aabb_max.z);
 }
 
 
@@ -438,6 +455,10 @@ void SculptManager::init_pipelines_and_bindgroups()
     WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
     sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();
 
+    //wgpuRenderPassEncoderMultiDrawIndexedIndirectCount
+
+    //wgpuRenderPassEncoderDrawIndexedIndirect
+
     // Create bindgroups
     {
         std::vector<Uniform*> uniforms = { &merge_data_uniform, &octree_edit_list,
@@ -455,12 +476,6 @@ void SculptManager::init_pipelines_and_bindgroups()
     {
         std::vector<Uniform*> uniforms = { &sdf_globals.indirect_buffers, &sdf_globals.brick_buffers };
         increment_level_bind_group = webgpu_context->create_bind_group(uniforms, increment_level_shader, 0);
-    }
-
-    // Brick copy for brick instanced rendering
-    {
-        std::vector<Uniform*> uniforms = { &sdf_globals.brick_copy_buffer, &sdf_globals.brick_buffers };
-        brick_copy_bind_group = webgpu_context->create_bind_group(uniforms, brick_copy_shader, 0);
     }
 
     // Octant usage, for propagating worl on the evalutor

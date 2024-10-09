@@ -7,6 +7,7 @@
 #define BRICK_REMOVAL_COUNT
 #define MAX_SUBDIVISION_SIZE
 #define MAX_STROKE_INFLUENCE_COUNT
+#define OCTREE_LAST_LEVEL_STARTING_IDX
 
 const SCULPT_TO_ATLAS_CONVERSION_FACTOR = (WORLD_SPACE_SCALE / SDF_RESOLUTION)  / (SCULPT_MAX_SIZE);
 const PIXEL_WORLD_SIZE = SCULPT_MAX_SIZE / WORLD_SPACE_SCALE;
@@ -104,6 +105,22 @@ struct OctreeNode {
     culling_id : u32
 };
 
+struct SculptIndirectCall {
+    vertex_count : u32,
+    instance_count : atomic<u32>,
+    first_vertex : u32,
+    first_instance : u32,
+    brick_count : atomic<u32>
+};
+
+struct SculptIndirectCall_NonAtomic {
+    vertex_count : u32,
+    instance_count : u32,
+    first_vertex : u32,
+    first_instance : u32,
+    brick_count : u32
+};
+
 struct Octree {
     current_level : atomic<u32>,
     atomic_counter : atomic<u32>,
@@ -185,7 +202,6 @@ struct IndirectBuffers_ReadOnly {
 
 struct BrickBuffers {
     atlas_empty_bricks_counter : atomic<u32>,
-    brick_instance_counter : atomic<u32>,
     brick_removal_counter : atomic<u32>,
     preview_instance_counter : atomic<u32>,
 
@@ -200,7 +216,6 @@ struct BrickBuffers {
 
 struct BrickBuffers_ReadOnly {
     atlas_empty_bricks_counter : u32,
-    brick_instance_counter : u32,
     brick_removal_counter : u32,
     preview_instance_counter : u32,
     

@@ -69,6 +69,8 @@ void RoomsRenderer::init_sdf_globals()
     sdf_globals.empty_brick_and_removal_buffer_count = sdf_globals.max_brick_count + (sdf_globals.max_brick_count % 4);
     float octree_space_scale = powf(2.0, sdf_globals.octree_depth + 3);
 
+    uint32_t p = sdf_globals.octree_total_size - sdf_globals.octree_last_level_size;
+
     // Scale the size of a brick
     Shader::set_custom_define("WORLD_SPACE_SCALE", octree_space_scale); // Worldspace scale is 1/octree_max_width
     Shader::set_custom_define("OCTREE_DEPTH", sdf_globals.octree_depth);
@@ -77,6 +79,7 @@ void RoomsRenderer::init_sdf_globals()
     Shader::set_custom_define("BRICK_REMOVAL_COUNT", sdf_globals.empty_brick_and_removal_buffer_count);
     Shader::set_custom_define("MAX_SUBDIVISION_SIZE", sdf_globals.octree_last_level_size);
     Shader::set_custom_define("MAX_STROKE_INFLUENCE_COUNT", MAX_STROKE_INFLUENCE_COUNT);
+    Shader::set_custom_define("OCTREE_LAST_LEVEL_STARTING_IDX", sdf_globals.octree_total_size - sdf_globals.octree_last_level_size);
 
     Shader::set_custom_define("SDF_RESOLUTION", SDF_RESOLUTION);
     Shader::set_custom_define("SCULPT_MAX_SIZE", SCULPT_MAX_SIZE);
@@ -172,12 +175,12 @@ void RoomsRenderer::init_sdf_globals()
         webgpu_context->update_buffer(std::get<WGPUBuffer>(sdf_globals.indirect_buffers.data), 0, default_indirect_values, sizeof(uint32_t) * 16u);
     }
 
-    {
-        // Indirect buffer for octree generation compute
-        sdf_globals.brick_copy_buffer.data = webgpu_context->create_buffer(sizeof(uint32_t) * sdf_globals.octants_max_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "brick_copy_buffer");
-        sdf_globals.brick_copy_buffer.binding = 0;
-        sdf_globals.brick_copy_buffer.buffer_size = sizeof(uint32_t) * sdf_globals.octants_max_size;
-    }
+    //{
+    //    // Indirect buffer for octree generation compute
+    //    sdf_globals.brick_copy_buffer.data = webgpu_context->create_buffer(sizeof(uint32_t) * sdf_globals.octants_max_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "brick_copy_buffer");
+    //    sdf_globals.brick_copy_buffer.binding = 0;
+    //    sdf_globals.brick_copy_buffer.buffer_size = sizeof(uint32_t) * sdf_globals.octants_max_size;
+    //}
 }
 
 void RoomsRenderer::update(float delta_time)
@@ -185,6 +188,8 @@ void RoomsRenderer::update(float delta_time)
     Renderer::update(delta_time);
 
     sculpt_manager->update(global_command_encoder);
+
+    raymarching_renderer.update_sculpts_and_instances(global_command_encoder);
 }
 
 void RoomsRenderer::render()

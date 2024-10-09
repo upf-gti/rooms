@@ -22,21 +22,27 @@ SculptInstance::SculptInstance(SculptInstance* reference) : Node3D()
     sculpt_gpu_data = reference->get_sculpt_data();
     sculpt_gpu_data->ref();
 
-    dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->add_sculpt_instance(this);
+    //dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->add_sculpt_instance(this);
 }
 
 SculptInstance::~SculptInstance()
 {
     // Remove from raymarching renderer
 
-    dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->remove_sculpt_instance(this);
+    //dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->remove_sculpt_instance(this);
 
     sculpt_gpu_data->unref();
 }
 
 
 void SculptInstance::update(float delta_time) {
+    dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->add_rendercall_to_sculpt(sculpt_gpu_data, get_model());
 
+    //dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->add_rendercall_to_sculpt(sculpt_gpu_data, glm::translate(glm::mat4(1.0f), {0.05, 0.0, 0.0}));
+}
+
+void SculptInstance::render() {
+    
 }
 
 void SculptInstance::initialize()
@@ -44,7 +50,7 @@ void SculptInstance::initialize()
     sculpt_gpu_data = dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_sculpt_manager()->create_sculpt();
     sculpt_gpu_data->ref();
 
-    dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->add_sculpt_instance(this);
+    //dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->add_sculpt_instance(this);
 }
 
 void SculptInstance::from_history(const std::vector<Stroke>& new_history)
@@ -53,7 +59,7 @@ void SculptInstance::from_history(const std::vector<Stroke>& new_history)
         RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
         sculpt_gpu_data = rooms_renderer->get_sculpt_manager()->create_sculpt_from_history(new_history);
         sculpt_gpu_data->ref();
-        rooms_renderer->get_raymarching_renderer()->add_sculpt_instance(this);
+        //rooms_renderer->get_raymarching_renderer()->add_sculpt_instance(this);
     }
     else {
         initialize();
@@ -95,7 +101,7 @@ void SculptInstance::parse(std::ifstream& binary_scene_file)
 
     sculpt_gpu_data->ref();
 
-    rooms_renderer->get_raymarching_renderer()->add_sculpt_instance(this);
+    //rooms_renderer->get_raymarching_renderer()->add_sculpt_instance(this);
 
     // TODO: Remove current
     //rooms_renderer->get_raymarching_renderer()->set_current_sculpt(this);
