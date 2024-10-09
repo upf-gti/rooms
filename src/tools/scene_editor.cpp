@@ -54,11 +54,11 @@ void SceneEditor::initialize()
     main_scene->add_node(default_sculpt);
 #endif
 
-    /*auto e = parse_mesh("data/meshes/torus/torus.obj");
+    auto e = parse_mesh("data/meshes/torus/torus.obj");
     main_scene->add_node(e);
 
     e = parse_mesh("data/meshes/cube/cube.obj");
-    main_scene->add_node(e);*/
+    main_scene->add_node(e);
 
     Node::bind(main_scene->get_name() + "@nodes_added", [&](const std::string& sg, void* data) {
         set_inspector_dirty();
@@ -221,7 +221,7 @@ void SceneEditor::process_node_hovered()
 {
     const bool sculpt_hovered = !!dynamic_cast<SculptInstance*>(hovered_node);
     const bool group_hovered = !sculpt_hovered && !!dynamic_cast<Group3D*>(hovered_node);
-    const bool a_pressed = Input::was_button_pressed(XR_BUTTON_A) || Input::was_mouse_pressed(GLFW_MOUSE_BUTTON_LEFT);
+    const bool a_pressed = Input::was_button_pressed(XR_BUTTON_A);
     const bool b_pressed = Input::was_button_pressed(XR_BUTTON_B);
     const bool r_trigger_pressed = Input::was_trigger_pressed(HAND_RIGHT);
 
@@ -264,7 +264,7 @@ void SceneEditor::process_node_hovered()
             RoomsEngine::switch_editor(SCULPT_EDITOR);
             static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(static_cast<SculptInstance*>(hovered_node));
         }
-        else if (r_trigger_pressed) {
+        else if (r_trigger_pressed || Input::was_mouse_pressed(GLFW_MOUSE_BUTTON_LEFT)) {
             select_node(hovered_node, false);
         }
     }
@@ -520,7 +520,7 @@ void SceneEditor::group_node(Node* node)
     */
 
     grouping_node = true;
-    node_to_group = hovered_node;
+    node_to_group = node;
 }
 
 void SceneEditor::process_group()
@@ -529,12 +529,12 @@ void SceneEditor::process_group()
     Node3D* to_group_3d = static_cast<Node3D*>(node_to_group);
 
     // Check if current hover has group... (parent)
-    Group3D* group = dynamic_cast<Group3D*>(hovered_3d->get_parent());
+    Group3D* group = dynamic_cast<Group3D*>(hovered_3d);
 
     if (group) {
         // Add first node to the same group as the current hover
         main_scene->remove_node(to_group_3d);
-        group->add_child(to_group_3d);
+        group->add_node(to_group_3d);
     }
     else {
 
