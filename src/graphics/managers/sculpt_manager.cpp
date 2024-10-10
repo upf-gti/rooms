@@ -57,6 +57,11 @@ void SculptManager::update(WGPUCommandEncoder command_encoder)
         evaluations_to_process.pop_back();
     }
 
+    if (preview.needs_computing) {
+        upload_preview_strokes();
+        evaluate_preview(compute_pass);
+    }
+
     // Sculpture deleting and cleaning
 //    {
 //        if (sculpts_to_clean.size() > 0u) {
@@ -95,11 +100,12 @@ void SculptManager::update_sculpt(Sculpt* sculpt, const sStrokeInfluence& stroke
     evaluations_to_process.push_back({ sculpt, strokes_to_process, edits_to_process });
 }
 
-void SculptManager::set_preview_stroke(const sToUploadStroke& preview_stroke, const std::vector<Edit>& preview_edits) {
-    to_upload_preview_stroke = &preview_stroke;
-    to_upload_preview_edit_list = &preview_edits;
+void SculptManager::set_preview_stroke(Sculpt* sculpt, const sToUploadStroke& preview_stroke, const std::vector<Edit>& preview_edits) {
+    preview.to_upload_stroke = &preview_stroke;
+    preview.to_upload_edit_list = &preview_edits;
+    preview.sculpt = sculpt;
 
-    preview_needs_computing = true;
+    preview.needs_computing = true;
 }
 
 Sculpt* SculptManager::create_sculpt()
@@ -180,19 +186,30 @@ void SculptManager::evaluate(WGPUComputePassEncoder compute_pass, const sEvaluat
     uint32_t zero = 0u;
     webgpu_context->update_buffer(std::get<WGPUBuffer>(sdf_globals.brick_buffers.data), sizeof(uint32_t), &(zero), sizeof(uint32_t));
 
-    // TODO uplad the AABB
     webgpu_context->update_buffer(std::get<WGPUBuffer>(stroke_context_list.data), 0, &evaluate_request.strokes_to_process, sizeof(uint32_t) * 4 * 4);
 
     // TODO: review undo
     uint32_t set_as_preview = /*(needs_undo) ? 0x01u :*/ 0u;
     webgpu_context->update_buffer(std::get<WGPUBuffer>(evaluate_request.sculpt->get_octree_uniform().data), sizeof(uint32_t) * 2u, &set_as_preview, sizeof(uint32_t));
 
-    //spdlog::info("Evaluate stroke! id: {}, stroke context count: {}", stroke_to_compute->in_frame_stroke.stroke_id, stroke_to_compute->in_frame_influence.stroke_count);
-
     // TODO: debug render eval AABB
 
     // Upload strokes
     upload_strokes_and_edits(evaluate_request.strokes_to_process.strokes, evaluate_request.edit_to_process);
+
+    if (previus_dispatch_had_preview) {
+        // Call the brick unmark
+#ifndef NDEBUG
+        wgpuComputePassEncoderPushDebugGroup(compute_pass, "Brick unmark");
+#endif
+        brick_unmark_pipeline.set(compute_pass);
+        wgpuComputePassEncoderSetBindGroup(compute_pass, 0, brick_unmark_bind_group, 0, nullptr);
+        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, sdf_globals.octants_max_size / (8u * 8u * 8u), 1, 1);
+#ifndef NDEBUG
+        wgpuComputePassEncoderPopDebugGroup(compute_pass);
+#endif
+        previus_dispatch_had_preview = false;
+    }
 
     // Compute dispatches
     {
@@ -301,7 +318,7 @@ void SculptManager::evaluate(WGPUComputePassEncoder compute_pass, const sEvaluat
     performed_evaluation = true;
 }
 
-void SculptManager::evaluate_preview(WGPUComputePassEncoder compute_pass, Sculpt* sculpt)
+void SculptManager::evaluate_preview(WGPUComputePassEncoder compute_pass)
 {
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
@@ -314,7 +331,7 @@ void SculptManager::evaluate_preview(WGPUComputePassEncoder compute_pass, Sculpt
 
     uint32_t stroke_dynamic_offset = 0;
     wgpuComputePassEncoderSetBindGroup(compute_pass, 0, evaluation_initialization_bind_group, 0, nullptr);
-    wgpuComputePassEncoderSetBindGroup(compute_pass, 1, sculpt->get_octree_bindgroup(), 0, nullptr);
+    wgpuComputePassEncoderSetBindGroup(compute_pass, 1, preview.sculpt->get_octree_bindgroup(), 0, nullptr);
 
     wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
 
@@ -325,7 +342,7 @@ void SculptManager::evaluate_preview(WGPUComputePassEncoder compute_pass, Sculpt
         evaluate_pipeline.set(compute_pass);
 
         wgpuComputePassEncoderSetBindGroup(compute_pass, 0, evaluate_bind_group, 0, nullptr);
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 1, sculpt->get_octree_bindgroup(), 0, nullptr);
+        wgpuComputePassEncoderSetBindGroup(compute_pass, 1, preview.sculpt->get_octree_bindgroup(), 0, nullptr);
         wgpuComputePassEncoderSetBindGroup(compute_pass, 2, octant_usage_ping_pong_bind_groups[ping_pong_idx], 0, nullptr);
         wgpuComputePassEncoderSetBindGroup(compute_pass, 3, preview_stroke_bind_group, 0, nullptr);
 
@@ -341,7 +358,8 @@ void SculptManager::evaluate_preview(WGPUComputePassEncoder compute_pass, Sculpt
         ping_pong_idx = (ping_pong_idx + 1) % 2;
     }
 
-    preview_needs_computing = false;
+    preview.needs_computing = false;
+    previus_dispatch_had_preview = true;
 }
 
 void SculptManager::upload_strokes_and_edits(const std::vector<sToUploadStroke>& strokes_to_compute, const std::vector<Edit>& edits_to_upload)
@@ -444,8 +462,8 @@ void SculptManager::upload_preview_strokes() {
     //}
 
     // Upload preview data, first the stoke and tehn the edit list, since we are storing it in a vector
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(sdf_globals.preview_stroke_uniform.data), 4 * sizeof(uint32_t), (to_upload_preview_stroke), sizeof(sToUploadStroke));
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(sdf_globals.preview_stroke_uniform.data), 4 * sizeof(uint32_t) + sizeof(sToUploadStroke), to_upload_preview_edit_list->data(), to_upload_preview_stroke->edit_count * sizeof(Edit));
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(sdf_globals.preview_stroke_uniform.data), 4 * sizeof(uint32_t), (preview.to_upload_stroke), sizeof(sToUploadStroke));
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(sdf_globals.preview_stroke_uniform.data), 4 * sizeof(uint32_t) + sizeof(sToUploadStroke), preview.to_upload_edit_list->data(), preview.to_upload_stroke->edit_count * sizeof(Edit));
 
 }
 
@@ -526,7 +544,7 @@ void SculptManager::init_shaders()
     brick_removal_shader = RendererStorage::get_shader("data/shaders/octree/brick_removal.wgsl");
     brick_copy_shader = RendererStorage::get_shader("data/shaders/octree/brick_copy.wgsl");
     evaluation_initialization_shader = RendererStorage::get_shader("data/shaders/octree/initialization.wgsl");
-    //brick_unmark_shader = RendererStorage::get_shader("data/shaders/octree/brick_unmark.wgsl");
+    brick_unmark_shader = RendererStorage::get_shader("data/shaders/octree/brick_unmark.wgsl");
     sculpt_delete_shader = RendererStorage::get_shader("data/shaders/octree/sculpture_delete.wgsl");
 }
 
@@ -535,10 +553,6 @@ void SculptManager::init_pipelines_and_bindgroups()
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
     sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();
-
-    //wgpuRenderPassEncoderMultiDrawIndexedIndirectCount
-
-    //wgpuRenderPassEncoderDrawIndexedIndirect
 
     // Create bindgroups
     {
@@ -597,6 +611,12 @@ void SculptManager::init_pipelines_and_bindgroups()
         preview_stroke_bind_group = webgpu_context->create_bind_group(uniforms, evaluate_shader, 3);
     }
 
+    // Brick unmarking bindgroup
+    {
+        std::vector<Uniform*> uniforms = { &sdf_globals.brick_buffers };
+        brick_unmark_bind_group = webgpu_context->create_bind_group(uniforms, brick_unmark_shader, 0);
+    }
+
     // Create pipelines
     {
         evaluate_pipeline.create_compute_async(evaluate_shader);
@@ -605,7 +625,7 @@ void SculptManager::init_pipelines_and_bindgroups()
         brick_removal_pipeline.create_compute_async(brick_removal_shader);
         brick_copy_pipeline.create_compute_async(brick_copy_shader);
         evaluation_initialization_pipeline.create_compute_async(evaluation_initialization_shader);
-        //brick_unmark_pipeline.create_compute_async(compute_octree_brick_unmark_shader);
+        brick_unmark_pipeline.create_compute_async(brick_unmark_shader);
         sculpt_delete_pipeline.create_compute_async(sculpt_delete_shader);
     }
 }

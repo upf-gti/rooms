@@ -21,8 +21,6 @@ SculptInstance::SculptInstance(SculptInstance* reference) : Node3D()
 
     sculpt_gpu_data = reference->get_sculpt_data();
     sculpt_gpu_data->ref();
-
-    //dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->add_sculpt_instance(this);
 }
 
 SculptInstance::~SculptInstance()
@@ -38,7 +36,7 @@ SculptInstance::~SculptInstance()
 void SculptInstance::update(float delta_time) {
     dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->add_rendercall_to_sculpt(sculpt_gpu_data, get_model());
 
-    //dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->add_rendercall_to_sculpt(sculpt_gpu_data, glm::translate(glm::mat4(1.0f), {0.05, 0.0, 0.0}));
+    //dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->add_rendercall_to_sculpt(sculpt_gpu_data, glm::translate(get_model(), {0.05, 0.0, 0.0}));
 }
 
 void SculptInstance::render() {

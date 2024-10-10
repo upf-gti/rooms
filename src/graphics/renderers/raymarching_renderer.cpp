@@ -61,7 +61,6 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
     // Compute constants
     
 #ifndef DISABLE_RAYMARCHER
-    init_compute_octree_pipeline();
     init_octree_ray_intersection_pipeline();
     init_raymarching_proxy_pipeline();
 #endif
@@ -277,80 +276,6 @@ void RaymarchingRenderer::get_brick_usage(std::function<void(float, uint32_t)> c
     //callback(pct, brick_count);
 }
 
-void RaymarchingRenderer::compute_preview_edit(WGPUComputePassEncoder compute_pass)
-{
-//    WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
-//#ifndef NDEBUG
-//    wgpuComputePassEncoderPushDebugGroup(compute_pass, "Preview evaluation");
-//#endif
-//
-//    // Resize the edit buffer and rebuild the bindgroups
-//    if (preview_stroke.edit_list.size() > preview_edit_array_length) {
-//        preview_edit_array_length = preview_stroke.edit_list.size();
-//        uint32_t struct_size = sizeof(sToUploadStroke) + sizeof(Edit) * preview_edit_array_length;
-//        preview_stroke_uniform.destroy();
-//        preview_stroke_uniform.data = webgpu_context->create_buffer(struct_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "preview_stroke_buffer");
-//        preview_stroke_uniform.binding = 0;
-//        preview_stroke_uniform.buffer_size = struct_size;
-//
-//        preview_stroke_uniform_2.data = preview_stroke_uniform.data;
-//        preview_stroke_uniform_2.buffer_size = preview_stroke_uniform.buffer_size;
-//
-//        std::vector<Uniform*> uniforms = { &sculpts_instance_data_uniform, &linear_sampler_uniform, &sdf_texture_uniform, &octree_brick_buffers, &octree_brick_copy_buffer, &sdf_material_texture_uniform, &preview_stroke_uniform_2 };
-//        wgpuBindGroupRelease(render_proxy_geometry_bind_group);
-//        render_proxy_geometry_bind_group = webgpu_context->create_bind_group(uniforms, render_proxy_shader, 0);
-//
-//        uniforms = { &sculpts_instance_data_uniform, &preview_stroke_uniform_2, &octree_brick_buffers };
-//        wgpuBindGroupRelease(sculpt_data_bind_preview_group);
-//        sculpt_data_bind_preview_group = webgpu_context->create_bind_group(uniforms, render_preview_proxy_shader, 1);
-//
-//        uniforms = { &preview_stroke_uniform };
-//        wgpuBindGroupRelease(preview_stroke_bind_group);
-//        preview_stroke_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_evaluate_shader, 3);
-//    }
-//
-//    // Upload preview data, first the stoke and tehn the edit list, since we are storing it in a vector
-//    webgpu_context->update_buffer(std::get<WGPUBuffer>(preview_stroke_uniform.data), 4 * sizeof(uint32_t), &(preview_stroke.stroke), sizeof(sToUploadStroke));
-//    webgpu_context->update_buffer(std::get<WGPUBuffer>(preview_stroke_uniform.data), 4 * sizeof(uint32_t) + sizeof(sToUploadStroke), preview_stroke.edit_list.data(), preview_stroke.stroke.edit_count * sizeof(Edit));
-//
-//    // Initializate the evaluator sequence
-//    compute_octree_initialization_pipeline.set(compute_pass);
-//
-//    uint32_t stroke_dynamic_offset = 0;
-//    wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_initialization_bind_group, 0, nullptr);
-//    wgpuComputePassEncoderSetBindGroup(compute_pass, 1, sculpt_octree_bindgroup, 0, nullptr);
-//
-//    wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
-//
-//    int ping_pong_idx = 0;
-//
-//    for (int j = 0; j <= octree_depth; ++j) {
-//
-//        compute_octree_evaluate_pipeline.set(compute_pass);
-//
-//        wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_evaluate_bind_group, 0, nullptr);
-//        wgpuComputePassEncoderSetBindGroup(compute_pass, 1, sculpt_octree_bindgroup, 0, nullptr);
-//        wgpuComputePassEncoderSetBindGroup(compute_pass, 2, compute_octant_usage_bind_groups[ping_pong_idx], 0, nullptr);
-//        wgpuComputePassEncoderSetBindGroup(compute_pass, 3, preview_stroke_bind_group, 0, nullptr);
-//
-//        wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(octree_indirect_buffer_struct.data), sizeof(uint32_t) * 12u);
-//
-//        compute_octree_increment_level_pipeline.set(compute_pass);
-//
-//        wgpuComputePassEncoderSetBindGroup(compute_pass, 0, compute_octree_increment_level_bind_group, 0, nullptr);
-//        wgpuComputePassEncoderSetBindGroup(compute_pass, 1, sculpt_octree_bindgroup, 0u, nullptr);
-//
-//        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
-//
-//        ping_pong_idx = (ping_pong_idx + 1) % 2;
-//    }
-//
-//    preview_stroke.stroke.edit_count = 0u;
-//#ifndef NDEBUG
-//    wgpuComputePassEncoderPopDebugGroup(compute_pass);
-//#endif
-};
-
 void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_pass, uint32_t camera_buffer_stride)
 {
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
@@ -427,33 +352,6 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
 #ifndef NDEBUG
     wgpuRenderPassEncoderPopDebugGroup(render_pass);
 #endif
-}
-
-void RaymarchingRenderer::init_compute_octree_pipeline()
-{
-    // Load shaders
-    compute_octree_brick_unmark_shader = RendererStorage::get_shader("data/shaders/octree/brick_unmark.wgsl");
-
-
-    RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
-    sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();
-
-    WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
-
-    //// TODO HOY
-    //{
-    //    // Brick unmarking bindgroup
-    //    std::vector<Uniform*> uniforms = { &octree_brick_buffers };
-
-    //    compute_octree_brick_unmark_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_brick_unmark_shader, 0);
-    //}
-
-    uint32_t default_val = 0;
-
-    uint32_t size = sizeof(Edit);
-    size = sizeof(Stroke);
-
-    compute_octree_brick_unmark_pipeline.create_compute_async(compute_octree_brick_unmark_shader);
 }
 
 void RaymarchingRenderer::init_raymarching_proxy_pipeline()

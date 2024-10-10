@@ -15,14 +15,18 @@ class SculptManager {
 
     // Sculpt instances
     struct sEvaluateRequest {
-        Sculpt* sculpt;
+        Sculpt* sculpt = nullptr;
         sStrokeInfluence strokes_to_process; // context and new strokes in GPU format
         std::vector<Edit> edit_to_process; // context and new edits
     };
 
-    bool preview_needs_computing = false;
-    const sToUploadStroke* to_upload_preview_stroke;
-    const std::vector<Edit>*  to_upload_preview_edit_list;
+    bool previus_dispatch_had_preview = false;
+    struct {
+        Sculpt* sculpt = nullptr;
+        bool needs_computing = false;
+        const sToUploadStroke* to_upload_stroke = nullptr;
+        const std::vector<Edit>* to_upload_edit_list = nullptr;
+    } preview;
 
     uint32_t        sculpt_count = 0u;
 
@@ -52,12 +56,14 @@ class SculptManager {
     Pipeline write_to_texture_pipeline;
     Pipeline brick_removal_pipeline;
     Pipeline brick_copy_pipeline;
+    Pipeline brick_unmark_pipeline;
 
     Shader* evaluate_shader = nullptr;
     Shader* increment_level_shader = nullptr;
     Shader* write_to_texture_shader = nullptr;
     Shader* brick_removal_shader = nullptr;
     Shader* brick_copy_shader = nullptr;
+    Shader* brick_unmark_shader = nullptr;
 
     WGPUBindGroup   evaluate_bind_group = nullptr;
     WGPUBindGroup   increment_level_bind_group = nullptr;
@@ -65,6 +71,7 @@ class SculptManager {
     WGPUBindGroup   indirect_brick_removal_bind_group = nullptr;
     WGPUBindGroup   brick_copy_bind_group = nullptr;
     WGPUBindGroup   sculpt_delete_bindgroup = nullptr;
+    WGPUBindGroup   brick_unmark_bind_group = nullptr;
     WGPUBindGroup   preview_stroke_bind_group = nullptr;
 
     // Evaluator uniforms
@@ -110,7 +117,7 @@ class SculptManager {
     void init_pipelines_and_bindgroups();
 
     void evaluate(WGPUComputePassEncoder compute_pass, const sEvaluateRequest& evaluate_request);
-    void evaluate_preview(WGPUComputePassEncoder compute_pass, Sculpt* sculpt);
+    void evaluate_preview(WGPUComputePassEncoder compute_pass);
 
 public:
     void init();
@@ -120,7 +127,7 @@ public:
     void update(WGPUCommandEncoder command_encoder);
 
     void update_sculpt(Sculpt* sculpt, const sStrokeInfluence& strokes_to_process, const std::vector<Edit>& edits_to_process);
-    void set_preview_stroke(const sToUploadStroke& preview_stroke, const std::vector<Edit>& preview_edits);
+    void set_preview_stroke(Sculpt* sculpt, const sToUploadStroke& preview_stroke, const std::vector<Edit>& preview_edits);
 
     Sculpt* create_sculpt();
     Sculpt* create_sculpt_from_history(const std::vector<Stroke>& stroke_history);

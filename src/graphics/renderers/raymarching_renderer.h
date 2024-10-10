@@ -137,11 +137,8 @@ class RaymarchingRenderer {
     // Timestepping counters
     float updated_time = 0.0f;
 
-    void init_compute_octree_pipeline();
     void init_raymarching_proxy_pipeline();
     void init_octree_ray_intersection_pipeline();
-
-    void compute_preview_edit(WGPUComputePassEncoder compute_pass);
 
     // DEBUG
     MeshInstance3D *AABB_mesh;
