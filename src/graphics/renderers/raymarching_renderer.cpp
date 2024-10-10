@@ -246,7 +246,8 @@ void RaymarchingRenderer::octree_ray_intersect(const glm::vec3& ray_origin, cons
 
     WGPUCommandBufferDescriptor cmd_buff_descriptor = {};
     cmd_buff_descriptor.nextInChain = NULL;
-    cmd_buff_descriptor.label = "Ray Intersection Command Buffer";
+    const char* label = "Ray Intersection Command Buffer";
+    cmd_buff_descriptor.label = { label, strlen(label)};
 
     // Encode and submit the GPU commands
     WGPUCommandBuffer commands = wgpuCommandEncoderFinish(command_encoder, &cmd_buff_descriptor);
