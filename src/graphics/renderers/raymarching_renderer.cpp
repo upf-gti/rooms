@@ -133,7 +133,9 @@ void RaymarchingRenderer::update_sculpts_and_instances(WGPUCommandEncoder comman
     // Prepare the instances of the sculpts that are rendered on the curren frame
     // Generate buffer of instances
     uint32_t in_frame_instance_count = 0u;
-    uint32_t sculpt_to_render_count = 0u;
+    uint32_t sculpt_to_render_count = 2u;
+    sculpt_instances.count_buffer[0u] = 0u;
+    sculpt_instances.count_buffer[1u] = 0u;
     for (auto& it : sculpts_render_lists) {
         if (models_for_upload.capacity() <= in_frame_instance_count) {
             models_for_upload.resize(models_for_upload.capacity() + 10u);
@@ -157,7 +159,7 @@ void RaymarchingRenderer::update_sculpts_and_instances(WGPUCommandEncoder comman
         Sculpt* current_sculpt = it.second->sculpt;
 
         sculpt_instances.prepare_indirect.set(compute_pass);
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 0u, sculpt_instances.count_bindgroup, sculpt_to_render_count, &offset);
+        wgpuComputePassEncoderSetBindGroup(compute_pass, 0u, sculpt_instances.count_bindgroup, 0u, nullptr);
         wgpuComputePassEncoderSetBindGroup(compute_pass, 1u, current_sculpt->get_sculpt_bindgroup(), 0u, nullptr);
         wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1u, 1u, 1u);
 
@@ -451,19 +453,6 @@ void RaymarchingRenderer::init_compute_octree_pipeline()
     uint32_t size = sizeof(Edit);
     size = sizeof(Stroke);
 
-    // TODO HOY
-    // Model and sculpt isntances bindgroups
-    //{
-
-    //    uint32_t size = sizeof(uint32_t) * 4096u * 4096u; // The current max size of instances
-    //    sculpt_instances_buffer_uniform.data = webgpu_context->create_buffer(size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, 0u, "sculpt instance data");
-    //    sculpt_instances_buffer_uniform.binding = 0u;
-    //    sculpt_instances_buffer_uniform.buffer_size = size;
-
-    //    std::vector<Uniform*> uniforms = { &sculpt_instances_buffer_uniform };
-    //    sculpt_instances_bindgroup = webgpu_context->create_bind_group(uniforms, compute_octree_brick_copy_shader, 1u);
-    //}
-
     compute_octree_brick_unmark_pipeline.create_compute_async(compute_octree_brick_unmark_shader);
 }
 
@@ -496,12 +485,12 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
     sculpt_instances.prepare_indirect_shader = RendererStorage::get_shader("data/shaders/octree/prepare_indirect_sculpt_render.wgsl");
 
     {
-        uint32_t size = sizeof(uint32_t) * 20u;
-        sculpt_instances.count_buffer.resize(20u);
+        uint32_t size = sizeof(uint32_t) * 22u;
+        sculpt_instances.count_buffer.resize(22u);
         memset(sculpt_instances.count_buffer.data(), 1u, size);
-        sculpt_instances.uniform_count_buffer.data = webgpu_context->create_buffer(size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, sculpt_instances.count_buffer.data(), "sculpt index data");
+        sculpt_instances.uniform_count_buffer.data = webgpu_context->create_buffer(size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, sculpt_instances.count_buffer.data(), "sculpt index data");
         sculpt_instances.uniform_count_buffer.binding = 0u;
-        sculpt_instances.uniform_count_buffer.buffer_size = sizeof(uint32_t);
+        sculpt_instances.uniform_count_buffer.buffer_size = size;
 
         std::vector<Uniform*> uniforms = { &sculpt_instances.uniform_count_buffer };
         sculpt_instances.count_bindgroup = webgpu_context->create_bind_group(uniforms, sculpt_instances.prepare_indirect_shader, 0);

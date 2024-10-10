@@ -110,7 +110,8 @@ struct SculptIndirectCall {
     instance_count : atomic<u32>,
     first_vertex : u32,
     first_instance : u32,
-    brick_count : atomic<u32>
+    brick_count : atomic<u32>,
+    starting_model_idx : u32
 };
 
 struct SculptIndirectCall_NonAtomic {
@@ -118,7 +119,8 @@ struct SculptIndirectCall_NonAtomic {
     instance_count : u32,
     first_vertex : u32,
     first_instance : u32,
-    brick_count : u32
+    brick_count : u32,
+    starting_model_idx : u32
 };
 
 struct Octree {

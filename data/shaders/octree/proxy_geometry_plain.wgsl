@@ -61,7 +61,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     // Revsar estoo
     let sculpt_instance_count : u32 = sculpt_indirect.instance_count / sculpt_indirect.brick_count;
     let brick_idx : u32 = brick_index_buffer[in.instance_id / sculpt_instance_count];
-    let model_idx : u32 = in.instance_id % sculpt_instance_count;
+    let model_idx : u32 = sculpt_indirect.starting_model_idx + (in.instance_id % sculpt_instance_count);
 
     let instance_data : ProxyInstanceData = brick_buffers.brick_instance_data[brick_idx];
 

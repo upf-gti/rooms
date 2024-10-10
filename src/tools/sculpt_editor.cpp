@@ -1425,7 +1425,7 @@ void SculptEditor::init_ui()
 void SculptEditor::bind_events()
 {
     Node::bind("go_back", [&](const std::string& signal, void* button) {
-        static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(nullptr);
+        //static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(nullptr);
         RoomsEngine::switch_editor(SCENE_EDITOR);
     });
 

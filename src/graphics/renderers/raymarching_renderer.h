@@ -103,7 +103,6 @@ class RaymarchingRenderer {
     Shader*         compute_octree_brick_unmark_shader = nullptr;
     WGPUBindGroup   compute_octree_brick_unmark_bind_group = nullptr;
 
-    Uniform         octree_preview_stroke;
     WGPUBindGroup   sculpt_data_bind_preview_group = nullptr;
 
     Uniform*        camera_uniform;

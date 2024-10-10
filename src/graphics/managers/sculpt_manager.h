@@ -20,6 +20,10 @@ class SculptManager {
         std::vector<Edit> edit_to_process; // context and new edits
     };
 
+    bool preview_needs_computing = false;
+    const sToUploadStroke* to_upload_preview_stroke;
+    const std::vector<Edit>*  to_upload_preview_edit_list;
+
     uint32_t        sculpt_count = 0u;
 
     bool performed_evaluation = false;
@@ -78,6 +82,9 @@ class SculptManager {
     Uniform         octant_usage_initialization_uniform[2];
     WGPUBindGroup   octant_usage_ping_pong_bind_groups[2] = {};
 
+    // Preview evaluation
+
+
     // Octree struct reference
     struct sOctreeNode {
         glm::vec2   octant_center_distance = glm::vec2(10000.0f, 10000.0f);
@@ -95,11 +102,15 @@ class SculptManager {
         uint32_t   padding;
     } compute_merge_data;
 
+    void upload_preview_strokes();
     void upload_strokes_and_edits(const std::vector<sToUploadStroke>& strokes_to_compute, const std::vector<Edit>& edits_to_upload);
 
     void init_shaders();
     void init_uniforms();
     void init_pipelines_and_bindgroups();
+
+    void evaluate(WGPUComputePassEncoder compute_pass, const sEvaluateRequest& evaluate_request);
+    void evaluate_preview(WGPUComputePassEncoder compute_pass, Sculpt* sculpt);
 
 public:
     void init();
@@ -109,6 +120,7 @@ public:
     void update(WGPUCommandEncoder command_encoder);
 
     void update_sculpt(Sculpt* sculpt, const sStrokeInfluence& strokes_to_process, const std::vector<Edit>& edits_to_process);
+    void set_preview_stroke(const sToUploadStroke& preview_stroke, const std::vector<Edit>& preview_edits);
 
     Sculpt* create_sculpt();
     Sculpt* create_sculpt_from_history(const std::vector<Stroke>& stroke_history);
@@ -116,7 +128,4 @@ public:
     bool has_performed_evaluation() { return performed_evaluation; }
 
     void delete_sculpt(WGPUComputePassEncoder compute_pass, Sculpt* to_delete);
-
-    void evaluate(WGPUComputePassEncoder compute_pass, const sEvaluateRequest& evaluate_request);
-    void evaluate_preview(WGPUComputePassEncoder compute_pass, const Stroke& stroke_to_preview);
 };
