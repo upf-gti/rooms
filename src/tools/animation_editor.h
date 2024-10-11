@@ -57,20 +57,29 @@ class AnimationEditor : public BaseEditor {
     MeshInstance3D* animation_trajectory_instance = nullptr;
     MeshInstance3D* keyframe_markers_render_instance = nullptr;
 
+    void render_gizmo();
+    void update_gizmo(float delta_time);
+
+    void update_animation_trajectory();
+
+    /*
+    *   Keyframes
+    */
+
     float current_time = 0.0f;
     bool show_keyframe_dirty = false;
+    bool keyframe_list_dirty = false;
     bool keyframe_dirty = false;
     bool editing_keyframe = false;
 
     void create_keyframe();
     void process_keyframe();
+    void edit_keyframe(uint32_t index);
+    void duplicate_keyframe(uint32_t index);
 
+    void set_animation_state(uint32_t index);
     void store_animation_state(sAnimationState& state);
-
-    void render_gizmo();
-    void update_gizmo(float delta_time);
-
-    void update_animation_trajectory();
+    sAnimationState& get_animation_state(uint32_t index);
 
     /*
         Animation Player
@@ -79,6 +88,7 @@ class AnimationEditor : public BaseEditor {
     void set_loop_type(uint8_t type);
 
     void play_animation();
+    void pause_animation();
     void stop_animation();
 
     /*
