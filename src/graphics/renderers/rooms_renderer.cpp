@@ -32,7 +32,7 @@ int RoomsRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
 #ifndef DISABLE_RAYMARCHER
     custom_post_opaque_pass = [](void* user_data, WGPURenderPassEncoder render_pass, uint32_t camera_stride_offset = 0) {
         RaymarchingRenderer* raymarching_renderer = reinterpret_cast<RaymarchingRenderer*>(user_data);
-        raymarching_renderer->render_raymarching_proxy(render_pass, camera_stride_offset);
+        raymarching_renderer->render(render_pass, camera_stride_offset);
     };
 #endif
 

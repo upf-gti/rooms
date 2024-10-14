@@ -2,7 +2,6 @@
 #include octree_includes.wgsl
 #include sdf_commons.wgsl
 
-@group(0) @binding(1) var<uniform> merge_data : MergeData;
 @group(0) @binding(5) var<storage, read_write> brick_buffers: BrickBuffers;
 @group(0) @binding(6) var<storage, read> stroke_history : StrokeHistory;
 @group(0) @binding(7) var<storage, read> edit_list : array<Edit>;
@@ -266,7 +265,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     //       any reevaluation and evaluation
     // TODO(Juan): fix undo redo reeval
     let aabb_half_size : mat4x3f = get_loose_half_size_mat(preview_stroke.stroke.primitive);
-    let tmp = merge_data.padding;
     let is_evaluating_preview : bool = ((octree.evaluation_mode & EVALUATE_PREVIEW_STROKE_FLAG) == EVALUATE_PREVIEW_STROKE_FLAG);
     let is_evaluating_undo : bool = (octree.evaluation_mode & UNDO_EVAL_FLAG) == UNDO_EVAL_FLAG;
 
@@ -446,7 +444,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         if (level < OCTREE_DEPTH) {
             // Broad culling using only the incomming stroke
             // TODO: intersection with current edit AABB?
-            if (intersection_AABB_AABB(eval_aabb_min, eval_aabb_max, merge_data.reevaluation_AABB_min, merge_data.reevaluation_AABB_max)) {
+            if (intersection_AABB_AABB(eval_aabb_min, eval_aabb_max, preview_stroke.stroke.aabb_min, preview_stroke.stroke.aabb_max)) {
                 // Subdivide
                 // Increase the number of children from the current level
                 let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 8);
@@ -469,7 +467,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
             let is_paint : bool = preview_stroke.stroke.operation == OP_SMOOTH_PAINT;
 
-            if (int_distance > 0.0001 || is_paint) {
+            if (int_distance > 0.00001 || is_paint) {
+                //preview_brick_create(octree_index, octant_center, true, 1u, 1u);
                 // Compute edit margin for preview evaluation
                 var edit_index_start : u32 = 1000u;
                 var edit_index_end : u32 = 0u;

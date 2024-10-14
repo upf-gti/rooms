@@ -88,6 +88,8 @@ struct sToUploadStroke {
     uint32_t        edit_list_index = 0u;// 4
     // 48 bytes
     StrokeMaterial material;
+
+    AABB get_world_AABB_of_edit_list(const std::vector<Edit> &list) const;
 };
 
 class StrokeParameters {

@@ -645,8 +645,10 @@ void SculptEditor::update(float delta_time)
     }
 
     // Push to the renderer the edits and the previews
-    renderer->push_preview_edit_list(preview_tmp_edits);
+    //renderer->push_preview_edit_list(preview_tmp_edits);
     //renderer->push_edit_list(new_edits);
+
+    set_preview_edits(preview_tmp_edits);
 
     if (new_edits.size() > 0u) {
         stroke_manager.add(new_edits);
@@ -670,6 +672,18 @@ void SculptEditor::update(float delta_time)
             Node::emit_signal("thermometer@changed", pct);
         });
     }*/
+}
+
+void SculptEditor::set_preview_edits(const std::vector<Edit>& edit_previews) {
+    sToUploadStroke preview_stroke = stroke_manager.result_to_compute.in_frame_stroke;
+
+    preview_stroke.edit_count = preview_tmp_edits.size();
+
+    AABB stroke_aabb = preview_stroke.get_world_AABB_of_edit_list(edit_previews);
+    preview_stroke.aabb_min = stroke_aabb.center - stroke_aabb.half_size;
+    preview_stroke.aabb_max = stroke_aabb.center + stroke_aabb.half_size;
+
+    renderer->get_sculpt_manager()->set_preview_stroke(current_sculpt->get_sculpt_data(), preview_stroke, edit_previews);
 }
 
 void SculptEditor::apply_mirror_position(glm::vec3& position)

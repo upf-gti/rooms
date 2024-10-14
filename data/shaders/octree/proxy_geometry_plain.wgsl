@@ -58,7 +58,6 @@ struct CameraData {
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
-    // Revsar estoo
     let sculpt_instance_count : u32 = sculpt_indirect.instance_count / sculpt_indirect.brick_count;
     let brick_idx : u32 = brick_index_buffer[in.instance_id / sculpt_instance_count];
     let model_idx : u32 = sculpt_indirect.starting_model_idx + (in.instance_id % sculpt_instance_count);
@@ -385,11 +384,11 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     var ray_result : vec4f;
     let tmp = preview_stroke.stroke.material.color.x;
-    // if (in.has_previews == 1) {
-    //     ray_result = raymarch_with_previews(ray_origin, ray_origin_sculpt_space, ray_dir_atlas, raymarch_distance, camera_data.view_projection);
-    // } else {
+    if (in.has_previews == 1) {
+        ray_result = raymarch_with_previews(ray_origin, ray_origin_sculpt_space, ray_dir_atlas, raymarch_distance, camera_data.view_projection);
+    } else {
         ray_result = raymarch(ray_origin, ray_origin_sculpt_space, ray_dir_atlas, raymarch_distance, camera_data.view_projection);
-    //}
+    }
     var final_color : vec3f = ray_result.rgb; 
     
 
@@ -400,15 +399,15 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     out.color = vec4f(final_color, 1.0); // Color
     out.depth = ray_result.a;
 
-    if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
-        if (in.has_previews == 1u) {
-            out.color = vec4f(0.0, 1.0, 0.0, 1.0);
-        } else {
-            out.color = vec4f(0.0, 0.0, 0.0, 1.0);
-        }
+    // if ( in.uv.x < 0.015 || in.uv.y > 0.985 || in.uv.x > 0.985 || in.uv.y < 0.015 )  {
+    //     if (in.has_previews == 1u) {
+    //         out.color = vec4f(0.0, 1.0, 0.0, 1.0);
+    //     } else {
+    //         out.color = vec4f(0.0, 0.0, 0.0, 1.0);
+    //     }
         
-        out.depth = in.position.z;
-    }
+    //     out.depth = in.position.z;
+    // }
 
     // out.color = vec4f(raymarch_distance / (SQRT_3 * BRICK_WORLD_SIZE), 0.0, 0.0, 0.0); // Color
     // out.depth = in.position.z / in.position.w;

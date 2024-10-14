@@ -231,6 +231,8 @@ public:
     void enable_tool(eTool tool);
     void set_sculpt_started(bool value);
 
+    void set_preview_edits(const std::vector<Edit> &edit_previews);
+
     void set_current_sculpt(SculptInstance* sculpt_instance);
     SculptInstance* get_current_sculpt() { return current_sculpt; }
 

@@ -112,6 +112,7 @@ class RaymarchingRenderer {
 
     MeshInstance3D* cube_mesh = nullptr;
 
+    bool            render_preview = false;
  
     struct RayInfo {
         glm::vec3 ray_origin;
@@ -140,6 +141,11 @@ class RaymarchingRenderer {
     void init_raymarching_proxy_pipeline();
     void init_octree_ray_intersection_pipeline();
 
+    void render_raymarching_proxy(WGPURenderPassEncoder render_pass, uint32_t camera_buffer_stride = 0);
+
+    void render_preview_raymarching_proxy(WGPURenderPassEncoder render_pass, uint32_t camera_buffer_stride = 0);
+
+
     // DEBUG
     MeshInstance3D *AABB_mesh;
 
@@ -155,13 +161,17 @@ public:
 
     void update_sculpts_and_instances(WGPUCommandEncoder command_encoder);
 
-    void render_raymarching_proxy(WGPURenderPassEncoder render_pass, uint32_t camera_buffer_stride = 0);
+    void render(WGPURenderPassEncoder render_pass, uint32_t camera_buffer_stride = 0u);
 
     void octree_ray_intersect(const glm::vec3& ray_origin, const glm::vec3& ray_dir, std::function<void(glm::vec3)> callback = nullptr);
 
     void get_brick_usage(std::function<void(float, uint32_t)> callback);
 
     const RayIntersectionInfo& get_ray_intersection_info() const;
+
+    inline void set_preview_render(const bool need_to_render_preview) {
+        render_preview = need_to_render_preview;
+    }
 
     /*
     *   Edits

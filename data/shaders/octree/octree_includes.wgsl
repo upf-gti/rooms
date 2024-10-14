@@ -139,13 +139,6 @@ struct Octree_NonAtomic {
     data : array<OctreeNode>
 };
 
-struct MergeData {
-    reevaluation_AABB_min : vec3f,
-    reevaluate            : u32,
-    reevaluation_AABB_max : vec3f,
-    padding               : u32
-};
-
 struct ProxyInstanceData {
     position : vec3f,
     atlas_tile_index : u32,

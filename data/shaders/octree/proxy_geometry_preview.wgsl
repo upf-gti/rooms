@@ -38,16 +38,15 @@ struct CameraData {
     ibl_intensity : f32
 };
 
+#dynamic @group(0) @binding(0) var<uniform> camera_data : CameraData;
+
 // @group(1) @binding(0) var<uniform> sculpt_data : SculptData;
 @group(1) @binding(1) var<storage, read> preview_stroke : PreviewStroke;
 @group(1) @binding(5) var<storage, read> brick_buffers: BrickBuffers_ReadOnly;
 @group(1) @binding(9) var<storage, read> sculpt_instance_data: array<SculptInstanceData>;
 
-#dynamic @group(0) @binding(0) var<uniform> camera_data : CameraData;
-
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
-
     let instance_data : ptr<storage, ProxyInstanceData, read> = &brick_buffers.preview_instance_data[in.instance_id];
 
     var vertex_in_sculpt_space : vec3f = in.position * BRICK_WORLD_SIZE * 0.5 + instance_data.position;
@@ -66,6 +65,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     // This is in an attribute for debugging
     out.vertex_in_world_space = vertex_in_world_space.xyz;
     out.voxel_center_sculpt_space = instance_data.position;
+
     return out;
 }
 

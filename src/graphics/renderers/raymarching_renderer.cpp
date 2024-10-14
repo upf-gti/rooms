@@ -276,13 +276,20 @@ void RaymarchingRenderer::get_brick_usage(std::function<void(float, uint32_t)> c
     //callback(pct, brick_count);
 }
 
+void RaymarchingRenderer::render(WGPURenderPassEncoder render_pass, uint32_t camera_buffer_stride) {
+    render_raymarching_proxy(render_pass, camera_buffer_stride);
+
+    if (render_preview) {
+        render_preview_raymarching_proxy(render_pass, camera_buffer_stride);
+    }
+}
+
 void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_pass, uint32_t camera_buffer_stride)
 {
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();
     WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
 
-    
 #ifndef NDEBUG
     wgpuRenderPassEncoderPushDebugGroup(render_pass, "Render sculpt proxy geometry");
 #endif
@@ -315,40 +322,37 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
 #ifndef NDEBUG
     wgpuRenderPassEncoderPopDebugGroup(render_pass);
 #endif
+}
+
+void RaymarchingRenderer::render_preview_raymarching_proxy(WGPURenderPassEncoder render_pass, uint32_t camera_buffer_stride) {
+    RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
+    sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();
+    WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
 
 #ifndef NDEBUG
-        wgpuRenderPassEncoderPushDebugGroup(render_pass, "Render sculpt proxy geometry");
+    wgpuRenderPassEncoderPushDebugGroup(render_pass, "Render preview proxy geometry");
 #endif
+    // Render Preview proxy geometry
+    render_preview_proxy_geometry_pipeline.set(render_pass);
 
-        {
-//#ifndef NDEBUG
-//    wgpuRenderPassEncoderPopDebugGroup(render_pass);
-//    wgpuRenderPassEncoderPushDebugGroup(render_pass, "Render preview proxy geometry");
-//#endif
-//    // Render Preview proxy geometry
-//    if (static_cast<RoomsEngine*>(RoomsEngine::instance)->get_current_editor_type() == EditorType::SCULPT_EDITOR) {
-//        render_preview_proxy_geometry_pipeline.set(render_pass);
-//
-//        // Update sculpt data
-//        //webgpu_context->update_buffer(std::get<WGPUBuffer>(sculpt_data_uniform.data), 0, &sculpt_data, sizeof(sSculptData));
-//
-//        const Surface* surface = cube_mesh->get_surface(0);
-//
-//        uint8_t bind_group_index = 0;
-//
-//        // Set bind groups
-//        wgpuRenderPassEncoderSetBindGroup(render_pass, 0, render_preview_camera_bind_group, 1, &camera_buffer_stride);
-//        wgpuRenderPassEncoderSetBindGroup(render_pass, 1, sculpt_data_bind_preview_group, 0, nullptr);
-//        wgpuRenderPassEncoderSetBindGroup(render_pass, 2, Renderer::instance->get_lighting_bind_group(), 0, nullptr);
-//
-//        // Set vertex buffer while encoding the render pass
-//        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, surface->get_vertex_buffer(), 0, surface->get_vertices_byte_size());
-//
-//        // Submit indirect drawcalls
-//        wgpuRenderPassEncoderDrawIndirect(render_pass, std::get<WGPUBuffer>(sdf_globals.indirect_buffers.data), sizeof(uint32_t) * 4u);
-//    }
-//
-        }
+    // Update sculpt data
+    //webgpu_context->update_buffer(std::get<WGPUBuffer>(sculpt_data_uniform.data), 0, &sculpt_data, sizeof(sSculptData));
+
+    const Surface* surface = cube_mesh->get_surface(0);
+
+    uint8_t bind_group_index = 0;
+
+    // Set bind groups
+    wgpuRenderPassEncoderSetBindGroup(render_pass, 0, render_preview_camera_bind_group, 1, &camera_buffer_stride);
+    wgpuRenderPassEncoderSetBindGroup(render_pass, 1, sculpt_data_bind_preview_group, 0, nullptr);
+    wgpuRenderPassEncoderSetBindGroup(render_pass, 2, Renderer::instance->get_lighting_bind_group(), 0, nullptr);
+
+    // Set vertex buffer while encoding the render pass
+    wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, surface->get_vertex_buffer(), 0, surface->get_vertices_byte_size());
+
+    // Submit indirect drawcalls
+    wgpuRenderPassEncoderDrawIndirect(render_pass, std::get<WGPUBuffer>(sdf_globals.indirect_buffers.data), sizeof(uint32_t) * 4u);
+
 #ifndef NDEBUG
     wgpuRenderPassEncoderPopDebugGroup(render_pass);
 #endif
@@ -415,6 +419,8 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
 
     PipelineDescription desc = { .cull_mode = WGPUCullMode_Front };
     render_proxy_geometry_pipeline.create_render_async(render_proxy_shader, color_target, desc);
+
+    
 
     // Proxy for Preview
     render_preview_proxy_shader = RendererStorage::get_shader("data/shaders/octree/proxy_geometry_preview.wgsl");

@@ -24,7 +24,7 @@ class SculptManager {
     struct {
         Sculpt* sculpt = nullptr;
         bool needs_computing = false;
-        const sToUploadStroke* to_upload_stroke = nullptr;
+        sToUploadStroke to_upload_stroke;
         const std::vector<Edit>* to_upload_edit_list = nullptr;
     } preview;
 
@@ -75,8 +75,6 @@ class SculptManager {
     WGPUBindGroup   preview_stroke_bind_group = nullptr;
 
     // Evaluator uniforms
-    Uniform         merge_data_uniform;
-
     uint32_t        octree_edit_list_size = 0u;
     Uniform         octree_edit_list;
 
@@ -101,14 +99,7 @@ class SculptManager {
         uint32_t    culling_data = 0u;
     };
 
-    // Data needed for sdf merging
-    struct sMergeData {
-        glm::vec3  reevaluation_AABB_min;
-        uint32_t   reevaluate = 0u;
-        glm::vec3  reevaluation_AABB_max;
-        uint32_t   padding;
-    } compute_merge_data;
-
+    void clean_previous_preview(WGPUComputePassEncoder compute_pass);
     void upload_preview_strokes();
     void upload_strokes_and_edits(const std::vector<sToUploadStroke>& strokes_to_compute, const std::vector<Edit>& edits_to_upload);
 
@@ -127,7 +118,7 @@ public:
     void update(WGPUCommandEncoder command_encoder);
 
     void update_sculpt(Sculpt* sculpt, const sStrokeInfluence& strokes_to_process, const std::vector<Edit>& edits_to_process);
-    void set_preview_stroke(Sculpt* sculpt, const sToUploadStroke& preview_stroke, const std::vector<Edit>& preview_edits);
+    void set_preview_stroke(Sculpt* sculpt, sToUploadStroke preview_stroke, const std::vector<Edit>& preview_edits);
 
     Sculpt* create_sculpt();
     Sculpt* create_sculpt_from_history(const std::vector<Stroke>& stroke_history);
