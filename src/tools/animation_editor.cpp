@@ -464,30 +464,36 @@ void AnimationEditor::duplicate_keyframe(uint32_t index)
         assert(0);
     }
 
-    sAnimationState new_anim_state = get_animation_state(index);
+    current_animation_state = get_animation_state(index);
 
-    for (auto prop : new_anim_state.properties) {
+    sAnimationState new_anim_state;
+    new_anim_state.time = current_time;
+
+    for (auto prop : current_animation_state->properties) {
 
         std::string property_name = prop.first;
 
-        sPropertyState& state = new_anim_state.properties[property_name];
+        sPropertyState state = current_animation_state->properties[property_name];
 
         Track* track = current_animation->get_track_by_id(state.track_id);
 
-        state.keyframe = &current_track->add_keyframe({ .value = state.value, .in = 0.0f, .out = 0.0f, .time = current_time });
+        state.keyframe = &track->add_keyframe({ .value = state.value, .in = 0.0f, .out = 0.0f, .time = current_time });
+
+        new_anim_state.properties[property_name] = state;
     }
 
-    new_anim_state.time = current_time;
     current_time += 0.5f;
     current_animation->recalculate_duration();
     animation_states.push_back(new_anim_state);
-
+    current_animation_state = nullptr;
     keyframe_list_dirty = true;
+
+    set_animation_state(index + 1u);
 }
 
-sAnimationState& AnimationEditor::get_animation_state(uint32_t index)
+sAnimationState* AnimationEditor::get_animation_state(uint32_t index)
 {
-    return animation_states[index];
+    return &animation_states[index];
 }
 
 void AnimationEditor::set_animation_state(uint32_t index)

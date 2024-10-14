@@ -79,7 +79,7 @@ class AnimationEditor : public BaseEditor {
 
     void set_animation_state(uint32_t index);
     void store_animation_state(sAnimationState& state);
-    sAnimationState& get_animation_state(uint32_t index);
+    sAnimationState* get_animation_state(uint32_t index);
 
     /*
         Animation Player
