@@ -10,8 +10,8 @@ class RoomsRenderer;
 class Node;
 class Node3D;
 class Animation;
-class Keyframe;
 class Viewport3D;
+class Surface;
 
 namespace ui {
     class Inspector;
@@ -37,8 +37,11 @@ struct sAnimationState {
     std::unordered_map<std::string, sPropertyState> properties;
 };
 
-class MeshInstance3d;
-class Surface;
+struct sAnimationData {
+    float current_time = 0.0f;
+    Animation* animation = nullptr;
+    std::vector<sAnimationState> states;
+};
 
 class AnimationEditor : public BaseEditor {
 
@@ -51,7 +54,7 @@ class AnimationEditor : public BaseEditor {
 
     sAnimationState* current_animation_state = nullptr;
 
-    std::vector<sAnimationState> animation_states;
+    std::unordered_map<uint32_t, sAnimationData> animations_data;
 
     Surface* animation_trajectory_mesh = nullptr;
     MeshInstance3D* animation_trajectory_instance = nullptr;
@@ -128,5 +131,5 @@ public:
     void render_gui() override;
 
     void on_enter(void* data);
-    // void on_exit();
+    void on_exit();
 };

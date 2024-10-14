@@ -33,7 +33,7 @@ uint64_t AnimationEditor::node_signal_uid = 0;
 
 uint32_t get_changed_properties_from_states(const sAnimationState& prev_state,
                                             const sAnimationState& current_state,
-                                            std::string* changed_properties_list)
+                                            std::vector<std::string>& changed_properties_list)
 {
     uint32_t changed_properties_count = 0u;
     // Compare the properties of one state to another
@@ -83,7 +83,7 @@ void AnimationEditor::initialize()
     animation_trajectory_instance->set_frustum_culling_enabled(false);
 
     InterleavedData empty;
-    const std::vector<InterleavedData> empty_vertex = std::vector<InterleavedData>{ empty };
+    const std::vector<InterleavedData> empty_vertex = { empty };
     animation_trajectory_mesh->update_vertex_buffer(empty_vertex);
 
     animation_trajectory_instance->add_surface(animation_trajectory_mesh);
@@ -101,6 +101,7 @@ void AnimationEditor::initialize()
 void AnimationEditor::clean()
 {
     delete keyframe_markers_render_instance;
+    delete animation_trajectory_instance;
 }
 
 void AnimationEditor::on_enter(void* data)
@@ -115,17 +116,16 @@ void AnimationEditor::on_enter(void* data)
     current_animation = RendererStorage::get_animation(animation_name);
 
     if (!current_animation) {
+
+        current_time = 0.0f;
+
         // Generate new animation
         current_animation = new Animation();
         current_animation->set_name(animation_name);
         RendererStorage::register_animation(animation_name, current_animation);
 
-        animation_states.push_back({});
-
-        sAnimationState& initial_state = animation_states.back();
+        sAnimationState initial_state;
         store_animation_state(initial_state);
-
-        current_animation_state = &initial_state;
 
         // Generate a new track of every node property as a initial state
 
@@ -144,8 +144,18 @@ void AnimationEditor::on_enter(void* data)
             p_state.keyframe = &current_track->add_keyframe({ .value = p_state.value, .in = 0.0f, .out = 0.0f, .time = 0.0f });
         }
 
+        sAnimationData new_anim_data;
+        new_anim_data.animation = current_animation;
+        new_anim_data.states.push_back(initial_state);
+        animations_data[(uint32_t)current_animation] = new_anim_data;
+
         current_time += 0.5f;
         current_animation->recalculate_duration();
+    }
+    else {
+        // Start with last keyframe added time
+        auto& data = animations_data[(uint32_t)current_animation];
+        current_time = data.current_time;
     }
 
     // Set inspector in front on VR mode
@@ -166,6 +176,13 @@ void AnimationEditor::on_enter(void* data)
     inspect_keyframes_list();
 
     update_animation_trajectory();
+}
+
+void AnimationEditor::on_exit()
+{
+    // Store current time..
+    auto& data = animations_data[(uint32_t)current_animation];
+    data.current_time = current_time;
 }
 
 void AnimationEditor::update(float delta_time)
@@ -257,8 +274,10 @@ void AnimationEditor::render()
         current_node->render();
     }
 
-    for (uint32_t i = 0u; i < animation_states.size(); i++) {
-        const glm::vec3 position = std::get<glm::vec3>(animation_states[i].properties["translation"].value);
+    auto& states = animations_data[(uint32_t)current_animation].states;
+
+    for (uint32_t i = 0u; i < states.size(); i++) {
+        const glm::vec3 position = std::get<glm::vec3>(states[i].properties["translation"].value);
 
         const glm::mat4 anim_position_model = glm::scale(glm::translate(glm::mat4(1.0f), position), glm::vec3(0.006f));
 
@@ -309,28 +328,31 @@ void AnimationEditor::update_gizmo(float delta_time)
 
 void AnimationEditor::update_animation_trajectory()
 {
-    std::vector<InterleavedData> vertieces_to_upload;
+    std::vector<InterleavedData> vertices_to_upload;
 
-    if (animation_states.size() <= 1u) {
+    auto& states = animations_data[(uint32_t)current_animation].states;
+
+    if (states.size() <= 1u) {
         return;
     }
 
-    for (uint32_t i = 0u; i < animation_states.size(); i++) {
-        vertieces_to_upload.push_back({ std::get<glm::vec3>(animation_states[i].properties["translation"].value)});
+    for (uint32_t i = 0u; i < states.size(); i++) {
+        vertices_to_upload.push_back({ std::get<glm::vec3>(states[i].properties["translation"].value) });
 
-        if (i + 1 >= animation_states.size()) {
-            vertieces_to_upload.push_back({ std::get<glm::vec3>(animation_states[i].properties["translation"].value) });
-        } else {
-            vertieces_to_upload.push_back({ std::get<glm::vec3>(animation_states[i + 1].properties["translation"].value) });
+        if (i + 1 >= states.size()) {
+            vertices_to_upload.push_back({ std::get<glm::vec3>(states[i].properties["translation"].value) });
+        }
+        else {
+            vertices_to_upload.push_back({ std::get<glm::vec3>(states[i + 1].properties["translation"].value) });
         }
     }
 
     if (keyframe_dirty && current_node) {
-        vertieces_to_upload.push_back(vertieces_to_upload.back());
-        vertieces_to_upload.push_back({ current_node->get_translation()});
+        vertices_to_upload.push_back(vertices_to_upload.back());
+        vertices_to_upload.push_back({ current_node->get_translation()});
     }
 
-    animation_trajectory_mesh->update_vertex_buffer(vertieces_to_upload);
+    animation_trajectory_mesh->update_vertex_buffer(vertices_to_upload);
 }
 
 /*
@@ -338,8 +360,10 @@ void AnimationEditor::update_animation_trajectory()
 */
 void AnimationEditor::create_keyframe()
 {
+    auto& states = animations_data[(uint32_t)current_animation].states;
+
     // Get the last state to check changes later when adding new keyframes
-    current_animation_state = &animation_states.back();
+    current_animation_state = &states.back();
 
     keyframe_dirty = true;
 
@@ -387,13 +411,13 @@ void AnimationEditor::process_keyframe()
     sAnimationState new_anim_state;
     store_animation_state(new_anim_state);
 
-    std::string* changed_properties = new std::string[new_anim_state.properties.size()];
+    std::vector<std::string> changed_properties;
+    changed_properties.resize(new_anim_state.properties.size());
 
     uint32_t changed_properties_count = get_changed_properties_from_states(*current_animation_state, new_anim_state, changed_properties);
 
     // Keyframe changes state
-    if (changed_properties_count == 0u) {
-        delete[] changed_properties;
+    if (changed_properties.empty()) {
         on_close();
         return;
     }
@@ -411,7 +435,6 @@ void AnimationEditor::process_keyframe()
         if (editing_keyframe && c_state.keyframe) {
             c_state.value = c_state.keyframe->value = n_state.value;
         }
-
         // No keyframe -> create one!
         else {
             // Create and add keypoint to track
@@ -431,10 +454,10 @@ void AnimationEditor::process_keyframe()
         new_anim_state.time = current_time;
         current_time += 0.5f;
         current_animation->recalculate_duration();
-        animation_states.push_back(new_anim_state);
+        auto& states = animations_data[(uint32_t)current_animation].states;
+        states.push_back(new_anim_state);
     }
 
-    delete[] changed_properties;
     on_close();
 }
 
@@ -443,7 +466,9 @@ void AnimationEditor::edit_keyframe(uint32_t index)
     show_keyframe_dirty = true;
     keyframe_dirty = true;
     editing_keyframe = true;
-    current_animation_state = &animation_states[index];
+
+    auto& states = animations_data[(uint32_t)current_animation].states;
+    current_animation_state = &states[index];
 
     // Show submit_keyframe button
     auto w = Node2D::get_widget_from_name("submit_keyframe");
@@ -484,16 +509,18 @@ void AnimationEditor::duplicate_keyframe(uint32_t index)
 
     current_time += 0.5f;
     current_animation->recalculate_duration();
-    animation_states.push_back(new_anim_state);
+    auto& states = animations_data[(uint32_t)current_animation].states;
+    states.push_back(new_anim_state);
     current_animation_state = nullptr;
     keyframe_list_dirty = true;
 
-    set_animation_state(index + 1u);
+    set_animation_state(states.size() - 1u);
 }
 
 sAnimationState* AnimationEditor::get_animation_state(uint32_t index)
 {
-    return &animation_states[index];
+    auto& states = animations_data[(uint32_t)current_animation].states;
+    return &states[index];
 }
 
 void AnimationEditor::set_animation_state(uint32_t index)
@@ -502,7 +529,7 @@ void AnimationEditor::set_animation_state(uint32_t index)
         assert(0);
     }
 
-    current_animation_state = &animation_states[index];
+    current_animation_state = get_animation_state(index);
 
     for (auto& p : current_animation_state->properties) {
 
@@ -657,11 +684,23 @@ void AnimationEditor::stop_animation()
 
 void AnimationEditor::render_gui()
 {
+    ImGui::Text("Animations");
+
+    ImGui::Separator();
+
+    for (const auto& a : animations_data) {
+        ImGui::Text("%s", a.second.animation->get_name().c_str());
+    }
+
+    ImGui::Separator();
+
     if (current_animation)
     {
         ImGui::Text("Animation %s", current_animation->get_name().c_str());
         ImGui::Text("Num Tracks %d", current_animation->get_track_count());
-        ImGui::Text("Num States %zu", animation_states.size());
+
+        auto& states = animations_data[(uint32_t)current_animation].states;
+        ImGui::Text("Num States %zu", states.size());
 
         if (current_animation && ImGui::Button("Play")) {
             player->play(current_animation);
@@ -953,9 +992,11 @@ void AnimationEditor::inspect_keyframes_list(bool force)
 {
     inspector->clear();
 
-    for (uint32_t i = 0; i < animation_states.size(); ++i) {
+    auto& states = animations_data[(uint32_t)current_animation].states;
 
-        sAnimationState& s = animation_states[i];
+    for (uint32_t i = 0; i < states.size(); ++i) {
+
+        const sAnimationState& s = states[i];
 
         inspector->same_line();
 
