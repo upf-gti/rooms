@@ -59,12 +59,12 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
     bool is_openxr_available = RoomsRenderer::instance->get_openxr_available();
 
     // Compute constants
-    
+
 #ifndef DISABLE_RAYMARCHER
     init_octree_ray_intersection_pipeline();
     init_raymarching_proxy_pipeline();
 #endif
-    
+
     AABB_mesh = parse_mesh("data/meshes/cube/aabb_cube.obj");
 
     Material* AABB_material = new Material();
@@ -82,7 +82,7 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
     preview_stroke.stroke.edit_count = 0u;
 
     preview_edit_array_length = PREVIEW_BASE_EDIT_LIST;
-    
+
     return 0;
 }
 
@@ -250,7 +250,8 @@ void RaymarchingRenderer::octree_ray_intersect(const glm::vec3& ray_origin, cons
 
     //WGPUCommandBufferDescriptor cmd_buff_descriptor = {};
     //cmd_buff_descriptor.nextInChain = NULL;
-    //cmd_buff_descriptor.label = "Ray Intersection Command Buffer";
+    //const char* label = "Ray Intersection Command Buffer";
+    //cmd_buff_descriptor.label = { label, strlen(label)};
 
     //// Encode and submit the GPU commands
     //WGPUCommandBuffer commands = wgpuCommandEncoderFinish(command_encoder, &cmd_buff_descriptor);
@@ -420,7 +421,7 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
     PipelineDescription desc = { .cull_mode = WGPUCullMode_Front };
     render_proxy_geometry_pipeline.create_render_async(render_proxy_shader, color_target, desc);
 
-    
+
 
     // Proxy for Preview
     render_preview_proxy_shader = RendererStorage::get_shader("data/shaders/octree/proxy_geometry_preview.wgsl");

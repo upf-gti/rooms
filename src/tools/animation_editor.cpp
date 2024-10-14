@@ -7,6 +7,7 @@
 #include "framework/nodes/animation_player.h"
 #include "framework/nodes/viewport_3d.h"
 #include "framework/nodes/container_2d.h"
+#include "framework/nodes/slider_2d.h"
 #include "framework/nodes/button_2d.h"
 #include "framework/ui/inspector.h"
 #include "framework/animation/track.h"
@@ -204,6 +205,11 @@ void AnimationEditor::update(float delta_time)
         update_animation_trajectory();
     }
 
+    if (keyframe_list_dirty) {
+        inspect_keyframes_list(true);
+        keyframe_list_dirty = false;
+    }
+
     if (renderer->get_openxr_available()) {
 
         if (!keyframe_dirty) {
@@ -301,7 +307,8 @@ void AnimationEditor::update_gizmo(float delta_time)
     }
 }
 
-void AnimationEditor::update_animation_trajectory() {
+void AnimationEditor::update_animation_trajectory()
+{
     std::vector<InterleavedData> vertieces_to_upload;
 
     if (animation_states.size() <= 1u) {
@@ -431,6 +438,77 @@ void AnimationEditor::process_keyframe()
     on_close();
 }
 
+void AnimationEditor::edit_keyframe(uint32_t index)
+{
+    show_keyframe_dirty = true;
+    keyframe_dirty = true;
+    editing_keyframe = true;
+    current_animation_state = &animation_states[index];
+
+    // Show submit_keyframe button
+    auto w = Node2D::get_widget_from_name("submit_keyframe");
+    w->set_visibility(true);
+
+    // Hide create_keyframe button
+    w = Node2D::get_widget_from_name("create_keyframe");
+    w->set_visibility(false);
+
+    // Deactivate open list
+    w = Node2D::get_widget_from_name("open_list");
+    static_cast<ui::Button2D*>(w)->set_disabled(true);
+}
+
+void AnimationEditor::duplicate_keyframe(uint32_t index)
+{
+    if (!current_node) {
+        assert(0);
+    }
+
+    sAnimationState new_anim_state = get_animation_state(index);
+
+    for (auto prop : new_anim_state.properties) {
+
+        std::string property_name = prop.first;
+
+        sPropertyState& state = new_anim_state.properties[property_name];
+
+        Track* track = current_animation->get_track_by_id(state.track_id);
+
+        state.keyframe = &current_track->add_keyframe({ .value = state.value, .in = 0.0f, .out = 0.0f, .time = current_time });
+    }
+
+    new_anim_state.time = current_time;
+    current_time += 0.5f;
+    current_animation->recalculate_duration();
+    animation_states.push_back(new_anim_state);
+
+    keyframe_list_dirty = true;
+}
+
+sAnimationState& AnimationEditor::get_animation_state(uint32_t index)
+{
+    return animation_states[index];
+}
+
+void AnimationEditor::set_animation_state(uint32_t index)
+{
+    if (!current_node) {
+        assert(0);
+    }
+
+    current_animation_state = &animation_states[index];
+
+    for (auto& p : current_animation_state->properties) {
+
+        Node::AnimatableProperty node_property = current_node->get_animatable_property(p.first);
+        void* data = node_property.property;
+
+        current_animation->sample(current_animation_state->time, p.second.track_id, ANIMATION_LOOP_NONE, data);
+
+        current_node->set_transform_dirty(true);
+    }
+}
+
 void AnimationEditor::store_animation_state(sAnimationState& state)
 {
     if (!current_node) {
@@ -536,23 +614,37 @@ void AnimationEditor::play_animation()
         w->set_visibility(false);
 
         // Show stop button
-        w = Node2D::get_widget_from_name("stop_animation");
+        w = Node2D::get_widget_from_name("pause_animation");
         w->set_visibility(true);
     }
 }
 
-void AnimationEditor::stop_animation()
+void AnimationEditor::pause_animation()
 {
-    player->stop(false);
+    player->pause();
 
-    // Manage menu player buttons
     {
         // Show play button
         auto w = Node2D::get_widget_from_name("play_animation");
         w->set_visibility(true);
 
         // Hide stop button
-        w = Node2D::get_widget_from_name("stop_animation");
+        w = Node2D::get_widget_from_name("pause_animation");
+        w->set_visibility(false);
+    }
+}
+
+void AnimationEditor::stop_animation()
+{
+    player->stop(true);
+
+    {
+        // Show play button
+        auto w = Node2D::get_widget_from_name("play_animation");
+        w->set_visibility(true);
+
+        // Hide stop button
+        w = Node2D::get_widget_from_name("pause_animation");
         w->set_visibility(false);
     }
 }
@@ -580,17 +672,16 @@ void AnimationEditor::init_ui()
     auto webgpu_context = Renderer::instance->get_webgpu_context();
     glm::vec2 screen_size = glm::vec2(static_cast<float>(webgpu_context->render_width), static_cast<float>(webgpu_context->render_height));
 
-    main_panel_2d = new ui::HContainer2D("scene_editor_root", { 48.0f, screen_size.y - 136.f });
+    main_panel_2d = new ui::HContainer2D("scene_editor_root", { 48.0f, screen_size.y - 200.f });
+
+    ui::VContainer2D* vertical_container = new ui::VContainer2D("animation_vertical_container", { 0.0f, 0.0f });
+    main_panel_2d->add_child(vertical_container);
 
     // Add main row
     ui::HContainer2D* first_row = new ui::HContainer2D("row_0", { 0.0f, 0.0f });
-    main_panel_2d->add_child(first_row);
+    vertical_container->add_child(first_row);
 
-    // ** Go back to scene editor **
-    first_row->add_child(new ui::TextureButton2D("go_back", "data/textures/back.png"));
-
-    // ** Clone node **
-    first_row->add_child(new ui::TextureButton2D("open_list", "data/textures/clone.png"));
+    first_row->add_child(new ui::FloatSlider2D("animation_speed", "data/textures/animation_speed.png", player->get_speed()));
 
     // Animation settings
     {
@@ -609,18 +700,28 @@ void AnimationEditor::init_ui()
         first_row->add_child(loop_mode);
     }
 
+    ui::HContainer2D* second_row = new ui::HContainer2D("row_1", { 0.0f, 0.0f });
+    vertical_container->add_child(second_row);
+
+    // ** Go back to scene editor **
+    second_row->add_child(new ui::TextureButton2D("go_back", "data/textures/back.png"));
+
+    // ** Open keyframe list **
+    second_row->add_child(new ui::TextureButton2D("open_list", "data/textures/keyframe_list.png"));
+
     // ** Keyframe actions
     {
         ui::ItemGroup2D* g_keyframes = new ui::ItemGroup2D("g_keyframes");
         g_keyframes->add_child(new ui::TextureButton2D("record_action", "data/textures/record_action.png", ui::DISABLED));
         g_keyframes->add_child(new ui::TextureButton2D("create_keyframe", "data/textures/add_key.png"));
         g_keyframes->add_child(new ui::TextureButton2D("submit_keyframe", "data/textures/submit_key.png", ui::HIDDEN));
-        first_row->add_child(g_keyframes);
+        second_row->add_child(g_keyframes);
     }
 
     // ** Play animation **
-    first_row->add_child(new ui::TextureButton2D("play_animation", "data/textures/play.png"));
-    first_row->add_child(new ui::TextureButton2D("stop_animation", "data/textures/stop.png", ui::HIDDEN));
+    second_row->add_child(new ui::TextureButton2D("play_animation", "data/textures/play.png"));
+    second_row->add_child(new ui::TextureButton2D("pause_animation", "data/textures/pause.png", ui::HIDDEN));
+    second_row->add_child(new ui::TextureButton2D("stop_animation", "data/textures/stop.png"));
 
     // Create inspection panel (Nodes, properties, etc)
     inspector = new ui::Inspector({ .name = "inspector_root", .title = "Animation",.position = { 32.0f, 32.f } }, [&](ui::Inspector* scope) {
@@ -664,14 +765,6 @@ void AnimationEditor::init_ui()
 
 void AnimationEditor::bind_events()
 {
-    // Loop mode events
-    {
-        Node::bind("loop_none", [&](const std::string& signal, void* button) { set_loop_type(ANIMATION_LOOP_NONE); });
-        Node::bind("loop_default", [&](const std::string& signal, void* button) { set_loop_type(ANIMATION_LOOP_DEFAULT); });
-        Node::bind("loop_reverse", [&](const std::string& signal, void* button) { set_loop_type(ANIMATION_LOOP_REVERSE); });
-        Node::bind("loop_ping_pong", [&](const std::string& signal, void* button) { set_loop_type(ANIMATION_LOOP_PING_PONG); });
-    }
-
     // Keyframe events
     {
         Node::bind("open_list", [&](const std::string& signal, void* button) { inspect_keyframes_list(true); });
@@ -683,8 +776,19 @@ void AnimationEditor::bind_events()
     // Animation player events
     {
         Node::bind("play_animation", [&](const std::string& signal, void* button) { play_animation(); });
+        Node::bind("pause_animation", [&](const std::string& signal, void* button) { pause_animation(); });
         Node::bind("stop_animation", [&](const std::string& signal, void* button) { stop_animation(); });
     }
+
+    // Loop mode events
+    {
+        Node::bind("loop_none", [&](const std::string& signal, void* button) { set_loop_type(ANIMATION_LOOP_NONE); });
+        Node::bind("loop_default", [&](const std::string& signal, void* button) { set_loop_type(ANIMATION_LOOP_DEFAULT); });
+        Node::bind("loop_reverse", [&](const std::string& signal, void* button) { set_loop_type(ANIMATION_LOOP_REVERSE); });
+        Node::bind("loop_ping_pong", [&](const std::string& signal, void* button) { set_loop_type(ANIMATION_LOOP_PING_PONG); });
+    }
+
+    Node::bind("animation_speed", (FuncFloat)[&](const std::string& signal, float value) { player->set_speed(value); });
 }
 
 void AnimationEditor::generate_shortcuts()
@@ -726,7 +830,7 @@ void AnimationEditor::inspect_keyframe()
     std::string key_name = "Keyframe";// +std::to_string(active_keyframe.idx);
 
     inspector->same_line();
-    inspector->icon("data/textures/pattern.png");
+    inspector->icon("data/textures/keyframe.png");
     inspector->label("empty", key_name);
     inspector->end_line();
 
@@ -852,17 +956,36 @@ void AnimationEditor::inspect_keyframes_list(bool force)
         // add unique identifier for signals
         std::string key_name = "Keyframe" + std::to_string(i);
 
-        inspector->icon("data/textures/pattern.png");
+        // Edit keyframe
+        {
+            std::string signal = key_name + std::to_string(keyframe_signal_uid++) + "_edit";
+            inspector->button(signal, "data/textures/edit.png");
 
-        std::string signal = key_name + std::to_string(keyframe_signal_uid++) + "_label";
-        inspector->label(signal, key_name);
+            Node::bind(signal, [&, it = i](const std::string& sg, void* data) {
+                edit_keyframe(it);
+            });
+        }
 
-        Node::bind(signal, [&, it = i](const std::string& sg, void* data) {
-            show_keyframe_dirty = true;
-            keyframe_dirty = true;
-            editing_keyframe = true;
-            current_animation_state = &animation_states[it];
-        });
+        // Duplicate keyframe
+        {
+            std::string signal = key_name + std::to_string(keyframe_signal_uid++) + "_duplicate";
+            inspector->button(signal, "data/textures/duplicate_key.png");
+
+            Node::bind(signal, [&, it = i](const std::string& sg, void* data) {
+                duplicate_keyframe(it);
+            });
+        }
+
+        // inspector->icon("data/textures/keyframe.png");
+        // Set state
+        {
+            std::string signal = key_name + std::to_string(keyframe_signal_uid++) + "_label";
+            inspector->label(signal, key_name);
+
+            Node::bind(signal, [&, it = i](const std::string& sg, void* data) {
+                set_animation_state(it);
+            });
+        }
 
         inspector->label("empty", std::to_string(s.time), ui::SKIP_TEXT_RECT);
 

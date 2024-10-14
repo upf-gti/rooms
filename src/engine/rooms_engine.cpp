@@ -213,11 +213,11 @@ void RoomsEngine::update(float delta_time)
 void RoomsEngine::render()
 {
 
-#ifndef __EMSCRIPTEN__
+//#ifndef __EMSCRIPTEN__
     if (show_imgui) {
         render_gui();
     }
-#endif
+//#endif
 
     cursor.render();
 
