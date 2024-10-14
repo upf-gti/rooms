@@ -129,6 +129,11 @@ class SculptEditor : public BaseEditor {
     glm::quat edit_rotation_world = {};
     glm::vec3 edit_position_world = {};
 
+    // Stamp slide
+    glm::vec3 edit_position_stamp = {};
+    glm::vec3 edit_origin_stamp = {};
+    glm::quat edit_rotation_stamp = { 0.0f, 0.0f, 0.0f, 1.0f };
+
     float hand_to_edit_distance = 0.0f;
 
     // Axis lock
@@ -142,7 +147,6 @@ class SculptEditor : public BaseEditor {
     bool axis_lock = false;
     Gizmo3D axis_lock_gizmo = {};
     uint8_t axis_lock_mode = AXIS_LOCK_Z;
-    glm::vec3 axis_lock_origin = glm::vec3(0.f);
 
     // Snap to grid
 
@@ -155,12 +159,11 @@ class SculptEditor : public BaseEditor {
 
     Gizmo3D mirror_gizmo = {};
     MeshInstance3D* mirror_mesh = nullptr;
-
-    glm::vec3 mirror_origin = glm::vec3(0.f);
     glm::vec3 mirror_normal = glm::vec3(0.f, 0.f, 1.f);
-    glm::quat mirror_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
 
-    // UI
+    /*
+    *	UI
+    */
 
     size_t max_recent_colors = 0;
     std::vector<Color> recent_colors;
@@ -170,11 +173,6 @@ class SculptEditor : public BaseEditor {
     void add_recent_color(const Color& color);
     void generate_shortcuts() override;
     bool is_something_hovered();
-
-    // Stamp slide
-    glm::vec3 edit_position_stamp = {};
-    glm::vec3 edit_origin_stamp = {};
-    glm::quat edit_rotation_stamp = { 0.0f, 0.0f, 0.0f, 1.0f };
 
     /*
     *	Splines

@@ -52,11 +52,13 @@ void AnimationEditor::initialize()
 
     player = new AnimationPlayer("Animation Player");
 
+    eGizmoType gizmo_type = TRANSLATE | ROTATE;
+
     if (renderer->get_openxr_available()) {
-        gizmo_3d.initialize(POSITION_SCALE_ROTATION_GIZMO);
+        gizmo_3d.initialize(gizmo_type);
     }
     else {
-        gizmo_2d.set_operation(ImGuizmo::TRANSLATE | /*ImGuizmo::SCALE |*/ ImGuizmo::ROTATE);
+        gizmo_2d.set_operation((ImGuizmo::OPERATION)gizmo_type);
     }
 
     init_ui();
