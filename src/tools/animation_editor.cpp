@@ -506,6 +506,8 @@ void AnimationEditor::duplicate_keyframe(uint32_t index)
     keyframe_list_dirty = true;
 
     set_animation_state(states.size() - 1u);
+
+    update_animation_trajectory();
 }
 
 sAnimationState* AnimationEditor::get_animation_state(uint32_t index)
