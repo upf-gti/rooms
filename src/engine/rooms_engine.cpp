@@ -90,7 +90,7 @@ int RoomsEngine::initialize(Renderer* renderer, sEngineConfiguration configurati
     }
 
     // Set default editor..
-    switch_editor(EditorType::PLAYER_EDITOR);
+    switch_editor(EditorType::SCENE_EDITOR);
 
     // Grid
     {
