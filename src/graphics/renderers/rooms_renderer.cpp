@@ -197,10 +197,10 @@ void RoomsRenderer::render()
     Renderer::render();
 
 #ifndef __EMSCRIPTEN__
-    last_frame_timestamps = get_timestamps();
+    //last_frame_timestamps = get_timestamps();
 
-    if (!last_frame_timestamps.empty() && sculpt_manager->has_performed_evaluation()) {
-        last_evaluation_time = last_frame_timestamps[0];
-    }
+    //if (!last_frame_timestamps.empty() && sculpt_manager->has_performed_evaluation()) {
+    //    last_evaluation_time = last_frame_timestamps[0];
+    //}
 #endif
 }
