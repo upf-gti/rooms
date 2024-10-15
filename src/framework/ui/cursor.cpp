@@ -14,7 +14,7 @@
 
 namespace ui {
 
-    void Cursor::load()
+    void Cursor::initialize()
     {
         is_xr = Renderer::instance->get_openxr_available();
 

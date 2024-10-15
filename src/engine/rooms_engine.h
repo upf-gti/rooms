@@ -7,21 +7,21 @@
 
 class Node;
 class Node3D;
-class MeshInstance3D;
 class Environment3D;
 class BaseEditor;
+class SculptInstance;
 class SculptEditor;
 class SceneEditor;
 class TutorialEditor;
 class AnimationEditor;
-class SculptInstance;
+class PlayerEditor;
 
 enum EditorType : uint8_t {
     SCENE_EDITOR,
     SCULPT_EDITOR,
     ANIMATION_EDITOR,
-    SHAPE_EDITOR,
-    TUTORIAL_EDITOR
+    TUTORIAL_EDITOR,
+    PLAYER_EDITOR
 };
 
 #define _DESTROY_(x) if(x) { delete x; }
@@ -41,6 +41,7 @@ class RoomsEngine : public Engine
     SceneEditor* scene_editor = nullptr;
     TutorialEditor* tutorial_editor = nullptr;
     AnimationEditor* animation_editor = nullptr;
+    PlayerEditor* player_editor = nullptr;
 
     void render_gui();
 

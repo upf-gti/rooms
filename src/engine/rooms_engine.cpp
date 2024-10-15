@@ -23,6 +23,7 @@
 #include "tools/sculpt_editor.h"
 #include "tools/scene_editor.h"
 #include "tools/animation_editor.h"
+#include "tools/player_editor.h"
 #include "tools/tutorial_editor.h"
 #include "framework/nodes/sculpt_instance.h"
 
@@ -82,8 +83,14 @@ int RoomsEngine::initialize(Renderer* renderer, sEngineConfiguration configurati
         animation_editor->initialize();
     }
 
+    // Experience Player
+    {
+        player_editor = new PlayerEditor("Player Editor");
+        player_editor->initialize();
+    }
+
     // Set default editor..
-    switch_editor(EditorType::SCENE_EDITOR);
+    switch_editor(EditorType::PLAYER_EDITOR);
 
     // Grid
     {
@@ -129,7 +136,7 @@ int RoomsEngine::initialize(Renderer* renderer, sEngineConfiguration configurati
         sphere_pointer->set_surface_material_override(sphere_pointer->get_surface(0), sphere_pointer_material);
     }
 
-    cursor.load();
+    cursor.initialize();
 
     ui::Keyboard::initialize();
 
@@ -150,6 +157,10 @@ void RoomsEngine::clean()
 
     if (animation_editor) {
         animation_editor->clean();
+    }
+
+    if (player_editor) {
+        player_editor->clean();
     }
 
     if (tutorial_editor) {
@@ -227,7 +238,9 @@ void RoomsEngine::render()
         environment->render();
     }
 
-    if (use_grid) {
+    bool playing_scene = dynamic_cast<PlayerEditor*>(current_editor);
+
+    if (use_grid && !playing_scene) {
         grid->render();
     }
 
@@ -242,7 +255,7 @@ void RoomsEngine::render()
         }
     }
 
-    if (Renderer::instance->get_openxr_available()) {
+    if (Renderer::instance->get_openxr_available() && !playing_scene) {
 
         const glm::mat4x4& raycast_transform = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
         ray_pointer->set_transform(Transform::mat4_to_transform(raycast_transform));
@@ -290,8 +303,8 @@ void RoomsEngine::switch_editor(uint8_t editor, void* data)
     case ANIMATION_EDITOR:
         i->current_editor = i->animation_editor;
         break;
-    case SHAPE_EDITOR:
-        // ...
+    case PLAYER_EDITOR:
+        i->current_editor = i->player_editor;
         break;
     default:
         assert(0 && "Editor is not created!");
