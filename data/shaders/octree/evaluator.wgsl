@@ -414,11 +414,11 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 if (surface_interval.x > 0.0) {
                     if (is_current_brick_filled) {
                         // delete any brick outside surface that was previosly filled
-                        brick_remove(octree_index);
+                        //brick_remove(octree_index);
                     } else {
-                        // reset flags for potential interior bricks
-                        octree.data[octree_index].tile_pointer = 0;
-                        octree.data[octree_index].octant_center_distance = vec2f(10000.0, 10000.0);
+                        // // reset flags for potential interior bricks
+                        // octree.data[octree_index].tile_pointer = 0;
+                        // octree.data[octree_index].octant_center_distance = vec2f(10000.0, 10000.0);
                     }
                 } else if (surface_interval.y < 0.0) {
                     brick_remove_and_mark_as_inside(octree_index, is_current_brick_filled);
@@ -426,7 +426,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                     brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
                 }
             } else if (brick_has_paint && is_current_brick_filled) {
-                    brick_reevaluate(octree_index);
+                    //brick_reevaluate(octree_index);
             }
         }
     } else {
@@ -468,7 +468,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             let is_paint : bool = preview_stroke.stroke.operation == OP_SMOOTH_PAINT;
 
             if (int_distance > 0.00001 || is_paint) {
-                //preview_brick_create(octree_index, octant_center, true, 1u, 1u);
                 // Compute edit margin for preview evaluation
                 var edit_index_start : u32 = 1000u;
                 var edit_index_end : u32 = 0u;

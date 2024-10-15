@@ -55,11 +55,11 @@ void SceneEditor::initialize()
     main_scene->add_node(default_sculpt);
 #endif
 
-    auto e = parse_mesh("data/meshes/torus/torus.obj");
+    /*auto e = parse_mesh("data/meshes/torus/torus.obj");
     main_scene->add_node(e);
 
     e = parse_mesh("data/meshes/cube/cube.obj");
-    main_scene->add_node(e);
+    main_scene->add_node(e);*/
 
     Node::bind(main_scene->get_name() + "@nodes_added", [&](const std::string& sg, void* data) {
         set_inspector_dirty();

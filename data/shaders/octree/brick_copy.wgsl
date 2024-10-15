@@ -52,6 +52,6 @@ fn compute(@builtin(workgroup_id) id: vec3<u32>, @builtin(local_invocation_index
     {
         let prev_index : u32 = atomicAdd(&sculpt_indirect.brick_count, 1u);
 
-        brick_index_buffer[prev_index] = current_instance_in_use_flag & ~FILLED_BRICK_FLAG;
+        brick_index_buffer[prev_index] = current_instance_in_use_flag & OCTREE_TILE_INDEX_MASK;
     }
 }

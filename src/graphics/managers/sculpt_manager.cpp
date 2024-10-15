@@ -150,11 +150,13 @@ Sculpt* SculptManager::create_sculpt()
     uniforms = { &octree_uniform };
     WGPUBindGroup octree_bindgroup = webgpu_context->create_bind_group(uniforms, evaluate_shader, 1u, "Octree bindgroup");
 
-    WGPUBindGroup readonly_sculpt_buffer_bindgroup;
     uniforms = { &brick_index_buffer, &indirect_buffer };
-    readonly_sculpt_buffer_bindgroup = webgpu_context->create_bind_group(uniforms, RendererStorage::get_shader("data/shaders/octree/proxy_geometry_plain.wgsl"), 2u, "Read only octree bindgroup");
+    WGPUBindGroup readonly_sculpt_buffer_bindgroup = webgpu_context->create_bind_group(uniforms, RendererStorage::get_shader("data/shaders/octree/proxy_geometry_plain.wgsl"), 2u, "Read only octree bindgroup");
 
-    return new Sculpt(sculpt_count++, octree_uniform, indirect_buffer, brick_index_buffer, octree_bindgroup, evaluate_sculpt_bindgroup, readonly_sculpt_buffer_bindgroup);
+    uniforms = { &octree_uniform, &indirect_buffer };
+    WGPUBindGroup oct_indi_bindgroup = webgpu_context->create_bind_group(uniforms, evaluation_initialization_shader, 1u, "Read only octree bindgroup");
+
+    return new Sculpt(sculpt_count++, octree_uniform, indirect_buffer, brick_index_buffer, octree_bindgroup, evaluate_sculpt_bindgroup, oct_indi_bindgroup, readonly_sculpt_buffer_bindgroup);
 }
 
 Sculpt* SculptManager::create_sculpt_from_history(const std::vector<Stroke>& stroke_history)
@@ -222,7 +224,7 @@ void SculptManager::evaluate(WGPUComputePassEncoder compute_pass, const sEvaluat
             evaluation_initialization_pipeline.set(compute_pass);
 
             wgpuComputePassEncoderSetBindGroup(compute_pass, 0, evaluation_initialization_bind_group, 0, nullptr);
-            wgpuComputePassEncoderSetBindGroup(compute_pass, 1, evaluate_request.sculpt->get_octree_bindgroup(), 0u, nullptr);
+            wgpuComputePassEncoderSetBindGroup(compute_pass, 1, evaluate_request.sculpt->get_octree_indirect_bindgroup(), 0u, nullptr);
 
             wgpuComputePassEncoderSetBindGroup(compute_pass, 3, preview_stroke_bind_group, 0, nullptr);
 
@@ -346,7 +348,7 @@ void SculptManager::evaluate_preview(WGPUComputePassEncoder compute_pass)
 
     uint32_t stroke_dynamic_offset = 0;
     wgpuComputePassEncoderSetBindGroup(compute_pass, 0, evaluation_initialization_bind_group, 0, nullptr);
-    wgpuComputePassEncoderSetBindGroup(compute_pass, 1, preview.sculpt->get_octree_bindgroup(), 0, nullptr);
+    wgpuComputePassEncoderSetBindGroup(compute_pass, 1, preview.sculpt->get_octree_indirect_bindgroup(), 0, nullptr);
 
     wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
 
@@ -466,7 +468,6 @@ void SculptManager::upload_preview_strokes() {
 
     //    sdf_globals.preview_stroke_uniform_2.data = sdf_globals.preview_stroke_uniform.data;
     //    sdf_globals.preview_stroke_uniform_2.buffer_size = sdf_globals.preview_stroke_uniform.buffer_size;
-
     //    std::vector<Uniform*> uniforms = { &sculpts_instance_data_uniform, &linear_sampler_uniform, &sdf_texture_uniform, &octree_brick_buffers, &octree_brick_copy_buffer, &sdf_material_texture_uniform, &preview_stroke_uniform_2 };
     //    wgpuBindGroupRelease(render_proxy_geometry_bind_group);
     //    render_proxy_geometry_bind_group = webgpu_context->create_bind_group(uniforms, render_proxy_shader, 0);

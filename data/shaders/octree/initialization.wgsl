@@ -8,6 +8,7 @@
 @group(0) @binding(9) var<storage, read_write> stroke_culling : array<u32>;
 
 @group(1) @binding(0) var<storage, read_write> octree : Octree_NonAtomic;
+@group(1) @binding(2) var<storage, read_write> sculpt_indirect : SculptIndirectCall_NonAtomic;
 
 
 /**
@@ -31,12 +32,11 @@ fn compute(@builtin(workgroup_id) group_id: vec3u)
     brick_buffers.preview_instance_counter = 0u;
     indirect_buffers.preview_instance_count = 0u;
 
-    //let padd : u32 = brick_index_buffer[0];
     // sculpt_indirect.vertex_count = 36u;
     // sculpt_indirect.instance_count = 0u;
     // sculpt_indirect.first_vertex = 0u;
     // sculpt_indirect.first_instance = 0u;
-    // sculpt_indirect.brick_count = 0u;
+    
 
     // if (level == 0u) {
     //     // TODO: check what happens with preview
@@ -49,6 +49,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u)
         indirect_buffers.brick_removal_counter = 0u;
         brick_buffers.brick_removal_counter = 0u;
         indirect_buffers.brick_instance_count = 0u;
+        sculpt_indirect.brick_count = 0u;
 
         // Store the culling data of the first level
         let culling_stroke_size : u32 = min(stroke_history.count, MAX_STROKE_INFLUENCE_COUNT);
