@@ -42,7 +42,7 @@ void SceneEditor::initialize()
 
     main_scene = Engine::instance->get_main_scene();
 
-    gizmo_3d.initialize(TRANSLATION_GIZMO, { 0.0f, 0.0f, 0.0f });
+    gizmo_3d.initialize(TRANSLATE, { 0.0f, 0.0f, 0.0f });
 
     init_ui();
 
@@ -55,7 +55,7 @@ void SceneEditor::initialize()
     main_scene->add_node(default_sculpt);
 #endif
 
-    /*auto e = parse_mesh("data/meshes/torus/torus.obj");
+   /* auto e = parse_mesh("data/meshes/torus/torus.obj");
     main_scene->add_node(e);
 
     e = parse_mesh("data/meshes/cube/cube.obj");
@@ -413,7 +413,7 @@ void SceneEditor::bind_events()
         new_sculpt->initialize();
         RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
         rooms_renderer->toogle_frame_debug();
-        
+
         static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(new_sculpt);
         main_scene->add_node(new_sculpt);
         select_node(new_sculpt);
@@ -653,7 +653,7 @@ void SceneEditor::render_gizmo()
 void SceneEditor::set_gizmo_translation()
 {
     if (renderer->get_openxr_available()) {
-        gizmo_3d.set_operation(TRANSLATION_GIZMO);
+        gizmo_3d.set_operation(TRANSLATE);
     }
     else {
         gizmo_2d.set_operation(ImGuizmo::TRANSLATE);
@@ -663,7 +663,7 @@ void SceneEditor::set_gizmo_translation()
 void SceneEditor::set_gizmo_rotation()
 {
     if (renderer->get_openxr_available()) {
-        gizmo_3d.set_operation(ROTATION_GIZMO);
+        gizmo_3d.set_operation(ROTATE);
     }
     else {
         gizmo_2d.set_operation(ImGuizmo::ROTATE);
@@ -673,7 +673,7 @@ void SceneEditor::set_gizmo_rotation()
 void SceneEditor::set_gizmo_scale()
 {
     if (renderer->get_openxr_available()) {
-        gizmo_3d.set_operation(SCALE_GIZMO);
+        gizmo_3d.set_operation(SCALE);
     }
     else {
         gizmo_2d.set_operation(ImGuizmo::SCALE);

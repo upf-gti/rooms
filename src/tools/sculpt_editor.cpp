@@ -56,8 +56,8 @@ void SculptEditor::initialize()
 
     mirror_mesh->set_surface_material_override(mirror_mesh->get_surface(0), mirror_material);
 
-    axis_lock_gizmo.initialize(TRANSLATION_GIZMO);
-    mirror_gizmo.initialize(TRANSLATION_GIZMO);
+    axis_lock_gizmo.initialize(TRANSLATE);
+    mirror_gizmo.initialize(TRANSLATE);
 
     // Set maximum number of edits per curve
     current_spline.set_density(MAX_EDITS_PER_SPLINE);
@@ -235,11 +235,11 @@ bool SculptEditor::edit_update(float delta_time)
             renderer->get_raymarching_renderer()->octree_ray_intersect(pose[3], ray_dir, callback);
         }
 
-        if (use_mirror) {
-            bool r = mirror_gizmo.update(mirror_origin, mirror_rotation, Input::get_controller_position(HAND_RIGHT, POSE_AIM), delta_time);
+        if (use_mirror && renderer->get_openxr_available()) {
+            bool r = mirror_gizmo.update(Input::get_controller_position(HAND_RIGHT, POSE_AIM), delta_time);
             is_tool_used &= !r;
             is_tool_pressed &= !r;
-            mirror_normal = glm::normalize(mirror_rotation * glm::vec3(0.f, 0.f, 1.f));
+            mirror_normal = glm::normalize(mirror_gizmo.get_rotation() * glm::vec3(0.f, 0.f, 1.f));
         }
 
         if (snap_to_grid) {
@@ -249,18 +249,18 @@ bool SculptEditor::edit_update(float delta_time)
             edit_to_add.position = glm::round(edit_to_add.position * grid_multiplier) / grid_multiplier;
         }
 
-        else if (axis_lock) {
-            bool r = axis_lock_gizmo.update(axis_lock_origin, Input::get_controller_position(HAND_RIGHT, POSE_AIM), delta_time);
+        else if (axis_lock && renderer->get_openxr_available()) {
+            bool r = axis_lock_gizmo.update(Input::get_controller_position(HAND_RIGHT, POSE_AIM), delta_time);
             is_tool_used &= !r;
             is_tool_pressed &= !r;
 
             glm::vec3 locked_pos = edit_to_add.position;
             if (axis_lock_mode & AXIS_LOCK_X)
-                locked_pos.x = axis_lock_origin.x;
+                locked_pos.x = axis_lock_gizmo.get_position().x;
             else if (axis_lock_mode & AXIS_LOCK_Y)
-                locked_pos.y = axis_lock_origin.y;
+                locked_pos.y = axis_lock_gizmo.get_position().y;
             else if (axis_lock_mode & AXIS_LOCK_Z)
-                locked_pos.z = axis_lock_origin.z;
+                locked_pos.z = axis_lock_gizmo.get_position().z;
             edit_to_add.position = locked_pos;
         }
     }
@@ -555,8 +555,10 @@ void SculptEditor::update(float delta_time)
                 current_sculpt->set_position(edit_to_add.position);
             }
 
-            mirror_origin = current_sculpt->get_translation();
-            axis_lock_origin = current_sculpt->get_translation();
+            Transform& mirror_transform = mirror_gizmo.get_transform();
+            mirror_transform.set_position(current_sculpt->get_translation());
+            Transform& lock_axis_transform = axis_lock_gizmo.get_transform();
+            lock_axis_transform.set_position(current_sculpt->get_translation());
         }
 
         // Mark the start of the sculpture for the origin
@@ -689,7 +691,7 @@ void SculptEditor::set_preview_edits(const std::vector<Edit>& edit_previews) {
 void SculptEditor::apply_mirror_position(glm::vec3& position)
 {
     // Don't rotate the mirror origin..
-    glm::vec3 origin_texture_space = world_to_texture3d(mirror_origin);
+    glm::vec3 origin_texture_space = world_to_texture3d(mirror_gizmo.get_position());
     glm::vec3 normal_texture_space = world_to_texture3d(mirror_normal, true);
     glm::vec3 pos_to_origin = origin_texture_space - position;
     glm::vec3 reflection = glm::reflect(pos_to_origin, normal_texture_space);
@@ -864,7 +866,7 @@ void SculptEditor::render()
         axis_lock_gizmo.render();
 
         mirror_mesh->set_transform(Transform::identity());
-        mirror_mesh->translate(axis_lock_origin);
+        mirror_mesh->translate(axis_lock_gizmo.get_position());
 
         if (axis_lock_mode & AXIS_LOCK_X)
             mirror_mesh->rotate(glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
@@ -874,12 +876,15 @@ void SculptEditor::render()
         mirror_mesh->render();
     }
     else if (use_mirror) {
+
         mirror_gizmo.render();
 
-        mirror_mesh->set_transform(Transform::identity());
-        mirror_mesh->translate(mirror_origin);
-        mirror_mesh->scale(glm::vec3(0.25f));
-        mirror_mesh->rotate(mirror_rotation);
+        if (!renderer->get_openxr_available()) {
+            mirror_normal = glm::normalize(mirror_gizmo.get_rotation() * glm::vec3(0.f, 0.f, 1.f));
+        }
+
+        mirror_mesh->set_transform(mirror_gizmo.get_transform());
+        mirror_mesh->scale(glm::vec3(0.5f));
         mirror_mesh->render();
     }
 
@@ -921,8 +926,9 @@ void SculptEditor::render_gui()
     changed |= ImGui::SliderInt("Octaves", &tmp, 1, 16);
     stroke_material.noise_params.z = static_cast<float>(tmp);
 
-    if (changed)
+    if (changed) {
         stroke_parameters.set_dirty(true);
+    }
 }
 
 bool SculptEditor::can_snap_to_surface()
@@ -1473,9 +1479,9 @@ void SculptEditor::bind_events()
     Node::bind("cap_value", (FuncFloat)[&](const std::string& signal, float value) { set_cap_modifier(value); });
 
     Node::bind("mirror_toggle", [&](const std::string& signal, void* button) { use_mirror = !use_mirror; });
-    Node::bind("mirror_translation", [&](const std::string& signal, void* button) { mirror_gizmo.set_operation(eGizmoType::TRANSLATION_GIZMO); });
-    Node::bind("mirror_rotation", [&](const std::string& signal, void* button) { mirror_gizmo.set_operation(eGizmoType::ROTATION_GIZMO); });
-    Node::bind("mirror_both", [&](const std::string& signal, void* button) { mirror_gizmo.set_operation(eGizmoType::POSITION_ROTATION_GIZMO); });
+    Node::bind("mirror_translation", [&](const std::string& signal, void* button) { mirror_gizmo.set_operation(TRANSLATE); });
+    Node::bind("mirror_rotation", [&](const std::string& signal, void* button) { mirror_gizmo.set_operation(ROTATE); });
+    Node::bind("mirror_both", [&](const std::string& signal, void* button) { mirror_gizmo.set_operation(TRANSLATE | ROTATE); });
     Node::bind("snap_to_surface", [&](const std::string& signal, void* button) { snap_to_surface = !snap_to_surface; });
     Node::bind("snap_to_grid", [&](const std::string& signal, void* button) { snap_to_grid = !snap_to_grid; });
     Node::bind("lock_axis_toggle", [&](const std::string& signal, void* button) { axis_lock = !axis_lock; });
