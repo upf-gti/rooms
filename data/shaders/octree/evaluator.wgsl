@@ -266,7 +266,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     // TODO(Juan): fix undo redo reeval
     let aabb_half_size : mat4x3f = get_loose_half_size_mat(preview_stroke.stroke.primitive);
     let is_evaluating_preview : bool = ((octree.evaluation_mode & EVALUATE_PREVIEW_STROKE_FLAG) == EVALUATE_PREVIEW_STROKE_FLAG);
-    let is_evaluating_undo : bool = (octree.evaluation_mode & UNDO_EVAL_FLAG) == UNDO_EVAL_FLAG;
+    let is_evaluating_undo : bool = (stroke_history.is_undo & UNDO_EVAL_FLAG) == UNDO_EVAL_FLAG;
 
     let octant_min : vec3f = octant_center - vec3f(level_half_size);
     let octant_max : vec3f = octant_center + vec3f(level_half_size);
@@ -414,11 +414,11 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 if (surface_interval.x > 0.0) {
                     if (is_current_brick_filled) {
                         // delete any brick outside surface that was previosly filled
-                        //brick_remove(octree_index);
+                        brick_remove(octree_index);
                     } else {
                         // // reset flags for potential interior bricks
-                        // octree.data[octree_index].tile_pointer = 0;
-                        // octree.data[octree_index].octant_center_distance = vec2f(10000.0, 10000.0);
+                        octree.data[octree_index].tile_pointer = 0;
+                        octree.data[octree_index].octant_center_distance = vec2f(10000.0, 10000.0);
                     }
                 } else if (surface_interval.y < 0.0) {
                     brick_remove_and_mark_as_inside(octree_index, is_current_brick_filled);
@@ -426,7 +426,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                     brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
                 }
             } else if (brick_has_paint && is_current_brick_filled) {
-                    //brick_reevaluate(octree_index);
+                brick_reevaluate(octree_index);
             }
         }
     } else {

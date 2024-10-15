@@ -62,6 +62,9 @@ class SculptEditor : public BaseEditor {
     bool was_tool_used = false;
     bool was_tutorial_shown = false;
 
+    bool called_undo = false;
+    bool called_redo = false;
+
     eTool current_tool = eTool::NONE;
 
     static uint8_t last_generated_material_uid;

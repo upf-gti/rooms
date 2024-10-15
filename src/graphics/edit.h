@@ -148,15 +148,22 @@ struct Stroke {
 
 struct sStrokeInfluence {
     uint32_t stroke_count = 0u;
-    uint32_t pad_1 = UINT32_MAX; // aligment issues when using vec3
+    uint32_t is_undo = 0u; // aligment issues when using vec3
     uint32_t pad_0 = 0u;
-    uint32_t pad_2 = UINT32_MAX;
+    uint32_t pad_2 = 0u;
     glm::vec3 eval_aabb_min;
     float pad1;
     glm::vec3 eval_aabb_max;
     float pad2;
     glm::vec4 pad3;
     std::vector<sToUploadStroke> strokes;
+
+    void set_defaults() {
+        is_undo = 0u;
+        stroke_count = 0u;
+        eval_aabb_min = { 0.0f, 0.0f, 0.0f };
+        eval_aabb_max = { 0.0f, 0.0f, 0.0f };
+    }
 };
 
 struct PBRMaterialData {

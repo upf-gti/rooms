@@ -8,18 +8,6 @@
 
 class SculptInstance;
 
-struct sToComputeStrokeData {
-    sToUploadStroke in_frame_stroke = {};
-    sStrokeInfluence in_frame_influence;
-    AABB in_frame_stroke_aabb;
-
-    inline void set_defaults() {
-        in_frame_stroke.edit_count = 0u;
-        in_frame_influence.stroke_count = 0u;
-        in_frame_stroke_aabb = { { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f } };
-    }
-};
-
 
 struct StrokeManager {
     Stroke in_frame_stroke = {
@@ -38,14 +26,13 @@ struct StrokeManager {
 
     glm::vec3 brick_world_size = {};
 
-    uint32_t edit_list_count = 0u;
-    std::vector<Edit> edit_list;
-
     StrokeParameters dirty_stroke_params;
     uint32_t dirty_stroke_increment = 0u;
     bool must_change_stroke = false;
 
-    sToComputeStrokeData result_to_compute;
+    sStrokeInfluence result_to_compute;
+    uint32_t edit_list_count = 0u;
+    std::vector<Edit> edit_list;
 
     inline void add_edit_to_upload(const Edit& edit) {
         // Expand the edit to upload list by chunks
@@ -75,10 +62,10 @@ struct StrokeManager {
     void change_stroke(const StrokeParameters& params, const uint32_t index_increment = 1u);
     void change_stroke(const uint32_t index_increment = 1u);
 
-    sToComputeStrokeData* undo();
-    sToComputeStrokeData* redo();
-    sToComputeStrokeData* add(std::vector<Edit> new_edits);
-    sToComputeStrokeData* new_history_add(std::vector<Stroke>* history);
+    sStrokeInfluence* undo();
+    sStrokeInfluence* redo();
+    sStrokeInfluence* add(std::vector<Edit> new_edits);
+    sStrokeInfluence* new_history_add(std::vector<Stroke>* history);
 
     void update();
 

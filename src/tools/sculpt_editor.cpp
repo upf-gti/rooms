@@ -646,18 +646,29 @@ void SculptEditor::update(float delta_time)
         mirror_current_edits(delta_time);
     }
 
-    // Push to the renderer the edits and the previews
-    //renderer->push_preview_edit_list(preview_tmp_edits);
-    //renderer->push_edit_list(new_edits);
+    if (force_new_stroke) {
+        stroke_manager.change_stroke();
+    }
 
     set_preview_edits(preview_tmp_edits);
 
-    if (new_edits.size() > 0u) {
+    if (called_undo) {
+        spdlog::info("Called undo");
+
+        if (stroke_manager.undo()) {
+            renderer->get_sculpt_manager()->update_sculpt(
+                current_sculpt->get_sculpt_data(),
+                stroke_manager.result_to_compute,
+                stroke_manager.edit_list);
+        }
+
+        called_undo = false;
+    } else if (new_edits.size() > 0u) {
         stroke_manager.add(new_edits);
 
         renderer->get_sculpt_manager()->update_sculpt(
             current_sculpt->get_sculpt_data(),
-            stroke_manager.result_to_compute.in_frame_influence,
+            stroke_manager.result_to_compute,
             stroke_manager.edit_list);
     }
     
@@ -677,7 +688,12 @@ void SculptEditor::update(float delta_time)
 }
 
 void SculptEditor::set_preview_edits(const std::vector<Edit>& edit_previews) {
-    sToUploadStroke preview_stroke = stroke_manager.result_to_compute.in_frame_stroke;
+    sToUploadStroke preview_stroke;
+
+    preview_stroke.color_blending_op = stroke_parameters.get_color_blend_operation();
+    preview_stroke.material = stroke_parameters.get_material();
+    preview_stroke.operation = stroke_parameters.get_operation();
+    preview_stroke.parameters = stroke_parameters.get_parameters();
 
     preview_stroke.edit_count = preview_tmp_edits.size();
 
@@ -828,7 +844,7 @@ void SculptEditor::undo()
     }
     else {
         renderer->toogle_frame_debug();
-        stroke_manager.undo();
+        called_undo = true;
     }
 }
 
