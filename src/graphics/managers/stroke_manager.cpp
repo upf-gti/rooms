@@ -128,7 +128,6 @@ sStrokeInfluence* StrokeManager::undo()
     if (united_stroke_idx == 0) {
         Stroke prev = history->at(0);
         prev.operation = OP_SMOOTH_SUBSTRACTION;
-        //result.in_frame_stroke = prev;
 
         add_stroke_to_upload_list(result_to_compute, prev);
     } else {

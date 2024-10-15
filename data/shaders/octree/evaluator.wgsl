@@ -341,7 +341,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                         }
                     }
 
-                    octree.data[octree_index].stroke_count = curr_stroke_count;
+                octree.data[octree_index].stroke_count = curr_stroke_count;
 
                 if (any_stroke_inside || is_evaluating_undo) {
                     // Increase the number of children from the current level
@@ -410,7 +410,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
             let int_distance = abs(distance(prev_interval, surface_interval));
             
-            if (int_distance > 0.00001) {
+            if (int_distance > 0.0001) {
                 if (surface_interval.x > 0.0) {
                     if (is_current_brick_filled) {
                         // delete any brick outside surface that was previosly filled
@@ -467,7 +467,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
             let is_paint : bool = preview_stroke.stroke.operation == OP_SMOOTH_PAINT;
 
-            if (int_distance > 0.00001 || is_paint) {
+            if (int_distance > 0.0001 || is_paint) {
                 // Compute edit margin for preview evaluation
                 var edit_index_start : u32 = 1000u;
                 var edit_index_end : u32 = 0u;

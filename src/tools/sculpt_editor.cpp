@@ -646,30 +646,28 @@ void SculptEditor::update(float delta_time)
         mirror_current_edits(delta_time);
     }
 
-    if (force_new_stroke) {
-        stroke_manager.change_stroke();
-    }
-
     set_preview_edits(preview_tmp_edits);
 
+    bool needs_evaluation = false;
     if (called_undo) {
-        spdlog::info("Called undo");
-
-        if (stroke_manager.undo()) {
-            renderer->get_sculpt_manager()->update_sculpt(
-                current_sculpt->get_sculpt_data(),
-                stroke_manager.result_to_compute,
-                stroke_manager.edit_list);
-        }
-
+        needs_evaluation = stroke_manager.undo();
         called_undo = false;
+    } else if (called_redo) {
+        needs_evaluation = stroke_manager.redo();
+        called_redo = false;
     } else if (new_edits.size() > 0u) {
-        stroke_manager.add(new_edits);
+        needs_evaluation = stroke_manager.add(new_edits);
+    }
 
+    if (needs_evaluation) {
         renderer->get_sculpt_manager()->update_sculpt(
             current_sculpt->get_sculpt_data(),
             stroke_manager.result_to_compute,
             stroke_manager.edit_list);
+    }
+
+    if (force_new_stroke) {
+        stroke_manager.change_stroke();
     }
     
     if (is_tool_used) {
@@ -855,7 +853,7 @@ void SculptEditor::redo()
     }
 
     renderer->toogle_frame_debug();
-    stroke_manager.redo();
+    called_redo = true;
 }
 
 void SculptEditor::render()
