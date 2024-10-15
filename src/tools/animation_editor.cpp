@@ -52,14 +52,7 @@ void AnimationEditor::initialize()
 
     player = new AnimationPlayer("Animation Player");
 
-    eGizmoType gizmo_type = TRANSLATE | ROTATE;
-
-    if (renderer->get_openxr_available()) {
-        gizmo_3d.initialize(gizmo_type);
-    }
-    else {
-        gizmo_2d.set_operation((ImGuizmo::OPERATION)gizmo_type);
-    }
+    gizmo.initialize(TRANSLATE | ROTATE);
 
     init_ui();
 
@@ -295,16 +288,12 @@ void AnimationEditor::render_gizmo()
         return;
     }
 
-    if (renderer->get_openxr_available()) {
-        gizmo_3d.render();
-    }
-    else {
-        Camera* camera = renderer->get_camera();
-        glm::mat4x4 m = current_node->get_model();
+    gizmo.set_transform(current_node->get_transform());
 
-        if (gizmo_2d.render(camera->get_view(), camera->get_projection(), m)) {
-            current_node->set_transform(Transform::mat4_to_transform(m));
-        }
+    bool transform_dirty = gizmo.render();
+
+    if (transform_dirty) {
+        current_node->set_transform(gizmo.get_transform());
     }
 }
 
@@ -314,7 +303,7 @@ void AnimationEditor::update_gizmo(float delta_time)
         return;
     }
 
-    // Only 3D Gizmo for XR needs to update
+    // Gizmo only needs to update for XR
 
     if (!renderer->get_openxr_available()) {
         return;
@@ -323,7 +312,7 @@ void AnimationEditor::update_gizmo(float delta_time)
     glm::vec3 right_controller_pos = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
     Transform t = current_node->get_transform();
 
-    if (gizmo_3d.update(t, right_controller_pos, delta_time)) {
+    if (gizmo.update(t, right_controller_pos, delta_time)) {
         current_node->set_transform(t);
     }
 }

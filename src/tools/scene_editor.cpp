@@ -41,7 +41,7 @@ void SceneEditor::initialize()
 
     main_scene = Engine::instance->get_main_scene();
 
-    gizmo_3d.initialize(TRANSLATE, { 0.0f, 0.0f, 0.0f });
+    gizmo.initialize(TRANSLATE);
 
     init_ui();
 
@@ -63,11 +63,21 @@ void SceneEditor::initialize()
     Node::bind(main_scene->get_name() + "@nodes_added", [&](const std::string& sg, void* data) {
         set_inspector_dirty();
     });
+
+    Node::bind("@node_deleted", [&](const std::string& sg, void* data) {
+        Node* node = reinterpret_cast<Node*>(data);
+        if (node == selected_node) {
+            selected_node = nullptr;
+            moving_node = false;
+        }
+
+        inspector_dirty = true;
+    });
 }
 
 void SceneEditor::clean()
 {
-    gizmo_3d.clean();
+    gizmo.clean();
 
     BaseEditor::clean();
 }
@@ -152,23 +162,27 @@ void SceneEditor::render()
 
 void SceneEditor::render_gui()
 {
-    ImGui::Text("Hovered Node");
+    if (selected_node) {
+        ImGui::Text("Selected Node: %s", selected_node->get_name().c_str());
+    }
 
     if (hovered_node) {
 
-        ImGui::OpenPopup("context_menu_popup");
+        ImGui::Text("Hovered Node");
 
-        if (ImGui::BeginPopup("context_menu_popup")) {
+        //ImGui::OpenPopup("context_menu_popup");
 
-            if (ImGui::MenuItem("Clone")) {
-                // Handle clone action..
-            }
-            if (ImGui::MenuItem("Delete")) {
-                // Handle delete action..
-            }
+        //if (ImGui::BeginPopup("context_menu_popup")) {
 
-            ImGui::EndPopup();
-        }
+        //    if (ImGui::MenuItem("Clone")) {
+        //        // Handle clone action..
+        //    }
+        //    if (ImGui::MenuItem("Delete")) {
+        //        // Handle delete action..
+        //    }
+
+        //    ImGui::EndPopup();
+        //}
     }
 }
 
@@ -447,9 +461,9 @@ void SceneEditor::bind_events()
 
     // Gizmo events
 
-    Node::bind("move", [&](const std::string& signal, void* button) { set_gizmo_translation(); });
-    Node::bind("rotate", [&](const std::string& signal, void* button) { set_gizmo_rotation(); });
-    Node::bind("scale", [&](const std::string& signal, void* button) { set_gizmo_scale(); });
+    Node::bind("move", [&](const std::string& signal, void* button) { gizmo.set_operation(TRANSLATE); });
+    Node::bind("rotate", [&](const std::string& signal, void* button) { gizmo.set_operation(ROTATE); });
+    Node::bind("scale", [&](const std::string& signal, void* button) { gizmo.set_operation(SCALE); });
 
     // Export / Import (.room)
     {
@@ -619,7 +633,7 @@ void SceneEditor::update_gizmo(float delta_time)
     glm::vec3 right_controller_pos = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
     Transform t = node->get_transform();
 
-    if (gizmo_3d.update(t, right_controller_pos, delta_time)) {
+    if (gizmo.update(t, right_controller_pos, delta_time)) {
         node->set_transform(t);
     }
 }
@@ -630,51 +644,14 @@ void SceneEditor::render_gizmo()
         return;
     }
 
-    if (renderer->get_openxr_available()) {
-        gizmo_3d.render();
-    }
-    else {
+    Node3D* node = static_cast<Node3D*>(selected_node);
 
-        Camera* camera = renderer->get_camera();
-        Node3D* node = static_cast<Node3D*>(selected_node);
-        glm::mat4x4 m = node->get_model();
+    gizmo.set_transform(node->get_transform());
 
-        if (gizmo_2d.render(camera->get_view(), camera->get_projection(), m)) {
-            Transform temp_transform = Transform::mat4_to_transform(m);
-            node->set_position(temp_transform.get_position());
-            node->set_rotation(temp_transform.get_rotation());
-            node->set_scale(temp_transform.get_scale());
-        }
-    }
-}
+    bool transform_dirty = gizmo.render();
 
-void SceneEditor::set_gizmo_translation()
-{
-    if (renderer->get_openxr_available()) {
-        gizmo_3d.set_operation(TRANSLATE);
-    }
-    else {
-        gizmo_2d.set_operation(ImGuizmo::TRANSLATE);
-    }
-}
-
-void SceneEditor::set_gizmo_rotation()
-{
-    if (renderer->get_openxr_available()) {
-        gizmo_3d.set_operation(ROTATE);
-    }
-    else {
-        gizmo_2d.set_operation(ImGuizmo::ROTATE);
-    }
-}
-
-void SceneEditor::set_gizmo_scale()
-{
-    if (renderer->get_openxr_available()) {
-        gizmo_3d.set_operation(SCALE);
-    }
-    else {
-        gizmo_2d.set_operation(ImGuizmo::SCALE);
+    if (transform_dirty) {
+        node->set_transform(gizmo.get_transform());
     }
 }
 
