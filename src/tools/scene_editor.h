@@ -2,7 +2,6 @@
 
 #include "tools/base_editor.h"
 
-#include "framework/ui/gizmo_2d.h"
 #include "framework/ui/gizmo_3d.h"
 
 class Node;
@@ -53,16 +52,11 @@ class SceneEditor : public BaseEditor {
     *   Gizmo stuff
     */
 
-    Gizmo2D gizmo_2d;
-    Gizmo3D gizmo_3d;
+    Gizmo3D gizmo;
 
     bool is_gizmo_usable();
     void update_gizmo(float delta_time);
     void render_gizmo();
-
-    void set_gizmo_translation();
-    void set_gizmo_rotation();
-    void set_gizmo_scale();
 
     /*
     *   Node stuff

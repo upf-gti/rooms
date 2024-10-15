@@ -3,7 +3,6 @@
 #include "base_editor.h"
 
 #include "framework/animation/track.h"
-#include "framework/ui/gizmo_2d.h"
 #include "framework/ui/gizmo_3d.h"
 
 class RoomsRenderer;
@@ -45,8 +44,7 @@ struct sAnimationData {
 
 class AnimationEditor : public BaseEditor {
 
-    Gizmo2D gizmo_2d;
-    Gizmo3D gizmo_3d;
+    Gizmo3D gizmo;
 
     Node3D* current_node = nullptr;
     Animation* current_animation = nullptr;
