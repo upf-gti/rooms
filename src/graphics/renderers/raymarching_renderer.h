@@ -79,7 +79,6 @@ class RaymarchingRenderer {
         Shader*                 prepare_indirect_shader = nullptr;
     } sculpt_instances;
 
-    Uniform         linear_sampler_uniform;
 
     Pipeline        render_proxy_geometry_pipeline;
     Shader*         render_proxy_shader = nullptr;
@@ -89,15 +88,6 @@ class RaymarchingRenderer {
     Shader*         render_preview_proxy_shader = nullptr;
     WGPUBindGroup   render_preview_proxy_geometry_bind_group = nullptr;
     WGPUBindGroup   render_preview_camera_bind_group = nullptr;
-
-    /* Uniform         ray_info_uniform;
-    Uniform         ray_intersection_info_uniform;
-    WGPUBindGroup   octree_ray_intersection_bind_group = nullptr;
-    WGPUBindGroup   octree_ray_intersection_info_bind_group = nullptr;
-    WGPUBuffer      ray_intersection_info_read_buffer = nullptr;*/
-
-    //Pipeline        compute_octree_ray_intersection_pipeline;
-    //Shader*         compute_octree_ray_intersection_shader = nullptr;
 
     Pipeline        compute_octree_brick_unmark_pipeline;
     Shader*         compute_octree_brick_unmark_shader = nullptr;
@@ -139,7 +129,6 @@ class RaymarchingRenderer {
     float updated_time = 0.0f;
 
     void init_raymarching_proxy_pipeline();
-    void init_octree_ray_intersection_pipeline();
 
     void render_raymarching_proxy(WGPURenderPassEncoder render_pass, uint32_t camera_buffer_stride = 0);
 
@@ -163,11 +152,7 @@ public:
 
     void render(WGPURenderPassEncoder render_pass, uint32_t camera_buffer_stride = 0u);
 
-    void octree_ray_intersect(const glm::vec3& ray_origin, const glm::vec3& ray_dir, std::function<void(glm::vec3)> callback = nullptr);
-
     void get_brick_usage(std::function<void(float, uint32_t)> callback);
-
-    const RayIntersectionInfo& get_ray_intersection_info() const;
 
     inline void set_preview_render(const bool need_to_render_preview) {
         render_preview = need_to_render_preview;

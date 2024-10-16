@@ -158,6 +158,11 @@ void RoomsRenderer::init_sdf_globals()
         sdf_globals.preview_stroke_uniform_2.buffer_size = sdf_globals.preview_stroke_uniform.buffer_size;
     }
 
+    {
+        sdf_globals.linear_sampler_uniform.data = webgpu_context->create_sampler(WGPUAddressMode_ClampToEdge, WGPUAddressMode_ClampToEdge, WGPUAddressMode_ClampToEdge, WGPUFilterMode_Linear, WGPUFilterMode_Linear);
+        sdf_globals.linear_sampler_uniform.binding = 4;
+    }
+
 
     // Indirect dispatch buffer
     {
@@ -174,13 +179,6 @@ void RoomsRenderer::init_sdf_globals()
         };
         webgpu_context->update_buffer(std::get<WGPUBuffer>(sdf_globals.indirect_buffers.data), 0, default_indirect_values, sizeof(uint32_t) * 16u);
     }
-
-    //{
-    //    // Indirect buffer for octree generation compute
-    //    sdf_globals.brick_copy_buffer.data = webgpu_context->create_buffer(sizeof(uint32_t) * sdf_globals.octants_max_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "brick_copy_buffer");
-    //    sdf_globals.brick_copy_buffer.binding = 0;
-    //    sdf_globals.brick_copy_buffer.buffer_size = sizeof(uint32_t) * sdf_globals.octants_max_size;
-    //}
 }
 
 void RoomsRenderer::update(float delta_time)

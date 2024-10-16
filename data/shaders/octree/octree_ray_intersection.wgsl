@@ -1,21 +1,15 @@
 #include octree_includes.wgsl
+#include ray_intersection_includes.wgsl
 
-struct RayInfo
-{
-    ray_origin : vec3f,
-    dummy0     : f32,
-    ray_dir    : vec3f,
-    dummy1     : f32
-}
+@group(0) @binding(0) var<uniform> ray_info: RayInfo;
 
-@group(0) @binding(3) var read_sdf: texture_3d<f32>;
-@group(0) @binding(4) var texture_sampler : sampler;
-@group(0) @binding(8) var read_material_sdf: texture_3d<u32>;
-
-@group(1) @binding(0) var<uniform> ray_info: RayInfo;
-@group(1) @binding(3) var<storage, read_write> ray_intersection_info: RayIntersectionInfo;
+@group(1) @binding(0) var<storage, read_write> ray_intersection_info: RayIntersectionInfo;
 
 @group(2) @binding(0) var<storage, read_write> octree : Octree;
+
+@group(3) @binding(3) var read_sdf: texture_3d<f32>;
+@group(3) @binding(4) var texture_sampler : sampler;
+@group(3) @binding(8) var read_material_sdf: texture_3d<u32>;
 
 // https://gist.github.com/DomNomNom/46bb1ce47f68d255fd5d
 fn ray_AABB_intersection(ray_origin : vec3f, ray_dir : vec3f, box_min : vec3f, box_max : vec3f, t_near : ptr<function, f32>, t_far : ptr<function, f32>) -> bool
@@ -138,6 +132,15 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_dir : vec3f, max_distance : f
     return -1000.0;
 }
 
+fn has_found_intersection(tile_pointer : u32, sculpt_id : u32, ray_t : f32) {
+    if (ray_intersection_info.intersected != 0u || ray_t < ray_intersection_info.ray_t) {
+        ray_intersection_info.intersected = 1u;
+        ray_intersection_info.tile_pointer = tile_pointer;
+        ray_intersection_info.sculpt_id = sculpt_id;
+        ray_intersection_info.ray_t = ray_t;
+    }
+}
+
 
 @compute @workgroup_size(1, 1, 1)
 fn compute()
@@ -245,11 +248,15 @@ fn compute()
                             let material : SdfMaterial = sample_material_atlas(atlas_position);
                             ray_intersection_info.tile_pointer = octree.data[octree_index].tile_pointer;
 
-                            ray_intersection_info.material_albedo = material.albedo;   
-                            ray_intersection_info.material_roughness = material.roughness;   
-                            ray_intersection_info.material_metalness = material.metalness;                           
-                            ray_intersection_info.intersected = 1u;
-                            ray_intersection_info.intersection_position = in_sculpture_point + ray_info.ray_dir * (raymarch_result_distance / SCULPT_TO_ATLAS_CONVERSION_FACTOR);//octants_to_visit[i].octant_center;
+                            let ray_t : f32 = octants_to_visit[i].distance + (raymarch_result_distance / SCULPT_TO_ATLAS_CONVERSION_FACTOR);
+
+                            has_found_intersection(octree.data[octree_index].tile_pointer, octree.octree_id, ray_t);
+
+                            // ray_intersection_info.material_albedo = material.albedo;   
+                            // ray_intersection_info.material_roughness = material.roughness;   
+                            // ray_intersection_info.material_metalness = material.metalness;                           
+                            // ray_intersection_info.intersected = 1u;
+                            // ray_intersection_info.intersection_position = in_sculpture_point + ray_info.ray_dir * (raymarch_result_distance / SCULPT_TO_ATLAS_CONVERSION_FACTOR);//octants_to_visit[i].octant_center;
                             return;
                         }
                     }

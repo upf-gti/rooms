@@ -26,6 +26,8 @@ struct sSDFGlobals {
     Uniform         preview_stroke_uniform_2;
     Uniform         preview_stroke_uniform;
 
+    Uniform         linear_sampler_uniform;
+
     // Octree creation params
     uint8_t         octree_depth = 0;
     uint32_t        octants_max_size = 0;

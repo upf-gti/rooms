@@ -223,12 +223,19 @@ struct BrickBuffers_ReadOnly {
     preview_instance_data : array<ProxyInstanceData, PREVIEW_PROXY_BRICKS_COUNT>
 };
 
-// struct SculptData {
-//     sculpt_start_position   : vec3f,
-//     dummy1                  : f32,
-//     sculpt_rotation         : vec4f,
-//     sculpt_inv_rotation     : vec4f
-// };
+struct GPUReturnResults {
+    // Evaluation
+    empty_brick_count : u32,
+    evaluation_sculpt_id : u32,
+    sculpt_aabb_min :   vec3f,
+    sculpt_aabb_max : vec3f,
+
+    // Ray interection
+    ray_has_intersected : u32,
+    ray_tile_pointer : u32,
+    ray_sculpt_id : u32,
+    ray_t : f32
+};
 
 struct SculptInstanceData {
     flags   : u32,
@@ -242,18 +249,6 @@ const SCULPT_INSTANCE_NOT_SELECTED = 0u;
 const SCULPT_INSTANCE_IS_OUT_OF_FOCUS = 1u;
 const SCULPT_INSTANCE_IS_POINTED = 2u;
 const SCULPT_INSTANCE_IS_SELECTED = 4u;
-
-struct RayIntersectionInfo
-{
-    intersected : u32,
-    tile_pointer : u32,
-    material_roughness : f32,
-    material_metalness : f32,
-    material_albedo : vec3f,
-    dummy0 : u32,
-    intersection_position : vec3f,
-    dummy1 : u32,
-};
 
 struct CullingStroke {
     stroke_idx : u32,

@@ -37,6 +37,25 @@ void SculptManager::update(WGPUCommandEncoder command_encoder)
 {
     performed_evaluation = false;
 
+    // New render pass for the interseccions
+    if (intersections_to_compute > 0u) {
+        WGPUComputePassDescriptor compute_pass_desc = {};
+
+        std::vector<WGPUComputePassTimestampWrites> timestampWrites(1);
+        timestampWrites[0].beginningOfPassWriteIndex = Renderer::instance->timestamp(command_encoder, "pre_evaluation_or_what");
+        timestampWrites[0].querySet = Renderer::instance->get_query_set();
+        timestampWrites[0].endOfPassWriteIndex = Renderer::instance->timestamp(command_encoder, "intersection");
+
+        compute_pass_desc.timestampWrites = timestampWrites.data();
+
+        WGPUComputePassEncoder intersection_compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
+
+        evaluate_closest_ray_intersection(intersection_compute_pass);
+
+        wgpuComputePassEncoderEnd(intersection_compute_pass);
+        wgpuComputePassEncoderRelease(intersection_compute_pass);
+    }
+
     // Create the octree renderpass
     WGPUComputePassDescriptor compute_pass_desc = {};
 
@@ -113,6 +132,18 @@ void SculptManager::set_preview_stroke(Sculpt* sculpt, sToUploadStroke preview_s
     preview.needs_computing = true;
 
     static_cast<RoomsRenderer*>(RoomsRenderer::instance)->get_raymarching_renderer()->set_preview_render(true);
+}
+
+void SculptManager::test_ray_sculpts_intersection(const glm::vec3& ray_origin, const glm::vec3& ray_dir, const std::vector<Sculpt*> sculpts) {
+    if (intersections_to_compute > 0u) {
+        spdlog::error("Only one ray test per frame!");
+        assert(0u);
+    }
+
+    ray_intersection_to_compute = sculpts;
+
+    ray_to_upload.ray_origin = ray_origin;
+    ray_to_upload.ray_direction = ray_dir;
 }
 
 Sculpt* SculptManager::create_sculpt()
@@ -383,6 +414,34 @@ void SculptManager::evaluate_preview(WGPUComputePassEncoder compute_pass)
     previus_dispatch_had_preview = true;
 }
 
+void SculptManager::evaluate_closest_ray_intersection(WGPUComputePassEncoder compute_pass) {
+    RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
+    WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
+    sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();
+
+    // TODO: add range checks for the ray, for an early out
+    // TODO: if bindless, we could do a workgroup/thread per ray
+ 
+    // Upload ray uniform
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(ray_info_uniform.data), 0u, &ray_to_upload, sizeof(sGPU_RayData));
+
+    ray_intersection_pipeline.set(compute_pass);
+    wgpuComputePassEncoderSetBindGroup(compute_pass, 0u, ray_intersection_info_bind_group, 0u, nullptr);
+    wgpuComputePassEncoderSetBindGroup(compute_pass, 1u, ray_info_bind_group, 0u, nullptr);
+    wgpuComputePassEncoderSetBindGroup(compute_pass, 3u, ray_info_bind_group, 0u, nullptr);
+
+    for (uint32_t i = 0u; i < intersections_to_compute; i++) {
+        wgpuComputePassEncoderSetBindGroup(compute_pass, 2u, ray_intersection_to_compute[i]->get_octree_bindgroup(), 0u, nullptr);
+        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1u, 1u, 1u);
+    }
+
+    wgpuComputePassEncoderSetBindGroup(compute_pass, 1u, gpu_results_bindgroup, 0u, nullptr);
+    ray_intersection_result_and_clean_pipeline.set(compute_pass);
+    wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1u, 1u, 1u);
+
+    intersections_to_compute = 0u;
+}
+
 void SculptManager::upload_strokes_and_edits(const std::vector<sToUploadStroke>& strokes_to_compute, const std::vector<Edit>& edits_to_upload)
 {
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
@@ -495,6 +554,12 @@ void SculptManager::init_uniforms()
 
     const uint32_t zero_value = 0u;
 
+    // GPU return data buffer
+    gpu_results_read_buffer = webgpu_context->create_buffer(sizeof(sGPU_Results), WGPUBufferUsage_MapRead | WGPUBufferUsage_CopyDst, nullptr, "Evaluation results buffer");
+    gpu_results_uniform.data = webgpu_context->create_buffer(sizeof(sGPU_Results), WGPUBufferUsage_Storage | WGPUBufferUsage_CopySrc | WGPUBufferUsage_CopyDst, nullptr, "Evaluation results buffer");
+    gpu_results_uniform.binding = 0u;
+    gpu_results_uniform.buffer_size = sizeof(sGPU_Results);
+
     // Evaluation data
 
     // Stroke context uniform
@@ -549,6 +614,18 @@ void SculptManager::init_uniforms()
         octant_usage_initialization_uniform[1].binding = 2;
         octant_usage_initialization_uniform[1].buffer_size = octant_usage_ping_pong_uniforms[1].buffer_size;
     }
+
+    // Intersect uniforms
+    {
+        ray_info_uniform.data = webgpu_context->create_buffer(sizeof(sGPU_RayData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "ray uniform");
+        ray_info_uniform.binding = 0u;
+        ray_info_uniform.buffer_size = sizeof(sGPU_RayData);
+
+        sGPU_RayIntersection intialization;
+        ray_intersection_info_uniform.data = webgpu_context->create_buffer(sizeof(sGPU_RayIntersection), WGPUBufferUsage_Storage | WGPUBufferUsage_CopySrc | WGPUBufferUsage_CopyDst, &intialization, "Ray intersection result");
+        ray_intersection_info_uniform.binding = 0u;
+        ray_intersection_info_uniform.buffer_size = sizeof(sGPU_RayIntersection);
+    }
 }
 
 void SculptManager::init_shaders()
@@ -561,6 +638,8 @@ void SculptManager::init_shaders()
     evaluation_initialization_shader = RendererStorage::get_shader("data/shaders/octree/initialization.wgsl");
     brick_unmark_shader = RendererStorage::get_shader("data/shaders/octree/brick_unmark.wgsl");
     sculpt_delete_shader = RendererStorage::get_shader("data/shaders/octree/sculpture_delete.wgsl");
+    ray_intersection_result_and_clean_shader = RendererStorage::get_shader("data/shaders/octree/octree_ray_intersection_clean.wgsl");
+    ray_intersection_shader = RendererStorage::get_shader("data/shaders/octree/octree_ray_intersection.wgsl");
 }
 
 void SculptManager::init_pipelines_and_bindgroups()
@@ -568,6 +647,14 @@ void SculptManager::init_pipelines_and_bindgroups()
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
     sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();
+
+
+    // GPU return data
+    {
+        std::vector<Uniform*> uniforms = { &gpu_results_uniform };
+        gpu_results_bindgroup = webgpu_context->create_bind_group(uniforms, ray_intersection_result_and_clean_shader, 1);
+    }
+
 
     // Create bindgroups
     {
@@ -603,6 +690,12 @@ void SculptManager::init_pipelines_and_bindgroups()
         write_to_texture_bind_group = webgpu_context->create_bind_group(uniforms, write_to_texture_shader, 0);
     }
 
+    // SDF atlases and samples bindgroup
+    {
+        std::vector<Uniform*> uniforms = { &sdf_globals.sdf_texture_uniform, &sdf_globals.sdf_material_texture_uniform, &sdf_globals.linear_sampler_uniform };
+        sdf_atlases_sampler_bindgroup = webgpu_context->create_bind_group(uniforms, ray_intersection_shader, 3);
+    }
+
     // Octree initialiation bindgroup
     {
         std::vector<Uniform*> uniforms = { &sdf_globals.indirect_buffers, &octant_usage_initialization_uniform[0], &octant_usage_initialization_uniform[1],
@@ -632,6 +725,18 @@ void SculptManager::init_pipelines_and_bindgroups()
         brick_unmark_bind_group = webgpu_context->create_bind_group(uniforms, brick_unmark_shader, 0);
     }
 
+    // Ray info bindgroup
+    {
+        std::vector<Uniform*> uniforms = { &ray_info_uniform };
+        ray_info_bind_group = webgpu_context->create_bind_group(uniforms, ray_intersection_shader, 0);
+    }
+
+    // Ray intersection bindgroup
+    {
+        std::vector<Uniform*> uniforms = { &ray_intersection_info_uniform };
+        ray_intersection_info_bind_group = webgpu_context->create_bind_group(uniforms, ray_intersection_shader, 1);
+    }
+
     // Create pipelines
     {
         evaluate_pipeline.create_compute_async(evaluate_shader);
@@ -642,5 +747,8 @@ void SculptManager::init_pipelines_and_bindgroups()
         evaluation_initialization_pipeline.create_compute_async(evaluation_initialization_shader);
         brick_unmark_pipeline.create_compute_async(brick_unmark_shader);
         sculpt_delete_pipeline.create_compute_async(sculpt_delete_shader);
+        ray_intersection_pipeline.create_compute_async(ray_intersection_shader);
+        ray_intersection_result_and_clean_pipeline.create_compute_async(ray_intersection_result_and_clean_shader);
+
     }
 }

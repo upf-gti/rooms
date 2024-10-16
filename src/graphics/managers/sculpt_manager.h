@@ -13,6 +13,27 @@
 */
 class SculptManager {
 
+    // GPU return data
+    struct sGPU_Results {
+        struct {
+            uint32_t empty_brick_count = 0u;
+            uint32_t sculpt_id = 0u;
+            glm::vec3 aabb_min;
+            glm::vec3 aabb_max;
+        } sculpt_eval_data;
+
+        struct {
+            uint32_t    has_intersected = 0u;
+            uint32_t    tile_pointer = 0u;
+            uint32_t    sculpt_id = 0u;
+            float       ray_t = 0.0;
+        } ray_intersection;
+    };
+
+    WGPUBuffer      gpu_results_read_buffer = nullptr;
+    Uniform         gpu_results_uniform;
+    WGPUBindGroup   gpu_results_bindgroup = nullptr;
+
     // Sculpt instances
     struct sEvaluateRequest {
         Sculpt* sculpt = nullptr;
@@ -45,6 +66,35 @@ class SculptManager {
     Shader*         sculpt_delete_shader = nullptr;
     WGPUBindGroup   compute_octree_clean_octree_bind_group = nullptr;
 
+    // Sculpt ray intersection
+    uint32_t intersections_to_compute = 0u;
+    std::vector<Sculpt*> ray_intersection_to_compute;
+
+    struct sGPU_RayData {
+        glm::vec3   ray_origin;
+        uint32_t    pad;
+        glm::vec3   ray_direction;
+    } ray_to_upload;
+
+    struct sGPU_RayIntersection {
+        uint32_t    has_intersected = 0u;
+        uint32_t    tile_pointer = 0u;
+        uint32_t    sculpt_id = 0u;
+        float       ray_t = -FLT_MAX;
+    };
+
+    Uniform         ray_info_uniform;
+    WGPUBindGroup   ray_info_bind_group = nullptr;
+
+    Uniform         ray_intersection_info_uniform;
+    WGPUBindGroup   ray_intersection_info_bind_group = nullptr;
+
+    Pipeline        ray_intersection_pipeline;
+    Shader*         ray_intersection_shader = nullptr;
+
+    Pipeline        ray_intersection_result_and_clean_pipeline;
+    Shader*         ray_intersection_result_and_clean_shader = nullptr;
+
     // Evaluation initialization
     Pipeline        evaluation_initialization_pipeline;
     Shader*         evaluation_initialization_shader = nullptr;
@@ -65,6 +115,7 @@ class SculptManager {
     Shader* brick_copy_shader = nullptr;
     Shader* brick_unmark_shader = nullptr;
 
+    WGPUBindGroup   sdf_atlases_sampler_bindgroup = nullptr;
     WGPUBindGroup   evaluate_bind_group = nullptr;
     WGPUBindGroup   increment_level_bind_group = nullptr;
     WGPUBindGroup   write_to_texture_bind_group = nullptr;
@@ -110,6 +161,8 @@ class SculptManager {
     void evaluate(WGPUComputePassEncoder compute_pass, const sEvaluateRequest& evaluate_request);
     void evaluate_preview(WGPUComputePassEncoder compute_pass);
 
+    void evaluate_closest_ray_intersection(WGPUComputePassEncoder compute_pass);
+
 public:
     void init();
     void clean();
@@ -119,6 +172,8 @@ public:
 
     void update_sculpt(Sculpt* sculpt, const sStrokeInfluence& strokes_to_process, const std::vector<Edit>& edits_to_process);
     void set_preview_stroke(Sculpt* sculpt, sToUploadStroke preview_stroke, const std::vector<Edit>& preview_edits);
+
+    void test_ray_sculpts_intersection(const glm::vec3& ray_origin, const glm::vec3& ray_dir, const std::vector<Sculpt*> sculpts);
 
     Sculpt* create_sculpt();
     Sculpt* create_sculpt_from_history(const std::vector<Stroke>& stroke_history);
