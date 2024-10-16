@@ -843,7 +843,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
     // Remove button
     if (flags & NODE_DELETE) {
         std::string signal = node_name + std::to_string(node_signal_uid++) + "_remove";
-        inspector->button(signal, "data/textures/delete.png");
+        inspector->button(signal, "data/textures/delete.png", ui::CONFIRM_BUTTON);
 
         Node::bind(signal, [&, n = node](const std::string& sg, void* data) {
 

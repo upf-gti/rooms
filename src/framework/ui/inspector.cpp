@@ -180,9 +180,17 @@ namespace ui {
             flex_container = create_row();
         }
 
-        auto w = new ui::TextureButton2D(name, texture_path, flags | ui::SKIP_NAME | ui::SCROLLABLE, { 0.0f, 0.0f }, glm::vec2(34.f));
-        flex_container->add_child(w);
-        items[name] = w;
+        ui::Button2D* button = nullptr;
+
+        if (flags & ui::CONFIRM_BUTTON) {
+            button = new ui::ConfirmButton2D(name, texture_path, flags | ui::SKIP_NAME | ui::SCROLLABLE, { 0.0f, 0.0f }, glm::vec2(34.f));
+        }
+        else {
+            button = new ui::TextureButton2D(name, texture_path, flags | ui::SKIP_NAME | ui::SCROLLABLE, { 0.0f, 0.0f }, glm::vec2(34.f));
+        }
+
+        flex_container->add_child(button);
+        items[name] = button;
     }
 
     void Inspector::fslider(const std::string& name, float value, float* result, float min, float max, int precision)
