@@ -1011,7 +1011,7 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
     color_target.blend = nullptr;
     color_target.writeMask = WGPUColorWriteMask_All;
 
-    PipelineDescription desc = { .cull_mode = WGPUCullMode_Front };
+    RenderPipelineDescription desc = { .cull_mode = WGPUCullMode_Front };
     render_proxy_geometry_pipeline.create_render_async(render_proxy_shader, color_target, desc);
 
     // Proxy for Preview

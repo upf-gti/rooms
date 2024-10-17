@@ -30,14 +30,6 @@ struct VertexOutput {
     @location(5) @interpolate(flat) voxel_center_sculpt_space : vec3f,
 };
 
-struct CameraData {
-    view_projection : mat4x4f,
-    eye : vec3f,
-    exposure : f32,
-    right_controller_position : vec3f,
-    ibl_intensity : f32
-};
-
 // @group(1) @binding(0) var<uniform> sculpt_data : SculptData;
 @group(1) @binding(1) var<storage, read> preview_stroke : PreviewStroke;
 @group(1) @binding(5) var<storage, read> brick_buffers: BrickBuffers_ReadOnly;
