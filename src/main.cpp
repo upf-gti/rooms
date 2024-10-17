@@ -27,7 +27,7 @@ int main()
 
     renderer->set_required_limits(required_limits);
 
-    if (engine->initialize(renderer)) {
+    if (engine->initialize(renderer, { .window_title = "ROOMS" })) {
         return 1;
     }
 
