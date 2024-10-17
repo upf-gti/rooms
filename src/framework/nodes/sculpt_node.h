@@ -8,7 +8,7 @@
 
 class Sculpt;
 
-class SculpNode : public Node3D {
+class SculptNode : public Node3D {
     struct sSculptBinaryHeader {
         size_t stroke_count = 0;
     };
@@ -20,9 +20,9 @@ class SculpNode : public Node3D {
 
 public: 
 
-    SculpNode();
-    SculpNode(SculpNode *reference);
-    ~SculpNode();
+    SculptNode();
+    SculptNode(SculptNode *reference);
+    ~SculptNode();
 
     void update(float delta_time);
 

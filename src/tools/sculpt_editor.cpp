@@ -1075,7 +1075,7 @@ void SculptEditor::set_cap_modifier(float value)
     stroke_parameters.set_parameters(parameters);
 }
 
-void SculptEditor::set_current_sculpt(SculpNode* sculpt_instance)
+void SculptEditor::set_current_sculpt(SculptNode* sculpt_instance)
 {
     current_sculpt = sculpt_instance;
     stroke_manager.new_history_add(&current_sculpt->get_sculpt_data()->get_stroke_history());

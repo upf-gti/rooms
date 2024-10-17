@@ -6,7 +6,7 @@
 
 #include <vector>
 
-class SculpNode;
+class SculptNode;
 
 
 struct StrokeManager {
@@ -47,7 +47,7 @@ struct StrokeManager {
 
     void init();
 
-    void set_current_sculpt(SculpNode* sculpt_instance);
+    void set_current_sculpt(SculptNode* sculpt_instance);
 
     void set_brick_world_size(const glm::vec3& new_brick_world_size) {
         brick_world_size = new_brick_world_size;
