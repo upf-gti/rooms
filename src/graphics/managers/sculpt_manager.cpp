@@ -149,6 +149,7 @@ void SculptManager::test_ray_sculpts_intersection(const glm::vec3& ray_origin, c
 void SculptManager::set_ray_to_test(const glm::vec3& ray_origin, const glm::vec3& ray_dir) {
     ray_to_upload.ray_origin = ray_origin;
     ray_to_upload.ray_direction = ray_dir;
+    intersections_to_compute = 1u;
 }
 
 void SculptManager::add_sculpt_to_ray_test(Sculpt* sculpt) {
@@ -449,13 +450,15 @@ void SculptManager::evaluate_closest_ray_intersection(WGPUComputePassEncoder com
     wgpuComputePassEncoderSetBindGroup(compute_pass, 1u, ray_intersection_info_bind_group, 0u, nullptr);
     wgpuComputePassEncoderSetBindGroup(compute_pass, 3u, sdf_atlases_sampler_bindgroup, 0u, nullptr);
 
-    for (uint32_t i = 0u; i < intersections_to_compute; i++) {
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 2u, ray_intersection_to_compute[i]->get_octree_bindgroup(), 0u, nullptr);
+    for (auto& it : rooms_renderer->get_sculpts_render_list()) {
+        Sculpt* curr_sculpt = it.second->sculpt;
+
+        wgpuComputePassEncoderSetBindGroup(compute_pass, 2u, curr_sculpt->get_octree_bindgroup(), 0u, nullptr);
         wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1u, 1u, 1u);
     }
 
-    wgpuComputePassEncoderSetBindGroup(compute_pass, 1u, gpu_results_bindgroup, 0u, nullptr);
     ray_intersection_result_and_clean_pipeline.set(compute_pass);
+    wgpuComputePassEncoderSetBindGroup(compute_pass, 1u, gpu_results_bindgroup, 0u, nullptr);
     wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1u, 1u, 1u);
 
     intersections_to_compute = 0u;
@@ -644,8 +647,12 @@ void SculptManager::init_uniforms()
 
         sGPU_RayIntersection intialization;
         ray_intersection_info_uniform.data = webgpu_context->create_buffer(sizeof(sGPU_RayIntersection), WGPUBufferUsage_Storage | WGPUBufferUsage_CopySrc | WGPUBufferUsage_CopyDst, &intialization, "Ray intersection result");
-        ray_intersection_info_uniform.binding = 1u;
+        ray_intersection_info_uniform.binding = 0u;
         ray_intersection_info_uniform.buffer_size = sizeof(sGPU_RayIntersection);
+
+        ray_sculpt_instances_uniform.data = webgpu_context->create_buffer(sizeof(uint32_t) * 4u, WGPUBufferUsage_Storage | WGPUBufferUsage_CopySrc | WGPUBufferUsage_CopyDst, nullptr, "Ray intersection result");
+        ray_sculpt_instances_uniform.binding = 1u;
+        ray_sculpt_instances_uniform.buffer_size = sizeof(uint32_t) * 4;
     }
 }
 
@@ -748,8 +755,14 @@ void SculptManager::init_pipelines_and_bindgroups()
 
     // Ray info bindgroup
     {
-        std::vector<Uniform*> uniforms = { &ray_info_uniform, &ray_intersection_info_uniform, &rooms_renderer->get_global_sculpts_instance_data()};
+        std::vector<Uniform*> uniforms = { &ray_info_uniform, &ray_sculpt_instances_uniform, &rooms_renderer->get_global_sculpts_instance_data()};
         ray_sculpt_info_bind_group = webgpu_context->create_bind_group(uniforms, ray_intersection_shader, 0);
+    }
+
+    // Ray intersection bindgroup
+    {
+        std::vector<Uniform*> uniforms = { &ray_intersection_info_uniform };
+        ray_intersection_info_bind_group = webgpu_context->create_bind_group(uniforms, ray_intersection_shader, 1u);
     }
 
     // Create pipelines

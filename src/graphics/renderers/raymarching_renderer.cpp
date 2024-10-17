@@ -6,7 +6,6 @@
 #include "framework/parsers/parse_scene.h"
 #include "framework/math/intersections.h"
 #include "framework/nodes/mesh_instance_3d.h"
-#include "framework/input.h"
 #include "framework/camera/camera.h"
 #include "framework/resources/sculpt.h"
 

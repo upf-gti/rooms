@@ -14,7 +14,7 @@ struct RayIntersectionInfo
     ray_t           : f32
 };
 
-struct RayIntersectionInstances {
+struct RaySculptInstances {
     curr_instance_idx : u32,
     instance_indices : array<u32>
 };
