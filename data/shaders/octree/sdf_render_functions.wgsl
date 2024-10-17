@@ -8,6 +8,18 @@ const specularCoeff = 1.0;
 const specularExponent = 4.0;
 const lightPos = vec3f(0.0, 2.0, 1.0);
 
+struct CameraData {
+    view_projection : mat4x4f,
+    view : mat4x4f,
+    projection : mat4x4f,
+    eye : vec3f,
+    exposure : f32,
+    right_controller_position : vec3f,
+    ibl_intensity : f32,
+    screen_size : vec2f,
+    dummy : vec2f,
+};
+
 // SKYMAP FUNCTION
 fn irradiance_spherical_harmonics(n : vec3f) -> vec3f {
     return vec3f(0.366, 0.363, 0.371)

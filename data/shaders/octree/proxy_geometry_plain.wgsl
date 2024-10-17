@@ -33,14 +33,6 @@ struct VertexOutput {
     @location(9) @interpolate(flat) model_index : u32
 };
 
-struct CameraData {
-    view_projection : mat4x4f,
-    eye : vec3f,
-    exposure : f32,
-    right_controller_position : vec3f,
-    ibl_intensity : f32
-};
-
 @group(0) @binding(1) var<storage, read> preview_stroke : PreviewStroke;
 @group(0) @binding(3) var read_sdf: texture_3d<f32>;
 @group(0) @binding(4) var texture_sampler : sampler;

@@ -823,7 +823,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
 
     if (flags & NODE_NAME) {
         std::string signal = node_name + std::to_string(node_signal_uid++) + "_label";
-        inspector->label(signal, node_name);
+        inspector->label(signal, node_name, (node == selected_node) ? ui::SELECTED : 0);
 
         // Request keyboard and use the result to set the new node name. Not the nicest code, but anyway..
         {
@@ -845,7 +845,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
     // Remove button
     if (flags & NODE_DELETE) {
         std::string signal = node_name + std::to_string(node_signal_uid++) + "_remove";
-        inspector->button(signal, "data/textures/delete.png");
+        inspector->button(signal, "data/textures/delete.png", ui::CONFIRM_BUTTON);
 
         Node::bind(signal, [&, n = node](const std::string& sg, void* data) {
 

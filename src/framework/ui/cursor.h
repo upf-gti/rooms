@@ -50,7 +50,7 @@ namespace ui {
 
         Cursor() {};
 
-        void load();
+        void initialize();
         void set(int type);
 
         void update(float delta_time);

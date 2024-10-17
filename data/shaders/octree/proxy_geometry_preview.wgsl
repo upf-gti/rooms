@@ -30,14 +30,6 @@ struct VertexOutput {
     @location(5) @interpolate(flat) voxel_center_sculpt_space : vec3f,
 };
 
-struct CameraData {
-    view_projection : mat4x4f,
-    eye : vec3f,
-    exposure : f32,
-    right_controller_position : vec3f,
-    ibl_intensity : f32
-};
-
 #dynamic @group(0) @binding(0) var<uniform> camera_data : CameraData;
 
 // @group(1) @binding(0) var<uniform> sculpt_data : SculptData;
