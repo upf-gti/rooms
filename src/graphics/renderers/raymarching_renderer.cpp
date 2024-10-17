@@ -152,17 +152,17 @@ void RaymarchingRenderer::update_sculpts_and_instances(WGPUCommandEncoder comman
     // Upload all the instance data
     webgpu_context->update_buffer(std::get<WGPUBuffer>(global_sculpts_instance_data_uniform.data), 0u, models_for_upload.data(), sizeof(sSculptInstanceData) * in_frame_instance_count);
 
-    uint32_t offset = 0u;
-    for (auto& it : sculpts_render_lists) {
-        Sculpt* current_sculpt = it.second->sculpt;
-
+    if (sculpts_render_lists.size() > 0u) {
         sculpt_instances.prepare_indirect.set(compute_pass);
         wgpuComputePassEncoderSetBindGroup(compute_pass, 0u, sculpt_instances.count_bindgroup, 0u, nullptr);
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 1u, current_sculpt->get_sculpt_bindgroup(), 0u, nullptr);
-        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1u, 1u, 1u);
 
-        offset++;
+        for (auto& it : sculpts_render_lists) {
+            Sculpt* current_sculpt = it.second->sculpt;
+            wgpuComputePassEncoderSetBindGroup(compute_pass, 1u, current_sculpt->get_sculpt_bindgroup(), 0u, nullptr);
+            wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1u, 1u, 1u);
+        }
     }
+   
 
 #ifndef NDEBUG
     wgpuComputePassEncoderPopDebugGroup(compute_pass);

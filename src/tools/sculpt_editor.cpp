@@ -665,6 +665,7 @@ void SculptEditor::update(float delta_time)
         renderer->get_sculpt_manager()->update_sculpt(
             current_sculpt->get_sculpt_data(),
             stroke_manager.result_to_compute,
+            stroke_manager.edit_list_count,
             stroke_manager.edit_list);
     }
 

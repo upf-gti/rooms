@@ -118,9 +118,9 @@ void SculptManager::update(WGPUCommandEncoder command_encoder)
     }
 }
 
-void SculptManager::update_sculpt(Sculpt* sculpt, const sStrokeInfluence& strokes_to_process, const std::vector<Edit>& edits_to_process)
+void SculptManager::update_sculpt(Sculpt* sculpt, const sStrokeInfluence& strokes_to_process, const uint32_t edit_count, const std::vector<Edit>& edits_to_process)
 {
-    evaluations_to_process.push_back({ sculpt, strokes_to_process, edits_to_process });
+    evaluations_to_process.push_back({ sculpt, strokes_to_process, edit_count, edits_to_process });
 }
 
 void SculptManager::set_preview_stroke(Sculpt* sculpt, sToUploadStroke preview_stroke, const std::vector<Edit>& preview_edits) {
@@ -228,7 +228,14 @@ void SculptManager::evaluate(WGPUComputePassEncoder compute_pass, const sEvaluat
     WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
     sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();
 
-    spdlog::info("Evaluating sculpt {} with a context size of {}", evaluate_request.sculpt->get_sculpt_id(), evaluate_request.strokes_to_process.stroke_count);
+    spdlog::info("Evaluating sculpt {}, from ({},{},{}) to ({},{},{})",
+        evaluate_request.sculpt->get_sculpt_id(),
+        evaluate_request.strokes_to_process.eval_aabb_min.x,
+        evaluate_request.strokes_to_process.eval_aabb_min.y,
+        evaluate_request.strokes_to_process.eval_aabb_min.z,
+        evaluate_request.strokes_to_process.eval_aabb_max.x,
+        evaluate_request.strokes_to_process.eval_aabb_max.y,
+        evaluate_request.strokes_to_process.eval_aabb_max.z);
 
     // Prepare for evaluation
     // Reset the brick instance counter
@@ -237,14 +244,11 @@ void SculptManager::evaluate(WGPUComputePassEncoder compute_pass, const sEvaluat
 
     webgpu_context->update_buffer(std::get<WGPUBuffer>(stroke_context_list.data), 0, &evaluate_request.strokes_to_process, sizeof(uint32_t) * 4 * 4);
 
-    // TODO: review undo
-    uint32_t set_as_preview = /*(needs_undo) ? 0x01u :*/ 0u;
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(evaluate_request.sculpt->get_octree_uniform().data), sizeof(uint32_t) * 2u, &set_as_preview, sizeof(uint32_t));
-
     // TODO: debug render eval AABB
-
+    uint32_t set_as_preview = 0u;
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(evaluate_request.sculpt->get_octree_uniform().data), sizeof(uint32_t) * 2u, &set_as_preview, sizeof(uint32_t));
     // Upload strokes
-    upload_strokes_and_edits(evaluate_request.strokes_to_process.strokes, evaluate_request.edit_to_process);
+    upload_strokes_and_edits(evaluate_request.strokes_to_process.stroke_count, evaluate_request.strokes_to_process.strokes, evaluate_request.edit_count, evaluate_request.edit_to_process);
 
     // Compute dispatches
     {
@@ -377,6 +381,12 @@ void SculptManager::evaluate_preview(WGPUComputePassEncoder compute_pass)
     WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
     sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();
 
+    // Set preview flag if needed
+    if (!performed_evaluation) {
+        uint32_t set_as_preview = 0x02u;
+        webgpu_context->update_buffer(std::get<WGPUBuffer>(preview.sculpt->get_octree_uniform().data), sizeof(uint32_t) * 2u, &set_as_preview, sizeof(uint32_t));
+    }
+
     upload_preview_strokes();
 
 #ifndef NDEBUG
@@ -451,7 +461,7 @@ void SculptManager::evaluate_closest_ray_intersection(WGPUComputePassEncoder com
     intersections_to_compute = 0u;
 }
 
-void SculptManager::upload_strokes_and_edits(const std::vector<sToUploadStroke>& strokes_to_compute, const std::vector<Edit>& edits_to_upload)
+void SculptManager::upload_strokes_and_edits(const uint32_t stroke_count, const std::vector<sToUploadStroke>& strokes_to_compute, const uint32_t edits_count, const std::vector<Edit>& edits_to_upload)
 {
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
@@ -516,8 +526,10 @@ void SculptManager::upload_strokes_and_edits(const std::vector<sToUploadStroke>&
 
     // TODO: This is sending all the edits & strokes from the buffer. The array is created once
     // Upload the data to the GPU
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_edit_list.data), 0, edits_to_upload.data(), sizeof(Edit) * edits_to_upload.size());
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(stroke_context_list.data), sizeof(uint32_t) * 4 * 4, strokes_to_compute.data(), sizeof(sToUploadStroke) * strokes_to_compute.size());
+    spdlog::info("   - Context edit size: {}", edits_count);
+    spdlog::info("   - Context stroke size: {}", stroke_count);
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_edit_list.data), 0, edits_to_upload.data(), sizeof(Edit) * edits_count);
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(stroke_context_list.data), sizeof(uint32_t) * 4 * 4, strokes_to_compute.data(), sizeof(sToUploadStroke) * stroke_count);
 }
 
 void SculptManager::upload_preview_strokes() {
