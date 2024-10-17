@@ -5,6 +5,8 @@
 #include "graphics/managers/sculpt_manager.h"
 
 #include "graphics/renderer_storage.h"
+#include "framework/camera/camera.h"
+#include "framework/input.h"
 
 
 RoomsRenderer::RoomsRenderer() : Renderer()
@@ -217,6 +219,16 @@ void RoomsRenderer::update(float delta_time)
     Renderer::update(delta_time);
 
     update_sculpts_and_instances(global_command_encoder);
+
+    if (Input::is_mouse_pressed(GLFW_MOUSE_BUTTON_RIGHT)) {
+        RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
+        WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
+
+        Camera* camera = rooms_renderer->get_camera();
+        glm::vec3 ray_dir = camera->screen_to_ray(Input::get_mouse_position());
+
+        sculpt_manager->set_ray_to_test(camera->get_eye(), glm::normalize(ray_dir));
+    }
 
     sculpt_manager->update(global_command_encoder);
 }

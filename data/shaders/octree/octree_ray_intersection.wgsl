@@ -2,7 +2,7 @@
 #include ray_intersection_includes.wgsl
 
 @group(0) @binding(0) var<uniform> ray_info: RayInfo;
-@group(0) @binding(1) var<storage, read> ray_intersection_instances: RayIntersectionInstances;
+@group(0) @binding(1) var<storage, read> ray_sculpt_instances: RaySculptInstances;
 @group(0) @binding(9) var<storage, read_write> sculpt_instance_data: array<SculptInstanceData>;
 
 @group(1) @binding(0) var<storage, read_write> ray_intersection_info: RayIntersectionInfo;
@@ -165,7 +165,7 @@ fn compute()
     ray_intersection_info.intersected = 0u;
     ray_intersection_info.tile_pointer = 0u;
 
-    let inv_model : mat4x4f  = sculpt_instance_data[ray_intersection_instances.instance_indices[ray_intersection_instances.curr_instance_idx]].inv_model;
+    let inv_model : mat4x4f  = sculpt_instance_data[ray_sculpt_instances.instance_indices[ray_sculpt_instances.curr_instance_idx]].inv_model;
 
     let local_ray_origin : vec3f = (vec4f(ray_info.ray_origin, 0.0) * inv_model).xyz;
     let local_ray_dir : vec3f = (vec4f(ray_info.ray_dir, 0.0) * inv_model).xyz;

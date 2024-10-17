@@ -73,8 +73,9 @@ class SculptManager {
 
     struct sGPU_RayData {
         glm::vec3   ray_origin;
-        uint32_t    pad;
+        uint32_t    padd0;
         glm::vec3   ray_direction;
+        uint32_t    padd1;
     } ray_to_upload;
 
     struct sGPU_RayIntersection {
@@ -85,6 +86,7 @@ class SculptManager {
     };
 
     Uniform         ray_info_uniform;
+    Uniform         ray_sculpt_instances_uniform;
     WGPUBindGroup   ray_sculpt_info_bind_group = nullptr;
 
     Uniform         ray_intersection_info_uniform;
