@@ -259,20 +259,24 @@ void SceneEditor::process_node_hovered()
     }
     else if (is_shift_right_pressed) {
         shortcuts[shortcuts::ANIMATE_NODE] = true;
+        shortcuts[shortcuts::CLONE_NODE] = true;
         shortcuts[shortcuts::GROUP_NODE] = true;
         if (a_pressed) {
-            group_node(hovered_node);
+            clone_node(hovered_node, false);
         }
         else if (b_pressed) {
             selected_node = hovered_node;
             RoomsEngine::switch_editor(ANIMATION_EDITOR, hovered_node);
         }
+        else if (r_trigger_pressed) {
+            group_node(hovered_node);
+        }
     }
     else {
-        shortcuts[shortcuts::CLONE_NODE] = true;
+        shortcuts[shortcuts::DUPLICATE_NODE] = true;
         shortcuts[shortcuts::EDIT_SCULPT_NODE] = sculpt_hovered;
         if (a_pressed) {
-            clone_node(hovered_node);
+            clone_node(hovered_node, true);
         }
         else if (b_pressed) {
             select_node(hovered_node, false);
@@ -317,6 +321,7 @@ void SceneEditor::init_ui()
     }
 
     // ** Clone node **
+    first_row->add_child(new ui::TextureButton2D("duplicate", "data/textures/clone.png"));
     first_row->add_child(new ui::TextureButton2D("clone", "data/textures/clone.png"));
 
     // ** Posible scene nodes **
@@ -400,12 +405,13 @@ void SceneEditor::init_ui()
             right_hand_box->add_child(new ui::ImageLabel2D("Edit Sculpt", shortcuts::B_BUTTON_PATH, shortcuts::EDIT_SCULPT_NODE));
             right_hand_box->add_child(new ui::ImageLabel2D("Edit Group", shortcuts::B_BUTTON_PATH, shortcuts::EDIT_GROUP));
             right_hand_box->add_child(new ui::ImageLabel2D("Animate", "data/textures/buttons/r_grip_plus_b.png", shortcuts::ANIMATE_NODE, double_size));
-            right_hand_box->add_child(new ui::ImageLabel2D("Clone Node", shortcuts::A_BUTTON_PATH, shortcuts::CLONE_NODE));
+            right_hand_box->add_child(new ui::ImageLabel2D("Duplicate Node", shortcuts::A_BUTTON_PATH, shortcuts::DUPLICATE_NODE));
             right_hand_box->add_child(new ui::ImageLabel2D("Create Group", shortcuts::A_BUTTON_PATH, shortcuts::CREATE_GROUP));
             right_hand_box->add_child(new ui::ImageLabel2D("Add to Group", shortcuts::A_BUTTON_PATH, shortcuts::ADD_TO_GROUP));
-            right_hand_box->add_child(new ui::ImageLabel2D("Group Node", "data/textures/buttons/r_grip_plus_a.png", shortcuts::GROUP_NODE, double_size));
+            right_hand_box->add_child(new ui::ImageLabel2D("Copy Node", "data/textures/buttons/r_grip_plus_a.png", shortcuts::CLONE_NODE, double_size));
             right_hand_box->add_child(new ui::ImageLabel2D("Place Node", "data/textures/buttons/r_trigger.png", shortcuts::PLACE_NODE));
             right_hand_box->add_child(new ui::ImageLabel2D("Select Node", "data/textures/buttons/r_trigger.png", shortcuts::SELECT_NODE));
+            right_hand_box->add_child(new ui::ImageLabel2D("Group Node", "data/textures/buttons/r_grip_plus_r_trigger.png", shortcuts::GROUP_NODE));
             right_hand_ui_3D = new Viewport3D(right_hand_box);
         }
     }
@@ -459,7 +465,8 @@ void SceneEditor::bind_events()
         });
     }
 
-    Node::bind("clone", [&](const std::string& signal, void* button) { clone_node(selected_node); });
+    Node::bind("duplicate", [&](const std::string& signal, void* button) { clone_node(selected_node, true); });
+    Node::bind("clone", [&](const std::string& signal, void* button) { clone_node(selected_node, false); });
 
     // Gizmo events
 
@@ -501,21 +508,7 @@ void SceneEditor::clone_node(Node* node, bool copy)
         return;
     }
 
-    SculptNode* new_sculpt = nullptr;
-
-    // raw copy, everything is recreated
-    if (copy) {
-        new_sculpt = new SculptNode();
-        new_sculpt->from_history(current_sculpt->get_sculpt_data()->get_stroke_history());
-    }
-
-    // instance copy, it should have different model, but uses same octree, etc.
-    else {
-        new_sculpt = new SculptNode(current_sculpt);
-    }
-
-    new_sculpt->set_transform(current_sculpt->get_transform());
-    new_sculpt->set_name(current_sculpt->get_name() + "_copy");
+    SculptNode* new_sculpt = current_sculpt->clone(copy);
 
     RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
     rooms_renderer->toogle_frame_debug();

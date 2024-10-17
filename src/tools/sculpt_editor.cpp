@@ -1078,7 +1078,10 @@ void SculptEditor::set_cap_modifier(float value)
 void SculptEditor::set_current_sculpt(SculptNode* sculpt_instance)
 {
     current_sculpt = sculpt_instance;
-    stroke_manager.new_history_add(&current_sculpt->get_sculpt_data()->get_stroke_history());
+
+    if (current_sculpt) {
+        stroke_manager.new_history_add(&current_sculpt->get_sculpt_data()->get_stroke_history());
+    }
 }
 
 void SculptEditor::enable_tool(eTool tool)

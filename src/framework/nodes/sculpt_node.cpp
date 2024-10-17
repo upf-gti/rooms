@@ -108,6 +108,27 @@ void SculptNode::parse(std::ifstream& binary_scene_file)
     rooms_renderer->toogle_frame_debug();
 }
 
+SculptNode* SculptNode::clone(bool copy)
+{
+    SculptNode* new_sculpt = new SculptNode();
+
+    // instance copy, it should have different model, but uses same gpu data
+    if (!copy) {
+        new_sculpt->set_sculpt_data(sculpt_gpu_data);
+        sculpt_gpu_data->ref();
+    }
+    // CLONE_COPY
+    // raw copy, everything is recreated
+    else {
+        new_sculpt->from_history(get_sculpt_data()->get_stroke_history());
+    }
+
+    new_sculpt->set_transform(get_transform());
+    new_sculpt->set_name(get_name() + "_copy");
+
+    return new_sculpt;
+}
+
 bool SculptNode::test_ray_collision(const glm::vec3& ray_origin, const glm::vec3& ray_direction, float& distance)
 {
     // wip... maybe this instance "aabb" is correct and we don't have to compute this every time
@@ -132,7 +153,8 @@ bool SculptNode::test_ray_collision(const glm::vec3& ray_origin, const glm::vec3
 }
 
 
-void SculptNode::set_out_of_focus(const bool oof) {
+void SculptNode::set_out_of_focus(const bool oof)
+{
     if (oof) {
         sculpt_flags |= eSculptInstanceFlags::SCULPT_IS_OUT_OF_FOCUS;
     }
