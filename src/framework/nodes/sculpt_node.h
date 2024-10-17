@@ -37,7 +37,7 @@ public:
     virtual void serialize(std::ofstream& binary_scene_file);
     virtual void parse(std::ifstream& binary_scene_file);
 
-    SculptNode* clone(bool copy = true);
+    void clone(Node* new_node, bool copy = true) override;
     bool test_ray_collision(const glm::vec3& ray_origin, const glm::vec3& ray_direction, float& distance) override;
 
     inline void set_sculpt_data(Sculpt* new_data) { sculpt_gpu_data = new_data; }

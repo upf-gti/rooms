@@ -501,22 +501,22 @@ void SceneEditor::clone_node(Node* node, bool copy)
         return;
     }
 
-    SculptNode* current_sculpt = dynamic_cast<SculptNode*>(node);
+    RoomsEngine* engine = static_cast<RoomsEngine*>(RoomsEngine::instance);
 
-    // Only clone sculpt nodes by now
-    if (current_sculpt == nullptr) {
-        return;
+    Node* new_node = engine->node_factory(node->get_node_type());
+    node->clone(new_node, copy);
+
+    SculptNode* sculpt_node = dynamic_cast<SculptNode*>(new_node);
+
+    if (sculpt_node) {
+        RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
+        rooms_renderer->toogle_frame_debug();
+        engine->set_current_sculpt(sculpt_node);
     }
 
-    SculptNode* new_sculpt = current_sculpt->clone(copy);
-
-    RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
-    rooms_renderer->toogle_frame_debug();
-    static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(new_sculpt);
-
     // Add to scene and select as current
-    main_scene->add_node(new_sculpt);
-    select_node(new_sculpt);
+    main_scene->add_node(new_node);
+    select_node(new_node);
     inspector_dirty = true;
 }
 

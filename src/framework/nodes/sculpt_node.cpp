@@ -108,9 +108,11 @@ void SculptNode::parse(std::ifstream& binary_scene_file)
     rooms_renderer->toogle_frame_debug();
 }
 
-SculptNode* SculptNode::clone(bool copy)
+void SculptNode::clone(Node* new_node, bool copy)
 {
-    SculptNode* new_sculpt = new SculptNode();
+    Node3D::clone(new_node, copy);
+
+    SculptNode* new_sculpt = static_cast<SculptNode*>(new_node);
 
     // instance copy, it should have different model, but uses same gpu data
     if (!copy) {
@@ -122,11 +124,6 @@ SculptNode* SculptNode::clone(bool copy)
     else {
         new_sculpt->from_history(get_sculpt_data()->get_stroke_history());
     }
-
-    new_sculpt->set_transform(get_transform());
-    new_sculpt->set_name(get_name() + "_copy");
-
-    return new_sculpt;
 }
 
 bool SculptNode::test_ray_collision(const glm::vec3& ray_origin, const glm::vec3& ray_direction, float& distance)

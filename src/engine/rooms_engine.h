@@ -9,7 +9,6 @@ class Node;
 class Node3D;
 class Environment3D;
 class BaseEditor;
-class SculptInstance;
 class SculptEditor;
 class SceneEditor;
 class TutorialEditor;
