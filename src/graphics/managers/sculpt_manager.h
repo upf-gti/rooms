@@ -85,7 +85,7 @@ class SculptManager {
     };
 
     Uniform         ray_info_uniform;
-    WGPUBindGroup   ray_info_bind_group = nullptr;
+    WGPUBindGroup   ray_sculpt_info_bind_group = nullptr;
 
     Uniform         ray_intersection_info_uniform;
     WGPUBindGroup   ray_intersection_info_bind_group = nullptr;

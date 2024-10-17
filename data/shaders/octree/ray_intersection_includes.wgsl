@@ -13,3 +13,8 @@ struct RayIntersectionInfo
     sculpt_id       : u32,
     ray_t           : f32
 };
+
+struct RayIntersectionInstances {
+    curr_instance_idx : u32,
+    instance_indices : array<u32>
+};

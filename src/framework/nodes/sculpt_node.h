@@ -18,6 +18,8 @@ class SculptNode : public Node3D {
 
     Sculpt* sculpt_gpu_data;
 
+    uint32_t in_frame_instance_id = 0u;
+
 public: 
 
     SculptNode();
@@ -38,6 +40,10 @@ public:
 
     inline uint32_t get_flags() {
         return sculpt_flags;
+    }
+
+    inline uint32_t get_in_frame_render_instance_idx() const {
+        return in_frame_instance_id;
     }
 
     void set_out_of_focus(const bool oof);

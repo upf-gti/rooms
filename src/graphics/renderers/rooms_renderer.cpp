@@ -4,6 +4,9 @@
 
 #include "graphics/managers/sculpt_manager.h"
 
+#include "graphics/renderer_storage.h"
+
+
 RoomsRenderer::RoomsRenderer() : Renderer()
 {
 
@@ -19,6 +22,8 @@ int RoomsRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
     Renderer::initialize(window, use_mirror_screen);
 
     init_sdf_globals();
+
+    intialize_sculpt_render_instances();
 
     sculpt_manager = new SculptManager();
     sculpt_manager->init();
@@ -181,13 +186,131 @@ void RoomsRenderer::init_sdf_globals()
     }
 }
 
+void RoomsRenderer::intialize_sculpt_render_instances() {
+    // Sculpt model buffer
+    {
+        // TODO(Juan): make this array dinamic
+        uint32_t size = sizeof(sSculptInstanceData) * 512u; // The current max size of instances
+        global_sculpts_instance_data_uniform.data = webgpu_context->create_buffer(size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, 0u, "sculpt instance data");
+        global_sculpts_instance_data_uniform.binding = 9u;
+        global_sculpts_instance_data_uniform.buffer_size = size;
+    }
+
+    sculpt_instances.prepare_indirect_shader = RendererStorage::get_shader("data/shaders/octree/prepare_indirect_sculpt_render.wgsl");
+    {
+        uint32_t size = sizeof(uint32_t) * 22u;
+        sculpt_instances.count_buffer.resize(22u);
+        memset(sculpt_instances.count_buffer.data(), 1u, size);
+        sculpt_instances.uniform_count_buffer.data = webgpu_context->create_buffer(size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, sculpt_instances.count_buffer.data(), "sculpt index data");
+        sculpt_instances.uniform_count_buffer.binding = 0u;
+        sculpt_instances.uniform_count_buffer.buffer_size = size;
+
+        std::vector<Uniform*> uniforms = { &sculpt_instances.uniform_count_buffer };
+        sculpt_instances.count_bindgroup = webgpu_context->create_bind_group(uniforms, sculpt_instances.prepare_indirect_shader, 0);
+    }
+
+    sculpt_instances.prepare_indirect.create_compute_async(sculpt_instances.prepare_indirect_shader);
+}
+
 void RoomsRenderer::update(float delta_time)
 {
     Renderer::update(delta_time);
 
-    sculpt_manager->update(global_command_encoder);
+    update_sculpts_and_instances(global_command_encoder);
 
-    raymarching_renderer.update_sculpts_and_instances(global_command_encoder);
+    sculpt_manager->update(global_command_encoder);
+}
+
+void RoomsRenderer::update_sculpts_and_instances(WGPUCommandEncoder command_encoder)
+{
+    RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
+    WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
+    sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();
+
+    WGPUComputePassDescriptor compute_pass_desc = {};
+    WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
+
+#ifndef NDEBUG
+    wgpuComputePassEncoderPushDebugGroup(compute_pass, "Update the sculpts instances");
+#endif
+
+    // Prepare the instances of the sculpts that are rendered on the curren frame
+    // Generate buffer of instances
+    uint32_t in_frame_instance_count = 0u;
+    uint32_t sculpt_to_render_count = 2u;
+    sculpt_instances.count_buffer[0u] = 0u;
+    sculpt_instances.count_buffer[1u] = 0u;
+    for (auto& it : sculpts_render_lists) {
+        if (models_for_upload.capacity() <= in_frame_instance_count) {
+            models_for_upload.resize(models_for_upload.capacity() + 10u);
+        }
+
+        for (uint16_t i = 0u; i < it.second->instance_count; i++) {
+            models_for_upload[in_frame_instance_count++] = (it.second->models[i]);
+        }
+
+        sculpt_instances.count_buffer[sculpt_to_render_count++] = it.second->instance_count;
+    }
+
+    // Upload the count of instances per sculpt
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(sculpt_instances.uniform_count_buffer.data), 0u, sculpt_instances.count_buffer.data(), sizeof(uint32_t) * sculpt_to_render_count);
+
+    // Upload all the instance data
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(global_sculpts_instance_data_uniform.data), 0u, models_for_upload.data(), sizeof(sSculptInstanceData) * in_frame_instance_count);
+
+    if (sculpts_render_lists.size() > 0u) {
+        sculpt_instances.prepare_indirect.set(compute_pass);
+        wgpuComputePassEncoderSetBindGroup(compute_pass, 0u, sculpt_instances.count_bindgroup, 0u, nullptr);
+
+        for (auto& it : sculpts_render_lists) {
+            Sculpt* current_sculpt = it.second->sculpt;
+            wgpuComputePassEncoderSetBindGroup(compute_pass, 1u, current_sculpt->get_sculpt_bindgroup(), 0u, nullptr);
+            wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1u, 1u, 1u);
+        }
+    }
+
+
+#ifndef NDEBUG
+    wgpuComputePassEncoderPopDebugGroup(compute_pass);
+#endif
+
+    wgpuComputePassEncoderEnd(compute_pass);
+    wgpuComputePassEncoderRelease(compute_pass);
+//#ifndef DISABLE_RAYMARCHER
+//    if (Input::is_mouse_pressed(GLFW_MOUSE_BUTTON_RIGHT))
+//    {
+        /* RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
+         WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
+
+         Camera* camera = rooms_renderer->get_camera();
+         glm::vec3 ray_dir = camera->screen_to_ray(Input::get_mouse_position());
+
+         octree_ray_intersect(camera->get_eye(), glm::normalize(ray_dir));*/
+ /*   }
+#endif*/
+
+}
+
+uint32_t RoomsRenderer::add_sculpt_render_call(Sculpt* sculpt, const glm::mat4& model, const uint32_t flags)
+{
+    const uint32_t sculpt_id = sculpt->get_sculpt_id();
+
+    sSculptRenderInstances* render_instance = nullptr;
+
+    if (!sculpts_render_lists.contains(sculpt_id)) {
+        render_instance = new sSculptRenderInstances{ .sculpt = sculpt, .instance_count = 0u };
+
+        sculpts_render_lists[sculpt_id] = render_instance;
+    }
+    else {
+        render_instance = sculpts_render_lists[sculpt_id];
+    }
+
+    assert(render_instance->instance_count < MAX_INSTANCES_PER_SCULPT && "MAX NUM OF SCULPT INSTANCES");
+
+    render_instance->models[render_instance->instance_count] = { .flags = flags, .model = model, .inv_model = glm::inverse(model) };
+
+    return render_instance->instance_count++;
 }
 
 void RoomsRenderer::render()
@@ -201,4 +324,7 @@ void RoomsRenderer::render()
     //    last_evaluation_time = last_frame_timestamps[0];
     //}
 #endif
+
+    // For the next frame
+    sculpts_render_lists.clear();
 }

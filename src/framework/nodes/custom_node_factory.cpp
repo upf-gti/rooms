@@ -9,7 +9,7 @@ Node* custom_node_factory(const std::string& node_type)
     Node* node = nullptr;
 
     if (node_type == "SculptInstance") {
-        node = new SculpNode();
+        node = new SculptNode();
     }
 
     if (!node) {

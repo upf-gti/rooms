@@ -312,7 +312,7 @@ void RoomsEngine::toggle_use_environment_map()
     use_environment_map = !use_environment_map;
 }
 
-void RoomsEngine::set_current_sculpt(SculpNode* sculpt_instance)
+void RoomsEngine::set_current_sculpt(SculptNode* sculpt_instance)
 {
     sculpt_editor->set_current_sculpt(sculpt_instance);
 }

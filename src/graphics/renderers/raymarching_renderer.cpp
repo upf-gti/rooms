@@ -40,17 +40,6 @@
 
 RaymarchingRenderer::RaymarchingRenderer()
 {
-    /*AABB test = { glm::vec3(0.5, 0.0f, 1.0f), glm::vec3(0.50, 0.50f, 0.70f) };
-    AABB result[8u];
-
-    uint32_t count = stroke_manager.divide_AABB_on_max_eval_size(test, result);
-
-    AABB test_f = { glm::vec3(0.0f), glm::vec3(0.0f) };
-    for (uint32_t i = 0u; i < count; i++) {
-        test_f = merge_aabbs(test_f, result[i]);
-    }
-
-    uint32_t p = 0u;*/
 }
 
 int RaymarchingRenderer::initialize(bool use_mirror_screen)
@@ -96,95 +85,6 @@ void RaymarchingRenderer::clean()
 #endif
 }
 
-void RaymarchingRenderer::add_rendercall_to_sculpt(Sculpt* sculpt, const glm::mat4& model, const uint32_t flags)
-{
-    const uint32_t sculpt_id = sculpt->get_sculpt_id();
-
-    sSculptRenderInstances* render_instance = nullptr;
-
-    if (!sculpts_render_lists.contains(sculpt_id)) {
-        render_instance = new sSculptRenderInstances{.sculpt = sculpt, .instance_count = 0u};
-
-        sculpts_render_lists[sculpt_id] = render_instance;
-    } else {
-        render_instance = sculpts_render_lists[sculpt_id];
-    }
-
-    assert(render_instance->instance_count < MAX_INSTANCES_PER_SCULPT && "MAX NUM OF SCULPT INSTANCES");
-
-    render_instance->models[render_instance->instance_count++] = { .flags = flags, .model = model, .inv_model = glm::inverse(model)};
-}
-
-void RaymarchingRenderer::update_sculpts_and_instances(WGPUCommandEncoder command_encoder)
-{
-    RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
-    WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
-    sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();
-
-    WGPUComputePassDescriptor compute_pass_desc = {};
-    WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
-
-#ifndef NDEBUG
-    wgpuComputePassEncoderPushDebugGroup(compute_pass, "Update the sculpts instances");
-#endif
-
-    // Prepare the instances of the sculpts that are rendered on the curren frame
-    // Generate buffer of instances
-    uint32_t in_frame_instance_count = 0u;
-    uint32_t sculpt_to_render_count = 2u;
-    sculpt_instances.count_buffer[0u] = 0u;
-    sculpt_instances.count_buffer[1u] = 0u;
-    for (auto& it : sculpts_render_lists) {
-        if (models_for_upload.capacity() <= in_frame_instance_count) {
-            models_for_upload.resize(models_for_upload.capacity() + 10u);
-        }
-
-        for (uint16_t i = 0u; i < it.second->instance_count; i++) {
-            models_for_upload[in_frame_instance_count++] = (it.second->models[i]);
-        }
-
-        sculpt_instances.count_buffer[sculpt_to_render_count++] = it.second->instance_count;
-    }
-
-    // Upload the count of instances per sculpt
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(sculpt_instances.uniform_count_buffer.data), 0u, sculpt_instances.count_buffer.data(), sizeof(uint32_t) * sculpt_to_render_count);
-
-    // Upload all the instance data
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(global_sculpts_instance_data_uniform.data), 0u, models_for_upload.data(), sizeof(sSculptInstanceData) * in_frame_instance_count);
-
-    if (sculpts_render_lists.size() > 0u) {
-        sculpt_instances.prepare_indirect.set(compute_pass);
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 0u, sculpt_instances.count_bindgroup, 0u, nullptr);
-
-        for (auto& it : sculpts_render_lists) {
-            Sculpt* current_sculpt = it.second->sculpt;
-            wgpuComputePassEncoderSetBindGroup(compute_pass, 1u, current_sculpt->get_sculpt_bindgroup(), 0u, nullptr);
-            wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1u, 1u, 1u);
-        }
-    }
-   
-
-#ifndef NDEBUG
-    wgpuComputePassEncoderPopDebugGroup(compute_pass);
-#endif
-
-    wgpuComputePassEncoderEnd(compute_pass);
-    wgpuComputePassEncoderRelease(compute_pass);
-#ifndef DISABLE_RAYMARCHER
-    if (Input::is_mouse_pressed(GLFW_MOUSE_BUTTON_RIGHT))
-    {
-       /* RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
-        WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
-
-        Camera* camera = rooms_renderer->get_camera();
-        glm::vec3 ray_dir = camera->screen_to_ray(Input::get_mouse_position());
-
-        octree_ray_intersect(camera->get_eye(), glm::normalize(ray_dir));*/
-    }
-#endif
-
-}
-
 AABB RaymarchingRenderer::sPreviewStroke::get_AABB() const
 {
     AABB result = {};
@@ -194,8 +94,6 @@ AABB RaymarchingRenderer::sPreviewStroke::get_AABB() const
 
     return result;
 }
-
-
 
 void RaymarchingRenderer::get_brick_usage(std::function<void(float, uint32_t)> callback)
 {
@@ -239,7 +137,7 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
     //wgpuRenderPassEncoderSetBindGroup(render_pass, 2, sculpt_data_bind_proxy_group, 0, nullptr);
     wgpuRenderPassEncoderSetBindGroup(render_pass, 3, Renderer::instance->get_lighting_bind_group(), 0, nullptr);
 
-    for (auto& it : sculpts_render_lists) {
+    for (auto& it : rooms_renderer->get_sculpts_render_list()) {
         Sculpt* curr_sculpt = it.second->sculpt;
         const uint32_t curr_sculpt_instance_count = 0u;
 
@@ -250,8 +148,6 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
 
         wgpuRenderPassEncoderDrawIndirect(render_pass, std::get<WGPUBuffer>(curr_sculpt->get_indirect_render_buffer().data), 0u);
     }
-
-    sculpts_render_lists.clear();
 
 #ifndef NDEBUG
     wgpuRenderPassEncoderPopDebugGroup(render_pass);
@@ -304,34 +200,10 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
 
     render_proxy_shader = RendererStorage::get_shader("data/shaders/octree/proxy_geometry_plain.wgsl");
 
-    // Sculpt model buffer
-    {
-        // TODO(Juan): make this array dinamic
-        uint32_t size = sizeof(sSculptInstanceData) * 512u; // The current max size of instances
-        global_sculpts_instance_data_uniform.data = webgpu_context->create_buffer(size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, 0u, "sculpt instance data");
-        global_sculpts_instance_data_uniform.binding = 9u;
-        global_sculpts_instance_data_uniform.buffer_size = size;
-    }
-
-
-    sculpt_instances.prepare_indirect_shader = RendererStorage::get_shader("data/shaders/octree/prepare_indirect_sculpt_render.wgsl");
-
-    {
-        uint32_t size = sizeof(uint32_t) * 22u;
-        sculpt_instances.count_buffer.resize(22u);
-        memset(sculpt_instances.count_buffer.data(), 1u, size);
-        sculpt_instances.uniform_count_buffer.data = webgpu_context->create_buffer(size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, sculpt_instances.count_buffer.data(), "sculpt index data");
-        sculpt_instances.uniform_count_buffer.binding = 0u;
-        sculpt_instances.uniform_count_buffer.buffer_size = size;
-
-        std::vector<Uniform*> uniforms = { &sculpt_instances.uniform_count_buffer };
-        sculpt_instances.count_bindgroup = webgpu_context->create_bind_group(uniforms, sculpt_instances.prepare_indirect_shader, 0);
-    }
-
     {
         camera_uniform = rooms_renderer->get_current_camera_uniform();
 
-        std::vector<Uniform*> uniforms = { &sdf_globals.linear_sampler_uniform, &global_sculpts_instance_data_uniform,
+        std::vector<Uniform*> uniforms = { &sdf_globals.linear_sampler_uniform, &rooms_renderer->get_global_sculpts_instance_data(),
             &sdf_globals.sdf_texture_uniform, & sdf_globals.brick_buffers,
             &sdf_globals.sdf_material_texture_uniform, &sdf_globals.preview_stroke_uniform_2 };
 
@@ -360,7 +232,7 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
         uniforms = { camera_uniform };
         render_preview_camera_bind_group = webgpu_context->create_bind_group(uniforms, render_preview_proxy_shader, 0);
 
-        uniforms = {&sdf_globals.preview_stroke_uniform_2, &sdf_globals.brick_buffers, &global_sculpts_instance_data_uniform };
+        uniforms = {&sdf_globals.preview_stroke_uniform_2, &sdf_globals.brick_buffers, &rooms_renderer->get_global_sculpts_instance_data() };
         sculpt_data_bind_preview_group = webgpu_context->create_bind_group(uniforms, render_preview_proxy_shader, 1);
     }
 
@@ -369,5 +241,4 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
     color_target.blend = nullptr;
     color_target.writeMask = WGPUColorWriteMask_All;
     render_preview_proxy_geometry_pipeline.create_render_async(render_preview_proxy_shader, color_target, desc);
-    sculpt_instances.prepare_indirect.create_compute_async(sculpt_instances.prepare_indirect_shader);
 }

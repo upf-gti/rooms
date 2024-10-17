@@ -51,36 +51,6 @@ class RaymarchingRenderer {
     };
 
     // Render pipelines
-    struct sSculptInstanceData {
-        uint32_t flags = 0u;
-        uint32_t pad0;
-        uint32_t pad1;
-        uint32_t pad2;
-        glm::mat4x4 model;
-        glm::mat4x4 inv_model;
-    };
-
-    struct sSculptRenderInstances {
-        Sculpt* sculpt = nullptr;
-        uint16_t instance_count = 0u;
-        sSculptInstanceData models[MAX_INSTANCES_PER_SCULPT];
-    };
-
-    std::unordered_map<uint32_t, sSculptRenderInstances*> sculpts_render_lists;
-    std::vector<sSculptInstanceData> models_for_upload;
-    Uniform         global_sculpts_instance_data_uniform;
-
-    struct {
-        uint32_t                count = 20u;
-        std::vector<uint32_t>   count_buffer;
-        Uniform                 uniform_count_buffer;
-        WGPUBindGroup           count_bindgroup = nullptr;
-
-        Pipeline                prepare_indirect;
-        Shader*                 prepare_indirect_shader = nullptr;
-    } sculpt_instances;
-
-
     Pipeline        render_proxy_geometry_pipeline;
     Shader*         render_proxy_shader = nullptr;
     WGPUBindGroup   render_proxy_geometry_bind_group = nullptr;
@@ -146,10 +116,6 @@ public:
     int initialize(bool use_mirror_screen);
 
     void clean();
-
-    void add_rendercall_to_sculpt(Sculpt* sculpt, const glm::mat4& model, const uint32_t flags = 0u);
-
-    void update_sculpts_and_instances(WGPUCommandEncoder command_encoder);
 
     void render(WGPURenderPassEncoder render_pass, uint32_t camera_buffer_stride = 0u);
 

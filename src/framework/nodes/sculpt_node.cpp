@@ -33,13 +33,15 @@ SculptNode::~SculptNode()
 }
 
 
-void SculptNode::update(float delta_time) {
-    dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->add_rendercall_to_sculpt(sculpt_gpu_data, get_model());
+void SculptNode::update(float delta_time)
+{
+    in_frame_instance_id = dynamic_cast<RoomsRenderer*>(Renderer::instance)->add_sculpt_render_call(sculpt_gpu_data, get_global_model());
 
-    //dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->add_rendercall_to_sculpt(sculpt_gpu_data, glm::translate(get_model(), {0.05, 0.0, 0.0}));
+    //dynamic_cast<RoomsRenderer*>(Renderer::instance)->add_sculpt_render_call(sculpt_gpu_data, glm::translate(get_global_model(), {0.05, 0.0, 0.0}));
 }
 
-void SculptNode::render() {
+void SculptNode::render()
+{
     
 }
 
