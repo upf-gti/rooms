@@ -5,7 +5,7 @@
 #include "framework/input.h"
 #include "framework/parsers/parse_scene.h"
 #include "framework/nodes/viewport_3d.h"
-#include "framework/nodes/sculpt_instance.h"
+#include "framework/nodes/sculpt_node.h"
 #include "framework/nodes/spot_light_3d.h"
 #include "framework/nodes/omni_light_3d.h"
 #include "framework/nodes/directional_light_3d.h"
@@ -47,7 +47,7 @@ void SceneEditor::initialize()
     init_ui();
 
 #ifndef DISABLE_RAYMARCHER
-    SculptInstance* default_sculpt = new SculptInstance();
+    SculpNode* default_sculpt = new SculpNode();
     default_sculpt->set_name("default_sculpt");
     default_sculpt->initialize();
     RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
@@ -234,7 +234,7 @@ void SceneEditor::update_hovered_node()
 
 void SceneEditor::process_node_hovered()
 {
-    const bool sculpt_hovered = !!dynamic_cast<SculptInstance*>(hovered_node);
+    const bool sculpt_hovered = !!dynamic_cast<SculpNode*>(hovered_node);
     const bool group_hovered = !sculpt_hovered && !!dynamic_cast<Group3D*>(hovered_node);
     const bool a_pressed = Input::was_button_pressed(XR_BUTTON_A);
     const bool b_pressed = Input::was_button_pressed(XR_BUTTON_B);
@@ -277,7 +277,7 @@ void SceneEditor::process_node_hovered()
         else if (b_pressed) {
             select_node(hovered_node, false);
             RoomsEngine::switch_editor(SCULPT_EDITOR);
-            static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(static_cast<SculptInstance*>(hovered_node));
+            static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(static_cast<SculpNode*>(hovered_node));
         }
         else if (r_trigger_pressed || Input::was_mouse_pressed(GLFW_MOUSE_BUTTON_LEFT)) {
             select_node(hovered_node, false);
@@ -423,7 +423,7 @@ void SceneEditor::bind_events()
     });
 
     Node::bind("sculpt", [&](const std::string& signal, void* button) {
-        SculptInstance* new_sculpt = new SculptInstance();
+        SculpNode* new_sculpt = new SculpNode();
         new_sculpt->initialize();
         RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
         rooms_renderer->toogle_frame_debug();
@@ -494,24 +494,24 @@ void SceneEditor::clone_node(Node* node, bool copy)
         return;
     }
 
-    SculptInstance* current_sculpt = dynamic_cast<SculptInstance*>(node);
+    SculpNode* current_sculpt = dynamic_cast<SculpNode*>(node);
 
     // Only clone sculpt nodes by now
     if (current_sculpt == nullptr) {
         return;
     }
 
-    SculptInstance* new_sculpt = nullptr;
+    SculpNode* new_sculpt = nullptr;
 
     // raw copy, everything is recreated
     if (copy) {
-        new_sculpt = new SculptInstance();
+        new_sculpt = new SculpNode();
         new_sculpt->from_history(current_sculpt->get_sculpt_data()->get_stroke_history());
     }
 
     // instance copy, it should have different model, but uses same octree, etc.
     else {
-        new_sculpt = new SculptInstance(current_sculpt);
+        new_sculpt = new SculpNode(current_sculpt);
     }
 
     new_sculpt->set_transform(current_sculpt->get_transform());
@@ -738,7 +738,7 @@ void SceneEditor::inspector_from_scene(bool force)
         if (dynamic_cast<Light3D*>(node)) {
             inspect_node(node, NODE_LIGHT);
         }
-        else if (dynamic_cast<SculptInstance*>(node)) {
+        else if (dynamic_cast<SculpNode*>(node)) {
             inspect_node(node, NODE_SCULPT);
         }
         else if (dynamic_cast<Group3D*>(node)) {
@@ -794,10 +794,10 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
             select_node(n, false);
 
             // Set as current sculpt and go to sculpt editor
-            if (dynamic_cast<SculptInstance*>(n)) {
+            if (dynamic_cast<SculpNode*>(n)) {
                 RoomsEngine::switch_editor(SCULPT_EDITOR);
                 // TODO: do this in the on_enter of the sculpt editor passing the current node
-                static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(static_cast<SculptInstance*>(n));
+                static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(static_cast<SculpNode*>(n));
             }
             else if (dynamic_cast<Group3D*>(n)) {
                 // TODO: Open group scene

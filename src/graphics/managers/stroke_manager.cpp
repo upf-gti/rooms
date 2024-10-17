@@ -1,6 +1,6 @@
 #include "stroke_manager.h"
 
-#include "framework/nodes/sculpt_instance.h"
+#include "framework/nodes/sculpt_node.h"
 
 #include "framework/resources/sculpt.h"
 
@@ -273,7 +273,7 @@ void StrokeManager::change_stroke(const uint32_t index_increment) {
     spdlog::info("change stroke");
 }
 
-void StrokeManager::set_current_sculpt(SculptInstance* sculpt_instance)
+void StrokeManager::set_current_sculpt(SculpNode* sculpt_instance)
 {
     history = &(sculpt_instance->get_sculpt_data()->get_stroke_history());
 

@@ -7,7 +7,7 @@
 #include "graphics/edit.h"
 #include "graphics/texture.h"
 
-#include "framework/nodes/sculpt_instance.h"
+#include "framework/nodes/sculpt_node.h"
 #include "framework/math/aabb.h"
 
 #include "graphics/managers/stroke_manager.h"
@@ -57,6 +57,7 @@ class RaymarchingRenderer {
         uint32_t pad1;
         uint32_t pad2;
         glm::mat4x4 model;
+        glm::mat4x4 inv_model;
     };
 
     struct sSculptRenderInstances {

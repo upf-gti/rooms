@@ -61,7 +61,6 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
     // Compute constants
 
 #ifndef DISABLE_RAYMARCHER
-    init_octree_ray_intersection_pipeline();
     init_raymarching_proxy_pipeline();
 #endif
 
@@ -113,7 +112,7 @@ void RaymarchingRenderer::add_rendercall_to_sculpt(Sculpt* sculpt, const glm::ma
 
     assert(render_instance->instance_count < MAX_INSTANCES_PER_SCULPT && "MAX NUM OF SCULPT INSTANCES");
 
-    render_instance->models[render_instance->instance_count++] = { .flags = flags, .model = model };
+    render_instance->models[render_instance->instance_count++] = { .flags = flags, .model = model, .inv_model = glm::inverse(model)};
 }
 
 void RaymarchingRenderer::update_sculpts_and_instances(WGPUCommandEncoder command_encoder)

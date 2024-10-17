@@ -3,7 +3,7 @@
 #include "includes.h"
 
 #include "framework/input.h"
-#include "framework/nodes/sculpt_instance.h"
+#include "framework/nodes/sculpt_node.h"
 #include "framework/nodes/viewport_3d.h"
 #include "framework/nodes/slider_2d.h"
 #include "framework/nodes/container_2d.h"
@@ -232,7 +232,9 @@ bool SculptEditor::edit_update(float delta_time)
 
             glm::mat4x4 pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
             glm::vec3 ray_dir = get_front(pose);
-            renderer->get_raymarching_renderer()->octree_ray_intersect(pose[3], ray_dir, callback);
+            std::vector<Sculpt*> sculpts = { current_sculpt->get_sculpt_data() };
+            //renderer->get_sculpt_manager()->test_ray_sculpts_intersection(pose[3], ray_dir, sculpts);
+            //renderer->get_raymarching_renderer()->octree_ray_intersect(pose[3], ray_dir, callback);
         }
 
         if (use_mirror && renderer->get_openxr_available()) {
@@ -1072,7 +1074,7 @@ void SculptEditor::set_cap_modifier(float value)
     stroke_parameters.set_parameters(parameters);
 }
 
-void SculptEditor::set_current_sculpt(SculptInstance* sculpt_instance)
+void SculptEditor::set_current_sculpt(SculpNode* sculpt_instance)
 {
     current_sculpt = sculpt_instance;
     stroke_manager.new_history_add(&current_sculpt->get_sculpt_data()->get_stroke_history());
@@ -1723,36 +1725,37 @@ void SculptEditor::update_stroke_from_material(const std::string& name)
 
 void SculptEditor::pick_material()
 {
-    if (renderer->get_openxr_available())
-    {
-        glm::mat4x4 pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
-        glm::vec3 ray_dir = get_front(pose);
-        renderer->get_raymarching_renderer()->octree_ray_intersect(pose[3], ray_dir);
-    }else
-    {
-        Camera* camera = Renderer::instance->get_camera();
-        glm::vec3 ray_dir = camera->screen_to_ray(Input::get_mouse_position());
-        renderer->get_raymarching_renderer()->octree_ray_intersect(camera->get_eye(), glm::normalize(ray_dir));
-    }
+    //if (renderer->get_openxr_available())
+    //{
+    //    glm::mat4x4 pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
+    //    glm::vec3 ray_dir = get_front(pose);
+    //    //renderer->get_raymarching_renderer()->octree_ray_intersect(pose[3], ray_dir);
+    //}else
+    //{
+    //    Camera* camera = Renderer::instance->get_camera();
+    //    glm::vec3 ray_dir = camera->screen_to_ray(Input::get_mouse_position());
+    //    //renderer->get_raymarching_renderer()->octree_ray_intersect(camera->get_eye(), glm::normalize(ray_dir));
+    //}
 
-    const RayIntersectionInfo& info = static_cast<RoomsRenderer*>(RoomsRenderer::instance)->get_raymarching_renderer()->get_ray_intersection_info();
+    //const RayIntersectionInfo& info = static_cast<RoomsRenderer*>(RoomsRenderer::instance)->get_raymarching_renderer()->get_ray_intersection_info();
 
-    if (info.intersected)
-    {
-        // Set all data
-        stroke_parameters.set_material_color(Color(info.material_albedo, 1.0f));
-        stroke_parameters.set_material_roughness(info.material_roughness);
-        stroke_parameters.set_material_metallic(info.material_metalness);
-        // stroke_parameters.set_material_noise(-1.0f);
+    //if (info.intersected)
+    //{
+    //    // Set all data
+    //    stroke_parameters.set_material_color(Color(info.material_albedo, 1.0f));
+    //    stroke_parameters.set_material_roughness(info.material_roughness);
+    //    stroke_parameters.set_material_metallic(info.material_metalness);
+    //    // stroke_parameters.set_material_noise(-1.0f);
 
-        update_gui_from_stroke_material(stroke_parameters.get_material());
-    }
+    //    update_gui_from_stroke_material(stroke_parameters.get_material());
+    //}
 
-    // Disable picking..
-    if (is_picking_material) {
-        Node::emit_signal("pick_material", (void*)nullptr);
-    }
+    //// Disable picking..
+    //if (is_picking_material) {
+    //    Node::emit_signal("pick_material", (void*)nullptr);
+    //}
 
-    // Manage interactions, set stamp mode until tool is used again
-    was_material_picked = true;
+    //// Manage interactions, set stamp mode until tool is used again
+    //was_material_picked = true;
+    was_material_picked = false;
 }

@@ -1,4 +1,4 @@
-#include "sculpt_instance.h"
+#include "sculpt_node.h"
 
 #include "framework/math/intersections.h"
 #include "graphics/renderers/rooms_renderer.h"
@@ -8,22 +8,22 @@
 
 #include "framework/resources/sculpt.h"
 
-SculptInstance::SculptInstance() : Node3D()
+SculpNode::SculpNode() : Node3D()
 {
-    node_type = "SculptInstance";
+    node_type = "SculptNode";
     collider_shape = COLLIDER_SHAPE_CUSTOM;
 }
 
-SculptInstance::SculptInstance(SculptInstance* reference) : Node3D()
+SculpNode::SculpNode(SculpNode* reference) : Node3D()
 {
-    node_type = "SculptInstance";
+    node_type = "SculptNode";
     collider_shape = COLLIDER_SHAPE_CUSTOM;
 
     sculpt_gpu_data = reference->get_sculpt_data();
     sculpt_gpu_data->ref();
 }
 
-SculptInstance::~SculptInstance()
+SculpNode::~SculpNode()
 {
     // Remove from raymarching renderer
 
@@ -33,17 +33,17 @@ SculptInstance::~SculptInstance()
 }
 
 
-void SculptInstance::update(float delta_time) {
+void SculpNode::update(float delta_time) {
     dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->add_rendercall_to_sculpt(sculpt_gpu_data, get_model());
 
     //dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->add_rendercall_to_sculpt(sculpt_gpu_data, glm::translate(get_model(), {0.05, 0.0, 0.0}));
 }
 
-void SculptInstance::render() {
+void SculpNode::render() {
     
 }
 
-void SculptInstance::initialize()
+void SculpNode::initialize()
 {
     sculpt_gpu_data = dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_sculpt_manager()->create_sculpt();
     sculpt_gpu_data->ref();
@@ -51,7 +51,7 @@ void SculptInstance::initialize()
     //dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->add_sculpt_instance(this);
 }
 
-void SculptInstance::from_history(const std::vector<Stroke>& new_history)
+void SculpNode::from_history(const std::vector<Stroke>& new_history)
 {
     if (!new_history.empty()) {
         RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
@@ -64,7 +64,7 @@ void SculptInstance::from_history(const std::vector<Stroke>& new_history)
     }
 }
 
-void SculptInstance::serialize(std::ofstream& binary_scene_file)
+void SculpNode::serialize(std::ofstream& binary_scene_file)
 {
     Node3D::serialize(binary_scene_file);
 
@@ -79,7 +79,7 @@ void SculptInstance::serialize(std::ofstream& binary_scene_file)
     }
 }
 
-void SculptInstance::parse(std::ifstream& binary_scene_file)
+void SculpNode::parse(std::ifstream& binary_scene_file)
 {
     Node3D::parse(binary_scene_file);
 
@@ -106,7 +106,7 @@ void SculptInstance::parse(std::ifstream& binary_scene_file)
     rooms_renderer->toogle_frame_debug();
 }
 
-bool SculptInstance::test_ray_collision(const glm::vec3& ray_origin, const glm::vec3& ray_direction, float& distance)
+bool SculpNode::test_ray_collision(const glm::vec3& ray_origin, const glm::vec3& ray_direction, float& distance)
 {
     // wip... maybe this instance "aabb" is correct and we don't have to compute this every time
 
@@ -130,7 +130,7 @@ bool SculptInstance::test_ray_collision(const glm::vec3& ray_origin, const glm::
 }
 
 
-void SculptInstance::set_out_of_focus(const bool oof) {
+void SculpNode::set_out_of_focus(const bool oof) {
     if (oof) {
         sculpt_flags |= eSculptInstanceFlags::SCULPT_IS_OUT_OF_FOCUS;
     }

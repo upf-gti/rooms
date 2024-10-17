@@ -175,6 +175,10 @@ public:
 
     void test_ray_sculpts_intersection(const glm::vec3& ray_origin, const glm::vec3& ray_dir, const std::vector<Sculpt*> sculpts);
 
+    void set_ray_to_test(const glm::vec3& ray_origin, const glm::vec3& ray_dir);
+
+    void add_sculpt_to_ray_test(Sculpt* sculpt);
+
     Sculpt* create_sculpt();
     Sculpt* create_sculpt_from_history(const std::vector<Stroke>& stroke_history);
 

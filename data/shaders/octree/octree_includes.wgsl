@@ -238,11 +238,12 @@ struct GPUReturnResults {
 };
 
 struct SculptInstanceData {
-    flags   : u32,
-    pad0    : u32,
-    pad1    : u32,
-    pad2    : u32,
-    model   : mat4x4f
+    flags       : u32,
+    pad0        : u32,
+    pad1        : u32,
+    pad2        : u32,
+    model       : mat4x4f,
+    inv_model   : mat4x4f
 };
 
 const SCULPT_INSTANCE_NOT_SELECTED = 0u;

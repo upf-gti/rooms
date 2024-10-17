@@ -19,7 +19,7 @@ enum eTool : uint8_t {
 };
 
 class MeshInstance3D;
-class SculptInstance;
+class SculpNode;
 
 struct PrimitiveState {
     glm::vec4 dimensions;
@@ -54,7 +54,7 @@ class SculptEditor : public BaseEditor {
 
     MeshInstance3D* sculpt_area_box = nullptr;
 
-    SculptInstance* current_sculpt = nullptr;
+    SculpNode* current_sculpt = nullptr;
 
     StrokeManager   stroke_manager = {};
 
@@ -234,8 +234,8 @@ public:
 
     void set_preview_edits(const std::vector<Edit> &edit_previews);
 
-    void set_current_sculpt(SculptInstance* sculpt_instance);
-    SculptInstance* get_current_sculpt() { return current_sculpt; }
+    void set_current_sculpt(SculpNode* sculpt_instance);
+    SculpNode* get_current_sculpt() { return current_sculpt; }
 
     bool is_tool_being_used(bool stamp_enabled);
 

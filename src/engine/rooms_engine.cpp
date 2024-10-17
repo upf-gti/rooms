@@ -3,7 +3,7 @@
 #include "framework/nodes/custom_node_factory.h"
 #include "framework/nodes/environment_3d.h"
 #include "framework/nodes/viewport_3d.h"
-#include "framework/nodes/sculpt_instance.h"
+#include "framework/nodes/sculpt_node.h"
 #include "framework/input.h"
 #include "framework/parsers/parse_scene.h"
 #include "framework/parsers/parse_gltf.h"
@@ -24,7 +24,7 @@
 #include "tools/scene_editor.h"
 #include "tools/animation_editor.h"
 #include "tools/tutorial_editor.h"
-#include "framework/nodes/sculpt_instance.h"
+#include "framework/nodes/sculpt_node.h"
 
 #include "spdlog/spdlog.h"
 #include "imgui.h"
@@ -312,7 +312,7 @@ void RoomsEngine::toggle_use_environment_map()
     use_environment_map = !use_environment_map;
 }
 
-void RoomsEngine::set_current_sculpt(SculptInstance* sculpt_instance)
+void RoomsEngine::set_current_sculpt(SculpNode* sculpt_instance)
 {
     sculpt_editor->set_current_sculpt(sculpt_instance);
 }
@@ -382,7 +382,7 @@ void RoomsEngine::render_gui()
         }
         if (ImGui::BeginTabItem("Rooms Debugger"))
         {
-            const RayIntersectionInfo& info = rooms_renderer->get_raymarching_renderer()->get_ray_intersection_info();
+            RayIntersectionInfo info;// = rooms_renderer->get_raymarching_renderer()->get_ray_intersection_info();
             std::string intersected = info.intersected ? "yes" : "no";
             ImGui::Text("Ray Intersection: %s", intersected.c_str());
             ImGui::Text("Tile pointer: %d", info.tile_pointer);

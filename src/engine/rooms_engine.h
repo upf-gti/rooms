@@ -14,7 +14,7 @@ class SculptEditor;
 class SceneEditor;
 class TutorialEditor;
 class AnimationEditor;
-class SculptInstance;
+class SculpNode;
 
 enum EditorType : uint8_t {
     SCENE_EDITOR,
@@ -72,7 +72,7 @@ public:
     static void toggle_use_grid();
     static void toggle_use_environment_map();
 
-    void set_current_sculpt(SculptInstance* sculpt_instance);
+    void set_current_sculpt(SculpNode* sculpt_instance);
 
     void toggle_tutorial();
 

@@ -146,6 +146,15 @@ void SculptManager::test_ray_sculpts_intersection(const glm::vec3& ray_origin, c
     ray_to_upload.ray_direction = ray_dir;
 }
 
+void SculptManager::set_ray_to_test(const glm::vec3& ray_origin, const glm::vec3& ray_dir) {
+    ray_to_upload.ray_origin = ray_origin;
+    ray_to_upload.ray_direction = ray_dir;
+}
+
+void SculptManager::add_sculpt_to_ray_test(Sculpt* sculpt) {
+    ray_intersection_to_compute.push_back(sculpt);
+}
+
 Sculpt* SculptManager::create_sculpt()
 {
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
