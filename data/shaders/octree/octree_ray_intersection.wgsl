@@ -4,7 +4,7 @@
 @group(0) @binding(0) var<storage, read_write> ray_intersection_info: RayIntersectionInfo;
 
 @group(1) @binding(0) var<uniform> ray_info: RayInfo;
-@group(1) @binding(1) var<storage, read> ray_sculpt_instances: RaySculptInstances;
+@group(1) @binding(1) var<storage, read_write> ray_sculpt_instances: RaySculptInstances;
 @group(1) @binding(9) var<storage, read_write> sculpt_instance_data: array<SculptInstanceData>;
 
 @group(2) @binding(0) var<storage, read_write> octree : Octree;
@@ -166,9 +166,10 @@ fn compute()
     ray_intersection_info.tile_pointer = 0u;
 
     let inv_model : mat4x4f  = sculpt_instance_data[ray_sculpt_instances.instance_indices[ray_sculpt_instances.curr_instance_idx]].inv_model;
-
-    let local_ray_origin : vec3f = (vec4f(ray_info.ray_origin, 0.0) * inv_model).xyz;
-    let local_ray_dir : vec3f = (vec4f(ray_info.ray_dir, 0.0) * inv_model).xyz;
+    ray_sculpt_instances.curr_instance_idx = ray_sculpt_instances.curr_instance_idx + 1u;
+    // TODO fix instances
+    let local_ray_origin : vec3f = (inv_model * vec4f(ray_info.ray_origin, 1.0)).xyz;
+    let local_ray_dir : vec3f = normalize((inv_model * vec4f(ray_info.ray_dir, 0.0)).xyz);
 
     var octants_to_visit : array<VisitedOctantData, 8>;
 
@@ -258,7 +259,7 @@ fn compute()
 
                             let ray_t : f32 = (raymarch_result_distance / SCULPT_TO_ATLAS_CONVERSION_FACTOR) + octants_to_visit[i].distance;
 
-                            has_found_intersection(octree.data[octree_index].tile_pointer, octree.octree_id, ray_t);
+                            has_found_intersection(octree.data[octree_index].tile_pointer, ray_sculpt_instances.curr_instance_idx, ray_t);
 
                             // ray_intersection_info.material_albedo = material.albedo;   
                             // ray_intersection_info.material_roughness = material.roughness;   

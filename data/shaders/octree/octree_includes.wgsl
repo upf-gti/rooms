@@ -282,3 +282,11 @@ fn culling_get_culling_data(stroke_pointer : u32, edit_start : u32, edit_count :
 fn culling_get_stroke_index(culling_data : u32) -> u32 {
     return (culling_data) >> 16;
 }
+
+
+struct sPaddedAABB {
+    min    : vec3f,
+    pad0        : u32,
+    max    : vec3f,
+    pad1        : u32
+};

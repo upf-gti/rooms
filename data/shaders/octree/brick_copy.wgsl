@@ -16,6 +16,8 @@ Brick copy buffer u32
 @group(0) @binding(1) var<storage, read_write> brick_index_buffer : array<u32>;
 @group(0) @binding(2) var<storage, read_write> sculpt_indirect : SculptIndirectCall;
 
+//@group(1) @binding(1) var<storage, read_write> aabb_group_storage : array<sPaddedAABB>;
+
 /**
     INSTANCING proposal 
         1 brick idx buffer por sculpt

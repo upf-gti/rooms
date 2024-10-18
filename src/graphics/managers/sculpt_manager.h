@@ -103,6 +103,9 @@ class SculptManager {
     Shader*         evaluation_initialization_shader = nullptr;
     WGPUBindGroup   evaluation_initialization_bind_group = nullptr;
 
+    Uniform         aabb_calculation_temp_buffer;
+    WGPUBindGroup   aabb_calculation_temp_bind_group = nullptr;
+
     // Sculpt evaluation
     Pipeline evaluate_pipeline;
     Pipeline increment_level_pipeline;

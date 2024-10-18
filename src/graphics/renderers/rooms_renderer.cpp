@@ -213,14 +213,11 @@ void RoomsRenderer::intialize_sculpt_render_instances() {
 
     sculpt_instances.prepare_indirect.create_compute_async(sculpt_instances.prepare_indirect_shader);
 }
-bool test = false;
 void RoomsRenderer::update(float delta_time)
 {
     Renderer::update(delta_time);
 
     update_sculpts_and_instances(global_command_encoder);
-
-    test = false;
 
     if (Input::is_mouse_pressed(GLFW_MOUSE_BUTTON_RIGHT)) {
         RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
@@ -230,7 +227,6 @@ void RoomsRenderer::update(float delta_time)
         glm::vec3 ray_dir = camera->screen_to_ray(Input::get_mouse_position());
 
         sculpt_manager->set_ray_to_test(camera->get_eye(), glm::normalize(ray_dir));
-        test = true;
     }
 
     sculpt_manager->update(global_command_encoder);
@@ -332,9 +328,7 @@ void RoomsRenderer::render()
 {
     Renderer::render();
 
-    if (test) {
-        sculpt_manager->read_GPU_results();
-    }
+    sculpt_manager->read_GPU_results();
 
 #ifndef __EMSCRIPTEN__
     //last_frame_timestamps = get_timestamps();

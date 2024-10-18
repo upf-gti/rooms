@@ -35,7 +35,20 @@ SculptNode::~SculptNode()
 
 void SculptNode::update(float delta_time)
 {
-    in_frame_instance_id = dynamic_cast<RoomsRenderer*>(Renderer::instance)->add_sculpt_render_call(sculpt_gpu_data, get_global_model());
+    uint32_t flags = 0u;
+    RoomsRenderer* renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
+    if (renderer->get_sculpt_manager()->read_results.loaded_results.ray_intersection.has_intersected == 1u) {
+        if (in_frame_instance_id == renderer->get_sculpt_manager()->read_results.loaded_results.ray_intersection.sculpt_id) {
+            flags = SCULPT_IS_POINTED;
+
+            spdlog::info("prev ID: {} sculpt_id : {}", in_frame_instance_id, sculpt_gpu_data->get_sculpt_id());
+        }
+    }
+    
+    in_frame_instance_id = renderer->add_sculpt_render_call(sculpt_gpu_data, get_global_model(), flags);
+
+    spdlog::info("curr ID: {} sculpt_id : {}", in_frame_instance_id, sculpt_gpu_data->get_sculpt_id());
+    spdlog::info("==================");
 
     //dynamic_cast<RoomsRenderer*>(Renderer::instance)->add_sculpt_render_call(sculpt_gpu_data, glm::translate(get_global_model(), {0.05, 0.0, 0.0}));
 }

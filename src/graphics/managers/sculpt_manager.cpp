@@ -448,6 +448,10 @@ void SculptManager::evaluate_closest_ray_intersection(WGPUComputePassEncoder com
     WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
     sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();
 
+#ifndef NDEBUG
+    wgpuComputePassEncoderPushDebugGroup(compute_pass, "Ray intersection");
+#endif
+
     // TODO: add range checks for the ray, for an early out
     // TODO: if bindless, we could do a workgroup/thread per ray
  
@@ -469,6 +473,10 @@ void SculptManager::evaluate_closest_ray_intersection(WGPUComputePassEncoder com
     ray_intersection_result_and_clean_pipeline.set(compute_pass);
     wgpuComputePassEncoderSetBindGroup(compute_pass, 1u, gpu_results_bindgroup, 0u, nullptr);
     wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1u, 1u, 1u);
+
+#ifndef NDEBUG
+    wgpuComputePassEncoderPopDebugGroup(compute_pass);
+#endif
 }
 
 void SculptManager::upload_strokes_and_edits(const uint32_t stroke_count, const std::vector<sToUploadStroke>& strokes_to_compute, const uint32_t edits_count, const std::vector<Edit>& edits_to_upload)
@@ -662,6 +670,16 @@ void SculptManager::init_uniforms()
         ray_sculpt_instances_uniform.binding = 1u;
         ray_sculpt_instances_uniform.buffer_size = sizeof(uint32_t) * 4;
     }
+
+    // TODO: compute AABB per sculpt
+    //// AABB sculpt compute
+    //{
+    //    // ((vec3 + padd) * 2) -> AABB struct size * num of workgroups
+    //    const size_t aabb_buffer_size = sizeof(glm::vec4) * 2.0f * sdf_globals.octree_last_level_size / (8u * 8u * 8u);
+    //    aabb_calculation_temp_buffer.data = webgpu_context->create_buffer(aabb_buffer_size, WGPUBufferUsage_Storage, nullptr, "AABB sculpt calculation buffer");
+    //    aabb_calculation_temp_buffer.binding = 0u;
+    //    aabb_calculation_temp_buffer.buffer_size = aabb_buffer_size;
+    //}
 }
 
 void SculptManager::init_shaders()
