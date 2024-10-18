@@ -10,6 +10,8 @@
 
 #include <spdlog/spdlog.h>
 
+void get_mapped_result_buffer(WGPUBufferMapAsyncStatus status, void* user_payload);
+
 void SculptManager::init()
 {
     init_shaders();
@@ -112,6 +114,11 @@ void SculptManager::update(WGPUCommandEncoder command_encoder)
 
     wgpuComputePassEncoderEnd(compute_pass);
     wgpuComputePassEncoderRelease(compute_pass);
+
+    if (intersections_to_compute > 0u) {
+        wgpuCommandEncoderCopyBufferToBuffer(command_encoder, std::get<WGPUBuffer>(gpu_results_uniform.data), 0u, read_results.gpu_results_read_buffer, 0u, sizeof(sGPU_SculptResults));
+        intersections_to_compute = 0u;
+    }
 
     if (sculpts_to_create.size() > 0u) {
         sculpts_to_create.pop_back();
@@ -297,6 +304,7 @@ void SculptManager::evaluate(WGPUComputePassEncoder compute_pass, const sEvaluat
                 increment_level_pipeline.set(compute_pass);
 
                 wgpuComputePassEncoderSetBindGroup(compute_pass, 0, increment_level_bind_group, 0, nullptr);
+                wgpuComputePassEncoderSetBindGroup(compute_pass, 2u, gpu_results_bindgroup, 0u, nullptr);
                 //wgpuComputePassEncoderSetBindGroup(compute_pass, 1, sculpt.octree_bindgroup, 0u, nullptr);
 
                 wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
@@ -326,6 +334,7 @@ void SculptManager::evaluate(WGPUComputePassEncoder compute_pass, const sEvaluat
 
             increment_level_pipeline.set(compute_pass);
             wgpuComputePassEncoderSetBindGroup(compute_pass, 0, increment_level_bind_group, 0, nullptr);
+            wgpuComputePassEncoderSetBindGroup(compute_pass, 2u, gpu_results_bindgroup, 0u, nullptr);
             //wgpuComputePassEncoderSetBindGroup(compute_pass, 1, sculpt.octree_bindgroup, 0u, nullptr);
             wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
 
@@ -419,7 +428,7 @@ void SculptManager::evaluate_preview(WGPUComputePassEncoder compute_pass)
         increment_level_pipeline.set(compute_pass);
 
         wgpuComputePassEncoderSetBindGroup(compute_pass, 0, increment_level_bind_group, 0, nullptr);
-        //wgpuComputePassEncoderSetBindGroup(compute_pass, 1, sculpt_octree_bindgroup, 0u, nullptr);
+        wgpuComputePassEncoderSetBindGroup(compute_pass, 2u, gpu_results_bindgroup, 0u, nullptr);
 
         wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
 
@@ -446,8 +455,8 @@ void SculptManager::evaluate_closest_ray_intersection(WGPUComputePassEncoder com
     webgpu_context->update_buffer(std::get<WGPUBuffer>(ray_info_uniform.data), 0u, &ray_to_upload, sizeof(sGPU_RayData));
 
     ray_intersection_pipeline.set(compute_pass);
-    wgpuComputePassEncoderSetBindGroup(compute_pass, 0u, ray_sculpt_info_bind_group, 0u, nullptr);
-    wgpuComputePassEncoderSetBindGroup(compute_pass, 1u, ray_intersection_info_bind_group, 0u, nullptr);
+    wgpuComputePassEncoderSetBindGroup(compute_pass, 0u, ray_intersection_info_bind_group, 0u, nullptr);
+    wgpuComputePassEncoderSetBindGroup(compute_pass, 1u, ray_sculpt_info_bind_group, 0u, nullptr);
     wgpuComputePassEncoderSetBindGroup(compute_pass, 3u, sdf_atlases_sampler_bindgroup, 0u, nullptr);
 
     for (auto& it : rooms_renderer->get_sculpts_render_list()) {
@@ -460,8 +469,6 @@ void SculptManager::evaluate_closest_ray_intersection(WGPUComputePassEncoder com
     ray_intersection_result_and_clean_pipeline.set(compute_pass);
     wgpuComputePassEncoderSetBindGroup(compute_pass, 1u, gpu_results_bindgroup, 0u, nullptr);
     wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1u, 1u, 1u);
-
-    intersections_to_compute = 0u;
 }
 
 void SculptManager::upload_strokes_and_edits(const uint32_t stroke_count, const std::vector<sToUploadStroke>& strokes_to_compute, const uint32_t edits_count, const std::vector<Edit>& edits_to_upload)
@@ -579,10 +586,11 @@ void SculptManager::init_uniforms()
     const uint32_t zero_value = 0u;
 
     // GPU return data buffer
-    gpu_results_read_buffer = webgpu_context->create_buffer(sizeof(sGPU_Results), WGPUBufferUsage_MapRead | WGPUBufferUsage_CopyDst, nullptr, "Evaluation results buffer");
-    gpu_results_uniform.data = webgpu_context->create_buffer(sizeof(sGPU_Results), WGPUBufferUsage_Storage | WGPUBufferUsage_CopySrc | WGPUBufferUsage_CopyDst, nullptr, "Evaluation results buffer");
+    sGPU_SculptResults defaults;
+    read_results.gpu_results_read_buffer = webgpu_context->create_buffer(sizeof(sGPU_SculptResults), WGPUBufferUsage_MapRead | WGPUBufferUsage_CopyDst, &defaults, "Evaluation results read buffer");
+    gpu_results_uniform.data = webgpu_context->create_buffer(sizeof(sGPU_SculptResults), WGPUBufferUsage_Storage | WGPUBufferUsage_CopySrc | WGPUBufferUsage_CopyDst, &defaults, "Evaluation results buffer");
     gpu_results_uniform.binding = 0u;
-    gpu_results_uniform.buffer_size = sizeof(sGPU_Results);
+    gpu_results_uniform.buffer_size = sizeof(sGPU_SculptResults);
 
     // Evaluation data
 
@@ -756,13 +764,13 @@ void SculptManager::init_pipelines_and_bindgroups()
     // Ray info bindgroup
     {
         std::vector<Uniform*> uniforms = { &ray_info_uniform, &ray_sculpt_instances_uniform, &rooms_renderer->get_global_sculpts_instance_data()};
-        ray_sculpt_info_bind_group = webgpu_context->create_bind_group(uniforms, ray_intersection_shader, 0);
+        ray_sculpt_info_bind_group = webgpu_context->create_bind_group(uniforms, ray_intersection_shader, 1u);
     }
 
     // Ray intersection bindgroup
     {
         std::vector<Uniform*> uniforms = { &ray_intersection_info_uniform };
-        ray_intersection_info_bind_group = webgpu_context->create_bind_group(uniforms, ray_intersection_shader, 1u);
+        ray_intersection_info_bind_group = webgpu_context->create_bind_group(uniforms, ray_intersection_shader, 0u);
     }
 
     // Create pipelines
@@ -779,4 +787,28 @@ void SculptManager::init_pipelines_and_bindgroups()
         ray_intersection_result_and_clean_pipeline.create_compute_async(ray_intersection_result_and_clean_shader);
 
     }
+}
+
+void SculptManager::read_GPU_results() {
+    RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
+    WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
+
+    read_results.map_in_progress = false;
+    wgpuBufferMapAsync(read_results.gpu_results_read_buffer, WGPUMapMode_Read, 0u, sizeof(sGPU_SculptResults), get_mapped_result_buffer, (void*)&read_results);
+
+    while (!read_results.map_in_progress) {
+        wgpuDeviceTick(webgpu_context->device);
+    }
+    wgpuBufferUnmap(read_results.gpu_results_read_buffer);
+}
+
+void get_mapped_result_buffer(WGPUBufferMapAsyncStatus status, void* user_payload) {
+    if (status != WGPUBufferMapAsyncStatus_Success) return;
+    SculptManager::sGPU_ReadResults* result = (SculptManager::sGPU_ReadResults*)(user_payload);
+
+    const void* gpu_buffer = wgpuBufferGetConstMappedRange(result->gpu_results_read_buffer, 0, 16);
+
+    memcpy(&result->loaded_results, gpu_buffer, sizeof(SculptManager::sGPU_ReadResults));
+
+    result->map_in_progress = true;
 }

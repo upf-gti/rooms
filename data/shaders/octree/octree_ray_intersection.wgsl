@@ -1,11 +1,11 @@
 #include octree_includes.wgsl
 #include ray_intersection_includes.wgsl
 
-@group(0) @binding(0) var<uniform> ray_info: RayInfo;
-@group(0) @binding(1) var<storage, read> ray_sculpt_instances: RaySculptInstances;
-@group(0) @binding(9) var<storage, read_write> sculpt_instance_data: array<SculptInstanceData>;
+@group(0) @binding(0) var<storage, read_write> ray_intersection_info: RayIntersectionInfo;
 
-@group(1) @binding(0) var<storage, read_write> ray_intersection_info: RayIntersectionInfo;
+@group(1) @binding(0) var<uniform> ray_info: RayInfo;
+@group(1) @binding(1) var<storage, read> ray_sculpt_instances: RaySculptInstances;
+@group(1) @binding(9) var<storage, read_write> sculpt_instance_data: array<SculptInstanceData>;
 
 @group(2) @binding(0) var<storage, read_write> octree : Octree;
 
@@ -135,7 +135,7 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_dir : vec3f, max_distance : f
 }
 
 fn has_found_intersection(tile_pointer : u32, sculpt_id : u32, ray_t : f32) {
-    if (ray_intersection_info.intersected != 0u || ray_t < ray_intersection_info.ray_t) {
+    if (ray_intersection_info.intersected == 0u || ray_t < ray_intersection_info.ray_t) {
         ray_intersection_info.intersected = 1u;
         ray_intersection_info.tile_pointer = tile_pointer;
         ray_intersection_info.sculpt_id = sculpt_id;
@@ -254,9 +254,9 @@ fn compute()
                         if (intersected) {
                             let atlas_position : vec3f = in_atlas_position + local_ray_dir * raymarch_result_distance;
                             let material : SdfMaterial = sample_material_atlas(atlas_position);
-                            ray_intersection_info.tile_pointer = octree.data[octree_index].tile_pointer;
+                            //ray_intersection_info.tile_pointer = octree.data[octree_index].tile_pointer;
 
-                            let ray_t : f32 = octants_to_visit[i].distance + (raymarch_result_distance / SCULPT_TO_ATLAS_CONVERSION_FACTOR);
+                            let ray_t : f32 = (raymarch_result_distance / SCULPT_TO_ATLAS_CONVERSION_FACTOR) + octants_to_visit[i].distance;
 
                             has_found_intersection(octree.data[octree_index].tile_pointer, octree.octree_id, ray_t);
 

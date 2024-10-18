@@ -225,10 +225,10 @@ struct BrickBuffers_ReadOnly {
 
 struct GPUReturnResults {
     // Evaluation
-    empty_brick_count : u32,
-    evaluation_sculpt_id : u32,
     sculpt_aabb_min :   vec3f,
+    empty_brick_count : u32,
     sculpt_aabb_max : vec3f,
+    evaluation_sculpt_id : u32,
 
     // Ray interection
     ray_has_intersected : u32,

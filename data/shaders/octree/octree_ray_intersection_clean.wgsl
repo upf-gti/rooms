@@ -1,7 +1,7 @@
 #include ray_intersection_includes.wgsl
 #include octree_includes.wgsl
 
-@group(0) @binding(3) var<storage, read_write> ray_intersection_info: RayIntersectionInfo;
+@group(0) @binding(0) var<storage, read_write> ray_intersection_info: RayIntersectionInfo;
 @group(1) @binding(0) var<storage, read_write> gpu_return_results: GPUReturnResults;
 
 

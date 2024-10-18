@@ -11,26 +11,26 @@
         - Raycasting
         - Compute preview
 */
+
+// GPU return data
+struct sGPU_SculptResults {
+    struct {
+        glm::vec3 aabb_min;
+        uint32_t empty_brick_count = 0u;
+        glm::vec3 aabb_max;
+        uint32_t sculpt_id = 0u;
+    } sculpt_eval_data;
+
+    struct {
+        uint32_t    has_intersected = 0u;
+        uint32_t    tile_pointer = 0u;
+        uint32_t    sculpt_id = 0u;
+        float       ray_t = -FLT_MAX;
+    } ray_intersection;
+};
+
 class SculptManager {
 
-    // GPU return data
-    struct sGPU_Results {
-        struct {
-            uint32_t empty_brick_count = 0u;
-            uint32_t sculpt_id = 0u;
-            glm::vec3 aabb_min;
-            glm::vec3 aabb_max;
-        } sculpt_eval_data;
-
-        struct {
-            uint32_t    has_intersected = 0u;
-            uint32_t    tile_pointer = 0u;
-            uint32_t    sculpt_id = 0u;
-            float       ray_t = 0.0;
-        } ray_intersection;
-    };
-
-    WGPUBuffer      gpu_results_read_buffer = nullptr;
     Uniform         gpu_results_uniform;
     WGPUBindGroup   gpu_results_bindgroup = nullptr;
 
@@ -167,8 +167,18 @@ class SculptManager {
     void evaluate_closest_ray_intersection(WGPUComputePassEncoder compute_pass);
 
 public:
+
+    struct sGPU_ReadResults {
+        WGPUBuffer      gpu_results_read_buffer = nullptr;
+        bool map_in_progress = false;
+
+        sGPU_SculptResults    loaded_results;
+    } read_results;
+
     void init();
     void clean();
+
+    void read_GPU_results();
 
     // TODO cleaning and deleting in frames
     void update(WGPUCommandEncoder command_encoder);
