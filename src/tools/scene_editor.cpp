@@ -360,6 +360,7 @@ void SceneEditor::init_ui()
     // ** Gizmo modes **
     {
         ui::ComboButtons2D* combo_gizmo_modes = new ui::ComboButtons2D("combo_gizmo_modes");
+        combo_gizmo_modes->add_child(new ui::TextureButton2D("no_gizmo", "data/textures/cross.png"));
         combo_gizmo_modes->add_child(new ui::TextureButton2D("move", "data/textures/translation_gizmo.png", ui::SELECTED));
         combo_gizmo_modes->add_child(new ui::TextureButton2D("rotate", "data/textures/rotation_gizmo.png"));
         combo_gizmo_modes->add_child(new ui::TextureButton2D("scale", "data/textures/scale_gizmo.png"));
@@ -470,6 +471,7 @@ void SceneEditor::bind_events()
 
     // Gizmo events
 
+    Node::bind("no_gizmo", [&](const std::string& signal, void* button) { gizmo.set_enabled(false); });
     Node::bind("move", [&](const std::string& signal, void* button) { gizmo.set_operation(TRANSLATE); });
     Node::bind("rotate", [&](const std::string& signal, void* button) { gizmo.set_operation(ROTATE); });
     Node::bind("scale", [&](const std::string& signal, void* button) { gizmo.set_operation(SCALE); });
