@@ -60,14 +60,13 @@ int RoomsRenderer::post_initialize()
 
 void RoomsRenderer::clean()
 {
-    Renderer::clean();
 
     sculpt_manager->clean();
+    delete sculpt_manager;
+
     raymarching_renderer.clean();
 
-    if (sculpt_manager) {
-        delete sculpt_manager;
-    }
+    Renderer::clean();
 }
 
 void RoomsRenderer::init_sdf_globals()
@@ -167,7 +166,7 @@ void RoomsRenderer::init_sdf_globals()
 
     {
         // Preview
-        uint32_t struct_size = sizeof(sToUploadStroke) + sizeof(Edit) * PREVIEW_BASE_EDIT_LIST;
+        uint32_t struct_size = sizeof(sGPUStroke) + sizeof(Edit) * PREVIEW_BASE_EDIT_LIST;
         sdf_globals.preview_stroke_uniform.data = webgpu_context->create_buffer(struct_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "preview_stroke_buffer");
         sdf_globals.preview_stroke_uniform.binding = 0;
         sdf_globals.preview_stroke_uniform.buffer_size = struct_size;

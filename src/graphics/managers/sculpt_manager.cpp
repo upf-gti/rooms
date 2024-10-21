@@ -21,6 +21,7 @@ void SculptManager::init()
 
 void SculptManager::clean()
 {
+    // TODO: Properly clean the sculpt manager!!!
 #ifndef DISABLE_RAYMARCHER
     wgpuBindGroupRelease(evaluate_bind_group);
     wgpuBindGroupRelease(increment_level_bind_group);
@@ -119,10 +120,6 @@ void SculptManager::update(WGPUCommandEncoder command_encoder)
         wgpuCommandEncoderCopyBufferToBuffer(command_encoder, std::get<WGPUBuffer>(gpu_results_uniform.data), 0u, read_results.gpu_results_read_buffer, 0u, sizeof(sGPU_SculptResults));
         intersections_to_compute = 0u;
     }
-
-    if (sculpts_to_create.size() > 0u) {
-        sculpts_to_create.pop_back();
-    }
 }
 
 void SculptManager::update_sculpt(Sculpt* sculpt, const sStrokeInfluence& strokes_to_process, const uint32_t edit_count, const std::vector<Edit>& edits_to_process)
@@ -130,7 +127,7 @@ void SculptManager::update_sculpt(Sculpt* sculpt, const sStrokeInfluence& stroke
     evaluations_to_process.push_back({ sculpt, strokes_to_process, edit_count, edits_to_process });
 }
 
-void SculptManager::set_preview_stroke(Sculpt* sculpt, sToUploadStroke preview_stroke, const std::vector<Edit>& preview_edits) {
+void SculptManager::set_preview_stroke(Sculpt* sculpt, sGPUStroke preview_stroke, const std::vector<Edit>& preview_edits) {
     preview.to_upload_stroke = preview_stroke;
     preview.to_upload_edit_list = &preview_edits;
     preview.to_upload_stroke.edit_count = preview_edits.size();
@@ -212,7 +209,40 @@ Sculpt* SculptManager::create_sculpt_from_history(const std::vector<Stroke>& str
     Sculpt* new_sculpt = create_sculpt();
     new_sculpt->set_stroke_history(stroke_history);
 
-    sculpts_to_create.push_back(new_sculpt);
+    sEvaluateRequest sculpt_creation;
+    sculpt_creation.sculpt = new_sculpt;
+    sculpt_creation.strokes_to_process.strokes.resize(stroke_history.size());
+
+    AABB eval_aabb;
+
+    for (const Stroke& curr_stroke : stroke_history) {
+        const AABB& curr_stroke_aabb = curr_stroke.get_world_AABB();
+        eval_aabb = merge_aabbs(eval_aabb, curr_stroke_aabb);
+
+        sGPUStroke to_upload_curr;
+        to_upload_curr.edit_count = curr_stroke.edit_count;
+        to_upload_curr.edit_list_index = sculpt_creation.edit_count;
+        to_upload_curr.material = curr_stroke.material;
+        to_upload_curr.stroke_id = curr_stroke.stroke_id;
+        to_upload_curr.primitive = curr_stroke.primitive;
+        to_upload_curr.operation = curr_stroke.operation;
+        to_upload_curr.color_blending_op = curr_stroke.color_blending_op;
+        to_upload_curr.aabb_min = curr_stroke_aabb.center - curr_stroke_aabb.half_size;
+        to_upload_curr.aabb_max = curr_stroke_aabb.center + curr_stroke_aabb.half_size;
+
+        sculpt_creation.strokes_to_process.strokes[sculpt_creation.strokes_to_process.stroke_count++] = to_upload_curr;
+
+        sculpt_creation.edit_to_process.resize(sculpt_creation.edit_to_process.size() + curr_stroke.edit_count);
+
+        for (uint32_t i = 0u; i < curr_stroke.edit_count; i++) {
+            sculpt_creation.edit_to_process[sculpt_creation.edit_count++] = curr_stroke.edits[i];
+        }
+    }
+
+    sculpt_creation.strokes_to_process.eval_aabb_min = eval_aabb.center - eval_aabb.half_size;
+    sculpt_creation.strokes_to_process.eval_aabb_max = eval_aabb.center + eval_aabb.half_size;
+
+    evaluations_to_process.push_back(sculpt_creation);
 
     return new_sculpt;
 }
@@ -479,7 +509,7 @@ void SculptManager::evaluate_closest_ray_intersection(WGPUComputePassEncoder com
 #endif
 }
 
-void SculptManager::upload_strokes_and_edits(const uint32_t stroke_count, const std::vector<sToUploadStroke>& strokes_to_compute, const uint32_t edits_count, const std::vector<Edit>& edits_to_upload)
+void SculptManager::upload_strokes_and_edits(const uint32_t stroke_count, const std::vector<sGPUStroke>& strokes_to_compute, const uint32_t edits_count, const std::vector<Edit>& edits_to_upload)
 {
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
@@ -511,7 +541,7 @@ void SculptManager::upload_strokes_and_edits(const uint32_t stroke_count, const 
 
         stroke_context_list.destroy();
 
-        size_t stroke_history_size = sizeof(uint32_t) * 4u * 4u + sizeof(sToUploadStroke) * stroke_context_list_size;
+        size_t stroke_history_size = sizeof(uint32_t) * 4u * 4u + sizeof(sGPUStroke) * stroke_context_list_size;
         stroke_context_list.data = webgpu_context->create_buffer(stroke_history_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "stroke_history");
         stroke_context_list.binding = 6;
         stroke_context_list.buffer_size = stroke_history_size;
@@ -547,7 +577,7 @@ void SculptManager::upload_strokes_and_edits(const uint32_t stroke_count, const 
     spdlog::info("   - Context edit size: {}", edits_count);
     spdlog::info("   - Context stroke size: {}", stroke_count);
     webgpu_context->update_buffer(std::get<WGPUBuffer>(octree_edit_list.data), 0, edits_to_upload.data(), sizeof(Edit) * edits_count);
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(stroke_context_list.data), sizeof(uint32_t) * 4 * 4, strokes_to_compute.data(), sizeof(sToUploadStroke) * stroke_count);
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(stroke_context_list.data), sizeof(uint32_t) * 4 * 4, strokes_to_compute.data(), sizeof(sGPUStroke) * stroke_count);
 }
 
 void SculptManager::upload_preview_strokes() {
@@ -558,7 +588,7 @@ void SculptManager::upload_preview_strokes() {
     //// Resize the edit buffer and rebuild the bindgroups
     //if (to_upload_preview_edit_list.size() > preview_edit_array_length) {
     //    preview_edit_array_length = to_upload_preview_edit_list.size();
-    //    uint32_t struct_size = sizeof(sToUploadStroke) + sizeof(Edit) * preview_edit_array_length;
+    //    uint32_t struct_size = sizeof(sGPUStroke) + sizeof(Edit) * preview_edit_array_length;
     //    sdf_globals.preview_stroke_uniform.destroy();
     //    sdf_globals.preview_stroke_uniform.data = webgpu_context->create_buffer(struct_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "preview_stroke_buffer");
     //    sdf_globals.preview_stroke_uniform.binding = 0;
@@ -580,8 +610,8 @@ void SculptManager::upload_preview_strokes() {
     //}
 
     // Upload preview data, first the stoke and tehn the edit list, since we are storing it in a vector
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(sdf_globals.preview_stroke_uniform.data), 4 * sizeof(uint32_t), (&preview.to_upload_stroke), sizeof(sToUploadStroke));
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(sdf_globals.preview_stroke_uniform.data), 4 * sizeof(uint32_t) + sizeof(sToUploadStroke), preview.to_upload_edit_list->data(), preview.to_upload_stroke.edit_count * sizeof(Edit));
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(sdf_globals.preview_stroke_uniform.data), 4 * sizeof(uint32_t), (&preview.to_upload_stroke), sizeof(sGPUStroke));
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(sdf_globals.preview_stroke_uniform.data), 4 * sizeof(uint32_t) + sizeof(sGPUStroke), preview.to_upload_edit_list->data(), preview.to_upload_stroke.edit_count * sizeof(Edit));
 
 }
 
@@ -605,7 +635,7 @@ void SculptManager::init_uniforms()
     // Stroke context uniform
     {
         stroke_context_list_size = STROKE_CONTEXT_INITIAL_SIZE;
-        size_t stroke_history_size = sizeof(uint32_t) * 4u * 4u + sizeof(sToUploadStroke) * STROKE_CONTEXT_INITIAL_SIZE;
+        size_t stroke_history_size = sizeof(uint32_t) * 4u * 4u + sizeof(sGPUStroke) * STROKE_CONTEXT_INITIAL_SIZE;
         stroke_context_list.data = webgpu_context->create_buffer(stroke_history_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "stroke_history");
         stroke_context_list.binding = 6;
         stroke_context_list.buffer_size = stroke_history_size;

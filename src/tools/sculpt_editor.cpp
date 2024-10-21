@@ -689,7 +689,7 @@ void SculptEditor::update(float delta_time)
 }
 
 void SculptEditor::set_preview_edits(const std::vector<Edit>& edit_previews) {
-    sToUploadStroke preview_stroke;
+    sGPUStroke preview_stroke;
 
     preview_stroke.color_blending_op = stroke_parameters.get_color_blend_operation();
     preview_stroke.material = stroke_parameters.get_material();

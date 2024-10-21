@@ -90,7 +90,7 @@ class RaymarchingRenderer {
         uint32_t dummy0;
         uint32_t dummy1;
         uint32_t dummy2;
-        sToUploadStroke stroke;
+        sGPUStroke stroke;
         std::vector<Edit> edit_list;
 
         AABB get_AABB() const;

@@ -19,7 +19,7 @@ void StrokeManager::add_stroke_to_upload_list(sStrokeInfluence& influence, const
         result_to_compute.strokes.resize(influence.strokes.size() + STROKE_CONTEXT_INCREASE);
     }
 
-    memcpy(&influence.strokes[influence.stroke_count], &stroke, sizeof(sToUploadStroke));
+    memcpy(&influence.strokes[influence.stroke_count], &stroke, sizeof(sGPUStroke));
     influence.strokes[influence.stroke_count].edit_list_index = edit_list_count;
 
     AABB stroke_aabb = stroke.get_world_AABB();

@@ -46,7 +46,7 @@ class SculptManager {
     struct {
         Sculpt* sculpt = nullptr;
         bool needs_computing = false;
-        sToUploadStroke to_upload_stroke;
+        sGPUStroke to_upload_stroke;
         const std::vector<Edit>* to_upload_edit_list = nullptr;
     } preview;
 
@@ -56,7 +56,6 @@ class SculptManager {
 
     std::vector<Sculpt*> sculpts_to_delete;
     std::vector<Sculpt*> sculpts_to_clean;
-    std::vector<Sculpt*> sculpts_to_create;
 
     std::vector<sEvaluateRequest> evaluations_to_process;
 
@@ -158,7 +157,7 @@ class SculptManager {
 
     void clean_previous_preview(WGPUComputePassEncoder compute_pass);
     void upload_preview_strokes();
-    void upload_strokes_and_edits(const uint32_t stroke_count, const std::vector<sToUploadStroke>& strokes_to_compute, const uint32_t edits_count, const std::vector<Edit>& edits_to_upload);
+    void upload_strokes_and_edits(const uint32_t stroke_count, const std::vector<sGPUStroke>& strokes_to_compute, const uint32_t edits_count, const std::vector<Edit>& edits_to_upload);
 
     void init_shaders();
     void init_uniforms();
@@ -187,7 +186,7 @@ public:
     void update(WGPUCommandEncoder command_encoder);
 
     void update_sculpt(Sculpt* sculpt, const sStrokeInfluence& strokes_to_process, const uint32_t edit_count, const std::vector<Edit>& edits_to_process);
-    void set_preview_stroke(Sculpt* sculpt, sToUploadStroke preview_stroke, const std::vector<Edit>& preview_edits);
+    void set_preview_stroke(Sculpt* sculpt, sGPUStroke preview_stroke, const std::vector<Edit>& preview_edits);
 
     void test_ray_sculpts_intersection(const glm::vec3& ray_origin, const glm::vec3& ray_dir, const std::vector<Sculpt*> sculpts);
 

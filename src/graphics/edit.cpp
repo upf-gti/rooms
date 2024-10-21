@@ -209,7 +209,7 @@ AABB extern_get_edit_world_AABB(const Edit &edit, const sdPrimitive primitive, c
     return { aabb_center, edit_half_size };
 }
 
-AABB sToUploadStroke::get_world_AABB_of_edit_list(const std::vector<Edit>& list) const {
+AABB sGPUStroke::get_world_AABB_of_edit_list(const std::vector<Edit>& list) const {
     AABB result;
 
     for (uint32_t i = 0u; i < list.size(); i++) {

@@ -76,7 +76,7 @@ struct StrokeMaterial {
     Color       noise_color     = colors::WHITE;
 };
 
-struct sToUploadStroke {
+struct sGPUStroke {
     uint32_t        stroke_id = 0u;
     uint32_t        edit_count = 0u;
     sdPrimitive     primitive = SD_SPHERE;
@@ -156,7 +156,7 @@ struct sStrokeInfluence {
     glm::vec3 eval_aabb_max;
     float pad2;
     glm::vec4 pad3;
-    std::vector<sToUploadStroke> strokes;
+    std::vector<sGPUStroke> strokes;
 
     void set_defaults() {
         is_undo = 0u;
