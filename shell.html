@@ -1,47 +1,54 @@
 <!doctype html>
 <html lang="en-us">
-  <head>
-    <meta charset="utf-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>WebGPU Engine</title>
-  </head>
-  <body>
-    <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex=-1 style="position:fixed;height:100%;width:100%;top:0%;left:0%;resize:both;"></canvas>
-    <template id="main-script">
-      {{{ SCRIPT }}}
-    </template>
-    <script type='text/javascript'>
 
-      var Module = {
-        preRun: [],
-        postRun: [],
-        canvas: (function() {
-          var canvas = document.getElementById('canvas');
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <title>Rooms</title>
+</head>
 
-          // Event handler to resize the canvas when the document view is changed
-          window.addEventListener('resize', () => {
-            canvas.clientWidth = window.innerWidth;
-            canvas.clientHeight = window.innerHeight;
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-          }, false);
+<body>
+  <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex=-1
+    style="position:fixed;height:100%;width:100%;top:0%;left:0%;resize:both;"></canvas>
+  <template id="main-script">
+    {{{ SCRIPT }}}
+  </template>
+  <script type='text/javascript'>
 
-          return canvas;
-        })(),
-        totalDependencies: 0
-      };
+    function loadApp() {
+    }
 
-      (async () => {
-        // Custom for WebGPU
-        if (!navigator.gpu) {
-          console.error("Sorry, WebGPU is not suported by your browser.");
-          return;
-        } else {
-          const jsTemplate = document.getElementById("main-script");
-          const js = jsTemplate.content.cloneNode(true);
-          document.body.appendChild(js);
-        }
-      })();
-    </script>
-  </body>
+    var Module = {
+      preRun: [],
+      postRun: [],
+      canvas: (function () {
+        var canvas = document.getElementById('canvas');
+
+        // Event handler to resize the canvas when the document view is changed
+        window.addEventListener('resize', () => {
+          canvas.clientWidth = window.innerWidth;
+          canvas.clientHeight = window.innerHeight;
+          canvas.width = window.innerWidth;
+          canvas.height = window.innerHeight;
+        }, false);
+
+        return canvas;
+      })(),
+      totalDependencies: 0
+    };
+
+    (async () => {
+      // Custom for WebGPU
+      if (!navigator.gpu) {
+        console.error("Sorry, WebGPU is not suported by your browser.");
+        return;
+      } else {
+        const jsTemplate = document.getElementById("main-script");
+        const js = jsTemplate.content.cloneNode(true);
+        document.body.appendChild(js);
+      }
+    })();
+  </script>
+</body>
+
 </html>

@@ -19,9 +19,23 @@ RoomsRenderer::~RoomsRenderer()
 
 }
 
-int RoomsRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
+int RoomsRenderer::pre_initialize(GLFWwindow* window, bool use_mirror_screen)
 {
-    Renderer::initialize(window, use_mirror_screen);
+    Renderer::pre_initialize(window, use_mirror_screen);
+
+    clear_color = glm::vec4(0.22f, 0.22f, 0.22f, 1.0);
+
+    return 0;
+}
+
+int RoomsRenderer::initialize()
+{
+    return Renderer::initialize();
+}
+
+int RoomsRenderer::post_initialize()
+{
+    Renderer::post_initialize();
 
     init_sdf_globals();
 
@@ -29,8 +43,6 @@ int RoomsRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
 
     sculpt_manager = new SculptManager();
     sculpt_manager->init();
-
-    clear_color = glm::vec4(0.22f, 0.22f, 0.22f, 1.0);
 
     raymarching_renderer.initialize(use_mirror_screen);
 

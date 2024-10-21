@@ -86,12 +86,12 @@ if (EMSCRIPTEN)
     )
 
     add_compile_options(
-    "-fno-exceptions"
+    #"-fno-exceptions"
     "$<$<CONFIG:Release>:-flto>"
     )
 
     add_link_options(
-    "-fno-exceptions"
+    #"-fno-exceptions"
     "$<$<CONFIG:Release>:-flto>"
     )
 
@@ -111,13 +111,13 @@ if (EMSCRIPTEN)
 
         -sUSE_GLFW=3
         -sALLOW_MEMORY_GROWTH
-        -sASYNCIFY
+#        -sASYNCIFY
 #        -sWASM=0
 #        -sASSERTIONS
 #        -fsanitize=address
         -Wdeprecated-literal-operator
         -sSTACK_SIZE=5MB
-        -sASYNCIFY_STACK_SIZE=10000
+#        -sASYNCIFY_STACK_SIZE=10000
         -lembind # to bind functions from c++ to javascript
         -O3
 #        -sWASM_BIGINT

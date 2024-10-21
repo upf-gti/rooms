@@ -126,7 +126,13 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
 #endif
 
     // Prepare the pipeline
-    render_proxy_geometry_pipeline.set(render_pass);
+    if (!render_proxy_geometry_pipeline.set(render_pass)) {
+#ifndef NDEBUG
+        wgpuRenderPassEncoderPopDebugGroup(render_pass);
+#endif
+        return;
+    }
+
     // Set vertex buffer for teh cube mesh
     const Surface* surface = cube_mesh->get_surface(0);
     wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, surface->get_vertex_buffer(), 0, surface->get_vertices_byte_size());
@@ -161,8 +167,14 @@ void RaymarchingRenderer::render_preview_raymarching_proxy(WGPURenderPassEncoder
 #ifndef NDEBUG
     wgpuRenderPassEncoderPushDebugGroup(render_pass, "Render preview proxy geometry");
 #endif
+
     // Render Preview proxy geometry
-    render_preview_proxy_geometry_pipeline.set(render_pass);
+    if (!render_preview_proxy_geometry_pipeline.set(render_pass)) {
+#ifndef NDEBUG
+        wgpuRenderPassEncoderPopDebugGroup(render_pass);
+#endif
+        return;
+    }
 
     // Update sculpt data
     //webgpu_context->update_buffer(std::get<WGPUBuffer>(sculpt_data_uniform.data), 0, &sculpt_data, sizeof(sSculptData));

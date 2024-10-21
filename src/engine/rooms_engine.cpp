@@ -40,6 +40,11 @@ int RoomsEngine::initialize(Renderer* renderer, sEngineConfiguration configurati
 
     if (error) return error;
 
+	return 0;
+}
+
+int RoomsEngine::post_initialize()
+{
     main_scene = new Scene("main_scene");
 
     environment = new Environment3D();
@@ -135,7 +140,7 @@ int RoomsEngine::initialize(Renderer* renderer, sEngineConfiguration configurati
 
     ui::Keyboard::initialize();
 
-	return 0;
+    return 0;
 }
 
 void RoomsEngine::clean()
