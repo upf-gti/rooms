@@ -1,12 +1,15 @@
 #include "sculpt_node.h"
 
 #include "framework/math/intersections.h"
+#include "framework/resources/sculpt.h"
+#include "framework/nodes/node_factory.h"
+
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/managers/sculpt_manager.h"
 
 #include <fstream>
 
-#include "framework/resources/sculpt.h"
+REGISTER_NODE_CLASS(SculptNode)
 
 SculptNode::SculptNode() : Node3D()
 {

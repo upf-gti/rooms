@@ -503,7 +503,7 @@ void SceneEditor::clone_node(Node* node, bool copy)
 
     RoomsEngine* engine = static_cast<RoomsEngine*>(RoomsEngine::instance);
 
-    Node* new_node = engine->node_factory(node->get_node_type());
+    Node* new_node = NodeRegistry::get_instance()->create_node(node->get_node_type());
     node->clone(new_node, copy);
 
     SculptNode* sculpt_node = dynamic_cast<SculptNode*>(new_node);

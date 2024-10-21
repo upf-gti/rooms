@@ -1,6 +1,5 @@
 #include "rooms_engine.h"
 
-#include "framework/nodes/custom_node_factory.h"
 #include "framework/nodes/environment_3d.h"
 #include "framework/nodes/viewport_3d.h"
 #include "framework/nodes/sculpt_node.h"
@@ -40,8 +39,6 @@ int RoomsEngine::initialize(Renderer* renderer, sEngineConfiguration configurati
     int error = Engine::initialize(renderer, configuration);
 
     if (error) return error;
-
-    node_factory = custom_node_factory;
 
     main_scene = new Scene("main_scene");
 
