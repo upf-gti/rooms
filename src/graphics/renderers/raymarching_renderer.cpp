@@ -650,7 +650,12 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
 
     // Render Sculpt's Proxy geometry
     {
-        render_proxy_geometry_pipeline.set(render_pass);
+        if (!render_proxy_geometry_pipeline.set(render_pass)) {
+#ifndef NDEBUG
+            wgpuRenderPassEncoderPopDebugGroup(render_pass);
+#endif
+            return;
+        }
 
         // Update sculpt data
         //webgpu_context->update_buffer(std::get<WGPUBuffer>(sculpt_data_uniform.data), 0, &sculpt_data, sizeof(sSculptData));
@@ -677,7 +682,13 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
 #endif
     // Render Preview proxy geometry
     if (static_cast<RoomsEngine*>(RoomsEngine::instance)->get_current_editor_type() == EditorType::SCULPT_EDITOR) {
-        render_preview_proxy_geometry_pipeline.set(render_pass);
+
+        if (!render_preview_proxy_geometry_pipeline.set(render_pass)) {
+#ifndef NDEBUG
+            wgpuRenderPassEncoderPopDebugGroup(render_pass);
+#endif
+            return;
+        }
 
         // Update sculpt data
         //webgpu_context->update_buffer(std::get<WGPUBuffer>(sculpt_data_uniform.data), 0, &sculpt_data, sizeof(sSculptData));

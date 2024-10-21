@@ -12,14 +12,26 @@ RoomsRenderer::~RoomsRenderer()
 
 }
 
-int RoomsRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
+int RoomsRenderer::pre_initialize(GLFWwindow* window, bool use_mirror_screen)
 {
-    Renderer::initialize(window, use_mirror_screen);
+    Renderer::pre_initialize(window, use_mirror_screen);
 
     Shader::set_custom_define("SDF_RESOLUTION", SDF_RESOLUTION);
     Shader::set_custom_define("SCULPT_MAX_SIZE", SCULPT_MAX_SIZE);
 
     clear_color = glm::vec4(0.22f, 0.22f, 0.22f, 1.0);
+
+    return 0;
+}
+
+int RoomsRenderer::initialize()
+{
+    return Renderer::initialize();
+}
+
+int RoomsRenderer::post_initialize()
+{
+    Renderer::post_initialize();
 
     raymarching_renderer.initialize(use_mirror_screen);
 
@@ -29,7 +41,7 @@ int RoomsRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
     custom_post_opaque_pass = [](void* user_data, WGPURenderPassEncoder render_pass, uint32_t camera_stride_offset = 0) {
         RaymarchingRenderer* raymarching_renderer = reinterpret_cast<RaymarchingRenderer*>(user_data);
         raymarching_renderer->render_raymarching_proxy(render_pass, camera_stride_offset);
-    };
+        };
 #endif
 
     return 0;

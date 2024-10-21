@@ -41,8 +41,11 @@ int RoomsEngine::initialize(Renderer* renderer, sEngineConfiguration configurati
 
     if (error) return error;
 
-    glfwSetWindowTitle(renderer->get_glfw_window(), "ROOMS");
+	return 0;
+}
 
+int RoomsEngine::post_initialize()
+{
     node_factory = custom_node_factory;
 
     main_scene = new Scene("main_scene");
@@ -140,7 +143,7 @@ int RoomsEngine::initialize(Renderer* renderer, sEngineConfiguration configurati
 
     ui::Keyboard::initialize();
 
-	return 0;
+    return 0;
 }
 
 void RoomsEngine::clean()

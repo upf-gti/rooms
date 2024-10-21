@@ -124,6 +124,10 @@ namespace ui {
 
     void Cursor::render()
     {
+#ifdef __EMSCRIPTEN__
+        return;
+#endif
+
         if (!current) {
             return;
         }
