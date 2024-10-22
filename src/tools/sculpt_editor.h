@@ -250,4 +250,7 @@ public:
             new_edits.push_back(edit);
         }
     }
+
+    void on_enter(void* data);
+    // void on_exit();
 };

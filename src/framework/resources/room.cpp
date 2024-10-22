@@ -2,6 +2,18 @@
 
 #include "engine/scene.h"
 
+uint32_t Room::last_uid = 0;
+
+Room::Room()
+{
+    uid = last_uid++;
+}
+
+Room::Room(Scene* new_scene) : Room()
+{
+    scene = new_scene;
+}
+
 void Room::start()
 {
     running = true;
