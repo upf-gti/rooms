@@ -84,7 +84,7 @@ namespace ui {
             inner_data[name] = value;
 
             if (result != nullptr) {
-                Node::bind(name + "_x@stick_moved", (FuncFloat)[&, result = result](const std::string& signal, float dt) {
+                Node::bind(name + "_x@stick_moved", (std::function<void(const std::string&, T)>)[&, result = result](const std::string& signal, float dt) {
                     std::string name = signal.substr(0, signal.find('@') - 2);
                     glm::vec<2, T> value = std::get<glm::vec<2, T>>(inner_data[name]);
                     (*result).x += dt;
@@ -94,7 +94,7 @@ namespace ui {
                     Node::emit_signal(name + "@changed", (void*)nullptr);
                 });
 
-                Node::bind(name + "_y@stick_moved", (FuncFloat)[&, result = result](const std::string& signal, float dt) {
+                Node::bind(name + "_y@stick_moved", (std::function<void(const std::string&, T)>)[&, result = result](const std::string& signal, float dt) {
                     std::string name = signal.substr(0, signal.find('@') - 2);
                     glm::vec<2, T> value = std::get<glm::vec<2, T>>(inner_data[name]);
                     (*result).y += dt;
@@ -123,7 +123,7 @@ namespace ui {
             inner_data[name] = value;
 
             if (result != nullptr) {
-                Node::bind(name + "_x@stick_moved", (FuncFloat)[&, result = result](const std::string& signal, float dt) {
+                Node::bind(name + "_x@stick_moved", (std::function<void(const std::string&, T)>)[&, result = result](const std::string& signal, float dt) {
                     std::string name = signal.substr(0, signal.find('@') - 2);
                     glm::vec<3, T> value = std::get<glm::vec<3, T>>(inner_data[name]);
                     (*result).x += dt;
@@ -133,7 +133,7 @@ namespace ui {
                     Node::emit_signal(name + "@changed", (void*)nullptr);
                 });
 
-                Node::bind(name + "_y@stick_moved", (FuncFloat)[&, result = result](const std::string& signal, float dt) {
+                Node::bind(name + "_y@stick_moved", (std::function<void(const std::string&, T)>)[&, result = result](const std::string& signal, float dt) {
                     std::string name = signal.substr(0, signal.find('@') - 2);
                     glm::vec<3, T> value = std::get<glm::vec<3, T>>(inner_data[name]);
                     (*result).y += dt;
@@ -143,7 +143,7 @@ namespace ui {
                     Node::emit_signal(name + "@changed", (void*)nullptr);
                 });
 
-                Node::bind(name + "_z@stick_moved", (FuncFloat)[&, result = result](const std::string& signal, float dt) {
+                Node::bind(name + "_z@stick_moved", (std::function<void(const std::string&, T)>)[&, result = result](const std::string& signal, float dt) {
                     std::string name = signal.substr(0, signal.find('@') - 2);
                     glm::vec<3, T> value = std::get<glm::vec<3, T>>(inner_data[name]);
                     (*result).z += dt;
@@ -173,7 +173,7 @@ namespace ui {
             inner_data[name] = value;
 
             if (result != nullptr) {
-                Node::bind(name + "_x@stick_moved", (FuncFloat)[&, result = result](const std::string& signal, float dt) {
+                Node::bind(name + "_x@stick_moved", (std::function<void(const std::string&, T)>)[&, result = result](const std::string& signal, float dt) {
                     std::string name = signal.substr(0, signal.find('@') - 2);
                     glm::vec<4, T> value = std::get<glm::vec<4, T>>(inner_data[name]);
                     (*result).x += dt;
@@ -183,7 +183,7 @@ namespace ui {
                     Node::emit_signal(name + "@changed", (void*)nullptr);
                 });
 
-                Node::bind(name + "_y@stick_moved", (FuncFloat)[&, result = result](const std::string& signal, float dt) {
+                Node::bind(name + "_y@stick_moved", (std::function<void(const std::string&, T)>)[&, result = result](const std::string& signal, float dt) {
                     std::string name = signal.substr(0, signal.find('@') - 2);
                     glm::vec<4, T> value = std::get<glm::vec<4, T>>(inner_data[name]);
                     (*result).y += dt;
@@ -193,7 +193,7 @@ namespace ui {
                     Node::emit_signal(name + "@changed", (void*)nullptr);
                 });
 
-                Node::bind(name + "_z@stick_moved", (FuncFloat)[&, result = result](const std::string& signal, float dt) {
+                Node::bind(name + "_z@stick_moved", (std::function<void(const std::string&, T)>)[&, result = result](const std::string& signal, float dt) {
                     std::string name = signal.substr(0, signal.find('@') - 2);
                     glm::vec<4, T> value = std::get<glm::vec<4, T>>(inner_data[name]);
                     (*result).z += dt;
@@ -203,7 +203,7 @@ namespace ui {
                     Node::emit_signal(name + "@changed", (void*)nullptr);
                 });
 
-                Node::bind(name + "_w@stick_moved", (FuncFloat)[&, result = result](const std::string& signal, float dt) {
+                Node::bind(name + "_w@stick_moved", (std::function<void(const std::string&, T)>)[&, result = result](const std::string& signal, float dt) {
                     std::string name = signal.substr(0, signal.find('@') - 2);
                     glm::vec<4, T> value = std::get<glm::vec<4, T>>(inner_data[name]);
                     (*result).w += dt;
