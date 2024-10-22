@@ -151,7 +151,7 @@ namespace ui {
             flex_container = create_row();
         }
 
-        flags |= (ui::SCROLLABLE | ui::TEXT_EVENTS | ui::DBL_CLICK | ui::LONG_CLICK);
+        flags |= (ui::SCROLLABLE | ui::DBL_CLICK | ui::LONG_CLICK | ui::TEXT_SELECTABLE);
 
         auto w = new ui::Text2D(text, 17.f, flags);
         w->set_signal(name);
