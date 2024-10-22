@@ -1,7 +1,6 @@
 #include "tutorial_editor.h"
 
 #include "framework/nodes/panel_2d.h"
-#include "framework/nodes/viewport_3d.h"
 #include "framework/input.h"
 #include "framework/math/math_utils.h"
 
@@ -17,7 +16,7 @@ void TutorialEditor::initialize()
 
     // Create tutorial/welcome panel
     {
-        xr_panel_2d = new Node2D("tutorial_root", { 0.0f, 0.0f }, { 1.0f, 1.0f });
+        panel = new Node2D("tutorial_root", { 0.0f, 0.0f }, { 1.0f, 1.0f });
 
         panels[TUTORIAL_WELCOME] = generate_panel("root_welcome", "data/textures/tutorial/welcome_screen.png", TUTORIAL_NONE, TUTORIAL_SCENE_1);
         panels[TUTORIAL_WELCOME]->set_visibility(true);
@@ -32,11 +31,6 @@ void TutorialEditor::initialize()
         panels[TUTORIAL_MATERIAL] = generate_panel("root_materials", "data/textures/tutorial/materials.png", TUTORIAL_GUIDES, TUTORIAL_PAINT);
         panels[TUTORIAL_PAINT] = generate_panel("root_paint", "data/textures/tutorial/paint.png", TUTORIAL_MATERIAL, TUTORIAL_UNDO_REDO);
         panels[TUTORIAL_UNDO_REDO] = generate_panel("root_undo_redo", "data/textures/tutorial/undo_redo.png", TUTORIAL_PAINT, TUTORIAL_NONE);
-
-        if (renderer->get_openxr_available()) {
-            xr_panel_3d = new Viewport3D(xr_panel_2d);
-            xr_panel_3d->set_active(true);
-        }
     }
 }
 
@@ -47,10 +41,7 @@ void TutorialEditor::clean()
 
 void TutorialEditor::update(float delta_time)
 {
-    if (xr_panel_3d) {
-
-        // Update welcome screen following headset??
-
+    if(renderer->get_openxr_available()) {
         glm::mat4x4 m(1.0f);
         glm::vec3 eye = renderer->get_camera_eye();
         glm::vec3 new_pos = eye + renderer->get_camera_front() * 1.25f;
@@ -59,22 +50,15 @@ void TutorialEditor::update(float delta_time)
         m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
         m = glm::rotate(m, glm::radians(180.f), { 1.0f, 0.0f, 0.0f });
 
-        xr_panel_3d->set_transform(Transform::mat4_to_transform(m));
-        xr_panel_3d->update(delta_time);
+        panel->set_xr_transform(Transform::mat4_to_transform(m));
     }
-    else {
-        xr_panel_2d->update(delta_time);
-    }
+
+    panel->update(delta_time);
 }
 
 void TutorialEditor::render()
 {
-    if (xr_panel_3d) {
-        xr_panel_3d->render();
-    }
-    else {
-        xr_panel_2d->render();
-    }
+    panel->render();
 }
 
 ui::XRPanel* TutorialEditor::generate_panel(const std::string& name, const std::string& path, uint8_t prev, uint8_t next)
@@ -93,7 +77,7 @@ ui::XRPanel* TutorialEditor::generate_panel(const std::string& name, const std::
 
     ui::XRPanel* new_panel = new ui::XRPanel(name, path, pos, size);
     new_panel->set_visibility(false);
-    xr_panel_2d->add_child(new_panel);
+    panel->add_child(new_panel);
 
     if (prev != TUTORIAL_NONE) {
         new_panel->add_button(name + "_prev", "data/textures/tutorial/back.png", { size.x * 0.25f, size.y - mini_button_size.y * 1.2f }, mini_button_size);

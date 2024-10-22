@@ -24,8 +24,6 @@ enum EditorType : uint8_t {
     PLAYER_EDITOR
 };
 
-#define _DESTROY_(x) if(x) { delete x; }
-
 class RoomsEngine : public Engine
 {
     static bool use_environment_map;

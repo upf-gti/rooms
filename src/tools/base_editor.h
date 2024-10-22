@@ -5,7 +5,6 @@
 
 class RoomsRenderer;
 class Node2D;
-class Viewport3D;
 
 namespace ui {
     class HContainer2D;
@@ -36,16 +35,9 @@ protected:
     // Controller UI
     ui::VContainer2D* right_hand_box = nullptr;
     ui::VContainer2D* left_hand_box = nullptr;
-    Viewport3D* right_hand_ui_3D = nullptr;
-    Viewport3D* left_hand_ui_3D = nullptr;
 
     // Main panel UI
-    ui::HContainer2D* main_panel_2d = nullptr;
-    Viewport3D* main_panel_3d = nullptr;
-
-    // Tutorial
-    Node2D* xr_panel_2d = nullptr;
-    Viewport3D* xr_panel_3d = nullptr;
+    ui::HContainer2D* main_panel = nullptr;
 
     // Shortcuts
     virtual void generate_shortcuts() {}

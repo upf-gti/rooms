@@ -6,7 +6,6 @@
 
 class Node;
 class Node2D;
-class MeshInstance3D;
 class Scene;
 
 namespace ui {
@@ -92,7 +91,6 @@ class SceneEditor : public BaseEditor {
     bool inspector_transform_dirty = false;
 
     ui::Inspector* inspector = nullptr;
-    Viewport3D* inspect_panel_3d = nullptr;
 
     std::unordered_map<uint8_t, bool> shortcuts;
 

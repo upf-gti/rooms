@@ -7,7 +7,6 @@
 #include <functional>
 
 class Node2D;
-class Viewport3D;
 
 namespace ui {
 
@@ -52,7 +51,6 @@ namespace ui {
 
         static glm::vec2 keyboard_size;
         static Node2D* keyboard_2d;
-        static Viewport3D* xr_keyboard;
         static ui::Text2D* caret;
 
         static ui::XRPanel* root_common;

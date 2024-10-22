@@ -23,14 +23,14 @@ namespace ui {
         root = new ui::XRPanel(name + "_background", panel_color, { 0.0f, 0.f }, panel_size);
         add_child(root);
 
-        ui::VContainer2D* column = new ui::VContainer2D(name + "_column", glm::vec2(padding), colors::GREEN);
+        ui::VContainer2D* column = new ui::VContainer2D(name + "_column", glm::vec2(padding));
         column->set_fixed_size({ inner_width, inner_height });
         root->add_child(column);
 
         // Title
         float title_text_scale = 22.0f;
         float title_y_corrected = desc.title_height * 0.5f - title_text_scale * 0.5f;
-        ui::Container2D* title_container = new ui::Container2D(name + "_title", { 0.0f, 0.0f }, { inner_width - padding * 0.4f, desc.title_height }, colors::BLUE);
+        ui::Container2D* title_container = new ui::Container2D(name + "_title", { 0.0f, 0.0f }, { inner_width - padding * 0.4f, desc.title_height });
         title_container->add_child(new ui::Text2D(desc.title.empty() ? "Inspector": desc.title, { 0.0f, title_y_corrected }, title_text_scale, ui::TEXT_CENTERED | ui::SKIP_TEXT_RECT));
         title_container->add_child(new ui::TextureButton2D("close_button", "data/textures/cross.png", ui::SKIP_NAME, { inner_width - padding * 3.0f, title_y_corrected }, glm::vec2(32.0f)));
         column->add_child(title_container);
@@ -46,7 +46,7 @@ namespace ui {
         });
 
         // Body row
-        body = new ui::VContainer2D(name + "_body", { 0.0f, 0.0f }, colors::RED);
+        body = new ui::VContainer2D(name + "_body", { 0.0f, 0.0f });
         body->set_fixed_size({ inner_width, panel_size.y - desc.title_height - padding * 3.0f });
         column->add_child(body);
 

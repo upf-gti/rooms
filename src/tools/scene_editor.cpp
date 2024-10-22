@@ -137,13 +137,10 @@ void SceneEditor::update(float delta_time)
             update_panel_transform();
         }
 
-        inspect_panel_3d->update(delta_time);
-
         BaseEditor::update_shortcuts(shortcuts);
     }
-    else {
-        inspector->update(delta_time);
-    }
+
+    inspector->update(delta_time);
 }
 
 void SceneEditor::render()
@@ -154,11 +151,7 @@ void SceneEditor::render()
 
     BaseEditor::render();
 
-    if (renderer->get_openxr_available()) {
-        inspect_panel_3d->render();
-    } else {
-        inspector->render();
-    }
+    inspector->render();
 }
 
 void SceneEditor::render_gui()
@@ -294,18 +287,18 @@ void SceneEditor::init_ui()
     auto webgpu_context = Renderer::instance->get_webgpu_context();
     glm::vec2 screen_size = glm::vec2(static_cast<float>(webgpu_context->render_width), static_cast<float>(webgpu_context->render_height));
 
-    main_panel_2d = new ui::HContainer2D("scene_editor_root", { 48.0f, screen_size.y - 200.f });
+    main_panel = new ui::HContainer2D("scene_editor_root", { 48.0f, screen_size.y - 200.f }, ui::CREATE_3D);
 
     // Color picker...
 
     {
         ui::ColorPicker2D* color_picker = new ui::ColorPicker2D("light_color_picker", colors::WHITE);
         color_picker->set_visibility(false);
-        main_panel_2d->add_child(color_picker);
+        main_panel->add_child(color_picker);
     }
 
     ui::VContainer2D* vertical_container = new ui::VContainer2D("scene_vertical_container", { 0.0f, 0.0f });
-    main_panel_2d->add_child(vertical_container);
+    main_panel->add_child(vertical_container);
 
     // Add main rows
     ui::HContainer2D* first_row = new ui::HContainer2D("row_0", { 0.0f, 0.0f });
@@ -351,7 +344,6 @@ void SceneEditor::init_ui()
         g_display->add_child(new ui::TextureButton2D("use_grid", "data/textures/grid.png", ui::ALLOW_TOGGLE | ui::SELECTED));
         g_display->add_child(new ui::TextureButton2D("use_environment", "data/textures/skybox.png", ui::ALLOW_TOGGLE | ui::SELECTED));
         g_display->add_child(new ui::FloatSlider2D("IBL_intensity", "data/textures/ibl_intensity.png", rooms_renderer->get_ibl_intensity(), ui::SliderMode::VERTICAL, ui::USER_RANGE/*ui::CURVE_INV_POW, 21.f, -6.0f*/, 0.0f, 4.0f, 2));
-        //g_display->add_child(new ui::IntSlider2D("TEST", "data/textures/ibl_intensity.png", 5));
         display_submenu->add_child(g_display);
         display_submenu->add_child(new ui::FloatSlider2D("exposure", "data/textures/exposure.png", rooms_renderer->get_exposure(), ui::SliderMode::VERTICAL, ui::USER_RANGE/*ui::CURVE_INV_POW, 21.f, -6.0f*/, 0.0f, 4.0f, 2));
         first_row->add_child(display_submenu);
@@ -381,10 +373,6 @@ void SceneEditor::init_ui()
 
     if (renderer->get_openxr_available())
     {
-        // create 3d viewports
-        main_panel_3d = new Viewport3D(main_panel_2d);
-        inspect_panel_3d = new Viewport3D(inspector);
-
         // Load controller UI labels
 
         // Thumbsticks
@@ -395,14 +383,13 @@ void SceneEditor::init_ui()
 
         // Left hand
         {
-            left_hand_box = new ui::VContainer2D("left_controller_root", { 0.0f, 0.0f });
+            left_hand_box = new ui::VContainer2D("left_controller_root", { 0.0f, 0.0f }, ui::CREATE_3D);
             left_hand_box->add_child(new ui::ImageLabel2D("Scene Panel", shortcuts::Y_BUTTON_PATH, shortcuts::TOGGLE_SCENE_INSPECTOR));
-            left_hand_ui_3D = new Viewport3D(left_hand_box);
         }
 
         // Right hand
         {
-            right_hand_box = new ui::VContainer2D("right_controller_root", { 0.0f, 0.0f });
+            right_hand_box = new ui::VContainer2D("right_controller_root", { 0.0f, 0.0f }, ui::CREATE_3D);
             right_hand_box->add_child(new ui::ImageLabel2D("Edit Sculpt", shortcuts::B_BUTTON_PATH, shortcuts::EDIT_SCULPT_NODE));
             right_hand_box->add_child(new ui::ImageLabel2D("Edit Group", shortcuts::B_BUTTON_PATH, shortcuts::EDIT_GROUP));
             right_hand_box->add_child(new ui::ImageLabel2D("Animate", "data/textures/buttons/r_grip_plus_b.png", shortcuts::ANIMATE_NODE, double_size));
@@ -413,7 +400,6 @@ void SceneEditor::init_ui()
             right_hand_box->add_child(new ui::ImageLabel2D("Place Node", "data/textures/buttons/r_trigger.png", shortcuts::PLACE_NODE));
             right_hand_box->add_child(new ui::ImageLabel2D("Select Node", "data/textures/buttons/r_trigger.png", shortcuts::SELECT_NODE));
             right_hand_box->add_child(new ui::ImageLabel2D("Group Node", "data/textures/buttons/r_grip_plus_r_trigger.png", shortcuts::GROUP_NODE));
-            right_hand_ui_3D = new Viewport3D(right_hand_box);
         }
     }
 
@@ -662,7 +648,7 @@ void SceneEditor::update_panel_transform()
     m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
     m = glm::rotate(m, glm::radians(180.f), { 1.0f, 0.0f, 0.0f });
 
-    inspect_panel_3d->set_transform(Transform::mat4_to_transform(m));
+    inspector->set_xr_transform(Transform::mat4_to_transform(m));
 
     inspector_transform_dirty = false;
 }
@@ -745,11 +731,6 @@ void SceneEditor::inspector_from_scene(bool force)
     }
 
     Node::emit_signal(inspector->get_name() + "@children_changed", (void*)nullptr);
-
-    // Enable xr for the buttons that need it..
-    if (renderer->get_openxr_available()) {
-        inspector->disable_2d();
-    }
 
     inspector_dirty = false;
     inspector_transform_dirty = !inspector->get_visibility() || force;
@@ -907,11 +888,6 @@ void SceneEditor::inspect_light()
         });
     }
 
-    // Enable xr for the buttons that need it..
-    if (renderer->get_openxr_available()) {
-        inspector->disable_2d();
-    }
-
     inspector->end_line();
 
     inspector_dirty = false;
@@ -944,11 +920,6 @@ void SceneEditor::inspect_exports(bool force)
 
         inspector->label("empty", name);
         inspector->end_line();
-    }
-
-    // Enable xr for the buttons that need it..
-    if (renderer->get_openxr_available()) {
-        inspector->disable_2d();
     }
 
     inspector_transform_dirty = !inspector->get_visibility();

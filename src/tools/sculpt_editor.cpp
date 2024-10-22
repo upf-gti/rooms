@@ -4,7 +4,6 @@
 
 #include "framework/input.h"
 #include "framework/nodes/sculpt_node.h"
-#include "framework/nodes/viewport_3d.h"
 #include "framework/nodes/slider_2d.h"
 #include "framework/nodes/container_2d.h"
 #include "framework/nodes/button_2d.h"
@@ -165,10 +164,10 @@ void SculptEditor::initialize()
 
 void SculptEditor::clean()
 {
-    _DESTROY_(mirror_mesh);
-    _DESTROY_(sculpt_area_box);
-    _DESTROY_(mesh_preview);
-    _DESTROY_(mesh_preview_outline);
+    if(mirror_mesh) delete mirror_mesh;
+    if(sculpt_area_box) delete sculpt_area_box;
+    if(mesh_preview) delete mesh_preview;
+    if(mesh_preview_outline) delete mesh_preview_outline;
 
     BaseEditor::clean();
 }
@@ -1189,7 +1188,7 @@ void SculptEditor::init_ui()
     auto webgpu_context = Renderer::instance->get_webgpu_context();
     glm::vec2 screen_size = glm::vec2(static_cast<float>(webgpu_context->render_width), static_cast<float>(webgpu_context->render_height));
 
-    main_panel_2d = new ui::HContainer2D("root", { 48.0f, screen_size.y - 224.f });
+    main_panel = new ui::HContainer2D("root", { 48.0f, screen_size.y - 224.f }, ui::CREATE_3D);
 
     const StrokeMaterial& stroke_material = stroke_parameters.get_material();
 
@@ -1217,11 +1216,11 @@ void SculptEditor::init_ui()
             }
         }
 
-        main_panel_2d->add_child(color_picker);
+        main_panel->add_child(color_picker);
     }
 
     ui::VContainer2D* vertical_container = new ui::VContainer2D("vertical_container", { 0.0f, 0.0f });
-    main_panel_2d->add_child(vertical_container);
+    main_panel->add_child(vertical_container);
 
     // And two main rows
     ui::HContainer2D* first_row = new ui::HContainer2D("main_first_row", { 0.0f, 0.0f });
@@ -1413,11 +1412,6 @@ void SculptEditor::init_ui()
         second_row->add_child(smooth_factor_slider);
     }
 
-    if (renderer->get_openxr_available()) {
-        main_panel_3d = new Viewport3D(main_panel_2d);
-        main_panel_3d->set_active(true);
-    }
-
     // Load controller UI labels
     if (renderer->get_openxr_available())
     {
@@ -1429,7 +1423,7 @@ void SculptEditor::init_ui()
 
         // Left hand
         {
-            left_hand_box = new ui::VContainer2D("left_controller_root", { 0.0f, 0.0f });
+            left_hand_box = new ui::VContainer2D("left_controller_root", { 0.0f, 0.0f }, ui::CREATE_3D);
             left_hand_box->add_child(new ui::ImageLabel2D("Round Shape", "data/textures/buttons/l_thumbstick.png", shortcuts::ROUND_SHAPE));
             left_hand_box->add_child(new ui::ImageLabel2D("Smooth", "data/textures/buttons/l_grip_plus_l_thumbstick.png", shortcuts::MODIFY_SMOOTH, double_size));
             left_hand_box->add_child(new ui::ImageLabel2D("Redo", shortcuts::Y_BUTTON_PATH, shortcuts::REDO));
@@ -1437,12 +1431,11 @@ void SculptEditor::init_ui()
             left_hand_box->add_child(new ui::ImageLabel2D("Undo", shortcuts::X_BUTTON_PATH, shortcuts::UNDO));
             left_hand_box->add_child(new ui::ImageLabel2D("PBR", "data/textures/buttons/l_grip_plus_x.png", shortcuts::OPEN_PBR_MENU, double_size));
             left_hand_box->add_child(new ui::ImageLabel2D("Manipulate Sculpt", "data/textures/buttons/l_trigger.png", shortcuts::MANIPULATE_SCULPT));
-            left_hand_ui_3D = new Viewport3D(left_hand_box);
         }
 
         // Right hand
         {
-            right_hand_box = new ui::VContainer2D("right_controller_root", { 0.0f, 0.0f });
+            right_hand_box = new ui::VContainer2D("right_controller_root", { 0.0f, 0.0f }, ui::CREATE_3D);
             right_hand_box->add_child(new ui::ImageLabel2D("Main size", "data/textures/buttons/r_thumbstick.png", shortcuts::MAIN_SIZE));
             right_hand_box->add_child(new ui::ImageLabel2D("Sec size", "data/textures/buttons/r_grip_plus_r_thumbstick.png", shortcuts::SECONDARY_SIZE, double_size));
             right_hand_box->add_child(new ui::ImageLabel2D("Back to scene", shortcuts::B_BUTTON_PATH, shortcuts::BACK_TO_SCENE));
@@ -1454,7 +1447,6 @@ void SculptEditor::init_ui()
             right_hand_box->add_child(new ui::ImageLabel2D("Stamp", "data/textures/buttons/r_trigger.png", shortcuts::STAMP));
             right_hand_box->add_child(new ui::ImageLabel2D("Add Knot", "data/textures/buttons/r_trigger.png", shortcuts::ADD_KNOT));
             right_hand_box->add_child(new ui::ImageLabel2D("Smear", "data/textures/buttons/r_grip_plus_r_trigger.png", shortcuts::SMEAR, double_size));
-            right_hand_ui_3D = new Viewport3D(right_hand_box);
         }
     }
 
@@ -1668,11 +1660,6 @@ void SculptEditor::generate_material_from_stroke(void* button)
 
         ui::TextureButton2D* new_button = new ui::TextureButton2D(output, "data/textures/material_samples.png", ui::UNIQUE_SELECTION);
         p->add_child(new_button);
-
-        // Set button as 3d
-        if (main_panel_3d) {
-            new_button->disable_2d();
-        }
 
         num_generated_materials++;
 

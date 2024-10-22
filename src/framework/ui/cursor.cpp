@@ -56,7 +56,7 @@ namespace ui {
                 root_cursor->add_child(cursors[i]);
             }
 
-            cursor_3d = new Viewport3D(root_cursor);
+            cursor_3d = root_cursor->get_xr_viewport();
         }
     }
 

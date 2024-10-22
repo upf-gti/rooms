@@ -5,7 +5,6 @@
 #include "framework/parsers/parse_obj.h"
 #include "framework/nodes/mesh_instance_3d.h"
 #include "framework/nodes/animation_player.h"
-#include "framework/nodes/viewport_3d.h"
 #include "framework/nodes/container_2d.h"
 #include "framework/nodes/slider_2d.h"
 #include "framework/nodes/button_2d.h"
@@ -164,7 +163,7 @@ void AnimationEditor::on_enter(void* data)
         m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
         m = glm::rotate(m, glm::radians(180.f), { 1.0f, 0.0f, 0.0f });
 
-        inspect_panel_3d->set_transform(Transform::mat4_to_transform(m));
+        inspector->set_xr_transform(Transform::mat4_to_transform(m));
         inspector_transform_dirty = false;
     }
 
@@ -241,13 +240,10 @@ void AnimationEditor::update(float delta_time)
             update_panel_transform();
         }
 
-        inspect_panel_3d->update(delta_time);
-
         generate_shortcuts();
     }
-    else {
-        inspector->update(delta_time);
-    }
+
+    inspector->update(delta_time);
 }
 
 void AnimationEditor::render()
@@ -256,12 +252,7 @@ void AnimationEditor::render()
 
     BaseEditor::render();
 
-    if (renderer->get_openxr_available()) {
-        inspect_panel_3d->render();
-    }
-    else {
-        inspector->render();
-    }
+    inspector->render();
 
     render_gizmo();
 
@@ -710,10 +701,10 @@ void AnimationEditor::init_ui()
     auto webgpu_context = Renderer::instance->get_webgpu_context();
     glm::vec2 screen_size = glm::vec2(static_cast<float>(webgpu_context->render_width), static_cast<float>(webgpu_context->render_height));
 
-    main_panel_2d = new ui::HContainer2D("scene_editor_root", { 48.0f, screen_size.y - 200.f });
+    main_panel = new ui::HContainer2D("scene_editor_root", { 48.0f, screen_size.y - 200.f }, ui::CREATE_3D);
 
     ui::VContainer2D* vertical_container = new ui::VContainer2D("animation_vertical_container", { 0.0f, 0.0f });
-    main_panel_2d->add_child(vertical_container);
+    main_panel->add_child(vertical_container);
 
     // Add main row
     ui::HContainer2D* first_row = new ui::HContainer2D("row_0", { 0.0f, 0.0f });
@@ -768,10 +759,6 @@ void AnimationEditor::init_ui()
 
     if (renderer->get_openxr_available())
     {
-        // create 3d viewports
-        main_panel_3d = new Viewport3D(main_panel_2d);
-        inspect_panel_3d = new Viewport3D(inspector);
-
         // Load controller UI labels
 
         // Thumbsticks
@@ -782,18 +769,16 @@ void AnimationEditor::init_ui()
 
         // Left hand
         {
-            left_hand_box = new ui::VContainer2D("left_controller_root", { 0.0f, 0.0f });
+            left_hand_box = new ui::VContainer2D("left_controller_root", { 0.0f, 0.0f }, ui::CREATE_3D);
             left_hand_box->add_child(new ui::ImageLabel2D("Keyframe List", shortcuts::Y_BUTTON_PATH, shortcuts::OPEN_KEYFRAME_LIST));
-            left_hand_ui_3D = new Viewport3D(left_hand_box);
         }
 
         // Right hand
         {
-            right_hand_box = new ui::VContainer2D("right_controller_root", { 0.0f, 0.0f });
+            right_hand_box = new ui::VContainer2D("right_controller_root", { 0.0f, 0.0f }, ui::CREATE_3D);
             right_hand_box->add_child(new ui::ImageLabel2D("Play Animation", shortcuts::B_BUTTON_PATH, shortcuts::PLAY_ANIMATION));
             right_hand_box->add_child(new ui::ImageLabel2D("Create keyframe", shortcuts::A_BUTTON_PATH, shortcuts::CREATE_KEYFRAME));
             right_hand_box->add_child(new ui::ImageLabel2D("Submit keyframe", shortcuts::A_BUTTON_PATH, shortcuts::SUBMIT_KEYFRAME));
-            right_hand_ui_3D = new Viewport3D(right_hand_box);
         }
     }
 
@@ -856,7 +841,7 @@ void AnimationEditor::update_panel_transform()
     m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
     m = glm::rotate(m, glm::radians(180.f), { 1.0f, 0.0f, 0.0f });
 
-    inspect_panel_3d->set_transform(Transform::mat4_to_transform(m));
+    inspector->set_xr_transform(Transform::mat4_to_transform(m));
 
     inspector_transform_dirty = false;
 }
