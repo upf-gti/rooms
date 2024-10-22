@@ -4,11 +4,10 @@
 
 #include "glm/vec2.hpp"
 
-class Viewport3D;
-
 namespace ui {
 
     class Image2D;
+    class HContainer2D;
 
     enum MouseCursor
     {
@@ -38,7 +37,7 @@ namespace ui {
         // Support for vr cursor
 
         bool is_xr = false;
-        Viewport3D* cursor_3d = nullptr;
+        HContainer2D* root_cursors_3d = nullptr;
         bool must_render_xr_cursor = false;
 
         // Pre-load different cursors
