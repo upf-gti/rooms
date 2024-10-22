@@ -162,6 +162,12 @@ void SculptEditor::initialize()
     RoomsEngine::entities.push_back(test_slider_thermometer);*/
 }
 
+void SculptEditor::on_enter(void* data)
+{
+    SculptNode* sculpt_node = reinterpret_cast<SculptNode*>(data);
+    set_current_sculpt(sculpt_node);
+}
+
 void SculptEditor::clean()
 {
     if(mirror_mesh) delete mirror_mesh;

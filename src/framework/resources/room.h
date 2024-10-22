@@ -8,6 +8,9 @@ class Scene;
 
 class Room : public Resource {
 
+    // temporal uids
+    static uint32_t last_uid;
+
     uint32_t uid = 0u;
 
     Scene* scene = nullptr;
@@ -18,7 +21,8 @@ class Room : public Resource {
 
 public:
 
-    Room() {};
+    Room();
+    Room(Scene* new_scene);
 
     uint32_t get_uid() const { return uid; }
 

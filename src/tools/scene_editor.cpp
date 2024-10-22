@@ -19,6 +19,7 @@
 #include "framework/math/math_utils.h"
 #include "framework/camera/camera.h"
 #include "framework/resources/sculpt.h"
+#include "framework/resources/room.h"
 
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/renderer_storage.h"
@@ -41,6 +42,9 @@ void SceneEditor::initialize()
     renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
 
     main_scene = Engine::instance->get_main_scene();
+
+    current_room = new Room(main_scene);
+    current_room->ref();
 
     gizmo.initialize(TRANSLATE);
 
@@ -271,15 +275,19 @@ void SceneEditor::process_node_hovered()
         if (a_pressed) {
             clone_node(hovered_node, true);
         }
-        else if (b_pressed) {
+        else if (b_pressed && sculpt_hovered) {
             select_node(hovered_node, false);
-            RoomsEngine::switch_editor(SCULPT_EDITOR);
-            static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(static_cast<SculptNode*>(hovered_node));
+            RoomsEngine::switch_editor(SCULPT_EDITOR, static_cast<SculptNode*>(hovered_node));
         }
         else if (r_trigger_pressed || Input::was_mouse_pressed(GLFW_MOUSE_BUTTON_LEFT)) {
             select_node(hovered_node, false);
         }
     }
+}
+
+void SceneEditor::enter_room()
+{
+    RoomsEngine::switch_editor(PLAYER_EDITOR, current_room);
 }
 
 void SceneEditor::init_ui()
@@ -363,6 +371,11 @@ void SceneEditor::init_ui()
     {
         second_row->add_child(new ui::TextureButton2D("load", "data/textures/load.png"));
         second_row->add_child(new ui::TextureButton2D("save", "data/textures/save.png"));
+    }
+
+    // ** Player stuff **
+    {
+        second_row->add_child(new ui::TextureButton2D("enter_room", "data/textures/play.png"));
     }
 
     // Create inspection panel (Nodes, properties, etc)
@@ -462,7 +475,7 @@ void SceneEditor::bind_events()
     Node::bind("rotate", [&](const std::string& signal, void* button) { gizmo.set_operation(ROTATE); });
     Node::bind("scale", [&](const std::string& signal, void* button) { gizmo.set_operation(SCALE); });
 
-    // Export / Import (.room)
+    // Export / Import (.room) / Player
     {
         auto callback = [&](const std::string& output) {
             main_scene->serialize("data/exports/" + output + ".room");
@@ -472,6 +485,7 @@ void SceneEditor::bind_events()
 
         Node::bind("save", [&, fn = callback](const std::string& signal, void* button) { ui::Keyboard::request(fn, main_scene->get_name()); });
         Node::bind("load", [&](const std::string& signal, void* button) { inspect_exports(true); });
+        Node::bind("enter_room", [&](const std::string& signal, void* button) { enter_room(); });
     }
 }
 
@@ -771,9 +785,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
 
             // Set as current sculpt and go to sculpt editor
             if (dynamic_cast<SculptNode*>(n)) {
-                RoomsEngine::switch_editor(SCULPT_EDITOR);
-                // TODO: do this in the on_enter of the sculpt editor passing the current node
-                static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(static_cast<SculptNode*>(n));
+                RoomsEngine::switch_editor(SCULPT_EDITOR, static_cast<SculptNode*>(n));
             }
             else if (dynamic_cast<Group3D*>(n)) {
                 // TODO: Open group scene

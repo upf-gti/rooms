@@ -7,6 +7,7 @@
 class Node;
 class Node2D;
 class Scene;
+class Room;
 
 namespace ui {
     class Inspector;
@@ -44,6 +45,7 @@ namespace shortcuts {
 class SceneEditor : public BaseEditor {
 
     Scene* main_scene = nullptr;
+    Room* current_room = nullptr;
 
     Node* selected_node = nullptr;
     Node* hovered_node = nullptr;
@@ -112,6 +114,11 @@ class SceneEditor : public BaseEditor {
     void update_node_transform();
     void update_hovered_node();
 
+    /*
+    *   Room Player
+    */
+
+    void enter_room();
 
     /*
     *   Filesystem
