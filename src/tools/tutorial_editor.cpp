@@ -16,7 +16,7 @@ void TutorialEditor::initialize()
 
     // Create tutorial/welcome panel
     {
-        panel = new Node2D("tutorial_root", { 0.0f, 0.0f }, { 1.0f, 1.0f });
+        panel = new Node2D("tutorial_root", { 0.0f, 0.0f }, { 1.0f, 1.0f }, ui::CREATE_3D);
 
         panels[TUTORIAL_WELCOME] = generate_panel("root_welcome", "data/textures/tutorial/welcome_screen.png", TUTORIAL_NONE, TUTORIAL_SCENE_1);
         panels[TUTORIAL_WELCOME]->set_visibility(true);
