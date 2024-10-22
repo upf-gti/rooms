@@ -34,14 +34,14 @@ void BaseEditor::update(float delta_time)
 
         {
             glm::mat4x4 pose = Input::get_controller_pose(HAND_RIGHT);
-            right_hand_box->get_xr_viewport()->set_transform(Transform::mat4_to_transform(pose * m));
-            right_hand_box->get_xr_viewport()->update(delta_time);
+            right_hand_box->set_xr_transform(Transform::mat4_to_transform(pose * m));
+            right_hand_box->update(delta_time);
         }
 
         {
             pose = Input::get_controller_pose(HAND_LEFT);
-            left_hand_box->get_xr_viewport()->set_transform(Transform::mat4_to_transform(pose * m));
-            left_hand_box->get_xr_viewport()->update(delta_time);
+            left_hand_box->set_xr_transform(Transform::mat4_to_transform(pose * m));
+            left_hand_box->update(delta_time);
         }
     }
 
@@ -52,8 +52,8 @@ void BaseEditor::render()
 {
     // Shortcuts panels
     if (renderer->get_openxr_available()) {
-        left_hand_box->get_xr_viewport()->render();
-        left_hand_box->get_xr_viewport()->render();
+        left_hand_box->render();
+        right_hand_box->render();
     }
 
     main_panel->render();
