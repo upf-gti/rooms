@@ -13,7 +13,7 @@ namespace ui {
     uint32_t Inspector::row_id = 0;
 
     Inspector::Inspector(const InspectorDesc& desc, std::function<bool(Inspector*)> close_fn)
-        : Node2D(name, desc.position, { 0.0f, 0.0f }), panel_size(desc.size), padding(desc.padding)
+        : Node2D(name, desc.position, { 0.0f, 0.0f }, ui::CREATE_3D), panel_size(desc.size), padding(desc.padding)
     {
         float inner_width = panel_size.x - padding * 2.0f;
         float inner_height = panel_size.y - padding * 2.0f;

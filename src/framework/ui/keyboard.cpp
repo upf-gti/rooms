@@ -149,7 +149,7 @@ namespace ui {
         keyboard_size = glm::vec2(button_size * (max_col_count + 3u), button_size * (max_row_count + 2u) + input_height);
         Color panel_color = Color(0.0f, 0.0f, 0.0f, 0.8f);
 
-        keyboard_2d = new Node2D(name, { 0.0f, 0.0f }, { 1.0f, 1.0f });
+        keyboard_2d = new Node2D(name, { 0.0f, 0.0f }, { 1.0f, 1.0f }, ui::CREATE_3D);
 
         root_common = new ui::XRPanel(name + "_common", panel_color, { 0.0f, 0.f }, keyboard_size);
         root_common->render_background = false;
