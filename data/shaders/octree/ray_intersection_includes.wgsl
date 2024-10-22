@@ -11,7 +11,8 @@ struct RayIntersectionInfo
     intersected     : u32,
     tile_pointer    : u32,
     sculpt_id       : u32,
-    ray_t           : f32
+    ray_t           : f32,
+    instance_id     : u32
 };
 
 struct RaySculptInstances {

@@ -224,6 +224,7 @@ void RoomsRenderer::intialize_sculpt_render_instances() {
 
     sculpt_instances.prepare_indirect.create_compute_async(sculpt_instances.prepare_indirect_shader);
 }
+
 void RoomsRenderer::update(float delta_time)
 {
     Renderer::update(delta_time);
@@ -330,7 +331,12 @@ uint32_t RoomsRenderer::add_sculpt_render_call(Sculpt* sculpt, const glm::mat4& 
 
     assert(render_instance->instance_count < MAX_INSTANCES_PER_SCULPT && "MAX NUM OF SCULPT INSTANCES");
 
-    render_instance->models[render_instance->instance_count] = { .flags = flags, .model = model, .inv_model = glm::inverse(model) };
+    render_instance->models[render_instance->instance_count] = {
+        .flags = flags,
+        .instance_id = render_instance->instance_count,
+        .model = model,
+        .inv_model = glm::inverse(model)
+    };
 
     return render_instance->instance_count++;
 }

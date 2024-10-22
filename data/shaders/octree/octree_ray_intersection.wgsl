@@ -134,11 +134,12 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_dir : vec3f, max_distance : f
     return -1000.0;
 }
 
-fn has_found_intersection(tile_pointer : u32, sculpt_id : u32, ray_t : f32) {
+fn has_found_intersection(tile_pointer : u32, sculpt_id : u32, ray_sculpt_instance_id : u32, ray_t : f32) {
     if (ray_intersection_info.intersected == 0u || ray_t < ray_intersection_info.ray_t) {
         ray_intersection_info.intersected = 1u;
         ray_intersection_info.tile_pointer = tile_pointer;
         ray_intersection_info.sculpt_id = sculpt_id;
+        ray_intersection_info.instance_id = ray_sculpt_instance_id;
         ray_intersection_info.ray_t = ray_t;
     }
 }
@@ -162,11 +163,12 @@ fn compute()
     var last_octant : u32 = 0;
 
     var intersected_distance : f32 = 10000000.0;
-    ray_intersection_info.intersected = 0u;
-    ray_intersection_info.tile_pointer = 0u;
 
-    let inv_model : mat4x4f  = sculpt_instance_data[ray_sculpt_instances.instance_indices[ray_sculpt_instances.curr_instance_idx]].inv_model;
+    let curr_idx : u32 = ray_sculpt_instances.instance_indices[ray_sculpt_instances.curr_instance_idx];
     ray_sculpt_instances.curr_instance_idx = ray_sculpt_instances.curr_instance_idx + 1u;
+
+    let sculpt_instance_id : u32 = sculpt_instance_data[curr_idx].instance_id;
+    let inv_model : mat4x4f  = sculpt_instance_data[curr_idx].inv_model;
     // TODO fix instances
     let local_ray_origin : vec3f = (inv_model * vec4f(ray_info.ray_origin, 1.0)).xyz;
     let local_ray_dir : vec3f = normalize((inv_model * vec4f(ray_info.ray_dir, 0.0)).xyz);
@@ -259,7 +261,7 @@ fn compute()
 
                             let ray_t : f32 = (raymarch_result_distance / SCULPT_TO_ATLAS_CONVERSION_FACTOR) + octants_to_visit[i].distance;
 
-                            has_found_intersection(octree.data[octree_index].tile_pointer, ray_sculpt_instances.curr_instance_idx, ray_t);
+                            has_found_intersection(octree.data[octree_index].tile_pointer, octree.octree_id, sculpt_instance_id, ray_t);
 
                             // ray_intersection_info.material_albedo = material.albedo;   
                             // ray_intersection_info.material_roughness = material.roughness;   
@@ -274,6 +276,4 @@ fn compute()
         }
 
     }
-
-    
 }

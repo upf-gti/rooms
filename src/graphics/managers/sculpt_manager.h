@@ -26,6 +26,10 @@ struct sGPU_SculptResults {
         uint32_t    tile_pointer = 0u;
         uint32_t    sculpt_id = 0u;
         float       ray_t = -FLT_MAX;
+        uint32_t    instance_id = 0u;
+        uint32_t    pad0;
+        uint32_t    pad1;
+        uint32_t    pad2;
     } ray_intersection;
 };
 
@@ -82,6 +86,7 @@ class SculptManager {
         uint32_t    tile_pointer = 0u;
         uint32_t    sculpt_id = 0u;
         float       ray_t = -FLT_MAX;
+        uint32_t    instance_id = 0u;
     };
 
     Uniform         ray_info_uniform;

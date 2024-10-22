@@ -234,14 +234,19 @@ struct GPUReturnResults {
     ray_has_intersected : u32,
     ray_tile_pointer : u32,
     ray_sculpt_id : u32,
-    ray_t : f32
+    ray_t : f32,
+
+    ray_sculpt_instance_id : u32,
+    pad0 : u32,
+    pad1 : u32,
+    pad2 : u32
 };
 
 struct SculptInstanceData {
     flags       : u32,
+    instance_id : u32,
     pad0        : u32,
     pad1        : u32,
-    pad2        : u32,
     model       : mat4x4f,
     inv_model   : mat4x4f
 };

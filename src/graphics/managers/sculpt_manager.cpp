@@ -249,18 +249,34 @@ Sculpt* SculptManager::create_sculpt_from_history(const std::vector<Stroke>& str
 
 void SculptManager::delete_sculpt(WGPUComputePassEncoder compute_pass, Sculpt* to_delete)
 {
+    if (!sculpt_delete_pipeline.is_loaded()) {
+        return;
+    }
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();
 
+#ifndef NDEBUG
+    wgpuComputePassEncoderPushDebugGroup(compute_pass, "Delete Sculpt");
+#endif
     sculpt_delete_pipeline.set(compute_pass);
     wgpuComputePassEncoderSetBindGroup(compute_pass, 0, to_delete->get_octree_bindgroup(), 0, nullptr);
     wgpuComputePassEncoderSetBindGroup(compute_pass, 1, sculpt_delete_bindgroup, 0, nullptr);
     wgpuComputePassEncoderDispatchWorkgroups(compute_pass, sdf_globals.octree_last_level_size / (8u * 8u * 8u), 1, 1);
+#ifndef NDEBUG
+    wgpuComputePassEncoderPopDebugGroup(compute_pass);
+#endif
 }
 
 void SculptManager::evaluate(WGPUComputePassEncoder compute_pass, const sEvaluateRequest& evaluate_request)
 {
     if (!evaluate_shader || !evaluate_shader->is_loaded()) return;
+    if (!evaluation_initialization_pipeline.is_loaded() ||
+        !evaluate_pipeline.is_loaded() ||
+        !increment_level_pipeline.is_loaded() ||
+        !write_to_texture_pipeline.is_loaded() ||
+        !brick_copy_pipeline.is_loaded()) {
+        return;
+    }
 
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
@@ -398,6 +414,9 @@ void SculptManager::evaluate(WGPUComputePassEncoder compute_pass, const sEvaluat
 }
 
 void SculptManager::clean_previous_preview(WGPUComputePassEncoder compute_pass) {
+    if (!brick_unmark_pipeline.is_loaded()) {
+        return;
+    }
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
     sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();
@@ -417,6 +436,12 @@ void SculptManager::clean_previous_preview(WGPUComputePassEncoder compute_pass) 
 
 void SculptManager::evaluate_preview(WGPUComputePassEncoder compute_pass)
 {
+    if (!evaluation_initialization_pipeline.is_loaded() ||
+        !evaluate_pipeline.is_loaded() ||
+        !increment_level_pipeline.is_loaded()) {
+        return;
+    }
+
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
     sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();
@@ -474,6 +499,11 @@ void SculptManager::evaluate_preview(WGPUComputePassEncoder compute_pass)
 }
 
 void SculptManager::evaluate_closest_ray_intersection(WGPUComputePassEncoder compute_pass) {
+    if (!ray_intersection_pipeline.is_loaded() ||
+        !ray_intersection_result_and_clean_pipeline.is_loaded()) {
+        return;
+    }
+
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
     sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();
@@ -495,9 +525,13 @@ void SculptManager::evaluate_closest_ray_intersection(WGPUComputePassEncoder com
 
     for (auto& it : rooms_renderer->get_sculpts_render_list()) {
         Sculpt* curr_sculpt = it.second->sculpt;
+        const uint32_t instances_count = it.second->instance_count;
 
         wgpuComputePassEncoderSetBindGroup(compute_pass, 2u, curr_sculpt->get_octree_bindgroup(), 0u, nullptr);
-        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1u, 1u, 1u);
+
+        for (uint32_t i = 0u; i < instances_count; i++) {
+            wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1u, 1u, 1u);
+        }
     }
 
     ray_intersection_result_and_clean_pipeline.set(compute_pass);
@@ -692,7 +726,7 @@ void SculptManager::init_uniforms()
         ray_info_uniform.buffer_size = sizeof(sGPU_RayData);
 
         sGPU_RayIntersection intialization;
-        ray_intersection_info_uniform.data = webgpu_context->create_buffer(sizeof(sGPU_RayIntersection), WGPUBufferUsage_Storage | WGPUBufferUsage_CopySrc | WGPUBufferUsage_CopyDst, &intialization, "Ray intersection result");
+        ray_intersection_info_uniform.data = webgpu_context->create_buffer(sizeof(sGPU_RayIntersection), WGPUBufferUsage_Storage | WGPUBufferUsage_CopySrc | WGPUBufferUsage_CopyDst, &intialization, "Ray intersection result to copy");
         ray_intersection_info_uniform.binding = 0u;
         ray_intersection_info_uniform.buffer_size = sizeof(sGPU_RayIntersection);
 

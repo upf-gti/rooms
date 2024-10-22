@@ -13,6 +13,7 @@ fn compute()
     gpu_return_results.ray_tile_pointer = ray_intersection_info.tile_pointer;
     gpu_return_results.ray_sculpt_id = ray_intersection_info.sculpt_id;
     gpu_return_results.ray_t = ray_intersection_info.ray_t;
+    gpu_return_results.ray_sculpt_instance_id = ray_intersection_info.instance_id;
 
     // Clean the buffers for the next frame
     ray_intersection_info.intersected = 0u;

@@ -56,9 +56,9 @@ class RoomsRenderer : public Renderer {
 
     struct sSculptInstanceData {
         uint32_t flags = 0u;
+        uint32_t instance_id;
         uint32_t pad0;
         uint32_t pad1;
-        uint32_t pad2;
         glm::mat4x4 model;
         glm::mat4x4 inv_model;
     };
@@ -69,7 +69,7 @@ class RoomsRenderer : public Renderer {
         sSculptInstanceData models[MAX_INSTANCES_PER_SCULPT];
     };
 
-    std::unordered_map<uint32_t, sSculptRenderInstances*> sculpts_render_lists;
+    std::map<uint32_t, sSculptRenderInstances*> sculpts_render_lists;
     std::vector<sSculptInstanceData> models_for_upload;
     Uniform         global_sculpts_instance_data_uniform;
 
@@ -111,7 +111,7 @@ public:
         return global_sculpts_instance_data_uniform;
     }
 
-    inline std::unordered_map<uint32_t, sSculptRenderInstances*>& get_sculpts_render_list() {
+    inline std::map<uint32_t, sSculptRenderInstances*>& get_sculpts_render_list() {
         return sculpts_render_lists;
     }
 
