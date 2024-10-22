@@ -28,11 +28,37 @@ void SculptManager::clean()
     wgpuBindGroupRelease(write_to_texture_bind_group);
     wgpuBindGroupRelease(octant_usage_ping_pong_bind_groups[0]);
     wgpuBindGroupRelease(octant_usage_ping_pong_bind_groups[1]);
+    wgpuBindGroupRelease(gpu_results_bindgroup);
+    //wgpuBindGroupRelease(compute_octree_clean_octree_bind_group);
+    wgpuBindGroupRelease(ray_sculpt_info_bind_group);
+    wgpuBindGroupRelease(ray_intersection_info_bind_group);
+    wgpuBindGroupRelease(sdf_atlases_sampler_bindgroup);
+    wgpuBindGroupRelease(indirect_brick_removal_bind_group);
+    wgpuBindGroupRelease(sculpt_delete_bindgroup);
+    wgpuBindGroupRelease(brick_unmark_bind_group);
     wgpuBindGroupRelease(preview_stroke_bind_group);
+
+    gpu_results_uniform.destroy();
+    ray_info_uniform.destroy();
+    ray_sculpt_instances_uniform.destroy();
+    ray_intersection_info_uniform.destroy();
+    octree_edit_list.destroy();
+    stroke_context_list.destroy();
+    stroke_culling_buffer.destroy();
+    octant_usage_ping_pong_uniforms[0].destroy();
+    octant_usage_ping_pong_uniforms[1].destroy();
+    octant_usage_initialization_uniform[0].destroy();
 
     delete evaluate_shader;
     delete increment_level_shader;
     delete write_to_texture_shader;
+    delete brick_removal_shader;
+    delete brick_copy_shader;
+    delete brick_unmark_shader;
+    delete sculpt_delete_shader;
+    delete ray_intersection_shader;
+    delete evaluation_initialization_shader;
+    delete ray_intersection_result_and_clean_shader;
 #endif
 }
 
@@ -88,30 +114,31 @@ void SculptManager::update(WGPUCommandEncoder command_encoder)
         evaluate_preview(compute_pass);
     }
 
-    // Sculpture deleting and cleaning
-//    {
-//        if (sculpts_to_clean.size() > 0u) {
-//            for (uint32_t i = 0u; i < sculpts_to_clean.size(); i++) {
-//                sculpts_to_clean[i]->get_octree_uniform().destroy();
-//                wgpuBindGroupRelease(sculpts_to_clean[i]->get_octree_bindgroup());
-//            }
-//            sculpts_to_clean.clear();
-//        }
-//
-//        if (sculpts_to_delete.size() > 0u) {
-//#ifndef NDEBUG
-//            wgpuComputePassEncoderPushDebugGroup(compute_pass, "Sculpt removal");
-//#endif
-//            for (uint32_t i = 0u; i < sculpts_to_delete.size(); i++) {
-//                compute_delete_sculpts(compute_pass, sculpts_to_delete[i]);
-//                sculpts_to_clean.push_back(sculpts_to_delete[i]);
-//            }
-//            sculpts_to_delete.clear();
-//#ifndef NDEBUG
-//            wgpuComputePassEncoderPopDebugGroup(compute_pass);
-//#endif
-//        }
-//    }
+     // Sculpture deleting and cleaning
+    {
+        if (sculpts_to_clean.size() > 0u) {
+            for (uint32_t i = 0u; i < sculpts_to_clean.size(); i++) {
+                sculpts_to_clean[i]->get_octree_uniform().destroy();
+                wgpuBindGroupRelease(sculpts_to_clean[i]->get_octree_bindgroup());
+                delete sculpts_to_clean[i];
+            }
+            sculpts_to_clean.clear();
+        }
+
+        if (sculpts_to_delete.size() > 0u) {
+#ifndef NDEBUG
+            wgpuComputePassEncoderPushDebugGroup(compute_pass, "Sculpt removal");
+#endif
+            for (uint32_t i = 0u; i < sculpts_to_delete.size(); i++) {
+                delete_sculpt(compute_pass, sculpts_to_delete[i]);
+                sculpts_to_clean.push_back(sculpts_to_delete[i]);
+            }
+            sculpts_to_delete.clear();
+#ifndef NDEBUG
+            wgpuComputePassEncoderPopDebugGroup(compute_pass);
+#endif
+        }
+    }
 
     wgpuComputePassEncoderEnd(compute_pass);
     wgpuComputePassEncoderRelease(compute_pass);

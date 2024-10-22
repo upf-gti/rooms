@@ -6,8 +6,12 @@
 
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/managers/sculpt_manager.h"
+#include "tools/sculpt_editor.h"
+
+#include "engine/engine.h"
 
 #include <fstream>
+#include <engine/rooms_engine.h>
 
 REGISTER_NODE_CLASS(SculptNode)
 
@@ -32,7 +36,9 @@ SculptNode::~SculptNode()
 
     //dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->remove_sculpt_instance(this);
 
-    sculpt_gpu_data->unref();
+    if (sculpt_gpu_data->unref()) {
+        dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_sculpt_manager()->delete_sculpt(sculpt_gpu_data);
+    }
 }
 
 
@@ -40,11 +46,19 @@ void SculptNode::update(float delta_time)
 {
     uint32_t flags = 0u;
     RoomsRenderer* renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
+    RoomsEngine* engine =  dynamic_cast<RoomsEngine*>(Engine::instance);
     sGPU_SculptResults& evaluation_results = renderer->get_sculpt_manager()->read_results.loaded_results;
+
+    if (engine->get_current_editor_type() == SCULPT_EDITOR) {
+        if (engine->get_sculpt_editor()->get_current_sculpt() != this) {
+            flags |= SCULPT_IS_OUT_OF_FOCUS;
+        }
+    }
+
     if (renderer->get_sculpt_manager()->read_results.loaded_results.ray_intersection.has_intersected == 1u) {
 
         if (sculpt_gpu_data->get_sculpt_id() == evaluation_results.ray_intersection.sculpt_id && in_frame_instance_id == evaluation_results.ray_intersection.instance_id) {
-            flags = SCULPT_IS_POINTED;
+            flags |= SCULPT_IS_POINTED;
         }
     }
     

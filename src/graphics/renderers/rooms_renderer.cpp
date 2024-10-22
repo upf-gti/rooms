@@ -60,10 +60,8 @@ int RoomsRenderer::post_initialize()
 
 void RoomsRenderer::clean()
 {
-
     sculpt_manager->clean();
-    delete sculpt_manager;
-
+    //delete sculpt_manager;
     raymarching_renderer.clean();
 
     Renderer::clean();

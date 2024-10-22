@@ -173,6 +173,8 @@ class SculptManager {
 
     void evaluate_closest_ray_intersection(WGPUComputePassEncoder compute_pass);
 
+    void delete_sculpt(WGPUComputePassEncoder compute_pass, Sculpt* to_delete);
+
 public:
 
     struct sGPU_ReadResults {
@@ -204,5 +206,7 @@ public:
 
     bool has_performed_evaluation() { return performed_evaluation; }
 
-    void delete_sculpt(WGPUComputePassEncoder compute_pass, Sculpt* to_delete);
+    void delete_sculpt(Sculpt * to_delete) {
+        sculpts_to_delete.push_back(to_delete);
+    }
 };
