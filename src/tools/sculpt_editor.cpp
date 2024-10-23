@@ -697,6 +697,7 @@ void SculptEditor::set_preview_edits(const std::vector<Edit>& edit_previews) {
     sGPUStroke preview_stroke;
 
     preview_stroke.color_blending_op = stroke_parameters.get_color_blend_operation();
+    preview_stroke.primitive = stroke_parameters.get_primitive();
     preview_stroke.material = stroke_parameters.get_material();
     preview_stroke.operation = stroke_parameters.get_operation();
     preview_stroke.parameters = stroke_parameters.get_parameters();

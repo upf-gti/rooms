@@ -50,7 +50,7 @@ fn compute(@builtin(workgroup_id) id: vec3<u32>, @builtin(local_invocation_index
     let current_instance_in_use_flag : u32 = octree.data[current_instance_index].tile_pointer;
 
     if ((current_instance_in_use_flag & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG)
-     //&& (current_instance_in_use_flag & BRICK_HIDE_FLAG) == 0)
+        //&& (current_instance_in_use_flag & BRICK_HIDE_FLAG) == 0)
     {
         let prev_index : u32 = atomicAdd(&sculpt_indirect.brick_count, 1u);
 
