@@ -116,10 +116,10 @@ class SculptEditor : public BaseEditor {
     bool was_material_picked    = false;
 
     struct {
-        glm::vec3 prev_controller_pos = {};
-        glm::vec3 controller_velocity = {};
-        glm::vec3 controller_acceleration = {};
-        glm::vec3 controller_frame_distance = {};
+        glm::vec3 prev_position = {};
+        glm::vec3 velocity = {};
+        glm::vec3 acceleration = {};
+        glm::vec3 frame_distance = {};
         glm::vec3 prev_edit_position = {};
     } controller_position_data;
 
