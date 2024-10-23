@@ -164,7 +164,7 @@ fn compute()
 
     var intersected_distance : f32 = 10000000.0;
 
-    let curr_idx : u32 = ray_sculpt_instances.instance_indices[ray_sculpt_instances.curr_instance_idx];
+    let curr_idx : u32 = ray_sculpt_instances.curr_instance_idx;
     ray_sculpt_instances.curr_instance_idx = ray_sculpt_instances.curr_instance_idx + 1u;
 
     let sculpt_instance_id : u32 = sculpt_instance_data[curr_idx].instance_id;
