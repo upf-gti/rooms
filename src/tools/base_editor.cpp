@@ -68,11 +68,12 @@ void BaseEditor::update(float delta_time)
             last_hover_time = 0.0f;
         }
 
-        float min_acceleration_trigger = 20.0f;
+        float min_acceleration_trigger = 40.0f;
 
         if (!main_panel->get_visibility() && glm::length(controller_movement_data[HAND_LEFT].acceleration) > min_acceleration_trigger) {
             main_panel->set_visibility(true);
             last_hover_time = 0.0f;
+            Engine::instance->vibrate_hand(HAND_LEFT, 0.25f, 0.25f);
         }
     }
 
