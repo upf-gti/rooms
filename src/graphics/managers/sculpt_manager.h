@@ -48,6 +48,7 @@ class SculptManager {
 
     bool previus_dispatch_had_preview = false;
     struct {
+        uint32_t sculpt_model_idx = 0u;
         Sculpt* sculpt = nullptr;
         bool needs_computing = false;
         sGPUStroke to_upload_stroke;
@@ -193,7 +194,7 @@ public:
     void update(WGPUCommandEncoder command_encoder);
 
     void update_sculpt(Sculpt* sculpt, const sStrokeInfluence& strokes_to_process, const uint32_t edit_count, const std::vector<Edit>& edits_to_process);
-    void set_preview_stroke(Sculpt* sculpt, sGPUStroke preview_stroke, const std::vector<Edit>& preview_edits);
+    void set_preview_stroke(Sculpt* sculpt, const uint32_t in_gpu_model_idx, sGPUStroke preview_stroke, const std::vector<Edit>& preview_edits);
 
     void test_ray_sculpts_intersection(const glm::vec3& ray_origin, const glm::vec3& ray_dir, const std::vector<Sculpt*> sculpts);
 

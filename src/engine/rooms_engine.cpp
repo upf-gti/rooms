@@ -194,6 +194,9 @@ void RoomsEngine::update(float delta_time)
         tutorial_active = !tutorial_active;
     }
 
+    // NOTE: main update was before env_map update, test if this here breacks anything
+    main_scene->update(delta_time);
+
     if (current_editor) {
 
         current_editor->update(delta_time);
@@ -210,8 +213,6 @@ void RoomsEngine::update(float delta_time)
     if (use_environment_map) {
         environment->update(delta_time);
     }
-
-    main_scene->update(delta_time);
 
     if (is_xr) {
         controller_mesh_right->set_transform(Transform::mat4_to_transform(Input::get_controller_pose(HAND_RIGHT)));

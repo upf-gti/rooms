@@ -154,11 +154,12 @@ void SculptManager::update_sculpt(Sculpt* sculpt, const sStrokeInfluence& stroke
     evaluations_to_process.push_back({ sculpt, strokes_to_process, edit_count, edits_to_process });
 }
 
-void SculptManager::set_preview_stroke(Sculpt* sculpt, sGPUStroke preview_stroke, const std::vector<Edit>& preview_edits) {
+void SculptManager::set_preview_stroke(Sculpt* sculpt, const uint32_t in_gpu_model_idx, sGPUStroke preview_stroke, const std::vector<Edit>& preview_edits) {
     preview.to_upload_stroke = preview_stroke;
     preview.to_upload_edit_list = &preview_edits;
     preview.to_upload_stroke.edit_count = preview_edits.size();
     preview.sculpt = sculpt;
+    preview.sculpt_model_idx = in_gpu_model_idx;
 
     preview.needs_computing = true;
 
@@ -671,6 +672,7 @@ void SculptManager::upload_preview_strokes() {
     //}
 
     // Upload preview data, first the stoke and tehn the edit list, since we are storing it in a vector
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(sdf_globals.preview_stroke_uniform.data), 0u, &preview.sculpt_model_idx, sizeof(uint32_t));
     webgpu_context->update_buffer(std::get<WGPUBuffer>(sdf_globals.preview_stroke_uniform.data), 4 * sizeof(uint32_t), (&preview.to_upload_stroke), sizeof(sGPUStroke));
     webgpu_context->update_buffer(std::get<WGPUBuffer>(sdf_globals.preview_stroke_uniform.data), 4 * sizeof(uint32_t) + sizeof(sGPUStroke), preview.to_upload_edit_list->data(), preview.to_upload_stroke.edit_count * sizeof(Edit));
 
