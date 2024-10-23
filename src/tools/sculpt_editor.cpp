@@ -18,7 +18,6 @@
 
 #include "shaders/mesh_forward.wgsl.gen.h"
 #include "shaders/mesh_transparent.wgsl.gen.h"
-#include "shaders/mesh_outline.wgsl.gen.h"
 
 #include "engine/rooms_engine.h"
 #include "engine/scene.h"
@@ -124,7 +123,7 @@ void SculptEditor::initialize()
         Material* outline_material = new Material();
         outline_material->set_cull_type(CULL_FRONT);
         outline_material->set_type(MATERIAL_UNLIT);
-        outline_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_outline::source, shaders::mesh_outline::path, outline_material));
+        outline_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, outline_material));
 
         mesh_preview_outline->set_surface_material_override(sphere_surface, outline_material);
     }
@@ -955,33 +954,29 @@ bool SculptEditor::must_render_mesh_preview_outline()
 void SculptEditor::update_edit_preview(const glm::vec4& dims)
 {
     // Recreate mesh depending on primitive parameters
-
     if (dimensions_dirty)
     {
+        glm::vec4 new_dims = dims + 0.002f;
+
         switch (stroke_parameters.get_primitive())
         {
         case SD_SPHERE:
-            mesh_preview->get_surface(0)->create_sphere(dims.x);
+            mesh_preview->get_surface(0)->create_sphere(new_dims.x);
             break;
         case SD_BOX:
-            if (dims.w > 0.001f) {
-                mesh_preview->get_surface(0)->create_rounded_box(dims.x, dims.y, dims.z, glm::clamp(dims.w / 0.08f, 0.0f, 1.0f) * glm::min(dims.x, glm::min(dims.y, dims.z)));
-            }
-            else {
-                mesh_preview->get_surface(0)->create_box(dims.x, dims.y, dims.z);
-            }
+            mesh_preview->get_surface(0)->create_rounded_box(new_dims.x, new_dims.y, new_dims.z, glm::clamp(dims.w / 0.08f, 0.0f, 1.0f) * glm::min(new_dims.x, glm::min(new_dims.y, new_dims.z)));
             break;
         case SD_CAPSULE:
-            mesh_preview->get_surface(0)->create_capsule(dims.x, dims.y);
+            mesh_preview->get_surface(0)->create_capsule(new_dims.x, new_dims.y);
             break;
         case SD_CONE:
-            mesh_preview->get_surface(0)->create_cone(dims.x, dims.y);
+            mesh_preview->get_surface(0)->create_cone(new_dims.x, new_dims.y);
             break;
         case SD_CYLINDER:
-            mesh_preview->get_surface(0)->create_cylinder(dims.x, dims.y * 2.f);
+            mesh_preview->get_surface(0)->create_cylinder(new_dims.x, new_dims.y * 2.f);
             break;
         case SD_TORUS:
-            mesh_preview->get_surface(0)->create_torus(dims.x, glm::clamp(dims.y, 0.0001f, dims.x));
+            mesh_preview->get_surface(0)->create_torus(new_dims.x, glm::clamp(new_dims.y, 0.0001f, dims.x));
             break;
         default:
             break;
