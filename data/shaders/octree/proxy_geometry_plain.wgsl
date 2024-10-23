@@ -350,8 +350,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     // TODO: move this to CPU!
     // From world to sculpt: make it relative to the sculpt center, and un-apply the rotation.
-    let inverse_model : mat4x4f = inverse(sculpt_instance_data[in.model_index].model);
-    let eye_in_sculpt = inverse_model * vec4f(camera_data.eye, 1.0);
+    let eye_in_sculpt = sculpt_instance_data[in.model_index].inv_model * vec4f(camera_data.eye, 1.0);
 
     // Get the sculpt space position relative to the current brick
     var eye_atlas_pos : vec3f = eye_in_sculpt.xyz - in.brick_center_in_sculpt_space;

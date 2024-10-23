@@ -158,7 +158,7 @@ void RoomsRenderer::init_sdf_globals()
             atlas_indices[i + 4u] = sdf_globals.octants_max_size - i - 1u;
         }
 
-        webgpu_context->update_buffer(std::get<WGPUBuffer>(sdf_globals.brick_buffers.data), 0u, atlas_indices, sizeof(uint32_t) * (sdf_globals.octants_max_size + 4u));
+        webgpu_context->update_buffer(std::get<WGPUBuffer>(sdf_globals.brick_buffers.data), 0u, atlas_indices, sizeof(uint32_t)* (sdf_globals.octants_max_size + 4u));
         delete[] atlas_indices;
     }
 
@@ -227,7 +227,7 @@ void RoomsRenderer::update(float delta_time)
 {
     Renderer::update(delta_time);
 
-    update_sculpts_and_instances(global_command_encoder);
+    upload_sculpt_models_and_instances(global_command_encoder);
 
     if (Input::is_mouse_pressed(GLFW_MOUSE_BUTTON_RIGHT)) {
         RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
@@ -240,20 +240,42 @@ void RoomsRenderer::update(float delta_time)
     }
 
     sculpt_manager->update(global_command_encoder);
+
+    
+    update_sculpts_indirect_buffers(global_command_encoder);
 }
 
-void RoomsRenderer::update_sculpts_and_instances(WGPUCommandEncoder command_encoder)
+void RoomsRenderer::update_sculpts_indirect_buffers(WGPUCommandEncoder command_encoder) {
+    if (sculpt_manager->has_performed_evaluation()) {
+        WGPUComputePassDescriptor compute_pass_desc = {};
+        WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(global_command_encoder, &compute_pass_desc);
+#ifndef NDEBUG
+        wgpuComputePassEncoderPushDebugGroup(compute_pass, "Update the sculpts instances");
+#endif
+
+        if (sculpts_render_lists.size() > 0u) {
+            sculpt_instances.prepare_indirect.set(compute_pass);
+            wgpuComputePassEncoderSetBindGroup(compute_pass, 0u, sculpt_instances.count_bindgroup, 0u, nullptr);
+
+            for (auto& it : sculpts_render_lists) {
+                Sculpt* current_sculpt = it.second->sculpt;
+                wgpuComputePassEncoderSetBindGroup(compute_pass, 1u, current_sculpt->get_sculpt_bindgroup(), 0u, nullptr);
+                wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1u, 1u, 1u);
+            }
+        }
+#ifndef NDEBUG
+        wgpuComputePassEncoderPopDebugGroup(compute_pass);
+#endif
+        wgpuComputePassEncoderEnd(compute_pass);
+        wgpuComputePassEncoderRelease(compute_pass);
+    }
+}
+
+void RoomsRenderer::upload_sculpt_models_and_instances(WGPUCommandEncoder command_encoder)
 {
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
     sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();
-
-    WGPUComputePassDescriptor compute_pass_desc = {};
-    WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
-
-#ifndef NDEBUG
-    wgpuComputePassEncoderPushDebugGroup(compute_pass, "Update the sculpts instances");
-#endif
 
     // Prepare the instances of the sculpts that are rendered on the curren frame
     // Generate buffer of instances
@@ -279,24 +301,9 @@ void RoomsRenderer::update_sculpts_and_instances(WGPUCommandEncoder command_enco
     // Upload all the instance data
     webgpu_context->update_buffer(std::get<WGPUBuffer>(global_sculpts_instance_data_uniform.data), 0u, models_for_upload.data(), sizeof(sSculptInstanceData) * in_frame_instance_count);
 
-    if (sculpts_render_lists.size() > 0u) {
-        sculpt_instances.prepare_indirect.set(compute_pass);
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 0u, sculpt_instances.count_bindgroup, 0u, nullptr);
-
-        for (auto& it : sculpts_render_lists) {
-            Sculpt* current_sculpt = it.second->sculpt;
-            wgpuComputePassEncoderSetBindGroup(compute_pass, 1u, current_sculpt->get_sculpt_bindgroup(), 0u, nullptr);
-            wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1u, 1u, 1u);
-        }
-    }
+    
 
 
-#ifndef NDEBUG
-    wgpuComputePassEncoderPopDebugGroup(compute_pass);
-#endif
-
-    wgpuComputePassEncoderEnd(compute_pass);
-    wgpuComputePassEncoderRelease(compute_pass);
 //#ifndef DISABLE_RAYMARCHER
 //    if (Input::is_mouse_pressed(GLFW_MOUSE_BUTTON_RIGHT))
 //    {

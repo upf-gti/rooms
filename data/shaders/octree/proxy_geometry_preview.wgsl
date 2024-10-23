@@ -173,10 +173,8 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     edit_range = in.edit_range;
 
-    let inverse_model : mat4x4f = inverse(sculpt_instance_data[preview_stroke.current_sculpt_idx].model);
-
     let ray_dir_world : vec3f = camera_to_vertex / camera_to_vertex_distance;
-    let ray_dir_sculpt : vec3f = (inverse_model * vec4f(ray_dir_world, 0.0)).xyz;
+    let ray_dir_sculpt : vec3f = (sculpt_instance_data[preview_stroke.current_sculpt_idx].inv_model * vec4f(ray_dir_world, 0.0)).xyz;
 
     let raymarch_distance : f32 = min(
         camera_to_vertex_distance,
