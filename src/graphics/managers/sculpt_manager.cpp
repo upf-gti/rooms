@@ -544,7 +544,9 @@ void SculptManager::evaluate_closest_ray_intersection(WGPUComputePassEncoder com
     // TODO: if bindless, we could do a workgroup/thread per ray
  
     // Upload ray uniform
+    uint32_t zero = 0u;
     webgpu_context->update_buffer(std::get<WGPUBuffer>(ray_info_uniform.data), 0u, &ray_to_upload, sizeof(sGPU_RayData));
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(ray_sculpt_instances_uniform.data), 0u, &zero, sizeof(uint32_t));
 
     ray_intersection_pipeline.set(compute_pass);
     wgpuComputePassEncoderSetBindGroup(compute_pass, 0u, ray_intersection_info_bind_group, 0u, nullptr);
@@ -759,7 +761,7 @@ void SculptManager::init_uniforms()
         ray_intersection_info_uniform.binding = 0u;
         ray_intersection_info_uniform.buffer_size = sizeof(sGPU_RayIntersection);
 
-        ray_sculpt_instances_uniform.data = webgpu_context->create_buffer(sizeof(uint32_t) * 4u, WGPUBufferUsage_Storage | WGPUBufferUsage_CopySrc | WGPUBufferUsage_CopyDst, nullptr, "Ray intersection result");
+        ray_sculpt_instances_uniform.data = webgpu_context->create_buffer(sizeof(uint32_t) * 4u, WGPUBufferUsage_Storage | WGPUBufferUsage_CopySrc | WGPUBufferUsage_CopyDst, nullptr, "Sculpt index counter");
         ray_sculpt_instances_uniform.binding = 1u;
         ray_sculpt_instances_uniform.buffer_size = sizeof(uint32_t) * 4;
     }
