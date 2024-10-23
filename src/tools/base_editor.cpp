@@ -5,6 +5,7 @@
 #include "framework/nodes/viewport_3d.h"
 #include "framework/nodes/container_2d.h"
 #include "framework/input.h"
+#include "framework/ui/io.h"
 
 #include "graphics/renderers/rooms_renderer.h"
 
@@ -42,6 +43,36 @@ void BaseEditor::update(float delta_time)
             pose = Input::get_controller_pose(HAND_LEFT);
             left_hand_box->set_xr_transform(Transform::mat4_to_transform(pose * m));
             left_hand_box->update(delta_time);
+        }
+
+        // Update controller speed & acceleration
+        for (uint8_t i = 0; i < HAND_COUNT; ++i) {
+            sControllerMovementData& data = controller_movement_data[i];
+            const glm::vec3 curr_controller_pos = Input::get_controller_position(i);
+            data.frame_distance = curr_controller_pos - data.prev_position;
+            const glm::vec3 curr_controller_velocity = (data.frame_distance) / delta_time;
+            data.acceleration = (curr_controller_velocity - data.velocity) / delta_time;
+            data.velocity = curr_controller_velocity;
+            data.prev_position = curr_controller_pos;
+        }
+
+        // Manage auto-hide of the menu in XR
+        if (!is_something_hovered()) {
+            last_hover_time += delta_time;
+
+            if (last_hover_time > 10.0f) {
+                main_panel->set_visibility(false);
+            }
+        }
+        else {
+            last_hover_time = 0.0f;
+        }
+
+        float min_acceleration_trigger = 20.0f;
+
+        if (!main_panel->get_visibility() && glm::length(controller_movement_data[HAND_LEFT].acceleration) > min_acceleration_trigger) {
+            main_panel->set_visibility(true);
+            last_hover_time = 0.0f;
         }
     }
 
@@ -93,4 +124,15 @@ void BaseEditor::update_shortcuts(const std::unordered_map<uint8_t, bool>& activ
         bool value = active_shortcuts.contains(mask) ? active_shortcuts.at(mask) : false;
         label->set_visibility(value);
     }
+}
+
+bool BaseEditor::is_something_hovered()
+{
+    if (!IO::any_hover()) {
+        return false;
+    }
+
+    auto xr_panel = dynamic_cast<ui::XRPanel*>(IO::get_hover());
+
+    return !xr_panel || (xr_panel && xr_panel->get_is_button());
 }

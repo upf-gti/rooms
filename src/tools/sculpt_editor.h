@@ -115,14 +115,6 @@ class SculptEditor : public BaseEditor {
     bool is_picking_material    = false;
     bool was_material_picked    = false;
 
-    struct {
-        glm::vec3 prev_position = {};
-        glm::vec3 velocity = {};
-        glm::vec3 acceleration = {};
-        glm::vec3 frame_distance = {};
-        glm::vec3 prev_edit_position = {};
-    } controller_position_data;
-
     glm::quat last_hand_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
     glm::vec3 last_hand_translation = {};
 
@@ -174,13 +166,11 @@ class SculptEditor : public BaseEditor {
 
     size_t max_recent_colors = 0;
     std::vector<Color> recent_colors;
-    float last_hover_time = 0.0f;
 
     void init_ui();
     void bind_events();
     void add_recent_color(const Color& color);
     void generate_shortcuts() override;
-    bool is_something_hovered();
 
     /*
     *	Splines

@@ -9,7 +9,6 @@
 #include "framework/nodes/button_2d.h"
 #include "framework/parsers/parse_gltf.h"
 #include "framework/parsers/parse_scene.h"
-#include "framework/ui/io.h"
 #include "framework/ui/keyboard.h"
 #include "framework/camera/camera.h"
 
@@ -370,7 +369,7 @@ bool SculptEditor::edit_update(float delta_time)
         }
         else {
             // Only stretch the edit when the acceleration of the hand exceds a threshold
-            is_stretching_edit = glm::length(glm::abs(controller_position_data.velocity)) > 0.20f;
+            is_stretching_edit = glm::length(glm::abs(controller_movement_data[HAND_RIGHT].velocity)) > 0.20f;
         }
     }
 
@@ -417,14 +416,14 @@ bool SculptEditor::edit_update(float delta_time)
     //if (glm::length(controller_position_data.controller_velocity) < 0.1f && glm::length(controller_position_data.controller_acceleration) < 10.1f) {
     // TODO(Juan): Check rotation?
     if (!stamp_enabled && was_tool_pressed && is_tool_used) {
-        if (glm::length(controller_position_data.prev_edit_position - edit_position_world) < (edit_to_add.dimensions.x / 3.0f)) {
+        if (glm::length(controller_movement_data[HAND_RIGHT].prev_edit_position - edit_position_world) < (edit_to_add.dimensions.x / 3.0f)) {
             is_tool_used = false;
         } else {
-            controller_position_data.prev_edit_position = edit_position_world;
+            controller_movement_data[HAND_RIGHT].prev_edit_position = edit_position_world;
         }
     }
     else {
-        controller_position_data.prev_edit_position = edit_position_world;
+        controller_movement_data[HAND_RIGHT].prev_edit_position = edit_position_world;
     }
 
     return is_tool_used;
@@ -435,26 +434,6 @@ void SculptEditor::update(float delta_time)
     if (!was_tutorial_shown) {
         static_cast<RoomsEngine*>(Engine::instance)->toggle_tutorial();
         was_tutorial_shown = true;
-    }
-
-    // Manage auto-hide of the menu in XR
-    if(true || renderer->get_openxr_available()) {
-        if (!is_something_hovered()) {
-            last_hover_time += delta_time;
-
-            if (last_hover_time > 2.0f) {
-                main_panel->set_visibility(false);
-            }
-        }
-        else {
-            last_hover_time = 0.0f;
-        }
-
-        float min_acceleration_trigger = 1.0f;
-
-        if (!main_panel->get_visibility() && glm::length(controller_position_data.acceleration) > min_acceleration_trigger) {
-            main_panel->set_visibility(true);
-        }
     }
 
     /*glm::mat4x4 m(1.0f);
@@ -480,16 +459,6 @@ void SculptEditor::update(float delta_time)
 
     preview_tmp_edits.clear();
     new_edits.clear();
-
-    // Update controller speed & acceleration
-    {
-        const glm::vec3 curr_controller_pos = Input::get_controller_position(HAND_RIGHT);
-        controller_position_data.frame_distance = curr_controller_pos - controller_position_data.prev_position;
-        const glm::vec3 curr_controller_velocity = (controller_position_data.frame_distance) / delta_time;
-        controller_position_data.acceleration = (curr_controller_velocity - controller_position_data.velocity) / delta_time;
-        controller_position_data.velocity = curr_controller_velocity;
-        controller_position_data.prev_position = curr_controller_pos;
-    }
 
     // Operation changer for the different tools
     {
@@ -1644,17 +1613,6 @@ void SculptEditor::add_recent_color(const Color& color)
         ui::Button2D* child = static_cast<ui::Button2D*>(color_picker->get_children()[i]);
         child->set_color(recent_colors[i]);
     }
-}
-
-bool SculptEditor::is_something_hovered()
-{
-    if (!IO::any_hover()) {
-        return false;
-    }
-
-    auto xr_panel = dynamic_cast<ui::XRPanel*>(IO::get_hover());
-
-    return !xr_panel || (xr_panel && xr_panel->get_is_button());
 }
 
 void SculptEditor::add_pbr_material_data(const std::string& name, const Color& base_color, float roughness, float metallic,
