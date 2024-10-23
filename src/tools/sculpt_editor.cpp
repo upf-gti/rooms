@@ -130,8 +130,6 @@ void SculptEditor::initialize()
         mesh_preview_outline->set_surface_material_override(sphere_surface, outline_material);
     }
 
-    enable_tool(SCULPT);
-
     // Default stroke config
     {
         stroke_parameters.set_primitive(SD_SPHERE);
@@ -150,6 +148,8 @@ void SculptEditor::initialize()
         add_pbr_material_data("charcoal", Color(0.02f, 0.02f, 0.02f, 1.0f), 0.5f, 0.0f);
         add_pbr_material_data("rusted_iron", Color(0.531f, 0.512f, 0.496f, 1.0f), 0.0f, 1.0f, 1.0f); // add noise
     }
+
+    enable_tool(SCULPT);
 
     /*ui::VContainer2D* test_root = new ui::VContainer2D("test_root", { 0.0f, 0.0f });
     test_root->set_centered(true);
@@ -437,7 +437,27 @@ void SculptEditor::update(float delta_time)
         was_tutorial_shown = true;
     }
 
-    glm::mat4x4 m(1.0f);
+    // Manage auto-hide of the menu in XR
+    if(true || renderer->get_openxr_available()) {
+        if (!is_something_hovered()) {
+            last_hover_time += delta_time;
+
+            if (last_hover_time > 2.0f) {
+                main_panel->set_visibility(false);
+            }
+        }
+        else {
+            last_hover_time = 0.0f;
+        }
+
+        float min_acceleration_trigger = 1.0f;
+
+        if (!main_panel->get_visibility() && glm::length(controller_position_data.acceleration) > min_acceleration_trigger) {
+            main_panel->set_visibility(true);
+        }
+    }
+
+    /*glm::mat4x4 m(1.0f);
 
     glm::vec3 eye = renderer->get_camera_eye();
     glm::vec3 new_pos = eye + renderer->get_camera_front() * 0.5f;
@@ -445,7 +465,7 @@ void SculptEditor::update(float delta_time)
     m = glm::translate(m, new_pos);
     m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
 
-    //test_slider_thermometer->set_model(m);
+    test_slider_thermometer->set_model(m);*/
 
     if (current_tool == NONE) {
         return;
@@ -1563,7 +1583,7 @@ void SculptEditor::bind_events()
             ui::Button2D* child = static_cast<ui::Button2D*>(samples_group->get_children()[i]);
             Node::bind(child->get_name(), [&](const std::string& signal, void* button) {
                 update_stroke_from_material(signal);
-                });
+            });
         }
     }
     else {

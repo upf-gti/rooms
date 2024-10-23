@@ -174,6 +174,7 @@ class SculptEditor : public BaseEditor {
 
     size_t max_recent_colors = 0;
     std::vector<Color> recent_colors;
+    float last_hover_time = 0.0f;
 
     void init_ui();
     void bind_events();
