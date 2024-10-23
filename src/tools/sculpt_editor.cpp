@@ -130,26 +130,26 @@ void SculptEditor::initialize()
         mesh_preview_outline->set_surface_material_override(sphere_surface, outline_material);
     }
 
-    // Deafult stroke config
+    enable_tool(SCULPT);
+
+    // Default stroke config
     {
         stroke_parameters.set_primitive(SD_SPHERE);
         stroke_parameters.set_operation(OP_SMOOTH_UNION);
         stroke_parameters.set_color_blend_operation(COLOR_OP_REPLACE);
         stroke_parameters.set_parameters({ 0.0f, -1.0f, 0.0f, 0.005f });
-    }
-
-    // Add pbr materials data
-    {
-        add_pbr_material_data("aluminium",   Color(0.912f, 0.914f, 0.92f, 1.0f),  0.0f, 1.0f);
-        add_pbr_material_data("charcoal",    Color(0.02f, 0.02f, 0.02f, 1.0f),    0.5f, 0.0f);
-        add_pbr_material_data("rusted_iron", Color(0.531f, 0.512f, 0.496f, 1.0f), 0.0f, 1.0f, 1.0f); // add noise
+        stroke_manager.change_stroke(stroke_parameters, 0u);
     }
 
     // Create UI and bind events
     init_ui();
 
-    enable_tool(SCULPT);
-    //renderer->change_stroke(stroke_parameters, 0u);
+    // Add pbr materials data
+    {
+        add_pbr_material_data("aluminium", Color(0.912f, 0.914f, 0.92f, 1.0f), 0.0f, 1.0f);
+        add_pbr_material_data("charcoal", Color(0.02f, 0.02f, 0.02f, 1.0f), 0.5f, 0.0f);
+        add_pbr_material_data("rusted_iron", Color(0.531f, 0.512f, 0.496f, 1.0f), 0.0f, 1.0f, 1.0f); // add noise
+    }
 
     /*ui::VContainer2D* test_root = new ui::VContainer2D("test_root", { 0.0f, 0.0f });
     test_root->set_centered(true);
@@ -341,7 +341,6 @@ bool SculptEditor::edit_update(float delta_time)
 
             edit_rotation_stamp = get_quat_between_vec3(stamp_origin_to_hand, glm::vec3(0.0f, -stamp_to_hand_distance, 0.0f)) * twist;
 
-
             // TODO: Remove when we can support BIG primitives
             float temp_limit = 0.23f;
 
@@ -371,7 +370,7 @@ bool SculptEditor::edit_update(float delta_time)
         }
         else {
             // Only stretch the edit when the acceleration of the hand exceds a threshold
-            is_stretching_edit = glm::length(glm::abs(controller_position_data.controller_velocity)) > 0.20f;
+            is_stretching_edit = glm::length(glm::abs(controller_position_data.velocity)) > 0.20f;
         }
     }
 
@@ -414,7 +413,6 @@ bool SculptEditor::edit_update(float delta_time)
 
     // Add edit based on controller movement
     //spdlog::info("Dist: {}", glm::length(controller_position_data.prev_edit_position - edit_position_world), glm::length(controller_position_data.controller_velocity), glm::length(controller_position_data.controller_acceleration));
-
 
     //if (glm::length(controller_position_data.controller_velocity) < 0.1f && glm::length(controller_position_data.controller_acceleration) < 10.1f) {
     // TODO(Juan): Check rotation?
@@ -466,11 +464,11 @@ void SculptEditor::update(float delta_time)
     // Update controller speed & acceleration
     {
         const glm::vec3 curr_controller_pos = Input::get_controller_position(HAND_RIGHT);
-        controller_position_data.controller_frame_distance = curr_controller_pos - controller_position_data.prev_controller_pos;
-        const glm::vec3 curr_controller_velocity = (controller_position_data.controller_frame_distance) / delta_time;
-        controller_position_data.controller_acceleration = (curr_controller_velocity - controller_position_data.controller_velocity) / delta_time;
-        controller_position_data.controller_velocity = curr_controller_velocity;
-        controller_position_data.prev_controller_pos = curr_controller_pos;
+        controller_position_data.frame_distance = curr_controller_pos - controller_position_data.prev_position;
+        const glm::vec3 curr_controller_velocity = (controller_position_data.frame_distance) / delta_time;
+        controller_position_data.acceleration = (curr_controller_velocity - controller_position_data.velocity) / delta_time;
+        controller_position_data.velocity = curr_controller_velocity;
+        controller_position_data.prev_position = curr_controller_pos;
     }
 
     // Operation changer for the different tools
@@ -584,7 +582,7 @@ void SculptEditor::update(float delta_time)
         must_change_stroke |= force_new_stroke;
 
         if (must_change_stroke) {
-            //renderer->change_stroke(stroke_parameters);
+            stroke_manager.change_stroke(stroke_parameters);
             stroke_parameters.set_dirty(false);
             force_new_stroke = false;
         }
@@ -693,7 +691,8 @@ void SculptEditor::update(float delta_time)
     }*/
 }
 
-void SculptEditor::set_preview_edits(const std::vector<Edit>& edit_previews) {
+void SculptEditor::set_preview_edits(const std::vector<Edit>& edit_previews)
+{
     sGPUStroke preview_stroke;
 
     preview_stroke.color_blending_op = stroke_parameters.get_color_blend_operation();
