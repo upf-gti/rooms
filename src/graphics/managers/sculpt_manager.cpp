@@ -24,6 +24,14 @@ void SculptManager::clean()
 {
     // TODO: Properly clean the sculpt manager!!!
 #ifndef DISABLE_RAYMARCHER
+    RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
+    WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
+
+    while (read_results.map_in_progress) {
+        wgpuDeviceTick(webgpu_context->device);
+    }
+    wgpuBufferUnmap(read_results.gpu_results_read_buffer);
+
     wgpuBindGroupRelease(evaluate_bind_group);
     wgpuBindGroupRelease(increment_level_bind_group);
     wgpuBindGroupRelease(write_to_texture_bind_group);
@@ -576,6 +584,7 @@ void SculptManager::evaluate_closest_ray_intersection(WGPUComputePassEncoder com
 #endif
 
     intersection_node_to_test = nullptr;
+    performed_evaluation = true;
 }
 
 void SculptManager::upload_strokes_and_edits(const uint32_t stroke_count, const std::vector<sGPUStroke>& strokes_to_compute, const uint32_t edits_count, const std::vector<Edit>& edits_to_upload)
@@ -917,11 +926,16 @@ void SculptManager::read_GPU_results() {
     while (!read_results.map_in_progress) {
         wgpuDeviceTick(webgpu_context->device);
     }
-    wgpuBufferUnmap(read_results.gpu_results_read_buffer);
+
+    read_results.map_in_progress = false;
+    
 }
 
 void get_mapped_result_buffer(WGPUBufferMapAsyncStatus status, void* user_payload) {
-    if (status != WGPUBufferMapAsyncStatus_Success) return;
+    if (status != WGPUBufferMapAsyncStatus_Success) {
+        wgpuBufferUnmap(((SculptManager::sGPU_ReadResults*)(user_payload))->gpu_results_read_buffer);
+        return;
+    }
     SculptManager::sGPU_ReadResults* result = (SculptManager::sGPU_ReadResults*)(user_payload);
 
     const void* gpu_buffer = wgpuBufferGetConstMappedRange(result->gpu_results_read_buffer, 0, 16);
@@ -929,4 +943,5 @@ void get_mapped_result_buffer(WGPUBufferMapAsyncStatus status, void* user_payloa
     memcpy(&result->loaded_results, gpu_buffer, sizeof(SculptManager::sGPU_ReadResults));
 
     result->map_in_progress = true;
+    wgpuBufferUnmap(result->gpu_results_read_buffer);
 }

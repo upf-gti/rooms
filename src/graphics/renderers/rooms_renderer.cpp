@@ -61,7 +61,7 @@ int RoomsRenderer::post_initialize()
 void RoomsRenderer::clean()
 {
     sculpt_manager->clean();
-    //delete sculpt_manager;
+    delete sculpt_manager;
     raymarching_renderer.clean();
 
     Renderer::clean();
@@ -301,22 +301,6 @@ void RoomsRenderer::upload_sculpt_models_and_instances(WGPUCommandEncoder comman
     // Upload all the instance data
     webgpu_context->update_buffer(std::get<WGPUBuffer>(global_sculpts_instance_data_uniform.data), 0u, models_for_upload.data(), sizeof(sSculptInstanceData) * in_frame_instance_count);
 
-    
-
-
-//#ifndef DISABLE_RAYMARCHER
-//    if (Input::is_mouse_pressed(GLFW_MOUSE_BUTTON_RIGHT))
-//    {
-        /* RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
-         WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
-
-         Camera* camera = rooms_renderer->get_camera();
-         glm::vec3 ray_dir = camera->screen_to_ray(Input::get_mouse_position());
-
-         octree_ray_intersect(camera->get_eye(), glm::normalize(ray_dir));*/
- /*   }
-#endif*/
-
 }
 
 uint32_t RoomsRenderer::add_sculpt_render_call(Sculpt* sculpt, const glm::mat4& model, const uint32_t flags)
@@ -350,7 +334,9 @@ void RoomsRenderer::render()
 {
     Renderer::render();
 
-    sculpt_manager->read_GPU_results();
+    if (get_sculpt_manager()->has_performed_evaluation()) {
+        sculpt_manager->read_GPU_results();
+    }
 
 #ifndef __EMSCRIPTEN__
     //last_frame_timestamps = get_timestamps();
