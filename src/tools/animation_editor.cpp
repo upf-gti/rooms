@@ -76,8 +76,8 @@ void AnimationEditor::initialize()
     animation_trajectory_mesh->set_name("Animation trajecotry");
     animation_trajectory_instance->set_frustum_culling_enabled(false);
 
-    InterleavedData empty;
-    const std::vector<InterleavedData> empty_vertex = { empty };
+    sInterleavedData empty;
+    const std::vector<sInterleavedData> empty_vertex = { empty };
     animation_trajectory_mesh->update_vertex_buffer(empty_vertex);
 
     animation_trajectory_instance->add_surface(animation_trajectory_mesh);
@@ -310,7 +310,7 @@ void AnimationEditor::update_gizmo(float delta_time)
 
 void AnimationEditor::update_animation_trajectory()
 {
-    std::vector<InterleavedData> vertices_to_upload;
+    std::vector<sInterleavedData> vertices_to_upload;
 
     auto& states = animations_data[(uint32_t)current_animation].states;
 
