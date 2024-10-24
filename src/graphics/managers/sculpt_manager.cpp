@@ -27,10 +27,11 @@ void SculptManager::clean()
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
 
-    while (read_results.map_in_progress) {
+   /* while (read_results.map_in_progress) {
         wgpuDeviceTick(webgpu_context->device);
-    }
+    }*/
     wgpuBufferUnmap(read_results.gpu_results_read_buffer);
+    wgpuBufferRelease(read_results.gpu_results_read_buffer);
 
     wgpuBindGroupRelease(evaluate_bind_group);
     wgpuBindGroupRelease(increment_level_bind_group);
@@ -920,15 +921,12 @@ void SculptManager::read_GPU_results() {
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
 
-    read_results.map_in_progress = false;
+    read_results.map_in_progress = true;
     wgpuBufferMapAsync(read_results.gpu_results_read_buffer, WGPUMapMode_Read, 0u, sizeof(sGPU_SculptResults), get_mapped_result_buffer, (void*)&read_results);
 
-    while (!read_results.map_in_progress) {
+    while (read_results.map_in_progress) {
         wgpuDeviceTick(webgpu_context->device);
     }
-
-    read_results.map_in_progress = false;
-    
 }
 
 void get_mapped_result_buffer(WGPUBufferMapAsyncStatus status, void* user_payload) {
@@ -942,6 +940,6 @@ void get_mapped_result_buffer(WGPUBufferMapAsyncStatus status, void* user_payloa
 
     memcpy(&result->loaded_results, gpu_buffer, sizeof(SculptManager::sGPU_ReadResults));
 
-    result->map_in_progress = true;
+    result->map_in_progress = false;
     wgpuBufferUnmap(result->gpu_results_read_buffer);
 }
