@@ -28,10 +28,14 @@ struct sGPU_SculptResults {
         float       ray_t = -FLT_MAX;
         uint32_t    instance_id = 0u;
         uint32_t    pad0;
+        float       intersection_metalness;
+        float       intersection_roughness;
+        glm::vec3   intersection_albedo;
         uint32_t    pad1;
-        uint32_t    pad2;
     } ray_intersection;
 };
+
+class SculptNode;
 
 class SculptManager {
 
@@ -73,8 +77,7 @@ class SculptManager {
 
     // Sculpt ray intersection
     uint32_t intersections_to_compute = 0u;
-    std::vector<Sculpt*> ray_intersection_to_compute;
-
+    SculptNode* intersection_node_to_test = nullptr;
     struct sGPU_RayData {
         glm::vec3   ray_origin;
         uint32_t    padd0;
@@ -88,6 +91,11 @@ class SculptManager {
         uint32_t    sculpt_id = 0u;
         float       ray_t = -FLT_MAX;
         uint32_t    instance_id = 0u;
+        uint32_t    pad0;
+        float       intersection_metalness;
+        float       intersection_roughness;
+        glm::vec3   intersection_albedo;
+        uint32_t    pad1;
     };
 
     Uniform         ray_info_uniform;
@@ -179,10 +187,9 @@ class SculptManager {
 public:
 
     struct sGPU_ReadResults {
-        WGPUBuffer      gpu_results_read_buffer = nullptr;
-        bool map_in_progress = false;
-
-        sGPU_SculptResults    loaded_results;
+        WGPUBuffer              gpu_results_read_buffer = nullptr;
+        bool                    map_in_progress = false;
+        sGPU_SculptResults      loaded_results;
     } read_results;
 
     void init();
@@ -196,11 +203,7 @@ public:
     void update_sculpt(Sculpt* sculpt, const sStrokeInfluence& strokes_to_process, const uint32_t edit_count, const std::vector<Edit>& edits_to_process);
     void set_preview_stroke(Sculpt* sculpt, const uint32_t in_gpu_model_idx, sGPUStroke preview_stroke, const std::vector<Edit>& preview_edits);
 
-    void test_ray_sculpts_intersection(const glm::vec3& ray_origin, const glm::vec3& ray_dir, const std::vector<Sculpt*> sculpts);
-
-    void set_ray_to_test(const glm::vec3& ray_origin, const glm::vec3& ray_dir);
-
-    void add_sculpt_to_ray_test(Sculpt* sculpt);
+    void set_ray_to_test(const glm::vec3& ray_origin, const glm::vec3& ray_dir, SculptNode* node_to_test = nullptr);
 
     Sculpt* create_sculpt();
     Sculpt* create_sculpt_from_history(const std::vector<Stroke>& stroke_history);

@@ -23,17 +23,6 @@
 
 class MeshInstance3D;
 
-struct RayIntersectionInfo {
-    uint32_t    intersected = 0;
-    uint32_t    tile_pointer = 0;
-    float       material_roughness = 0.0f;
-    float       material_metalness = 0.0f;
-    glm::vec3   material_albedo;
-    uint32_t    dummy1 = 0;
-    glm::vec3   intersection_position;
-    uint32_t    dummy2 = 0;
-};
-
 enum eSculptInstanceFlags : uint32_t {
     SCULPT_NOT_SELECTED = 0u,
     SCULPT_IS_OUT_OF_FOCUS = 0b1u,
@@ -74,15 +63,6 @@ class RaymarchingRenderer {
     MeshInstance3D* cube_mesh = nullptr;
 
     bool            render_preview = false;
- 
-    struct RayInfo {
-        glm::vec3 ray_origin;
-        float dummy0;
-        glm::vec3 ray_dir;
-        float dummy1;
-    } ray_info;
-
-    RayIntersectionInfo ray_intersection_info;
 
     uint32_t preview_edit_array_length = 0u;
     struct sPreviewStroke {

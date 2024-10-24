@@ -7,6 +7,7 @@
 #include "graphics/renderer_storage.h"
 
 #include "framework/resources/sculpt.h"
+#include "framework/nodes/sculpt_node.h"
 
 #include <spdlog/spdlog.h>
 
@@ -166,26 +167,16 @@ void SculptManager::set_preview_stroke(Sculpt* sculpt, const uint32_t in_gpu_mod
     static_cast<RoomsRenderer*>(RoomsRenderer::instance)->get_raymarching_renderer()->set_preview_render(true);
 }
 
-void SculptManager::test_ray_sculpts_intersection(const glm::vec3& ray_origin, const glm::vec3& ray_dir, const std::vector<Sculpt*> sculpts) {
+void SculptManager::set_ray_to_test(const glm::vec3& ray_origin, const glm::vec3& ray_dir, SculptNode *node_to_test) {
     if (intersections_to_compute > 0u) {
         spdlog::error("Only one ray test per frame!");
         assert(0u);
     }
 
-    ray_intersection_to_compute = sculpts;
-
-    ray_to_upload.ray_origin = ray_origin;
-    ray_to_upload.ray_direction = ray_dir;
-}
-
-void SculptManager::set_ray_to_test(const glm::vec3& ray_origin, const glm::vec3& ray_dir) {
     ray_to_upload.ray_origin = ray_origin;
     ray_to_upload.ray_direction = ray_dir;
     intersections_to_compute = 1u;
-}
-
-void SculptManager::add_sculpt_to_ray_test(Sculpt* sculpt) {
-    ray_intersection_to_compute.push_back(sculpt);
+    intersection_node_to_test = node_to_test;
 }
 
 Sculpt* SculptManager::create_sculpt()
@@ -544,24 +535,36 @@ void SculptManager::evaluate_closest_ray_intersection(WGPUComputePassEncoder com
     // TODO: if bindless, we could do a workgroup/thread per ray
  
     // Upload ray uniform
-    uint32_t zero = 0u;
+    uint32_t starting_idx = 0u;
     webgpu_context->update_buffer(std::get<WGPUBuffer>(ray_info_uniform.data), 0u, &ray_to_upload, sizeof(sGPU_RayData));
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(ray_sculpt_instances_uniform.data), 0u, &zero, sizeof(uint32_t));
+    if (intersection_node_to_test != nullptr) {
+        starting_idx = intersection_node_to_test->get_in_frame_render_instance_idx();
+    } 
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(ray_sculpt_instances_uniform.data), 0u, &starting_idx, sizeof(uint32_t));
+    
 
     ray_intersection_pipeline.set(compute_pass);
     wgpuComputePassEncoderSetBindGroup(compute_pass, 0u, ray_intersection_info_bind_group, 0u, nullptr);
     wgpuComputePassEncoderSetBindGroup(compute_pass, 1u, ray_sculpt_info_bind_group, 0u, nullptr);
     wgpuComputePassEncoderSetBindGroup(compute_pass, 3u, sdf_atlases_sampler_bindgroup, 0u, nullptr);
 
-    for (auto& it : rooms_renderer->get_sculpts_render_list()) {
-        Sculpt* curr_sculpt = it.second->sculpt;
-        const uint32_t instances_count = it.second->instance_count;
+    if (intersection_node_to_test == nullptr) {
+        for (auto& it : rooms_renderer->get_sculpts_render_list()) {
+            Sculpt* curr_sculpt = it.second->sculpt;
+            const uint32_t instances_count = it.second->instance_count;
+
+            wgpuComputePassEncoderSetBindGroup(compute_pass, 2u, curr_sculpt->get_octree_bindgroup(), 0u, nullptr);
+
+            for (uint32_t i = 0u; i < instances_count; i++) {
+                wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1u, 1u, 1u);
+            }
+        }
+    } else {
+        Sculpt* curr_sculpt = intersection_node_to_test->get_sculpt_data();
 
         wgpuComputePassEncoderSetBindGroup(compute_pass, 2u, curr_sculpt->get_octree_bindgroup(), 0u, nullptr);
 
-        for (uint32_t i = 0u; i < instances_count; i++) {
-            wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1u, 1u, 1u);
-        }
+        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1u, 1u, 1u);
     }
 
     ray_intersection_result_and_clean_pipeline.set(compute_pass);
@@ -571,6 +574,8 @@ void SculptManager::evaluate_closest_ray_intersection(WGPUComputePassEncoder com
 #ifndef NDEBUG
     wgpuComputePassEncoderPopDebugGroup(compute_pass);
 #endif
+
+    intersection_node_to_test = nullptr;
 }
 
 void SculptManager::upload_strokes_and_edits(const uint32_t stroke_count, const std::vector<sGPUStroke>& strokes_to_compute, const uint32_t edits_count, const std::vector<Edit>& edits_to_upload)

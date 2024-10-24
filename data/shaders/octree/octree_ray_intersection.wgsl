@@ -134,16 +134,6 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_dir : vec3f, max_distance : f
     return -1000.0;
 }
 
-fn has_found_intersection(tile_pointer : u32, sculpt_id : u32, ray_sculpt_instance_id : u32, ray_t : f32) {
-    if (ray_intersection_info.intersected == 0u || ray_t < ray_intersection_info.ray_t) {
-        ray_intersection_info.intersected = 1u;
-        ray_intersection_info.tile_pointer = tile_pointer;
-        ray_intersection_info.sculpt_id = sculpt_id;
-        ray_intersection_info.instance_id = ray_sculpt_instance_id;
-        ray_intersection_info.ray_t = ray_t;
-    }
-}
-
 
 @compute @workgroup_size(1, 1, 1)
 fn compute()
@@ -261,11 +251,18 @@ fn compute()
 
                             let ray_t : f32 = (raymarch_result_distance / SCULPT_TO_ATLAS_CONVERSION_FACTOR) + octants_to_visit[i].distance;
 
-                            has_found_intersection(octree.data[octree_index].tile_pointer, octree.octree_id, sculpt_instance_id, ray_t);
+                            if (ray_intersection_info.intersected == 0u || ray_t < ray_intersection_info.ray_t) {
+                                ray_intersection_info.intersected = 1u;
+                                ray_intersection_info.tile_pointer = octree.data[octree_index].tile_pointer;
+                                ray_intersection_info.sculpt_id = octree.octree_id;
+                                ray_intersection_info.instance_id = sculpt_instance_id;
+                                ray_intersection_info.ray_t = ray_t;
+                                ray_intersection_info.ray_albedo_color = material.albedo;   
+                                ray_intersection_info.ray_roughness = material.roughness;   
+                                ray_intersection_info.ray_metalness = material.metalness;
+                            }
 
-                            // ray_intersection_info.material_albedo = material.albedo;   
-                            // ray_intersection_info.material_roughness = material.roughness;   
-                            // ray_intersection_info.material_metalness = material.metalness;                           
+                                                       
                             // ray_intersection_info.intersected = 1u;
                             // ray_intersection_info.intersection_position = in_sculpture_point + ray_info.ray_dir * (raymarch_result_distance / SCULPT_TO_ATLAS_CONVERSION_FACTOR);//octants_to_visit[i].octant_center;
                             return;
