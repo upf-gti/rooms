@@ -78,9 +78,13 @@ void RaymarchingRenderer::clean()
 #ifndef DISABLE_RAYMARCHER
     wgpuBindGroupRelease(render_proxy_geometry_bind_group);
     wgpuBindGroupRelease(render_camera_bind_group);
+    wgpuBindGroupRelease(render_preview_camera_bind_group);
+    wgpuBindGroupRelease(sculpt_data_bind_preview_group);
 
     delete render_proxy_shader;
     delete render_preview_proxy_shader;
+
+    camera_uniform->destroy();
 #endif
 }
 

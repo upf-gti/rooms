@@ -2,6 +2,8 @@
 
 #include "rooms_includes.h"
 
+#include "engine/rooms_engine.h"
+
 #include "graphics/shader.h"
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/renderer_storage.h"
@@ -39,7 +41,6 @@ void SculptManager::clean()
     wgpuBindGroupRelease(octant_usage_ping_pong_bind_groups[0]);
     wgpuBindGroupRelease(octant_usage_ping_pong_bind_groups[1]);
     wgpuBindGroupRelease(gpu_results_bindgroup);
-    //wgpuBindGroupRelease(compute_octree_clean_octree_bind_group);
     wgpuBindGroupRelease(ray_sculpt_info_bind_group);
     wgpuBindGroupRelease(ray_intersection_info_bind_group);
     wgpuBindGroupRelease(sdf_atlases_sampler_bindgroup);
@@ -164,7 +165,8 @@ void SculptManager::update_sculpt(Sculpt* sculpt, const sStrokeInfluence& stroke
     evaluations_to_process.push_back({ sculpt, strokes_to_process, edit_count, edits_to_process });
 }
 
-void SculptManager::set_preview_stroke(Sculpt* sculpt, const uint32_t in_gpu_model_idx, sGPUStroke preview_stroke, const std::vector<Edit>& preview_edits) {
+void SculptManager::set_preview_stroke(Sculpt* sculpt, const uint32_t in_gpu_model_idx, sGPUStroke preview_stroke, const std::vector<Edit>& preview_edits)
+{
     preview.to_upload_stroke = preview_stroke;
     preview.to_upload_edit_list = &preview_edits;
     preview.to_upload_stroke.edit_count = preview_edits.size();
@@ -176,7 +178,8 @@ void SculptManager::set_preview_stroke(Sculpt* sculpt, const uint32_t in_gpu_mod
     static_cast<RoomsRenderer*>(RoomsRenderer::instance)->get_raymarching_renderer()->set_preview_render(true);
 }
 
-void SculptManager::set_ray_to_test(const glm::vec3& ray_origin, const glm::vec3& ray_dir, SculptNode *node_to_test) {
+void SculptManager::set_ray_to_test(const glm::vec3& ray_origin, const glm::vec3& ray_dir, SculptNode *node_to_test)
+{
     if (intersections_to_compute > 0u) {
         spdlog::error("Only one ray test per frame!");
         assert(0u);
@@ -441,7 +444,8 @@ void SculptManager::evaluate(WGPUComputePassEncoder compute_pass, const sEvaluat
     performed_evaluation = true;
 }
 
-void SculptManager::clean_previous_preview(WGPUComputePassEncoder compute_pass) {
+void SculptManager::clean_previous_preview(WGPUComputePassEncoder compute_pass)
+{
     if (!brick_unmark_pipeline.is_loaded()) {
         return;
     }
@@ -526,7 +530,8 @@ void SculptManager::evaluate_preview(WGPUComputePassEncoder compute_pass)
     previus_dispatch_had_preview = true;
 }
 
-void SculptManager::evaluate_closest_ray_intersection(WGPUComputePassEncoder compute_pass) {
+void SculptManager::evaluate_closest_ray_intersection(WGPUComputePassEncoder compute_pass)
+{
     if (!ray_intersection_pipeline.is_loaded() ||
         !ray_intersection_result_and_clean_pipeline.is_loaded()) {
         return;
@@ -659,7 +664,8 @@ void SculptManager::upload_strokes_and_edits(const uint32_t stroke_count, const 
     webgpu_context->update_buffer(std::get<WGPUBuffer>(stroke_context_list.data), sizeof(uint32_t) * 4 * 4, strokes_to_compute.data(), sizeof(sGPUStroke) * stroke_count);
 }
 
-void SculptManager::upload_preview_strokes() {
+void SculptManager::upload_preview_strokes()
+{
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
     sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();
@@ -917,29 +923,33 @@ void SculptManager::init_pipelines_and_bindgroups()
     }
 }
 
-void SculptManager::read_GPU_results() {
+void SculptManager::read_GPU_results()
+{
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
 
     read_results.map_in_progress = true;
+
     wgpuBufferMapAsync(read_results.gpu_results_read_buffer, WGPUMapMode_Read, 0u, sizeof(sGPU_SculptResults), get_mapped_result_buffer, (void*)&read_results);
 
     while (read_results.map_in_progress) {
         wgpuDeviceTick(webgpu_context->device);
     }
+
+    wgpuBufferUnmap(read_results.gpu_results_read_buffer);
 }
 
-void get_mapped_result_buffer(WGPUBufferMapAsyncStatus status, void* user_payload) {
-    if (status != WGPUBufferMapAsyncStatus_Success) {
-        wgpuBufferUnmap(((SculptManager::sGPU_ReadResults*)(user_payload))->gpu_results_read_buffer);
-        return;
-    }
+void get_mapped_result_buffer(WGPUBufferMapAsyncStatus status, void* user_payload)
+{
     SculptManager::sGPU_ReadResults* result = (SculptManager::sGPU_ReadResults*)(user_payload);
 
-    const void* gpu_buffer = wgpuBufferGetConstMappedRange(result->gpu_results_read_buffer, 0, 16);
-
-    memcpy(&result->loaded_results, gpu_buffer, sizeof(SculptManager::sGPU_ReadResults));
-
     result->map_in_progress = false;
-    wgpuBufferUnmap(result->gpu_results_read_buffer);
+
+    if (status != WGPUBufferMapAsyncStatus_Success) {
+        return;
+    }
+
+    size_t size = sizeof(sGPU_SculptResults);
+    const void* gpu_buffer = wgpuBufferGetConstMappedRange(result->gpu_results_read_buffer, 0, size);
+    memcpy_s(&result->loaded_results, size, gpu_buffer, size);
 }

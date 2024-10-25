@@ -36,6 +36,8 @@ struct sSDFGlobals {
     uint32_t        max_brick_count = 0u;
     uint32_t        empty_brick_and_removal_buffer_count = 0u;
     float           brick_world_size = 0.0f;
+
+    void clean();
 };
 
 class RoomsRenderer : public Renderer {

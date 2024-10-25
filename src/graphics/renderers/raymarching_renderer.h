@@ -46,19 +46,12 @@ class RaymarchingRenderer {
 
     Pipeline        render_preview_proxy_geometry_pipeline;
     Shader*         render_preview_proxy_shader = nullptr;
-    WGPUBindGroup   render_preview_proxy_geometry_bind_group = nullptr;
     WGPUBindGroup   render_preview_camera_bind_group = nullptr;
-
-    Pipeline        compute_octree_brick_unmark_pipeline;
-    Shader*         compute_octree_brick_unmark_shader = nullptr;
-    WGPUBindGroup   compute_octree_brick_unmark_bind_group = nullptr;
 
     WGPUBindGroup   sculpt_data_bind_preview_group = nullptr;
 
     Uniform*        camera_uniform;
     WGPUBindGroup   render_camera_bind_group = nullptr;
-
-    Uniform         compute_stroke_buffer_uniform;
 
     MeshInstance3D* cube_mesh = nullptr;
 
@@ -87,7 +80,7 @@ class RaymarchingRenderer {
 
 
     // DEBUG
-    MeshInstance3D *AABB_mesh;
+    MeshInstance3D* AABB_mesh = nullptr;
 
 public:
 
@@ -115,11 +108,4 @@ public:
         }
         preview_stroke.edit_list[preview_stroke.stroke.edit_count++] = edit;
     }
-
-    /*
-    *   Sculpt management
-    */
-
-    //void add_sculpt_instance(SculptInstance* instance);
-    //void remove_sculpt_instance(SculptInstance* instance);
 };

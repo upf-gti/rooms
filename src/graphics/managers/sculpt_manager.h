@@ -73,7 +73,6 @@ class SculptManager {
     // Sculpt deletion
     Pipeline        sculpt_delete_pipeline;
     Shader*         sculpt_delete_shader = nullptr;
-    WGPUBindGroup   compute_octree_clean_octree_bind_group = nullptr;
 
     // Sculpt ray intersection
     uint32_t intersections_to_compute = 0u;
@@ -210,7 +209,7 @@ public:
 
     bool has_performed_evaluation() { return performed_evaluation; }
 
-    void delete_sculpt(Sculpt * to_delete) {
+    void delete_sculpt(Sculpt* to_delete) {
         sculpts_to_delete.push_back(to_delete);
     }
 };

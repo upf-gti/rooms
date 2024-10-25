@@ -8,6 +8,17 @@
 #include "framework/camera/camera.h"
 #include "framework/input.h"
 
+void sSDFGlobals::clean()
+{
+    brick_buffers.destroy();
+    brick_copy_buffer.destroy();
+    indirect_buffers.destroy();
+    sdf_texture_uniform.destroy();
+    sdf_material_texture_uniform.destroy();
+    preview_stroke_uniform_2.destroy();
+    preview_stroke_uniform.destroy();
+    linear_sampler_uniform.destroy();
+}
 
 RoomsRenderer::RoomsRenderer() : Renderer()
 {
@@ -16,7 +27,11 @@ RoomsRenderer::RoomsRenderer() : Renderer()
 
 RoomsRenderer::~RoomsRenderer()
 {
+    if (sculpt_manager) {
+        delete sculpt_manager;
+    }
 
+    Renderer::clean();
 }
 
 int RoomsRenderer::pre_initialize(GLFWwindow* window, bool use_mirror_screen)
@@ -60,11 +75,17 @@ int RoomsRenderer::post_initialize()
 
 void RoomsRenderer::clean()
 {
+    sculpt_instances.uniform_count_buffer.destroy();
+    wgpuBindGroupRelease(sculpt_instances.count_bindgroup);
+    delete sculpt_instances.prepare_indirect_shader;
+
+    sdf_globals.clean();
+
     sculpt_manager->clean();
-    delete sculpt_manager;
+
     raymarching_renderer.clean();
 
-    Renderer::clean();
+    global_sculpts_instance_data_uniform.destroy();
 }
 
 void RoomsRenderer::init_sdf_globals()
@@ -197,7 +218,8 @@ void RoomsRenderer::init_sdf_globals()
     }
 }
 
-void RoomsRenderer::intialize_sculpt_render_instances() {
+void RoomsRenderer::intialize_sculpt_render_instances()
+{
     // Sculpt model buffer
     {
         // TODO(Juan): make this array dinamic
@@ -245,30 +267,35 @@ void RoomsRenderer::update(float delta_time)
     update_sculpts_indirect_buffers(global_command_encoder);
 }
 
-void RoomsRenderer::update_sculpts_indirect_buffers(WGPUCommandEncoder command_encoder) {
-    if (sculpt_manager->has_performed_evaluation()) {
-        WGPUComputePassDescriptor compute_pass_desc = {};
-        WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(global_command_encoder, &compute_pass_desc);
-#ifndef NDEBUG
-        wgpuComputePassEncoderPushDebugGroup(compute_pass, "Update the sculpts instances");
-#endif
-
-        if (sculpts_render_lists.size() > 0u) {
-            sculpt_instances.prepare_indirect.set(compute_pass);
-            wgpuComputePassEncoderSetBindGroup(compute_pass, 0u, sculpt_instances.count_bindgroup, 0u, nullptr);
-
-            for (auto& it : sculpts_render_lists) {
-                Sculpt* current_sculpt = it.second->sculpt;
-                wgpuComputePassEncoderSetBindGroup(compute_pass, 1u, current_sculpt->get_sculpt_bindgroup(), 0u, nullptr);
-                wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1u, 1u, 1u);
-            }
-        }
-#ifndef NDEBUG
-        wgpuComputePassEncoderPopDebugGroup(compute_pass);
-#endif
-        wgpuComputePassEncoderEnd(compute_pass);
-        wgpuComputePassEncoderRelease(compute_pass);
+void RoomsRenderer::update_sculpts_indirect_buffers(WGPUCommandEncoder command_encoder)
+{
+    if (!sculpt_manager->has_performed_evaluation()) {
+        return;
     }
+
+    WGPUComputePassDescriptor compute_pass_desc = {};
+    WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(global_command_encoder, &compute_pass_desc);
+
+#ifndef NDEBUG
+    wgpuComputePassEncoderPushDebugGroup(compute_pass, "Update the sculpts instances");
+#endif
+
+    if (sculpts_render_lists.size() > 0u) {
+        sculpt_instances.prepare_indirect.set(compute_pass);
+        wgpuComputePassEncoderSetBindGroup(compute_pass, 0u, sculpt_instances.count_bindgroup, 0u, nullptr);
+
+        for (auto& it : sculpts_render_lists) {
+            Sculpt* current_sculpt = it.second->sculpt;
+            wgpuComputePassEncoderSetBindGroup(compute_pass, 1u, current_sculpt->get_sculpt_bindgroup(), 0u, nullptr);
+            wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1u, 1u, 1u);
+        }
+    }
+
+#ifndef NDEBUG
+    wgpuComputePassEncoderPopDebugGroup(compute_pass);
+#endif
+    wgpuComputePassEncoderEnd(compute_pass);
+    wgpuComputePassEncoderRelease(compute_pass);
 }
 
 void RoomsRenderer::upload_sculpt_models_and_instances(WGPUCommandEncoder command_encoder)
