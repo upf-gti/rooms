@@ -9,7 +9,6 @@ class RoomsRenderer;
 class Node;
 class Node3D;
 class Animation;
-class Viewport3D;
 class Surface;
 
 namespace ui {
@@ -102,7 +101,6 @@ class AnimationEditor : public BaseEditor {
     bool inspector_transform_dirty = false;
 
     ui::Inspector* inspector = nullptr;
-    Viewport3D* inspect_panel_3d = nullptr;
 
     void init_ui();
     void bind_events();

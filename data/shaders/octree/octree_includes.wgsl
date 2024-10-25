@@ -7,6 +7,7 @@
 #define BRICK_REMOVAL_COUNT
 #define MAX_SUBDIVISION_SIZE
 #define MAX_STROKE_INFLUENCE_COUNT
+#define OCTREE_LAST_LEVEL_STARTING_IDX
 
 const SCULPT_TO_ATLAS_CONVERSION_FACTOR = (WORLD_SPACE_SCALE / SDF_RESOLUTION)  / (SCULPT_MAX_SIZE);
 const PIXEL_WORLD_SIZE = SCULPT_MAX_SIZE / WORLD_SPACE_SCALE;
@@ -85,9 +86,9 @@ struct Stroke {
 
 struct StrokeHistory {
     count : u32,
-    pad0:u32,
-    pad1:u32,
-    pad2:u32,
+    is_undo: u32,
+    pad1: u32,
+    pad2: u32,
     eval_aabb_min : vec3f,
     pad3 : f32,
     eval_aabb_max : vec3f,
@@ -104,6 +105,24 @@ struct OctreeNode {
     culling_id : u32
 };
 
+struct SculptIndirectCall {
+    vertex_count : u32,
+    instance_count : atomic<u32>,
+    first_vertex : u32,
+    first_instance : u32,
+    brick_count : atomic<u32>,
+    starting_model_idx : u32
+};
+
+struct SculptIndirectCall_NonAtomic {
+    vertex_count : u32,
+    instance_count : u32,
+    first_vertex : u32,
+    first_instance : u32,
+    brick_count : u32,
+    starting_model_idx : u32
+};
+
 struct Octree {
     current_level : atomic<u32>,
     atomic_counter : atomic<u32>,
@@ -118,13 +137,6 @@ struct Octree_NonAtomic {
     evaluation_mode : u32,
     octree_id : u32,
     data : array<OctreeNode>
-};
-
-struct MergeData {
-    reevaluation_AABB_min : vec3f,
-    reevaluate            : u32,
-    reevaluation_AABB_max : vec3f,
-    padding               : u32
 };
 
 struct ProxyInstanceData {
@@ -185,7 +197,6 @@ struct IndirectBuffers_ReadOnly {
 
 struct BrickBuffers {
     atlas_empty_bricks_counter : atomic<u32>,
-    brick_instance_counter : atomic<u32>,
     brick_removal_counter : atomic<u32>,
     preview_instance_counter : atomic<u32>,
 
@@ -200,7 +211,6 @@ struct BrickBuffers {
 
 struct BrickBuffers_ReadOnly {
     atlas_empty_bricks_counter : u32,
-    brick_instance_counter : u32,
     brick_removal_counter : u32,
     preview_instance_counter : u32,
     
@@ -213,24 +223,41 @@ struct BrickBuffers_ReadOnly {
     preview_instance_data : array<ProxyInstanceData, PREVIEW_PROXY_BRICKS_COUNT>
 };
 
-// struct SculptData {
-//     sculpt_start_position   : vec3f,
-//     dummy1                  : f32,
-//     sculpt_rotation         : vec4f,
-//     sculpt_inv_rotation     : vec4f
-// };
+struct GPUReturnResults {
+    // Evaluation
+    sculpt_aabb_min :   vec3f,
+    empty_brick_count : u32,
+    sculpt_aabb_max : vec3f,
+    evaluation_sculpt_id : u32,
 
-struct RayIntersectionInfo
-{
-    intersected : u32,
-    tile_pointer : u32,
-    material_roughness : f32,
-    material_metalness : f32,
-    material_albedo : vec3f,
-    dummy0 : u32,
-    intersection_position : vec3f,
-    dummy1 : u32,
+    // Ray interection
+    ray_has_intersected : u32,
+    ray_tile_pointer : u32,
+    ray_sculpt_id : u32,
+    ray_t : f32,
+
+    ray_sculpt_instance_id : u32,
+    pad0 : u32,
+    ray_metalness : f32,
+    ray_roughness : f32,
+
+    ray_albedo_color : vec3f,
+    pad1 : u32
 };
+
+struct SculptInstanceData {
+    flags       : u32,
+    instance_id : u32,
+    pad0        : u32,
+    pad1        : u32,
+    model       : mat4x4f,
+    inv_model   : mat4x4f
+};
+
+const SCULPT_INSTANCE_NOT_SELECTED = 0u;
+const SCULPT_INSTANCE_IS_OUT_OF_FOCUS = 1u;
+const SCULPT_INSTANCE_IS_POINTED = 2u;
+const SCULPT_INSTANCE_IS_SELECTED = 4u;
 
 struct CullingStroke {
     stroke_idx : u32,
@@ -263,3 +290,11 @@ fn culling_get_culling_data(stroke_pointer : u32, edit_start : u32, edit_count :
 fn culling_get_stroke_index(culling_data : u32) -> u32 {
     return (culling_data) >> 16;
 }
+
+
+struct sPaddedAABB {
+    min    : vec3f,
+    pad0        : u32,
+    max    : vec3f,
+    pad1        : u32
+};

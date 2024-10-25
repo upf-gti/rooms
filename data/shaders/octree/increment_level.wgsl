@@ -5,6 +5,8 @@
 
 @group(1) @binding(0) var<storage, read_write> octree : Octree;
 
+@group(2) @binding(0) var<storage, read_write> gpu_return_results: GPUReturnResults;
+
 /**
     Este shader se llama despues de cada pasada de evaluator, y su fin es configurar el
     indirect buffer para llamar al siguiente shader e incrementar el nivel actual
@@ -26,12 +28,7 @@ fn compute(@builtin(global_invocation_id) id: vec3<u32>)
 
     // Update the indirect buffer
     indirect_buffers.evaluator_subdivision_counter = num_dispatches;
-    indirect_buffers.brick_instance_count = brick_buffers.brick_instance_counter;
     indirect_buffers.brick_removal_counter = brick_buffers.brick_removal_counter;
-
-    if (level == 0u) {
-        brick_buffers.brick_instance_counter = 0u;
-    }
 
     if (level == OCTREE_DEPTH) {
         // If we evaluated the preview in the prev subdivision pass, we set it back.
@@ -40,8 +37,10 @@ fn compute(@builtin(global_invocation_id) id: vec3<u32>)
             indirect_buffers.preview_instance_count = brick_buffers.preview_instance_counter;
         } else {
             octree.evaluation_mode = EVALUATE_PREVIEW_STROKE_FLAG;
-           // octree.evaluation_mode = EVALUATE_PREVIEW_STROKE_FLAG;
+            // octree.evaluation_mode = EVALUATE_PREVIEW_STROKE_FLAG;
             indirect_buffers.preview_instance_count = brick_buffers.preview_instance_counter;
         }
+    } else if (level > OCTREE_DEPTH) {
+        gpu_return_results.empty_brick_count = brick_buffers.atlas_empty_bricks_counter;
     }
 }

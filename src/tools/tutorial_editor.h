@@ -30,8 +30,7 @@ protected:
     RoomsRenderer* renderer = nullptr;
 
     // Tutorial
-    Node2D* xr_panel_2d = nullptr;
-    Viewport3D* xr_panel_3d = nullptr;
+    Node2D* panel = nullptr;
 
     // Panels
     ui::XRPanel* panels[TUTORIAL_PANEL_COUNT];

@@ -2,7 +2,6 @@
 #include octree_includes.wgsl
 #include sdf_commons.wgsl
 
-@group(0) @binding(1) var<uniform> merge_data : MergeData;
 @group(0) @binding(5) var<storage, read_write> brick_buffers: BrickBuffers;
 @group(0) @binding(6) var<storage, read> stroke_history : StrokeHistory;
 @group(0) @binding(7) var<storage, read> edit_list : array<Edit>;
@@ -265,8 +264,9 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     // Note: the preview evaluation only happens at the end of the frame, so it must wait for
     //       any reevaluation and evaluation
     // TODO(Juan): fix undo redo reeval
+    let aabb_half_size : mat4x3f = get_loose_half_size_mat(preview_stroke.stroke.primitive);
     let is_evaluating_preview : bool = ((octree.evaluation_mode & EVALUATE_PREVIEW_STROKE_FLAG) == EVALUATE_PREVIEW_STROKE_FLAG);
-    let is_evaluating_undo : bool = (octree.evaluation_mode & UNDO_EVAL_FLAG) == UNDO_EVAL_FLAG;
+    let is_evaluating_undo : bool = (stroke_history.is_undo & UNDO_EVAL_FLAG) == UNDO_EVAL_FLAG;
 
     let octant_min : vec3f = octant_center - vec3f(level_half_size);
     let octant_max : vec3f = octant_center + vec3f(level_half_size);
@@ -341,7 +341,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                         }
                     }
 
-                    octree.data[octree_index].stroke_count = curr_stroke_count;
+                octree.data[octree_index].stroke_count = curr_stroke_count;
 
                 if (any_stroke_inside || is_evaluating_undo) {
                     // Increase the number of children from the current level
@@ -359,7 +359,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             // in order to find the goops (where the current stroke is taking affect)
             var curr_stroke_count : u32 = 0u;
             var brick_has_paint : bool = false;
-            for(var i : u32 = 0u; i < octree.data[parent_octree_index].stroke_count; i++) {
+            let stroke_count : u32 = octree.data[parent_octree_index].stroke_count;
+            for(var i : u32 = 0u; i < stroke_count; i++) {
                 let index : u32 = culling_get_stroke_index(stroke_culling[prev_culling_layer_index + i]);
                 if (intersection_AABB_AABB(eval_aabb_min, 
                                                eval_aabb_max, 
@@ -409,13 +410,13 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
             let int_distance = abs(distance(prev_interval, surface_interval));
             
-            if (int_distance > 0.00001) {
+            if (int_distance > 0.0001) {
                 if (surface_interval.x > 0.0) {
                     if (is_current_brick_filled) {
                         // delete any brick outside surface that was previosly filled
                         brick_remove(octree_index);
                     } else {
-                        // reset flags for potential interior bricks
+                        // // reset flags for potential interior bricks
                         octree.data[octree_index].tile_pointer = 0;
                         octree.data[octree_index].octant_center_distance = vec2f(10000.0, 10000.0);
                     }
@@ -425,7 +426,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                     brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
                 }
             } else if (brick_has_paint && is_current_brick_filled) {
-                    brick_reevaluate(octree_index);
+                brick_reevaluate(octree_index);
             }
         }
     } else {
@@ -443,7 +444,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
         if (level < OCTREE_DEPTH) {
             // Broad culling using only the incomming stroke
             // TODO: intersection with current edit AABB?
-            if (intersection_AABB_AABB(eval_aabb_min, eval_aabb_max, merge_data.reevaluation_AABB_min, merge_data.reevaluation_AABB_max)) {
+            if (intersection_AABB_AABB(eval_aabb_min, eval_aabb_max, preview_stroke.stroke.aabb_min, preview_stroke.stroke.aabb_max)) {
                 // Subdivide
                 // Increase the number of children from the current level
                 let prev_counter : u32 = atomicAdd(&octree.atomic_counter, 8);

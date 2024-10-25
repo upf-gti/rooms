@@ -2,7 +2,6 @@
 
 #include "framework/nodes/panel_2d.h"
 #include "framework/nodes/container_2d.h"
-#include "framework/nodes/viewport_3d.h"
 #include "framework/input.h"
 #include "framework/ui/io.h"
 
@@ -48,15 +47,13 @@ namespace ui {
 
         if (is_xr) {
 
-            HContainer2D* root_cursor = new HContainer2D("root_cursor", { 0.0f, 0.0f });
+            root_cursors_3d = new HContainer2D("root_cursor", { 0.0f, 0.0f }, ui::CREATE_3D);
 
             // Add all of them to the viewport 3d
 
             for (uint8_t i = 0u; i < MOUSE_CURSOR_COUNT; ++i) {
-                root_cursor->add_child(cursors[i]);
+                root_cursors_3d->add_child(cursors[i]);
             }
-
-            cursor_3d = new Viewport3D(root_cursor);
         }
     }
 
@@ -114,9 +111,9 @@ namespace ui {
             m = m * glm::toMat4(glm::quat_cast(hovered->get_global_viewport_model()));
             m = glm::translate(m, glm::vec3(-cursors_data[current_type].offset * hovered->get_scale(), 0.0f));
 
-            cursor_3d->set_transform(Transform::mat4_to_transform(m));
+            root_cursors_3d->set_xr_transform(Transform::mat4_to_transform(m));
 
-            cursor_3d->update(delta_time);
+            root_cursors_3d->update(delta_time);
 
             must_render_xr_cursor = true;
         }
@@ -135,7 +132,7 @@ namespace ui {
         if (is_xr) {
 
             if (must_render_xr_cursor) {
-                cursor_3d->render();
+                root_cursors_3d->render();
             }
 
         } else {

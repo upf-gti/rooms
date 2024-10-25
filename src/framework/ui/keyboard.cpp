@@ -15,7 +15,6 @@
 namespace ui {
 
     Node2D* Keyboard::keyboard_2d = nullptr;
-    Viewport3D* Keyboard::xr_keyboard = nullptr;
     XrKeyboardState Keyboard::state;
     glm::vec2 Keyboard::keyboard_size = {};
     ui::Text2D* Keyboard::caret = nullptr;
@@ -150,7 +149,7 @@ namespace ui {
         keyboard_size = glm::vec2(button_size * (max_col_count + 3u), button_size * (max_row_count + 2u) + input_height);
         Color panel_color = Color(0.0f, 0.0f, 0.0f, 0.8f);
 
-        keyboard_2d = new Node2D(name, { 0.0f, 0.0f }, { 1.0f, 1.0f });
+        keyboard_2d = new Node2D(name, { 0.0f, 0.0f }, { 1.0f, 1.0f }, ui::CREATE_3D);
 
         root_common = new ui::XRPanel(name + "_common", panel_color, { 0.0f, 0.f }, keyboard_size);
         root_common->render_background = false;
@@ -168,7 +167,7 @@ namespace ui {
         keyboard_2d->add_child(root_sym);
 
         // Input text
-        ui::Container2D* title_container = new ui::Container2D(name + "_title", { 0.0f, 0.0f }, { 512.0f, 48.f }, colors::BLUE);
+        ui::Container2D* title_container = new ui::Container2D(name + "_title", { 0.0f, 0.0f }, { 512.0f, 48.f });
         keyboard_2d->add_child(title_container);
 
         input_start_position = start_pos.x + 12.0f;
@@ -189,12 +188,6 @@ namespace ui {
         glm::vec2 screen_size = glm::vec2(static_cast<float>(webgpu_context->render_width), static_cast<float>(webgpu_context->render_height));
 
         keyboard_2d->translate({ screen_size.x * 0.5f - keyboard_size.x * 0.5f, 16.0f});
-
-        // Generate 3d version of the keyboard
-        if(Renderer::instance->get_openxr_available()) {
-            xr_keyboard = new Viewport3D(keyboard_2d);
-            xr_keyboard->set_active(true);
-        }
     }
 
     void Keyboard::render()
@@ -203,12 +196,7 @@ namespace ui {
             return;
         }
 
-        if (Renderer::instance->get_openxr_available()) {
-            xr_keyboard->render();
-        }
-        else {
-            keyboard_2d->render();
-        }
+        keyboard_2d->render();
     }
 
     void Keyboard::update(float delta_time)
@@ -255,8 +243,7 @@ namespace ui {
             // Rotate to have a good perspective
             //m = glm::rotate(m, glm::radians(35.f), { 1.0f, 0.0f, 0.0f });
 
-            xr_keyboard->set_transform(Transform::mat4_to_transform(m));
-            xr_keyboard->update(delta_time);
+            keyboard_2d->set_xr_transform(Transform::mat4_to_transform(m));
         }
         else {
 
@@ -274,9 +261,9 @@ namespace ui {
 
             /*if (Input::was_key_pressed(GLFW_KEY_LEFT)) { state.move_caret_left(); }
             if (Input::was_key_pressed(GLFW_KEY_RIGHT)) { state.move_caret_right(); }*/
-
-            keyboard_2d->update(delta_time);
         }
+
+        keyboard_2d->update(delta_time);
     }
 
     void Keyboard::request(std::function<void(const std::string&)> fn, const std::string& str, uint32_t max_length)

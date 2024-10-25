@@ -7,6 +7,8 @@
 #include "framework/ui/gizmo_3d.h"
 #include "framework/math/spline.h"
 
+#include "graphics/managers/stroke_manager.h"
+
 #include <map>
 
 enum eTool : uint8_t {
@@ -17,7 +19,7 @@ enum eTool : uint8_t {
 };
 
 class MeshInstance3D;
-class SculptInstance;
+class SculptNode;
 
 struct PrimitiveState {
     glm::vec4 dimensions;
@@ -52,11 +54,16 @@ class SculptEditor : public BaseEditor {
 
     MeshInstance3D* sculpt_area_box = nullptr;
 
-    SculptInstance* current_sculpt = nullptr;
+    SculptNode* current_sculpt = nullptr;
+
+    StrokeManager   stroke_manager = {};
 
     bool sculpt_started = false;
     bool was_tool_used = false;
     bool was_tutorial_shown = false;
+
+    bool called_undo = false;
+    bool called_redo = false;
 
     eTool current_tool = eTool::NONE;
 
@@ -107,14 +114,6 @@ class SculptEditor : public BaseEditor {
     bool snap_to_surface        = false;
     bool is_picking_material    = false;
     bool was_material_picked    = false;
-
-    struct {
-        glm::vec3 prev_controller_pos = {};
-        glm::vec3 controller_velocity = {};
-        glm::vec3 controller_acceleration = {};
-        glm::vec3 controller_frame_distance = {};
-        glm::vec3 prev_edit_position = {};
-    } controller_position_data;
 
     glm::quat last_hand_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
     glm::vec3 last_hand_translation = {};
@@ -172,7 +171,6 @@ class SculptEditor : public BaseEditor {
     void bind_events();
     void add_recent_color(const Color& color);
     void generate_shortcuts() override;
-    bool is_something_hovered();
 
     /*
     *	Splines
@@ -225,8 +223,10 @@ public:
     void enable_tool(eTool tool);
     void set_sculpt_started(bool value);
 
-    void set_current_sculpt(SculptInstance* sculpt_instance);
-    SculptInstance* get_current_sculpt() { return current_sculpt; }
+    void set_preview_edits(const std::vector<Edit> &edit_previews);
+
+    void set_current_sculpt(SculptNode* sculpt_instance);
+    SculptNode* get_current_sculpt() { return current_sculpt; }
 
     bool is_tool_being_used(bool stamp_enabled);
 
@@ -241,4 +241,7 @@ public:
             new_edits.push_back(edit);
         }
     }
+
+    void on_enter(void* data);
+    // void on_exit();
 };

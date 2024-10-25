@@ -1,8 +1,6 @@
 #include "engine/rooms_engine.h"
 #include "graphics/renderers/rooms_renderer.h"
 
-#include "spdlog/spdlog.h"
-
 int main()
 {
     RoomsEngine* engine = new RoomsEngine();
@@ -29,7 +27,7 @@ int main()
 
     renderer->set_required_limits(required_limits);
 
-    if (engine->initialize(renderer)) {
+    if (engine->initialize(renderer, { .window_title = "ROOMS" })) {
         return 1;
     }
 

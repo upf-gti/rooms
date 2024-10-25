@@ -209,6 +209,19 @@ AABB extern_get_edit_world_AABB(const Edit &edit, const sdPrimitive primitive, c
     return { aabb_center, edit_half_size };
 }
 
+AABB sGPUStroke::get_world_AABB_of_edit_list(const std::vector<Edit>& list) const {
+    AABB result;
+
+    for (uint32_t i = 0u; i < list.size(); i++) {
+        const Edit& edit = list[i];
+        const float smooth_margin = parameters.w * 2.0f;
+
+        result = merge_aabbs(result, extern_get_edit_world_AABB(edit, primitive, smooth_margin));
+    }
+
+    return result;
+}
+
 AABB Stroke::get_edit_world_AABB(const uint16_t edit_index) const
 {
     const Edit& edit = edits[edit_index];

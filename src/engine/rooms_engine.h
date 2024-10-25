@@ -9,11 +9,11 @@ class Node;
 class Node3D;
 class Environment3D;
 class BaseEditor;
-class SculptInstance;
 class SculptEditor;
 class SceneEditor;
 class TutorialEditor;
 class AnimationEditor;
+class SculptNode;
 class PlayerEditor;
 
 enum EditorType : uint8_t {
@@ -23,8 +23,6 @@ enum EditorType : uint8_t {
     TUTORIAL_EDITOR,
     PLAYER_EDITOR
 };
-
-#define _DESTROY_(x) if(x) { delete x; }
 
 class RoomsEngine : public Engine
 {
@@ -75,7 +73,7 @@ public:
     static void toggle_use_grid();
     static void toggle_use_environment_map();
 
-    void set_current_sculpt(SculptInstance* sculpt_instance);
+    void set_current_sculpt(SculptNode* sculpt_instance);
 
     void toggle_tutorial();
 

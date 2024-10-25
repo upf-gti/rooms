@@ -30,20 +30,19 @@ struct VertexOutput {
     @location(5) @interpolate(flat) voxel_center_sculpt_space : vec3f,
 };
 
+#dynamic @group(0) @binding(0) var<uniform> camera_data : CameraData;
+
 // @group(1) @binding(0) var<uniform> sculpt_data : SculptData;
 @group(1) @binding(1) var<storage, read> preview_stroke : PreviewStroke;
 @group(1) @binding(5) var<storage, read> brick_buffers: BrickBuffers_ReadOnly;
-@group(1) @binding(9) var<storage, read> sculpt_model_buffer: array<mat4x4f>;
-
-#dynamic @group(0) @binding(0) var<uniform> camera_data : CameraData;
+@group(1) @binding(9) var<storage, read> sculpt_instance_data: array<SculptInstanceData>;
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
-
     let instance_data : ptr<storage, ProxyInstanceData, read> = &brick_buffers.preview_instance_data[in.instance_id];
 
     var vertex_in_sculpt_space : vec3f = in.position * BRICK_WORLD_SIZE * 0.5 + instance_data.position;
-    var vertex_in_world_space : vec4f = (sculpt_model_buffer[preview_stroke.current_sculpt_idx] * vec4f(vertex_in_sculpt_space, 1.0));
+    var vertex_in_world_space : vec4f = (sculpt_instance_data[preview_stroke.current_sculpt_idx].model * vec4f(vertex_in_sculpt_space, 1.0));
 
     // let model_mat = mat4x4f(vec4f(BOX_SIZE, 0.0, 0.0, 0.0), vec4f(0.0, BOX_SIZE, 0.0, 0.0), vec4f(0.0, 0.0, BOX_SIZE, 0.0), vec4f(instance_pos.x, instance_pos.y, instance_pos.z, 1.0));
 
@@ -58,6 +57,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     // This is in an attribute for debugging
     out.vertex_in_world_space = vertex_in_world_space.xyz;
     out.voxel_center_sculpt_space = instance_data.position;
+
     return out;
 }
 
@@ -139,15 +139,15 @@ fn raymarch_sculpt_space(ray_origin_sculpt_space : vec3f, ray_dir : vec3f, max_d
 	}
 
     if (exit == 1u) {
-        let position_in_world : vec3f = (sculpt_model_buffer[preview_stroke.current_sculpt_idx] * vec4f(pos, 1.0)).xyz;
+        let position_in_world : vec3f = (sculpt_instance_data[preview_stroke.current_sculpt_idx].model * vec4f(pos, 1.0)).xyz;
 
         let epsilon : f32 = 0.000001; // avoids flashing when camera inside sdf
         let proj_pos : vec4f = view_proj * vec4f(position_in_world + ray_dir * epsilon, 1.0);
         depth = proj_pos.z / proj_pos.w;
 
         let normal : vec3f = estimate_normal_preview(pos);
-        let normal_world : vec3f = (sculpt_model_buffer[preview_stroke.current_sculpt_idx] * vec4f(normal, 0.0)).xyz;
-        let ray_dir_world : vec3f = (sculpt_model_buffer[preview_stroke.current_sculpt_idx] * vec4f(ray_dir, 0.0)).xyz;
+        let normal_world : vec3f = (sculpt_instance_data[preview_stroke.current_sculpt_idx].model * vec4f(normal, 0.0)).xyz;
+        let ray_dir_world : vec3f = (sculpt_instance_data[preview_stroke.current_sculpt_idx].model * vec4f(ray_dir, 0.0)).xyz;
 
         let material : SdfMaterial = get_material_preview();
         //let material : SdfMaterial = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);
@@ -173,10 +173,8 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     edit_range = in.edit_range;
 
-    let inverse_model : mat4x4f = inverse(sculpt_model_buffer[preview_stroke.current_sculpt_idx]);
-
     let ray_dir_world : vec3f = camera_to_vertex / camera_to_vertex_distance;
-    let ray_dir_sculpt : vec3f = (inverse_model * vec4f(ray_dir_world, 0.0)).xyz;
+    let ray_dir_sculpt : vec3f = (sculpt_instance_data[preview_stroke.current_sculpt_idx].inv_model * vec4f(ray_dir_world, 0.0)).xyz;
 
     let raymarch_distance : f32 = min(
         camera_to_vertex_distance,

@@ -6,8 +6,8 @@
 
 class Node;
 class Node2D;
-class MeshInstance3D;
 class Scene;
+class Room;
 
 namespace ui {
     class Inspector;
@@ -33,6 +33,7 @@ namespace shortcuts {
         EDIT_GROUP,
         ANIMATE_NODE,
         SELECT_NODE,
+        DUPLICATE_NODE,
         CLONE_NODE,
         PLACE_NODE,
         GROUP_NODE,
@@ -44,6 +45,7 @@ namespace shortcuts {
 class SceneEditor : public BaseEditor {
 
     Scene* main_scene = nullptr;
+    Room* current_room = nullptr;
 
     Node* selected_node = nullptr;
     Node* hovered_node = nullptr;
@@ -91,7 +93,6 @@ class SceneEditor : public BaseEditor {
     bool inspector_transform_dirty = false;
 
     ui::Inspector* inspector = nullptr;
-    Viewport3D* inspect_panel_3d = nullptr;
 
     std::unordered_map<uint8_t, bool> shortcuts;
 
@@ -113,6 +114,11 @@ class SceneEditor : public BaseEditor {
     void update_node_transform();
     void update_hovered_node();
 
+    /*
+    *   Room Player
+    */
+
+    void enter_room();
 
     /*
     *   Filesystem

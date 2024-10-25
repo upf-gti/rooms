@@ -2,7 +2,7 @@
 
 #include "framework/nodes/environment_3d.h"
 #include "framework/nodes/viewport_3d.h"
-#include "framework/nodes/sculpt_instance.h"
+#include "framework/nodes/sculpt_node.h"
 #include "framework/input.h"
 #include "framework/parsers/parse_scene.h"
 #include "framework/parsers/parse_gltf.h"
@@ -24,12 +24,13 @@
 #include "tools/animation_editor.h"
 #include "tools/player_editor.h"
 #include "tools/tutorial_editor.h"
-#include "framework/nodes/sculpt_instance.h"
+#include "framework/nodes/sculpt_node.h"
 
 #include "spdlog/spdlog.h"
 #include "imgui.h"
 
 #include <fstream>
+#include <graphics/managers/sculpt_manager.h>
 
 bool RoomsEngine::use_grid = true;
 bool RoomsEngine::use_environment_map = true;
@@ -194,6 +195,9 @@ void RoomsEngine::update(float delta_time)
         tutorial_active = !tutorial_active;
     }
 
+    // NOTE: main update was before env_map update, test if this here breacks anything
+    main_scene->update(delta_time);
+
     if (current_editor) {
 
         current_editor->update(delta_time);
@@ -207,18 +211,16 @@ void RoomsEngine::update(float delta_time)
 
     Node::check_controller_signals();
 
-    Engine::update(delta_time);
-
     if (use_environment_map) {
         environment->update(delta_time);
     }
-
-    main_scene->update(delta_time);
 
     if (is_xr) {
         controller_mesh_right->set_transform(Transform::mat4_to_transform(Input::get_controller_pose(HAND_RIGHT)));
         controller_mesh_left->set_transform(Transform::mat4_to_transform(Input::get_controller_pose(HAND_LEFT)));
     }
+
+    Engine::update(delta_time);
 }
 
 void RoomsEngine::render()
@@ -325,11 +327,8 @@ void RoomsEngine::toggle_use_environment_map()
     use_environment_map = !use_environment_map;
 }
 
-void RoomsEngine::set_current_sculpt(SculptInstance* sculpt_instance)
+void RoomsEngine::set_current_sculpt(SculptNode* sculpt_instance)
 {
-    RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
-    rooms_renderer->get_raymarching_renderer()->set_current_sculpt(sculpt_instance);
-
     sculpt_editor->set_current_sculpt(sculpt_instance);
 }
 
@@ -398,14 +397,17 @@ void RoomsEngine::render_gui()
         }
         if (ImGui::BeginTabItem("Rooms Debugger"))
         {
-            const RayIntersectionInfo& info = rooms_renderer->get_raymarching_renderer()->get_ray_intersection_info();
-            std::string intersected = info.intersected ? "yes" : "no";
+            sGPU_SculptResults &intersection_info = rooms_renderer->get_sculpt_manager()->read_results.loaded_results;// = rooms_renderer->get_raymarching_renderer()->get_ray_intersection_info();
+            std::string intersected = (intersection_info.ray_intersection.has_intersected == 1u) ? "yes" : "no";
             ImGui::Text("Ray Intersection: %s", intersected.c_str());
-            ImGui::Text("Tile pointer: %d", info.tile_pointer);
-            ImGui::ColorEdit3("Picked albedo:", (float*)&info.material_albedo);
-            if (info.intersected) {
-                ImGui::Text("Intersection position :");
-                ImGui::Text("   : %.3f, %.3f, %.3f", info.intersection_position.x, info.intersection_position.y, info.intersection_position.z);
+            ImGui::Text("Tile pointer: %d", intersection_info.ray_intersection.tile_pointer);
+            ImGui::ColorEdit3("Picked albedo:", (float*)&intersection_info.ray_intersection.intersection_albedo);
+            ImGui::Text("Picked metalness: %.3f", intersection_info.ray_intersection.intersection_metalness);
+            ImGui::Text("Picked roughness: %.3f", intersection_info.ray_intersection.intersection_roughness);
+            if (intersection_info.ray_intersection.has_intersected) {
+                ImGui::Text("Intersection t : %.3f", intersection_info.ray_intersection.ray_t);
+                /*ImGui::Text("Intersection position :");
+                ImGui::Text("   : %.3f, %.3f, %.3f", info.intersection_position.x, info.intersection_position.y, info.intersection_position.z);*/
             }
 
             ImGui::Separator();

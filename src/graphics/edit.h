@@ -76,6 +76,22 @@ struct StrokeMaterial {
     Color       noise_color     = colors::WHITE;
 };
 
+struct sGPUStroke {
+    uint32_t        stroke_id = 0u;
+    uint32_t        edit_count = 0u;
+    sdPrimitive     primitive = SD_SPHERE;
+    sdOperation     operation = OP_SMOOTH_UNION;//4
+    glm::vec4	    parameters = { 0.f, -1.f, 0.f, 0.f }; // 4
+    glm::vec3	    aabb_min;// 4
+    ColorBlendOp    color_blending_op = ColorBlendOp::COLOR_OP_REPLACE;
+    glm::vec3	    aabb_max;
+    uint32_t        edit_list_index = 0u;// 4
+    // 48 bytes
+    StrokeMaterial material;
+
+    AABB get_world_AABB_of_edit_list(const std::vector<Edit> &list) const;
+};
+
 class StrokeParameters {
 
     sdPrimitive     primitive = SD_SPHERE;
@@ -128,6 +144,26 @@ struct Stroke {
     AABB get_edit_world_AABB(const uint16_t edit_index) const;
     AABB get_world_AABB() const;
     void get_AABB_intersecting_stroke(const AABB intersection_area, Stroke& resulting_stroke, const uint32_t item_to_exclude = 0u) const;
+};
+
+struct sStrokeInfluence {
+    uint32_t stroke_count = 0u;
+    uint32_t is_undo = 0u; // aligment issues when using vec3
+    uint32_t pad_0 = 0u;
+    uint32_t pad_2 = 0u;
+    glm::vec3 eval_aabb_min;
+    float pad1;
+    glm::vec3 eval_aabb_max;
+    float pad2;
+    glm::vec4 pad3;
+    std::vector<sGPUStroke> strokes;
+
+    void set_defaults() {
+        is_undo = 0u;
+        stroke_count = 0u;
+        eval_aabb_min = { 0.0f, 0.0f, 0.0f };
+        eval_aabb_max = { 0.0f, 0.0f, 0.0f };
+    }
 };
 
 struct PBRMaterialData {

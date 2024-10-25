@@ -5,7 +5,7 @@
 #include "framework/input.h"
 #include "framework/parsers/parse_scene.h"
 #include "framework/nodes/viewport_3d.h"
-#include "framework/nodes/sculpt_instance.h"
+#include "framework/nodes/sculpt_node.h"
 #include "framework/nodes/spot_light_3d.h"
 #include "framework/nodes/omni_light_3d.h"
 #include "framework/nodes/directional_light_3d.h"
@@ -18,6 +18,8 @@
 #include "framework/ui/keyboard.h"
 #include "framework/math/math_utils.h"
 #include "framework/camera/camera.h"
+#include "framework/resources/sculpt.h"
+#include "framework/resources/room.h"
 
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/renderer_storage.h"
@@ -41,16 +43,19 @@ void SceneEditor::initialize()
 
     main_scene = Engine::instance->get_main_scene();
 
+    current_room = new Room(main_scene);
+    current_room->ref();
+
     gizmo.initialize(TRANSLATE);
 
     init_ui();
 
 #ifndef DISABLE_RAYMARCHER
-    SculptInstance* default_sculpt = new SculptInstance();
+    SculptNode* default_sculpt = new SculptNode();
     default_sculpt->set_name("default_sculpt");
     default_sculpt->initialize();
     RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
-    rooms_renderer->get_raymarching_renderer()->set_current_sculpt(default_sculpt);
+    //static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(default_sculpt);
     main_scene->add_node(default_sculpt);
 #endif
 
@@ -136,13 +141,10 @@ void SceneEditor::update(float delta_time)
             update_panel_transform();
         }
 
-        inspect_panel_3d->update(delta_time);
-
         BaseEditor::update_shortcuts(shortcuts);
     }
-    else {
-        inspector->update(delta_time);
-    }
+
+    inspector->update(delta_time);
 }
 
 void SceneEditor::render()
@@ -153,11 +155,7 @@ void SceneEditor::render()
 
     BaseEditor::render();
 
-    if (renderer->get_openxr_available()) {
-        inspect_panel_3d->render();
-    } else {
-        inspector->render();
-    }
+    inspector->render();
 }
 
 void SceneEditor::render_gui()
@@ -233,7 +231,7 @@ void SceneEditor::update_hovered_node()
 
 void SceneEditor::process_node_hovered()
 {
-    const bool sculpt_hovered = !!dynamic_cast<SculptInstance*>(hovered_node);
+    const bool sculpt_hovered = !!dynamic_cast<SculptNode*>(hovered_node);
     const bool group_hovered = !sculpt_hovered && !!dynamic_cast<Group3D*>(hovered_node);
     const bool a_pressed = Input::was_button_pressed(XR_BUTTON_A);
     const bool b_pressed = Input::was_button_pressed(XR_BUTTON_B);
@@ -258,25 +256,28 @@ void SceneEditor::process_node_hovered()
     }
     else if (is_shift_right_pressed) {
         shortcuts[shortcuts::ANIMATE_NODE] = true;
+        shortcuts[shortcuts::CLONE_NODE] = true;
         shortcuts[shortcuts::GROUP_NODE] = true;
         if (a_pressed) {
-            group_node(hovered_node);
+            clone_node(hovered_node, false);
         }
         else if (b_pressed) {
             selected_node = hovered_node;
             RoomsEngine::switch_editor(ANIMATION_EDITOR, hovered_node);
         }
+        else if (r_trigger_pressed) {
+            group_node(hovered_node);
+        }
     }
     else {
-        shortcuts[shortcuts::CLONE_NODE] = true;
+        shortcuts[shortcuts::DUPLICATE_NODE] = true;
         shortcuts[shortcuts::EDIT_SCULPT_NODE] = sculpt_hovered;
         if (a_pressed) {
-            clone_node(hovered_node);
+            clone_node(hovered_node, true);
         }
-        else if (b_pressed) {
+        else if (b_pressed && sculpt_hovered) {
             select_node(hovered_node, false);
-            RoomsEngine::switch_editor(SCULPT_EDITOR);
-            static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(static_cast<SculptInstance*>(hovered_node));
+            RoomsEngine::switch_editor(SCULPT_EDITOR, static_cast<SculptNode*>(hovered_node));
         }
         else if (r_trigger_pressed || Input::was_mouse_pressed(GLFW_MOUSE_BUTTON_LEFT)) {
             select_node(hovered_node, false);
@@ -284,23 +285,28 @@ void SceneEditor::process_node_hovered()
     }
 }
 
+void SceneEditor::enter_room()
+{
+    RoomsEngine::switch_editor(PLAYER_EDITOR, current_room);
+}
+
 void SceneEditor::init_ui()
 {
     auto webgpu_context = Renderer::instance->get_webgpu_context();
     glm::vec2 screen_size = glm::vec2(static_cast<float>(webgpu_context->render_width), static_cast<float>(webgpu_context->render_height));
 
-    main_panel_2d = new ui::HContainer2D("scene_editor_root", { 48.0f, screen_size.y - 200.f });
+    main_panel = new ui::HContainer2D("scene_editor_root", { 48.0f, screen_size.y - 200.f }, ui::CREATE_3D);
 
     // Color picker...
 
     {
         ui::ColorPicker2D* color_picker = new ui::ColorPicker2D("light_color_picker", colors::WHITE);
         color_picker->set_visibility(false);
-        main_panel_2d->add_child(color_picker);
+        main_panel->add_child(color_picker);
     }
 
     ui::VContainer2D* vertical_container = new ui::VContainer2D("scene_vertical_container", { 0.0f, 0.0f });
-    main_panel_2d->add_child(vertical_container);
+    main_panel->add_child(vertical_container);
 
     // Add main rows
     ui::HContainer2D* first_row = new ui::HContainer2D("row_0", { 0.0f, 0.0f });
@@ -316,6 +322,7 @@ void SceneEditor::init_ui()
     }
 
     // ** Clone node **
+    first_row->add_child(new ui::TextureButton2D("duplicate", "data/textures/clone.png"));
     first_row->add_child(new ui::TextureButton2D("clone", "data/textures/clone.png"));
 
     // ** Posible scene nodes **
@@ -345,7 +352,6 @@ void SceneEditor::init_ui()
         g_display->add_child(new ui::TextureButton2D("use_grid", "data/textures/grid.png", ui::ALLOW_TOGGLE | ui::SELECTED));
         g_display->add_child(new ui::TextureButton2D("use_environment", "data/textures/skybox.png", ui::ALLOW_TOGGLE | ui::SELECTED));
         g_display->add_child(new ui::FloatSlider2D("IBL_intensity", "data/textures/ibl_intensity.png", rooms_renderer->get_ibl_intensity(), ui::SliderMode::VERTICAL, ui::USER_RANGE/*ui::CURVE_INV_POW, 21.f, -6.0f*/, 0.0f, 4.0f, 2));
-        //g_display->add_child(new ui::IntSlider2D("TEST", "data/textures/ibl_intensity.png", 5));
         display_submenu->add_child(g_display);
         display_submenu->add_child(new ui::FloatSlider2D("exposure", "data/textures/exposure.png", rooms_renderer->get_exposure(), ui::SliderMode::VERTICAL, ui::USER_RANGE/*ui::CURVE_INV_POW, 21.f, -6.0f*/, 0.0f, 4.0f, 2));
         first_row->add_child(display_submenu);
@@ -354,6 +360,7 @@ void SceneEditor::init_ui()
     // ** Gizmo modes **
     {
         ui::ComboButtons2D* combo_gizmo_modes = new ui::ComboButtons2D("combo_gizmo_modes");
+        combo_gizmo_modes->add_child(new ui::TextureButton2D("no_gizmo", "data/textures/cross.png"));
         combo_gizmo_modes->add_child(new ui::TextureButton2D("move", "data/textures/translation_gizmo.png", ui::SELECTED));
         combo_gizmo_modes->add_child(new ui::TextureButton2D("rotate", "data/textures/rotation_gizmo.png"));
         combo_gizmo_modes->add_child(new ui::TextureButton2D("scale", "data/textures/scale_gizmo.png"));
@@ -366,6 +373,11 @@ void SceneEditor::init_ui()
         second_row->add_child(new ui::TextureButton2D("save", "data/textures/save.png"));
     }
 
+    // ** Player stuff **
+    {
+        second_row->add_child(new ui::TextureButton2D("enter_room", "data/textures/play.png"));
+    }
+
     // Create inspection panel (Nodes, properties, etc)
     {
         inspector = new ui::Inspector({ .name = "inspector_root", .title = "Scene Nodes",.position = {32.0f, 32.f}});
@@ -374,10 +386,6 @@ void SceneEditor::init_ui()
 
     if (renderer->get_openxr_available())
     {
-        // create 3d viewports
-        main_panel_3d = new Viewport3D(main_panel_2d);
-        inspect_panel_3d = new Viewport3D(inspector);
-
         // Load controller UI labels
 
         // Thumbsticks
@@ -388,24 +396,23 @@ void SceneEditor::init_ui()
 
         // Left hand
         {
-            left_hand_box = new ui::VContainer2D("left_controller_root", { 0.0f, 0.0f });
+            left_hand_box = new ui::VContainer2D("left_controller_root", { 0.0f, 0.0f }, ui::CREATE_3D);
             left_hand_box->add_child(new ui::ImageLabel2D("Scene Panel", shortcuts::Y_BUTTON_PATH, shortcuts::TOGGLE_SCENE_INSPECTOR));
-            left_hand_ui_3D = new Viewport3D(left_hand_box);
         }
 
         // Right hand
         {
-            right_hand_box = new ui::VContainer2D("right_controller_root", { 0.0f, 0.0f });
+            right_hand_box = new ui::VContainer2D("right_controller_root", { 0.0f, 0.0f }, ui::CREATE_3D);
             right_hand_box->add_child(new ui::ImageLabel2D("Edit Sculpt", shortcuts::B_BUTTON_PATH, shortcuts::EDIT_SCULPT_NODE));
             right_hand_box->add_child(new ui::ImageLabel2D("Edit Group", shortcuts::B_BUTTON_PATH, shortcuts::EDIT_GROUP));
             right_hand_box->add_child(new ui::ImageLabel2D("Animate", "data/textures/buttons/r_grip_plus_b.png", shortcuts::ANIMATE_NODE, double_size));
-            right_hand_box->add_child(new ui::ImageLabel2D("Clone Node", shortcuts::A_BUTTON_PATH, shortcuts::CLONE_NODE));
+            right_hand_box->add_child(new ui::ImageLabel2D("Duplicate Node", shortcuts::A_BUTTON_PATH, shortcuts::DUPLICATE_NODE));
             right_hand_box->add_child(new ui::ImageLabel2D("Create Group", shortcuts::A_BUTTON_PATH, shortcuts::CREATE_GROUP));
             right_hand_box->add_child(new ui::ImageLabel2D("Add to Group", shortcuts::A_BUTTON_PATH, shortcuts::ADD_TO_GROUP));
-            right_hand_box->add_child(new ui::ImageLabel2D("Group Node", "data/textures/buttons/r_grip_plus_a.png", shortcuts::GROUP_NODE, double_size));
+            right_hand_box->add_child(new ui::ImageLabel2D("Copy Node", "data/textures/buttons/r_grip_plus_a.png", shortcuts::CLONE_NODE, double_size));
             right_hand_box->add_child(new ui::ImageLabel2D("Place Node", "data/textures/buttons/r_trigger.png", shortcuts::PLACE_NODE));
             right_hand_box->add_child(new ui::ImageLabel2D("Select Node", "data/textures/buttons/r_trigger.png", shortcuts::SELECT_NODE));
-            right_hand_ui_3D = new Viewport3D(right_hand_box);
+            right_hand_box->add_child(new ui::ImageLabel2D("Group Node", "data/textures/buttons/r_grip_plus_r_trigger.png", shortcuts::GROUP_NODE));
         }
     }
 
@@ -422,11 +429,12 @@ void SceneEditor::bind_events()
     });
 
     Node::bind("sculpt", [&](const std::string& signal, void* button) {
-        SculptInstance* new_sculpt = new SculptInstance();
+        SculptNode* new_sculpt = new SculptNode();
         new_sculpt->initialize();
         RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
         rooms_renderer->toogle_frame_debug();
-        rooms_renderer->get_raymarching_renderer()->set_current_sculpt(new_sculpt);
+
+        static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(new_sculpt);
         main_scene->add_node(new_sculpt);
         select_node(new_sculpt);
         inspector_dirty = true;
@@ -457,15 +465,17 @@ void SceneEditor::bind_events()
         });
     }
 
-    Node::bind("clone", [&](const std::string& signal, void* button) { clone_node(selected_node); });
+    Node::bind("duplicate", [&](const std::string& signal, void* button) { clone_node(selected_node, true); });
+    Node::bind("clone", [&](const std::string& signal, void* button) { clone_node(selected_node, false); });
 
     // Gizmo events
 
+    Node::bind("no_gizmo", [&](const std::string& signal, void* button) { gizmo.set_enabled(false); });
     Node::bind("move", [&](const std::string& signal, void* button) { gizmo.set_operation(TRANSLATE); });
     Node::bind("rotate", [&](const std::string& signal, void* button) { gizmo.set_operation(ROTATE); });
     Node::bind("scale", [&](const std::string& signal, void* button) { gizmo.set_operation(SCALE); });
 
-    // Export / Import (.room)
+    // Export / Import (.room) / Player
     {
         auto callback = [&](const std::string& output) {
             main_scene->serialize("data/exports/" + output + ".room");
@@ -475,6 +485,7 @@ void SceneEditor::bind_events()
 
         Node::bind("save", [&, fn = callback](const std::string& signal, void* button) { ui::Keyboard::request(fn, main_scene->get_name()); });
         Node::bind("load", [&](const std::string& signal, void* button) { inspect_exports(true); });
+        Node::bind("enter_room", [&](const std::string& signal, void* button) { enter_room(); });
     }
 }
 
@@ -492,36 +503,22 @@ void SceneEditor::clone_node(Node* node, bool copy)
         return;
     }
 
-    SculptInstance* current_sculpt = dynamic_cast<SculptInstance*>(node);
+    RoomsEngine* engine = static_cast<RoomsEngine*>(RoomsEngine::instance);
 
-    // Only clone sculpt nodes by now
-    if (current_sculpt == nullptr) {
-        return;
+    Node* new_node = NodeRegistry::get_instance()->create_node(node->get_node_type());
+    node->clone(new_node, copy);
+
+    SculptNode* sculpt_node = dynamic_cast<SculptNode*>(new_node);
+
+    if (sculpt_node) {
+        RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
+        rooms_renderer->toogle_frame_debug();
+        engine->set_current_sculpt(sculpt_node);
     }
-
-    SculptInstance* new_sculpt = nullptr;
-
-    // raw copy, everything is recreated
-    if (copy) {
-        new_sculpt = new SculptInstance();
-        new_sculpt->from_history(current_sculpt->get_stroke_history());
-    }
-
-    // instance copy, it should have different model, but uses same octree, etc.
-    else {
-        new_sculpt = new SculptInstance(current_sculpt);
-    }
-
-    new_sculpt->set_transform(current_sculpt->get_transform());
-    new_sculpt->set_name(current_sculpt->get_name() + "_copy");
-
-    RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
-    rooms_renderer->toogle_frame_debug();
-    rooms_renderer->get_raymarching_renderer()->set_current_sculpt(new_sculpt);
 
     // Add to scene and select as current
-    main_scene->add_node(new_sculpt);
-    select_node(new_sculpt);
+    main_scene->add_node(new_node);
+    select_node(new_node);
     inspector_dirty = true;
 }
 
@@ -665,7 +662,7 @@ void SceneEditor::update_panel_transform()
     m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
     m = glm::rotate(m, glm::radians(180.f), { 1.0f, 0.0f, 0.0f });
 
-    inspect_panel_3d->set_transform(Transform::mat4_to_transform(m));
+    inspector->set_xr_transform(Transform::mat4_to_transform(m));
 
     inspector_transform_dirty = false;
 }
@@ -736,7 +733,7 @@ void SceneEditor::inspector_from_scene(bool force)
         if (dynamic_cast<Light3D*>(node)) {
             inspect_node(node, NODE_LIGHT);
         }
-        else if (dynamic_cast<SculptInstance*>(node)) {
+        else if (dynamic_cast<SculptNode*>(node)) {
             inspect_node(node, NODE_SCULPT);
         }
         else if (dynamic_cast<Group3D*>(node)) {
@@ -748,11 +745,6 @@ void SceneEditor::inspector_from_scene(bool force)
     }
 
     Node::emit_signal(inspector->get_name() + "@children_changed", (void*)nullptr);
-
-    // Enable xr for the buttons that need it..
-    if (renderer->get_openxr_available()) {
-        inspector->disable_2d();
-    }
 
     inspector_dirty = false;
     inspector_transform_dirty = !inspector->get_visibility() || force;
@@ -792,10 +784,8 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
             select_node(n, false);
 
             // Set as current sculpt and go to sculpt editor
-            if (dynamic_cast<SculptInstance*>(n)) {
-                RoomsEngine::switch_editor(SCULPT_EDITOR);
-                // TODO: do this in the on_enter of the sculpt editor passing the current node
-                static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(static_cast<SculptInstance*>(n));
+            if (dynamic_cast<SculptNode*>(n)) {
+                RoomsEngine::switch_editor(SCULPT_EDITOR, static_cast<SculptNode*>(n));
             }
             else if (dynamic_cast<Group3D*>(n)) {
                 // TODO: Open group scene
@@ -821,7 +811,8 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
 
     if (flags & NODE_NAME) {
         std::string signal = node_name + std::to_string(node_signal_uid++) + "_label";
-        inspector->label(signal, node_name, (node == selected_node) ? ui::SELECTED : 0);
+        uint32_t flags = ui::TEXT_EVENTS | (node == selected_node ? ui::SELECTED : 0);
+        inspector->label(signal, node_name, flags);
 
         // Request keyboard and use the result to set the new node name. Not the nicest code, but anyway..
         {
@@ -909,11 +900,6 @@ void SceneEditor::inspect_light()
         });
     }
 
-    // Enable xr for the buttons that need it..
-    if (renderer->get_openxr_available()) {
-        inspector->disable_2d();
-    }
-
     inspector->end_line();
 
     inspector_dirty = false;
@@ -946,11 +932,6 @@ void SceneEditor::inspect_exports(bool force)
 
         inspector->label("empty", name);
         inspector->end_line();
-    }
-
-    // Enable xr for the buttons that need it..
-    if (renderer->get_openxr_available()) {
-        inspector->disable_2d();
     }
 
     inspector_transform_dirty = !inspector->get_visibility();

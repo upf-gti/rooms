@@ -3,9 +3,10 @@
 #include <string>
 #include <unordered_map>
 
+#include "framework/input_xr.h"
+
 class RoomsRenderer;
 class Node2D;
-class Viewport3D;
 
 namespace ui {
     class HContainer2D;
@@ -31,25 +32,32 @@ protected:
     bool is_shift_left_pressed = false;
     bool is_shift_right_pressed = false;
 
+    float last_hover_time = 0.0f;
+
+    struct sControllerMovementData {
+        glm::vec3 prev_position = {};
+        glm::vec3 velocity = {};
+        glm::vec3 acceleration = {};
+        glm::vec3 frame_distance = {};
+        glm::vec3 prev_edit_position = {};
+    };
+
+    sControllerMovementData controller_movement_data[HAND_COUNT];
+
     RoomsRenderer* renderer = nullptr;
 
     // Controller UI
     ui::VContainer2D* right_hand_box = nullptr;
     ui::VContainer2D* left_hand_box = nullptr;
-    Viewport3D* right_hand_ui_3D = nullptr;
-    Viewport3D* left_hand_ui_3D = nullptr;
 
     // Main panel UI
-    ui::HContainer2D* main_panel_2d = nullptr;
-    Viewport3D* main_panel_3d = nullptr;
-
-    // Tutorial
-    Node2D* xr_panel_2d = nullptr;
-    Viewport3D* xr_panel_3d = nullptr;
+    ui::HContainer2D* main_panel = nullptr;
 
     // Shortcuts
     virtual void generate_shortcuts() {}
     void update_shortcuts(const std::unordered_map<uint8_t, bool>& active_shortcuts);
+
+    bool is_something_hovered();
 
 public:
 

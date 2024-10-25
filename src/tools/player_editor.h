@@ -2,7 +2,12 @@
 
 #include "base_editor.h"
 
+class Room;
+
 class PlayerEditor : public BaseEditor {
+
+    Room* current_room = nullptr;
+
 public:
 
     PlayerEditor() {};
