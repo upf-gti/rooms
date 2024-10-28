@@ -359,9 +359,16 @@ void SceneEditor::init_ui()
         // first_row->add_child(new ui::TextureButton2D("scene_redo", "data/textures/redo.png"));
     }
 
-    // ** Clone node **
-    first_row->add_child(new ui::TextureButton2D("duplicate", "data/textures/clone.png"));
-    first_row->add_child(new ui::TextureButton2D("clone", "data/textures/clone.png"));
+    first_row->add_child(new ui::TextureButton2D("deselect", "data/textures/cross.png"));
+
+    // ** Node actions **
+    {
+        ui::ButtonSubmenu2D* node_actions_submenu = new ui::ButtonSubmenu2D("node_actions", "data/textures/cube.png");
+        node_actions_submenu->add_child(new ui::TextureButton2D("group", "data/textures/group.png"));
+        node_actions_submenu->add_child(new ui::TextureButton2D("duplicate", "data/textures/clone.png"));
+        node_actions_submenu->add_child(new ui::TextureButton2D("clone", "data/textures/clone_instance.png"));
+        first_row->add_child(node_actions_submenu);
+    }
 
     // ** Posible scene nodes **
     {
@@ -398,7 +405,7 @@ void SceneEditor::init_ui()
     // ** Gizmo modes **
     {
         ui::ComboButtons2D* combo_gizmo_modes = new ui::ComboButtons2D("combo_gizmo_modes");
-        combo_gizmo_modes->add_child(new ui::TextureButton2D("no_gizmo", "data/textures/cross.png"));
+        combo_gizmo_modes->add_child(new ui::TextureButton2D("no_gizmo", "data/textures/no_gizmo.png"));
         combo_gizmo_modes->add_child(new ui::TextureButton2D("move", "data/textures/translation_gizmo.png", ui::SELECTED));
         combo_gizmo_modes->add_child(new ui::TextureButton2D("rotate", "data/textures/rotation_gizmo.png"));
         combo_gizmo_modes->add_child(new ui::TextureButton2D("scale", "data/textures/scale_gizmo.png"));
@@ -460,11 +467,11 @@ void SceneEditor::init_ui()
 
 void SceneEditor::bind_events()
 {
-    Node::bind("gltf", [&](const std::string& signal, void* button) {
+    /*Node::bind("gltf", [&](const std::string& signal, void* button) {
         parse_scene("data/meshes/controllers/left_controller.glb", main_scene->get_nodes());
         select_node(main_scene->get_nodes().back());
         inspector_dirty = true;
-    });
+    });*/
 
     Node::bind("sculpt", [&](const std::string& signal, void* button) {
         SculptNode* new_sculpt = new SculptNode();
