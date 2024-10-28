@@ -21,7 +21,7 @@ struct sGPU_SculptResults {
         uint32_t sculpt_id = 0u;
     } sculpt_eval_data;
 
-    struct {
+    struct sGPU_IntersectionData{
         uint32_t    has_intersected = 0u;
         uint32_t    tile_pointer = 0u;
         uint32_t    sculpt_id = 0u;

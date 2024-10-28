@@ -47,8 +47,14 @@ class SceneEditor : public BaseEditor {
     Scene* main_scene = nullptr;
     Room* current_room = nullptr;
 
+    /*
+    *   Input stuff
+    */
+
     Node* selected_node = nullptr;
     Node* hovered_node = nullptr;
+
+    bool select_action_pressed = false;
 
     /*
     *   Gizmo stuff

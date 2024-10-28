@@ -30,6 +30,8 @@
 #include "engine/rooms_engine.h"
 #include "engine/scene.h"
 
+#include "graphics/managers/sculpt_manager.h"
+
 #include "spdlog/spdlog.h"
 #include "imgui.h"
 
@@ -75,9 +77,28 @@ void SceneEditor::initialize()
             selected_node = nullptr;
             moving_node = false;
         }
-
         inspector_dirty = true;
     });
+
+    Node::bind("@on_gpu_intersection_results", [&](const std::string& sg, void* data) {
+        SculptManager::sGPU_ReadResults* gpu_result = reinterpret_cast<SculptManager::sGPU_ReadResults*>(data);
+        assert(gpu_result);
+        const sGPU_SculptResults::sGPU_IntersectionData& intersection = gpu_result->loaded_results.ray_intersection;
+        assert(intersection.has_intersected == 1u);
+
+        auto& nodes = main_scene->get_nodes();
+
+        for (auto node : nodes) {
+            SculptNode* sculpt_node = dynamic_cast<SculptNode*>(node);
+            if (!sculpt_node) {
+                continue;
+            }
+            if (sculpt_node->check_intersection(intersection.sculpt_id, intersection.instance_id)) {
+                select_node(sculpt_node, false);
+                break; // No more intersections to check..
+            }
+        }
+     });
 }
 
 void SceneEditor::clean()
@@ -90,6 +111,11 @@ void SceneEditor::clean()
 void SceneEditor::update(float delta_time)
 {
     BaseEditor::update(delta_time);
+
+    // Update input actions
+    {
+        select_action_pressed = Input::was_trigger_pressed(HAND_RIGHT) || Input::was_mouse_pressed(GLFW_MOUSE_BUTTON_LEFT);
+    }
 
     if (exports_dirty) {
         get_export_files();
@@ -227,6 +253,15 @@ void SceneEditor::update_hovered_node()
             }
         }
     }
+
+    // Select sculpt
+
+    if (select_action_pressed) {
+        RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
+        Camera* camera = rooms_renderer->get_camera();
+        glm::vec3 ray_dir = camera->screen_to_ray(Input::get_mouse_position());
+        rooms_renderer->get_sculpt_manager()->set_ray_to_test(camera->get_eye(), glm::normalize(ray_dir));
+    }
 }
 
 void SceneEditor::process_node_hovered()
@@ -235,7 +270,6 @@ void SceneEditor::process_node_hovered()
     const bool group_hovered = !sculpt_hovered && !!dynamic_cast<Group3D*>(hovered_node);
     const bool a_pressed = Input::was_button_pressed(XR_BUTTON_A);
     const bool b_pressed = Input::was_button_pressed(XR_BUTTON_B);
-    const bool r_trigger_pressed = Input::was_trigger_pressed(HAND_RIGHT);
 
     if (group_hovered) {
         if (grouping_node) {
@@ -265,9 +299,12 @@ void SceneEditor::process_node_hovered()
             selected_node = hovered_node;
             RoomsEngine::switch_editor(ANIMATION_EDITOR, hovered_node);
         }
-        else if (r_trigger_pressed) {
+        else if (select_action_pressed) {
             group_node(hovered_node);
         }
+    }
+    else if (Input::was_key_pressed(GLFW_KEY_G)) {
+        group_node(hovered_node);
     }
     else {
         shortcuts[shortcuts::DUPLICATE_NODE] = true;
@@ -279,7 +316,8 @@ void SceneEditor::process_node_hovered()
             select_node(hovered_node, false);
             RoomsEngine::switch_editor(SCULPT_EDITOR, static_cast<SculptNode*>(hovered_node));
         }
-        else if (r_trigger_pressed || Input::was_mouse_pressed(GLFW_MOUSE_BUTTON_LEFT)) {
+        // do not select sculpts here, since we have to use gpu intersection results
+        else if (select_action_pressed && !sculpt_hovered) {
             select_node(hovered_node, false);
         }
     }
@@ -492,6 +530,9 @@ void SceneEditor::bind_events()
 void SceneEditor::select_node(Node* node, bool place)
 {
     selected_node = node;
+
+    // Update inspector selection
+    Node::emit_signal(node->get_name() + "_label@selected", (void*)nullptr);
 
     // To allow the user to move the node at the beginning
     moving_node = place && is_gizmo_usable() && renderer->get_openxr_available();
@@ -810,7 +851,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
     }
 
     if (flags & NODE_NAME) {
-        std::string signal = node_name + std::to_string(node_signal_uid++) + "_label";
+        std::string signal = node_name + "_label";
         uint32_t flags = ui::TEXT_EVENTS | (node == selected_node ? ui::SELECTED : 0);
         inspector->label(signal, node_name, flags);
 

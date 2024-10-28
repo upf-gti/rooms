@@ -45,7 +45,7 @@ void SculptNode::update(float delta_time)
     uint32_t flags = 0u;
     RoomsRenderer* renderer = static_cast<RoomsRenderer*>(Renderer::instance);
     RoomsEngine* engine = static_cast<RoomsEngine*>(Engine::instance);
-    sGPU_SculptResults& evaluation_results = renderer->get_sculpt_manager()->read_results.loaded_results;
+    const sGPU_SculptResults::sGPU_IntersectionData& intersection_results = renderer->get_sculpt_manager()->read_results.loaded_results.ray_intersection;
 
     if (engine->get_current_editor_type() == SCULPT_EDITOR) {
         if (engine->get_sculpt_editor()->get_current_sculpt() != this) {
@@ -53,16 +53,16 @@ void SculptNode::update(float delta_time)
         }
     }
 
-    if (renderer->get_sculpt_manager()->read_results.loaded_results.ray_intersection.has_intersected == 1u) {
+    if (intersection_results.has_intersected == 1u) {
 
-        if (sculpt_gpu_data->get_sculpt_id() == evaluation_results.ray_intersection.sculpt_id && in_frame_instance_id == evaluation_results.ray_intersection.instance_id) {
+        if (check_intersection(intersection_results.sculpt_id, intersection_results.instance_id)) {
             flags |= SCULPT_IS_POINTED;
         }
     }
     
     in_frame_instance_id = renderer->add_sculpt_render_call(sculpt_gpu_data, get_global_model(), flags);
 
-    //dynamic_cast<RoomsRenderer*>(Renderer::instance)->add_sculpt_render_call(sculpt_gpu_data, glm::translate(get_global_model(), {0.05, 0.0, 0.0}));
+    // static_cast<RoomsRenderer*>(Renderer::instance)->add_sculpt_render_call(sculpt_gpu_data, glm::translate(get_global_model(), {0.05, 0.0, 0.0}));
 }
 
 void SculptNode::render()
@@ -75,7 +75,7 @@ void SculptNode::initialize()
     sculpt_gpu_data = static_cast<RoomsRenderer*>(Renderer::instance)->get_sculpt_manager()->create_sculpt();
     sculpt_gpu_data->ref();
 
-    //dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->add_sculpt_instance(this);
+    //static_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->add_sculpt_instance(this);
 }
 
 void SculptNode::from_history(const std::vector<Stroke>& new_history)
@@ -149,6 +149,11 @@ void SculptNode::clone(Node* new_node, bool copy)
     else {
         new_sculpt->from_history(get_sculpt_data()->get_stroke_history());
     }
+}
+
+bool SculptNode::check_intersection(uint32_t sculpt_id, uint32_t instance_id)
+{
+    return (sculpt_gpu_data->get_sculpt_id() == sculpt_id) && (in_frame_instance_id == instance_id);
 }
 
 bool SculptNode::test_ray_collision(const glm::vec3& ray_origin, const glm::vec3& ray_direction, float& distance)

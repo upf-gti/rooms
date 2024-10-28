@@ -39,6 +39,7 @@ public:
 
     void clone(Node* new_node, bool copy = true) override;
     bool test_ray_collision(const glm::vec3& ray_origin, const glm::vec3& ray_direction, float& distance) override;
+    bool check_intersection(uint32_t sculpt_id, uint32_t instance_id);
 
     inline void set_sculpt_data(Sculpt* new_data) { sculpt_gpu_data = new_data; }
     void set_out_of_focus(const bool oof);

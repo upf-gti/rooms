@@ -24,17 +24,11 @@ void SculptManager::init()
 
 void SculptManager::clean()
 {
-    // TODO: Properly clean the sculpt manager!!!
 #ifndef DISABLE_RAYMARCHER
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
 
-   /* while (read_results.map_in_progress) {
-        wgpuDeviceTick(webgpu_context->device);
-    }*/
-    wgpuBufferUnmap(read_results.gpu_results_read_buffer);
     wgpuBufferRelease(read_results.gpu_results_read_buffer);
-
     wgpuBindGroupRelease(evaluate_bind_group);
     wgpuBindGroupRelease(increment_level_bind_group);
     wgpuBindGroupRelease(write_to_texture_bind_group);
@@ -75,8 +69,6 @@ void SculptManager::clean()
 
 void SculptManager::update(WGPUCommandEncoder command_encoder)
 {
-    performed_evaluation = false;
-
     // New render pass for the interseccions
     if (intersections_to_compute > 0u) {
         WGPUComputePassDescriptor compute_pass_desc = {};
@@ -937,6 +929,8 @@ void SculptManager::read_GPU_results()
     }
 
     wgpuBufferUnmap(read_results.gpu_results_read_buffer);
+
+    performed_evaluation = false;
 }
 
 void get_mapped_result_buffer(WGPUBufferMapAsyncStatus status, void* user_payload)
@@ -952,4 +946,10 @@ void get_mapped_result_buffer(WGPUBufferMapAsyncStatus status, void* user_payloa
     size_t size = sizeof(sGPU_SculptResults);
     const void* gpu_buffer = wgpuBufferGetConstMappedRange(result->gpu_results_read_buffer, 0, size);
     memcpy_s(&result->loaded_results, size, gpu_buffer, size);
+
+    if (result->loaded_results.ray_intersection.has_intersected == 1u) {
+        Node::emit_signal("@on_gpu_intersection_results", (void*)result);
+    }
+
+    Node::emit_signal("@on_gpu_results", (void*)result);
 }
