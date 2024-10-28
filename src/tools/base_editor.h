@@ -17,10 +17,12 @@ namespace shortcuts {
     // Left hand
     const std::string X_BUTTON_PATH = "data/textures/buttons/x.png";
     const std::string Y_BUTTON_PATH = "data/textures/buttons/y.png";
+    const std::string L_TRIGGER_PATH = "data/textures/buttons/l_trigger.png";
 
     // Right hand
     const std::string A_BUTTON_PATH = "data/textures/buttons/a.png";
     const std::string B_BUTTON_PATH = "data/textures/buttons/b.png";
+    const std::string R_TRIGGER_PATH = "data/textures/buttons/r_trigger.png";
 }
 
 class BaseEditor {

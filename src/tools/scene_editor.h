@@ -73,6 +73,7 @@ class SceneEditor : public BaseEditor {
     bool moving_node = false;
 
     void select_node(Node* node, bool place = true);
+    void deselect();
     void clone_node(Node* node, bool copy = true);
     void group_node(Node* node);
     void create_light_node(uint8_t type);

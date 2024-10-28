@@ -947,9 +947,9 @@ void get_mapped_result_buffer(WGPUBufferMapAsyncStatus status, void* user_payloa
     const void* gpu_buffer = wgpuBufferGetConstMappedRange(result->gpu_results_read_buffer, 0, size);
     memcpy_s(&result->loaded_results, size, gpu_buffer, size);
 
-    if (result->loaded_results.ray_intersection.has_intersected == 1u) {
+    /*if (result->loaded_results.ray_intersection.has_intersected == 1u) {
         Node::emit_signal("@on_gpu_intersection_results", (void*)result);
-    }
+    }*/
 
     Node::emit_signal("@on_gpu_results", (void*)result);
 }

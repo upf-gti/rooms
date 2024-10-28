@@ -80,22 +80,65 @@ void SceneEditor::initialize()
         inspector_dirty = true;
     });
 
-    Node::bind("@on_gpu_intersection_results", [&](const std::string& sg, void* data) {
+    Node::bind("@on_gpu_results", [&](const std::string& sg, void* data) {
+
+        hovered_node = nullptr;
+
+        if (moving_node) {
+            return;
+        }
+
         SculptManager::sGPU_ReadResults* gpu_result = reinterpret_cast<SculptManager::sGPU_ReadResults*>(data);
         assert(gpu_result);
         const sGPU_SculptResults::sGPU_IntersectionData& intersection = gpu_result->loaded_results.ray_intersection;
-        assert(intersection.has_intersected == 1u);
 
         auto& nodes = main_scene->get_nodes();
 
+        glm::vec3 ray_origin;
+        glm::vec3 ray_direction;
+
+        if (Renderer::instance->get_openxr_available()) {
+            ray_origin = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
+            glm::mat4x4 select_hand_pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
+            ray_direction = get_front(select_hand_pose);
+        }
+        else {
+            Camera* camera = Renderer::instance->get_camera();
+            glm::vec3 ray_dir = camera->screen_to_ray(Input::get_mouse_position());
+            ray_origin = camera->get_eye();
+            ray_direction = glm::normalize(ray_dir);
+        }
+
+        float distance = 1e10f;
+
         for (auto node : nodes) {
-            SculptNode* sculpt_node = dynamic_cast<SculptNode*>(node);
-            if (!sculpt_node) {
+
+            Node3D* node_3d = dynamic_cast<Node3D*>(node);
+            if (!node_3d) {
                 continue;
             }
-            if (sculpt_node->check_intersection(intersection.sculpt_id, intersection.instance_id)) {
-                select_node(sculpt_node, false);
-                break; // No more intersections to check..
+
+            SculptNode* sculpt_node = dynamic_cast<SculptNode*>(node);
+
+            if (sculpt_node) {
+                if (intersection.has_intersected == 0u || !sculpt_node->check_intersection(intersection.sculpt_id, intersection.instance_id)) {
+                    continue;
+                }
+                if (intersection.ray_t < distance) {
+                    distance = intersection.ray_t;
+                    hovered_node = node;
+                }
+            }
+            else {
+                float node_distance = 1e10f;
+
+                if (node_3d->test_ray_collision(ray_origin, ray_direction, node_distance)) {
+
+                    if (node_distance < distance) {
+                        distance = node_distance;
+                        hovered_node = node;
+                    }
+                }
             }
         }
      });
@@ -130,6 +173,8 @@ void SceneEditor::update(float delta_time)
         process_node_hovered();
     }
     else if (moving_node) {
+
+        assert(selected_node);
 
         shortcuts[shortcuts::PLACE_NODE] = true;
 
@@ -212,56 +257,11 @@ void SceneEditor::render_gui()
 
 void SceneEditor::update_hovered_node()
 {
-    hovered_node = nullptr;
-
-    if (moving_node) {
-        return;
-    }
-
-    glm::vec3 ray_origin;
-    glm::vec3 ray_direction;
-
-    if (Renderer::instance->get_openxr_available()) {
-        ray_origin = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
-        glm::mat4x4 select_hand_pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
-        ray_direction = get_front(select_hand_pose);
-    }
-    else {
-        Camera* camera = Renderer::instance->get_camera();
-        glm::vec3 ray_dir = camera->screen_to_ray(Input::get_mouse_position());
-        ray_origin = camera->get_eye();
-        ray_direction = glm::normalize(ray_dir);
-    }
-
-    float distance = 1e10f;
-
-    for (auto node : main_scene->get_nodes()) {
-
-        Node3D* node_3d = dynamic_cast<Node3D*>(node);
-
-        if (!node_3d) {
-            continue;
-        }
-
-        float node_distance = 1e10f;
-
-        if (node_3d->test_ray_collision(ray_origin, ray_direction, node_distance)) {
-
-            if (node_distance < distance) {
-                distance = node_distance;
-                hovered_node = node;
-            }
-        }
-    }
-
-    // Select sculpt
-
-    if (select_action_pressed) {
-        RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
-        Camera* camera = rooms_renderer->get_camera();
-        glm::vec3 ray_dir = camera->screen_to_ray(Input::get_mouse_position());
-        rooms_renderer->get_sculpt_manager()->set_ray_to_test(camera->get_eye(), glm::normalize(ray_dir));
-    }
+    // Send rays each frame to detect hovered sculpts and other nodes
+    RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
+    Camera* camera = rooms_renderer->get_camera();
+    glm::vec3 ray_dir = camera->screen_to_ray(Input::get_mouse_position());
+    rooms_renderer->get_sculpt_manager()->set_ray_to_test(camera->get_eye(), glm::normalize(ray_dir));
 }
 
 void SceneEditor::process_node_hovered()
@@ -316,8 +316,7 @@ void SceneEditor::process_node_hovered()
             select_node(hovered_node, false);
             RoomsEngine::switch_editor(SCULPT_EDITOR, static_cast<SculptNode*>(hovered_node));
         }
-        // do not select sculpts here, since we have to use gpu intersection results
-        else if (select_action_pressed && !sculpt_hovered) {
+        else if (select_action_pressed) {
             select_node(hovered_node, false);
         }
     }
@@ -510,6 +509,8 @@ void SceneEditor::bind_events()
         });
     }
 
+    Node::bind("deselect", [&](const std::string& signal, void* button) { deselect(); });
+    Node::bind("group", [&](const std::string& signal, void* button) { group_node(selected_node); });
     Node::bind("duplicate", [&](const std::string& signal, void* button) { clone_node(selected_node, true); });
     Node::bind("clone", [&](const std::string& signal, void* button) { clone_node(selected_node, false); });
 
@@ -545,6 +546,15 @@ void SceneEditor::select_node(Node* node, bool place)
     moving_node = place && is_gizmo_usable() && renderer->get_openxr_available();
 }
 
+void SceneEditor::deselect()
+{
+    selected_node = nullptr;
+
+    moving_node = false;
+
+    ui::Text2D::select(nullptr);
+}
+
 void SceneEditor::clone_node(Node* node, bool copy)
 {
     if (!selected_node) {
@@ -572,6 +582,10 @@ void SceneEditor::clone_node(Node* node, bool copy)
 
 void SceneEditor::group_node(Node* node)
 {
+    if (!node) {
+        return;
+    }
+
     /*
     *   The idea is now to hover and accept another node:
     *   - If it does not have a group, create and group both nodes into it
