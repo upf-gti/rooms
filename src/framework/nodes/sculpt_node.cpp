@@ -55,8 +55,20 @@ void SculptNode::update(float delta_time)
 
     if (intersection_results.has_intersected == 1u) {
 
+        // check its intersection and its sibling ones
+
         if (check_intersection(intersection_results.sculpt_id, intersection_results.instance_id)) {
             flags |= SCULPT_IS_POINTED;
+        }
+
+        if (parent) {
+            for (auto child : parent->get_children()) {
+
+                SculptNode* sculpt_child = dynamic_cast<SculptNode*>(child);
+                if (sculpt_child && sculpt_child->check_intersection(intersection_results.sculpt_id, intersection_results.instance_id)) {
+                    flags |= SCULPT_IS_POINTED;
+                }
+            }
         }
     }
     

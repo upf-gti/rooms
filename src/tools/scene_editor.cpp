@@ -92,54 +92,30 @@ void SceneEditor::initialize()
         assert(gpu_result);
         const sGPU_SculptResults::sGPU_IntersectionData& intersection = gpu_result->loaded_results.ray_intersection;
 
-        auto& nodes = main_scene->get_nodes();
-
-        glm::vec3 ray_origin;
-        glm::vec3 ray_direction;
-
-        if (Renderer::instance->get_openxr_available()) {
-            ray_origin = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
-            glm::mat4x4 select_hand_pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
-            ray_direction = get_front(select_hand_pose);
-        }
-        else {
-            Camera* camera = Renderer::instance->get_camera();
-            glm::vec3 ray_dir = camera->screen_to_ray(Input::get_mouse_position());
-            ray_origin = camera->get_eye();
-            ray_direction = glm::normalize(ray_dir);
+        if (intersection.has_intersected == 0u) {
+            return;
         }
 
-        float distance = 1e10f;
-
-        for (auto node : nodes) {
-
-            Node3D* node_3d = dynamic_cast<Node3D*>(node);
-            if (!node_3d) {
-                continue;
-            }
-
+        std::function<void(Node* node)> check_intersections = [&](Node* node) {
             SculptNode* sculpt_node = dynamic_cast<SculptNode*>(node);
-
-            if (sculpt_node) {
-                if (intersection.has_intersected == 0u || !sculpt_node->check_intersection(intersection.sculpt_id, intersection.instance_id)) {
-                    continue;
+            if (sculpt_node && sculpt_node->check_intersection(intersection.sculpt_id, intersection.instance_id)) {
+                // hover the group
+                if (sculpt_node->get_parent()) {
+                    hovered_node = sculpt_node->get_parent();
+                    assert(dynamic_cast<Group3D*>(hovered_node));
                 }
-                if (intersection.ray_t < distance) {
-                    distance = intersection.ray_t;
-                    hovered_node = node;
-                }
-            }
-            else {
-                float node_distance = 1e10f;
-
-                if (node_3d->test_ray_collision(ray_origin, ray_direction, node_distance)) {
-
-                    if (node_distance < distance) {
-                        distance = node_distance;
-                        hovered_node = node;
-                    }
+                else {
+                    hovered_node = sculpt_node;
                 }
             }
+            for (auto child : node->get_children()) {
+                check_intersections(child);
+            }
+        };
+
+        auto& nodes = main_scene->get_nodes();
+        for (auto node : nodes) {
+            check_intersections(node);
         }
     });
 }
@@ -288,11 +264,17 @@ void SceneEditor::process_node_hovered()
     if (group_hovered) {
         if (grouping_node) {
             shortcuts[shortcuts::ADD_TO_GROUP] = true;
+            if (a_pressed) {
+                process_group();
+            }
         }
         else {
             shortcuts[shortcuts::EDIT_GROUP] = !is_shift_right_pressed;
             if (a_pressed) {
                 edit_group();
+            }
+            else if (select_action_pressed) {
+                select_node(hovered_node, false);
             }
         }
     }
@@ -316,9 +298,6 @@ void SceneEditor::process_node_hovered()
         else if (select_action_pressed) {
             group_node(hovered_node);
         }
-    }
-    else if (Input::was_key_pressed(GLFW_KEY_G)) {
-        group_node(hovered_node);
     }
     else {
         shortcuts[shortcuts::DUPLICATE_NODE] = true;
