@@ -1,13 +1,34 @@
 #include "group_3d.h"
 
+#include "framework/nodes/node_factory.h"
 #include "framework/math/intersections.h"
 
+#include <fstream>
+
 uint32_t Group3D::last_uid = 0;
+
+REGISTER_NODE_CLASS(Group3D)
 
 Group3D::Group3D()
 {
     node_type = "Group3D";
     name = "Group" + std::to_string(last_uid++);
+}
+
+void Group3D::serialize(std::ofstream& binary_scene_file)
+{
+    Node3D::serialize(binary_scene_file);
+
+    binary_scene_file.write(reinterpret_cast<char*>(&last_uid), sizeof(uint32_t));
+}
+
+void Group3D::parse(std::ifstream& binary_scene_file)
+{
+    Node3D::parse(binary_scene_file);
+
+    binary_scene_file.read(reinterpret_cast<char*>(&last_uid), sizeof(uint32_t));
+
+    update_pivot();
 }
 
 void Group3D::update_pivot()
