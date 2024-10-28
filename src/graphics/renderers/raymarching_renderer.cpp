@@ -23,7 +23,6 @@
 
 #include "spdlog/spdlog.h"
 
-
 /*
     Stroke management and lifecylce
         The begining and end of a stroke is managed by the scult_editor.
@@ -111,7 +110,8 @@ void RaymarchingRenderer::get_brick_usage(std::function<void(float, uint32_t)> c
     //callback(pct, brick_count);
 }
 
-void RaymarchingRenderer::render(WGPURenderPassEncoder render_pass, uint32_t camera_buffer_stride) {
+void RaymarchingRenderer::render(WGPURenderPassEncoder render_pass, uint32_t camera_buffer_stride)
+{
     render_raymarching_proxy(render_pass, camera_buffer_stride);
 
     if (render_preview) {
@@ -148,6 +148,11 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
 
     for (auto& it : rooms_renderer->get_sculpts_render_list()) {
         Sculpt* curr_sculpt = it.second->sculpt;
+
+        if (curr_sculpt->is_deleted()) {
+            continue;
+        }
+
         const uint32_t curr_sculpt_instance_count = 0u;
 
         wgpuRenderPassEncoderSetBindGroup(render_pass, 2u, curr_sculpt->get_readonly_sculpt_bindgroup(), 0u, nullptr);
@@ -163,7 +168,8 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
 #endif
 }
 
-void RaymarchingRenderer::render_preview_raymarching_proxy(WGPURenderPassEncoder render_pass, uint32_t camera_buffer_stride) {
+void RaymarchingRenderer::render_preview_raymarching_proxy(WGPURenderPassEncoder render_pass, uint32_t camera_buffer_stride)
+{
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();
     WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
@@ -236,8 +242,6 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
 
     RenderPipelineDescription desc = { .cull_mode = WGPUCullMode_Front };
     render_proxy_geometry_pipeline.create_render_async(render_proxy_shader, color_target, desc);
-
-
 
     // Proxy for Preview
     render_preview_proxy_shader = RendererStorage::get_shader("data/shaders/octree/proxy_geometry_preview.wgsl");

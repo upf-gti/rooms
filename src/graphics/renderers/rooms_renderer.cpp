@@ -54,7 +54,7 @@ int RoomsRenderer::post_initialize()
 
     init_sdf_globals();
 
-    intialize_sculpt_render_instances();
+    initialize_sculpt_render_instances();
 
     sculpt_manager = new SculptManager();
     sculpt_manager->init();
@@ -218,7 +218,7 @@ void RoomsRenderer::init_sdf_globals()
     }
 }
 
-void RoomsRenderer::intialize_sculpt_render_instances()
+void RoomsRenderer::initialize_sculpt_render_instances()
 {
     // Sculpt model buffer
     {
@@ -265,6 +265,26 @@ void RoomsRenderer::update(float delta_time)
 
     
     update_sculpts_indirect_buffers(global_command_encoder);
+}
+
+void RoomsRenderer::render()
+{
+    Renderer::render();
+
+    if (get_sculpt_manager()->has_performed_evaluation()) {
+        sculpt_manager->read_GPU_results();
+    }
+
+#ifndef __EMSCRIPTEN__
+    //last_frame_timestamps = get_timestamps();
+
+    //if (!last_frame_timestamps.empty() && sculpt_manager->has_performed_evaluation()) {
+    //    last_evaluation_time = last_frame_timestamps[0];
+    //}
+#endif
+
+    // For the next frame
+    sculpts_render_lists.clear();
 }
 
 void RoomsRenderer::update_sculpts_indirect_buffers(WGPUCommandEncoder command_encoder)
@@ -355,24 +375,4 @@ uint32_t RoomsRenderer::add_sculpt_render_call(Sculpt* sculpt, const glm::mat4& 
     };
 
     return render_instance->instance_count++;
-}
-
-void RoomsRenderer::render()
-{
-    Renderer::render();
-
-    if (get_sculpt_manager()->has_performed_evaluation()) {
-        sculpt_manager->read_GPU_results();
-    }
-
-#ifndef __EMSCRIPTEN__
-    //last_frame_timestamps = get_timestamps();
-
-    //if (!last_frame_timestamps.empty() && sculpt_manager->has_performed_evaluation()) {
-    //    last_evaluation_time = last_frame_timestamps[0];
-    //}
-#endif
-
-    // For the next frame
-    sculpts_render_lists.clear();
 }

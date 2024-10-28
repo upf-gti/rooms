@@ -8,10 +8,9 @@
 #include "graphics/managers/sculpt_manager.h"
 #include "tools/sculpt_editor.h"
 
-#include "engine/engine.h"
+#include <engine/rooms_engine.h>
 
 #include <fstream>
-#include <engine/rooms_engine.h>
 
 REGISTER_NODE_CLASS(SculptNode)
 
@@ -37,16 +36,15 @@ SculptNode::~SculptNode()
     //dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->remove_sculpt_instance(this);
 
     if (sculpt_gpu_data->unref()) {
-        dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_sculpt_manager()->delete_sculpt(sculpt_gpu_data);
+        static_cast<RoomsRenderer*>(Renderer::instance)->get_sculpt_manager()->delete_sculpt(sculpt_gpu_data);
     }
 }
-
 
 void SculptNode::update(float delta_time)
 {
     uint32_t flags = 0u;
-    RoomsRenderer* renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
-    RoomsEngine* engine =  dynamic_cast<RoomsEngine*>(Engine::instance);
+    RoomsRenderer* renderer = static_cast<RoomsRenderer*>(Renderer::instance);
+    RoomsEngine* engine = static_cast<RoomsEngine*>(Engine::instance);
     sGPU_SculptResults& evaluation_results = renderer->get_sculpt_manager()->read_results.loaded_results;
 
     if (engine->get_current_editor_type() == SCULPT_EDITOR) {
@@ -74,7 +72,7 @@ void SculptNode::render()
 
 void SculptNode::initialize()
 {
-    sculpt_gpu_data = dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_sculpt_manager()->create_sculpt();
+    sculpt_gpu_data = static_cast<RoomsRenderer*>(Renderer::instance)->get_sculpt_manager()->create_sculpt();
     sculpt_gpu_data->ref();
 
     //dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->add_sculpt_instance(this);
@@ -83,7 +81,7 @@ void SculptNode::initialize()
 void SculptNode::from_history(const std::vector<Stroke>& new_history)
 {
     if (!new_history.empty()) {
-        RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
+        RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(Renderer::instance);
         sculpt_gpu_data = rooms_renderer->get_sculpt_manager()->create_sculpt_from_history(new_history);
         sculpt_gpu_data->ref();
         //rooms_renderer->get_raymarching_renderer()->add_sculpt_instance(this);
@@ -115,7 +113,7 @@ void SculptNode::parse(std::ifstream& binary_scene_file)
     sSculptBinaryHeader header;
     binary_scene_file.read(reinterpret_cast<char*>(&header), sizeof(sSculptBinaryHeader));
 
-    RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
+    RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(Renderer::instance);
 
     if (header.stroke_count > 0u) {
         std::vector<Stroke> stroke_history;

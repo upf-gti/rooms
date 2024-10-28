@@ -86,7 +86,7 @@ class RoomsRenderer : public Renderer {
     } sculpt_instances;
 
 
-    void intialize_sculpt_render_instances();
+    void initialize_sculpt_render_instances();
     void upload_sculpt_models_and_instances(WGPUCommandEncoder command_encoder);
     void update_sculpts_indirect_buffers(WGPUCommandEncoder command_encoder);
 
