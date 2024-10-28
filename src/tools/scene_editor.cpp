@@ -141,7 +141,7 @@ void SceneEditor::initialize()
                 }
             }
         }
-     });
+    });
 }
 
 void SceneEditor::clean()
@@ -258,10 +258,24 @@ void SceneEditor::render_gui()
 void SceneEditor::update_hovered_node()
 {
     // Send rays each frame to detect hovered sculpts and other nodes
+
+    glm::vec3 ray_origin;
+    glm::vec3 ray_direction;
+
+    if (Renderer::instance->get_openxr_available()) {
+        ray_origin = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
+        glm::mat4x4 select_hand_pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
+        ray_direction = get_front(select_hand_pose);
+    }
+    else {
+        Camera* camera = Renderer::instance->get_camera();
+        glm::vec3 ray_dir = camera->screen_to_ray(Input::get_mouse_position());
+        ray_origin = camera->get_eye();
+        ray_direction = glm::normalize(ray_dir);
+    }
+
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
-    Camera* camera = rooms_renderer->get_camera();
-    glm::vec3 ray_dir = camera->screen_to_ray(Input::get_mouse_position());
-    rooms_renderer->get_sculpt_manager()->set_ray_to_test(camera->get_eye(), glm::normalize(ray_dir));
+    rooms_renderer->get_sculpt_manager()->set_ray_to_test(ray_origin, ray_direction);
 }
 
 void SceneEditor::process_node_hovered()

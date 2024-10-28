@@ -312,11 +312,15 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
 
         if ((curr_sculpt_flags & SCULPT_INSTANCE_IS_POINTED) == SCULPT_INSTANCE_IS_POINTED) {
             let v_dot_n : f32 = clamp(dot(-ray_dir_world, normal_world), 0.0, 1.0);
-            final_color += (F_Schlick(vec3f(0.0), vec3f(1.0), v_dot_n)) * vec3f(15.0, 15.0, 0.0);
+            var fresnel : f32 = pow(1.0 - v_dot_n, 3.0) + 0.5;
+            fresnel = smoothstep(0.5, 1.0, fresnel);
+            let hightlight_color : vec3f = mix(pow(vec3f(0.467, 0.333, 0.933), vec3f(2.2)), pow(vec3f(1.0, 0.404, 0.0), vec3f(2.2)), (-normal.y)*0.5+0.5);
+            final_color = mix(final_color, hightlight_color, fresnel);
         } 
         
         if ((curr_sculpt_flags & SCULPT_INSTANCE_IS_OUT_OF_FOCUS) == SCULPT_INSTANCE_IS_OUT_OF_FOCUS) {
-            final_color *= vec3f(0.35);
+            let grey : f32 = 0.21 * final_color.r + 0.71 * final_color.g + 0.07 * final_color.b;
+            final_color = vec3f(grey) * 0.25;
         }
 
         // let interpolant : f32 = (f32( i ) / f32(MAX_ITERATIONS)) * (M_PI / 2.0);
