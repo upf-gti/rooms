@@ -21,6 +21,7 @@
 
 #include "tools/sculpt_editor.h"
 #include "tools/scene_editor.h"
+#include "tools/group_editor.h"
 #include "tools/animation_editor.h"
 #include "tools/player_editor.h"
 #include "tools/tutorial_editor.h"
@@ -60,38 +61,25 @@ int RoomsEngine::post_initialize()
         controller_mesh_right = static_cast<MeshInstance3D*>(entities[1]);
     }
 
-    // Tutorial
+
+    // Instantiate and initialize editors
     {
-        tutorial_editor = new TutorialEditor("Tutorial Editor");
-        tutorial_editor->initialize();
+        editors.resize(EDITOR_COUNT);
+
+        editors[SCENE_EDITOR] = new SceneEditor("Scene Editor");
+        editors[GROUP_EDITOR] = new GroupEditor("Group Editor");
+        editors[SCULPT_EDITOR] = new SculptEditor("Sculpt Editor");
+        editors[ANIMATION_EDITOR] = new AnimationEditor("Animation Editor");
+        editors[TUTORIAL_EDITOR] = new TutorialEditor("Tutorial Editor");
+        editors[PLAYER_EDITOR] = new PlayerEditor("Player Editor");
     }
 
-    // Scenes
-    {
-        scene_editor = new SceneEditor("Scene Editor");
-        scene_editor->initialize();
-    }
-
-    // Sculpting
-    {
-        sculpt_editor = new SculptEditor("Sculpt Editor");
-        sculpt_editor->initialize();
-    }
-
-    // Animation
-    {
-        animation_editor = new AnimationEditor("Animation Editor");
-        animation_editor->initialize();
-    }
-
-    // Experience Player
-    {
-        player_editor = new PlayerEditor("Player Editor");
-        player_editor->initialize();
+    for (auto editor : editors) {
+        editor->initialize();
     }
 
     // Set default editor..
-    switch_editor(EditorType::SCENE_EDITOR);
+    switch_editor(SCENE_EDITOR);
 
     // Grid
     {
@@ -148,24 +136,8 @@ void RoomsEngine::clean()
 {
     Engine::clean();
 
-    if (scene_editor) {
-        scene_editor->clean();
-    }
-
-    if (sculpt_editor) {
-        sculpt_editor->clean();
-    }
-
-    if (animation_editor) {
-        animation_editor->clean();
-    }
-
-    if (player_editor) {
-        player_editor->clean();
-    }
-
-    if (tutorial_editor) {
-        tutorial_editor->clean();
+    for (auto editor : editors) {
+        editor->clean();
     }
 }
 
@@ -173,8 +145,8 @@ void RoomsEngine::set_main_scene(const std::string& scene_path)
 {
     Engine::set_main_scene(scene_path);
 
-    sculpt_editor->set_current_sculpt(nullptr);
-    scene_editor->set_main_scene(main_scene);
+    get_editor<SculptEditor*>(SCULPT_EDITOR)->set_current_sculpt(nullptr);
+    get_editor<SceneEditor*>(SCENE_EDITOR)->set_main_scene(main_scene);
 }
 
 void RoomsEngine::add_to_main_scene(const std::string& scene_path)
@@ -203,7 +175,7 @@ void RoomsEngine::update(float delta_time)
         current_editor->update(delta_time);
 
         if (tutorial_active) {
-            tutorial_editor->update(delta_time);
+            get_editor<TutorialEditor*>(TUTORIAL_EDITOR)->update(delta_time);
         }
     }
 
@@ -253,7 +225,7 @@ void RoomsEngine::render()
         current_editor->render();
 
         if (tutorial_active) {
-            tutorial_editor->render();
+            get_editor<TutorialEditor*>(TUTORIAL_EDITOR)->render();
         }
     }
 
@@ -283,37 +255,21 @@ void RoomsEngine::render_controllers()
     }
 }
 
-void RoomsEngine::switch_editor(uint8_t editor, void* data)
+void RoomsEngine::switch_editor(uint8_t editor_idx, void* data)
 {
+    if (editor_idx >= EDITOR_COUNT) {
+        assert(0 && "Editor is not created!");
+        return;
+    }
+
     RoomsEngine* i = static_cast<RoomsEngine*>(instance);
 
     if (i->current_editor) {
         i->current_editor->on_exit();
     }
 
-    switch (editor)
-    {
-    case TUTORIAL_EDITOR:
-        i->current_editor = i->tutorial_editor;
-        break;
-    case SCENE_EDITOR:
-        i->current_editor = i->scene_editor;
-        break;
-    case SCULPT_EDITOR:
-        i->current_editor = i->sculpt_editor;
-        break;
-    case ANIMATION_EDITOR:
-        i->current_editor = i->animation_editor;
-        break;
-    case PLAYER_EDITOR:
-        i->current_editor = i->player_editor;
-        break;
-    default:
-        assert(0 && "Editor is not created!");
-        break;
-    }
-
-    i->current_editor_type = (EditorType) editor;
+    i->current_editor = i->get_editor(editor_idx);
+    i->current_editor_type = static_cast<EditorType>(editor_idx);
     i->current_editor->on_enter(data);
 }
 
@@ -329,7 +285,7 @@ void RoomsEngine::toggle_use_environment_map()
 
 void RoomsEngine::set_current_sculpt(SculptNode* sculpt_instance)
 {
-    sculpt_editor->set_current_sculpt(sculpt_instance);
+    get_editor<SculptEditor*>(SCULPT_EDITOR)->set_current_sculpt(sculpt_instance);
 }
 
 void RoomsEngine::toggle_tutorial()

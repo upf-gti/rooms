@@ -7,21 +7,18 @@
 
 class Node;
 class Node3D;
+class SculptNode;
 class Environment3D;
 class BaseEditor;
-class SculptEditor;
-class SceneEditor;
-class TutorialEditor;
-class AnimationEditor;
-class SculptNode;
-class PlayerEditor;
 
 enum EditorType : uint8_t {
     SCENE_EDITOR,
+    GROUP_EDITOR,
     SCULPT_EDITOR,
     ANIMATION_EDITOR,
     TUTORIAL_EDITOR,
-    PLAYER_EDITOR
+    PLAYER_EDITOR,
+    EDITOR_COUNT
 };
 
 class RoomsEngine : public Engine
@@ -34,12 +31,9 @@ class RoomsEngine : public Engine
     bool tutorial_active = false;
     EditorType current_editor_type;
 
+    std::vector<BaseEditor*> editors;
+
     BaseEditor* current_editor = nullptr;
-    SculptEditor* sculpt_editor = nullptr;
-    SceneEditor* scene_editor = nullptr;
-    TutorialEditor* tutorial_editor = nullptr;
-    AnimationEditor* animation_editor = nullptr;
-    PlayerEditor* player_editor = nullptr;
 
     void render_gui();
 
@@ -69,7 +63,7 @@ public:
 
     static void render_controllers();
 
-    static void switch_editor(uint8_t editor, void* data = nullptr);
+    static void switch_editor(uint8_t editor_idx, void* data = nullptr);
     static void toggle_use_grid();
     static void toggle_use_environment_map();
 
@@ -77,15 +71,9 @@ public:
 
     void toggle_tutorial();
 
-    inline BaseEditor* get_current_editor() const {
-        return current_editor;
-    }
+    inline BaseEditor* get_current_editor() const { return current_editor; }
+    inline EditorType get_current_editor_type() const { return current_editor_type; }
 
-    inline EditorType get_current_editor_type() const {
-        return current_editor_type;
-    }
-
-    SculptEditor* get_sculpt_editor() const {
-        return sculpt_editor;
-    }
+    template <typename T = BaseEditor*>
+    inline T get_editor(uint8_t editor_idx) const { return static_cast<T>(editors[editor_idx]); }
 };
