@@ -224,11 +224,17 @@ void AnimationEditor::update(float delta_time)
     if (renderer->get_openxr_available()) {
 
         if (!keyframe_dirty) {
-            if (Input::was_button_pressed(XR_BUTTON_Y)) {
+            if (Input::was_button_pressed(XR_BUTTON_X)) {
+                play_animation();
+            }
+            else if (Input::was_button_pressed(XR_BUTTON_Y)) {
                 inspect_keyframes_list(true);
             }
             else if (Input::was_button_pressed(XR_BUTTON_A)) {
                 create_keyframe();
+            }
+            else if (Input::was_button_pressed(XR_BUTTON_B)) {
+                RoomsEngine::switch_editor(SCENE_EDITOR);
             }
         }
         // Creating keyframe
@@ -771,12 +777,13 @@ void AnimationEditor::init_ui()
         {
             left_hand_box = new ui::VContainer2D("left_controller_root", { 0.0f, 0.0f }, ui::CREATE_3D);
             left_hand_box->add_child(new ui::ImageLabel2D("Keyframe List", shortcuts::Y_BUTTON_PATH, shortcuts::OPEN_KEYFRAME_LIST));
+            right_hand_box->add_child(new ui::ImageLabel2D("Play Animation", shortcuts::X_BUTTON_PATH, shortcuts::PLAY_ANIMATION));
         }
 
         // Right hand
         {
             right_hand_box = new ui::VContainer2D("right_controller_root", { 0.0f, 0.0f }, ui::CREATE_3D);
-            right_hand_box->add_child(new ui::ImageLabel2D("Play Animation", shortcuts::B_BUTTON_PATH, shortcuts::PLAY_ANIMATION));
+            right_hand_box->add_child(new ui::ImageLabel2D("Back to scene", shortcuts::B_BUTTON_PATH, shortcuts::BACK_TO_SCENE));
             right_hand_box->add_child(new ui::ImageLabel2D("Create keyframe", shortcuts::A_BUTTON_PATH, shortcuts::CREATE_KEYFRAME));
             right_hand_box->add_child(new ui::ImageLabel2D("Submit keyframe", shortcuts::A_BUTTON_PATH, shortcuts::SUBMIT_KEYFRAME));
         }

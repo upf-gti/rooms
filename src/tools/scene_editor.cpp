@@ -4,7 +4,6 @@
 
 #include "framework/input.h"
 #include "framework/parsers/parse_scene.h"
-#include "framework/nodes/viewport_3d.h"
 #include "framework/nodes/sculpt_node.h"
 #include "framework/nodes/spot_light_3d.h"
 #include "framework/nodes/omni_light_3d.h"
@@ -16,21 +15,17 @@
 #include "framework/math/intersections.h"
 #include "framework/ui/inspector.h"
 #include "framework/ui/keyboard.h"
-#include "framework/math/math_utils.h"
 #include "framework/camera/camera.h"
-#include "framework/resources/sculpt.h"
 #include "framework/resources/room.h"
 
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/renderer_storage.h"
+#include "graphics/managers/sculpt_manager.h"
 
 #include "shaders/mesh_forward.wgsl.gen.h"
-#include "shaders/ui/ui_xr_panel.wgsl.gen.h"
 
 #include "engine/rooms_engine.h"
 #include "engine/scene.h"
-
-#include "graphics/managers/sculpt_manager.h"
 
 #include "spdlog/spdlog.h"
 #include "imgui.h"
@@ -74,13 +69,18 @@ void SceneEditor::initialize()
     Node::bind("@node_deleted", [&](const std::string& sg, void* data) {
         Node* node = reinterpret_cast<Node*>(data);
         if (node == selected_node) {
-            selected_node = nullptr;
-            moving_node = false;
+            deselect();
         }
         inspector_dirty = true;
     });
 
     Node::bind("@on_gpu_results", [&](const std::string& sg, void* data) {
+
+        // Do nothing if it's not the current editor..
+        auto engine = static_cast<RoomsEngine*>(RoomsEngine::instance);;
+        if (engine->get_current_editor() != this) {
+            return;
+        }
 
         hovered_node = nullptr;
 
@@ -260,6 +260,13 @@ void SceneEditor::process_node_hovered()
     const bool group_hovered = !sculpt_hovered && !!dynamic_cast<Group3D*>(hovered_node);
     const bool a_pressed = Input::was_button_pressed(XR_BUTTON_A);
     const bool b_pressed = Input::was_button_pressed(XR_BUTTON_B);
+
+    // DEBUG......
+    if (Input::is_key_pressed(GLFW_KEY_K)) {
+        edit_group();
+        return;
+    }
+    // ............
 
     if (group_hovered) {
         if (grouping_node) {
@@ -449,7 +456,7 @@ void SceneEditor::init_ui()
             right_hand_box->add_child(new ui::ImageLabel2D("Copy Node", "data/textures/buttons/r_grip_plus_a.png", shortcuts::CLONE_NODE, double_size));
             right_hand_box->add_child(new ui::ImageLabel2D("Place Node", "data/textures/buttons/r_trigger.png", shortcuts::PLACE_NODE));
             right_hand_box->add_child(new ui::ImageLabel2D("Select Node", "data/textures/buttons/r_trigger.png", shortcuts::SELECT_NODE));
-            right_hand_box->add_child(new ui::ImageLabel2D("Group Node", "data/textures/buttons/r_grip_plus_r_trigger.png", shortcuts::GROUP_NODE));
+            right_hand_box->add_child(new ui::ImageLabel2D("Group Node", "data/textures/buttons/r_grip_plus_r_trigger.png", shortcuts::GROUP_NODE, double_size));
         }
     }
 
@@ -507,8 +514,7 @@ void SceneEditor::bind_events()
     Node::bind("duplicate", [&](const std::string& signal, void* button) { clone_node(selected_node, true); });
     Node::bind("clone", [&](const std::string& signal, void* button) { clone_node(selected_node, false); });
 
-    // Gizmo events
-
+    // Gizmo events (these ones are used for all editors..)
     Node::bind("no_gizmo", [&](const std::string& signal, void* button) { gizmo.set_enabled(false); });
     Node::bind("move", [&](const std::string& signal, void* button) { gizmo.set_operation(TRANSLATE); });
     Node::bind("rotate", [&](const std::string& signal, void* button) { gizmo.set_operation(ROTATE); });
@@ -541,6 +547,12 @@ void SceneEditor::select_node(Node* node, bool place)
 
 void SceneEditor::deselect()
 {
+    // hack by now: Do nothing if it's not the current editor..
+    auto engine = static_cast<RoomsEngine*>(RoomsEngine::instance);
+    if (engine->get_current_editor() != this) {
+        return;
+    }
+
     selected_node = nullptr;
 
     moving_node = false;
@@ -622,7 +634,7 @@ void SceneEditor::process_group()
 
 void SceneEditor::edit_group()
 {
-    editing_group = true;
+    RoomsEngine::switch_editor(GROUP_EDITOR, static_cast<Group3D*>(hovered_node));
 }
 
 void SceneEditor::create_light_node(uint8_t type)
@@ -894,8 +906,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
         Node::bind(signal, [&, n = node](const std::string& sg, void* data) {
 
             if (selected_node == n) {
-                selected_node = nullptr;
-                moving_node = false;
+                deselect();
             }
 
             main_scene->remove_node(n);
@@ -975,7 +986,7 @@ void SceneEditor::inspect_exports(bool force)
         std::string signal = name + std::to_string(node_signal_uid++) + "_load";
         inspector->button(signal, "data/textures/load.png");
         Node::bind(signal, [&, str = full_name](const std::string& sg, void* data) {
-            selected_node = nullptr;
+            deselect();
             static_cast<RoomsEngine*>(RoomsEngine::instance)->set_main_scene(str);
         });
 

@@ -45,8 +45,7 @@ namespace shortcuts {
         SCULPT_PAINT,
         PICK_MATERIAL,
         STAMP,
-        SMEAR,
-        BACK_TO_SCENE
+        SMEAR
     };
 }
 

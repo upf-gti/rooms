@@ -4,17 +4,21 @@
 
 class Node;
 class Node2D;
-class Scene;
-class Room;
+class Group3D;
 
 namespace ui {
     class Inspector;
 }
 
-class SceneEditor : public BaseEditor {
+namespace shortcuts {
+    enum : uint8_t {
+        
+    };
+}
 
-    Scene* main_scene = nullptr;
-    Room* current_room = nullptr;
+class GroupEditor : public BaseEditor {
+
+    Group3D* current_group = nullptr;
 
     /*
     *   Input stuff
@@ -37,25 +41,10 @@ class SceneEditor : public BaseEditor {
     *   Node stuff
     */
 
-    bool moving_node = false;
-
     void select_node(Node* node, bool place = true);
     void deselect();
-    void clone_node(Node* node, bool copy = true);
-    void group_node(Node* node);
-    void create_light_node(uint8_t type);
+    void ungroup_node(Node* node);
     void process_node_hovered();
-
-    /*
-    *   Group stuff
-    */
-
-    bool grouping_node = false;
-    bool editing_group = false;
-    Node* node_to_group = nullptr;
-
-    void process_group();
-    void edit_group();
 
     /*
     *   UI
@@ -73,9 +62,8 @@ class SceneEditor : public BaseEditor {
     void init_ui();
     void bind_events();
 
-    void inspector_from_scene(bool force = false);
-    void inspect_node(Node* node, uint32_t flags = NODE_STANDARD, const std::string& texture_path = "");
-    void inspect_light();
+    void inspect_group(bool force = false);
+    void inspect_node(Node* node, const std::string& texture_path = "");
     void update_panel_transform();
 
     bool rotation_started = false;
@@ -88,26 +76,10 @@ class SceneEditor : public BaseEditor {
     void update_node_transform();
     void update_hovered_node();
 
-    /*
-    *   Room Player
-    */
-
-    void enter_room();
-
-    /*
-    *   Filesystem
-    */
-
-    bool exports_dirty = true;
-    std::vector<std::string> exported_scenes;
-
-    void get_export_files();
-    void inspect_exports(bool force = false);
-
 public:
 
-    SceneEditor() {};
-    SceneEditor(const std::string& name) : BaseEditor(name) {};
+    GroupEditor() {};
+    GroupEditor(const std::string& name) : BaseEditor(name) {};
 
     void initialize() override;
     void clean() override;
@@ -116,6 +88,10 @@ public:
     void render() override;
     void render_gui() override;
 
-    void set_main_scene(Scene* new_scene) { main_scene = new_scene; };
+    void on_enter(void* data);
+    // void on_exit();
+
     void set_inspector_dirty() { inspector_dirty = true; };
+
+    Group3D* get_current_group() { return current_group; }
 };

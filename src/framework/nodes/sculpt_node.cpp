@@ -6,7 +6,9 @@
 
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/managers/sculpt_manager.h"
+
 #include "tools/sculpt_editor.h"
+#include "tools/group_editor.h"
 
 #include <engine/rooms_engine.h>
 
@@ -47,28 +49,33 @@ void SculptNode::update(float delta_time)
     RoomsEngine* engine = static_cast<RoomsEngine*>(Engine::instance);
     const sGPU_SculptResults::sGPU_IntersectionData& intersection_results = renderer->get_sculpt_manager()->read_results.loaded_results.ray_intersection;
 
+    bool oof = false;
+
     if (engine->get_current_editor_type() == SCULPT_EDITOR) {
-        if (engine->get_sculpt_editor()->get_current_sculpt() != this) {
-            flags |= SCULPT_IS_OUT_OF_FOCUS;
-        }
+        oof |= (engine->get_editor<SculptEditor*>(SCULPT_EDITOR)->get_current_sculpt() != this);
+    }
+    else if (engine->get_current_editor_type() == GROUP_EDITOR) {
+        oof |= (!parent || parent != (Node*)engine->get_editor<GroupEditor*>(GROUP_EDITOR)->get_current_group());
     }
 
-    if (intersection_results.has_intersected == 1u) {
+    if (oof) {
+        flags |= SCULPT_IS_OUT_OF_FOCUS;
+    }
 
-        // check its intersection and its sibling ones
+    if (!oof && intersection_results.has_intersected == 1u) {
 
-        if (check_intersection(intersection_results.sculpt_id, intersection_results.instance_id)) {
-            flags |= SCULPT_IS_POINTED;
+        // check its intersection and its sibling ones if not in group editor
+        bool hovered = check_intersection(intersection_results.sculpt_id, intersection_results.instance_id);
+
+        if (engine->get_current_editor_type() != GROUP_EDITOR && parent) {
+            for (auto child : parent->get_children()) {
+                SculptNode* sculpt_child = dynamic_cast<SculptNode*>(child);
+                hovered |= (sculpt_child && sculpt_child->check_intersection(intersection_results.sculpt_id, intersection_results.instance_id));
+            }
         }
 
-        if (parent) {
-            for (auto child : parent->get_children()) {
-
-                SculptNode* sculpt_child = dynamic_cast<SculptNode*>(child);
-                if (sculpt_child && sculpt_child->check_intersection(intersection_results.sculpt_id, intersection_results.instance_id)) {
-                    flags |= SCULPT_IS_POINTED;
-                }
-            }
+        if (hovered) {
+            flags |= SCULPT_IS_POINTED;
         }
     }
     
