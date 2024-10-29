@@ -218,7 +218,7 @@ void GroupEditor::init_ui()
     vertical_container->add_child(second_row);
 
     first_row->add_child(new ui::TextureButton2D("deselect", "data/textures/cross.png"));
-    first_row->add_child(new ui::TextureButton2D("ungroup", "data/textures/a.png"));
+    first_row->add_child(new ui::TextureButton2D("ungroup", "data/textures/ungroup.png"));
 
     // ** Go back to scene editor **
     second_row->add_child(new ui::TextureButton2D("go_back", "data/textures/back.png"));

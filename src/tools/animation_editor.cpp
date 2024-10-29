@@ -777,7 +777,7 @@ void AnimationEditor::init_ui()
         {
             left_hand_box = new ui::VContainer2D("left_controller_root", { 0.0f, 0.0f }, ui::CREATE_3D);
             left_hand_box->add_child(new ui::ImageLabel2D("Keyframe List", shortcuts::Y_BUTTON_PATH, shortcuts::OPEN_KEYFRAME_LIST));
-            right_hand_box->add_child(new ui::ImageLabel2D("Play Animation", shortcuts::X_BUTTON_PATH, shortcuts::PLAY_ANIMATION));
+            left_hand_box->add_child(new ui::ImageLabel2D("Play Animation", shortcuts::X_BUTTON_PATH, shortcuts::PLAY_ANIMATION));
         }
 
         // Right hand
