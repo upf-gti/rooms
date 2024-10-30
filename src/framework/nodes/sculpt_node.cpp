@@ -48,10 +48,11 @@ void SculptNode::update(float delta_time)
     RoomsRenderer* renderer = static_cast<RoomsRenderer*>(Renderer::instance);
     RoomsEngine* engine = static_cast<RoomsEngine*>(Engine::instance);
     const sGPU_SculptResults::sGPU_IntersectionData& intersection_results = renderer->get_sculpt_manager()->read_results.loaded_results.ray_intersection;
+    bool in_sculpt_editor = (engine->get_current_editor_type() == SCULPT_EDITOR);
 
     bool oof = false;
 
-    if (engine->get_current_editor_type() == SCULPT_EDITOR) {
+    if (in_sculpt_editor) {
         oof |= (engine->get_editor<SculptEditor*>(SCULPT_EDITOR)->get_current_sculpt() != this);
     }
     else if (engine->get_current_editor_type() == GROUP_EDITOR) {
@@ -62,7 +63,12 @@ void SculptNode::update(float delta_time)
         flags |= SCULPT_IS_OUT_OF_FOCUS;
     }
 
-    if (!oof && intersection_results.has_intersected == 1u) {
+    /* Do not highlight if:
+    * 1) Out of focus
+    * 2) In sculpt mode
+    * 3) No intersection
+    */
+    if (!oof && !in_sculpt_editor && intersection_results.has_intersected == 1u) {
 
         // check its intersection and its sibling ones if not in group editor
         bool hovered = check_intersection(intersection_results.sculpt_id, intersection_results.instance_id);
