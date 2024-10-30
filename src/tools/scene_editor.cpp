@@ -178,17 +178,16 @@ void SceneEditor::update(float delta_time)
 
     // Manage Undo/Redo
     {
-        if (renderer->get_openxr_available()) {
+        bool can_undo = Input::was_button_pressed(XR_BUTTON_X) || (Input::is_key_pressed(GLFW_KEY_LEFT_CONTROL) && Input::was_key_pressed(GLFW_KEY_Z));
+        bool can_redo = (is_shift_left_pressed && Input::was_button_pressed(XR_BUTTON_X)) || (Input::is_key_pressed(GLFW_KEY_LEFT_CONTROL) && Input::was_key_pressed(GLFW_KEY_Y));
 
-        }
-        // flat screen
-        else if(Input::is_key_pressed(GLFW_KEY_LEFT_CONTROL)) {
-            if (Input::was_key_pressed(GLFW_KEY_Z)) {
-                scene_undo();
-            }
-            else if (Input::was_key_pressed(GLFW_KEY_Y)) {
-                scene_redo();
-            }
+        shortcuts[shortcuts::SCENE_UNDO] = true;
+        shortcuts[shortcuts::SCENE_REDO] = is_shift_left_pressed;
+
+        if (can_undo) {
+            scene_undo();
+        } else if (can_redo) {
+            scene_redo();
         }
     }
 
@@ -455,6 +454,8 @@ void SceneEditor::init_ui()
         {
             left_hand_box = new ui::VContainer2D("left_controller_root", { 0.0f, 0.0f }, ui::CREATE_3D);
             left_hand_box->add_child(new ui::ImageLabel2D("Scene Panel", shortcuts::Y_BUTTON_PATH, shortcuts::TOGGLE_SCENE_INSPECTOR));
+            left_hand_box->add_child(new ui::ImageLabel2D("Redo", shortcuts::Y_BUTTON_PATH, shortcuts::SCENE_REDO));
+            left_hand_box->add_child(new ui::ImageLabel2D("Undo", shortcuts::X_BUTTON_PATH, shortcuts::SCENE_UNDO));
         }
 
         // Right hand

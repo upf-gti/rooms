@@ -38,6 +38,8 @@ namespace shortcuts {
         ADD_TO_GROUP,
         CREATE_GROUP,
         UNGROUP,
+        SCENE_UNDO,
+        SCENE_REDO,
         BACK_TO_SCENE
     };
 }
