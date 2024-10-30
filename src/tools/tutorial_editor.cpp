@@ -35,19 +35,6 @@ void TutorialEditor::initialize()
 
         current_panel = panels[TUTORIAL_WELCOME];
     }
-
-    // Set location in front of headset
-    {
-        glm::mat4x4 m(1.0f);
-        glm::vec3 eye = renderer->get_camera_eye();
-        glm::vec3 new_pos = eye + renderer->get_camera_front() * 1.25f;
-
-        m = glm::translate(m, new_pos);
-        m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
-        m = glm::rotate(m, glm::radians(180.f), { 1.0f, 0.0f, 0.0f });
-
-        panel->set_xr_transform(Transform::mat4_to_transform(m));
-    }
 }
 
 void TutorialEditor::clean()
