@@ -43,7 +43,7 @@ void SceneEditor::initialize()
     current_room = new Room(main_scene);
     current_room->ref();
 
-    gizmo.initialize(TRANSLATE);
+    gizmo = static_cast<RoomsEngine*>(RoomsEngine::instance)->get_gizmo();
 
     init_ui();
 
@@ -122,8 +122,6 @@ void SceneEditor::initialize()
 
 void SceneEditor::clean()
 {
-    gizmo.clean();
-
     BaseEditor::clean();
 }
 
@@ -229,6 +227,12 @@ void SceneEditor::render_gui()
         //    ImGui::EndPopup();
         //}
     }
+}
+
+void SceneEditor::on_enter(void* data)
+{
+    gizmo->set_operation(TRANSLATE);
+    Node::emit_signal("combo_gizmo_modes@changed", (void*)"translate");
 }
 
 void SceneEditor::update_hovered_node()
@@ -398,7 +402,7 @@ void SceneEditor::init_ui()
     {
         ui::ComboButtons2D* combo_gizmo_modes = new ui::ComboButtons2D("combo_gizmo_modes");
         combo_gizmo_modes->add_child(new ui::TextureButton2D("no_gizmo", "data/textures/no_gizmo.png"));
-        combo_gizmo_modes->add_child(new ui::TextureButton2D("move", "data/textures/translation_gizmo.png", ui::SELECTED));
+        combo_gizmo_modes->add_child(new ui::TextureButton2D("translate", "data/textures/translation_gizmo.png", ui::SELECTED));
         combo_gizmo_modes->add_child(new ui::TextureButton2D("rotate", "data/textures/rotation_gizmo.png"));
         combo_gizmo_modes->add_child(new ui::TextureButton2D("scale", "data/textures/scale_gizmo.png"));
         second_row->add_child(combo_gizmo_modes);
@@ -506,12 +510,6 @@ void SceneEditor::bind_events()
     Node::bind("group", [&](const std::string& signal, void* button) { group_node(selected_node); });
     Node::bind("duplicate", [&](const std::string& signal, void* button) { clone_node(selected_node, true); });
     Node::bind("clone", [&](const std::string& signal, void* button) { clone_node(selected_node, false); });
-
-    // Gizmo events
-    Node::bind("no_gizmo", [&](const std::string& signal, void* button) { gizmo.set_enabled(false); });
-    Node::bind("move", [&](const std::string& signal, void* button) { gizmo.set_operation(TRANSLATE); });
-    Node::bind("rotate", [&](const std::string& signal, void* button) { gizmo.set_operation(ROTATE); });
-    Node::bind("scale", [&](const std::string& signal, void* button) { gizmo.set_operation(SCALE); });
 
     // Export / Import (.room) / Player
     {
@@ -692,7 +690,7 @@ void SceneEditor::update_gizmo(float delta_time)
     glm::vec3 right_controller_pos = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
     Transform t = node->get_transform();
 
-    if (gizmo.update(t, right_controller_pos, delta_time)) {
+    if (gizmo->update(t, right_controller_pos, delta_time)) {
         node->set_transform(t);
     }
 }
@@ -705,12 +703,12 @@ void SceneEditor::render_gizmo()
 
     Node3D* node = static_cast<Node3D*>(selected_node);
 
-    gizmo.set_transform(node->get_transform());
+    gizmo->set_transform(node->get_transform());
 
-    bool transform_dirty = gizmo.render();
+    bool transform_dirty = gizmo->render();
 
     if (transform_dirty) {
-        node->set_transform(gizmo.get_transform());
+        node->set_transform(gizmo->get_transform());
     }
 }
 

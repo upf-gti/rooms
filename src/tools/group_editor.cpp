@@ -33,7 +33,7 @@ void GroupEditor::initialize()
 {
     renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
 
-    gizmo.initialize(TRANSLATE);
+    gizmo = static_cast<RoomsEngine*>(RoomsEngine::instance)->get_gizmo();
 
     init_ui();
 
@@ -68,8 +68,6 @@ void GroupEditor::initialize()
 
 void GroupEditor::clean()
 {
-    gizmo.clean();
-
     BaseEditor::clean();
 }
 
@@ -77,6 +75,9 @@ void GroupEditor::on_enter(void* data)
 {
     current_group = reinterpret_cast<Group3D*>(data);
     assert(current_group);
+
+    gizmo->set_operation(TRANSLATE);
+    Node::emit_signal("combo_gizmo_modes@changed", (void*)"translate");
 }
 
 void GroupEditor::update(float delta_time)
@@ -227,7 +228,7 @@ void GroupEditor::init_ui()
     {
         ui::ComboButtons2D* combo_gizmo_modes = new ui::ComboButtons2D("combo_gizmo_modes");
         combo_gizmo_modes->add_child(new ui::TextureButton2D("no_gizmo", "data/textures/no_gizmo.png"));
-        combo_gizmo_modes->add_child(new ui::TextureButton2D("move", "data/textures/translation_gizmo.png", ui::SELECTED));
+        combo_gizmo_modes->add_child(new ui::TextureButton2D("translate", "data/textures/translation_gizmo.png", ui::SELECTED));
         combo_gizmo_modes->add_child(new ui::TextureButton2D("rotate", "data/textures/rotation_gizmo.png"));
         combo_gizmo_modes->add_child(new ui::TextureButton2D("scale", "data/textures/scale_gizmo.png"));
         second_row->add_child(combo_gizmo_modes);
@@ -272,11 +273,6 @@ void GroupEditor::bind_events()
 {
     Node::bind("deselect", [&](const std::string& signal, void* button) { deselect(); });
     Node::bind("ungroup", [&](const std::string& signal, void* button) { ungroup_node(selected_node); });
-
-    Node::bind("no_gizmo", [&](const std::string& signal, void* button) { gizmo.set_enabled(false); });
-    Node::bind("move", [&](const std::string& signal, void* button) { gizmo.set_operation(TRANSLATE); });
-    Node::bind("rotate", [&](const std::string& signal, void* button) { gizmo.set_operation(ROTATE); });
-    Node::bind("scale", [&](const std::string& signal, void* button) { gizmo.set_operation(SCALE); });
 }
 
 void GroupEditor::select_node(Node* node, bool place)
@@ -365,7 +361,7 @@ void GroupEditor::update_gizmo(float delta_time)
     const Transform& parent_transform = node->get_parent<Node3D*>()->get_transform();
     Transform t = Transform::combine(parent_transform, node->get_transform());
 
-    if (gizmo.update(t, right_controller_pos, delta_time)) {
+    if (gizmo->update(t, right_controller_pos, delta_time)) {
         node->set_transform(Transform::combine(Transform::inverse(parent_transform), t));
     }
 }
@@ -381,12 +377,12 @@ void GroupEditor::render_gizmo()
     Node3D* node = static_cast<Node3D*>(selected_node);
 
     const Transform& parent_transform = node->get_parent<Node3D*>()->get_transform();
-    gizmo.set_transform(Transform::combine(parent_transform, node->get_transform()));
+    gizmo->set_transform(Transform::combine(parent_transform, node->get_transform()));
 
-    bool transform_dirty = gizmo.render();
+    bool transform_dirty = gizmo->render();
 
     if (transform_dirty) {
-        node->set_transform(Transform::combine(Transform::inverse(parent_transform), gizmo.get_transform()));
+        node->set_transform(Transform::combine(Transform::inverse(parent_transform), gizmo->get_transform()));
     }
 }
 

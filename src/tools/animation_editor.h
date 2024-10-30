@@ -3,11 +3,11 @@
 #include "base_editor.h"
 
 #include "framework/animation/track.h"
-#include "framework/ui/gizmo_3d.h"
 
 class RoomsRenderer;
 class Node;
 class Node3D;
+class MeshInstance3D;
 class Animation;
 class Surface;
 
@@ -42,8 +42,6 @@ struct sAnimationData {
 };
 
 class AnimationEditor : public BaseEditor {
-
-    Gizmo3D gizmo;
 
     Node3D* current_node = nullptr;
     Animation* current_animation = nullptr;
@@ -126,6 +124,6 @@ public:
     void render() override;
     void render_gui() override;
 
-    void on_enter(void* data);
-    void on_exit();
+    void on_enter(void* data) override;
+    void on_exit() override;
 };

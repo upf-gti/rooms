@@ -45,6 +45,8 @@ class RoomsEngine : public Engine
     MeshInstance3D* ray_pointer = nullptr;
     MeshInstance3D* sphere_pointer = nullptr;
 
+    Gizmo3D gizmo;
+
     // make Cursor all static and remove this??
     ui::Cursor cursor;
 
@@ -71,6 +73,7 @@ public:
 
     void toggle_tutorial();
 
+    inline Gizmo3D* get_gizmo() { return &gizmo; }
     inline BaseEditor* get_current_editor() const { return current_editor; }
     inline EditorType get_current_editor_type() const { return current_editor_type; }
 

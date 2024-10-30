@@ -3,11 +3,11 @@
 #include <string>
 #include <unordered_map>
 
-#include "framework/ui/gizmo_3d.h"
 #include "framework/input_xr.h"
 
 class RoomsRenderer;
 class Node2D;
+class Gizmo3D;
 
 namespace ui {
     class HContainer2D;
@@ -78,7 +78,7 @@ protected:
 
     RoomsRenderer* renderer = nullptr;
 
-    Gizmo3D gizmo;
+    Gizmo3D* gizmo = nullptr;
 
     // Controller UI
     ui::VContainer2D* right_hand_box = nullptr;

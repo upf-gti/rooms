@@ -88,8 +88,8 @@ public:
     void render() override;
     void render_gui() override;
 
-    void on_enter(void* data);
-    // void on_exit();
+    void on_enter(void* data) override;
+    // void on_exit() override;
 
     void set_inspector_dirty() { inspector_dirty = true; };
 

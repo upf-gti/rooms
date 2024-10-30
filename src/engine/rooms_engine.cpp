@@ -61,7 +61,6 @@ int RoomsEngine::post_initialize()
         controller_mesh_right = static_cast<MeshInstance3D*>(entities[1]);
     }
 
-
     // Instantiate and initialize editors
     {
         editors.resize(EDITOR_COUNT);
@@ -129,6 +128,16 @@ int RoomsEngine::post_initialize()
 
     ui::Keyboard::initialize();
 
+    {
+        gizmo.initialize(TRANSLATE);
+
+        // Gizmo events
+        Node::bind("no_gizmo", [&](const std::string& signal, void* button) { gizmo.set_enabled(false); });
+        Node::bind("translate", [&](const std::string& signal, void* button) { gizmo.set_operation(TRANSLATE); });
+        Node::bind("rotate", [&](const std::string& signal, void* button) { gizmo.set_operation(ROTATE); });
+        Node::bind("scale", [&](const std::string& signal, void* button) { gizmo.set_operation(SCALE); });
+    }
+
     return 0;
 }
 
@@ -139,6 +148,8 @@ void RoomsEngine::clean()
     for (auto editor : editors) {
         editor->clean();
     }
+
+    gizmo.clean();
 }
 
 void RoomsEngine::set_main_scene(const std::string& scene_path)

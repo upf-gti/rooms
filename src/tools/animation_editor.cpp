@@ -51,7 +51,7 @@ void AnimationEditor::initialize()
 
     player = new AnimationPlayer("Animation Player");
 
-    gizmo.initialize(TRANSLATE | ROTATE);
+    gizmo = static_cast<RoomsEngine*>(RoomsEngine::instance)->get_gizmo();
 
     init_ui();
 
@@ -94,6 +94,8 @@ void AnimationEditor::initialize()
 
 void AnimationEditor::clean()
 {
+    BaseEditor::clean();
+
     delete keyframe_markers_render_instance;
     delete animation_trajectory_instance;
 }
@@ -170,6 +172,8 @@ void AnimationEditor::on_enter(void* data)
     inspect_keyframes_list();
 
     update_animation_trajectory();
+
+    gizmo->set_operation(TRANSLATE | ROTATE);
 }
 
 void AnimationEditor::on_exit()
@@ -285,12 +289,12 @@ void AnimationEditor::render_gizmo()
         return;
     }
 
-    gizmo.set_transform(current_node->get_transform());
+    gizmo->set_transform(current_node->get_transform());
 
-    bool transform_dirty = gizmo.render();
+    bool transform_dirty = gizmo->render();
 
     if (transform_dirty) {
-        current_node->set_transform(gizmo.get_transform());
+        current_node->set_transform(gizmo->get_transform());
     }
 }
 
@@ -309,7 +313,7 @@ void AnimationEditor::update_gizmo(float delta_time)
     glm::vec3 right_controller_pos = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
     Transform t = current_node->get_transform();
 
-    if (gizmo.update(t, right_controller_pos, delta_time)) {
+    if (gizmo->update(t, right_controller_pos, delta_time)) {
         current_node->set_transform(t);
     }
 }
