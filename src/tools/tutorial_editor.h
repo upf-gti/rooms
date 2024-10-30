@@ -29,12 +29,15 @@ protected:
 
     RoomsRenderer* renderer = nullptr;
 
+    bool placed = false;
+    bool grabbing = false;
+
     // Tutorial
     Node2D* panel = nullptr;
+    ui::XRPanel* current_panel = nullptr;
 
     // Panels
     ui::XRPanel* panels[TUTORIAL_PANEL_COUNT];
-
     ui::XRPanel* generate_panel(const std::string& name, const std::string& path, uint8_t prev, uint8_t next);
 
 public:

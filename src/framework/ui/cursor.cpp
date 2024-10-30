@@ -25,7 +25,7 @@ namespace ui {
         cursors[MOUSE_CURSOR_RESIZE_EW] = new Image2D("resize_ew_cursor", "data/textures/cursors/resize_c_horizontal.png", size * 0.75f, CURSOR);
         cursors[MOUSE_CURSOR_RESIZE_NS] = new Image2D("resize_ns_cursor", "data/textures/cursors/resize_c_vertical.png", size * 0.75f, CURSOR);
         cursors[MOUSE_CURSOR_PICKER] = new Image2D("picker_cursor", "data/textures/cursors/drawing_picker.png", size * 0.5f, CURSOR);
-        cursors[MOUSE_CURSOR_GRAB] = new Image2D("grab_cursor", "data/textures/cursors/hand_small_closed.png", size * 0.5f, CURSOR);
+        cursors[MOUSE_CURSOR_GRAB] = new Image2D("grab_cursor", "data/textures/cursors/hand_small_open.png", size, CURSOR);
         cursors[MOUSE_CURSOR_DISABLED] = new Image2D("disabled_cursor", "data/textures/cursors/disabled.png", size * 0.75f, CURSOR);
 
         // Set some offsets
@@ -89,6 +89,9 @@ namespace ui {
             }
             else if (IO::is_hover_type(VSLIDER)) {
                 set(ui::MOUSE_CURSOR_RESIZE_NS);
+            }
+            else if (IO::is_hover_type(DRAGGABLE)) {
+                set(ui::MOUSE_CURSOR_GRAB);
             }
 
             if (IO::is_hover_disabled()) {

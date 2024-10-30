@@ -2,6 +2,7 @@
 
 #include "framework/nodes/panel_2d.h"
 #include "framework/input.h"
+#include "framework/ui/io.h"
 #include "framework/math/math_utils.h"
 
 #include "graphics/renderers/rooms_renderer.h"
@@ -31,6 +32,21 @@ void TutorialEditor::initialize()
         panels[TUTORIAL_MATERIAL] = generate_panel("root_materials", "data/textures/tutorial/materials.png", TUTORIAL_GUIDES, TUTORIAL_PAINT);
         panels[TUTORIAL_PAINT] = generate_panel("root_paint", "data/textures/tutorial/paint.png", TUTORIAL_MATERIAL, TUTORIAL_UNDO_REDO);
         panels[TUTORIAL_UNDO_REDO] = generate_panel("root_undo_redo", "data/textures/tutorial/undo_redo.png", TUTORIAL_PAINT, TUTORIAL_NONE);
+
+        current_panel = panels[TUTORIAL_WELCOME];
+    }
+
+    // Set location in front of headset
+    {
+        glm::mat4x4 m(1.0f);
+        glm::vec3 eye = renderer->get_camera_eye();
+        glm::vec3 new_pos = eye + renderer->get_camera_front() * 1.25f;
+
+        m = glm::translate(m, new_pos);
+        m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
+        m = glm::rotate(m, glm::radians(180.f), { 1.0f, 0.0f, 0.0f });
+
+        panel->set_xr_transform(Transform::mat4_to_transform(m));
     }
 }
 
@@ -41,16 +57,45 @@ void TutorialEditor::clean()
 
 void TutorialEditor::update(float delta_time)
 {
+    current_panel->set_priority(PANEL);
+
+    if ((IO::get_hover() == current_panel) && Input::was_grab_pressed(HAND_RIGHT)) {
+        grabbing = true;
+    }
+
+    if (Input::was_grab_released(HAND_RIGHT)) {
+        grabbing = false;
+    }
+
     if(renderer->get_openxr_available()) {
-        glm::mat4x4 m(1.0f);
-        glm::vec3 eye = renderer->get_camera_eye();
-        glm::vec3 new_pos = eye + renderer->get_camera_front() * 1.25f;
 
-        m = glm::translate(m, new_pos);
-        m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
-        m = glm::rotate(m, glm::radians(180.f), { 1.0f, 0.0f, 0.0f });
+        if (!placed) {
+            glm::mat4x4 m(1.0f);
+            glm::vec3 eye = renderer->get_camera_eye();
+            glm::vec3 new_pos = eye + renderer->get_camera_front() * 1.25f;
 
-        panel->set_xr_transform(Transform::mat4_to_transform(m));
+            m = glm::translate(m, new_pos);
+            m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
+            m = glm::rotate(m, glm::radians(180.f), { 1.0f, 0.0f, 0.0f });
+            panel->set_xr_transform(Transform::mat4_to_transform(m));
+            placed = true;
+        }
+        else if (grabbing) {
+
+            Transform raycast_transform = Transform::mat4_to_transform(Input::get_controller_pose(HAND_RIGHT, POSE_AIM));
+            const glm::vec3& forward = raycast_transform.get_front();
+            
+            glm::mat4x4 m(1.0f);
+            glm::vec3 eye = raycast_transform.get_position();
+            glm::vec3 new_pos = eye + forward;
+
+            m = glm::translate(m, new_pos);
+            m = m * glm::toMat4(get_rotation_to_face(new_pos, renderer->get_camera_eye(), { 0.0f, 1.0f, 0.0f }));
+            m = glm::rotate(m, glm::radians(180.f), { 1.0f, 0.0f, 0.0f });
+            panel->set_xr_transform(Transform::mat4_to_transform(m));
+
+            current_panel->set_priority(DRAGGABLE);
+        }
     }
 
     panel->update(delta_time);
@@ -84,6 +129,7 @@ ui::XRPanel* TutorialEditor::generate_panel(const std::string& name, const std::
         Node::bind(name + "_prev", [&, c = new_panel, p = prev](const std::string& signal, void* button) {
             c->set_visibility(false);
             panels[p]->set_visibility(true);
+            current_panel = panels[p];
         });
     }
 
@@ -92,6 +138,7 @@ ui::XRPanel* TutorialEditor::generate_panel(const std::string& name, const std::
         Node::bind(name + "_next", [&, c = new_panel, n = next](const std::string& signal, void* button) {
             c->set_visibility(false);
             panels[n]->set_visibility(true);
+            current_panel = panels[n];
             // If in scene editor, close the tutorial, that will reopen when entering the sculpt editor
             auto engine = static_cast<RoomsEngine*>(Engine::instance);
             if (engine->get_current_editor_type() == SCENE_EDITOR && n == TUTORIAL_STAMP_SMEAR) {
