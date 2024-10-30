@@ -187,10 +187,6 @@ void AnimationEditor::update(float delta_time)
 {
     player->update(delta_time);
 
-    if (current_node) {
-        current_node->update(delta_time);
-    }
-
     BaseEditor::update(delta_time);
 
     update_gizmo(delta_time);

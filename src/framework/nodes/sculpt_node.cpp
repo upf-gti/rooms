@@ -88,6 +88,8 @@ void SculptNode::update(float delta_time)
     in_frame_instance_id = renderer->add_sculpt_render_call(sculpt_gpu_data, get_global_model(), flags);
 
     // static_cast<RoomsRenderer*>(Renderer::instance)->add_sculpt_render_call(sculpt_gpu_data, glm::translate(get_global_model(), {0.05, 0.0, 0.0}));
+
+    Node3D::update(delta_time);
 }
 
 void SculptNode::render()
