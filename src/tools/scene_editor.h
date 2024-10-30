@@ -2,8 +2,13 @@
 
 #include "tools/base_editor.h"
 
+#include "framework/math/transform.h"
+
+#include <variant>
+
 class Node;
 class Node2D;
+class Node3D;
 class Group3D;
 class Scene;
 class Room;
@@ -11,6 +16,17 @@ class Room;
 namespace ui {
     class Inspector;
 }
+
+struct sActionData {
+
+    enum {
+        ACTION_TRANSFORM
+    };
+
+    int type = -1;
+    Node3D* ref = nullptr;
+    std::variant<Transform> value;
+};
 
 class SceneEditor : public BaseEditor {
 
@@ -104,6 +120,16 @@ class SceneEditor : public BaseEditor {
 
     void get_export_files();
     void inspect_exports(bool force = false);
+
+    /*
+    *   Undo/Redo
+    */
+
+    std::vector<sActionData> undo_list;
+    std::vector<sActionData> redo_list;
+
+    bool scene_undo();
+    bool scene_redo();
 
 public:
 

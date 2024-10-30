@@ -131,7 +131,7 @@ void SceneEditor::update(float delta_time)
 
     // Update input actions
     {
-        select_action_pressed = Input::was_trigger_pressed(HAND_RIGHT) || Input::was_mouse_pressed(GLFW_MOUSE_BUTTON_LEFT);
+        select_action_pressed = Input::was_trigger_pressed(HAND_RIGHT) || Input::was_mouse_released(GLFW_MOUSE_BUTTON_LEFT);
     }
 
     if (exports_dirty) {
@@ -172,13 +172,29 @@ void SceneEditor::update(float delta_time)
         }
     }
 
-    if (Input::was_button_pressed(XR_BUTTON_Y) || Input::was_key_pressed(GLFW_KEY_I)) {
-        inspector_from_scene(true);
-    }
-
     update_gizmo(delta_time);
 
     update_node_transform();
+
+    // Manage Undo/Redo
+    {
+        if (renderer->get_openxr_available()) {
+
+        }
+        // flat screen
+        else if(Input::is_key_pressed(GLFW_KEY_LEFT_CONTROL)) {
+            if (Input::was_key_pressed(GLFW_KEY_Z)) {
+                scene_undo();
+            }
+            else if (Input::was_key_pressed(GLFW_KEY_Y)) {
+                scene_redo();
+            }
+        }
+    }
+
+    if (Input::was_button_pressed(XR_BUTTON_Y) || Input::was_key_pressed(GLFW_KEY_I)) {
+        inspector_from_scene(true);
+    }
 
     if (renderer->get_openxr_available()) {
 
@@ -349,13 +365,13 @@ void SceneEditor::init_ui()
     ui::HContainer2D* second_row = new ui::HContainer2D("row_1", { 0.0f, 0.0f });
     vertical_container->add_child(second_row);
 
+    first_row->add_child(new ui::TextureButton2D("deselect", "data/textures/cross.png"));
+
     // ** Undo/Redo scene **
     {
-        // first_row->add_child(new ui::TextureButton2D("scene_undo", "data/textures/undo.png"));
-        // first_row->add_child(new ui::TextureButton2D("scene_redo", "data/textures/redo.png"));
+        first_row->add_child(new ui::TextureButton2D("scene_undo", "data/textures/undo.png"));
+        first_row->add_child(new ui::TextureButton2D("scene_redo", "data/textures/redo.png"));
     }
-
-    first_row->add_child(new ui::TextureButton2D("deselect", "data/textures/cross.png"));
 
     // ** Node actions **
     {
@@ -463,11 +479,11 @@ void SceneEditor::init_ui()
 
 void SceneEditor::bind_events()
 {
-    /*Node::bind("gltf", [&](const std::string& signal, void* button) {
-        parse_scene("data/meshes/controllers/left_controller.glb", main_scene->get_nodes());
-        select_node(main_scene->get_nodes().back());
-        inspector_dirty = true;
-    });*/
+    // Undo/Redo
+    {
+        Node::bind("scene_undo", [&](const std::string& signal, void* button) { scene_undo(); });
+        Node::bind("scene_redo", [&](const std::string& signal, void* button) { scene_redo(); });
+    }
 
     Node::bind("sculpt", [&](const std::string& signal, void* button) {
         SculptNode* new_sculpt = new SculptNode();
@@ -695,6 +711,8 @@ void SceneEditor::update_gizmo(float delta_time)
     }
 }
 
+bool moving = true;
+
 void SceneEditor::render_gizmo()
 {
     if (!is_gizmo_usable()) {
@@ -707,8 +725,26 @@ void SceneEditor::render_gizmo()
 
     bool transform_dirty = gizmo->render();
 
+    // Assume this is only for 2D since Gizmo.render will only return true if
+    // Gizmo2D is used!
     if (transform_dirty) {
+
+        if (!moving) {
+            undo_list.push_back({
+                .type = sActionData::ACTION_TRANSFORM,
+                .ref = node,
+                .value = node->get_transform()
+            });
+            spdlog::info("SCENE UNDO!");
+            redo_list.clear();
+        }
+
         node->set_transform(gizmo->get_transform());
+
+        moving = true;
+    }
+    else if (moving) {
+        moving = false;
     }
 }
 
@@ -1021,4 +1057,52 @@ void SceneEditor::get_export_files()
     inspect_exports();
 
     exports_dirty = false;
+}
+
+bool SceneEditor::scene_undo()
+{
+    if (undo_list.empty()) {
+        return false;
+    }
+
+    sActionData step = undo_list.back();
+    undo_list.pop_back();
+
+    switch (step.type)
+    {
+    case sActionData::ACTION_TRANSFORM:
+        step.ref->set_transform(std::get<Transform>(step.value));
+        break;
+    default:
+        assert(0);
+        break;
+    }
+
+    redo_list.push_back(step);
+
+    return true;
+}
+
+bool SceneEditor::scene_redo()
+{
+    if (redo_list.empty()) {
+        return false;
+    }
+
+    sActionData step = redo_list.back();
+    redo_list.pop_back();
+
+    switch (step.type)
+    {
+    case sActionData::ACTION_TRANSFORM:
+        step.ref->set_transform(std::get<Transform>(step.value));
+        break;
+    default:
+        assert(0);
+        break;
+    }
+
+    undo_list.push_back(step);
+
+    return true;
 }
