@@ -272,6 +272,11 @@ void GroupEditor::bind_events()
 {
     Node::bind("deselect", [&](const std::string& signal, void* button) { deselect(); });
     Node::bind("ungroup", [&](const std::string& signal, void* button) { ungroup_node(selected_node); });
+
+    Node::bind("no_gizmo", [&](const std::string& signal, void* button) { gizmo.set_enabled(false); });
+    Node::bind("move", [&](const std::string& signal, void* button) { gizmo.set_operation(TRANSLATE); });
+    Node::bind("rotate", [&](const std::string& signal, void* button) { gizmo.set_operation(ROTATE); });
+    Node::bind("scale", [&](const std::string& signal, void* button) { gizmo.set_operation(SCALE); });
 }
 
 void GroupEditor::select_node(Node* node, bool place)
@@ -305,16 +310,28 @@ void GroupEditor::ungroup_node(Node* node)
         deselect();
     }
 
-    current_group->remove_child(node);
+    // Store world transform
+    glm::mat4x4 world_space_model = static_cast<Node3D*>(node)->get_global_model();
 
-    /*auto engine = static_cast<RoomsEngine*>(RoomsEngine::instance);
-    SceneEditor* scene_editor = engine->get_editor<SceneEditor*>(SCENE_EDITOR);*/
+    current_group->remove_child(node);
 
     // Add back to the scene
     Scene* main_scene = Engine::instance->get_main_scene();
     main_scene->add_node(node);
 
+    // Offset the node so it keeps its world position even without the parent
+    static_cast<Node3D*>(node)->set_transform(Transform::mat4_to_transform(world_space_model));
+
     inspector_dirty = true;
+
+    // Delete group and go back to scene editor in case no nodes left in group
+    if (current_group->get_children().empty()) {
+        main_scene->remove_node(current_group);
+        delete current_group;
+        current_group = nullptr;
+
+        RoomsEngine::switch_editor(SCENE_EDITOR);
+    }
 }
 
 bool GroupEditor::is_gizmo_usable()
@@ -340,12 +357,16 @@ void GroupEditor::update_gizmo(float delta_time)
         return;
     }
 
+    // Make sure to set gizmo in node space
+
     Node3D* node = static_cast<Node3D*>(selected_node);
     glm::vec3 right_controller_pos = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
-    Transform t = node->get_transform();
+
+    const Transform& parent_transform = node->get_parent<Node3D*>()->get_transform();
+    Transform t = Transform::combine(parent_transform, node->get_transform());
 
     if (gizmo.update(t, right_controller_pos, delta_time)) {
-        node->set_transform(t);
+        node->set_transform(Transform::combine(Transform::inverse(parent_transform), t));
     }
 }
 
@@ -355,14 +376,17 @@ void GroupEditor::render_gizmo()
         return;
     }
 
+    // Make sure to set gizmo in node space
+
     Node3D* node = static_cast<Node3D*>(selected_node);
 
-    gizmo.set_transform(node->get_transform());
+    const Transform& parent_transform = node->get_parent<Node3D*>()->get_transform();
+    gizmo.set_transform(Transform::combine(parent_transform, node->get_transform()));
 
     bool transform_dirty = gizmo.render();
 
     if (transform_dirty) {
-        node->set_transform(gizmo.get_transform());
+        node->set_transform(Transform::combine(Transform::inverse(parent_transform), gizmo.get_transform()));
     }
 }
 

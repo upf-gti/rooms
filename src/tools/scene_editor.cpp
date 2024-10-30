@@ -261,13 +261,6 @@ void SceneEditor::process_node_hovered()
     const bool a_pressed = Input::was_button_pressed(XR_BUTTON_A);
     const bool b_pressed = Input::was_button_pressed(XR_BUTTON_B);
 
-    // DEBUG......
-    if (Input::is_key_pressed(GLFW_KEY_K)) {
-        edit_group();
-        return;
-    }
-    // ............
-
     if (group_hovered) {
         if (grouping_node) {
             shortcuts[shortcuts::ADD_TO_GROUP] = true;
@@ -278,7 +271,7 @@ void SceneEditor::process_node_hovered()
         else {
             shortcuts[shortcuts::EDIT_GROUP] = !is_shift_right_pressed;
             if (a_pressed) {
-                edit_group();
+                edit_group(static_cast<Group3D*>(hovered_node));
             }
             else if (select_action_pressed) {
                 select_node(hovered_node, false);
@@ -514,7 +507,7 @@ void SceneEditor::bind_events()
     Node::bind("duplicate", [&](const std::string& signal, void* button) { clone_node(selected_node, true); });
     Node::bind("clone", [&](const std::string& signal, void* button) { clone_node(selected_node, false); });
 
-    // Gizmo events (these ones are used for all editors..)
+    // Gizmo events
     Node::bind("no_gizmo", [&](const std::string& signal, void* button) { gizmo.set_enabled(false); });
     Node::bind("move", [&](const std::string& signal, void* button) { gizmo.set_operation(TRANSLATE); });
     Node::bind("rotate", [&](const std::string& signal, void* button) { gizmo.set_operation(ROTATE); });
@@ -632,9 +625,11 @@ void SceneEditor::process_group()
     inspector_dirty = true;
 }
 
-void SceneEditor::edit_group()
+void SceneEditor::edit_group(Group3D* group)
 {
-    RoomsEngine::switch_editor(GROUP_EDITOR, static_cast<Group3D*>(hovered_node));
+    deselect();
+
+    RoomsEngine::switch_editor(GROUP_EDITOR, group);
 }
 
 void SceneEditor::create_light_node(uint8_t type)
@@ -855,8 +850,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
                 RoomsEngine::switch_editor(SCULPT_EDITOR, static_cast<SculptNode*>(n));
             }
             else if (dynamic_cast<Group3D*>(n)) {
-                // TODO: Open group scene
-                // ...
+                edit_group(static_cast<Group3D*>(n));
             }
         });
     }

@@ -4,6 +4,7 @@
 
 class Node;
 class Node2D;
+class Group3D;
 class Scene;
 class Room;
 
@@ -55,7 +56,7 @@ class SceneEditor : public BaseEditor {
     Node* node_to_group = nullptr;
 
     void process_group();
-    void edit_group();
+    void edit_group(Group3D* group);
 
     /*
     *   UI
