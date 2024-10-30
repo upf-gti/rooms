@@ -20,6 +20,7 @@ namespace ui {
     ui::Text2D* Keyboard::caret = nullptr;
 
     bool Keyboard::active = false;
+    bool Keyboard::placed = false;
     float Keyboard::input_start_position = 0.0f;
 
     ui::XRPanel* Keyboard::root_common = nullptr;
@@ -31,7 +32,9 @@ namespace ui {
     const uint16_t physical_keys[MAX_PHYSICAL_KEYS] = {
         GLFW_KEY_SPACE, GLFW_KEY_COMMA, GLFW_KEY_MINUS, GLFW_KEY_PERIOD,
         GLFW_KEY_0, GLFW_KEY_1, GLFW_KEY_2, GLFW_KEY_3, GLFW_KEY_4, GLFW_KEY_5, GLFW_KEY_6, GLFW_KEY_7, GLFW_KEY_8, GLFW_KEY_9,
-        GLFW_KEY_A, GLFW_KEY_B, GLFW_KEY_C, GLFW_KEY_D, GLFW_KEY_E, GLFW_KEY_F, GLFW_KEY_G, GLFW_KEY_H, GLFW_KEY_I, GLFW_KEY_J, GLFW_KEY_K, GLFW_KEY_L, GLFW_KEY_M, GLFW_KEY_N, GLFW_KEY_O, GLFW_KEY_P, GLFW_KEY_Q, GLFW_KEY_R, GLFW_KEY_S, GLFW_KEY_T, GLFW_KEY_U, GLFW_KEY_V, GLFW_KEY_W, GLFW_KEY_X, GLFW_KEY_Y, GLFW_KEY_Z
+        GLFW_KEY_A, GLFW_KEY_B, GLFW_KEY_C, GLFW_KEY_D, GLFW_KEY_E, GLFW_KEY_F, GLFW_KEY_G, GLFW_KEY_H, GLFW_KEY_I, GLFW_KEY_J,
+        GLFW_KEY_K, GLFW_KEY_L, GLFW_KEY_M, GLFW_KEY_N, GLFW_KEY_O, GLFW_KEY_P, GLFW_KEY_Q, GLFW_KEY_R, GLFW_KEY_S, GLFW_KEY_T,
+        GLFW_KEY_U, GLFW_KEY_V, GLFW_KEY_W, GLFW_KEY_X, GLFW_KEY_Y, GLFW_KEY_Z
     };
 
     void XrKeyboardState::set_input(const std::string& str)
@@ -76,7 +79,7 @@ namespace ui {
             return;
         }
 
-        input.pop_back();
+        input.erase(input.begin() + p_caret - 1u);
         text->set_text(input);
         p_caret--;
     }
@@ -126,6 +129,18 @@ namespace ui {
             caps = false;
             layout_dirty = true;
         }
+    }
+
+    void XrKeyboardState::move_caret_left()
+    {
+        p_caret--;
+        p_caret = glm::max((uint8_t)1u, p_caret);
+    }
+
+    void XrKeyboardState::move_caret_right()
+    {
+        p_caret++;
+        p_caret = glm::min(p_caret, (uint8_t)input.size());
     }
 
     float XrKeyboardState::get_caret_position()
@@ -228,47 +243,50 @@ namespace ui {
         }
 
         if (renderer->get_openxr_available()) {
-            glm::mat4x4 m(1.0f);
-            glm::vec3 eye = renderer->get_camera_eye();
-            glm::vec3 new_pos = eye + renderer->get_camera_front() * 0.5f;
 
-            // Set current pos
-            m = glm::translate(m, new_pos);
-            // Rotate to face camera
-            m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
-            m = glm::rotate(m, glm::radians(180.f), { 1.0f, 0.0f, 0.0f });
-            // Center panel
-            glm::vec2 offset = -(keyboard_size * 0.5f * keyboard_2d->get_scale());
-            m = glm::translate(m, glm::vec3(offset.x, -offset.y, 0.0f));
-            // Rotate to have a good perspective
-            //m = glm::rotate(m, glm::radians(35.f), { 1.0f, 0.0f, 0.0f });
+            if (!placed) {
+                glm::mat4x4 m(1.0f);
+                glm::vec3 eye = renderer->get_camera_eye();
+                glm::vec3 new_pos = eye + renderer->get_camera_front() * 0.5f;
 
-            keyboard_2d->set_xr_transform(Transform::mat4_to_transform(m));
+                // Set current pos
+                m = glm::translate(m, new_pos);
+                // Rotate to face camera
+                m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
+                m = glm::rotate(m, glm::radians(180.f), { 1.0f, 0.0f, 0.0f });
+                // Center panel
+                glm::vec2 offset = -(keyboard_size * 0.5f * keyboard_2d->get_scale());
+                m = glm::translate(m, glm::vec3(offset.x, -offset.y, 0.0f));
+
+                keyboard_2d->set_xr_transform(Transform::mat4_to_transform(m));
+                placed = true;
+            }
+            // else stay in position..
         }
         else {
-
             // Push keys in 2d using physical keyboard..
             for (uint32_t i = 0u; i < MAX_PHYSICAL_KEYS; ++i) {
-                if (Input::was_key_pressed(physical_keys[i])) {
+                if (Input::was_key_pressed(physical_keys[i], true)) {
                     char c = physical_keys[i];
-                    state.push_char(Input::is_key_pressed(GLFW_KEY_LEFT_SHIFT) ? c : std::tolower(c));
+                    state.push_char(Input::is_key_pressed(GLFW_KEY_LEFT_SHIFT, true) ? c : std::tolower(c));
                 }
             }
 
-            if (Input::was_key_pressed(GLFW_KEY_ENTER)) { Node::emit_signal("Enter", (void*)nullptr); }
-            if (Input::was_key_pressed(GLFW_KEY_BACKSPACE)) { Node::emit_signal("Backspace", (void*)nullptr); }
-            if (Input::was_key_pressed(GLFW_KEY_ESCAPE)) { Node::emit_signal("HideKeyboard", (void*)nullptr); }
+            if (Input::was_key_pressed(GLFW_KEY_ENTER, true)) { Node::emit_signal("Enter", (void*)nullptr); }
+            if (Input::was_key_pressed(GLFW_KEY_BACKSPACE, true)) { Node::emit_signal("Backspace", (void*)nullptr); }
+            if (Input::was_key_pressed(GLFW_KEY_ESCAPE, true)) { Node::emit_signal("HideKeyboard", (void*)nullptr); }
 
-            /*if (Input::was_key_pressed(GLFW_KEY_LEFT)) { state.move_caret_left(); }
-            if (Input::was_key_pressed(GLFW_KEY_RIGHT)) { state.move_caret_right(); }*/
+            if (Input::was_key_pressed(GLFW_KEY_LEFT, true)) { state.move_caret_left(); }
+            if (Input::was_key_pressed(GLFW_KEY_RIGHT, true)) { state.move_caret_right(); }
         }
 
         keyboard_2d->update(delta_time);
     }
 
-    void Keyboard::request(std::function<void(const std::string&)> fn, const std::string& str, uint32_t max_length)
+    void Keyboard::request(std::function<void(const std::string&)> fn, const std::string& str, uint8_t max_length)
     {
         active = true;
+        placed = false; // place again in correct position
 
         state.callback = fn;
         state.max_length = max_length;

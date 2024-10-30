@@ -26,8 +26,8 @@ namespace ui {
         bool caps_locked = false;
         bool layout_dirty = false;
         bool symbols = false;
-        uint32_t p_caret = 1u;
-        uint32_t max_length = 256u;
+        uint8_t p_caret = 1u;
+        uint8_t max_length = 255u;
         std::string input = ":";
         ui::Text2D* text = nullptr;
         std::function<void(const std::string&)> callback;
@@ -40,6 +40,9 @@ namespace ui {
 
         std::string get_input() { return input.substr(1); }
         float get_caret_position();
+
+        void move_caret_left();
+        void move_caret_right();
 
         void toggle_caps();
         void toggle_caps_lock();
@@ -60,6 +63,7 @@ namespace ui {
 
         static float input_start_position;
         static bool active;
+        static bool placed;
 
         static XrKeyboardState state;
 
@@ -79,7 +83,7 @@ namespace ui {
         static void render();
         static void update(float delta_time);
 
-        static void request(std::function<void(const std::string&)> fn, const std::string& str = "", uint32_t max_length = 256);
+        static void request(std::function<void(const std::string&)> fn, const std::string& str = "", uint8_t max_length = 255u);
         static void close() { active = false; };
     };
 }
