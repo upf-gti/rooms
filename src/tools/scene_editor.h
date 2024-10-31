@@ -20,11 +20,12 @@ namespace ui {
 struct sActionData {
 
     enum {
-        ACTION_TRANSFORM
+        ACTION_TRANSFORM,
+        ACTION_DELETE
     };
 
     int type = -1;
-    Node3D* ref = nullptr;
+    Node3D* ref_node = nullptr;
     std::variant<Transform> value;
 };
 
@@ -60,6 +61,8 @@ class SceneEditor : public BaseEditor {
     void deselect();
     void clone_node(Node* node, bool copy = true);
     void group_node(Node* node);
+    void delete_node(Node* node, bool push_undo = true);
+    void recover_node(Node* node, bool push_redo = true);
     void create_light_node(uint8_t type);
     void process_node_hovered();
 
@@ -129,6 +132,13 @@ class SceneEditor : public BaseEditor {
 
     std::vector<sActionData> undo_list;
     std::vector<sActionData> redo_list;
+
+    struct sDeletedNode {
+        int index = -1;
+        Node3D* ref = nullptr;
+    };
+
+    std::unordered_map<uintptr_t, sDeletedNode> deleted_nodes;
 
     bool scene_undo();
     bool scene_redo();

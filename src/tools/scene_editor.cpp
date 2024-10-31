@@ -32,7 +32,7 @@
 
 #include <filesystem>
 
-#define MAX_UNDO_STEPS 128
+#define MAX_UNDO_STEPS 64
 
 uint64_t SceneEditor::node_signal_uid = 0;
 
@@ -125,6 +125,13 @@ void SceneEditor::initialize()
 void SceneEditor::clean()
 {
     BaseEditor::clean();
+
+    // Clean nodes deleted still stored for undo/redo
+    for (const auto& node_data : deleted_nodes) {
+        delete node_data.second.ref;
+    }
+
+    deleted_nodes.clear();
 }
 
 void SceneEditor::update(float delta_time)
@@ -612,6 +619,41 @@ void SceneEditor::group_node(Node* node)
     node_to_group = node;
 }
 
+void SceneEditor::delete_node(Node* node, bool push_undo)
+{
+    uintptr_t idx = reinterpret_cast<uintptr_t>(node);
+    main_scene->remove_node(node);
+    Node3D* node_3d = static_cast<Node3D*>(node);
+    assert(node_3d);
+
+    // TODO: Store correct index
+    deleted_nodes[idx] = { -1, node_3d };
+
+    if (push_undo) {
+        push_undo_action({ sActionData::ACTION_DELETE, node_3d }, false);
+    }
+
+    // Don't delete node now
+    // delete node;
+
+    inspector_dirty = true;
+}
+
+void SceneEditor::recover_node(Node* node, bool push_redo)
+{
+    uintptr_t idx = reinterpret_cast<uintptr_t>(node);
+    const sDeletedNode& node_data = deleted_nodes[idx];
+    Node3D* recovered_node = node_data.ref;
+    main_scene->add_node(recovered_node, node_data.index);
+    deleted_nodes.erase(idx);
+
+    if (push_redo) {
+        push_redo_action({ sActionData::ACTION_DELETE, recovered_node });
+    }
+
+    inspector_dirty = true;
+}
+
 void SceneEditor::process_group()
 {
     Node3D* hovered_3d = static_cast<Node3D*>(hovered_node);
@@ -949,11 +991,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
                 deselect();
             }
 
-            main_scene->remove_node(n);
-
-            delete n;
-
-            inspector_dirty = true;
+            delete_node(n);
         });
     }
 
@@ -1073,7 +1111,7 @@ void SceneEditor::get_export_files()
 void SceneEditor::push_undo_action(const sActionData& step, bool clear_redo)
 {
     if (undo_list.size() >= MAX_UNDO_STEPS) {
-        return;
+        undo_list.erase(undo_list.begin());
     }
 
     undo_list.push_back(step);
@@ -1097,11 +1135,18 @@ bool SceneEditor::scene_undo()
     sActionData step = undo_list.back();
     undo_list.pop_back();
 
+    if (!step.ref_node) {
+        return false;
+    }
+
     switch (step.type)
     {
     case sActionData::ACTION_TRANSFORM:
-        push_redo_action({ sActionData::ACTION_TRANSFORM, step.ref, step.ref->get_transform() });
-        step.ref->set_transform(std::get<Transform>(step.value));
+        push_redo_action({ sActionData::ACTION_TRANSFORM, step.ref_node, step.ref_node->get_transform() });
+        step.ref_node->set_transform(std::get<Transform>(step.value));
+        break;
+    case sActionData::ACTION_DELETE:
+        recover_node(step.ref_node);
         break;
     default:
         assert(0);
@@ -1120,11 +1165,18 @@ bool SceneEditor::scene_redo()
     sActionData step = redo_list.back();
     redo_list.pop_back();
 
+    if (!step.ref_node) {
+        return false;
+    }
+
     switch (step.type)
     {
     case sActionData::ACTION_TRANSFORM:
-        push_undo_action({ sActionData::ACTION_TRANSFORM, step.ref, step.ref->get_transform() }, false);
-        step.ref->set_transform(std::get<Transform>(step.value));
+        push_undo_action({ sActionData::ACTION_TRANSFORM, step.ref_node, step.ref_node->get_transform() }, false);
+        step.ref_node->set_transform(std::get<Transform>(step.value));
+        break;
+    case sActionData::ACTION_DELETE:
+        delete_node(step.ref_node); // delete again node
         break;
     default:
         assert(0);
