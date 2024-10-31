@@ -29,6 +29,8 @@ SculptNode::SculptNode(SculptNode* reference) : Node3D()
 
     sculpt_gpu_data = reference->get_sculpt_data();
     sculpt_gpu_data->ref();
+
+    from_memory = true;
 }
 
 SculptNode::~SculptNode()
@@ -101,8 +103,6 @@ void SculptNode::initialize()
 {
     sculpt_gpu_data = static_cast<RoomsRenderer*>(Renderer::instance)->get_sculpt_manager()->create_sculpt();
     sculpt_gpu_data->ref();
-
-    //static_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->add_sculpt_instance(this);
 }
 
 void SculptNode::from_history(const std::vector<Stroke>& new_history)
@@ -111,7 +111,7 @@ void SculptNode::from_history(const std::vector<Stroke>& new_history)
         RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(Renderer::instance);
         sculpt_gpu_data = rooms_renderer->get_sculpt_manager()->create_sculpt_from_history(new_history);
         sculpt_gpu_data->ref();
-        //rooms_renderer->get_raymarching_renderer()->add_sculpt_instance(this);
+        from_memory = true;
     }
     else {
         initialize();
@@ -147,13 +147,12 @@ void SculptNode::parse(std::ifstream& binary_scene_file)
         stroke_history.resize(header.stroke_count);
         binary_scene_file.read(reinterpret_cast<char*>(&stroke_history[0]), header.stroke_count * sizeof(Stroke));
         sculpt_gpu_data = rooms_renderer->get_sculpt_manager()->create_sculpt_from_history(stroke_history);
+        from_memory = true;
     } else {
         sculpt_gpu_data = rooms_renderer->get_sculpt_manager()->create_sculpt();
     }
 
     sculpt_gpu_data->ref();
-
-    //rooms_renderer->get_raymarching_renderer()->add_sculpt_instance(this);
 
     // TODO: Remove current
     //rooms_renderer->get_raymarching_renderer()->set_current_sculpt(this);
@@ -165,6 +164,7 @@ void SculptNode::clone(Node* new_node, bool copy)
     Node3D::clone(new_node, copy);
 
     SculptNode* new_sculpt = static_cast<SculptNode*>(new_node);
+    new_sculpt->set_from_memory(true);
 
     // instance copy, it should have different model, but uses same gpu data
     if (!copy) {

@@ -163,7 +163,17 @@ void SculptEditor::initialize()
 void SculptEditor::on_enter(void* data)
 {
     SculptNode* sculpt_node = reinterpret_cast<SculptNode*>(data);
+    assert(sculpt_node);
     set_current_sculpt(sculpt_node);
+
+    /*
+    * If loaded from memory, we can assume it has a defined position,
+    * so do not move it and start now the sculpt.
+    */
+
+    if (!sculpt_started && sculpt_node->get_from_memory()) {
+        sculpt_started = true;
+    }
 }
 
 void SculptEditor::clean()

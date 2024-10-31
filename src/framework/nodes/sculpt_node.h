@@ -14,12 +14,13 @@ class SculptNode : public Node3D {
         size_t stroke_count = 0;
     };
 
+    // bool are_sculpt_flags_dirty = false;
+    bool from_memory = false;
+
     uint32_t sculpt_flags = 0u;
-    bool are_sculpt_flags_dirty = false;
+    uint32_t in_frame_instance_id = 0u;
 
     Sculpt* sculpt_gpu_data = nullptr;
-
-    uint32_t in_frame_instance_id = 0u;
 
     void from_history(const std::vector<Stroke>& new_history);
 
@@ -43,8 +44,10 @@ public:
 
     inline void set_sculpt_data(Sculpt* new_data) { sculpt_gpu_data = new_data; }
     void set_out_of_focus(const bool oof);
+    void set_from_memory(bool value) { from_memory = value; }
 
     inline Sculpt* get_sculpt_data() { return sculpt_gpu_data; }
     inline uint32_t get_flags() { return sculpt_flags; }
     inline uint32_t get_in_frame_render_instance_idx() const { return in_frame_instance_id; }
+    inline bool get_from_memory() { return from_memory; }
 };
