@@ -60,6 +60,8 @@ class AnimationEditor : public BaseEditor {
 
     void update_animation_trajectory();
 
+    uint32_t get_animation_idx();
+
     /*
     *   Keyframes
     */

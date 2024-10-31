@@ -143,14 +143,14 @@ void AnimationEditor::on_enter(void* data)
         sAnimationData new_anim_data;
         new_anim_data.animation = current_animation;
         new_anim_data.states.push_back(initial_state);
-        animations_data[(uint32_t)current_animation] = new_anim_data;
+        animations_data[get_animation_idx()] = new_anim_data;
 
         current_time += 0.5f;
         current_animation->recalculate_duration();
     }
     else {
         // Start with last keyframe added time
-        auto& data = animations_data[(uint32_t)current_animation];
+        auto& data = animations_data[get_animation_idx()];
         current_time = data.current_time;
     }
 
@@ -179,7 +179,7 @@ void AnimationEditor::on_enter(void* data)
 void AnimationEditor::on_exit()
 {
     // Store current time..
-    auto& data = animations_data[(uint32_t)current_animation];
+    auto& data = animations_data[get_animation_idx()];
     data.current_time = current_time;
 }
 
@@ -266,7 +266,7 @@ void AnimationEditor::render()
         current_node->render();
     }
 
-    auto& states = animations_data[(uint32_t)current_animation].states;
+    auto& states = animations_data[get_animation_idx()].states;
 
     for (uint32_t i = 0u; i < states.size(); i++) {
         const glm::vec3 position = std::get<glm::vec3>(states[i].properties["translation"].value);
@@ -284,6 +284,7 @@ void AnimationEditor::render_gizmo()
     if (!keyframe_dirty || !current_node) {
         return;
     }
+
 
     gizmo->set_transform(current_node->get_transform());
 
@@ -314,11 +315,16 @@ void AnimationEditor::update_gizmo(float delta_time)
     }
 }
 
+uint32_t AnimationEditor::get_animation_idx()
+{
+    return reinterpret_cast<uintptr_t>(current_animation);
+}
+
 void AnimationEditor::update_animation_trajectory()
 {
     std::vector<sInterleavedData> vertices_to_upload;
 
-    auto& states = animations_data[(uint32_t)current_animation].states;
+    auto& states = animations_data[get_animation_idx()].states;
 
     if (states.size() <= 1u) {
         return;
@@ -348,7 +354,7 @@ void AnimationEditor::update_animation_trajectory()
 */
 void AnimationEditor::create_keyframe()
 {
-    auto& states = animations_data[(uint32_t)current_animation].states;
+    auto& states = animations_data[get_animation_idx()].states;
 
     // Get the last state to check changes later when adding new keyframes
     current_animation_state = &states.back();
@@ -442,7 +448,7 @@ void AnimationEditor::process_keyframe()
         new_anim_state.time = current_time;
         current_time += 0.5f;
         current_animation->recalculate_duration();
-        auto& states = animations_data[(uint32_t)current_animation].states;
+        auto& states = animations_data[get_animation_idx()].states;
         states.push_back(new_anim_state);
     }
 
@@ -455,7 +461,7 @@ void AnimationEditor::edit_keyframe(uint32_t index)
     keyframe_dirty = true;
     editing_keyframe = true;
 
-    auto& states = animations_data[(uint32_t)current_animation].states;
+    auto& states = animations_data[get_animation_idx()].states;
     current_animation_state = &states[index];
 
     // Show submit_keyframe button
@@ -497,7 +503,7 @@ void AnimationEditor::duplicate_keyframe(uint32_t index)
 
     current_time += 0.5f;
     current_animation->recalculate_duration();
-    auto& states = animations_data[(uint32_t)current_animation].states;
+    auto& states = animations_data[get_animation_idx()].states;
     states.push_back(new_anim_state);
     current_animation_state = nullptr;
     keyframe_list_dirty = true;
@@ -509,7 +515,7 @@ void AnimationEditor::duplicate_keyframe(uint32_t index)
 
 sAnimationState* AnimationEditor::get_animation_state(uint32_t index)
 {
-    auto& states = animations_data[(uint32_t)current_animation].states;
+    auto& states = animations_data[get_animation_idx()].states;
     return &states[index];
 }
 
@@ -689,7 +695,7 @@ void AnimationEditor::render_gui()
         ImGui::Text("Animation %s", current_animation->get_name().c_str());
         ImGui::Text("Num Tracks %d", current_animation->get_track_count());
 
-        auto& states = animations_data[(uint32_t)current_animation].states;
+        auto& states = animations_data[get_animation_idx()].states;
         ImGui::Text("Num States %zu", states.size());
 
         if (current_animation && ImGui::Button("Play")) {
@@ -977,7 +983,7 @@ void AnimationEditor::inspect_keyframes_list(bool force)
 {
     inspector->clear();
 
-    auto& states = animations_data[(uint32_t)current_animation].states;
+    auto& states = animations_data[get_animation_idx()].states;
 
     for (uint32_t i = 0; i < states.size(); ++i) {
 
