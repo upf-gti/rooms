@@ -32,6 +32,8 @@
 
 #include <filesystem>
 
+#define MAX_UNDO_STEPS 128
+
 uint64_t SceneEditor::node_signal_uid = 0;
 
 void SceneEditor::initialize()
@@ -697,8 +699,7 @@ void SceneEditor::update_gizmo(float delta_time)
         return;
     }
 
-    // Only 3D Gizmo for XR needs to update
-
+    // Gizmo should update in XR mode only 
     if (!renderer->get_openxr_available()) {
         return;
     }
@@ -708,11 +709,18 @@ void SceneEditor::update_gizmo(float delta_time)
     Transform t = node->get_transform();
 
     if (gizmo->update(t, right_controller_pos, delta_time)) {
+
+        if (!action_in_progress) {
+            push_undo_action({ sActionData::ACTION_TRANSFORM, node, node->get_transform() });
+            action_in_progress = true;
+        }
+
         node->set_transform(t);
     }
+    else if (action_in_progress) {
+        action_in_progress = false;
+    }
 }
-
-bool moving = true;
 
 void SceneEditor::render_gizmo()
 {
@@ -726,26 +734,23 @@ void SceneEditor::render_gizmo()
 
     bool transform_dirty = gizmo->render();
 
-    // Assume this is only for 2D since Gizmo.render will only return true if
+    // This is only for 2D since Gizmo.render will only return true if
     // Gizmo2D is used!
+    if (renderer->get_openxr_available()) {
+        return;
+    }
+
     if (transform_dirty) {
 
-        if (!moving) {
-            undo_list.push_back({
-                .type = sActionData::ACTION_TRANSFORM,
-                .ref = node,
-                .value = node->get_transform()
-            });
-            spdlog::info("SCENE UNDO!");
-            redo_list.clear();
+        if (!action_in_progress) {
+            push_undo_action({ sActionData::ACTION_TRANSFORM, node, node->get_transform() });
+            action_in_progress = true;
         }
 
         node->set_transform(gizmo->get_transform());
-
-        moving = true;
     }
-    else if (moving) {
-        moving = false;
+    else if (action_in_progress && !Input::is_mouse_pressed(GLFW_MOUSE_BUTTON_LEFT)) {
+        action_in_progress = false;
     }
 }
 
@@ -771,8 +776,14 @@ bool SceneEditor::is_rotation_being_used()
 
 void SceneEditor::update_node_transform()
 {
+    if (!selected_node) {
+        return;
+    }
+
+    Node3D* node_3d = static_cast<Node3D*>(selected_node);
+
     // Do not rotate sculpt if shift -> we might be rotating the edit
-    if (selected_node && is_rotation_being_used() && !is_shift_left_pressed) {
+    if (is_rotation_being_used() && !is_shift_left_pressed) {
 
         glm::quat left_hand_rotation = Input::get_controller_rotation(HAND_LEFT);
         glm::vec3 left_hand_translation = Input::get_controller_position(HAND_LEFT);
@@ -782,15 +793,14 @@ void SceneEditor::update_node_transform()
         if (!rotation_started) {
             last_left_hand_rotation = left_hand_rotation;
             last_left_hand_translation = left_hand_translation;
+            push_undo_action({ sActionData::ACTION_TRANSFORM, node_3d, node_3d->get_transform() });
         }
 
         glm::quat rotation_diff = (left_hand_rotation * glm::inverse(last_left_hand_rotation));
         glm::vec3 translation_diff = left_hand_translation - last_left_hand_translation;
 
-        Node3D* node = static_cast<Node3D*>(selected_node);
-
-        node->rotate_world(rotation_diff);
-        node->translate(translation_diff);
+        node_3d->rotate_world(rotation_diff);
+        node_3d->translate(translation_diff);
 
         if (Input::get_trigger_value(HAND_RIGHT) > 0.5) {
 
@@ -800,7 +810,7 @@ void SceneEditor::update_node_transform()
             }
 
             float hand_distance_diff = hand_distance / last_hand_distance;
-            node->scale(glm::vec3(hand_distance_diff));
+            node_3d->scale(glm::vec3(hand_distance_diff));
             last_hand_distance = hand_distance;
         }
         else if (scale_started) {
@@ -1049,7 +1059,6 @@ void SceneEditor::get_export_files()
     }
 
     for (const auto& entry : std::filesystem::directory_iterator(path)) {
-
         std::string file_name = entry.path().string();
         std::string scene_name = file_name.substr(13);
         exported_scenes.push_back(scene_name);
@@ -1058,6 +1067,24 @@ void SceneEditor::get_export_files()
     inspect_exports();
 
     exports_dirty = false;
+}
+
+void SceneEditor::push_undo_action(const sActionData& step, bool clear_redo)
+{
+    if (undo_list.size() >= MAX_UNDO_STEPS) {
+        return;
+    }
+
+    undo_list.push_back(step);
+
+    if (clear_redo) {
+        redo_list.clear();
+    }
+}
+
+void SceneEditor::push_redo_action(const sActionData& step)
+{
+    redo_list.push_back(step);
 }
 
 bool SceneEditor::scene_undo()
@@ -1072,14 +1099,13 @@ bool SceneEditor::scene_undo()
     switch (step.type)
     {
     case sActionData::ACTION_TRANSFORM:
+        push_redo_action({ sActionData::ACTION_TRANSFORM, step.ref, step.ref->get_transform() });
         step.ref->set_transform(std::get<Transform>(step.value));
         break;
     default:
         assert(0);
         break;
     }
-
-    redo_list.push_back(step);
 
     return true;
 }
@@ -1096,14 +1122,13 @@ bool SceneEditor::scene_redo()
     switch (step.type)
     {
     case sActionData::ACTION_TRANSFORM:
+        push_undo_action({ sActionData::ACTION_TRANSFORM, step.ref, step.ref->get_transform() }, false);
         step.ref->set_transform(std::get<Transform>(step.value));
         break;
     default:
         assert(0);
         break;
     }
-
-    undo_list.push_back(step);
 
     return true;
 }

@@ -125,11 +125,16 @@ class SceneEditor : public BaseEditor {
     *   Undo/Redo
     */
 
+    bool action_in_progress = true;
+
     std::vector<sActionData> undo_list;
     std::vector<sActionData> redo_list;
 
     bool scene_undo();
     bool scene_redo();
+
+    void push_undo_action(const sActionData& step, bool clear_redo = true);
+    void push_redo_action(const sActionData& step);
 
 public:
 
