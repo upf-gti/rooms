@@ -1414,29 +1414,29 @@ void SculptEditor::init_ui()
         // Left hand
         {
             left_hand_box = new ui::VContainer2D("left_controller_root", { 0.0f, 0.0f }, ui::CREATE_3D);
-            left_hand_box->add_child(new ui::ImageLabel2D("Round Shape", "data/textures/buttons/l_thumbstick.png", shortcuts::ROUND_SHAPE));
-            left_hand_box->add_child(new ui::ImageLabel2D("Smooth", "data/textures/buttons/l_grip_plus_l_thumbstick.png", shortcuts::MODIFY_SMOOTH, double_size));
+            left_hand_box->add_child(new ui::ImageLabel2D("Round Shape", shortcuts::L_THUMBSTICK_PATH, shortcuts::ROUND_SHAPE));
+            left_hand_box->add_child(new ui::ImageLabel2D("Smooth", shortcuts::L_GRIP_L_THUMBSTICK_PATH, shortcuts::MODIFY_SMOOTH, double_size));
             left_hand_box->add_child(new ui::ImageLabel2D("Redo", shortcuts::Y_BUTTON_PATH, shortcuts::REDO));
-            left_hand_box->add_child(new ui::ImageLabel2D("Guides", "data/textures/buttons/l_grip_plus_y.png", shortcuts::OPEN_GUIDES_MENU, double_size));
+            left_hand_box->add_child(new ui::ImageLabel2D("Guides", shortcuts::L_GRIP_Y_BUTTON_PATH, shortcuts::OPEN_GUIDES_MENU, double_size));
             left_hand_box->add_child(new ui::ImageLabel2D("Undo", shortcuts::X_BUTTON_PATH, shortcuts::UNDO));
-            left_hand_box->add_child(new ui::ImageLabel2D("PBR", "data/textures/buttons/l_grip_plus_x.png", shortcuts::OPEN_PBR_MENU, double_size));
-            left_hand_box->add_child(new ui::ImageLabel2D("Manipulate Sculpt", "data/textures/buttons/l_trigger.png", shortcuts::MANIPULATE_SCULPT));
+            left_hand_box->add_child(new ui::ImageLabel2D("PBR", shortcuts::L_GRIP_X_BUTTON_PATH, shortcuts::OPEN_PBR_MENU, double_size));
+            left_hand_box->add_child(new ui::ImageLabel2D("Manipulate Sculpt", shortcuts::L_TRIGGER_PATH, shortcuts::MANIPULATE_SCULPT));
         }
 
         // Right hand
         {
             right_hand_box = new ui::VContainer2D("right_controller_root", { 0.0f, 0.0f }, ui::CREATE_3D);
-            right_hand_box->add_child(new ui::ImageLabel2D("Main size", "data/textures/buttons/r_thumbstick.png", shortcuts::MAIN_SIZE));
-            right_hand_box->add_child(new ui::ImageLabel2D("Sec size", "data/textures/buttons/r_grip_plus_r_thumbstick.png", shortcuts::SECONDARY_SIZE, double_size));
+            right_hand_box->add_child(new ui::ImageLabel2D("Main size", shortcuts::R_THUMBSTICK_PATH, shortcuts::MAIN_SIZE));
+            right_hand_box->add_child(new ui::ImageLabel2D("Sec size", shortcuts::R_GRIP_R_THUMBSTICK_PATH, shortcuts::SECONDARY_SIZE, double_size));
             right_hand_box->add_child(new ui::ImageLabel2D("Back to scene", shortcuts::B_BUTTON_PATH, shortcuts::BACK_TO_SCENE));
             right_hand_box->add_child(new ui::ImageLabel2D("Cancel Spline", shortcuts::B_BUTTON_PATH, shortcuts::CANCEL_SPLINE));
-            right_hand_box->add_child(new ui::ImageLabel2D("Sculpt/Paint", "data/textures/buttons/r_grip_plus_b.png", shortcuts::SCULPT_PAINT, double_size));
+            right_hand_box->add_child(new ui::ImageLabel2D("Sculpt/Paint", shortcuts::R_GRIP_B_BUTTON_PATH, shortcuts::SCULPT_PAINT, double_size));
             right_hand_box->add_child(new ui::ImageLabel2D("Confirm Spline", shortcuts::A_BUTTON_PATH, shortcuts::CONFIRM_SPLINE));
             right_hand_box->add_child(new ui::ImageLabel2D("Add/Substract", shortcuts::A_BUTTON_PATH, shortcuts::ADD_SUBSTRACT));
-            right_hand_box->add_child(new ui::ImageLabel2D("Pick Material", "data/textures/buttons/r_grip_plus_a.png", shortcuts::PICK_MATERIAL, double_size));
-            right_hand_box->add_child(new ui::ImageLabel2D("Stamp", "data/textures/buttons/r_trigger.png", shortcuts::STAMP));
-            right_hand_box->add_child(new ui::ImageLabel2D("Add Knot", "data/textures/buttons/r_trigger.png", shortcuts::ADD_KNOT));
-            right_hand_box->add_child(new ui::ImageLabel2D("Smear", "data/textures/buttons/r_grip_plus_r_trigger.png", shortcuts::SMEAR, double_size));
+            right_hand_box->add_child(new ui::ImageLabel2D("Pick Material", shortcuts::R_GRIP_A_BUTTON_PATH, shortcuts::PICK_MATERIAL, double_size));
+            right_hand_box->add_child(new ui::ImageLabel2D("Stamp", shortcuts::R_TRIGGER_PATH, shortcuts::STAMP));
+            right_hand_box->add_child(new ui::ImageLabel2D("Add Knot", shortcuts::R_TRIGGER_PATH, shortcuts::ADD_KNOT));
+            right_hand_box->add_child(new ui::ImageLabel2D("Smear", shortcuts::R_GRIP_R_TRIGGER_PATH, shortcuts::SMEAR, double_size));
         }
     }
 

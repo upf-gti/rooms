@@ -145,6 +145,10 @@ void SceneEditor::update(float delta_time)
     shortcuts.clear();
     shortcuts[shortcuts::TOGGLE_SCENE_INSPECTOR] = true;
 
+    if(!selected_node || (hovered_node != selected_node)) {
+        shortcuts[shortcuts::SELECT_NODE] = true;
+    }
+
     if (hovered_node) {
         process_node_hovered();
     }
@@ -159,9 +163,6 @@ void SceneEditor::update(float delta_time)
         if (Input::was_trigger_pressed(HAND_RIGHT)) {
             moving_node = false;
         }
-    }
-    else {
-        shortcuts[shortcuts::SELECT_NODE] = true;
     }
 
     if (inspector_dirty) {
@@ -183,7 +184,7 @@ void SceneEditor::update(float delta_time)
         bool can_undo = Input::was_button_pressed(XR_BUTTON_X) || (Input::is_key_pressed(GLFW_KEY_LEFT_CONTROL) && Input::was_key_pressed(GLFW_KEY_Z));
         bool can_redo = (is_shift_left_pressed && Input::was_button_pressed(XR_BUTTON_X)) || (Input::is_key_pressed(GLFW_KEY_LEFT_CONTROL) && Input::was_key_pressed(GLFW_KEY_Y));
 
-        shortcuts[shortcuts::SCENE_UNDO] = true;
+        shortcuts[shortcuts::SCENE_UNDO] = !is_shift_left_pressed;
         shortcuts[shortcuts::SCENE_REDO] = is_shift_left_pressed;
 
         if (can_undo) {
@@ -456,7 +457,7 @@ void SceneEditor::init_ui()
         {
             left_hand_box = new ui::VContainer2D("left_controller_root", { 0.0f, 0.0f }, ui::CREATE_3D);
             left_hand_box->add_child(new ui::ImageLabel2D("Scene Panel", shortcuts::Y_BUTTON_PATH, shortcuts::TOGGLE_SCENE_INSPECTOR));
-            left_hand_box->add_child(new ui::ImageLabel2D("Redo", shortcuts::Y_BUTTON_PATH, shortcuts::SCENE_REDO));
+            left_hand_box->add_child(new ui::ImageLabel2D("Redo", shortcuts::L_GRIP_X_BUTTON_PATH, shortcuts::SCENE_REDO, double_size));
             left_hand_box->add_child(new ui::ImageLabel2D("Undo", shortcuts::X_BUTTON_PATH, shortcuts::SCENE_UNDO));
         }
 
@@ -465,14 +466,14 @@ void SceneEditor::init_ui()
             right_hand_box = new ui::VContainer2D("right_controller_root", { 0.0f, 0.0f }, ui::CREATE_3D);
             right_hand_box->add_child(new ui::ImageLabel2D("Edit Sculpt", shortcuts::B_BUTTON_PATH, shortcuts::EDIT_SCULPT_NODE));
             right_hand_box->add_child(new ui::ImageLabel2D("Edit Group", shortcuts::B_BUTTON_PATH, shortcuts::EDIT_GROUP));
-            right_hand_box->add_child(new ui::ImageLabel2D("Animate", "data/textures/buttons/r_grip_plus_b.png", shortcuts::ANIMATE_NODE, double_size));
+            right_hand_box->add_child(new ui::ImageLabel2D("Animate", shortcuts::R_GRIP_B_BUTTON_PATH, shortcuts::ANIMATE_NODE, double_size));
             right_hand_box->add_child(new ui::ImageLabel2D("Duplicate Node", shortcuts::A_BUTTON_PATH, shortcuts::DUPLICATE_NODE));
             right_hand_box->add_child(new ui::ImageLabel2D("Create Group", shortcuts::A_BUTTON_PATH, shortcuts::CREATE_GROUP));
             right_hand_box->add_child(new ui::ImageLabel2D("Add to Group", shortcuts::A_BUTTON_PATH, shortcuts::ADD_TO_GROUP));
-            right_hand_box->add_child(new ui::ImageLabel2D("Copy Node", "data/textures/buttons/r_grip_plus_a.png", shortcuts::CLONE_NODE, double_size));
-            right_hand_box->add_child(new ui::ImageLabel2D("Place Node", "data/textures/buttons/r_trigger.png", shortcuts::PLACE_NODE));
-            right_hand_box->add_child(new ui::ImageLabel2D("Select Node", "data/textures/buttons/r_trigger.png", shortcuts::SELECT_NODE));
-            right_hand_box->add_child(new ui::ImageLabel2D("Group Node", "data/textures/buttons/r_grip_plus_r_trigger.png", shortcuts::GROUP_NODE, double_size));
+            right_hand_box->add_child(new ui::ImageLabel2D("Clone Node", shortcuts::R_GRIP_A_BUTTON_PATH, shortcuts::CLONE_NODE, double_size));
+            right_hand_box->add_child(new ui::ImageLabel2D("Place Node", shortcuts::R_TRIGGER_PATH, shortcuts::PLACE_NODE));
+            right_hand_box->add_child(new ui::ImageLabel2D("Select Node", shortcuts::R_TRIGGER_PATH, shortcuts::SELECT_NODE));
+            right_hand_box->add_child(new ui::ImageLabel2D("Group Node", shortcuts::R_GRIP_R_TRIGGER_PATH, shortcuts::GROUP_NODE, double_size));
         }
     }
 
