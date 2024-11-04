@@ -84,6 +84,9 @@ namespace ui {
             if (IO::is_any_hover_type({ PANEL_BUTTON, BUTTON, TEXTURE_BUTTON, SELECTOR_BUTTON, COMBO_BUTTON, SUBMENU })) {
                 set(ui::MOUSE_CURSOR_POINTER);
             }
+            else if (IO::is_hover_type(TEXT, ui::TEXT_SELECTABLE)) {
+                set(ui::MOUSE_CURSOR_POINTER);
+            }
             else if (IO::is_hover_type(HSLIDER)) {
                 set(ui::MOUSE_CURSOR_RESIZE_EW);
             }
