@@ -17,6 +17,7 @@
 #include "framework/ui/keyboard.h"
 #include "framework/camera/camera.h"
 #include "framework/resources/room.h"
+#include "framework/ui/io.h"
 
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/renderer_storage.h"
@@ -79,7 +80,7 @@ void SceneEditor::initialize()
     Node::bind("@on_gpu_results", [&](const std::string& sg, void* data) {
 
         // Do nothing if it's not the current editor..
-        auto engine = static_cast<RoomsEngine*>(RoomsEngine::instance);;
+        auto engine = static_cast<RoomsEngine*>(RoomsEngine::instance);
         if (engine->get_current_editor() != this) {
             return;
         }
@@ -109,6 +110,7 @@ void SceneEditor::initialize()
                 else {
                     hovered_node = sculpt_node;
                 }
+                IO::set_xr_ray_distance(intersection.ray_t);
             }
             for (auto child : node->get_children()) {
                 check_intersections(child);
@@ -188,7 +190,7 @@ void SceneEditor::update(float delta_time)
 
     // Manage Undo/Redo
     {
-        bool can_undo = Input::was_button_pressed(XR_BUTTON_X) || (Input::is_key_pressed(GLFW_KEY_LEFT_CONTROL) && Input::was_key_pressed(GLFW_KEY_Z));
+        bool can_undo = (!is_shift_left_pressed && Input::was_button_pressed(XR_BUTTON_X)) || (Input::is_key_pressed(GLFW_KEY_LEFT_CONTROL) && Input::was_key_pressed(GLFW_KEY_Z));
         bool can_redo = (is_shift_left_pressed && Input::was_button_pressed(XR_BUTTON_X)) || (Input::is_key_pressed(GLFW_KEY_LEFT_CONTROL) && Input::was_key_pressed(GLFW_KEY_Y));
 
         shortcuts[shortcuts::SCENE_UNDO] = !is_shift_left_pressed;
@@ -293,8 +295,8 @@ void SceneEditor::process_node_hovered()
             }
         }
         else {
-            shortcuts[shortcuts::EDIT_GROUP] = !is_shift_right_pressed;
-            if (a_pressed) {
+            shortcuts[shortcuts::EDIT_GROUP] = true;
+            if (b_pressed) {
                 edit_group(static_cast<Group3D*>(hovered_node));
             }
             else if (select_action_pressed) {
@@ -1017,7 +1019,8 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
 
 void SceneEditor::inspect_light()
 {
-    inspector->clear();
+    bool inspector_visible = inspector->get_visibility();
+    inspector->clear(!inspector_visible);
 
     Light3D* light = static_cast<Light3D*>(selected_node);
 
@@ -1070,7 +1073,8 @@ void SceneEditor::inspect_light()
 
 void SceneEditor::inspect_exports(bool force)
 {
-    inspector->clear();
+    bool inspector_visible = inspector->get_visibility();
+    inspector->clear(!inspector_visible);
 
     for (const std::string& name : exported_scenes) {
 

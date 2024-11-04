@@ -78,6 +78,8 @@ void GroupEditor::on_enter(void* data)
 
     gizmo->set_operation(TRANSLATE);
     Node::emit_signal("combo_gizmo_modes@changed", (void*)"translate");
+
+    selected_node = nullptr;
 }
 
 void GroupEditor::update(float delta_time)
@@ -114,11 +116,6 @@ void GroupEditor::update(float delta_time)
     update_node_transform();
 
     if (renderer->get_openxr_available()) {
-
-        if (inspector_transform_dirty) {
-            update_panel_transform();
-        }
-
         BaseEditor::update_shortcuts(shortcuts);
     }
 
@@ -189,6 +186,9 @@ void GroupEditor::process_node_hovered()
 {
     const bool a_pressed = Input::was_button_pressed(XR_BUTTON_A);
     const bool b_pressed = Input::was_button_pressed(XR_BUTTON_B);
+
+    shortcuts[shortcuts::UNGROUP] = true;
+    shortcuts[shortcuts::BACK_TO_SCENE] = true;
 
     if (a_pressed) {
         ungroup_node(hovered_node);
@@ -386,21 +386,6 @@ void GroupEditor::render_gizmo()
     }
 }
 
-void GroupEditor::update_panel_transform()
-{
-    glm::mat4x4 m(1.0f);
-    glm::vec3 eye = renderer->get_camera_eye();
-    glm::vec3 new_pos = eye + renderer->get_camera_front() * 0.6f;
-
-    m = glm::translate(m, new_pos);
-    m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
-    m = glm::rotate(m, glm::radians(180.f), { 1.0f, 0.0f, 0.0f });
-
-    inspector->set_xr_transform(Transform::mat4_to_transform(m));
-
-    inspector_transform_dirty = false;
-}
-
 bool GroupEditor::is_rotation_being_used()
 {
     return Input::get_trigger_value(HAND_LEFT) > 0.5;
@@ -458,7 +443,7 @@ void GroupEditor::update_node_transform()
 
 void GroupEditor::inspect_group(bool force)
 {
-    inspector->clear();
+    inspector->clear(!inspector->get_visibility());
 
     auto& nodes = current_group->get_children();
 
@@ -469,7 +454,6 @@ void GroupEditor::inspect_group(bool force)
     Node::emit_signal(inspector->get_name() + "@children_changed", (void*)nullptr);
 
     inspector_dirty = false;
-    inspector_transform_dirty = !inspector->get_visibility() || force;
 
     if (force) {
         inspector->set_visibility(true);

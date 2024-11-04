@@ -53,7 +53,6 @@ class GroupEditor : public BaseEditor {
     static uint64_t node_signal_uid;
 
     bool inspector_dirty = true;
-    bool inspector_transform_dirty = false;
 
     ui::Inspector* inspector = nullptr;
 
@@ -64,7 +63,6 @@ class GroupEditor : public BaseEditor {
 
     void inspect_group(bool force = false);
     void inspect_node(Node* node, const std::string& texture_path = "");
-    void update_panel_transform();
 
     bool rotation_started = false;
     bool scale_started = false;
@@ -89,7 +87,6 @@ public:
     void render_gui() override;
 
     void on_enter(void* data) override;
-    // void on_exit() override;
 
     void set_inspector_dirty() { inspector_dirty = true; };
 
