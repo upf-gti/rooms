@@ -77,6 +77,10 @@ int RoomsEngine::post_initialize()
         editor->initialize();
     }
 
+    if (skip_tutorial) {
+        get_editor<TutorialEditor*>(TUTORIAL_EDITOR)->end();
+    }
+
     // Set default editor..
     switch_editor(SCENE_EDITOR);
 
@@ -174,10 +178,6 @@ void RoomsEngine::update(float delta_time)
 
     ui::Keyboard::update(delta_time);
 
-    if (Input::was_button_pressed(XR_BUTTON_MENU) || Input::was_key_pressed(GLFW_KEY_T)) {
-        tutorial_active = !tutorial_active;
-    }
-
     // NOTE: main update was before env_map update, test if this here breacks anything
     main_scene->update(delta_time);
 
@@ -185,9 +185,7 @@ void RoomsEngine::update(float delta_time)
 
         current_editor->update(delta_time);
 
-        if (tutorial_active) {
-            get_editor<TutorialEditor*>(TUTORIAL_EDITOR)->update(delta_time);
-        }
+        get_editor<TutorialEditor*>(TUTORIAL_EDITOR)->update(delta_time);
     }
 
     cursor.update(delta_time);
@@ -235,9 +233,7 @@ void RoomsEngine::render()
 
         current_editor->render();
 
-        if (tutorial_active) {
-            get_editor<TutorialEditor*>(TUTORIAL_EDITOR)->render();
-        }
+        get_editor<TutorialEditor*>(TUTORIAL_EDITOR)->render();
     }
 
     if (Renderer::instance->get_openxr_available() && !playing_scene) {
@@ -297,11 +293,6 @@ void RoomsEngine::toggle_use_environment_map()
 void RoomsEngine::set_current_sculpt(SculptNode* sculpt_instance)
 {
     get_editor<SculptEditor*>(SCULPT_EDITOR)->set_current_sculpt(sculpt_instance);
-}
-
-void RoomsEngine::toggle_tutorial()
-{
-    tutorial_active = !tutorial_active;
 }
 
 void RoomsEngine::render_gui()

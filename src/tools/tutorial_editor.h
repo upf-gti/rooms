@@ -8,33 +8,20 @@ namespace ui {
     class XRPanel;
 };
 
-enum : uint8_t {
-    TUTORIAL_NONE,
-    TUTORIAL_WELCOME,
-    TUTORIAL_SCENE_1,
-    TUTORIAL_SCENE_2,
-    TUTORIAL_SCENE_3,
-    TUTORIAL_STAMP_SMEAR,
-    TUTORIAL_PRIMITIVES_OPERATIONS,
-    TUTORIAL_CURVES,
-    TUTORIAL_GUIDES,
-    TUTORIAL_MATERIAL,
-    TUTORIAL_PAINT,
-    TUTORIAL_UNDO_REDO,
-    TUTORIAL_PANEL_COUNT,
-};
-
 class TutorialEditor : public BaseEditor {
 protected:
 
     RoomsRenderer* renderer = nullptr;
 
-    bool placed = false;
-    bool grabbing = false;
+    bool active         = true;
+    bool placed         = false;
+    bool grabbing       = false;
 
     // Tutorial
     Node2D* panel = nullptr;
     ui::XRPanel* current_panel = nullptr;
+    uint32_t current_panel_idx = 0u;
+    void next_panel();
 
     // Panels
     ui::XRPanel* panels[TUTORIAL_PANEL_COUNT];
@@ -53,4 +40,6 @@ public:
     void render_gui()  override {};
 
     void generate_shortcuts() override {};
+
+    void end();
 };

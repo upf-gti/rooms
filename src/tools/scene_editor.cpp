@@ -378,13 +378,13 @@ void SceneEditor::init_ui()
 
     // ** Undo/Redo scene **
     {
-        first_row->add_child(new ui::TextureButton2D("scene_undo", "data/textures/undo.png"));
-        first_row->add_child(new ui::TextureButton2D("scene_redo", "data/textures/redo.png"));
+        first_row->add_child(new ui::TextureButton2D("scene_undo", "data/textures/undo.png", ui::DISABLED));
+        first_row->add_child(new ui::TextureButton2D("scene_redo", "data/textures/redo.png", ui::DISABLED));
     }
 
     // ** Node actions **
     {
-        ui::ButtonSubmenu2D* node_actions_submenu = new ui::ButtonSubmenu2D("node_actions", "data/textures/cube.png");
+        ui::ButtonSubmenu2D* node_actions_submenu = new ui::ButtonSubmenu2D("node_actions", "data/textures/cube.png", ui::DISABLED);
         node_actions_submenu->add_child(new ui::TextureButton2D("group", "data/textures/group.png"));
         node_actions_submenu->add_child(new ui::TextureButton2D("duplicate", "data/textures/clone.png"));
         node_actions_submenu->add_child(new ui::TextureButton2D("clone", "data/textures/clone_instance.png"));
@@ -401,6 +401,7 @@ void SceneEditor::init_ui()
         // Lights
         {
             ui::ItemGroup2D* g_add_node = new ui::ItemGroup2D("g_light_types");
+            g_add_node->set_visibility(false);
             g_add_node->add_child(new ui::TextureButton2D("omni", "data/textures/light.png"));
             g_add_node->add_child(new ui::TextureButton2D("spot", "data/textures/spot.png"));
             g_add_node->add_child(new ui::TextureButton2D("directional", "data/textures/sun.png"));
@@ -413,8 +414,9 @@ void SceneEditor::init_ui()
     // ** Display Settings **
     {
         RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
-        ui::ItemGroup2D* g_display = new ui::ItemGroup2D("g_display");
         ui::ButtonSubmenu2D* display_submenu = new ui::ButtonSubmenu2D("display", "data/textures/display_settings.png");
+        display_submenu->set_visibility(false);
+        ui::ItemGroup2D* g_display = new ui::ItemGroup2D("g_display");
         g_display->add_child(new ui::TextureButton2D("use_grid", "data/textures/grid.png", ui::ALLOW_TOGGLE | ui::SELECTED));
         g_display->add_child(new ui::TextureButton2D("use_environment", "data/textures/skybox.png", ui::ALLOW_TOGGLE | ui::SELECTED));
         g_display->add_child(new ui::FloatSlider2D("IBL_intensity", "data/textures/ibl_intensity.png", rooms_renderer->get_ibl_intensity(), ui::SliderMode::VERTICAL, ui::USER_RANGE/*ui::CURVE_INV_POW, 21.f, -6.0f*/, 0.0f, 4.0f, 2));
@@ -435,13 +437,13 @@ void SceneEditor::init_ui()
 
     // ** Import/Export scene **
     {
-        second_row->add_child(new ui::TextureButton2D("load", "data/textures/load.png"));
-        second_row->add_child(new ui::TextureButton2D("save", "data/textures/save.png"));
+        second_row->add_child(new ui::TextureButton2D("load", "data/textures/load.png", ui::DISABLED));
+        second_row->add_child(new ui::TextureButton2D("save", "data/textures/save.png", ui::DISABLED));
     }
 
     // ** Player stuff **
     {
-        second_row->add_child(new ui::TextureButton2D("enter_room", "data/textures/play.png"));
+        second_row->add_child(new ui::TextureButton2D("enter_room", "data/textures/play.png", ui::DISABLED));
     }
 
     // Create inspection panel (Nodes, properties, etc)
@@ -449,6 +451,8 @@ void SceneEditor::init_ui()
         inspector = new ui::Inspector({ .name = "inspector_root", .title = "Scene Nodes",.position = {32.0f, 32.f}});
         inspector->set_visibility(false);
     }
+
+    main_panel->set_visibility(false);
 
     if (renderer->get_openxr_available())
     {
@@ -506,6 +510,8 @@ void SceneEditor::bind_events()
         main_scene->add_node(new_sculpt);
         select_node(new_sculpt);
         inspector_dirty = true;
+
+        Node::emit_signal("@on_sculpt_added", (void*)nullptr);
     });
 
     // Environment / Scene Lights
@@ -549,6 +555,36 @@ void SceneEditor::bind_events()
         Node::bind("save", [&, fn = callback](const std::string& signal, void* button) { ui::Keyboard::request(fn, main_scene->get_name()); });
         Node::bind("load", [&](const std::string& signal, void* button) { inspect_exports(true); });
         Node::bind("enter_room", [&](const std::string& signal, void* button) { enter_room(); });
+    }
+
+    // Reactive buttons on finish tutorial
+    {
+        Node::bind("@on_tutorial_ended", [&](const std::string& signal, void* button) {
+
+            main_panel->set_visibility(true);
+
+            std::vector<std::string> to_enable = { "load", "save", "enter_room", "node_actions", "scene_undo", "scene_redo" };
+            for (const std::string& w : to_enable) {
+                Node2D::get_widget_from_name<ui::ButtonSubmenu2D*>(w)->set_disabled(false);
+            }
+
+            std::vector<std::string> to_show = { "display", "g_light_types" };
+            for (const std::string& w : to_show) {
+                Node2D::get_widget_from_name(w)->set_visibility(true);
+            }
+        });
+
+        Node::bind("@on_tutorial_step", (FuncInt)[&](const std::string& signal, int step) {
+
+            switch (step)
+            {
+            case TUTORIAL_SCENE_4:
+                main_panel->set_visibility(true);
+                break;
+            /*case TUTORIAL_STAMP_SMEAR:
+                break;*/
+            }
+        });
     }
 }
 
@@ -901,6 +937,7 @@ void SceneEditor::inspector_from_scene(bool force)
 
     if (force) {
         inspector->set_visibility(true);
+        Node::emit_signal("@on_inspector_opened", (void*)nullptr);
     }
 }
 
@@ -935,6 +972,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
 
             // Set as current sculpt and go to sculpt editor
             if (dynamic_cast<SculptNode*>(n)) {
+                Node::emit_signal("@on_sculpt_edited", (void*)nullptr);
                 RoomsEngine::switch_editor(SCULPT_EDITOR, static_cast<SculptNode*>(n));
             }
             else if (dynamic_cast<Group3D*>(n)) {

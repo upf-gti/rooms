@@ -23,17 +23,50 @@ void TutorialEditor::initialize()
         panels[TUTORIAL_WELCOME]->set_visibility(true);
 
         panels[TUTORIAL_SCENE_1] = generate_panel("root_scene_1", "data/textures/tutorial/scene_1.png", TUTORIAL_WELCOME, TUTORIAL_SCENE_2);
-        panels[TUTORIAL_SCENE_2] = generate_panel("root_scene_2", "data/textures/tutorial/scene_2.png", TUTORIAL_SCENE_1, TUTORIAL_SCENE_3);
-        panels[TUTORIAL_SCENE_3] = generate_panel("root_scene_3", "data/textures/tutorial/scene_3.png", TUTORIAL_SCENE_2, TUTORIAL_STAMP_SMEAR);
-        panels[TUTORIAL_STAMP_SMEAR] = generate_panel("root_stamp_smear", "data/textures/tutorial/stamp_smear.png", TUTORIAL_SCENE_3, TUTORIAL_PRIMITIVES_OPERATIONS);
+        panels[TUTORIAL_SCENE_2] = generate_panel("root_scene_2", "data/textures/tutorial/scene_2.png", TUTORIAL_SCENE_1, TUTORIAL_NONE);
+        panels[TUTORIAL_SCENE_3] = generate_panel("root_scene_3", "data/textures/tutorial/scene_3.png", TUTORIAL_SCENE_2, TUTORIAL_NONE);
+        panels[TUTORIAL_SCENE_4] = generate_panel("root_scene_4", "data/textures/tutorial/scene_4.png", TUTORIAL_SCENE_3, TUTORIAL_NONE);
+        panels[TUTORIAL_STAMP_SMEAR] = generate_panel("root_stamp_smear", "data/textures/tutorial/stamp_smear.png", TUTORIAL_SCENE_4, TUTORIAL_PRIMITIVES_OPERATIONS);
         panels[TUTORIAL_PRIMITIVES_OPERATIONS] = generate_panel("root_primitives_op", "data/textures/tutorial/prims_ops.png", TUTORIAL_STAMP_SMEAR, TUTORIAL_CURVES);
         panels[TUTORIAL_CURVES] = generate_panel("root_curves", "data/textures/tutorial/curves.png", TUTORIAL_PRIMITIVES_OPERATIONS, TUTORIAL_GUIDES);
         panels[TUTORIAL_GUIDES] = generate_panel("root_guides", "data/textures/tutorial/guides.png", TUTORIAL_CURVES, TUTORIAL_MATERIAL);
         panels[TUTORIAL_MATERIAL] = generate_panel("root_materials", "data/textures/tutorial/materials.png", TUTORIAL_GUIDES, TUTORIAL_PAINT);
         panels[TUTORIAL_PAINT] = generate_panel("root_paint", "data/textures/tutorial/paint.png", TUTORIAL_MATERIAL, TUTORIAL_UNDO_REDO);
-        panels[TUTORIAL_UNDO_REDO] = generate_panel("root_undo_redo", "data/textures/tutorial/undo_redo.png", TUTORIAL_PAINT, TUTORIAL_NONE);
+        panels[TUTORIAL_UNDO_REDO] = generate_panel("root_undo_redo", "data/textures/tutorial/undo_redo.png", TUTORIAL_PAINT, TUTORIAL_CLOSE);
 
         current_panel = panels[TUTORIAL_WELCOME];
+    }
+
+    // Bind different events to create a more dynamic tutorial
+    {
+        Node::bind("@on_inspector_opened", [&](const std::string& signal, void* data) {
+
+            if (!active || (current_panel_idx != TUTORIAL_SCENE_2)) {
+                return;
+            }
+
+            next_panel();
+
+            Node::emit_signal("@on_tutorial_step", (int)TUTORIAL_SCENE_4);
+        });
+
+        Node::bind("@on_sculpt_added", [&](const std::string& signal, void* data) {
+
+            if (!active || (current_panel_idx != TUTORIAL_SCENE_3)) {
+                return;
+            }
+
+            next_panel();
+        });
+
+        Node::bind("@on_sculpt_edited", [&](const std::string& signal, void* data) {
+
+            if (!active || (current_panel_idx != TUTORIAL_SCENE_4)) {
+                return;
+            }
+
+            next_panel();
+        });
     }
 }
 
@@ -44,6 +77,14 @@ void TutorialEditor::clean()
 
 void TutorialEditor::update(float delta_time)
 {
+    if (Input::was_button_pressed(XR_BUTTON_MENU) || Input::was_key_pressed(GLFW_KEY_T)) {
+        active = false;
+    }
+
+    if (!active) {
+        return;
+    }
+
     current_panel->set_priority(PANEL);
 
     if ((IO::get_hover() == current_panel) && Input::was_grab_pressed(HAND_RIGHT)) {
@@ -90,7 +131,27 @@ void TutorialEditor::update(float delta_time)
 
 void TutorialEditor::render()
 {
+    if (!active) {
+        return;
+    }
+
     panel->render();
+}
+
+void TutorialEditor::end()
+{
+    active = false;
+
+    Node::emit_signal("@on_tutorial_ended", (void*)nullptr);
+}
+
+void TutorialEditor::next_panel()
+{
+    current_panel_idx++;
+    current_panel->set_visibility(false);
+    assert(panels[current_panel_idx]);
+    panels[current_panel_idx]->set_visibility(true);
+    current_panel = panels[current_panel_idx];
 }
 
 ui::XRPanel* TutorialEditor::generate_panel(const std::string& name, const std::string& path, uint8_t prev, uint8_t next)
@@ -111,34 +172,29 @@ ui::XRPanel* TutorialEditor::generate_panel(const std::string& name, const std::
     new_panel->set_visibility(false);
     panel->add_child(new_panel);
 
-    if (prev != TUTORIAL_NONE) {
+    /*if (prev != TUTORIAL_NONE) {
         new_panel->add_button(name + "_prev", "data/textures/tutorial/back.png", { size.x * 0.25f, size.y - mini_button_size.y * 1.2f }, mini_button_size);
         Node::bind(name + "_prev", [&, c = new_panel, p = prev](const std::string& signal, void* button) {
             c->set_visibility(false);
             panels[p]->set_visibility(true);
-            current_panel = panels[p];
+            current_panel_idx = p;
+            current_panel = panels[current_panel_idx];
+        });
+    }*/
+
+    if (next == TUTORIAL_CLOSE) {
+        new_panel->add_button(name + "_next", "data/textures/tutorial/close.png", { size.x * 0.75f, size.y - mini_button_size.y * 1.2f }, mini_button_size);
+        Node::bind(name + "_next", [&](const std::string& signal, void* button) {
+            end();
         });
     }
-
-    if (next != TUTORIAL_NONE) {
+    else if (next != TUTORIAL_NONE) {
         new_panel->add_button(name + "_next", "data/textures/tutorial/next.png", { size.x * 0.75f, size.y - mini_button_size.y * 1.2f }, mini_button_size);
         Node::bind(name + "_next", [&, c = new_panel, n = next](const std::string& signal, void* button) {
             c->set_visibility(false);
             panels[n]->set_visibility(true);
-            current_panel = panels[n];
-            // If in scene editor, close the tutorial, that will reopen when entering the sculpt editor
-            auto engine = static_cast<RoomsEngine*>(Engine::instance);
-            if (engine->get_current_editor_type() == SCENE_EDITOR && n == TUTORIAL_STAMP_SMEAR) {
-                engine->toggle_tutorial();
-            }
-        });
-    }
-    // close button
-    else {
-        new_panel->add_button(name + "_next", "data/textures/tutorial/close.png", { size.x * 0.75f, size.y - mini_button_size.y * 1.2f }, mini_button_size);
-        Node::bind(name + "_next", [&, c = new_panel, n = next](const std::string& signal, void* button) {
-            auto engine = static_cast<RoomsEngine*>(Engine::instance);
-            engine->toggle_tutorial();
+            current_panel_idx = n;
+            current_panel = panels[current_panel_idx];
         });
     }
 

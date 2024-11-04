@@ -440,11 +440,6 @@ bool SculptEditor::edit_update(float delta_time)
 
 void SculptEditor::update(float delta_time)
 {
-    if (!was_tutorial_shown) {
-        static_cast<RoomsEngine*>(Engine::instance)->toggle_tutorial();
-        was_tutorial_shown = true;
-    }
-
     /*glm::mat4x4 m(1.0f);
 
     glm::vec3 eye = renderer->get_camera_eye();

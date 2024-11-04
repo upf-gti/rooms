@@ -28,7 +28,8 @@ class RoomsEngine : public Engine
 
     // Editors
 
-    bool tutorial_active = false;
+    bool skip_tutorial = true;
+
     EditorType current_editor_type;
 
     std::vector<BaseEditor*> editors;
@@ -70,8 +71,6 @@ public:
     static void toggle_use_environment_map();
 
     void set_current_sculpt(SculptNode* sculpt_instance);
-
-    void toggle_tutorial();
 
     inline Gizmo3D* get_gizmo() { return &gizmo; }
     inline BaseEditor* get_current_editor() const { return current_editor; }

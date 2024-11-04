@@ -59,7 +59,6 @@ class SculptEditor : public BaseEditor {
 
     bool sculpt_started = false;
     bool was_tool_used = false;
-    bool was_tutorial_shown = false;
 
     bool called_undo = false;
     bool called_redo = false;
