@@ -31,6 +31,9 @@ namespace ui {
         glm::vec2 panel_size = {};
         Color panel_color = { 0.01f, 0.01f, 0.01f, 0.95f };
 
+        bool placed = false;
+        bool grabbing = false;
+
         float body_height = 0.0f;
         float padding = 0.0f;
         float scroll_top = 0.0f;
@@ -55,7 +58,7 @@ namespace ui {
 
         void update(float delta_time);
         /*void render(); */
-        void clear();
+        void clear(bool force_place = false);
 
         void label(const std::string& name, const std::string& text, uint32_t flags = 0);
         void icon(const std::string& texture_path);

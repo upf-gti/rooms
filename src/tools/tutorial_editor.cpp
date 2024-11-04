@@ -19,14 +19,14 @@ void TutorialEditor::initialize()
     {
         panel = new Node2D("tutorial_root", { 0.0f, 0.0f }, { 1.0f, 1.0f }, ui::CREATE_3D);
 
-        panels[TUTORIAL_WELCOME] = generate_panel("root_welcome", "data/textures/tutorial/welcome_screen.png", TUTORIAL_NONE, TUTORIAL_SCENE_1);
+        panels[TUTORIAL_WELCOME] = generate_panel("root_welcome", "data/textures/tutorial/welcome_screen.png", TUTORIAL_NONE, TUTORIAL_ROOM);
         panels[TUTORIAL_WELCOME]->set_visibility(true);
 
-        panels[TUTORIAL_SCENE_1] = generate_panel("root_scene_1", "data/textures/tutorial/scene_1.png", TUTORIAL_WELCOME, TUTORIAL_SCENE_2);
-        panels[TUTORIAL_SCENE_2] = generate_panel("root_scene_2", "data/textures/tutorial/scene_2.png", TUTORIAL_SCENE_1, TUTORIAL_NONE);
-        panels[TUTORIAL_SCENE_3] = generate_panel("root_scene_3", "data/textures/tutorial/scene_3.png", TUTORIAL_SCENE_2, TUTORIAL_NONE);
-        panels[TUTORIAL_SCENE_4] = generate_panel("root_scene_4", "data/textures/tutorial/scene_4.png", TUTORIAL_SCENE_3, TUTORIAL_NONE);
-        panels[TUTORIAL_STAMP_SMEAR] = generate_panel("root_stamp_smear", "data/textures/tutorial/stamp_smear.png", TUTORIAL_SCENE_4, TUTORIAL_PRIMITIVES_OPERATIONS);
+        panels[TUTORIAL_ROOM] = generate_panel("root_scene_1", "data/textures/tutorial/scene_1.png", TUTORIAL_WELCOME, TUTORIAL_SCENE_INSPECTOR);
+        panels[TUTORIAL_SCENE_INSPECTOR] = generate_panel("root_scene_2", "data/textures/tutorial/scene_2.png", TUTORIAL_ROOM, TUTORIAL_NONE);
+        panels[TUTORIAL_ADD_NODE] = generate_panel("root_scene_3", "data/textures/tutorial/scene_3.png", TUTORIAL_SCENE_INSPECTOR, TUTORIAL_NONE);
+        panels[TUTORIAL_EDIT_SCULPT] = generate_panel("root_scene_4", "data/textures/tutorial/scene_4.png", TUTORIAL_ADD_NODE, TUTORIAL_NONE);
+        panels[TUTORIAL_STAMP_SMEAR] = generate_panel("root_stamp_smear", "data/textures/tutorial/stamp_smear.png", TUTORIAL_EDIT_SCULPT, TUTORIAL_PRIMITIVES_OPERATIONS);
         panels[TUTORIAL_PRIMITIVES_OPERATIONS] = generate_panel("root_primitives_op", "data/textures/tutorial/prims_ops.png", TUTORIAL_STAMP_SMEAR, TUTORIAL_CURVES);
         panels[TUTORIAL_CURVES] = generate_panel("root_curves", "data/textures/tutorial/curves.png", TUTORIAL_PRIMITIVES_OPERATIONS, TUTORIAL_GUIDES);
         panels[TUTORIAL_GUIDES] = generate_panel("root_guides", "data/textures/tutorial/guides.png", TUTORIAL_CURVES, TUTORIAL_MATERIAL);
@@ -41,18 +41,18 @@ void TutorialEditor::initialize()
     {
         Node::bind("@on_inspector_opened", [&](const std::string& signal, void* data) {
 
-            if (!active || (current_panel_idx != TUTORIAL_SCENE_2)) {
+            if (!active || (current_panel_idx != TUTORIAL_SCENE_INSPECTOR)) {
                 return;
             }
 
             next_panel();
 
-            Node::emit_signal("@on_tutorial_step", (int)TUTORIAL_SCENE_4);
+            Node::emit_signal("@on_tutorial_step", (int)TUTORIAL_ADD_NODE);
         });
 
         Node::bind("@on_sculpt_added", [&](const std::string& signal, void* data) {
 
-            if (!active || (current_panel_idx != TUTORIAL_SCENE_3)) {
+            if (!active || (current_panel_idx != TUTORIAL_ADD_NODE)) {
                 return;
             }
 
@@ -61,7 +61,7 @@ void TutorialEditor::initialize()
 
         Node::bind("@on_sculpt_edited", [&](const std::string& signal, void* data) {
 
-            if (!active || (current_panel_idx != TUTORIAL_SCENE_4)) {
+            if (!active || (current_panel_idx != TUTORIAL_EDIT_SCULPT)) {
                 return;
             }
 

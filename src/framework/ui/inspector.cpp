@@ -6,6 +6,10 @@
 #include "framework/nodes/container_2d.h"
 #include "framework/nodes/button_2d.h"
 
+#include "graphics/renderer.h"
+
+#include "glm/gtx/quaternion.hpp"
+
 #include "spdlog/spdlog.h"
 
 namespace ui {
@@ -73,6 +77,58 @@ namespace ui {
 
     void Inspector::update(float delta_time)
     {
+        if ((IO::get_hover() == root) && Input::was_grab_pressed(HAND_RIGHT)) {
+            grabbing = true;
+        }
+
+        if (Input::was_grab_released(HAND_RIGHT)) {
+            grabbing = false;
+        }
+
+        root->set_priority(PANEL);
+
+        auto renderer = Renderer::instance;
+
+        if (renderer->get_openxr_available()) {
+
+            if (!placed) {
+                glm::mat4x4 m(1.0f);
+                glm::vec3 eye = renderer->get_camera_eye();
+                glm::vec3 new_pos = eye + renderer->get_camera_front() * 0.5f;
+
+                m = glm::translate(m, new_pos);
+                m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
+                m = glm::rotate(m, glm::radians(180.f), { 1.0f, 0.0f, 0.0f });
+                set_xr_transform(Transform::mat4_to_transform(m));
+                placed = true;
+            }
+            else if (grabbing) {
+
+                Transform raycast_transform = Transform::mat4_to_transform(Input::get_controller_pose(HAND_RIGHT, POSE_AIM));
+                const glm::vec3& forward = raycast_transform.get_front();
+
+                glm::mat4x4 m(1.0f);
+                glm::vec3 eye = raycast_transform.get_position();
+
+                auto webgpu_context = Renderer::instance->get_webgpu_context();
+                float width = static_cast<float>(webgpu_context->render_width);
+                float height = static_cast<float>(webgpu_context->render_height);
+
+                glm::vec2 size = panel_size * 0.5f / glm::vec2(width, height);
+                glm::vec3 new_pos = eye + forward * 0.35f;
+
+                m = glm::translate(m, new_pos);
+                m = m * glm::toMat4(get_rotation_to_face(new_pos, renderer->get_camera_eye(), { 0.0f, 1.0f, 0.0f }));
+                m = glm::rotate(m, glm::radians(180.f), { 1.0f, 0.0f, 0.0f });
+                m = glm::translate(m, -glm::vec3(size, 0.0f));
+                set_xr_transform(Transform::mat4_to_transform(m));
+
+                root->set_priority(DRAGGABLE);
+            }
+        }
+
+        // Scroll stuff
+
         sInputData data = root->get_input_data(true);
 
         if (data.is_hovered)
@@ -115,7 +171,7 @@ namespace ui {
         Node2D::update(delta_time);
     }
 
-    void Inspector::clear()
+    void Inspector::clear(bool force_place)
     {
         std::vector<Node*> to_delete;
 
@@ -139,6 +195,10 @@ namespace ui {
         }
 
         items.clear();
+
+        if (force_place) {
+            placed = false;
+        }
 
         IO::set_hover(nullptr, {});
     }

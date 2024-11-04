@@ -206,11 +206,6 @@ void SceneEditor::update(float delta_time)
     }
 
     if (renderer->get_openxr_available()) {
-
-        if (inspector_transform_dirty) {
-            update_panel_transform();
-        }
-
         BaseEditor::update_shortcuts(shortcuts);
     }
 
@@ -578,7 +573,7 @@ void SceneEditor::bind_events()
 
             switch (step)
             {
-            case TUTORIAL_SCENE_4:
+            case TUTORIAL_ADD_NODE:
                 main_panel->set_visibility(true);
                 break;
             /*case TUTORIAL_STAMP_SMEAR:
@@ -833,21 +828,6 @@ void SceneEditor::render_gizmo()
     }
 }
 
-void SceneEditor::update_panel_transform()
-{
-    glm::mat4x4 m(1.0f);
-    glm::vec3 eye = renderer->get_camera_eye();
-    glm::vec3 new_pos = eye + renderer->get_camera_front() * 0.6f;
-
-    m = glm::translate(m, new_pos);
-    m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
-    m = glm::rotate(m, glm::radians(180.f), { 1.0f, 0.0f, 0.0f });
-
-    inspector->set_xr_transform(Transform::mat4_to_transform(m));
-
-    inspector_transform_dirty = false;
-}
-
 bool SceneEditor::is_rotation_being_used()
 {
     return Input::get_trigger_value(HAND_LEFT) > 0.5;
@@ -910,7 +890,7 @@ void SceneEditor::update_node_transform()
 
 void SceneEditor::inspector_from_scene(bool force)
 {
-    inspector->clear();
+    inspector->clear(force);
 
     auto& nodes = main_scene->get_nodes();
 
@@ -933,7 +913,6 @@ void SceneEditor::inspector_from_scene(bool force)
     Node::emit_signal(inspector->get_name() + "@children_changed", (void*)nullptr);
 
     inspector_dirty = false;
-    inspector_transform_dirty = !inspector->get_visibility() || force;
 
     if (force) {
         inspector->set_visibility(true);
@@ -1115,8 +1094,6 @@ void SceneEditor::inspect_exports(bool force)
         inspector->label("empty", name);
         inspector->end_line();
     }
-
-    inspector_transform_dirty = !inspector->get_visibility();
 
     if (force) {
         inspector->set_visibility(true);

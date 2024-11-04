@@ -84,7 +84,6 @@ class SceneEditor : public BaseEditor {
     static uint64_t node_signal_uid;
 
     bool inspector_dirty = true;
-    bool inspector_transform_dirty = false;
 
     ui::Inspector* inspector = nullptr;
 
@@ -96,7 +95,6 @@ class SceneEditor : public BaseEditor {
     void inspector_from_scene(bool force = false);
     void inspect_node(Node* node, uint32_t flags = NODE_STANDARD, const std::string& texture_path = "");
     void inspect_light();
-    void update_panel_transform();
 
     bool rotation_started = false;
     bool scale_started = false;

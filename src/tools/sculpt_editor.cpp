@@ -1172,7 +1172,7 @@ void SculptEditor::generate_shortcuts()
         shortcuts[shortcuts::PICK_MATERIAL] = is_shift_right_pressed;
         shortcuts[shortcuts::STAMP] = !is_shift_right_pressed;
         shortcuts[shortcuts::SMEAR] = is_shift_right_pressed;
-        shortcuts[shortcuts::BACK_TO_SCENE] = true;
+        shortcuts[shortcuts::BACK_TO_SCENE] = !is_shift_right_pressed;
     }
 
     BaseEditor::update_shortcuts(shortcuts);

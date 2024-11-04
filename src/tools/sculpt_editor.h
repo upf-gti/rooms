@@ -27,28 +27,6 @@ struct PrimitiveState {
     // modifiers?
 };
 
-namespace shortcuts {
-    enum : uint8_t {
-        ROUND_SHAPE,
-        MODIFY_SMOOTH,
-        REDO,
-        UNDO,
-        OPEN_GUIDES_MENU,
-        OPEN_PBR_MENU,
-        MANIPULATE_SCULPT,
-        MAIN_SIZE,
-        SECONDARY_SIZE,
-        ADD_SUBSTRACT,
-        CONFIRM_SPLINE,
-        CANCEL_SPLINE,
-        ADD_KNOT,
-        SCULPT_PAINT,
-        PICK_MATERIAL,
-        STAMP,
-        SMEAR
-    };
-}
-
 class SculptEditor : public BaseEditor {
 
     MeshInstance3D* sculpt_area_box = nullptr;
