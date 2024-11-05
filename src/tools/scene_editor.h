@@ -25,7 +25,7 @@ struct sActionData {
         ACTION_TRANSFORM,
         ACTION_DELETE,
         ACTION_GROUP,
-        // ACTION_UNGROUP,
+        ACTION_UNGROUP,
         ACTION_CLONE
     };
 
@@ -69,7 +69,7 @@ class SceneEditor : public BaseEditor {
     void group_node(Node* node);
     void delete_node(Node* node, bool push_undo = true);
     void recover_node(Node* node, bool push_redo = true);
-    void ungroup_node(Node* node, bool push_redo = true);
+    void ungroup_node(Node* node, bool push_undo = true, bool push_redo = true);
     void create_light_node(uint8_t type);
     void process_node_hovered();
 

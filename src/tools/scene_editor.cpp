@@ -297,7 +297,7 @@ void SceneEditor::process_node_hovered()
     if (current_group) {
         shortcuts[shortcuts::UNGROUP] = true;
         if (a_pressed) {
-            ungroup_node(hovered_node);
+            ungroup_node(hovered_node, true, false);
         }
         else if (select_action_pressed) {
             select_node(hovered_node, false);
@@ -557,7 +557,7 @@ void SceneEditor::bind_events()
 
     Node::bind("deselect", [&](const std::string& signal, void* button) { deselect(); });
     Node::bind("group", [&](const std::string& signal, void* button) { group_node(selected_node); });
-    Node::bind("ungroup", [&](const std::string& signal, void* button) { ungroup_node(selected_node, false); });
+    Node::bind("ungroup", [&](const std::string& signal, void* button) { ungroup_node(selected_node, true, false); });
     Node::bind("duplicate", [&](const std::string& signal, void* button) { clone_node(selected_node, true); });
     Node::bind("clone", [&](const std::string& signal, void* button) { clone_node(selected_node, false); });
 
@@ -708,6 +708,11 @@ void SceneEditor::delete_node(Node* node, bool push_undo)
 void SceneEditor::recover_node(Node* node, bool push_redo)
 {
     uintptr_t idx = reinterpret_cast<uintptr_t>(node);
+
+    if (!deleted_nodes.contains(idx)) {
+        return;
+    }
+
     const sDeletedNode& node_data = deleted_nodes[idx];
     Node3D* recovered_node = node_data.ref;
     main_scene->add_node(recovered_node, node_data.index);
@@ -720,7 +725,7 @@ void SceneEditor::recover_node(Node* node, bool push_redo)
     inspector_dirty = true;
 }
 
-void SceneEditor::ungroup_node(Node* node, bool push_redo)
+void SceneEditor::ungroup_node(Node* node, bool push_undo, bool push_redo)
 {
     Node3D* g_node = static_cast<Node3D*>(node);
     Group3D* group = g_node->get_parent<Group3D*>();
@@ -738,10 +743,14 @@ void SceneEditor::ungroup_node(Node* node, bool push_redo)
     if (push_redo && group->get_children().size() == 1u) {
         Node* child = group->get_children().front();
         data.param_2 = child;
-        ungroup_node(child, false);
+        ungroup_node(child, false, false);
     }
     else if (group->get_children().empty()) {
         delete_node(group, false);
+    }
+
+    if (push_undo) {
+        push_undo_action({ sActionData::ACTION_UNGROUP, g_node, group });
     }
 
     if (push_redo) {
@@ -798,6 +807,8 @@ void SceneEditor::edit_group(Group3D* group)
     current_group = group;
 
     inspector_dirty = true;
+
+    Node2D::get_widget_from_name<ui::TextureButton2D*>("group")->set_disabled(true);
 }
 
 void SceneEditor::create_light_node(uint8_t type)
@@ -1304,7 +1315,7 @@ bool SceneEditor::scene_undo()
     }
     case sActionData::ACTION_GROUP:
     {
-        ungroup_node(step.ref_node);
+        ungroup_node(step.ref_node, false);
         break;
     }
     case sActionData::ACTION_CLONE:
@@ -1312,6 +1323,15 @@ bool SceneEditor::scene_undo()
         Node* node_to_delete = std::get<Node*>(step.param_1);
         push_redo_action({ sActionData::ACTION_CLONE, step.ref_node, node_to_delete, std::get<bool>(step.param_2) });
         delete_node(node_to_delete, false);
+        break;
+    }
+    case sActionData::ACTION_UNGROUP:
+    {
+        Node3D* group = std::get<Node3D*>(step.param_1);
+        recover_node(group, false);
+        push_redo_action({ sActionData::ACTION_UNGROUP, step.ref_node, group });
+        node_to_group = step.ref_node;
+        process_group(group, false);
         break;
     }
     default:
@@ -1369,6 +1389,13 @@ bool SceneEditor::scene_redo()
         bool copy = std::get<bool>(step.param_2);
         recover_node(node_to_recover, false);
         push_undo_action({ sActionData::ACTION_CLONE, step.ref_node, node_to_recover, copy }, false);
+        break;
+    }
+    case sActionData::ACTION_UNGROUP:
+    {
+        Node3D* group = std::get<Node3D*>(step.param_1);
+        push_undo_action({ sActionData::ACTION_UNGROUP, step.ref_node, group }, false);
+        ungroup_node(step.ref_node, false, false);
         break;
     }
     default:
