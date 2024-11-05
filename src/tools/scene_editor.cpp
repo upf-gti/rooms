@@ -1056,6 +1056,9 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
     if ((flags & NODE_ICON) && texture_path.size()) {
         inspector->icon(texture_path);
     }
+    else if (flags & NODE_SUBMENU_ICON) {
+        inspector->icon("data/textures/cursors/dot_small.png");
+    }
 
     //if (flags & NODE_VISIBILITY) {
     //    std::string signal = node_name + std::to_string(node_signal_uid++) + "_visibility";
@@ -1139,6 +1142,29 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
     }
 
     inspector->end_line();
+
+    // Show children
+    if (flags & NODE_CHILDREN) {
+
+        auto& nodes = node->get_children();
+
+        inspector->set_indentation(1u);
+
+        for (auto node : nodes) {
+
+            if (dynamic_cast<Light3D*>(node)) {
+                inspect_node(node, NODE_LIGHT | NODE_SUBMENU_ICON);
+            }
+            else if (dynamic_cast<SculptNode*>(node)) {
+                inspect_node(node, NODE_SCULPT | NODE_SUBMENU_ICON);
+            }
+            else {
+                inspect_node(node, NODE_SUBMENU_ICON);
+            }
+        }
+
+        inspector->set_indentation(0u);
+    }
 }
 
 void SceneEditor::inspect_group(bool force)

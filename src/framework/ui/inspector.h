@@ -37,6 +37,8 @@ namespace ui {
         float padding = 0.0f;
         float scroll_top = 0.0f;
 
+        uint32_t indentation_level = 0u;
+
         XRPanel* root = nullptr;
         VContainer2D* body = nullptr;
         Text2D* title = nullptr;
@@ -221,6 +223,7 @@ namespace ui {
 
         void same_line();
         void end_line();
+        void set_indentation(uint32_t level);
 
         Node2D* get(const std::string& name);
     };
