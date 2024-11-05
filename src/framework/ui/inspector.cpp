@@ -37,7 +37,7 @@ namespace ui {
         ui::Container2D* title_container = new ui::Container2D(name + "_title", { 0.0f, 0.0f }, { inner_width - padding * 0.4f, desc.title_height });
         title = new ui::Text2D(desc.title.empty() ? "Inspector" : desc.title, { 0.0f, title_y_corrected }, title_text_scale, ui::TEXT_CENTERED | ui::SKIP_TEXT_RECT);
         title_container->add_child(title);
-        title_container->add_child(new ui::TextureButton2D("close_button", "data/textures/cross.png", ui::SKIP_NAME, { inner_width - padding * 3.0f, title_y_corrected }, glm::vec2(32.0f)));
+        title_container->add_child(new ui::TextureButton2D("close_button", { "data/textures/cross.png", ui::SKIP_NAME, { inner_width - padding * 3.0f, title_y_corrected }, glm::vec2(32.0f) }));
         column->add_child(title_container);
 
         Node::bind("close_button", [&](const std::string& sg, void* data) {
@@ -242,7 +242,7 @@ namespace ui {
         items[name] = w;
     }
 
-    void Inspector::button(const std::string& name, const std::string& texture_path, uint32_t flags)
+    void Inspector::button(const std::string& name, const std::string& texture_path, uint32_t flags, const std::string& label)
     {
         ui::HContainer2D* flex_container = current_row;
 
@@ -252,11 +252,13 @@ namespace ui {
 
         ui::Button2D* button = nullptr;
 
+        sButtonDescription desc = { texture_path, flags | ui::SCROLLABLE, { 0.0f, 0.0f }, glm::vec2(34.f), colors::WHITE, label };
+
         if (flags & ui::CONFIRM_BUTTON) {
-            button = new ui::ConfirmButton2D(name, texture_path, flags | ui::SKIP_NAME | ui::SCROLLABLE, { 0.0f, 0.0f }, glm::vec2(34.f));
+            button = new ui::ConfirmButton2D(name, desc);
         }
         else {
-            button = new ui::TextureButton2D(name, texture_path, flags | ui::SKIP_NAME | ui::SCROLLABLE, { 0.0f, 0.0f }, glm::vec2(34.f));
+            button = new ui::TextureButton2D(name, desc);
         }
 
         flex_container->add_child(button);

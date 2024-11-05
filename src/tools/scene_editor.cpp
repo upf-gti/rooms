@@ -388,38 +388,38 @@ void SceneEditor::init_ui()
     ui::HContainer2D* second_row = new ui::HContainer2D("row_1", { 0.0f, 0.0f });
     vertical_container->add_child(second_row);
 
-    first_row->add_child(new ui::TextureButton2D("deselect", "data/textures/cross.png"));
+    first_row->add_child(new ui::TextureButton2D("deselect", { "data/textures/cross.png" }));
 
     // ** Undo/Redo scene **
     {
-        first_row->add_child(new ui::TextureButton2D("scene_undo", "data/textures/undo.png", ui::DISABLED));
-        first_row->add_child(new ui::TextureButton2D("scene_redo", "data/textures/redo.png", ui::DISABLED));
+        first_row->add_child(new ui::TextureButton2D("scene_undo", { "data/textures/undo.png", ui::DISABLED }));
+        first_row->add_child(new ui::TextureButton2D("scene_redo", { "data/textures/redo.png", ui::DISABLED }));
     }
 
     // ** Node actions **
     {
-        ui::ButtonSubmenu2D* node_actions_submenu = new ui::ButtonSubmenu2D("node_actions", "data/textures/cube.png", ui::DISABLED);
-        node_actions_submenu->add_child(new ui::TextureButton2D("group", "data/textures/group.png"));
-        node_actions_submenu->add_child(new ui::TextureButton2D("ungroup", "data/textures/ungroup.png"));
-        node_actions_submenu->add_child(new ui::TextureButton2D("duplicate", "data/textures/clone.png"));
-        node_actions_submenu->add_child(new ui::TextureButton2D("clone", "data/textures/clone_instance.png"));
+        ui::ButtonSubmenu2D* node_actions_submenu = new ui::ButtonSubmenu2D("node_actions", { "data/textures/cube.png", ui::DISABLED });
+        node_actions_submenu->add_child(new ui::TextureButton2D("group", { "data/textures/group.png" }));
+        node_actions_submenu->add_child(new ui::TextureButton2D("ungroup", { "data/textures/ungroup.png" }));
+        node_actions_submenu->add_child(new ui::TextureButton2D("duplicate", { "data/textures/clone.png" }));
+        node_actions_submenu->add_child(new ui::TextureButton2D("clone", { "data/textures/clone_instance.png" }));
         first_row->add_child(node_actions_submenu);
     }
 
     // ** Posible scene nodes **
     {
-        ui::ButtonSubmenu2D* add_node_submenu = new ui::ButtonSubmenu2D("add_node", "data/textures/add.png");
+        ui::ButtonSubmenu2D* add_node_submenu = new ui::ButtonSubmenu2D("add_node", { "data/textures/add.png" });
 
         // add_node_submenu->add_child(new ui::TextureButton2D("gltf", "data/textures/monkey.png"));
-        add_node_submenu->add_child(new ui::TextureButton2D("sculpt", "data/textures/sculpt.png"));
+        add_node_submenu->add_child(new ui::TextureButton2D("sculpt", { "data/textures/sculpt.png" }));
 
         // Lights
         {
             ui::ItemGroup2D* g_add_node = new ui::ItemGroup2D("g_light_types");
             g_add_node->set_visibility(false);
-            g_add_node->add_child(new ui::TextureButton2D("omni", "data/textures/light.png"));
-            g_add_node->add_child(new ui::TextureButton2D("spot", "data/textures/spot.png"));
-            g_add_node->add_child(new ui::TextureButton2D("directional", "data/textures/sun.png"));
+            g_add_node->add_child(new ui::TextureButton2D("omni", { "data/textures/light.png" }));
+            g_add_node->add_child(new ui::TextureButton2D("spot", { "data/textures/spot.png"  }));
+            g_add_node->add_child(new ui::TextureButton2D("directional", { "data/textures/sun.png"  }));
             add_node_submenu->add_child(g_add_node);
         }
 
@@ -429,11 +429,11 @@ void SceneEditor::init_ui()
     // ** Display Settings **
     {
         RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
-        ui::ButtonSubmenu2D* display_submenu = new ui::ButtonSubmenu2D("display", "data/textures/display_settings.png");
+        ui::ButtonSubmenu2D* display_submenu = new ui::ButtonSubmenu2D("display", { "data/textures/display_settings.png" });
         display_submenu->set_visibility(false);
         ui::ItemGroup2D* g_display = new ui::ItemGroup2D("g_display");
-        g_display->add_child(new ui::TextureButton2D("use_grid", "data/textures/grid.png", ui::ALLOW_TOGGLE | ui::SELECTED));
-        g_display->add_child(new ui::TextureButton2D("use_environment", "data/textures/skybox.png", ui::ALLOW_TOGGLE | ui::SELECTED));
+        g_display->add_child(new ui::TextureButton2D("use_grid", { "data/textures/grid.png", ui::ALLOW_TOGGLE | ui::SELECTED }));
+        g_display->add_child(new ui::TextureButton2D("use_environment", { "data/textures/skybox.png", ui::ALLOW_TOGGLE | ui::SELECTED }));
         g_display->add_child(new ui::FloatSlider2D("IBL_intensity", "data/textures/ibl_intensity.png", rooms_renderer->get_ibl_intensity(), ui::SliderMode::VERTICAL, ui::USER_RANGE/*ui::CURVE_INV_POW, 21.f, -6.0f*/, 0.0f, 4.0f, 2));
         display_submenu->add_child(g_display);
         display_submenu->add_child(new ui::FloatSlider2D("exposure", "data/textures/exposure.png", rooms_renderer->get_exposure(), ui::SliderMode::VERTICAL, ui::USER_RANGE/*ui::CURVE_INV_POW, 21.f, -6.0f*/, 0.0f, 4.0f, 2));
@@ -443,22 +443,22 @@ void SceneEditor::init_ui()
     // ** Gizmo modes **
     {
         ui::ComboButtons2D* combo_gizmo_modes = new ui::ComboButtons2D("combo_gizmo_modes");
-        combo_gizmo_modes->add_child(new ui::TextureButton2D("no_gizmo", "data/textures/no_gizmo.png"));
-        combo_gizmo_modes->add_child(new ui::TextureButton2D("translate", "data/textures/translation_gizmo.png", ui::SELECTED));
-        combo_gizmo_modes->add_child(new ui::TextureButton2D("rotate", "data/textures/rotation_gizmo.png"));
-        combo_gizmo_modes->add_child(new ui::TextureButton2D("scale", "data/textures/scale_gizmo.png"));
+        combo_gizmo_modes->add_child(new ui::TextureButton2D("no_gizmo", { "data/textures/no_gizmo.png" }));
+        combo_gizmo_modes->add_child(new ui::TextureButton2D("translate", { "data/textures/translation_gizmo.png", ui::SELECTED }));
+        combo_gizmo_modes->add_child(new ui::TextureButton2D("rotate", { "data/textures/rotation_gizmo.png" }));
+        combo_gizmo_modes->add_child(new ui::TextureButton2D("scale", { "data/textures/scale_gizmo.png" }));
         second_row->add_child(combo_gizmo_modes);
     }
 
     // ** Import/Export scene **
     {
-        second_row->add_child(new ui::TextureButton2D("load", "data/textures/load.png", ui::DISABLED));
-        second_row->add_child(new ui::TextureButton2D("save", "data/textures/save.png", ui::DISABLED));
+        second_row->add_child(new ui::TextureButton2D("load", { "data/textures/load.png", ui::DISABLED }));
+        second_row->add_child(new ui::TextureButton2D("save", { "data/textures/save.png", ui::DISABLED }));
     }
 
     // ** Player stuff **
     {
-        second_row->add_child(new ui::TextureButton2D("enter_room", "data/textures/play.png", ui::DISABLED));
+        second_row->add_child(new ui::TextureButton2D("enter_room", { "data/textures/play.png", ui::DISABLED }));
     }
 
     // Create inspection panel (Nodes, properties, etc)
@@ -834,7 +834,6 @@ void SceneEditor::process_group(Node* node, bool push_undo)
         group->add_node(to_group_3d);
     }
     else {
-
         // Remove nodes from main scene
         main_scene->remove_node(to_group_3d);
         main_scene->remove_node(hovered_3d);
@@ -910,6 +909,7 @@ void SceneEditor::create_light_node(uint8_t type)
     add_node(new_light);
 
     select_node(new_light);
+
     inspector_dirty = true;
 }
 
@@ -1128,7 +1128,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
 
     if (flags & NODE_EDIT) {
         std::string signal = node_name + std::to_string(node_signal_uid++) + "_edit";
-        inspector->button(signal, "data/textures/edit.png");
+        inspector->button(signal, "data/textures/edit.png", 0u, "Edit");
 
         Node::bind(signal, [&, n = node, flags = flags](const std::string& sg, void* data) {
 
@@ -1147,7 +1147,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
 
     if (flags & NODE_ANIMATE) {
         std::string signal = node_name + std::to_string(node_signal_uid++) + "_animate";
-        inspector->button(signal, "data/textures/animate.png");
+        inspector->button(signal, "data/textures/animate.png", 0u, "Animate");
 
         Node::bind(signal, [&, n = node, flags = flags](const std::string& sg, void* data) {
 
@@ -1185,7 +1185,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
     // Remove button
     if (flags & NODE_DELETE) {
         std::string signal = node_name + std::to_string(node_signal_uid++) + "_remove";
-        inspector->button(signal, "data/textures/delete.png", ui::CONFIRM_BUTTON);
+        inspector->button(signal, "data/textures/delete.png", ui::CONFIRM_BUTTON, "Delete");
 
         Node::bind(signal, [&, n = node](const std::string& sg, void* data) {
 
@@ -1319,14 +1319,14 @@ void SceneEditor::inspect_exports(bool force)
         inspector->same_line();
 
         std::string signal = name + std::to_string(node_signal_uid++) + "_load";
-        inspector->button(signal, "data/textures/load.png");
+        inspector->button(signal, "data/textures/load.png", 0u, "New Scene");
         Node::bind(signal, [&, str = full_name](const std::string& sg, void* data) {
             deselect();
             static_cast<RoomsEngine*>(RoomsEngine::instance)->set_main_scene(str);
         });
 
         signal = name + std::to_string(node_signal_uid++) + "_add";
-        inspector->button(signal, "data/textures/add.png");
+        inspector->button(signal, "data/textures/add.png", 0u, "Add");
         Node::bind(signal, [&, str = full_name](const std::string& sg, void* data) {
             static_cast<RoomsEngine*>(RoomsEngine::instance)->add_to_main_scene(str);
         });

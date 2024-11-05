@@ -65,7 +65,7 @@ namespace ui {
 
         void label(const std::string& name, const std::string& text, uint32_t flags = 0);
         void icon(const std::string& texture_path);
-        void button(const std::string& name, const std::string& texture_path, uint32_t flags = 0);
+        void button(const std::string& name, const std::string& texture_path, uint32_t flags = 0, const std::string& label = "");
 
         void color_picker(const std::string& name, const Color& c, Color* result = nullptr);
 

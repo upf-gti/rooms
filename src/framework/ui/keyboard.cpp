@@ -303,7 +303,7 @@ namespace ui {
         create_keyboard_common_layout(keys, start_x, start_y, margin);
 
         for (const XrKey& key : keys) {
-            root_common->add_child(new ui::TextureButton2D(key.label, key.texture_path, key.flags | ui::SKIP_NAME, key.position, key.size));
+            root_common->add_child(new ui::TextureButton2D(key.label, { key.texture_path, key.flags | ui::SKIP_NAME, key.position, key.size }));
         }
 
         // Create lower case letter panel
@@ -311,7 +311,7 @@ namespace ui {
         create_keyboard_letters_layout(keys, start_x, start_y, margin);
 
         for (const XrKey& key : keys) {
-            root_lc->add_child(new ui::TextureButton2D(key.label, key.texture_path, key.flags | ui::SKIP_NAME, key.position, key.size));
+            root_lc->add_child(new ui::TextureButton2D(key.label, { key.texture_path, key.flags | ui::SKIP_NAME, key.position, key.size }));
         }
 
         // Fill upper case letters panel
@@ -319,7 +319,7 @@ namespace ui {
         create_keyboard_letters_layout(keys, start_x, start_y, margin, true);
 
         for (const XrKey& key : keys) {
-            root_uc->add_child(new ui::TextureButton2D(key.label, key.texture_path, key.flags | ui::SKIP_NAME, key.position, key.size));
+            root_uc->add_child(new ui::TextureButton2D(key.label, { key.texture_path, key.flags | ui::SKIP_NAME, key.position, key.size }));
         }
 
         // Fill symbols panel
@@ -327,7 +327,7 @@ namespace ui {
         create_keyboard_symbols_layout(keys, start_x, start_y, margin);
 
         for (const XrKey& key : keys) {
-            root_sym->add_child(new ui::TextureButton2D(key.label, key.texture_path, key.flags | ui::SKIP_NAME, key.position, key.size));
+            root_sym->add_child(new ui::TextureButton2D(key.label, { key.texture_path, key.flags | ui::SKIP_NAME, key.position, key.size }));
         }
     }
 

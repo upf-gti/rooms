@@ -766,15 +766,15 @@ void AnimationEditor::init_ui()
 
     // Animation settings
     {
-        ui::ButtonSubmenu2D* loop_mode = new ui::ButtonSubmenu2D("loop_mode", "data/textures/loop.png");
+        ui::ButtonSubmenu2D* loop_mode = new ui::ButtonSubmenu2D("loop_mode", { "data/textures/loop.png" });
 
         // ** Loop modes
         {
             ui::ComboButtons2D* combo_loops = new ui::ComboButtons2D("combo_loops");
-            combo_loops->add_child(new ui::TextureButton2D("loop_none", "data/textures/cross.png"));
-            combo_loops->add_child(new ui::TextureButton2D("loop_default", "data/textures/loop.png", ui::SELECTED));
-            combo_loops->add_child(new ui::TextureButton2D("loop_reverse", "data/textures/reverse_loop.png"));
-            combo_loops->add_child(new ui::TextureButton2D("loop_ping_pong", "data/textures/ping_pong_loop.png"));
+            combo_loops->add_child(new ui::TextureButton2D("loop_none", { "data/textures/cross.png" }));
+            combo_loops->add_child(new ui::TextureButton2D("loop_default", { "data/textures/loop.png", ui::SELECTED }));
+            combo_loops->add_child(new ui::TextureButton2D("loop_reverse", { "data/textures/reverse_loop.png" }));
+            combo_loops->add_child(new ui::TextureButton2D("loop_ping_pong", { "data/textures/ping_pong_loop.png" }));
             loop_mode->add_child(combo_loops);
         }
 
@@ -785,24 +785,24 @@ void AnimationEditor::init_ui()
     vertical_container->add_child(second_row);
 
     // ** Go back to scene editor **
-    second_row->add_child(new ui::TextureButton2D("go_back", "data/textures/back.png"));
+    second_row->add_child(new ui::TextureButton2D("go_back", { "data/textures/back.png" }));
 
     // ** Open keyframe list **
-    second_row->add_child(new ui::TextureButton2D("open_list", "data/textures/keyframe_list.png"));
+    second_row->add_child(new ui::TextureButton2D("open_list", { "data/textures/keyframe_list.png" }));
 
     // ** Keyframe actions
     {
         ui::ItemGroup2D* g_keyframes = new ui::ItemGroup2D("g_keyframes");
-        g_keyframes->add_child(new ui::TextureButton2D("record_action", "data/textures/record_action.png", ui::DISABLED));
-        g_keyframes->add_child(new ui::TextureButton2D("create_keyframe", "data/textures/add_key.png"));
-        g_keyframes->add_child(new ui::TextureButton2D("submit_keyframe", "data/textures/submit_key.png", ui::HIDDEN));
+        g_keyframes->add_child(new ui::TextureButton2D("record_action", { "data/textures/record_action.png", ui::DISABLED }));
+        g_keyframes->add_child(new ui::TextureButton2D("create_keyframe", { "data/textures/add_key.png" }));
+        g_keyframes->add_child(new ui::TextureButton2D("submit_keyframe", { "data/textures/submit_key.png", ui::HIDDEN }));
         second_row->add_child(g_keyframes);
     }
 
     // ** Play animation **
-    second_row->add_child(new ui::TextureButton2D("play_animation", "data/textures/play.png"));
-    second_row->add_child(new ui::TextureButton2D("pause_animation", "data/textures/pause.png", ui::HIDDEN));
-    second_row->add_child(new ui::TextureButton2D("stop_animation", "data/textures/stop.png"));
+    second_row->add_child(new ui::TextureButton2D("play_animation", { "data/textures/play.png" }));
+    second_row->add_child(new ui::TextureButton2D("pause_animation", { "data/textures/pause.png", ui::HIDDEN }));
+    second_row->add_child(new ui::TextureButton2D("stop_animation", { "data/textures/stop.png" }));
 
     // Create inspection panel (Nodes, properties, etc)
     inspector = new ui::Inspector({ .name = "inspector_root", .title = "Animation",.position = { 32.0f, 32.f } }, [&](ui::Inspector* scope) {

@@ -1205,7 +1205,7 @@ void SculptEditor::init_ui()
             {
                 float angle = PI - PI_2 * i / (float)(child_count - 1);
                 glm::vec2 translation = glm::vec2(radius * cos(angle), radius * sin(angle)) - center;
-                ui::Button2D* child = new ui::Button2D("recent_color_" + std::to_string(i), colors::WHITE, 0, translation, glm::vec2(sample_size));
+                ui::Button2D* child = new ui::Button2D("recent_color_" + std::to_string(i), { .position = translation, .size = glm::vec2(sample_size), .color = colors::WHITE });
                 child->set_position(translation);
                 color_picker->add_child(child);
             }
@@ -1226,19 +1226,19 @@ void SculptEditor::init_ui()
 
     // ** Primitives **
     {
-        ui::ButtonSelector2D* prim_selector = new ui::ButtonSelector2D("shapes", "data/textures/primitives.png");
-        prim_selector->add_child(new ui::TextureButton2D("sphere", "data/textures/sphere.png", ui::SELECTED));
-        prim_selector->add_child(new ui::TextureButton2D("cube", "data/textures/cube.png"));
-        prim_selector->add_child(new ui::TextureButton2D("cone", "data/textures/cone.png"));
-        prim_selector->add_child(new ui::TextureButton2D("capsule", "data/textures/capsule.png"));
-        prim_selector->add_child(new ui::TextureButton2D("cylinder", "data/textures/cylinder.png"));
-        prim_selector->add_child(new ui::TextureButton2D("torus", "data/textures/torus.png"));
-        prim_selector->add_child(new ui::TextureButton2D("vesica", "data/textures/x.png"));
+        ui::ButtonSelector2D* prim_selector = new ui::ButtonSelector2D("shapes", { "data/textures/primitives.png" });
+        prim_selector->add_child(new ui::TextureButton2D("sphere", { "data/textures/sphere.png", ui::SELECTED }));
+        prim_selector->add_child(new ui::TextureButton2D("cube", { "data/textures/cube.png" }));
+        prim_selector->add_child(new ui::TextureButton2D("cone", { "data/textures/cone.png" }));
+        prim_selector->add_child(new ui::TextureButton2D("capsule", { "data/textures/capsule.png" }));
+        prim_selector->add_child(new ui::TextureButton2D("cylinder", { "data/textures/cylinder.png" }));
+        prim_selector->add_child(new ui::TextureButton2D("torus", { "data/textures/torus.png" }));
+        prim_selector->add_child(new ui::TextureButton2D("vesica", { "data/textures/x.png" }));
         first_row->add_child(prim_selector);
     }
 
     // DEBUG SPLINES: REMOVE THIS!!
-    first_row->add_child(new ui::TextureButton2D("create_spline", "data/textures/bezier.png", ui::ALLOW_TOGGLE));
+    first_row->add_child(new ui::TextureButton2D("create_spline", { "data/textures/bezier.png", ui::ALLOW_TOGGLE }));
 
     // ** Shape, Brush, Material Editors **
     {
@@ -1246,7 +1246,7 @@ void SculptEditor::init_ui()
 
         // Shape editor
         {
-            ui::ButtonSubmenu2D* shape_editor_submenu = new ui::ButtonSubmenu2D("shape_editor", "data/textures/shape_editor.png");
+            ui::ButtonSubmenu2D* shape_editor_submenu = new ui::ButtonSubmenu2D("shape_editor", { "data/textures/shape_editor.png" });
 
             // Edit sizes
             {
@@ -1270,7 +1270,7 @@ void SculptEditor::init_ui()
 
         // Material editor
         {
-            ui::ButtonSubmenu2D* material_editor_submenu = new ui::ButtonSubmenu2D("material_editor", "data/textures/material_editor.png");
+            ui::ButtonSubmenu2D* material_editor_submenu = new ui::ButtonSubmenu2D("material_editor", { "data/textures/material_editor.png" });
 
             // Shading properties
             /*{
@@ -1301,21 +1301,21 @@ void SculptEditor::init_ui()
 
             // Shuffle
             {
-                material_editor_submenu->add_child(new ui::TextureButton2D("shuffle_material", "data/textures/shuffle.png"));
+                material_editor_submenu->add_child(new ui::TextureButton2D("shuffle_material", { "data/textures/shuffle.png" }));
             }
 
             // Materials: add, pick, defaults
             {
                 ui::ItemGroup2D* g_saved_materials = new ui::ItemGroup2D("g_saved_materials");
 
-                g_saved_materials->add_child(new ui::TextureButton2D("save_material", "data/textures/add.png"));
-                g_saved_materials->add_child(new ui::TextureButton2D("pick_material", "data/textures/pick_material.png", ui::ALLOW_TOGGLE));
+                g_saved_materials->add_child(new ui::TextureButton2D("save_material", { "data/textures/add.png" }));
+                g_saved_materials->add_child(new ui::TextureButton2D("pick_material", { "data/textures/pick_material.png", ui::ALLOW_TOGGLE }));
 
                 {
-                    ui::ButtonSelector2D* mat_samples_selector = new ui::ButtonSelector2D("material_samples", "data/textures/material_samples.png");
-                    mat_samples_selector->add_child(new ui::TextureButton2D("aluminium", "data/textures/material_samples.png", ui::UNIQUE_SELECTION));
-                    mat_samples_selector->add_child(new ui::TextureButton2D("charcoal", "data/textures/material_samples.png", ui::UNIQUE_SELECTION));
-                    mat_samples_selector->add_child(new ui::TextureButton2D("rusted_iron", "data/textures/material_samples.png", ui::UNIQUE_SELECTION));
+                    ui::ButtonSelector2D* mat_samples_selector = new ui::ButtonSelector2D("material_samples", { "data/textures/material_samples.png" });
+                    mat_samples_selector->add_child(new ui::TextureButton2D("aluminium", { "data/textures/material_samples.png", ui::UNIQUE_SELECTION }));
+                    mat_samples_selector->add_child(new ui::TextureButton2D("charcoal", { "data/textures/material_samples.png", ui::UNIQUE_SELECTION }));
+                    mat_samples_selector->add_child(new ui::TextureButton2D("rusted_iron", { "data/textures/material_samples.png", ui::UNIQUE_SELECTION }));
                     g_saved_materials->add_child(mat_samples_selector);
                 }
 
@@ -1328,15 +1328,15 @@ void SculptEditor::init_ui()
         // Brush editor
         {
 
-            ui::ButtonSubmenu2D* brush_editor_submenu = new ui::ButtonSubmenu2D("brush_editor", "data/textures/brush_editor.png", ui::DISABLED);
+            ui::ButtonSubmenu2D* brush_editor_submenu = new ui::ButtonSubmenu2D("brush_editor", { "data/textures/brush_editor.png", ui::DISABLED });
 
             {
-                ui::ButtonSelector2D* color_blend_selector = new ui::ButtonSelector2D("color_blend", "data/textures/color_blend.png");
-                color_blend_selector->add_child(new ui::TextureButton2D("replace", "data/textures/r.png"));
-                color_blend_selector->add_child(new ui::TextureButton2D("mix", "data/textures/x.png"));
-                color_blend_selector->add_child(new ui::TextureButton2D("additive", "data/textures/a.png"));
-                color_blend_selector->add_child(new ui::TextureButton2D("multiply", "data/textures/m.png"));
-                color_blend_selector->add_child(new ui::TextureButton2D("screen", "data/textures/s.png"));
+                ui::ButtonSelector2D* color_blend_selector = new ui::ButtonSelector2D("color_blend", { "data/textures/color_blend.png" });
+                color_blend_selector->add_child(new ui::TextureButton2D("replace", { "data/textures/r.png" }));
+                color_blend_selector->add_child(new ui::TextureButton2D("mix", { "data/textures/x.png" }));
+                color_blend_selector->add_child(new ui::TextureButton2D("additive", { "data/textures/a.png" }));
+                color_blend_selector->add_child(new ui::TextureButton2D("multiply", { "data/textures/m.png" }));
+                color_blend_selector->add_child(new ui::TextureButton2D("screen", { "data/textures/s.png" }));
                 brush_editor_submenu->add_child(color_blend_selector);
             }
 
@@ -1348,33 +1348,33 @@ void SculptEditor::init_ui()
 
     // ** Guides **
     {
-        ui::ButtonSubmenu2D* guides_submenu = new ui::ButtonSubmenu2D("guides", "data/textures/mirror.png");
+        ui::ButtonSubmenu2D* guides_submenu = new ui::ButtonSubmenu2D("guides", { "data/textures/mirror.png" });
         ui::ItemGroup2D* g_guides = new ui::ItemGroup2D("g_guides");
 
         // Mirror
         {
-            ui::ButtonSubmenu2D* mirror_submenu = new ui::ButtonSubmenu2D("mirror", "data/textures/mirror.png");
-            mirror_submenu->add_child(new ui::TextureButton2D("mirror_toggle", "data/textures/mirror.png", ui::ALLOW_TOGGLE));
+            ui::ButtonSubmenu2D* mirror_submenu = new ui::ButtonSubmenu2D("mirror", { "data/textures/mirror.png" });
+            mirror_submenu->add_child(new ui::TextureButton2D("mirror_toggle", { "data/textures/mirror.png", ui::ALLOW_TOGGLE }));
             ui::ComboButtons2D* g_mirror = new ui::ComboButtons2D("g_mirror");
-            g_mirror->add_child(new ui::TextureButton2D("mirror_translation", "data/textures/translation_gizmo.png", ui::SELECTED));
-            g_mirror->add_child(new ui::TextureButton2D("mirror_rotation", "data/textures/rotation_gizmo.png"));
-            g_mirror->add_child(new ui::TextureButton2D("mirror_both", "data/textures/transform_gizmo.png"));
+            g_mirror->add_child(new ui::TextureButton2D("mirror_translation", { "data/textures/translation_gizmo.png", ui::SELECTED }));
+            g_mirror->add_child(new ui::TextureButton2D("mirror_rotation", { "data/textures/rotation_gizmo.png" }));
+            g_mirror->add_child(new ui::TextureButton2D("mirror_both", { "data/textures/transform_gizmo.png" }));
             mirror_submenu->add_child(g_mirror);
             g_guides->add_child(mirror_submenu);
         }
 
         // Snap to surface, grid
-        g_guides->add_child(new ui::TextureButton2D("snap_to_surface", "data/textures/snap_to_surface.png", ui::ALLOW_TOGGLE));
-        g_guides->add_child(new ui::TextureButton2D("snap_to_grid", "data/textures/snap_to_grid.png", ui::ALLOW_TOGGLE));
+        g_guides->add_child(new ui::TextureButton2D("snap_to_surface", { "data/textures/snap_to_surface.png", ui::ALLOW_TOGGLE }));
+        g_guides->add_child(new ui::TextureButton2D("snap_to_grid", { "data/textures/snap_to_grid.png", ui::ALLOW_TOGGLE }));
 
         // Snap to axis
         {
-            ui::ButtonSubmenu2D* lock_axis_submenu = new ui::ButtonSubmenu2D("lock_axis", "data/textures/lock_axis.png");
-            lock_axis_submenu->add_child(new ui::TextureButton2D("lock_axis_toggle", "data/textures/lock_axis.png", ui::ALLOW_TOGGLE));
+            ui::ButtonSubmenu2D* lock_axis_submenu = new ui::ButtonSubmenu2D("lock_axis", { "data/textures/lock_axis.png" });
+            lock_axis_submenu->add_child(new ui::TextureButton2D("lock_axis_toggle", { "data/textures/lock_axis.png", ui::ALLOW_TOGGLE }));
             ui::ComboButtons2D* g_lock_axis = new ui::ComboButtons2D("g_lock_axis");
-            g_lock_axis->add_child(new ui::TextureButton2D("lock_axis_x", "data/textures/x.png"));
-            g_lock_axis->add_child(new ui::TextureButton2D("lock_axis_y", "data/textures/y.png"));
-            g_lock_axis->add_child(new ui::TextureButton2D("lock_axis_z", "data/textures/z.png", ui::SELECTED));
+            g_lock_axis->add_child(new ui::TextureButton2D("lock_axis_x", { "data/textures/x.png" }));
+            g_lock_axis->add_child(new ui::TextureButton2D("lock_axis_y", { "data/textures/y.png" }));
+            g_lock_axis->add_child(new ui::TextureButton2D("lock_axis_z", { "data/textures/z.png", ui::SELECTED }));
             lock_axis_submenu->add_child(g_lock_axis);
             g_guides->add_child(lock_axis_submenu);
         }
@@ -1384,21 +1384,21 @@ void SculptEditor::init_ui()
     }
 
     // ** Go back to scene editor **
-    second_row->add_child(new ui::TextureButton2D("go_back", "data/textures/back.png"));
+    second_row->add_child(new ui::TextureButton2D("go_back", { "data/textures/back.png" }));
 
     // ** Main tools (SCULPT & PAINT) **
     {
         ui::ComboButtons2D* combo_main_tools = new ui::ComboButtons2D("combo_main_tools");
-        combo_main_tools->add_child(new ui::TextureButton2D("add", "data/textures/cube_add.png", ui::SELECTED));
-        combo_main_tools->add_child(new ui::TextureButton2D("substract", "data/textures/cube_substract.png"));
-        combo_main_tools->add_child(new ui::TextureButton2D("paint", "data/textures/paint.png"));
+        combo_main_tools->add_child(new ui::TextureButton2D("add", { "data/textures/cube_add.png", ui::SELECTED }));
+        combo_main_tools->add_child(new ui::TextureButton2D("substract", { "data/textures/cube_substract.png" }));
+        combo_main_tools->add_child(new ui::TextureButton2D("paint", { "data/textures/paint.png" }));
         second_row->add_child(combo_main_tools);
     }
 
     // ** Undo/Redo **
     {
-        second_row->add_child(new ui::TextureButton2D("undo", "data/textures/undo.png"));
-        second_row->add_child(new ui::TextureButton2D("redo", "data/textures/redo.png"));
+        second_row->add_child(new ui::TextureButton2D("undo", { "data/textures/undo.png" }));
+        second_row->add_child(new ui::TextureButton2D("redo", { "data/textures/redo.png" }));
     }
 
     // Smooth factor
@@ -1642,7 +1642,7 @@ void SculptEditor::generate_material_from_stroke(void* button)
 
     auto callback = [&, p = mat_samples](const std::string& output) {
 
-        ui::TextureButton2D* new_button = new ui::TextureButton2D(output, "data/textures/material_samples.png", ui::UNIQUE_SELECTION);
+        ui::TextureButton2D* new_button = new ui::TextureButton2D(output, { "data/textures/material_samples.png", ui::UNIQUE_SELECTION });
         p->add_child(new_button);
 
         num_generated_materials++;
