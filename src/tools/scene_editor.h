@@ -70,6 +70,7 @@ class SceneEditor : public BaseEditor {
     void delete_node(Node* node, bool push_undo = true);
     void recover_node(Node* node, bool push_redo = true);
     void ungroup_node(Node* node, bool push_undo = true, bool push_redo = true);
+    void ungroup_all(Node* node);
     void create_light_node(uint8_t type);
     void process_node_hovered();
 

@@ -740,6 +740,11 @@ void SceneEditor::recover_node(Node* node, bool push_redo)
 
 void SceneEditor::ungroup_node(Node* node, bool push_undo, bool push_redo)
 {
+    if (dynamic_cast<Group3D*>(node)) {
+        ungroup_all(node);
+        return;
+    }
+
     Node3D* g_node = static_cast<Node3D*>(node);
     Group3D* group = g_node->get_parent<Group3D*>();
 
@@ -773,6 +778,16 @@ void SceneEditor::ungroup_node(Node* node, bool push_undo, bool push_redo)
     deselect();
 
     inspector_dirty = true;
+}
+
+// This cannot be undone by now
+void SceneEditor::ungroup_all(Node* node)
+{
+    Group3D* g_node = static_cast<Group3D*>(node);
+
+    for (auto child : g_node->get_children()) {
+        ungroup_node(child, false, false);
+    }
 }
 
 void SceneEditor::process_group(Node* node, bool push_undo)
