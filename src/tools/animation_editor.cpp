@@ -8,6 +8,7 @@
 #include "framework/nodes/container_2d.h"
 #include "framework/nodes/slider_2d.h"
 #include "framework/nodes/button_2d.h"
+#include "framework/nodes/group_3d.h"
 #include "framework/ui/inspector.h"
 #include "framework/animation/track.h"
 #include "framework/math/math_utils.h"
@@ -20,10 +21,11 @@
 
 #include "engine/rooms_engine.h"
 
-#include "spdlog/spdlog.h"
-#include "imgui.h"
+#include "tools/scene_editor.h"
 
 #include "glm/gtx/quaternion.hpp"
+#include "spdlog/spdlog.h"
+#include "imgui.h"
 
 AnimationPlayer* player = nullptr;
 
@@ -279,22 +281,6 @@ void AnimationEditor::render()
     animation_trajectory_instance->render();
 }
 
-void AnimationEditor::render_gizmo()
-{
-    if (!keyframe_dirty || !current_node) {
-        return;
-    }
-
-
-    gizmo->set_transform(current_node->get_transform());
-
-    bool transform_dirty = gizmo->render();
-
-    if (transform_dirty) {
-        current_node->set_transform(gizmo->get_transform());
-    }
-}
-
 void AnimationEditor::update_gizmo(float delta_time)
 {
     if (!keyframe_dirty || !current_node) {
@@ -308,10 +294,64 @@ void AnimationEditor::update_gizmo(float delta_time)
     }
 
     glm::vec3 right_controller_pos = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
+
     Transform t = current_node->get_transform();
+    Transform parent_transform;
+
+    auto scene_editor = static_cast<RoomsEngine*>(Engine::instance)->get_editor<SceneEditor*>(SCENE_EDITOR);
+    Group3D* current_group = scene_editor->get_current_group();
+
+    if (current_group) {
+        parent_transform = current_group->get_transform();
+        t = Transform::combine(parent_transform, t);
+    }
 
     if (gizmo->update(t, right_controller_pos, delta_time)) {
+
+        if (current_group) {
+            t = Transform::combine(Transform::inverse(parent_transform), t);
+        }
+
         current_node->set_transform(t);
+    }
+}
+
+void AnimationEditor::render_gizmo()
+{
+    if (!keyframe_dirty || !current_node) {
+        return;
+    }
+
+    Transform t = current_node->get_transform();
+    Transform parent_transform;
+
+    auto scene_editor = static_cast<RoomsEngine*>(Engine::instance)->get_editor<SceneEditor*>(SCENE_EDITOR);
+    Group3D* current_group = scene_editor->get_current_group();
+
+    if (current_group) {
+        parent_transform = current_group->get_transform();
+        t = Transform::combine(parent_transform, t);
+    }
+
+    gizmo->set_transform(t);
+
+    bool transform_dirty = gizmo->render();
+
+    // This is only for 2D since Gizmo.render will only return true if
+    // Gizmo2D is used!
+    if (renderer->get_openxr_available()) {
+        return;
+    }
+
+    if (transform_dirty) {
+
+        Transform new_transform = gizmo->get_transform();
+
+        if (current_group) {
+            new_transform = Transform::combine(Transform::inverse(parent_transform), new_transform);
+        }
+
+        current_node->set_transform(new_transform);
     }
 }
 

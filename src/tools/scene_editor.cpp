@@ -178,16 +178,20 @@ void SceneEditor::update(float delta_time)
         }
     }
 
+    if (Input::was_button_pressed(XR_BUTTON_Y) || Input::was_key_pressed(GLFW_KEY_I)) {
+        inspector_dirty = true;
+    }
+
     if (inspector_dirty) {
 
         if (selected_node && dynamic_cast<Light3D*>(selected_node)) {
             inspect_light();
         }
         else if (current_group) {
-            inspect_group();
+            inspect_group(true);
         }
         else {
-            inspector_from_scene();
+            inspector_from_scene(true);
         }
     }
 
@@ -208,10 +212,6 @@ void SceneEditor::update(float delta_time)
         } else if (can_redo) {
             scene_redo();
         }
-    }
-
-    if (Input::was_button_pressed(XR_BUTTON_Y) || Input::was_key_pressed(GLFW_KEY_I)) {
-        inspector_from_scene(true);
     }
 
     if (renderer->get_openxr_available()) {
@@ -463,7 +463,9 @@ void SceneEditor::init_ui()
 
     // Create inspection panel (Nodes, properties, etc)
     {
-        inspector = new ui::Inspector({ .name = "inspector_root", .title = "Scene Nodes",.position = {32.0f, 32.f}});
+        inspector = new ui::Inspector({ .name = "inspector_root", .title = "Scene Nodes",.position = {32.0f, 32.f}}, [&](ui::Inspector* scope) {
+            return on_close_inspector();
+        });
         inspector->set_visibility(false);
     }
 
@@ -603,6 +605,17 @@ void SceneEditor::bind_events()
             }
         });
     }
+}
+
+bool SceneEditor::on_close_inspector()
+{
+    if (current_group) {
+        current_group = nullptr;
+        inspector_dirty = true;
+        return false;
+    }
+
+    return true;
 }
 
 void SceneEditor::select_node(Node* node, bool place)
@@ -1003,7 +1016,7 @@ void SceneEditor::update_node_transform()
 
 void SceneEditor::inspector_from_scene(bool force)
 {
-    inspector->clear(force);
+    inspector->clear(force, "Scene Nodes");
 
     auto& nodes = main_scene->get_nodes();
 
@@ -1132,7 +1145,7 @@ void SceneEditor::inspect_group(bool force)
 {
     assert(current_group);
 
-    inspector->clear(!inspector->get_visibility());
+    inspector->clear(!inspector->get_visibility(), "Group Nodes");
 
     auto& nodes = current_group->get_children();
 

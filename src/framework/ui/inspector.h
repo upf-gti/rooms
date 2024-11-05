@@ -11,9 +11,8 @@
 
 namespace ui {
 
+    class Text2D;
     class XRPanel;
-    //class VContainer2D;
-    //class HContainer2D;
 
     struct InspectorDesc {
         std::string name = "";
@@ -40,6 +39,7 @@ namespace ui {
 
         XRPanel* root = nullptr;
         VContainer2D* body = nullptr;
+        Text2D* title = nullptr;
         HContainer2D* current_row = nullptr;
 
         HContainer2D* create_row();
@@ -57,8 +57,9 @@ namespace ui {
         Inspector(const InspectorDesc& desc, std::function<bool(Inspector*)> close_fn = nullptr);
 
         void update(float delta_time);
-        /*void render(); */
-        void clear(bool force_place = false);
+        void clear(bool force_place = false, const std::string& new_title = "");
+
+        void set_title(const std::string& new_title);
 
         void label(const std::string& name, const std::string& text, uint32_t flags = 0);
         void icon(const std::string& texture_path);

@@ -35,7 +35,8 @@ namespace ui {
         float title_text_scale = 22.0f;
         float title_y_corrected = desc.title_height * 0.5f - title_text_scale * 0.5f;
         ui::Container2D* title_container = new ui::Container2D(name + "_title", { 0.0f, 0.0f }, { inner_width - padding * 0.4f, desc.title_height });
-        title_container->add_child(new ui::Text2D(desc.title.empty() ? "Inspector": desc.title, { 0.0f, title_y_corrected }, title_text_scale, ui::TEXT_CENTERED | ui::SKIP_TEXT_RECT));
+        title = new ui::Text2D(desc.title.empty() ? "Inspector" : desc.title, { 0.0f, title_y_corrected }, title_text_scale, ui::TEXT_CENTERED | ui::SKIP_TEXT_RECT);
+        title_container->add_child(title);
         title_container->add_child(new ui::TextureButton2D("close_button", "data/textures/cross.png", ui::SKIP_NAME, { inner_width - padding * 3.0f, title_y_corrected }, glm::vec2(32.0f)));
         column->add_child(title_container);
 
@@ -171,7 +172,12 @@ namespace ui {
         Node2D::update(delta_time);
     }
 
-    void Inspector::clear(bool force_place)
+    void Inspector::set_title(const std::string& new_title)
+    {
+        title->set_text(new_title);
+    }
+
+    void Inspector::clear(bool force_place, const std::string& new_title)
     {
         std::vector<Node*> to_delete;
 
@@ -201,6 +207,10 @@ namespace ui {
         }
 
         IO::set_hover(nullptr, {});
+
+        if (new_title.size()) {
+            set_title(new_title);
+        }
     }
 
     void Inspector::label(const std::string& name, const std::string& text, uint32_t flags)

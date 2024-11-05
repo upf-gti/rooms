@@ -98,6 +98,7 @@ class SceneEditor : public BaseEditor {
 
     void init_ui();
     void bind_events();
+    bool on_close_inspector();
 
     void inspector_from_scene(bool force = false);
     void inspect_node(Node* node, uint32_t flags = NODE_STANDARD, const std::string& texture_path = "");
