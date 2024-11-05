@@ -84,6 +84,7 @@ class SceneEditor : public BaseEditor {
 
     void process_group(Node* node = nullptr, bool push_undo = true);
     void edit_group(Group3D* group);
+    const Transform& get_group_global_transform(Node3D* node);
 
     /*
     *   UI
@@ -136,7 +137,7 @@ class SceneEditor : public BaseEditor {
     *   Undo/Redo
     */
 
-    bool action_in_progress = true;
+    bool action_in_progress = false;
 
     std::vector<sActionData> undo_list;
     std::vector<sActionData> redo_list;

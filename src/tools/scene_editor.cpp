@@ -142,7 +142,7 @@ void SceneEditor::update(float delta_time)
 
     // Update input actions
     {
-        select_action_pressed = Input::was_trigger_pressed(HAND_RIGHT) || Input::was_mouse_released(GLFW_MOUSE_BUTTON_LEFT);
+        select_action_pressed = Input::was_trigger_pressed(HAND_RIGHT) || Input::was_mouse_pressed(GLFW_MOUSE_BUTTON_LEFT);
 
         if (Input::was_key_pressed(GLFW_KEY_ESCAPE)) {
             deselect();
@@ -620,6 +620,12 @@ bool SceneEditor::on_close_inspector()
 
 void SceneEditor::select_node(Node* node, bool place)
 {
+    // Avoid input issues with interacting with gizmo
+    auto& io = ImGui::GetIO();
+    if (io.WantCaptureMouse) {
+        return;
+    }
+
     // Select group target node in 2d only!
     if (grouping_node && !renderer->get_openxr_available()) {
         process_group(node);
@@ -839,6 +845,21 @@ void SceneEditor::edit_group(Group3D* group)
     Node2D::get_widget_from_name<ui::TextureButton2D*>("group")->set_disabled(true);
 }
 
+const Transform& SceneEditor::get_group_global_transform(Node3D* node)
+{
+    if (current_group) {
+        return current_group->get_transform();
+    }
+
+    else if (node->get_parent()) {
+        return node->get_parent<Node3D*>()->get_transform();
+    }
+
+    assert(0);
+
+    return Transform();
+}
+
 void SceneEditor::create_light_node(uint8_t type)
 {
     Light3D* new_light = nullptr;
@@ -900,8 +921,8 @@ void SceneEditor::update_gizmo(float delta_time)
     Transform t = node->get_transform();
     Transform parent_transform;
 
-    if (current_group) {
-        parent_transform = current_group->get_transform();
+    if (current_group || node->get_parent()) {
+        parent_transform = get_group_global_transform(node);
         t = Transform::combine(parent_transform, t);
     }
 
@@ -912,7 +933,7 @@ void SceneEditor::update_gizmo(float delta_time)
             action_in_progress = true;
         }
 
-        if (current_group) {
+        if (current_group || node->get_parent()) {
             t = Transform::combine(Transform::inverse(parent_transform), t);
         }
 
@@ -934,8 +955,8 @@ void SceneEditor::render_gizmo()
     Transform t = node->get_transform();
     Transform parent_transform;
 
-    if (current_group) {
-        parent_transform = current_group->get_transform();
+    if (current_group || node->get_parent()) {
+        parent_transform = get_group_global_transform(node);
         t = Transform::combine(parent_transform, t);
     }
 
@@ -958,7 +979,7 @@ void SceneEditor::render_gizmo()
 
         Transform new_transform = gizmo->get_transform();
 
-        if (current_group) {
+        if (current_group || node->get_parent()) {
             new_transform = Transform::combine(Transform::inverse(parent_transform), new_transform);
         }
 
@@ -1136,7 +1157,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
             };
 
             Node::bind(signal + "@long_click", [fn = callback, str = node_name](const std::string& sg, void* data) {
-                ui::Keyboard::request(fn, str, 32u);
+                ui::Keyboard::request(fn, str, 24u);
             });
         }
     }
