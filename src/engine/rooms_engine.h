@@ -28,7 +28,7 @@ class RoomsEngine : public Engine
 
     // Editors
 
-    bool skip_tutorial = true;
+    bool skip_tutorial = false;
 
     EditorType current_editor_type;
 

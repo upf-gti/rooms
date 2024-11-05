@@ -51,7 +51,7 @@ int RoomsEngine::post_initialize()
 
     environment = new Environment3D();
 
-    // Meta Quest Controllers
+    // Load Meta Quest Controllers and Controller pointer
     if (renderer->get_openxr_available())
     {
         std::vector<Node*> entities;
@@ -59,6 +59,28 @@ int RoomsEngine::post_initialize()
         parse_gltf("data/meshes/controllers/right_controller.glb", entities);
         controller_mesh_left = static_cast<MeshInstance3D*>(entities[0]);
         controller_mesh_right = static_cast<MeshInstance3D*>(entities[1]);
+
+        // Controller pointer
+        ray_pointer = parse_mesh("data/meshes/raycast.obj");
+
+        Material* pointer_material = new Material();
+        pointer_material->set_transparency_type(ALPHA_BLEND);
+        pointer_material->set_cull_type(CULL_NONE);
+        pointer_material->set_type(MATERIAL_UNLIT);
+        pointer_material->set_shader(RendererStorage::get_shader_from_source(shaders::ui_ray_pointer::source, shaders::ui_ray_pointer::path, pointer_material));
+
+        ray_pointer->set_surface_material_override(ray_pointer->get_surface(0), pointer_material);
+
+        sphere_pointer = parse_mesh("data/meshes/sphere.obj");
+
+        Material* sphere_pointer_material = new Material();
+        sphere_pointer_material->set_depth_read(false);
+        sphere_pointer_material->set_priority(0);
+        sphere_pointer_material->set_transparency_type(ALPHA_BLEND);
+        sphere_pointer_material->set_type(MATERIAL_UNLIT);
+        sphere_pointer_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, sphere_pointer_material));
+
+        sphere_pointer->set_surface_material_override(sphere_pointer->get_surface(0), sphere_pointer_material);
     }
 
     // Instantiate and initialize editors
@@ -77,7 +99,7 @@ int RoomsEngine::post_initialize()
         editor->initialize();
     }
 
-    if (skip_tutorial) {
+    if (1 || skip_tutorial) {
         get_editor<TutorialEditor*>(TUTORIAL_EDITOR)->end();
     }
 
@@ -102,30 +124,6 @@ int RoomsEngine::post_initialize()
         grid_material->set_type(MATERIAL_UNLIT);
         grid_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_grid::source, shaders::mesh_grid::path, grid_material));
         grid->set_surface_material_override(grid->get_surface(0), grid_material);
-    }
-
-    // Controller pointer
-    {
-        ray_pointer = parse_mesh("data/meshes/raycast.obj");
-
-        Material* pointer_material = new Material();
-        pointer_material->set_transparency_type(ALPHA_BLEND);
-        pointer_material->set_cull_type(CULL_NONE);
-        pointer_material->set_type(MATERIAL_UNLIT);
-        pointer_material->set_shader(RendererStorage::get_shader_from_source(shaders::ui_ray_pointer::source, shaders::ui_ray_pointer::path, pointer_material));
-
-        ray_pointer->set_surface_material_override(ray_pointer->get_surface(0), pointer_material);
-
-        sphere_pointer = parse_mesh("data/meshes/sphere.obj");
-
-        Material* sphere_pointer_material = new Material();
-        sphere_pointer_material->set_depth_read(false);
-        sphere_pointer_material->set_priority(0);
-        sphere_pointer_material->set_transparency_type(ALPHA_BLEND);
-        sphere_pointer_material->set_type(MATERIAL_UNLIT);
-        sphere_pointer_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, sphere_pointer_material));
-
-        sphere_pointer->set_surface_material_override(sphere_pointer->get_surface(0), sphere_pointer_material);
     }
 
     cursor.initialize();
@@ -206,12 +204,9 @@ void RoomsEngine::update(float delta_time)
 
 void RoomsEngine::render()
 {
-
-//#ifndef __EMSCRIPTEN__
     if (show_imgui) {
         render_gui();
     }
-//#endif
 
     cursor.render();
 
@@ -230,14 +225,11 @@ void RoomsEngine::render()
     main_scene->render();
 
     if (current_editor) {
-
         current_editor->render();
-
         get_editor<TutorialEditor*>(TUTORIAL_EDITOR)->render();
     }
 
     if (Renderer::instance->get_openxr_available() && !playing_scene) {
-
         const glm::mat4x4& raycast_transform = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
         ray_pointer->set_transform(Transform::mat4_to_transform(raycast_transform));
         float xr_ray_distance = IO::get_xr_ray_distance();
@@ -254,12 +246,13 @@ void RoomsEngine::render()
 
 void RoomsEngine::render_controllers()
 {
-    RoomsEngine* i = static_cast<RoomsEngine*>(instance);
-
-    if (i->renderer->get_openxr_available()) {
-        i->controller_mesh_right->render();
-        i->controller_mesh_left->render();
+    if (!Renderer::instance->get_openxr_available()) {
+        return;
     }
+
+    RoomsEngine* i = static_cast<RoomsEngine*>(instance);
+    i->controller_mesh_right->render();
+    i->controller_mesh_left->render();
 }
 
 void RoomsEngine::switch_editor(uint8_t editor_idx, void* data)
