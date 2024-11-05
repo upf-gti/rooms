@@ -525,8 +525,11 @@ void SceneEditor::bind_events()
         rooms_renderer->toogle_frame_debug();
 
         static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(new_sculpt);
-        main_scene->add_node(new_sculpt);
+
         select_node(new_sculpt);
+
+        add_node(new_sculpt);
+
         inspector_dirty = true;
 
         Node::emit_signal("@on_sculpt_added", (void*)nullptr);
@@ -641,6 +644,17 @@ void SceneEditor::select_node(Node* node, bool place)
     moving_node = place && is_gizmo_usable() && renderer->get_openxr_available();
 }
 
+void SceneEditor::add_node(Node* node, int idx)
+{
+    if (current_group) {
+        node_to_group = node;
+        process_group(current_group, false);
+    }
+    else {
+        main_scene->add_node(node, idx);
+    }
+}
+
 void SceneEditor::deselect()
 {
     // hack by now: Do nothing if it's not the current editor..
@@ -675,8 +689,8 @@ Node* SceneEditor::clone_node(Node* node, bool copy, bool push_undo)
         engine->set_current_sculpt(sculpt_node);
     }
 
-    // Add to scene and select as current
-    main_scene->add_node(new_node);
+    add_node(new_node);
+
     select_node(new_node);
 
     if (push_undo) {
@@ -734,7 +748,7 @@ void SceneEditor::recover_node(Node* node, bool push_redo)
 
     const sDeletedNode& node_data = deleted_nodes[idx];
     Node3D* recovered_node = node_data.ref;
-    main_scene->add_node(recovered_node, node_data.index);
+    add_node(recovered_node, node_data.index);
     deleted_nodes.erase(idx);
 
     if (push_redo) {
@@ -746,8 +760,14 @@ void SceneEditor::recover_node(Node* node, bool push_redo)
 
 void SceneEditor::ungroup_node(Node* node, bool push_undo, bool push_redo)
 {
+    assert(node);
+
     if (dynamic_cast<Group3D*>(node)) {
         ungroup_all(node);
+        return;
+    }
+
+    if (!node->get_parent()) {
         return;
     }
 
@@ -758,7 +778,6 @@ void SceneEditor::ungroup_node(Node* node, bool push_undo, bool push_redo)
     group->remove_child(g_node);
     g_node->set_transform(Transform::mat4_to_transform(world_space_model));
 
-    Scene* main_scene = Engine::instance->get_main_scene();
     main_scene->add_node(node);
 
     sActionData data = { sActionData::ACTION_GROUP, g_node, group };
@@ -888,7 +907,8 @@ void SceneEditor::create_light_node(uint8_t type)
     new_light->set_intensity(1.0f);
     new_light->set_range(5.0f);
 
-    main_scene->add_node(new_light);
+    add_node(new_light);
+
     select_node(new_light);
     inspector_dirty = true;
 }
