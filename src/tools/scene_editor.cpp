@@ -304,7 +304,8 @@ void SceneEditor::process_node_hovered()
             }
         }
     }
-    else if (grouping_node) {
+    // In 2d, we have to select manually by click, so do not enter here!
+    else if (grouping_node && renderer->get_openxr_available()) {
         shortcuts[shortcuts::CREATE_GROUP] = true;
         if (a_pressed) {
             process_group();
@@ -587,6 +588,12 @@ void SceneEditor::bind_events()
 
 void SceneEditor::select_node(Node* node, bool place)
 {
+    // Select group target node in 2d only!
+    if (grouping_node && !renderer->get_openxr_available()) {
+        process_group(node);
+        return;
+    }
+
     selected_node = node;
 
     // Update inspector selection
@@ -687,9 +694,41 @@ void SceneEditor::recover_node(Node* node, bool push_redo)
     inspector_dirty = true;
 }
 
-void SceneEditor::process_group()
+void SceneEditor::ungroup_node(Node* node, bool push_redo)
 {
-    Node3D* hovered_3d = static_cast<Node3D*>(hovered_node);
+    Node3D* g_node = static_cast<Node3D*>(node);
+    Group3D* group = g_node->get_parent<Group3D*>();
+
+    glm::mat4x4 world_space_model = g_node->get_global_model();
+    group->remove_child(g_node);
+    g_node->set_transform(Transform::mat4_to_transform(world_space_model));
+
+    Scene* main_scene = Engine::instance->get_main_scene();
+    main_scene->add_node(node);
+
+    sActionData data = { sActionData::ACTION_GROUP, g_node, group };
+
+    // Remove group since it has been created for this node..
+    if (group->get_children().size() == 1u) {
+        data.param_2 = static_cast<Node3D*>(group->get_children().front());
+        ungroup_node(group->get_children().front(), false);
+    }
+    else if (group->get_children().empty()) {
+        delete_node(group, false);
+    }
+
+    if (push_redo) {
+        push_redo_action(data);
+    }
+
+    deselect();
+
+    inspector_dirty = true;
+}
+
+void SceneEditor::process_group(Node* node, bool push_undo)
+{
+    Node3D* hovered_3d = static_cast<Node3D*>(node ? node : hovered_node);
     Node3D* to_group_3d = static_cast<Node3D*>(node_to_group);
 
     // Check if current hover has group... (parent)
@@ -710,8 +749,10 @@ void SceneEditor::process_group()
         Group3D* new_group = new Group3D();
         new_group->add_nodes({ to_group_3d, hovered_3d });
         main_scene->add_node(new_group);
+    }
 
-        spdlog::info("group processed. {} nodes in scene. {} nodes in group", main_scene->get_nodes().size(), new_group->get_children().size());
+    if (push_undo) {
+        push_undo_action({ sActionData::ACTION_GROUP, to_group_3d });
     }
 
     grouping_node = false;
@@ -1162,10 +1203,13 @@ bool SceneEditor::scene_undo()
     {
     case sActionData::ACTION_TRANSFORM:
         push_redo_action({ sActionData::ACTION_TRANSFORM, step.ref_node, step.ref_node->get_transform() });
-        step.ref_node->set_transform(std::get<Transform>(step.value));
+        step.ref_node->set_transform(std::get<Transform>(step.param_1));
         break;
     case sActionData::ACTION_DELETE:
         recover_node(step.ref_node);
+        break;
+    case sActionData::ACTION_GROUP:
+        ungroup_node(step.ref_node);
         break;
     default:
         assert(0);
@@ -1192,11 +1236,25 @@ bool SceneEditor::scene_redo()
     {
     case sActionData::ACTION_TRANSFORM:
         push_undo_action({ sActionData::ACTION_TRANSFORM, step.ref_node, step.ref_node->get_transform() }, false);
-        step.ref_node->set_transform(std::get<Transform>(step.value));
+        step.ref_node->set_transform(std::get<Transform>(step.param_1));
         break;
     case sActionData::ACTION_DELETE:
         delete_node(step.ref_node); // delete again node
         break;
+    case sActionData::ACTION_GROUP:
+    {
+        Node3D* group = std::get<Node3D*>(step.param_1);
+        recover_node(group, false);
+        push_undo_action({ sActionData::ACTION_GROUP, step.ref_node, group }, false);
+        node_to_group = step.ref_node;
+        process_group(group, false);
+        Node3D* sec = std::get<Node3D*>(step.param_2);
+        if (sec) {
+            node_to_group = sec;
+            process_group(group, false);
+        }
+        break;
+    }
     default:
         assert(0);
         break;

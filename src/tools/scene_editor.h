@@ -19,14 +19,21 @@ namespace ui {
 
 struct sActionData {
 
+    using ActionDataParameter = std::variant<Transform, Node3D*>;
+
     enum {
         ACTION_TRANSFORM,
-        ACTION_DELETE
+        ACTION_DELETE,
+        ACTION_GROUP,
+        // ACTION_UNGROUP,
+        // ACTION_CLONE,
+        // ACTION_DUPLICATE
     };
 
     int type = -1;
     Node3D* ref_node = nullptr;
-    std::variant<Transform> value;
+    ActionDataParameter param_1;
+    ActionDataParameter param_2;
 };
 
 class SceneEditor : public BaseEditor {
@@ -63,6 +70,7 @@ class SceneEditor : public BaseEditor {
     void group_node(Node* node);
     void delete_node(Node* node, bool push_undo = true);
     void recover_node(Node* node, bool push_redo = true);
+    void ungroup_node(Node* node, bool push_redo = true);
     void create_light_node(uint8_t type);
     void process_node_hovered();
 
@@ -74,7 +82,7 @@ class SceneEditor : public BaseEditor {
     bool editing_group = false;
     Node* node_to_group = nullptr;
 
-    void process_group();
+    void process_group(Node* node = nullptr, bool push_undo = true);
     void edit_group(Group3D* group);
 
     /*
