@@ -78,8 +78,8 @@ class SceneEditor : public BaseEditor {
     */
 
     bool grouping_node = false;
-    bool editing_group = false;
     Node* node_to_group = nullptr;
+    Group3D* current_group = nullptr;
 
     void process_group(Node* node = nullptr, bool push_undo = true);
     void edit_group(Group3D* group);
@@ -101,6 +101,7 @@ class SceneEditor : public BaseEditor {
 
     void inspector_from_scene(bool force = false);
     void inspect_node(Node* node, uint32_t flags = NODE_STANDARD, const std::string& texture_path = "");
+    void inspect_group(bool force = false);
     void inspect_light();
 
     bool rotation_started = false;
@@ -164,8 +165,9 @@ public:
     void render_gui() override;
 
     void on_enter(void* data) override;
-    // void on_exit() override;
 
     void set_main_scene(Scene* new_scene) { main_scene = new_scene; };
     void set_inspector_dirty() { inspector_dirty = true; };
+
+    Group3D* get_current_group() { return current_group; }
 };

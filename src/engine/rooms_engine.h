@@ -13,7 +13,6 @@ class BaseEditor;
 
 enum EditorType : uint8_t {
     SCENE_EDITOR,
-    GROUP_EDITOR,
     SCULPT_EDITOR,
     ANIMATION_EDITOR,
     TUTORIAL_EDITOR,

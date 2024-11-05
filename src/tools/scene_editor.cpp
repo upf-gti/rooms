@@ -103,7 +103,7 @@ void SceneEditor::initialize()
             SculptNode* sculpt_node = dynamic_cast<SculptNode*>(node);
             if (sculpt_node && sculpt_node->check_intersection(intersection.sculpt_id, intersection.instance_id)) {
                 // hover the group
-                if (sculpt_node->get_parent()) {
+                if (!current_group && sculpt_node->get_parent()) {
                     hovered_node = sculpt_node->get_parent();
                     assert(dynamic_cast<Group3D*>(hovered_node));
                 }
@@ -117,7 +117,7 @@ void SceneEditor::initialize()
             }
         };
 
-        auto& nodes = main_scene->get_nodes();
+        auto& nodes = current_group ? current_group->get_children() : main_scene->get_nodes();
         for (auto node : nodes) {
             check_intersections(node);
         }
@@ -182,6 +182,9 @@ void SceneEditor::update(float delta_time)
 
         if (selected_node && dynamic_cast<Light3D*>(selected_node)) {
             inspect_light();
+        }
+        else if (current_group) {
+            inspect_group();
         }
         else {
             inspector_from_scene();
@@ -291,7 +294,16 @@ void SceneEditor::process_node_hovered()
     const bool a_pressed = Input::was_button_pressed(XR_BUTTON_A);
     const bool b_pressed = Input::was_button_pressed(XR_BUTTON_B);
 
-    if (group_hovered) {
+    if (current_group) {
+        shortcuts[shortcuts::UNGROUP] = true;
+        if (a_pressed) {
+            ungroup_node(hovered_node);
+        }
+        else if (select_action_pressed) {
+            select_node(hovered_node, false);
+        }
+    }
+    else if (group_hovered) {
         if (grouping_node) {
             shortcuts[shortcuts::ADD_TO_GROUP] = true;
             if (a_pressed) {
@@ -388,6 +400,7 @@ void SceneEditor::init_ui()
     {
         ui::ButtonSubmenu2D* node_actions_submenu = new ui::ButtonSubmenu2D("node_actions", "data/textures/cube.png", ui::DISABLED);
         node_actions_submenu->add_child(new ui::TextureButton2D("group", "data/textures/group.png"));
+        node_actions_submenu->add_child(new ui::TextureButton2D("ungroup", "data/textures/ungroup.png"));
         node_actions_submenu->add_child(new ui::TextureButton2D("duplicate", "data/textures/clone.png"));
         node_actions_submenu->add_child(new ui::TextureButton2D("clone", "data/textures/clone_instance.png"));
         first_row->add_child(node_actions_submenu);
@@ -483,6 +496,7 @@ void SceneEditor::init_ui()
             right_hand_box->add_child(new ui::ImageLabel2D("Duplicate Node", shortcuts::A_BUTTON_PATH, shortcuts::DUPLICATE_NODE));
             right_hand_box->add_child(new ui::ImageLabel2D("Create Group", shortcuts::A_BUTTON_PATH, shortcuts::CREATE_GROUP));
             right_hand_box->add_child(new ui::ImageLabel2D("Add to Group", shortcuts::A_BUTTON_PATH, shortcuts::ADD_TO_GROUP));
+            right_hand_box->add_child(new ui::ImageLabel2D("Ungroup", shortcuts::A_BUTTON_PATH, shortcuts::UNGROUP));
             right_hand_box->add_child(new ui::ImageLabel2D("Clone Node", shortcuts::R_GRIP_A_BUTTON_PATH, shortcuts::CLONE_NODE, double_size));
             right_hand_box->add_child(new ui::ImageLabel2D("Place Node", shortcuts::R_TRIGGER_PATH, shortcuts::PLACE_NODE));
             right_hand_box->add_child(new ui::ImageLabel2D("Select Node", shortcuts::R_TRIGGER_PATH, shortcuts::SELECT_NODE));
@@ -543,6 +557,7 @@ void SceneEditor::bind_events()
 
     Node::bind("deselect", [&](const std::string& signal, void* button) { deselect(); });
     Node::bind("group", [&](const std::string& signal, void* button) { group_node(selected_node); });
+    Node::bind("ungroup", [&](const std::string& signal, void* button) { ungroup_node(selected_node, false); });
     Node::bind("duplicate", [&](const std::string& signal, void* button) { clone_node(selected_node, true); });
     Node::bind("clone", [&](const std::string& signal, void* button) { clone_node(selected_node, false); });
 
@@ -720,7 +735,7 @@ void SceneEditor::ungroup_node(Node* node, bool push_redo)
     sActionData data = { sActionData::ACTION_GROUP, g_node, group };
 
     // Remove group since it has been created for this node..
-    if (group->get_children().size() == 1u) {
+    if (push_redo && group->get_children().size() == 1u) {
         Node* child = group->get_children().front();
         data.param_2 = child;
         ungroup_node(child, false);
@@ -780,7 +795,9 @@ void SceneEditor::edit_group(Group3D* group)
 {
     deselect();
 
-    RoomsEngine::switch_editor(GROUP_EDITOR, group);
+    current_group = group;
+
+    inspector_dirty = true;
 }
 
 void SceneEditor::create_light_node(uint8_t type)
@@ -840,13 +857,24 @@ void SceneEditor::update_gizmo(float delta_time)
 
     Node3D* node = static_cast<Node3D*>(selected_node);
     glm::vec3 right_controller_pos = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
+
     Transform t = node->get_transform();
+    Transform parent_transform;
+
+    if (current_group) {
+        parent_transform = current_group->get_transform();
+        t = Transform::combine(parent_transform, t);
+    }
 
     if (gizmo->update(t, right_controller_pos, delta_time)) {
 
         if (!action_in_progress) {
             push_undo_action({ sActionData::ACTION_TRANSFORM, node, node->get_transform() });
             action_in_progress = true;
+        }
+
+        if (current_group) {
+            t = Transform::combine(Transform::inverse(parent_transform), t);
         }
 
         node->set_transform(t);
@@ -864,7 +892,15 @@ void SceneEditor::render_gizmo()
 
     Node3D* node = static_cast<Node3D*>(selected_node);
 
-    gizmo->set_transform(node->get_transform());
+    Transform t = node->get_transform();
+    Transform parent_transform;
+
+    if (current_group) {
+        parent_transform = current_group->get_transform();
+        t = Transform::combine(parent_transform, t);
+    }
+
+    gizmo->set_transform(t);
 
     bool transform_dirty = gizmo->render();
 
@@ -881,7 +917,13 @@ void SceneEditor::render_gizmo()
             action_in_progress = true;
         }
 
-        node->set_transform(gizmo->get_transform());
+        Transform new_transform = gizmo->get_transform();
+
+        if (current_group) {
+            new_transform = Transform::combine(Transform::inverse(parent_transform), new_transform);
+        }
+
+        node->set_transform(new_transform);
     }
     else if (action_in_progress && !Input::is_mouse_pressed(GLFW_MOUSE_BUTTON_LEFT)) {
         action_in_progress = false;
@@ -1073,6 +1115,36 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
     }
 
     inspector->end_line();
+}
+
+void SceneEditor::inspect_group(bool force)
+{
+    assert(current_group);
+
+    inspector->clear(!inspector->get_visibility());
+
+    auto& nodes = current_group->get_children();
+
+    for (auto node : nodes) {
+
+        if (dynamic_cast<Light3D*>(node)) {
+            inspect_node(node, NODE_LIGHT);
+        }
+        else if (dynamic_cast<SculptNode*>(node)) {
+            inspect_node(node, NODE_SCULPT);
+        }
+        else {
+            inspect_node(node);
+        }
+    }
+
+    Node::emit_signal(inspector->get_name() + "@children_changed", (void*)nullptr);
+
+    inspector_dirty = false;
+
+    if (force) {
+        inspector->set_visibility(true);
+    }
 }
 
 void SceneEditor::inspect_light()

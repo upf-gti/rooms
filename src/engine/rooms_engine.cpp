@@ -21,7 +21,6 @@
 
 #include "tools/sculpt_editor.h"
 #include "tools/scene_editor.h"
-#include "tools/group_editor.h"
 #include "tools/animation_editor.h"
 #include "tools/player_editor.h"
 #include "tools/tutorial_editor.h"
@@ -88,7 +87,6 @@ int RoomsEngine::post_initialize()
         editors.resize(EDITOR_COUNT);
 
         editors[SCENE_EDITOR] = new SceneEditor("Scene Editor");
-        editors[GROUP_EDITOR] = new GroupEditor("Group Editor");
         editors[SCULPT_EDITOR] = new SculptEditor("Sculpt Editor");
         editors[ANIMATION_EDITOR] = new AnimationEditor("Animation Editor");
         editors[TUTORIAL_EDITOR] = new TutorialEditor("Tutorial Editor");

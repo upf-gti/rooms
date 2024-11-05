@@ -8,7 +8,7 @@
 #include "graphics/managers/sculpt_manager.h"
 
 #include "tools/sculpt_editor.h"
-#include "tools/group_editor.h"
+#include "tools/scene_editor.h"
 
 #include <engine/rooms_engine.h>
 
@@ -37,8 +37,6 @@ SculptNode::~SculptNode()
 {
     // Remove from raymarching renderer
 
-    //dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_raymarching_renderer()->remove_sculpt_instance(this);
-
     if (sculpt_gpu_data->unref()) {
         static_cast<RoomsRenderer*>(Renderer::instance)->get_sculpt_manager()->delete_sculpt(sculpt_gpu_data);
     }
@@ -51,14 +49,15 @@ void SculptNode::update(float delta_time)
     RoomsEngine* engine = static_cast<RoomsEngine*>(Engine::instance);
     const sGPU_SculptResults::sGPU_IntersectionData& intersection_results = renderer->get_sculpt_manager()->read_results.loaded_results.ray_intersection;
     bool in_sculpt_editor = (engine->get_current_editor_type() == SCULPT_EDITOR);
+    bool editing_scene_group = (engine->get_current_editor_type() == SCENE_EDITOR) && (!!engine->get_editor<SceneEditor*>(SCENE_EDITOR)->get_current_group());
 
     bool oof = false;
 
     if (in_sculpt_editor) {
         oof |= (engine->get_editor<SculptEditor*>(SCULPT_EDITOR)->get_current_sculpt() != this);
     }
-    else if (engine->get_current_editor_type() == GROUP_EDITOR) {
-        oof |= (!parent || parent != (Node*)engine->get_editor<GroupEditor*>(GROUP_EDITOR)->get_current_group());
+    else if (editing_scene_group) {
+        oof |= (!parent || parent != (Node*)engine->get_editor<SceneEditor*>(SCENE_EDITOR)->get_current_group());
     }
 
     if (oof) {
@@ -75,7 +74,7 @@ void SculptNode::update(float delta_time)
         // check its intersection and its sibling ones if not in group editor
         bool hovered = check_intersection(intersection_results.sculpt_id, intersection_results.instance_id);
 
-        if (engine->get_current_editor_type() != GROUP_EDITOR && parent) {
+        if (!editing_scene_group && parent) {
             for (auto child : parent->get_children()) {
                 SculptNode* sculpt_child = dynamic_cast<SculptNode*>(child);
                 hovered |= (sculpt_child && sculpt_child->check_intersection(intersection_results.sculpt_id, intersection_results.instance_id));
