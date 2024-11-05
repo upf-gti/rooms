@@ -743,6 +743,11 @@ void SceneEditor::process_group(Node* node, bool push_undo)
     Node3D* hovered_3d = static_cast<Node3D*>(node ? node : hovered_node);
     Node3D* to_group_3d = static_cast<Node3D*>(node_to_group);
 
+    // same node!
+    if (hovered_3d == to_group_3d) {
+        return;
+    }
+
     // Check if current hover has group... (parent)
     Group3D* group = dynamic_cast<Group3D*>(hovered_3d);
 
@@ -1279,7 +1284,7 @@ bool SceneEditor::scene_redo()
         push_undo_action({ sActionData::ACTION_GROUP, step.ref_node, group }, false);
         node_to_group = step.ref_node;
         process_group(group, false);
-        Node3D* sec = std::get<Node3D*>(step.param_2);
+        Node* sec = std::get<Node*>(step.param_2);
         if (sec) {
             node_to_group = sec;
             process_group(group, false);
