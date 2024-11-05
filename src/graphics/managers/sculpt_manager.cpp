@@ -252,6 +252,7 @@ Sculpt* SculptManager::create_sculpt_from_history(const std::vector<Stroke>& str
         to_upload_curr.color_blending_op = curr_stroke.color_blending_op;
         to_upload_curr.aabb_min = curr_stroke_aabb.center - curr_stroke_aabb.half_size;
         to_upload_curr.aabb_max = curr_stroke_aabb.center + curr_stroke_aabb.half_size;
+        to_upload_curr.parameters = curr_stroke.parameters;
 
         sculpt_creation.strokes_to_process.strokes[sculpt_creation.strokes_to_process.stroke_count++] = to_upload_curr;
 

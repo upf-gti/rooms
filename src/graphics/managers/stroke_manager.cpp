@@ -7,14 +7,15 @@
 #include "spdlog/spdlog.h"
 #include <glm/detail/compute_vector_relational.hpp>
 
-void StrokeManager::init() {
+void StrokeManager::init()
+{
     result_to_compute.set_defaults();
-
     edit_list.resize(EDIT_BUFFER_INITIAL_SIZE);
     result_to_compute.strokes.resize(STROKE_CONTEXT_INITIAL_SIZE);
 }
 
-void StrokeManager::add_stroke_to_upload_list(sStrokeInfluence& influence, const Stroke& stroke) {
+void StrokeManager::add_stroke_to_upload_list(sStrokeInfluence& influence, const Stroke& stroke)
+{
     if (influence.strokes.size() == influence.stroke_count) {
         result_to_compute.strokes.resize(influence.strokes.size() + STROKE_CONTEXT_INCREASE);
     }
@@ -34,7 +35,8 @@ void StrokeManager::add_stroke_to_upload_list(sStrokeInfluence& influence, const
     influence.stroke_count++;
 }
 
-void StrokeManager::compute_history_intersection(sStrokeInfluence &influence, AABB& operation_aabb, uint32_t history_max_index) {
+void StrokeManager::compute_history_intersection(sStrokeInfluence &influence, AABB& operation_aabb, uint32_t history_max_index)
+{
     Stroke intersection_stroke = {};
     // Get the strokes that are on the region of the undo
     for (uint32_t i = 0u; i < history_max_index; i++) {
@@ -56,7 +58,8 @@ void StrokeManager::compute_history_intersection(sStrokeInfluence &influence, AA
     }
 }
 
-AABB StrokeManager::compute_grid_aligned_AABB(const AABB& base, const glm::vec3& brick_world_size) {
+AABB StrokeManager::compute_grid_aligned_AABB(const AABB& base, const glm::vec3& brick_world_size)
+{
 
     glm::vec3 max_aabb = base.center + base.half_size;
     glm::vec3 min_aabb = base.center - base.half_size;
@@ -72,7 +75,6 @@ AABB StrokeManager::compute_grid_aligned_AABB(const AABB& base, const glm::vec3&
         .half_size = half_size
     };
 }
-
 
 sStrokeInfluence* StrokeManager::undo()
 {
@@ -141,8 +143,8 @@ sStrokeInfluence* StrokeManager::undo()
     return &result_to_compute;
 }
 
-
-sStrokeInfluence* StrokeManager::redo() {
+sStrokeInfluence* StrokeManager::redo()
+{
     if (redo_history.size() <= 0u) {
         return nullptr;
     }
@@ -196,9 +198,8 @@ sStrokeInfluence* StrokeManager::redo() {
     return &result_to_compute;
 }
 
-
-sStrokeInfluence* StrokeManager::add(std::vector<Edit> new_edits) {
-
+sStrokeInfluence* StrokeManager::add(std::vector<Edit> new_edits)
+{
     result_to_compute.set_defaults();
 
     // Add new edits to the current stroke and the in_frame_stroke
@@ -239,7 +240,8 @@ sStrokeInfluence* StrokeManager::add(std::vector<Edit> new_edits) {
     return &result_to_compute;
 }
 
-void StrokeManager::update() {
+void StrokeManager::update()
+{
     // Remove undo strokes of history, and add them to the redo history
     for (uint32_t i = 0u; i < pop_count_from_history; i++) {
         redo_history.push_back(history->back());
@@ -262,7 +264,8 @@ void StrokeManager::update() {
     edit_list_count = 0u;
 }
 
-void StrokeManager::change_stroke(const uint32_t index_increment) {
+void StrokeManager::change_stroke(const uint32_t index_increment)
+{
     if (current_stroke.edit_count > 0u) {
         // Add it to the history
         history->push_back(current_stroke);
@@ -293,7 +296,8 @@ void StrokeManager::set_current_sculpt(SculptNode* sculpt_instance)
     edit_list_count = 0u;
 }
 
-void StrokeManager::change_stroke(const StrokeParameters& params, const uint32_t index_increment) {
+void StrokeManager::change_stroke(const StrokeParameters& params, const uint32_t index_increment)
+{
     if (current_stroke.edit_count > 0u) {
         // Add it to the history
         history->push_back(current_stroke);
@@ -345,8 +349,8 @@ sStrokeInfluence* StrokeManager::new_history_add(std::vector<Stroke>* new_histor
     return &result_to_compute;
 }
 
-
-void aabb_split(AABB *container, uint32_t curr_idx, uint32_t *box_pool_top, const float half_max_division_size) {
+void aabb_split(AABB *container, uint32_t curr_idx, uint32_t *box_pool_top, const float half_max_division_size)
+{
     AABB& curr = container[curr_idx];
     const bool test_axis_x = half_max_division_size < curr.half_size.x;
     const bool test_axis_y = half_max_division_size < curr.half_size.y;
@@ -376,7 +380,8 @@ void aabb_split(AABB *container, uint32_t curr_idx, uint32_t *box_pool_top, cons
     // recursion end
 }
 
-uint32_t StrokeManager::divide_AABB_on_max_eval_size(const AABB& base, AABB divided_bases[8]) {
+uint32_t StrokeManager::divide_AABB_on_max_eval_size(const AABB& base, AABB divided_bases[8])
+{
     const uint32_t index_LUT[8u] = { 0u, 0u,   0u, 1u,   0u, 1u, 2u, 3u };
 
     uint32_t division_count = 1u;
