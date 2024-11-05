@@ -19,19 +19,18 @@ namespace ui {
 
 struct sActionData {
 
-    using ActionDataParameter = std::variant<Transform, Node3D*>;
+    using ActionDataParameter = std::variant<Transform, Node*, Node3D*, bool>;
 
     enum {
         ACTION_TRANSFORM,
         ACTION_DELETE,
         ACTION_GROUP,
         // ACTION_UNGROUP,
-        // ACTION_CLONE,
-        // ACTION_DUPLICATE
+        ACTION_CLONE
     };
 
     int type = -1;
-    Node3D* ref_node = nullptr;
+    Node* ref_node = nullptr;
     ActionDataParameter param_1;
     ActionDataParameter param_2;
 };
@@ -66,7 +65,7 @@ class SceneEditor : public BaseEditor {
 
     void select_node(Node* node, bool place = true);
     void deselect();
-    void clone_node(Node* node, bool copy = true);
+    Node* clone_node(Node* node, bool copy = true, bool push_undo = true);
     void group_node(Node* node);
     void delete_node(Node* node, bool push_undo = true);
     void recover_node(Node* node, bool push_redo = true);

@@ -143,6 +143,10 @@ void SceneEditor::update(float delta_time)
     // Update input actions
     {
         select_action_pressed = Input::was_trigger_pressed(HAND_RIGHT) || Input::was_mouse_released(GLFW_MOUSE_BUTTON_LEFT);
+
+        if (Input::was_key_pressed(GLFW_KEY_ESCAPE)) {
+            deselect();
+        }
     }
 
     if (exports_dirty) {
@@ -618,10 +622,10 @@ void SceneEditor::deselect()
     ui::Text2D::select(nullptr);
 }
 
-void SceneEditor::clone_node(Node* node, bool copy)
+Node* SceneEditor::clone_node(Node* node, bool copy, bool push_undo)
 {
     if (!selected_node) {
-        return;
+        return nullptr;
     }
 
     RoomsEngine* engine = static_cast<RoomsEngine*>(RoomsEngine::instance);
@@ -640,7 +644,14 @@ void SceneEditor::clone_node(Node* node, bool copy)
     // Add to scene and select as current
     main_scene->add_node(new_node);
     select_node(new_node);
+
+    if (push_undo) {
+        push_undo_action({ sActionData::ACTION_CLONE, node, new_node, copy });
+    }
+
     inspector_dirty = true;
+
+    return new_node;
 }
 
 void SceneEditor::group_node(Node* node)
@@ -710,8 +721,9 @@ void SceneEditor::ungroup_node(Node* node, bool push_redo)
 
     // Remove group since it has been created for this node..
     if (group->get_children().size() == 1u) {
-        data.param_2 = static_cast<Node3D*>(group->get_children().front());
-        ungroup_node(group->get_children().front(), false);
+        Node* child = group->get_children().front();
+        data.param_2 = child;
+        ungroup_node(child, false);
     }
     else if (group->get_children().empty()) {
         delete_node(group, false);
@@ -1202,15 +1214,29 @@ bool SceneEditor::scene_undo()
     switch (step.type)
     {
     case sActionData::ACTION_TRANSFORM:
-        push_redo_action({ sActionData::ACTION_TRANSFORM, step.ref_node, step.ref_node->get_transform() });
-        step.ref_node->set_transform(std::get<Transform>(step.param_1));
+    {
+        Node3D* node_3d = static_cast<Node3D*>(step.ref_node);
+        push_redo_action({ sActionData::ACTION_TRANSFORM, node_3d, node_3d->get_transform() });
+        node_3d->set_transform(std::get<Transform>(step.param_1));
         break;
+    }
     case sActionData::ACTION_DELETE:
+    {
         recover_node(step.ref_node);
         break;
+    }
     case sActionData::ACTION_GROUP:
+    {
         ungroup_node(step.ref_node);
         break;
+    }
+    case sActionData::ACTION_CLONE:
+    {
+        Node* node_to_delete = std::get<Node*>(step.param_1);
+        push_redo_action({ sActionData::ACTION_CLONE, step.ref_node, node_to_delete, std::get<bool>(step.param_2) });
+        delete_node(node_to_delete, false);
+        break;
+    }
     default:
         assert(0);
         break;
@@ -1235,12 +1261,17 @@ bool SceneEditor::scene_redo()
     switch (step.type)
     {
     case sActionData::ACTION_TRANSFORM:
-        push_undo_action({ sActionData::ACTION_TRANSFORM, step.ref_node, step.ref_node->get_transform() }, false);
-        step.ref_node->set_transform(std::get<Transform>(step.param_1));
+    {
+        Node3D* node_3d = static_cast<Node3D*>(step.ref_node);
+        push_undo_action({ sActionData::ACTION_TRANSFORM, node_3d, node_3d->get_transform() }, false);
+        node_3d->set_transform(std::get<Transform>(step.param_1));
         break;
+    }
     case sActionData::ACTION_DELETE:
+    {
         delete_node(step.ref_node); // delete again node
         break;
+    }
     case sActionData::ACTION_GROUP:
     {
         Node3D* group = std::get<Node3D*>(step.param_1);
@@ -1253,6 +1284,14 @@ bool SceneEditor::scene_redo()
             node_to_group = sec;
             process_group(group, false);
         }
+        break;
+    }
+    case sActionData::ACTION_CLONE:
+    {
+        Node* node_to_recover = std::get<Node*>(step.param_1);
+        bool copy = std::get<bool>(step.param_2);
+        recover_node(node_to_recover, false);
+        push_undo_action({ sActionData::ACTION_CLONE, step.ref_node, node_to_recover, copy }, false);
         break;
     }
     default:
