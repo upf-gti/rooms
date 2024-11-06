@@ -65,12 +65,12 @@ class SceneEditor : public BaseEditor {
     bool moving_node = false;
 
     void select_node(Node* node, bool place = true);
-    void add_node(Node* node, int idx = -1);
+    void add_node(Node* node, Node* parent = nullptr, int idx = -1);
     void deselect();
     Node* clone_node(Node* node, bool copy = true, bool push_undo = true);
     void group_node(Node* node);
     void delete_node(Node* node, bool push_undo = true);
-    void recover_node(Node* node, bool push_redo = true);
+    void recover_node(Node* node, Node* parent = nullptr, bool push_redo = true);
     void ungroup_node(Node* node, bool push_undo = true, bool push_redo = true);
     void ungroup_all(Node* node);
     void create_light_node(uint8_t type);
@@ -87,7 +87,7 @@ class SceneEditor : public BaseEditor {
 
     void process_group(Node* node = nullptr, bool push_undo = true);
     void edit_group(Group3D* group);
-    const Transform& get_group_global_transform(Node3D* node);
+    const Transform& get_group_global_transform(Node* node);
 
     /*
     *   UI
@@ -95,7 +95,7 @@ class SceneEditor : public BaseEditor {
 
     static uint64_t node_signal_uid;
 
-    bool inspector_dirty = true;
+    bool inspector_dirty = false;
 
     ui::Inspector* inspector = nullptr;
 
@@ -147,7 +147,7 @@ class SceneEditor : public BaseEditor {
 
     struct sDeletedNode {
         int index = -1;
-        Node3D* ref = nullptr;
+        Node* ref = nullptr;
     };
 
     std::unordered_map<uintptr_t, sDeletedNode> deleted_nodes;

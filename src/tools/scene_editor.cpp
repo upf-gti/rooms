@@ -74,7 +74,7 @@ void SceneEditor::initialize()
         if (node == selected_node) {
             deselect();
         }
-        inspector_dirty = true;
+        set_inspector_dirty();
     });
 
     Node::bind("@on_gpu_results", [&](const std::string& sg, void* data) {
@@ -153,13 +153,17 @@ void SceneEditor::update(float delta_time)
         get_export_files();
     }
 
+    update_gizmo(delta_time);
+
+    update_node_transform();
+
     update_hovered_node();
 
     shortcuts.clear();
-    shortcuts[shortcuts::TOGGLE_SCENE_INSPECTOR] = true;
+    shortcuts[shortcuts::TOGGLE_SCENE_INSPECTOR] = !is_shift_left_pressed;
 
     if(!selected_node || (hovered_node != selected_node)) {
-        shortcuts[shortcuts::SELECT_NODE] = true;
+        shortcuts[shortcuts::SELECT_NODE] = !is_shift_right_pressed;
     }
 
     if (hovered_node) {
@@ -171,7 +175,14 @@ void SceneEditor::update(float delta_time)
 
         shortcuts[shortcuts::PLACE_NODE] = true;
 
-        static_cast<Node3D*>(selected_node)->set_position(Input::get_controller_position(HAND_RIGHT, POSE_AIM));
+        glm::vec3 pos = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
+
+        if (current_group || selected_node->get_parent()) {
+            Transform parent_transform = get_group_global_transform(selected_node);
+            pos -= parent_transform.get_position();
+        }
+
+        static_cast<Node3D*>(selected_node)->set_position(pos);
 
         if (Input::was_trigger_pressed(HAND_RIGHT)) {
             moving_node = false;
@@ -179,7 +190,7 @@ void SceneEditor::update(float delta_time)
     }
 
     if (Input::was_button_pressed(XR_BUTTON_Y) || Input::was_key_pressed(GLFW_KEY_I)) {
-        inspector_dirty = true;
+        set_inspector_dirty();
     }
 
     if (inspector_dirty) {
@@ -194,10 +205,6 @@ void SceneEditor::update(float delta_time)
             inspector_from_scene(true);
         }
     }
-
-    update_gizmo(delta_time);
-
-    update_node_transform();
 
     // Manage Undo/Redo
     {
@@ -308,19 +315,11 @@ void SceneEditor::process_node_hovered()
     const bool a_pressed = Input::was_button_pressed(XR_BUTTON_A);
     const bool b_pressed = Input::was_button_pressed(XR_BUTTON_B);
 
-    if (current_group) {
-        shortcuts[shortcuts::UNGROUP] = true;
-        if (a_pressed) {
-            ungroup_node(hovered_node, true, false);
-        }
-        else if (select_action_pressed) {
-            select_node(hovered_node, false);
-        }
-    }
-    else if (group_hovered) {
+    if (group_hovered) {
         if (grouping_node) {
-            shortcuts[shortcuts::ADD_TO_GROUP] = true;
-            if (a_pressed) {
+            bool can_group = (hovered_node != node_to_group);
+            shortcuts[shortcuts::ADD_TO_GROUP] = can_group;
+            if (a_pressed && can_group) {
                 process_group();
             }
         }
@@ -336,15 +335,17 @@ void SceneEditor::process_node_hovered()
     }
     // In 2d, we have to select manually by click, so do not enter here!
     else if (grouping_node && renderer->get_openxr_available()) {
-        shortcuts[shortcuts::CREATE_GROUP] = true;
-        if (a_pressed) {
+        bool can_group = (hovered_node != node_to_group);
+        shortcuts[shortcuts::CREATE_GROUP] = can_group;
+        if (a_pressed && can_group) {
             process_group();
         }
     }
     else if (is_shift_right_pressed) {
         shortcuts[shortcuts::ANIMATE_NODE] = true;
         shortcuts[shortcuts::CLONE_NODE] = true;
-        shortcuts[shortcuts::GROUP_NODE] = true;
+        shortcuts[shortcuts::UNGROUP] = !!current_group;
+        shortcuts[shortcuts::GROUP_NODE] = !current_group;
         if (a_pressed) {
             clone_node(hovered_node, false);
         }
@@ -353,7 +354,12 @@ void SceneEditor::process_node_hovered()
             RoomsEngine::switch_editor(ANIMATION_EDITOR, hovered_node);
         }
         else if (select_action_pressed) {
-            group_node(hovered_node);
+            if (current_group) {
+                ungroup_node(hovered_node, true, false);
+            }
+            else {
+                group_node(hovered_node);
+            }
         }
     }
     else {
@@ -503,10 +509,10 @@ void SceneEditor::init_ui()
             right_hand_box->add_child(new ui::ImageLabel2D("Duplicate Node", shortcuts::A_BUTTON_PATH, shortcuts::DUPLICATE_NODE));
             right_hand_box->add_child(new ui::ImageLabel2D("Create Group", shortcuts::A_BUTTON_PATH, shortcuts::CREATE_GROUP));
             right_hand_box->add_child(new ui::ImageLabel2D("Add to Group", shortcuts::A_BUTTON_PATH, shortcuts::ADD_TO_GROUP));
-            right_hand_box->add_child(new ui::ImageLabel2D("Ungroup", shortcuts::A_BUTTON_PATH, shortcuts::UNGROUP));
             right_hand_box->add_child(new ui::ImageLabel2D("Clone Node", shortcuts::R_GRIP_A_BUTTON_PATH, shortcuts::CLONE_NODE, double_size));
             right_hand_box->add_child(new ui::ImageLabel2D("Place Node", shortcuts::R_TRIGGER_PATH, shortcuts::PLACE_NODE));
             right_hand_box->add_child(new ui::ImageLabel2D("Select Node", shortcuts::R_TRIGGER_PATH, shortcuts::SELECT_NODE));
+            right_hand_box->add_child(new ui::ImageLabel2D("Ungroup", shortcuts::R_GRIP_R_TRIGGER_PATH, shortcuts::UNGROUP, double_size));
             right_hand_box->add_child(new ui::ImageLabel2D("Group Node", shortcuts::R_GRIP_R_TRIGGER_PATH, shortcuts::GROUP_NODE, double_size));
         }
     }
@@ -535,7 +541,7 @@ void SceneEditor::bind_events()
 
         add_node(new_sculpt);
 
-        inspector_dirty = true;
+        set_inspector_dirty();
 
         Node::emit_signal("@on_sculpt_added", (void*)nullptr);
     });
@@ -619,7 +625,7 @@ bool SceneEditor::on_close_inspector()
 {
     if (current_group) {
         current_group = nullptr;
-        inspector_dirty = true;
+        set_inspector_dirty();
         return false;
     }
 
@@ -629,8 +635,7 @@ bool SceneEditor::on_close_inspector()
 void SceneEditor::select_node(Node* node, bool place)
 {
     // Avoid input issues with interacting with gizmo
-    auto& io = ImGui::GetIO();
-    if (io.WantCaptureMouse) {
+    if (IO::get_want_capture_input()) {
         return;
     }
 
@@ -649,9 +654,17 @@ void SceneEditor::select_node(Node* node, bool place)
     moving_node = place && is_gizmo_usable() && renderer->get_openxr_available();
 }
 
-void SceneEditor::add_node(Node* node, int idx)
+void SceneEditor::add_node(Node* node, Node* parent, int idx)
 {
-    if (current_group) {
+    // Check for its own group first
+    if (parent) {
+        Group3D* group = static_cast<Group3D*>(parent);
+        Node3D* node_3d = static_cast<Node3D*>(node);
+
+        node_3d->set_transform(Transform::combine(node_3d->get_transform(), group->get_transform()));
+        group->add_node(node_3d);
+    }
+    else if (current_group) {
         node_to_group = node;
         process_group(current_group, false);
     }
@@ -677,9 +690,9 @@ void SceneEditor::deselect()
 
 Node* SceneEditor::clone_node(Node* node, bool copy, bool push_undo)
 {
-    if (!selected_node) {
+    /*if (!selected_node) {
         return nullptr;
-    }
+    }*/
 
     RoomsEngine* engine = static_cast<RoomsEngine*>(RoomsEngine::instance);
 
@@ -702,7 +715,7 @@ Node* SceneEditor::clone_node(Node* node, bool copy, bool push_undo)
         push_undo_action({ sActionData::ACTION_CLONE, node, new_node, copy });
     }
 
-    inspector_dirty = true;
+    set_inspector_dirty();
 
     return new_node;
 }
@@ -726,24 +739,27 @@ void SceneEditor::group_node(Node* node)
 void SceneEditor::delete_node(Node* node, bool push_undo)
 {
     uintptr_t idx = reinterpret_cast<uintptr_t>(node);
-    main_scene->remove_node(node);
-    Node3D* node_3d = static_cast<Node3D*>(node);
-    assert(node_3d);
 
-    // TODO: Store correct index
-    deleted_nodes[idx] = { -1, node_3d };
+    Node* parent = node->get_parent();
 
-    if (push_undo) {
-        push_undo_action({ sActionData::ACTION_DELETE, node_3d }, false);
+    if (parent) {
+        parent->remove_child(node);
+    }
+    else {
+        main_scene->remove_node(node);
     }
 
-    // Don't delete node now
-    // delete node;
+    // TODO: Store correct index
+    deleted_nodes[idx] = { -1, node };
 
-    inspector_dirty = true;
+    if (push_undo) {
+        push_undo_action({ sActionData::ACTION_DELETE, node, parent }, false);
+    }
+
+    set_inspector_dirty();
 }
 
-void SceneEditor::recover_node(Node* node, bool push_redo)
+void SceneEditor::recover_node(Node* node, Node* parent, bool push_redo)
 {
     uintptr_t idx = reinterpret_cast<uintptr_t>(node);
 
@@ -752,15 +768,15 @@ void SceneEditor::recover_node(Node* node, bool push_redo)
     }
 
     const sDeletedNode& node_data = deleted_nodes[idx];
-    Node3D* recovered_node = node_data.ref;
-    add_node(recovered_node, node_data.index);
+    Node* recovered_node = node_data.ref;
+    add_node(recovered_node, parent, node_data.index);
     deleted_nodes.erase(idx);
 
     if (push_redo) {
         push_redo_action({ sActionData::ACTION_DELETE, recovered_node });
     }
 
-    inspector_dirty = true;
+    set_inspector_dirty();
 }
 
 void SceneEditor::ungroup_node(Node* node, bool push_undo, bool push_redo)
@@ -807,7 +823,7 @@ void SceneEditor::ungroup_node(Node* node, bool push_undo, bool push_redo)
 
     deselect();
 
-    inspector_dirty = true;
+    set_inspector_dirty();
 }
 
 // This cannot be undone by now
@@ -830,6 +846,8 @@ void SceneEditor::process_group(Node* node, bool push_undo)
         return;
     }
 
+    grouping_node = false;
+
     // Check if current hover has group... (parent)
     Group3D* group = dynamic_cast<Group3D*>(hovered_3d);
 
@@ -837,6 +855,7 @@ void SceneEditor::process_group(Node* node, bool push_undo)
         // Add first node to the same group as the current hover
         main_scene->remove_node(to_group_3d);
         group->add_node(to_group_3d);
+        select_node(group, false);
     }
     else {
         // Remove nodes from main scene
@@ -847,14 +866,15 @@ void SceneEditor::process_group(Node* node, bool push_undo)
         Group3D* new_group = new Group3D();
         new_group->add_nodes({ to_group_3d, hovered_3d });
         main_scene->add_node(new_group);
+
+        select_node(new_group, false);
     }
 
     if (push_undo) {
         push_undo_action({ sActionData::ACTION_GROUP, to_group_3d });
     }
 
-    grouping_node = false;
-    inspector_dirty = true;
+    set_inspector_dirty();
 }
 
 void SceneEditor::edit_group(Group3D* group)
@@ -863,12 +883,12 @@ void SceneEditor::edit_group(Group3D* group)
 
     current_group = group;
 
-    inspector_dirty = true;
+    set_inspector_dirty();
 
     Node2D::get_widget_from_name<ui::TextureButton2D*>("group")->set_disabled(true);
 }
 
-const Transform& SceneEditor::get_group_global_transform(Node3D* node)
+const Transform& SceneEditor::get_group_global_transform(Node* node)
 {
     if (current_group) {
         return current_group->get_transform();
@@ -915,7 +935,7 @@ void SceneEditor::create_light_node(uint8_t type)
 
     select_node(new_light);
 
-    inspector_dirty = true;
+    set_inspector_dirty();
 }
 
 bool SceneEditor::is_gizmo_usable()
@@ -1077,7 +1097,7 @@ void SceneEditor::update_node_transform()
 
 void SceneEditor::inspector_from_scene(bool force)
 {
-    inspector->clear(force, "Scene Nodes");
+    inspector->clear(!inspector->get_visibility(), "Scene Nodes");
 
     auto& nodes = main_scene->get_nodes();
 
@@ -1178,7 +1198,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
 
             auto callback = [&, n = node](const std::string& output) {
                 n->set_name(output);
-                inspector_dirty = true;
+                set_inspector_dirty();
             };
 
             Node::bind(signal + "@long_click", [fn = callback, str = node_name](const std::string& sg, void* data) {
@@ -1367,8 +1387,6 @@ void SceneEditor::get_export_files()
         exported_scenes.push_back(scene_name);
     }
 
-    inspect_exports();
-
     exports_dirty = false;
 }
 
@@ -1414,7 +1432,8 @@ bool SceneEditor::scene_undo()
     }
     case sActionData::ACTION_DELETE:
     {
-        recover_node(step.ref_node);
+        Node* parent = std::get<Node*>(step.param_1);
+        recover_node(step.ref_node, parent);
         break;
     }
     case sActionData::ACTION_GROUP:
@@ -1432,7 +1451,7 @@ bool SceneEditor::scene_undo()
     case sActionData::ACTION_UNGROUP:
     {
         Node3D* group = std::get<Node3D*>(step.param_1);
-        recover_node(group, false);
+        recover_node(group, nullptr, false);
         push_redo_action({ sActionData::ACTION_UNGROUP, step.ref_node, group });
         node_to_group = step.ref_node;
         process_group(group, false);
@@ -1476,7 +1495,7 @@ bool SceneEditor::scene_redo()
     case sActionData::ACTION_GROUP:
     {
         Node3D* group = std::get<Node3D*>(step.param_1);
-        recover_node(group, false);
+        recover_node(group, nullptr, false);
         push_undo_action({ sActionData::ACTION_GROUP, step.ref_node, group }, false);
         node_to_group = step.ref_node;
         process_group(group, false);
@@ -1491,7 +1510,7 @@ bool SceneEditor::scene_redo()
     {
         Node* node_to_recover = std::get<Node*>(step.param_1);
         bool copy = std::get<bool>(step.param_2);
-        recover_node(node_to_recover, false);
+        recover_node(node_to_recover, nullptr, false);
         push_undo_action({ sActionData::ACTION_CLONE, step.ref_node, node_to_recover, copy }, false);
         break;
     }
