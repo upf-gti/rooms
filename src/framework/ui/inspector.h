@@ -63,7 +63,7 @@ namespace ui {
 
         void set_title(const std::string& new_title);
 
-        void label(const std::string& name, const std::string& text, uint32_t flags = 0);
+        void label(const std::string& name, const std::string& text, uint32_t flags = 0, const Color& c = colors::BLACK);
         void icon(const std::string& texture_path);
         void button(const std::string& name, const std::string& texture_path, uint32_t flags = 0, const std::string& label = "");
 

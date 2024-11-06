@@ -287,6 +287,20 @@ void SceneEditor::update_hovered_node()
     rooms_renderer->get_sculpt_manager()->set_ray_to_test(ray_origin, ray_direction);
 }
 
+Color SceneEditor::get_node_highlight_color(Node* node)
+{
+    Color basic_color = Color(0.967f, 0.892f, 0.793f, 1.0f);
+
+    if (dynamic_cast<Light3D*>(node)) {
+        return glm::pow(Color(1.0f, 0.404f, 0.0f, 1.0f), glm::vec4(2.2f));
+    }
+    else if (dynamic_cast<Group3D*>(node)) {
+        return glm::pow(Color(0.467f, 0.333f, 0.933f, 1.0f), glm::vec4(2.2f));
+    }
+
+    return glm::pow(basic_color, glm::vec4(2.2f));
+}
+
 void SceneEditor::process_node_hovered()
 {
     const bool sculpt_hovered = !!dynamic_cast<SculptNode*>(hovered_node);
@@ -1163,7 +1177,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
     if (flags & NODE_NAME) {
         std::string signal = node_name + "_label";
         uint32_t flags = ui::TEXT_EVENTS | (node == selected_node ? ui::SELECTED : 0);
-        inspector->label(signal, node_name, flags);
+        inspector->label(signal, node_name, flags, get_node_highlight_color(node));
 
         // Request keyboard and use the result to set the new node name. Not the nicest code, but anyway..
         {
@@ -1310,7 +1324,7 @@ void SceneEditor::inspect_light()
 void SceneEditor::inspect_exports(bool force)
 {
     bool inspector_visible = inspector->get_visibility();
-    inspector->clear(!inspector_visible);
+    inspector->clear(!inspector_visible, "Available Rooms");
 
     for (const std::string& name : exported_scenes) {
 

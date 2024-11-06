@@ -3,6 +3,7 @@
 #include "tools/base_editor.h"
 
 #include "framework/math/transform.h"
+#include "framework/colors.h"
 
 #include <variant>
 
@@ -74,6 +75,7 @@ class SceneEditor : public BaseEditor {
     void ungroup_all(Node* node);
     void create_light_node(uint8_t type);
     void process_node_hovered();
+    Color get_node_highlight_color(Node* node);
 
     /*
     *   Group stuff

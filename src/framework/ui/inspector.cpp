@@ -213,7 +213,7 @@ namespace ui {
         }
     }
 
-    void Inspector::label(const std::string& name, const std::string& text, uint32_t flags)
+    void Inspector::label(const std::string& name, const std::string& text, uint32_t flags, const Color& c)
     {
         ui::HContainer2D* flex_container = current_row;
 
@@ -223,7 +223,7 @@ namespace ui {
 
         flags |= (ui::SCROLLABLE | ui::DBL_CLICK | ui::LONG_CLICK | ui::TEXT_SELECTABLE);
 
-        auto w = new ui::Text2D(text, 17.f, flags);
+        auto w = new ui::Text2D(text, { 0.0f, 0.0f }, 17.f, flags, c);
         w->set_signal(name);
         flex_container->add_child(w);
         items[name] = w;
