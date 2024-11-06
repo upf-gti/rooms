@@ -384,14 +384,6 @@ void SceneEditor::init_ui()
 
     main_panel = new ui::HContainer2D("scene_editor_root", { 48.0f, screen_size.y - 200.f }, ui::CREATE_3D);
 
-    // Color picker...
-
-    {
-        ui::ColorPicker2D* color_picker = new ui::ColorPicker2D("light_color_picker", colors::WHITE);
-        color_picker->set_visibility(false);
-        main_panel->add_child(color_picker);
-    }
-
     ui::VContainer2D* vertical_container = new ui::VContainer2D("scene_vertical_container", { 0.0f, 0.0f });
     main_panel->add_child(vertical_container);
 
@@ -413,8 +405,10 @@ void SceneEditor::init_ui()
     // ** Node actions **
     {
         ui::ButtonSubmenu2D* node_actions_submenu = new ui::ButtonSubmenu2D("node_actions", { "data/textures/cube.png", ui::DISABLED });
-        node_actions_submenu->add_child(new ui::TextureButton2D("group", { "data/textures/group.png" }));
-        node_actions_submenu->add_child(new ui::TextureButton2D("ungroup", { "data/textures/ungroup.png" }));
+        ui::ItemGroup2D* g_grouping = new ui::ItemGroup2D("g_grouping");
+        g_grouping->add_child(new ui::TextureButton2D("group", { "data/textures/group.png" }));
+        g_grouping->add_child(new ui::TextureButton2D("ungroup", { "data/textures/ungroup.png" }));
+        node_actions_submenu->add_child(g_grouping);
         node_actions_submenu->add_child(new ui::TextureButton2D("duplicate", { "data/textures/clone.png" }));
         node_actions_submenu->add_child(new ui::TextureButton2D("clone", { "data/textures/clone_instance.png" }));
         first_row->add_child(node_actions_submenu);
@@ -424,13 +418,11 @@ void SceneEditor::init_ui()
     {
         ui::ButtonSubmenu2D* add_node_submenu = new ui::ButtonSubmenu2D("add_node", { "data/textures/add.png" });
 
-        // add_node_submenu->add_child(new ui::TextureButton2D("gltf", "data/textures/monkey.png"));
         add_node_submenu->add_child(new ui::TextureButton2D("sculpt", { "data/textures/sculpt.png" }));
 
         // Lights
         {
-            ui::ItemGroup2D* g_add_node = new ui::ItemGroup2D("g_light_types");
-            g_add_node->set_visibility(false);
+            ui::ItemGroup2D* g_add_node = new ui::ItemGroup2D("g_light_types", ui::HIDDEN);
             g_add_node->add_child(new ui::TextureButton2D("omni", { "data/textures/light.png" }));
             g_add_node->add_child(new ui::TextureButton2D("spot", { "data/textures/spot.png"  }));
             g_add_node->add_child(new ui::TextureButton2D("directional", { "data/textures/sun.png"  }));
@@ -443,8 +435,7 @@ void SceneEditor::init_ui()
     // ** Display Settings **
     {
         RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
-        ui::ButtonSubmenu2D* display_submenu = new ui::ButtonSubmenu2D("display", { "data/textures/display_settings.png" });
-        display_submenu->set_visibility(false);
+        ui::ButtonSubmenu2D* display_submenu = new ui::ButtonSubmenu2D("display", { "data/textures/display_settings.png", ui::HIDDEN });
         ui::ItemGroup2D* g_display = new ui::ItemGroup2D("g_display");
         g_display->add_child(new ui::TextureButton2D("use_grid", { "data/textures/grid.png", ui::ALLOW_TOGGLE | ui::SELECTED }));
         g_display->add_child(new ui::TextureButton2D("use_environment", { "data/textures/skybox.png", ui::ALLOW_TOGGLE | ui::SELECTED }));
@@ -1267,7 +1258,7 @@ void SceneEditor::inspect_group(bool force)
     }
 }
 
-void SceneEditor::inspect_light()
+void SceneEditor::inspect_light(bool force)
 {
     bool inspector_visible = inspector->get_visibility();
     inspector->clear(!inspector_visible);
@@ -1317,6 +1308,10 @@ void SceneEditor::inspect_light()
     inspector->end_line();
 
     inspector_dirty = false;
+
+    if (force) {
+        inspector->set_visibility(true);
+    }
 
     Node::emit_signal(inspector->get_name() + "@children_changed", (void*)nullptr);
 }
