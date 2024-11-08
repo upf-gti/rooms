@@ -27,6 +27,13 @@ int main()
 
     renderer->set_required_limits(required_limits);
 
+    // Set the timestamp in all platforms except the web
+    std::vector<WGPUFeatureName> required_features;
+#if !defined(__EMSCRIPTEN__)
+    required_features.push_back(WGPUFeatureName_TimestampQuery);
+#endif
+    renderer->set_required_features(required_features);
+
     if (engine->initialize(renderer, { .window_title = "ROOMS" })) {
         return 1;
     }
