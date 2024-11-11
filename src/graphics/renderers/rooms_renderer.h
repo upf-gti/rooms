@@ -92,7 +92,7 @@ class RoomsRenderer : public Renderer {
 
 public:
 
-    RoomsRenderer();
+    RoomsRenderer(const sRendererConfiguration& config = {});
     ~RoomsRenderer();
 
     virtual int pre_initialize(GLFWwindow* window, bool use_mirror_screen = false) override;
