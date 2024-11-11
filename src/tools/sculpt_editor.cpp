@@ -189,7 +189,7 @@ void SculptEditor::clean()
 bool SculptEditor::is_tool_being_used(bool stamp_enabled)
 {
 #ifdef XR_SUPPORT
-    bool is_currently_pressed = !is_something_hovered() && Input::is_trigger_pressed(HAND_RIGHT);
+    bool is_currently_pressed = !is_something_focused() && Input::is_trigger_pressed(HAND_RIGHT);
     is_released = is_tool_pressed && !is_currently_pressed;
 
     bool add_edit_with_tool = stamp_enabled ? is_released : is_currently_pressed;
