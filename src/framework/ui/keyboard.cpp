@@ -30,11 +30,17 @@ namespace ui {
 
     const uint16_t MAX_PHYSICAL_KEYS = 40;
     const uint16_t physical_keys[MAX_PHYSICAL_KEYS] = {
-        GLFW_KEY_SPACE, GLFW_KEY_COMMA, GLFW_KEY_MINUS, GLFW_KEY_PERIOD,
+        GLFW_KEY_SPACE, GLFW_KEY_COMMA, GLFW_KEY_SLASH, GLFW_KEY_PERIOD,
         GLFW_KEY_0, GLFW_KEY_1, GLFW_KEY_2, GLFW_KEY_3, GLFW_KEY_4, GLFW_KEY_5, GLFW_KEY_6, GLFW_KEY_7, GLFW_KEY_8, GLFW_KEY_9,
         GLFW_KEY_A, GLFW_KEY_B, GLFW_KEY_C, GLFW_KEY_D, GLFW_KEY_E, GLFW_KEY_F, GLFW_KEY_G, GLFW_KEY_H, GLFW_KEY_I, GLFW_KEY_J,
         GLFW_KEY_K, GLFW_KEY_L, GLFW_KEY_M, GLFW_KEY_N, GLFW_KEY_O, GLFW_KEY_P, GLFW_KEY_Q, GLFW_KEY_R, GLFW_KEY_S, GLFW_KEY_T,
         GLFW_KEY_U, GLFW_KEY_V, GLFW_KEY_W, GLFW_KEY_X, GLFW_KEY_Y, GLFW_KEY_Z
+    };
+
+    std::unordered_map<char, char> shift_symbols = {
+        {'0', '='}, {'1', '!'}, {'2', '@'}, {'3', '#'},
+        {'4', '$'}, {'5', '%'}, {'6', '&'}, {'7', '7'},
+        {'8', '('}, {'9', ')'}
     };
 
     void XrKeyboardState::set_input(const std::string& str)
@@ -266,10 +272,32 @@ namespace ui {
         else {
             // Push keys in 2d using physical keyboard..
             for (uint32_t i = 0u; i < MAX_PHYSICAL_KEYS; ++i) {
-                if (Input::was_key_pressed(physical_keys[i], true)) {
-                    char c = physical_keys[i];
-                    state.push_char(Input::is_key_pressed(GLFW_KEY_LEFT_SHIFT, true) ? c : std::tolower(c));
+                if (!Input::was_key_pressed(physical_keys[i], true)) {
+                    continue;
                 }
+
+                char c = physical_keys[i];
+                bool shift_pressed = Input::is_key_pressed(GLFW_KEY_LEFT_SHIFT) || Input::is_key_pressed(GLFW_KEY_RIGHT_SHIFT);
+
+                // Handle number keys
+                if (c >= GLFW_KEY_0 && c <= GLFW_KEY_9) {
+                    if (shift_pressed) {
+                        c = shift_symbols[c];
+                    }
+                }
+                // Handle letters
+                else if(c >= GLFW_KEY_A && c <= GLFW_KEY_Z) {
+                    c = shift_pressed ? c : std::tolower(c);
+                }
+                else {
+                    // Handle other symbols
+                    switch (c) {
+                    case GLFW_KEY_SLASH: c = shift_pressed ? '_' : '-'; break; // minus in ES keyboards
+                    case GLFW_KEY_COMMA: c = shift_pressed ? ';' : ','; break;
+                    }
+                }
+
+                state.push_char(c);
             }
 
             if (Input::was_key_pressed(GLFW_KEY_ENTER, true)) { Node::emit_signal("Enter", (void*)nullptr); }
