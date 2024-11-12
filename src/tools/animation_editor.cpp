@@ -452,7 +452,7 @@ void AnimationEditor::process_keyframe()
 
     // Keyframe changes state
     if (changed_properties.empty()) {
-        on_close();
+        on_close_inspector();
         return;
     }
 
@@ -492,7 +492,7 @@ void AnimationEditor::process_keyframe()
         states.push_back(new_anim_state);
     }
 
-    on_close();
+    on_close_inspector();
 }
 
 void AnimationEditor::edit_keyframe(uint32_t index)
@@ -805,9 +805,9 @@ void AnimationEditor::init_ui()
     second_row->add_child(new ui::TextureButton2D("stop_animation", { "data/textures/stop.png" }));
 
     // Create inspection panel (Nodes, properties, etc)
-    inspector = new ui::Inspector({ .name = "inspector_root", .title = "Animation",.position = { 32.0f, 32.f } }, [&](ui::Inspector* scope) {
-        return on_close();
-    });
+    inspector = new ui::Inspector({ .name = "inspector_root", .title = "Animation",.position = { 32.0f, 32.f }, .close_fn = [&](ui::Inspector* scope) {
+        return on_close_inspector(scope);
+    }});
 
     if (renderer->get_openxr_available())
     {
@@ -1094,7 +1094,7 @@ void AnimationEditor::inspect_keyframes_list(bool force)
     }
 }
 
-bool AnimationEditor::on_close()
+bool AnimationEditor::on_close_inspector(ui::Inspector* scope)
 {
     bool should_close = !keyframe_dirty;
 

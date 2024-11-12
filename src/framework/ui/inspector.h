@@ -14,6 +14,7 @@ namespace ui {
     class Text2D;
     class XRPanel;
     class TextureButton2D;
+    class Inspector;
 
     struct InspectorDesc {
         std::string name = "";

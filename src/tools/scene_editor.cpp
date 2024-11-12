@@ -477,9 +477,9 @@ void SceneEditor::init_ui()
     // Create inspection panel (Nodes, properties, etc)
     {
         ui::InspectorDesc desc = { .name = "inspector_root", .title = "Scene Nodes",.position = {32.0f, 32.f} };
-        desc.back_fn = &(SceneEditor::on_goback_inspector);
+        // desc.back_fn = &(SceneEditor::on_goback_inspector);
         desc.close_fn = [&](ui::Inspector* scope) {
-            return on_close_inspector();
+            return on_close_inspector(scope);
         };
         inspector = new ui::Inspector(desc);
         inspector->set_visibility(false);

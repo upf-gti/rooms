@@ -22,7 +22,7 @@ namespace ui {
         float inner_width = panel_size.x - padding * 2.0f;
         float inner_height = panel_size.y - padding * 2.0f;
 
-        on_close = close_fn;
+        on_close = desc.close_fn;
 
         root = new ui::XRPanel(name + "_background", panel_color, { 0.0f, 0.f }, panel_size);
         add_child(root);

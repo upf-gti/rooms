@@ -112,7 +112,7 @@ class AnimationEditor : public BaseEditor {
     void inspect_keyframe_properties();
     void inspect_node(Node* node);
 
-    bool on_close();
+    bool on_close_inspector(ui::Inspector* scope = nullptr);
 
 public:
 
