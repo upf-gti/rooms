@@ -388,7 +388,7 @@ void SceneEditor::init_ui()
     auto webgpu_context = Renderer::instance->get_webgpu_context();
     glm::vec2 screen_size = glm::vec2(static_cast<float>(webgpu_context->render_width), static_cast<float>(webgpu_context->render_height));
 
-    main_panel = new ui::HContainer2D("scene_editor_root", { 48.0f, screen_size.y - 200.f }, ui::CREATE_3D);
+    main_panel = new ui::HContainer2D("scene_editor_root", { 48.0f, screen_size.y - 216.f }, ui::CREATE_3D);
 
     ui::VContainer2D* vertical_container = new ui::VContainer2D("scene_vertical_container", { 0.0f, 0.0f });
     main_panel->add_child(vertical_container);
@@ -404,8 +404,10 @@ void SceneEditor::init_ui()
 
     // ** Undo/Redo scene **
     {
-        first_row->add_child(new ui::TextureButton2D("scene_undo", { "data/textures/undo.png", ui::DISABLED }));
-        first_row->add_child(new ui::TextureButton2D("scene_redo", { "data/textures/redo.png", ui::DISABLED }));
+        ui::ItemGroup2D* g_scene_undo_redo = new ui::ItemGroup2D("g_scene_undo_redo");
+        g_scene_undo_redo->add_child(new ui::TextureButton2D("scene_undo", { "data/textures/undo.png", ui::DISABLED }));
+        g_scene_undo_redo->add_child(new ui::TextureButton2D("scene_redo", { "data/textures/redo.png", ui::DISABLED }));
+        first_row->add_child(g_scene_undo_redo);
     }
 
     // ** Node actions **
@@ -474,9 +476,12 @@ void SceneEditor::init_ui()
 
     // Create inspection panel (Nodes, properties, etc)
     {
-        inspector = new ui::Inspector({ .name = "inspector_root", .title = "Scene Nodes",.position = {32.0f, 32.f}}, [&](ui::Inspector* scope) {
+        ui::InspectorDesc desc = { .name = "inspector_root", .title = "Scene Nodes",.position = {32.0f, 32.f} };
+        desc.back_fn = &(SceneEditor::on_goback_inspector);
+        desc.close_fn = [&](ui::Inspector* scope) {
             return on_close_inspector();
-        });
+        };
+        inspector = new ui::Inspector(desc);
         inspector->set_visibility(false);
     }
 
@@ -621,7 +626,18 @@ void SceneEditor::bind_events()
     }
 }
 
-bool SceneEditor::on_close_inspector()
+bool SceneEditor::on_goback_inspector(ui::Inspector* scope)
+{
+    if (current_group) {
+        current_group = nullptr;
+        set_inspector_dirty();
+        return false;
+    }
+
+    return true;
+}
+
+bool SceneEditor::on_close_inspector(ui::Inspector* scope)
 {
     if (current_group) {
         current_group = nullptr;
@@ -1097,7 +1113,13 @@ void SceneEditor::update_node_transform()
 
 void SceneEditor::inspector_from_scene(bool force)
 {
-    inspector->clear(!inspector->get_visibility(), "Scene Nodes");
+    uint8_t flags = ui::INSPECTOR_FLAG_CLOSE_BUTTON;
+
+    if (!inspector->get_visibility()) {
+        flags |= ui::INSPECTOR_FLAG_FORCE_3D_POSITION;
+    }
+
+    inspector->clear(flags, "Scene Nodes");
 
     auto& nodes = main_scene->get_nodes();
 
@@ -1252,7 +1274,13 @@ void SceneEditor::inspect_group(bool force)
 {
     assert(current_group);
 
-    inspector->clear(!inspector->get_visibility(), "Group Nodes");
+    uint8_t flags = ui::INSPECTOR_FLAG_BACK_BUTTON | ui::INSPECTOR_FLAG_CLOSE_BUTTON;
+
+    if (!inspector->get_visibility()) {
+        flags |= ui::INSPECTOR_FLAG_FORCE_3D_POSITION;
+    }
+
+    inspector->clear(flags, "Group Nodes");
 
     auto& nodes = current_group->get_children();
 
@@ -1280,12 +1308,16 @@ void SceneEditor::inspect_group(bool force)
 
 void SceneEditor::inspect_light(bool force)
 {
-    bool inspector_visible = inspector->get_visibility();
-    inspector->clear(!inspector_visible);
+    uint8_t flags = ui::INSPECTOR_FLAG_BACK_BUTTON | ui::INSPECTOR_FLAG_CLOSE_BUTTON;
+
+    if (!inspector->get_visibility()) {
+        flags |= ui::INSPECTOR_FLAG_FORCE_3D_POSITION;
+    }
 
     Light3D* light = static_cast<Light3D*>(selected_node);
+    std::string node_name = light->get_name();
 
-    std::string node_name = selected_node->get_name();
+    inspector->clear(flags, node_name);
 
     inspector->same_line();
     inspector->icon("data/textures/light.png");
@@ -1338,8 +1370,13 @@ void SceneEditor::inspect_light(bool force)
 
 void SceneEditor::inspect_exports(bool force)
 {
-    bool inspector_visible = inspector->get_visibility();
-    inspector->clear(!inspector_visible, "Available Rooms");
+    uint8_t flags = ui::INSPECTOR_FLAG_BACK_BUTTON | ui::INSPECTOR_FLAG_CLOSE_BUTTON;
+
+    if (!inspector->get_visibility()) {
+        flags |= ui::INSPECTOR_FLAG_FORCE_3D_POSITION;
+    }
+
+    inspector->clear(flags, "Available Rooms");
 
     for (const std::string& name : exported_scenes) {
 

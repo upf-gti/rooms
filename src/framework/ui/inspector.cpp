@@ -16,7 +16,7 @@ namespace ui {
 
     uint32_t Inspector::row_id = 0;
 
-    Inspector::Inspector(const InspectorDesc& desc, std::function<bool(Inspector*)> close_fn)
+    Inspector::Inspector(const InspectorDesc& desc)
         : Node2D(name, desc.position, { 0.0f, 0.0f }, ui::CREATE_3D), panel_size(desc.size), padding(desc.padding)
     {
         float inner_width = panel_size.x - padding * 2.0f;
@@ -36,8 +36,11 @@ namespace ui {
         float title_y_corrected = desc.title_height * 0.5f - title_text_scale * 0.5f;
         ui::Container2D* title_container = new ui::Container2D(name + "_title", { 0.0f, 0.0f }, { inner_width - padding * 0.4f, desc.title_height });
         title = new ui::Text2D(desc.title.empty() ? "Inspector" : desc.title, { 0.0f, title_y_corrected }, title_text_scale, ui::TEXT_CENTERED | ui::SKIP_TEXT_RECT);
+        back_button = new ui::TextureButton2D("back_button", { "data/textures/back.png", 0u, { padding, title_y_corrected }, glm::vec2(32.0f), colors::WHITE, "Back" });
+        close_button = new ui::TextureButton2D("close_button", { "data/textures/cross.png", 0u, { inner_width - padding * 3.0f, title_y_corrected }, glm::vec2(32.0f), colors::WHITE, "Close" });
+        title_container->add_child(back_button);
         title_container->add_child(title);
-        title_container->add_child(new ui::TextureButton2D("close_button", { "data/textures/cross.png", ui::SKIP_NAME, { inner_width - padding * 3.0f, title_y_corrected }, glm::vec2(32.0f) }));
+        title_container->add_child(close_button);
         column->add_child(title_container);
 
         Node::bind("close_button", [&](const std::string& sg, void* data) {
@@ -177,8 +180,18 @@ namespace ui {
         title->set_text(new_title);
     }
 
-    void Inspector::clear(bool force_place, const std::string& new_title)
+    void Inspector::clear(uint8_t reset_flags, const std::string& new_title)
     {
+        if (reset_flags & INSPECTOR_FLAG_FORCE_3D_POSITION) {
+            placed = false;
+        }
+
+        // Show/Hide workflow buttons
+        back_button->set_visibility(reset_flags & INSPECTOR_FLAG_BACK_BUTTON);
+        close_button->set_visibility(reset_flags & INSPECTOR_FLAG_CLOSE_BUTTON);
+
+        // Clear widgets inside the inspector
+
         std::vector<Node*> to_delete;
 
         for (auto node : body->get_children()) {
@@ -201,10 +214,6 @@ namespace ui {
         }
 
         items.clear();
-
-        if (force_place) {
-            placed = false;
-        }
 
         IO::set_hover(nullptr, {});
 

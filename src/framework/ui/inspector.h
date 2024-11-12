@@ -13,6 +13,7 @@ namespace ui {
 
     class Text2D;
     class XRPanel;
+    class TextureButton2D;
 
     struct InspectorDesc {
         std::string name = "";
@@ -21,6 +22,14 @@ namespace ui {
         float padding = 18.0f;
         glm::vec2 size = { 420.f, 600.f };
         glm::vec2 position = { 0.0f, 0.0f };
+        std::function<bool(Inspector*)> back_fn = nullptr;
+        std::function<bool(Inspector*)> close_fn = nullptr;
+    };
+
+    enum eInspectorResetFlags: uint8_t {
+        INSPECTOR_FLAG_FORCE_3D_POSITION = 1 << 0,
+        INSPECTOR_FLAG_BACK_BUTTON = 1 << 1,
+        INSPECTOR_FLAG_CLOSE_BUTTON = 1 << 2,
     };
 
     class Inspector : public Node2D {
@@ -43,6 +52,8 @@ namespace ui {
         VContainer2D* body = nullptr;
         Text2D* title = nullptr;
         HContainer2D* current_row = nullptr;
+        TextureButton2D* back_button = nullptr;
+        TextureButton2D* close_button = nullptr;
 
         HContainer2D* create_row();
 
@@ -56,10 +67,10 @@ namespace ui {
     public:
 
         Inspector() {};
-        Inspector(const InspectorDesc& desc, std::function<bool(Inspector*)> close_fn = nullptr);
+        Inspector(const InspectorDesc& desc);
 
         void update(float delta_time);
-        void clear(bool force_place = false, const std::string& new_title = "");
+        void clear(uint8_t reset_flags = INSPECTOR_FLAG_CLOSE_BUTTON, const std::string& new_title = "");
 
         void set_title(const std::string& new_title);
 
