@@ -14,10 +14,10 @@
 
 // GPU return data
 struct sGPU_SculptResults {
-    struct {
-        glm::vec3 aabb_min;
+    struct sGPU_SculptEvalData {
+        glm::vec3 aabb_min = glm::vec3(6.0f);
         uint32_t empty_brick_count = 0u;
-        glm::vec3 aabb_max;
+        glm::vec3 aabb_max = glm::vec3(3.0f);
         uint32_t sculpt_id = 0u;
     } sculpt_eval_data;
 
@@ -123,14 +123,14 @@ class SculptManager {
     Pipeline increment_level_pipeline;
     Pipeline write_to_texture_pipeline;
     Pipeline brick_removal_pipeline;
-    Pipeline brick_copy_pipeline;
+    Pipeline brick_copy_aabb_gen_pipeline;
     Pipeline brick_unmark_pipeline;
 
     Shader* evaluate_shader = nullptr;
     Shader* increment_level_shader = nullptr;
     Shader* write_to_texture_shader = nullptr;
     Shader* brick_removal_shader = nullptr;
-    Shader* brick_copy_shader = nullptr;
+    Shader* brick_copy_aabb_gen_shader = nullptr;
     Shader* brick_unmark_shader = nullptr;
 
     WGPUBindGroup   sdf_atlases_sampler_bindgroup = nullptr;
@@ -138,7 +138,6 @@ class SculptManager {
     WGPUBindGroup   increment_level_bind_group = nullptr;
     WGPUBindGroup   write_to_texture_bind_group = nullptr;
     WGPUBindGroup   indirect_brick_removal_bind_group = nullptr;
-    WGPUBindGroup   brick_copy_bind_group = nullptr;
     WGPUBindGroup   sculpt_delete_bindgroup = nullptr;
     WGPUBindGroup   brick_unmark_bind_group = nullptr;
     WGPUBindGroup   preview_stroke_bind_group = nullptr;

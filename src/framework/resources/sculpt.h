@@ -23,6 +23,9 @@ class Sculpt : public Resource {
     WGPUBindGroup evaluate_sculpt_bindgroup = nullptr;
     WGPUBindGroup readonly_octree_bindgroup = nullptr;
     WGPUBindGroup octree_indirect_bindgroup = nullptr;
+    WGPUBindGroup octree_brick_copy_aabb_gen_bindgroup = nullptr;
+
+    AABB aabb;
 
     std::vector<Stroke> stroke_history;
 
@@ -31,10 +34,10 @@ class Sculpt : public Resource {
     void on_delete() override;
 
 public:
-    Sculpt(const uint32_t id, const Uniform uniform, const Uniform indiret_buffer, const Uniform indices_buffer, const WGPUBindGroup octree_bind, const WGPUBindGroup eval_sculpt_bindgroup, const WGPUBindGroup oct_indir_bindroup, const WGPUBindGroup readonly_bindgroup):
+    Sculpt(const uint32_t id, const Uniform uniform, const Uniform indiret_buffer, const Uniform indices_buffer, const WGPUBindGroup octree_bind, const WGPUBindGroup eval_sculpt_bindgroup, const WGPUBindGroup oct_indir_bindroup, const WGPUBindGroup readonly_bindgroup, const WGPUBindGroup brick_copy_aabb_gen_bindgroup):
         sculpt_id (id), octree_uniform(uniform), evaluate_sculpt_bindgroup(eval_sculpt_bindgroup), octree_bindgroup(octree_bind),
         indirect_call_buffer(indiret_buffer), brick_indices_buffer(indices_buffer), readonly_octree_bindgroup(readonly_bindgroup),
-        octree_indirect_bindgroup(oct_indir_bindroup) {};
+        octree_indirect_bindgroup(oct_indir_bindroup), octree_brick_copy_aabb_gen_bindgroup(brick_copy_aabb_gen_bindgroup) {};
 
     /*void init();
     void clean();*/
@@ -50,6 +53,7 @@ public:
     WGPUBindGroup get_sculpt_bindgroup() { return evaluate_sculpt_bindgroup; }
     WGPUBindGroup get_readonly_sculpt_bindgroup() { return readonly_octree_bindgroup; }
     WGPUBindGroup get_octree_indirect_bindgroup() { return octree_indirect_bindgroup; }
+    WGPUBindGroup get_brick_copy_aabb_gen_bindgroup() { return octree_brick_copy_aabb_gen_bindgroup; }
     std::vector<Stroke>& get_stroke_history() { return stroke_history; }
     Uniform& get_brick_indices_uniform() { return brick_indices_buffer; }
     Uniform& get_indirect_render_buffer() { return indirect_call_buffer; }
@@ -58,4 +62,7 @@ public:
     inline void set_in_frame_model_buffer_index(const uint32_t id) { in_frame_model_buffer_index = id; }
 
     bool is_deleted() { return deleted; }
+
+    const AABB& get_AABB() const { return aabb; }
+    void set_AABB(const AABB& new_aabb) { aabb = new_aabb; }
 };

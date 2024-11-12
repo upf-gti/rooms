@@ -51,18 +51,6 @@ int RaymarchingRenderer::initialize(bool use_mirror_screen)
     init_raymarching_proxy_pipeline();
 #endif
 
-    AABB_mesh = parse_mesh("data/meshes/cube/aabb_cube.obj");
-
-    Material* AABB_material = new Material();
-    //AABB_material.priority = 10;
-    AABB_material->set_color(glm::vec4(0.8f, 0.3f, 0.9f, 1.0f));
-    AABB_material->set_transparency_type(ALPHA_BLEND);
-    AABB_material->set_cull_type(CULL_NONE);
-    AABB_material->set_type(MATERIAL_UNLIT);
-    AABB_material->set_shader(RendererStorage::get_shader_from_source(shaders::AABB_shader::source, shaders::AABB_shader::path, AABB_material));
-    //AABB_material.diffuse_texture = RendererStorage::get_texture("data/meshes/cube/cube_AABB.png");
-    AABB_mesh->set_surface_material_override(AABB_mesh->get_surface(0), AABB_material);
-
     // Prepare preview stroke
     preview_stroke.edit_list.resize(PREVIEW_BASE_EDIT_LIST);
     preview_stroke.stroke.edit_count = 0u;
@@ -95,19 +83,6 @@ AABB RaymarchingRenderer::sPreviewStroke::get_AABB() const
     }
 
     return result;
-}
-
-void RaymarchingRenderer::get_brick_usage(std::function<void(float, uint32_t)> callback)
-{
-    //WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
-
-    //sBrickBuffers_counters brick_usage_info;
-    //webgpu_context->read_buffer(brick_buffers_counters_read_buffer, sizeof(sBrickBuffers_counters), &brick_usage_info);
-
-    //uint32_t brick_count = brick_usage_info.brick_instance_counter;
-    //float pct = brick_count / (float)max_brick_count;
-
-    //callback(pct, brick_count);
 }
 
 void RaymarchingRenderer::render(WGPURenderPassEncoder render_pass, uint32_t camera_buffer_stride)

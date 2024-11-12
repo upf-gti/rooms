@@ -10,6 +10,11 @@
 #include "tools/sculpt_editor.h"
 #include "tools/scene_editor.h"
 
+#include "framework/parsers/parse_scene.h"
+#include "graphics/renderer_storage.h"
+#include "shaders/AABB_shader.wgsl.gen.h"
+#include "framework/nodes/mesh_instance_3d.h"
+
 #include <engine/rooms_engine.h>
 
 #include <fstream>
@@ -95,13 +100,32 @@ void SculptNode::update(float delta_time)
 
 void SculptNode::render()
 {
-    
+#ifdef SHOW_SCULPT_AABB
+    const AABB& sculpt_aabb = sculpt_gpu_data->get_AABB();
+    AABB_mesh->set_scale(sculpt_aabb.half_size*2.0f);
+    AABB_mesh->set_position(get_global_model() * glm::vec4(sculpt_aabb.center, 1.0));
+    AABB_mesh->render();
+#endif
 }
 
 void SculptNode::initialize()
 {
     sculpt_gpu_data = static_cast<RoomsRenderer*>(Renderer::instance)->get_sculpt_manager()->create_sculpt();
     sculpt_gpu_data->ref();
+
+#ifdef SHOW_SCULPT_AABB
+    AABB_mesh = parse_mesh("data/meshes/cube/aabb_cube.obj");
+
+    Material* AABB_material = new Material();
+    //AABB_material.priority = 10;
+    AABB_material->set_color(glm::vec4(0.8f, 0.3f, 0.9f, 1.0f));
+    AABB_material->set_transparency_type(ALPHA_BLEND);
+    AABB_material->set_cull_type(CULL_NONE);
+    AABB_material->set_type(MATERIAL_UNLIT);
+    AABB_material->set_shader(RendererStorage::get_shader_from_source(shaders::AABB_shader::source, shaders::AABB_shader::path, AABB_material));
+    //AABB_material.diffuse_texture = RendererStorage::get_texture("data/meshes/cube/cube_AABB.png");
+    AABB_mesh->set_surface_material_override(AABB_mesh->get_surface(0), AABB_material);
+#endif
 }
 
 void SculptNode::from_history(const std::vector<Stroke>& new_history)

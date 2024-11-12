@@ -11,7 +11,7 @@
 void sSDFGlobals::clean()
 {
     brick_buffers.destroy();
-    brick_copy_buffer.destroy();
+    brick_copy_aabb_gen_buffer.destroy();
     indirect_buffers.destroy();
     sdf_texture_uniform.destroy();
     sdf_material_texture_uniform.destroy();
@@ -19,6 +19,7 @@ void sSDFGlobals::clean()
     preview_stroke_uniform.destroy();
     linear_sampler_uniform.destroy();
 }
+#include <bit>
 
 RoomsRenderer::RoomsRenderer(const sRendererConfiguration& config) : Renderer(config)
 {
@@ -365,4 +366,8 @@ uint32_t RoomsRenderer::add_sculpt_render_call(Sculpt* sculpt, const glm::mat4& 
     };
 
     return render_instance->instance_count++;
+}
+
+bool RoomsRenderer::has_performed_evaluation() const {
+    return sculpt_manager->has_performed_evaluation();
 }

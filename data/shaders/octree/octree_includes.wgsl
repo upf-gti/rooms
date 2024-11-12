@@ -225,9 +225,36 @@ struct BrickBuffers_ReadOnly {
 
 struct GPUReturnResults {
     // Evaluation
-    sculpt_aabb_min :   vec3f,
+    sculpt_aabb_min :      vec3f,
+    empty_brick_count :    u32,
+    sculpt_aabb_max :      vec3f,
+    evaluation_sculpt_id : u32,
+
+    // Ray interection
+    ray_has_intersected :u32,
+    ray_tile_pointer :      u32,
+    ray_sculpt_id : u32,
+    ray_t : f32,
+
+    ray_sculpt_instance_id : u32,
+    pad0 : u32,
+    ray_metalness : f32,
+    ray_roughness : f32,
+
+    ray_albedo_color : vec3f,
+    pad1 : u32
+};
+
+struct GPUReturnResults_Atomic {
+    // Evaluation
+    sculpt_aabb_min_x : atomic<i32>,
+    sculpt_aabb_min_y : atomic<i32>,
+    sculpt_aabb_min_z : atomic<i32>,
     empty_brick_count : u32,
-    sculpt_aabb_max : vec3f,
+
+    sculpt_aabb_max_x : atomic<i32>,
+    sculpt_aabb_max_y : atomic<i32>,
+    sculpt_aabb_max_z : atomic<i32>,
     evaluation_sculpt_id : u32,
 
     // Ray interection
@@ -290,7 +317,6 @@ fn culling_get_culling_data(stroke_pointer : u32, edit_start : u32, edit_count :
 fn culling_get_stroke_index(culling_data : u32) -> u32 {
     return (culling_data) >> 16;
 }
-
 
 struct sPaddedAABB {
     min    : vec3f,

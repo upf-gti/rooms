@@ -92,8 +92,6 @@ public:
 
     void render(WGPURenderPassEncoder render_pass, uint32_t camera_buffer_stride = 0u);
 
-    void get_brick_usage(std::function<void(float, uint32_t)> callback);
-
     inline void set_preview_render(const bool need_to_render_preview) {
         render_preview = need_to_render_preview;
     }

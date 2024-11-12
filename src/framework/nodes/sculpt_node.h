@@ -6,7 +6,10 @@
 
 #include <vector>
 
+//#define SHOW_SCULPT_AABB
+
 class Sculpt;
+class MeshInstance3D;
 
 class SculptNode : public Node3D {
 
@@ -23,6 +26,9 @@ class SculptNode : public Node3D {
     Sculpt* sculpt_gpu_data = nullptr;
 
     void from_history(const std::vector<Stroke>& new_history);
+
+    // DEBUG
+    MeshInstance3D* AABB_mesh = nullptr;
 
 public: 
 

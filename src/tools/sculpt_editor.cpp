@@ -1538,6 +1538,28 @@ void SculptEditor::bind_events()
 
     Node::bind("smooth_factor", (FuncFloat)[&](const std::string& signal, float value) { stroke_parameters.set_smooth_factor(value); });
 
+
+    Node::bind("@on_gpu_results", [&](const std::string& sg, void* data) {
+        // Do nothing if it's not the current editor..
+        auto engine = static_cast<RoomsEngine*>(RoomsEngine::instance);
+        if (engine->get_current_editor() != this) {
+            return;
+        }
+
+        SculptManager::sGPU_ReadResults* gpu_result = reinterpret_cast<SculptManager::sGPU_ReadResults*>(data);
+        assert(gpu_result);
+        const sGPU_SculptResults::sGPU_IntersectionData& intersection = gpu_result->loaded_results.ray_intersection;
+        const sGPU_SculptResults::sGPU_SculptEvalData& eval_data = gpu_result->loaded_results.sculpt_eval_data;
+
+        // If there has been an eval, assign the AABB to the sculpt
+        if (static_cast<RoomsRenderer*>(engine->get_renderer())->has_performed_evaluation()) {
+            AABB result;
+            result.half_size = (eval_data.aabb_max - eval_data.aabb_min) / 2.0f;
+            result.center = result.half_size + eval_data.aabb_min;
+
+            current_sculpt->get_sculpt_data()->set_AABB(result);
+        }    
+    });
     // Bind colors callback...
 
     for (auto it : Node2D::all_widgets)

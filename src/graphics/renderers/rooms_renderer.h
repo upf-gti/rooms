@@ -13,7 +13,7 @@ class SculptManager;
 
 struct sSDFGlobals {
     Uniform         brick_buffers;
-    Uniform         brick_copy_buffer;
+    Uniform         brick_copy_aabb_gen_buffer;
 
     Uniform         indirect_buffers;
 
@@ -124,6 +124,7 @@ public:
 
     float get_last_evaluation_time() { return last_evaluation_time; }
 
+    bool has_performed_evaluation() const;
     /*
     *   Edits
     */

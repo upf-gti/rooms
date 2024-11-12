@@ -30,7 +30,13 @@ fn compute(@builtin(global_invocation_id) id: vec3<u32>)
     indirect_buffers.evaluator_subdivision_counter = num_dispatches;
     indirect_buffers.brick_removal_counter = brick_buffers.brick_removal_counter;
 
-    if (level == OCTREE_DEPTH) {
+    if (level == 0u) {
+        if ((octree.evaluation_mode & EVALUATE_PREVIEW_STROKE_FLAG) != EVALUATE_PREVIEW_STROKE_FLAG) {
+            // Clean the aabb
+            gpu_return_results.sculpt_aabb_min = vec3f(6.0);
+            gpu_return_results.sculpt_aabb_max = vec3f(3.0);
+        }
+    }else if (level == OCTREE_DEPTH) {
         // If we evaluated the preview in the prev subdivision pass, we set it back.
         if ((octree.evaluation_mode & EVALUATE_PREVIEW_STROKE_FLAG) == EVALUATE_PREVIEW_STROKE_FLAG) {
             
@@ -42,5 +48,6 @@ fn compute(@builtin(global_invocation_id) id: vec3<u32>)
         }
     } else if (level > OCTREE_DEPTH) {
         gpu_return_results.empty_brick_count = brick_buffers.atlas_empty_bricks_counter;
+        
     }
 }

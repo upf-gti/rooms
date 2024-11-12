@@ -58,7 +58,7 @@ void SculptManager::clean()
     delete increment_level_shader;
     delete write_to_texture_shader;
     delete brick_removal_shader;
-    delete brick_copy_shader;
+    delete brick_copy_aabb_gen_shader;
     delete brick_unmark_shader;
     delete sculpt_delete_shader;
     delete ray_intersection_shader;
@@ -146,7 +146,7 @@ void SculptManager::update(WGPUCommandEncoder command_encoder)
     wgpuComputePassEncoderEnd(compute_pass);
     wgpuComputePassEncoderRelease(compute_pass);
 
-    if (intersections_to_compute > 0u) {
+    if (intersections_to_compute > 0u || has_performed_evaluation()) {
         wgpuCommandEncoderCopyBufferToBuffer(command_encoder, std::get<WGPUBuffer>(gpu_results_uniform.data), 0u, read_results.gpu_results_read_buffer, 0u, sizeof(sGPU_SculptResults));
         intersections_to_compute = 0u;
     }
@@ -213,7 +213,7 @@ Sculpt* SculptManager::create_sculpt()
     indirect_buffer.buffer_size = indirect_buffer_size;
 
     std::vector<Uniform*> uniforms = { &octree_uniform, &brick_index_buffer, &indirect_buffer };
-    WGPUBindGroup evaluate_sculpt_bindgroup = webgpu_context->create_bind_group(uniforms, brick_copy_shader, 0u, "Write read octree bindgroup");
+    WGPUBindGroup evaluate_sculpt_bindgroup = webgpu_context->create_bind_group(uniforms, RendererStorage::get_shader("data/shaders/octree/prepare_indirect_sculpt_render.wgsl"), 1u, "Write read octree bindgroup");
 
     uniforms = { &octree_uniform };
     WGPUBindGroup octree_bindgroup = webgpu_context->create_bind_group(uniforms, evaluate_shader, 1u, "Octree bindgroup");
@@ -224,7 +224,10 @@ Sculpt* SculptManager::create_sculpt()
     uniforms = { &octree_uniform, &indirect_buffer };
     WGPUBindGroup oct_indi_bindgroup = webgpu_context->create_bind_group(uniforms, evaluation_initialization_shader, 1u, "Read only octree bindgroup");
 
-    return new Sculpt(sculpt_count++, octree_uniform, indirect_buffer, brick_index_buffer, octree_bindgroup, evaluate_sculpt_bindgroup, oct_indi_bindgroup, readonly_sculpt_buffer_bindgroup);
+    uniforms = { &octree_uniform, &brick_index_buffer, &indirect_buffer, &sdf_globals.brick_buffers};
+    WGPUBindGroup brick_copy_aabb_gen_bind_group = webgpu_context->create_bind_group(uniforms, brick_copy_aabb_gen_shader, 0u, "brick copy bindgroup");
+
+    return new Sculpt(sculpt_count++, octree_uniform, indirect_buffer, brick_index_buffer, octree_bindgroup, evaluate_sculpt_bindgroup, oct_indi_bindgroup, readonly_sculpt_buffer_bindgroup, brick_copy_aabb_gen_bind_group);
 }
 
 Sculpt* SculptManager::create_sculpt_from_history(const std::vector<Stroke>& stroke_history)
@@ -298,7 +301,7 @@ void SculptManager::evaluate(WGPUComputePassEncoder compute_pass, const sEvaluat
         !evaluate_pipeline.is_loaded() ||
         !increment_level_pipeline.is_loaded() ||
         !write_to_texture_pipeline.is_loaded() ||
-        !brick_copy_pipeline.is_loaded()) {
+        !brick_copy_aabb_gen_pipeline.is_loaded()) {
         return;
     }
 
@@ -421,8 +424,9 @@ void SculptManager::evaluate(WGPUComputePassEncoder compute_pass, const sEvaluat
         wgpuComputePassEncoderPopDebugGroup(compute_pass);
 #endif
 
-        brick_copy_pipeline.set(compute_pass);
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 0u, evaluate_request.sculpt->get_sculpt_bindgroup(), 0u, nullptr);
+        brick_copy_aabb_gen_pipeline.set(compute_pass);
+        wgpuComputePassEncoderSetBindGroup(compute_pass, 0u, evaluate_request.sculpt->get_brick_copy_aabb_gen_bindgroup(), 0u, nullptr);
+        wgpuComputePassEncoderSetBindGroup(compute_pass, 1u, gpu_results_bindgroup, 0u, nullptr);
 
         //wgpuComputePassEncoderSetBindGroup(compute_pass, 1, sculpt.octree_bindgroup, 0, nullptr);
         wgpuComputePassEncoderDispatchWorkgroups(compute_pass, sdf_globals.octree_last_level_size / (8u * 8u * 8u), 1, 1);
@@ -674,7 +678,7 @@ void SculptManager::upload_preview_strokes()
 
     //    sdf_globals.preview_stroke_uniform_2.data = sdf_globals.preview_stroke_uniform.data;
     //    sdf_globals.preview_stroke_uniform_2.buffer_size = sdf_globals.preview_stroke_uniform.buffer_size;
-    //    std::vector<Uniform*> uniforms = { &sculpts_instance_data_uniform, &linear_sampler_uniform, &sdf_texture_uniform, &octree_brick_buffers, &octree_brick_copy_buffer, &sdf_material_texture_uniform, &preview_stroke_uniform_2 };
+    //    std::vector<Uniform*> uniforms = { &sculpts_instance_data_uniform, &linear_sampler_uniform, &sdf_texture_uniform, &octree_brick_buffers, &octree_brick_copy_aabb_gen_buffer, &sdf_material_texture_uniform, &preview_stroke_uniform_2 };
     //    wgpuBindGroupRelease(render_proxy_geometry_bind_group);
     //    render_proxy_geometry_bind_group = webgpu_context->create_bind_group(uniforms, render_proxy_shader, 0);
 
@@ -797,7 +801,7 @@ void SculptManager::init_shaders()
     increment_level_shader = RendererStorage::get_shader("data/shaders/octree/increment_level.wgsl");
     write_to_texture_shader = RendererStorage::get_shader("data/shaders/octree/write_to_texture.wgsl");
     brick_removal_shader = RendererStorage::get_shader("data/shaders/octree/brick_removal.wgsl");
-    brick_copy_shader = RendererStorage::get_shader("data/shaders/octree/brick_copy.wgsl");
+    brick_copy_aabb_gen_shader = RendererStorage::get_shader("data/shaders/octree/brick_copy_aabb_gen.wgsl");
     evaluation_initialization_shader = RendererStorage::get_shader("data/shaders/octree/initialization.wgsl");
     brick_unmark_shader = RendererStorage::get_shader("data/shaders/octree/brick_unmark.wgsl");
     sculpt_delete_shader = RendererStorage::get_shader("data/shaders/octree/sculpture_delete.wgsl");
@@ -906,7 +910,7 @@ void SculptManager::init_pipelines_and_bindgroups()
         increment_level_pipeline.create_compute_async(increment_level_shader);
         write_to_texture_pipeline.create_compute_async(write_to_texture_shader);
         brick_removal_pipeline.create_compute_async(brick_removal_shader);
-        brick_copy_pipeline.create_compute_async(brick_copy_shader);
+        brick_copy_aabb_gen_pipeline.create_compute_async(brick_copy_aabb_gen_shader);
         evaluation_initialization_pipeline.create_compute_async(evaluation_initialization_shader);
         brick_unmark_pipeline.create_compute_async(brick_unmark_shader);
         sculpt_delete_pipeline.create_compute_async(sculpt_delete_shader);
@@ -951,6 +955,14 @@ void get_mapped_result_buffer(WGPUBufferMapAsyncStatus status, void* user_payloa
     /*if (result->loaded_results.ray_intersection.has_intersected == 1u) {
         Node::emit_signal("@on_gpu_intersection_results", (void*)result);
     }*/
+
+    result->loaded_results.sculpt_eval_data.aabb_min.x -= 5.0f;
+    result->loaded_results.sculpt_eval_data.aabb_min.y -= 5.0f;
+    result->loaded_results.sculpt_eval_data.aabb_min.z -= 5.0f;
+
+    result->loaded_results.sculpt_eval_data.aabb_max.x -= 5.0f;
+    result->loaded_results.sculpt_eval_data.aabb_max.y -= 5.0f;
+    result->loaded_results.sculpt_eval_data.aabb_max.z -= 5.0f;
 
     Node::emit_signal("@on_gpu_results", (void*)result);
 }
