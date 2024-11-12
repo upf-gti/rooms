@@ -368,6 +368,7 @@ uint32_t RoomsRenderer::add_sculpt_render_call(Sculpt* sculpt, const glm::mat4& 
     return render_instance->instance_count++;
 }
 
-bool RoomsRenderer::has_performed_evaluation() const {
+bool RoomsRenderer::has_performed_evaluation() const
+{
     return sculpt_manager->has_performed_evaluation();
 }

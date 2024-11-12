@@ -157,15 +157,29 @@ void SculptEditor::initialize()
 
         SculptManager::sGPU_ReadResults* gpu_result = reinterpret_cast<SculptManager::sGPU_ReadResults*>(data);
         assert(gpu_result);
-        const sGPU_SculptResults::sGPU_IntersectionData& intersection = gpu_result->loaded_results.ray_intersection;
 
-        ray_intersected = intersection.has_intersected;
+        // Computing sculpt AABB
+        {
+            const sGPU_SculptResults::sGPU_SculptEvalData& eval_data = gpu_result->loaded_results.sculpt_eval_data;
 
-        if (!ray_intersected) {
-            return;
+            // If there has been an eval, assign the AABB to the sculpt
+            if (static_cast<RoomsRenderer*>(engine->get_renderer())->has_performed_evaluation()) {
+                glm::vec3 half_size = (eval_data.aabb_max - eval_data.aabb_min) / 2.0f;
+                AABB result = { result.half_size + eval_data.aabb_min, half_size };
+                result = result.rotate(current_sculpt->get_transform().get_rotation());
+                current_sculpt->get_sculpt_data()->set_AABB(result);
+            }
         }
 
-        last_snap_position = ray_origin + ray_direction * intersection.ray_t;
+        // Computing intersection for surface snap
+        {
+            const sGPU_SculptResults::sGPU_IntersectionData& intersection = gpu_result->loaded_results.ray_intersection;
+            ray_intersected = intersection.has_intersected;
+
+            if (ray_intersected) {
+                last_snap_position = ray_origin + ray_direction * intersection.ray_t;
+            }
+        }
     });
 
     enable_tool(SCULPT);
@@ -1538,28 +1552,6 @@ void SculptEditor::bind_events()
 
     Node::bind("smooth_factor", (FuncFloat)[&](const std::string& signal, float value) { stroke_parameters.set_smooth_factor(value); });
 
-
-    Node::bind("@on_gpu_results", [&](const std::string& sg, void* data) {
-        // Do nothing if it's not the current editor..
-        auto engine = static_cast<RoomsEngine*>(RoomsEngine::instance);
-        if (engine->get_current_editor() != this) {
-            return;
-        }
-
-        SculptManager::sGPU_ReadResults* gpu_result = reinterpret_cast<SculptManager::sGPU_ReadResults*>(data);
-        assert(gpu_result);
-        const sGPU_SculptResults::sGPU_IntersectionData& intersection = gpu_result->loaded_results.ray_intersection;
-        const sGPU_SculptResults::sGPU_SculptEvalData& eval_data = gpu_result->loaded_results.sculpt_eval_data;
-
-        // If there has been an eval, assign the AABB to the sculpt
-        if (static_cast<RoomsRenderer*>(engine->get_renderer())->has_performed_evaluation()) {
-            AABB result;
-            result.half_size = (eval_data.aabb_max - eval_data.aabb_min) / 2.0f;
-            result.center = result.half_size + eval_data.aabb_min;
-
-            current_sculpt->get_sculpt_data()->set_AABB(result);
-        }    
-    });
     // Bind colors callback...
 
     for (auto it : Node2D::all_widgets)

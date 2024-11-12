@@ -124,7 +124,8 @@ void StrokeParameters::set_material_noise_color(const Color& color)
 }
 
 
-glm::vec3 get_edit_world_half_size(const Edit &edit, const sdPrimitive primitive, const float smooth_margin) {
+glm::vec3 get_edit_world_half_size(const Edit &edit, const sdPrimitive primitive, const float smooth_margin)
+{
     glm::vec3 size = glm::vec3(edit.dimensions);
     float round = edit.dimensions.w;
 
@@ -152,7 +153,8 @@ glm::vec3 get_edit_world_half_size(const Edit &edit, const sdPrimitive primitive
     }
 }
 
-AABB extern_get_edit_world_AABB(const Edit &edit, const sdPrimitive primitive, const float smooth_margin) {
+AABB extern_get_edit_world_AABB(const Edit& edit, const sdPrimitive primitive, const float smooth_margin)
+{
     const float radius = edit.dimensions.x + smooth_margin;
     const float height = edit.dimensions.y;
 
@@ -180,36 +182,12 @@ AABB extern_get_edit_world_AABB(const Edit &edit, const sdPrimitive primitive, c
         aabb_center += (inv_rotation * glm::vec3(0.0f, height * 0.5f, 0.0f));
     }
 
-    // Rotate the AABB (turning it into an OBB) and compute the AABB
-    const glm::vec3 axis[8] = { inv_rotation * glm::vec3(pure_edit_half_size.x,  pure_edit_half_size.y,  pure_edit_half_size.z),
-                                inv_rotation * glm::vec3(pure_edit_half_size.x,  pure_edit_half_size.y, -pure_edit_half_size.z),
-                                inv_rotation * glm::vec3(pure_edit_half_size.x, -pure_edit_half_size.y,  pure_edit_half_size.z),
-                                inv_rotation * glm::vec3(pure_edit_half_size.x, -pure_edit_half_size.y, -pure_edit_half_size.z),
-                                inv_rotation * glm::vec3(-pure_edit_half_size.x,  pure_edit_half_size.y,  pure_edit_half_size.z),
-                                inv_rotation * glm::vec3(-pure_edit_half_size.x,  pure_edit_half_size.y, -pure_edit_half_size.z),
-                                inv_rotation * glm::vec3(-pure_edit_half_size.x, -pure_edit_half_size.y,  pure_edit_half_size.z),
-                                inv_rotation * glm::vec3(-pure_edit_half_size.x, -pure_edit_half_size.y, -pure_edit_half_size.z) };
-
-
-    glm::vec3 rotated_max_size = glm::vec3(-FLT_MAX);
-    glm::vec3 rotated_min_size = glm::vec3(FLT_MAX);
-
-    for (uint8_t i = 0; i < 8; i++) {
-        rotated_max_size.x = glm::max(rotated_max_size.x, axis[i].x);
-        rotated_max_size.y = glm::max(rotated_max_size.y, axis[i].y);
-        rotated_max_size.z = glm::max(rotated_max_size.z, axis[i].z);
-
-        rotated_min_size.x = glm::min(rotated_min_size.x, axis[i].x);
-        rotated_min_size.y = glm::min(rotated_min_size.y, axis[i].y);
-        rotated_min_size.z = glm::min(rotated_min_size.z, axis[i].z);
-    }
-
-    const glm::vec3 edit_half_size = (rotated_max_size - rotated_min_size) * 0.5f;
-
-    return { aabb_center, edit_half_size };
+    AABB aabb = { aabb_center, pure_edit_half_size };
+    return aabb.rotate(edit_rotation);
 }
 
-AABB sGPUStroke::get_world_AABB_of_edit_list(const std::vector<Edit>& list) const {
+AABB sGPUStroke::get_world_AABB_of_edit_list(const std::vector<Edit>& list) const
+{
     AABB result;
 
     for (uint32_t i = 0u; i < list.size(); i++) {
@@ -245,7 +223,8 @@ AABB Stroke::get_world_AABB() const
 // Compute the resulting stroke on the current stroke's edits that are inside the area
 void Stroke::get_AABB_intersecting_stroke(const AABB intersection_area,
                                                 Stroke& resulting_stroke,
-                                          const uint32_t item_to_exclude) const {
+                                          const uint32_t item_to_exclude) const
+{
     resulting_stroke.edit_count = 0u;
     resulting_stroke.primitive = primitive;
     resulting_stroke.operation = operation;
