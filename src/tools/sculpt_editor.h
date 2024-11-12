@@ -93,10 +93,12 @@ class SculptEditor : public BaseEditor {
 
     glm::quat last_hand_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
     glm::vec3 last_hand_translation = {};
+    glm::vec3 last_snap_position = {};
 
-    // Sculpt
-    //glm::quat rotation_diff = { 0.0f, 0.0f, 0.0f, 1.0f };
-    //glm::vec3 translation_diff = {};
+    // Intersections
+    glm::vec3 ray_origin;
+    glm::vec3 ray_direction;
+    bool ray_intersected = false;
 
     // Edit
     glm::quat edit_rotation_diff = { 0.0, 0.0, 0.0, 1.0 };

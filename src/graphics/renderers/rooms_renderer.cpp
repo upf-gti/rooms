@@ -251,11 +251,6 @@ void RoomsRenderer::update(float delta_time)
 
     upload_sculpt_models_and_instances(global_command_encoder);
 
-    /*if (Input::is_mouse_pressed(GLFW_MOUSE_BUTTON_RIGHT)) {
-        glm::vec3 ray_dir = camera->screen_to_ray(Input::get_mouse_position());
-        sculpt_manager->set_ray_to_test(camera->get_eye(), glm::normalize(ray_dir));
-    }*/
-
     sculpt_manager->update(global_command_encoder);
     
     update_sculpts_indirect_buffers(global_command_encoder);

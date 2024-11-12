@@ -147,6 +147,27 @@ void SculptEditor::initialize()
         add_pbr_material_data("rusted_iron", Color(0.531f, 0.512f, 0.496f, 1.0f), 0.0f, 1.0f, 1.0f); // add noise
     }
 
+    Node::bind("@on_gpu_results", [&](const std::string& sg, void* data) {
+
+        // Do nothing if it's not the current editor..
+        auto engine = static_cast<RoomsEngine*>(RoomsEngine::instance);
+        if (engine->get_current_editor() != this) {
+            return;
+        }
+
+        SculptManager::sGPU_ReadResults* gpu_result = reinterpret_cast<SculptManager::sGPU_ReadResults*>(data);
+        assert(gpu_result);
+        const sGPU_SculptResults::sGPU_IntersectionData& intersection = gpu_result->loaded_results.ray_intersection;
+
+        ray_intersected = intersection.has_intersected;
+
+        if (!ray_intersected) {
+            return;
+        }
+
+        last_snap_position = ray_origin + ray_direction * intersection.ray_t;
+    });
+
     enable_tool(SCULPT);
 
     /*ui::VContainer2D* test_root = new ui::VContainer2D("test_root", { 0.0f, 0.0f });
@@ -235,22 +256,26 @@ bool SculptEditor::edit_update(float delta_time)
     }
 
     // Guides: edit position modifiers
-    {
+    if(renderer->get_openxr_available()) {
         // Snap surface
-        if (can_snap_to_surface()) {
 
-            auto callback = [&](glm::vec3 center) {
-                edit_to_add.position = texture3d_to_world(center);
-            };
+        if (snap_to_surface) {
+            // Send rays each frame to detect hovered sculpts and other nodes
+            {
+                ray_origin = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
+                glm::mat4x4 select_hand_pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
+                ray_direction = get_front(select_hand_pose);
 
-            glm::mat4x4 pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
-            glm::vec3 ray_dir = get_front(pose);
-            std::vector<Sculpt*> sculpts = { current_sculpt->get_sculpt_data() };
-            //renderer->get_sculpt_manager()->test_ray_sculpts_intersection(pose[3], ray_dir, sculpts);
-            //renderer->get_raymarching_renderer()->octree_ray_intersect(pose[3], ray_dir, callback);
+                RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
+                rooms_renderer->get_sculpt_manager()->set_ray_to_test(ray_origin, ray_direction);
+            }
+
+            if (can_snap_to_surface()) {
+                edit_to_add.position = last_snap_position;
+            }
         }
 
-        if (use_mirror && renderer->get_openxr_available()) {
+        if (use_mirror) {
             bool r = mirror_gizmo.update(Input::get_controller_position(HAND_RIGHT, POSE_AIM), delta_time);
             is_tool_used &= !r;
             is_tool_pressed &= !r;
@@ -263,8 +288,7 @@ bool SculptEditor::edit_update(float delta_time)
             // grid_multiplier = 1.f / (edit_to_add.dimensions.x / 2.f);
             edit_to_add.position = glm::round(edit_to_add.position * grid_multiplier) / grid_multiplier;
         }
-
-        else if (axis_lock && renderer->get_openxr_available()) {
+        else if (axis_lock) {
             bool r = axis_lock_gizmo.update(Input::get_controller_position(HAND_RIGHT, POSE_AIM), delta_time);
             is_tool_used &= !r;
             is_tool_pressed &= !r;
@@ -951,7 +975,7 @@ void SculptEditor::render_gui()
 
 bool SculptEditor::can_snap_to_surface()
 {
-    return snap_to_surface && (stamp_enabled || current_tool == PAINT);
+    return snap_to_surface && ray_intersected && (stamp_enabled || current_tool == PAINT);
 }
 
 bool SculptEditor::must_render_mesh_preview_outline()
