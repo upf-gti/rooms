@@ -21,17 +21,30 @@
 
 REGISTER_NODE_CLASS(SculptNode)
 
+#define SHOW_SCULPT_AABB
+
 SculptNode::SculptNode() : Node3D()
 {
     node_type = "SculptNode";
     collider_shape = COLLIDER_SHAPE_CUSTOM;
+
+#ifdef SHOW_SCULPT_AABB
+    AABB_mesh = parse_mesh("data/meshes/cube/aabb_cube.obj");
+
+    Material* AABB_material = new Material();
+    //AABB_material.priority = 10;
+    AABB_material->set_color(glm::vec4(0.8f, 0.3f, 0.9f, 1.0f));
+    AABB_material->set_transparency_type(ALPHA_BLEND);
+    AABB_material->set_cull_type(CULL_NONE);
+    AABB_material->set_type(MATERIAL_UNLIT);
+    AABB_material->set_shader(RendererStorage::get_shader_from_source(shaders::AABB_shader::source, shaders::AABB_shader::path, AABB_material));
+    //AABB_material.diffuse_texture = RendererStorage::get_texture("data/meshes/cube/cube_AABB.png");
+    AABB_mesh->set_surface_material_override(AABB_mesh->get_surface(0), AABB_material);
+#endif
 }
 
-SculptNode::SculptNode(SculptNode* reference) : Node3D()
+SculptNode::SculptNode(SculptNode* reference) : SculptNode()
 {
-    node_type = "SculptNode";
-    collider_shape = COLLIDER_SHAPE_CUSTOM;
-
     sculpt_gpu_data = reference->get_sculpt_data();
     sculpt_gpu_data->ref();
 
@@ -112,20 +125,6 @@ void SculptNode::initialize()
 {
     sculpt_gpu_data = static_cast<RoomsRenderer*>(Renderer::instance)->get_sculpt_manager()->create_sculpt();
     sculpt_gpu_data->ref();
-
-#ifdef SHOW_SCULPT_AABB
-    AABB_mesh = parse_mesh("data/meshes/cube/aabb_cube.obj");
-
-    Material* AABB_material = new Material();
-    //AABB_material.priority = 10;
-    AABB_material->set_color(glm::vec4(0.8f, 0.3f, 0.9f, 1.0f));
-    AABB_material->set_transparency_type(ALPHA_BLEND);
-    AABB_material->set_cull_type(CULL_NONE);
-    AABB_material->set_type(MATERIAL_UNLIT);
-    AABB_material->set_shader(RendererStorage::get_shader_from_source(shaders::AABB_shader::source, shaders::AABB_shader::path, AABB_material));
-    //AABB_material.diffuse_texture = RendererStorage::get_texture("data/meshes/cube/cube_AABB.png");
-    AABB_mesh->set_surface_material_override(AABB_mesh->get_surface(0), AABB_material);
-#endif
 }
 
 void SculptNode::from_history(const std::vector<Stroke>& new_history)
@@ -207,17 +206,11 @@ bool SculptNode::check_intersection(uint32_t sculpt_id, uint32_t instance_id)
 
 bool SculptNode::test_ray_collision(const glm::vec3& ray_origin, const glm::vec3& ray_direction, float& distance)
 {
-    // wip... maybe this instance "aabb" is correct and we don't have to compute this every time
+    const AABB& aabb = sculpt_gpu_data->get_AABB();
 
-    AABB current_aabb;
+    glm::vec3 center = aabb.center + transform.get_position();
 
-    for (const auto& stroke : sculpt_gpu_data->get_stroke_history()) {
-        current_aabb = merge_aabbs(current_aabb, stroke.get_world_AABB());
-    }
-
-    glm::vec3 center = current_aabb.center + transform.get_position();
-
-    const bool intersecting = intersection::ray_AABB(ray_origin, ray_direction, center, current_aabb.half_size, distance);
+    const bool intersecting = intersection::ray_AABB(ray_origin, ray_direction, center, aabb.half_size, distance);
 
     if (intersecting) {
         sculpt_flags |= SCULPT_IS_POINTED;
