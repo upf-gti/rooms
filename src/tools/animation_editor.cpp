@@ -805,9 +805,13 @@ void AnimationEditor::init_ui()
     second_row->add_child(new ui::TextureButton2D("stop_animation", { "data/textures/stop.png" }));
 
     // Create inspection panel (Nodes, properties, etc)
-    inspector = new ui::Inspector({ .name = "inspector_root", .title = "Animation",.position = { 32.0f, 32.f }, .close_fn = [&](ui::Inspector* scope) {
-        return on_close_inspector(scope);
-    }});
+    inspector = new ui::Inspector({
+        .name = "inspector_root",
+        .title = "Animation",
+        .position = {32.0f, 32.f},
+        .close_fn = std::bind(&AnimationEditor::on_close_inspector, this, std::placeholders::_1),
+        // .back_fn = std::bind(&AnimationEditor::on_goback_inspector, this, std::placeholders::_1)
+    });
 
     if (renderer->get_openxr_available())
     {

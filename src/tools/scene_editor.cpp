@@ -476,12 +476,13 @@ void SceneEditor::init_ui()
 
     // Create inspection panel (Nodes, properties, etc)
     {
-        ui::InspectorDesc desc = { .name = "inspector_root", .title = "Scene Nodes",.position = {32.0f, 32.f} };
-        // desc.back_fn = &(SceneEditor::on_goback_inspector);
-        desc.close_fn = [&](ui::Inspector* scope) {
-            return on_close_inspector(scope);
-        };
-        inspector = new ui::Inspector(desc);
+        inspector = new ui::Inspector({
+            .name = "inspector_root",
+            .title = "Scene Nodes",
+            .position = {32.0f, 32.f},
+            .close_fn = std::bind(&SceneEditor::on_close_inspector, this, std::placeholders::_1),
+            .back_fn = std::bind(&SceneEditor::on_goback_inspector, this, std::placeholders::_1)
+        });
         inspector->set_visibility(false);
     }
 
@@ -630,8 +631,8 @@ bool SceneEditor::on_goback_inspector(ui::Inspector* scope)
 {
     if (current_group) {
         current_group = nullptr;
+        Node2D::get_widget_from_name<ui::TextureButton2D*>("group")->set_disabled(false);
         set_inspector_dirty();
-        return false;
     }
 
     return true;
@@ -641,8 +642,7 @@ bool SceneEditor::on_close_inspector(ui::Inspector* scope)
 {
     if (current_group) {
         current_group = nullptr;
-        set_inspector_dirty();
-        return false;
+        Node2D::get_widget_from_name<ui::TextureButton2D*>("group")->set_disabled(false);
     }
 
     return true;

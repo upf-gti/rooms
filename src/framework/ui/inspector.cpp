@@ -23,6 +23,7 @@ namespace ui {
         float inner_height = panel_size.y - padding * 2.0f;
 
         on_close = desc.close_fn;
+        on_back = desc.back_fn;
 
         root = new ui::XRPanel(name + "_background", panel_color, { 0.0f, 0.f }, panel_size);
         add_child(root);
@@ -50,6 +51,12 @@ namespace ui {
             }
             if (should_close) {
                 set_visibility(false);
+            }
+        });
+
+        Node::bind("back_button", [&](const std::string& sg, void* data) {
+            if (on_back) {
+                on_back(this);
             }
         });
 

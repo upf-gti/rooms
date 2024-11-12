@@ -16,6 +16,8 @@ namespace ui {
     class TextureButton2D;
     class Inspector;
 
+    using InspectorFunc = std::function<bool(Inspector*)>;
+
     struct InspectorDesc {
         std::string name = "";
         std::string title = "";
@@ -23,11 +25,11 @@ namespace ui {
         float padding = 18.0f;
         glm::vec2 size = { 420.f, 600.f };
         glm::vec2 position = { 0.0f, 0.0f };
-        std::function<bool(Inspector*)> back_fn = nullptr;
-        std::function<bool(Inspector*)> close_fn = nullptr;
+        InspectorFunc close_fn = nullptr;
+        InspectorFunc back_fn = nullptr;
     };
 
-    enum eInspectorResetFlags: uint8_t {
+    enum eInspectorResetFlags : uint8_t {
         INSPECTOR_FLAG_FORCE_3D_POSITION = 1 << 0,
         INSPECTOR_FLAG_BACK_BUTTON = 1 << 1,
         INSPECTOR_FLAG_CLOSE_BUTTON = 1 << 2,
@@ -58,7 +60,8 @@ namespace ui {
 
         HContainer2D* create_row();
 
-        std::function<bool(Inspector*)> on_close = nullptr;
+        InspectorFunc on_close = nullptr;
+        InspectorFunc on_back = nullptr;
 
         glm::vec2 last_grab_position = {};
 
