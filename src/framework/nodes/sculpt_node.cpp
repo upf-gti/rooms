@@ -86,7 +86,7 @@ void SculptNode::update(float delta_time)
         }
     }
     
-    in_frame_instance_id = renderer->add_sculpt_render_call(sculpt_gpu_data, get_global_model(), flags);
+    in_frame_sculpt_render_list_id = renderer->add_sculpt_render_call(sculpt_gpu_data, get_global_model(), flags);
 
     // static_cast<RoomsRenderer*>(Renderer::instance)->add_sculpt_render_call(sculpt_gpu_data, glm::translate(get_global_model(), {0.05, 0.0, 0.0}));
 
@@ -145,13 +145,12 @@ void SculptNode::parse(std::ifstream& binary_scene_file)
         std::vector<Stroke> stroke_history;
         stroke_history.resize(header.stroke_count);
         binary_scene_file.read(reinterpret_cast<char*>(&stroke_history[0]), header.stroke_count * sizeof(Stroke));
-        sculpt_gpu_data = rooms_renderer->get_sculpt_manager()->create_sculpt_from_history(stroke_history);
-        from_memory = true;
+        from_history(stroke_history);
     } else {
         sculpt_gpu_data = rooms_renderer->get_sculpt_manager()->create_sculpt();
+        sculpt_gpu_data->ref();
     }
 
-    sculpt_gpu_data->ref();
 
     // TODO: Remove current
     //rooms_renderer->get_raymarching_renderer()->set_current_sculpt(this);
@@ -179,7 +178,7 @@ void SculptNode::clone(Node* new_node, bool copy)
 
 bool SculptNode::check_intersection(uint32_t sculpt_id, uint32_t instance_id)
 {
-    return (sculpt_gpu_data->get_sculpt_id() == sculpt_id) && (in_frame_instance_id == instance_id);
+    return (sculpt_gpu_data->get_sculpt_id() == sculpt_id) && (in_frame_sculpt_render_list_id == instance_id);
 }
 
 bool SculptNode::test_ray_collision(const glm::vec3& ray_origin, const glm::vec3& ray_direction, float& distance)
@@ -214,4 +213,10 @@ void SculptNode::set_out_of_focus(const bool oof)
     else {
         sculpt_flags &= ~eSculptInstanceFlags::SCULPT_IS_OUT_OF_FOCUS;
     }
+}
+
+
+uint32_t SculptNode::get_in_frame_model_idx()
+{
+    return in_frame_sculpt_render_list_id + sculpt_gpu_data->get_in_frame_model_buffer_index();
 }

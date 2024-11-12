@@ -137,3 +137,14 @@ bool BaseEditor::is_something_hovered()
 
     return !xr_panel || (xr_panel && xr_panel->get_is_button());
 }
+
+bool BaseEditor::is_something_focused()
+{
+    if (!IO::any_focus()) {
+        return false;
+    }
+
+    auto xr_panel = dynamic_cast<ui::XRPanel*>(IO::get_focus());
+
+    return !xr_panel || (xr_panel && xr_panel->get_is_button());
+}

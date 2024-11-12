@@ -189,7 +189,7 @@ void SculptEditor::clean()
 bool SculptEditor::is_tool_being_used(bool stamp_enabled)
 {
 #ifdef XR_SUPPORT
-    bool is_currently_pressed = !is_something_hovered() && Input::is_trigger_pressed(HAND_RIGHT);
+    bool is_currently_pressed = !is_something_focused() && Input::is_trigger_pressed(HAND_RIGHT);
     is_released = is_tool_pressed && !is_currently_pressed;
 
     bool add_edit_with_tool = stamp_enabled ? is_released : is_currently_pressed;
@@ -281,7 +281,7 @@ bool SculptEditor::edit_update(float delta_time)
     }
 
     // Update edit dimensions
-    if (!stamp_enabled || !is_tool_pressed && !is_released) {
+    if(!is_stretching_edit) {
 
         // Get the data from the primitive default
         edit_to_add.dimensions = primitive_default_states[stroke_parameters.get_primitive()].dimensions;
@@ -289,7 +289,7 @@ bool SculptEditor::edit_update(float delta_time)
 
         if (fabsf(right_size_multiplier) > 0.f) {
             // Update primitive main size
-            if (!is_shift_right_pressed) {
+            if (!is_shift_right_pressed || is_tool_pressed) { // When smearing, always change main size!
                 edit_to_add.dimensions.x = glm::clamp(right_size_multiplier + edit_to_add.dimensions.x, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE);
                 if (stroke_parameters.get_primitive() == SD_BOX) {
                     edit_to_add.dimensions = glm::vec4(glm::vec3(edit_to_add.dimensions.x), edit_to_add.dimensions.w);
@@ -326,11 +326,10 @@ bool SculptEditor::edit_update(float delta_time)
         }
 
         edit_to_add.rotation = glm::inverse(Input::get_controller_rotation(HAND_RIGHT, POSE_AIM));
-        is_stretching_edit = false;
     }
 
     // Stretch the edit using motion controls
-    else if (stamp_enabled && is_tool_pressed && !creating_spline) { 
+    if (stamp_enabled && is_tool_pressed && !creating_spline) {
 
         if (is_stretching_edit) {
             sdPrimitive curr_primitive = stroke_parameters.get_primitive();
@@ -381,6 +380,9 @@ bool SculptEditor::edit_update(float delta_time)
             is_stretching_edit = glm::length(glm::abs(controller_movement_data[HAND_RIGHT].velocity)) > 0.20f;
         }
     }
+    else {
+        is_stretching_edit = false;
+    }
 
     if (!creating_spline) {
         update_edit_rotation();
@@ -410,7 +412,8 @@ bool SculptEditor::edit_update(float delta_time)
             }
             else {
                 // Make sure we don't get NaNs in preview rotation due to polling XR controllers in 2D mode
-                edit_to_add.rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
+                edit_to_add.position = current_sculpt->get_translation();
+                edit_to_add.rotation = current_sculpt->get_rotation();
             }
         }
     }
@@ -700,7 +703,7 @@ void SculptEditor::set_preview_edits(const std::vector<Edit>& edit_previews)
     preview_stroke.aabb_min = stroke_aabb.center - stroke_aabb.half_size;
     preview_stroke.aabb_max = stroke_aabb.center + stroke_aabb.half_size;
 
-    renderer->get_sculpt_manager()->set_preview_stroke(current_sculpt->get_sculpt_data(), current_sculpt->get_in_frame_render_instance_idx(), preview_stroke, edit_previews);
+    renderer->get_sculpt_manager()->set_preview_stroke(current_sculpt->get_sculpt_data(), current_sculpt->get_in_frame_model_idx(), preview_stroke, edit_previews);
 }
 
 void SculptEditor::apply_mirror_position(glm::vec3& position)

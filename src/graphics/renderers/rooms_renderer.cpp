@@ -20,7 +20,7 @@ void sSDFGlobals::clean()
     linear_sampler_uniform.destroy();
 }
 
-RoomsRenderer::RoomsRenderer() : Renderer()
+RoomsRenderer::RoomsRenderer(const sRendererConfiguration& config) : Renderer(config)
 {
 
 }
@@ -329,6 +329,8 @@ void RoomsRenderer::upload_sculpt_models_and_instances(WGPUCommandEncoder comman
             models_for_upload.resize(models_for_upload.capacity() + 10u);
         }
 
+        it.second->sculpt->set_in_frame_model_buffer_index(in_frame_instance_count);
+
         for (uint16_t i = 0u; i < it.second->instance_count; i++) {
             models_for_upload[in_frame_instance_count++] = (it.second->models[i]);
         }
@@ -341,7 +343,6 @@ void RoomsRenderer::upload_sculpt_models_and_instances(WGPUCommandEncoder comman
 
     // Upload all the instance data
     webgpu_context->update_buffer(std::get<WGPUBuffer>(global_sculpts_instance_data_uniform.data), 0u, models_for_upload.data(), sizeof(sSculptInstanceData) * in_frame_instance_count);
-
 }
 
 uint32_t RoomsRenderer::add_sculpt_render_call(Sculpt* sculpt, const glm::mat4& model, const uint32_t flags)
