@@ -141,6 +141,7 @@ protected:
     void update_shortcuts(const std::unordered_map<uint8_t, bool>& active_shortcuts);
 
     bool is_something_hovered();
+    bool is_something_focused();
 
 public:
 

@@ -20,7 +20,7 @@ void sSDFGlobals::clean()
     linear_sampler_uniform.destroy();
 }
 
-RoomsRenderer::RoomsRenderer() : Renderer()
+RoomsRenderer::RoomsRenderer(const sRendererConfiguration& config) : Renderer(config)
 {
 
 }
