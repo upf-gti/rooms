@@ -410,7 +410,8 @@ bool SculptEditor::edit_update(float delta_time)
             }
             else {
                 // Make sure we don't get NaNs in preview rotation due to polling XR controllers in 2D mode
-                edit_to_add.rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
+                edit_to_add.position = current_sculpt->get_translation();
+                edit_to_add.rotation = current_sculpt->get_rotation();
             }
         }
     }
@@ -700,7 +701,7 @@ void SculptEditor::set_preview_edits(const std::vector<Edit>& edit_previews)
     preview_stroke.aabb_min = stroke_aabb.center - stroke_aabb.half_size;
     preview_stroke.aabb_max = stroke_aabb.center + stroke_aabb.half_size;
 
-    renderer->get_sculpt_manager()->set_preview_stroke(current_sculpt->get_sculpt_data(), current_sculpt->get_in_frame_render_instance_idx(), preview_stroke, edit_previews);
+    renderer->get_sculpt_manager()->set_preview_stroke(current_sculpt->get_sculpt_data(), current_sculpt->get_in_frame_model_idx(), preview_stroke, edit_previews);
 }
 
 void SculptEditor::apply_mirror_position(glm::vec3& position)

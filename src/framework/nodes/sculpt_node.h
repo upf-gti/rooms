@@ -18,7 +18,7 @@ class SculptNode : public Node3D {
     bool from_memory = false;
 
     uint32_t sculpt_flags = 0u;
-    uint32_t in_frame_instance_id = 0u;
+    uint32_t in_frame_sculpt_render_list_id = 0u;
 
     Sculpt* sculpt_gpu_data = nullptr;
 
@@ -48,6 +48,8 @@ public:
 
     inline Sculpt* get_sculpt_data() { return sculpt_gpu_data; }
     inline uint32_t get_flags() { return sculpt_flags; }
-    inline uint32_t get_in_frame_render_instance_idx() const { return in_frame_instance_id; }
+    inline uint32_t get_in_frame_render_instance_idx() const { return in_frame_sculpt_render_list_id; }
     inline bool get_from_memory() { return from_memory; }
+
+    uint32_t get_in_frame_model_idx();
 };

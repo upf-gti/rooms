@@ -9,7 +9,7 @@
 #include <vector>
 
 class Sculpt : public Resource {
-
+    uint32_t in_frame_model_buffer_index = 0u;
     uint32_t sculpt_id;
 
     Uniform octree_uniform;
@@ -53,6 +53,9 @@ public:
     std::vector<Stroke>& get_stroke_history() { return stroke_history; }
     Uniform& get_brick_indices_uniform() { return brick_indices_buffer; }
     Uniform& get_indirect_render_buffer() { return indirect_call_buffer; }
+
+    inline uint32_t get_in_frame_model_buffer_index() { return in_frame_model_buffer_index; }
+    inline void set_in_frame_model_buffer_index(const uint32_t id) { in_frame_model_buffer_index = id; }
 
     bool is_deleted() { return deleted; }
 };
