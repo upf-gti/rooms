@@ -1,7 +1,7 @@
 
 /*
     RGB: R 7 bits + G 8 bits + B 7 bits = 22 bits
-    Metalness: 5 bits
+    Metallic: 5 bits
     Roughness: 5 bits
 */
 
@@ -9,7 +9,7 @@ const RED_MASK : u32 = 0x7f << 25u;//0xFE000000u;
 const GREEN_MASK : u32 = 0xFF << 17u; // 0x1FE0000u;
 const BLUE_MASK : u32 = 0x7f << 10u; // 0x1FC00u;
 const ROUGHNESS_MASK : u32 = 0x1fu << 5u;
-const METALNESS_MASK : u32 = 0x1fu;
+const METALLIC_MASK : u32 = 0x1fu;
 
 
 fn unpack_material(packed_material : u32) -> SdfMaterial {
@@ -20,11 +20,11 @@ fn unpack_material(packed_material : u32) -> SdfMaterial {
     let blue_val : u32 = (packed_material & BLUE_MASK) >> 10u;
 
     let roughess_val : u32 = (packed_material & ROUGHNESS_MASK) >> 5u;
-    let metalness_val : u32 = packed_material & METALNESS_MASK;
+    let metallic_val : u32 = packed_material & METALLIC_MASK;
 
     resulting_material.albedo = vec3f(f32(red_val) / 127.0, f32(green_val) / 255.0, f32(blue_val) / 127.0);
     resulting_material.roughness = f32(roughess_val) / 31.0;
-    resulting_material.metalness = f32(metalness_val) / 31.0;
+    resulting_material.metallic = f32(metallic_val) / 31.0;
 
     return resulting_material;
 }
@@ -37,13 +37,13 @@ fn pack_material(material : SdfMaterial) -> u32 {
     let blue : u32 = u32(material.albedo.b * 127.0);
 
     let roughness : u32 = u32(round(material.roughness * 31.0));
-    let metalness : u32 = u32(round(material.metalness * 31.0));
+    let metallic : u32 = u32(round(material.metallic * 31.0));
 
     packed_material = red << 25u;
     packed_material |= green << 17u;
     packed_material |= blue << 10u;
     packed_material |= roughness << 5u;
-    packed_material |= metalness;
+    packed_material |= metallic;
 
     return packed_material;
 }

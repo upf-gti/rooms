@@ -173,7 +173,7 @@ fn opPaint( s1 : Surface, s2 : Surface, material : SdfMaterial, color_blend_op :
 
     new_mat.albedo = clamp(result_color, vec3f(0.0), vec3f(1.0));
     new_mat.roughness = material.roughness;
-    new_mat.metalness = material.metalness;
+    new_mat.metallic = material.metallic;
 
     sColorInter.material = new_mat;
     return opUnion(s1, sColorInter);

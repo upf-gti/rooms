@@ -78,7 +78,7 @@ fn get_material_preview() -> SdfMaterial {
     var material : SdfMaterial;
     material.albedo = preview_stroke.stroke.material.color.xyz;
     material.roughness = preview_stroke.stroke.material.roughness;
-    material.metalness = preview_stroke.stroke.material.metallic;
+    material.metallic = preview_stroke.stroke.material.metallic;
     return material;
 }
 

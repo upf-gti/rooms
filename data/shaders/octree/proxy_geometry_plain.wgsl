@@ -142,7 +142,7 @@ fn sample_sdf_with_preview(sculpt_position : vec3f, atlas_position : vec3f) -> S
     var material : SdfMaterial;
     material.albedo = preview_stroke.stroke.material.color.xyz;
     material.roughness = preview_stroke.stroke.material.roughness;
-    material.metalness = preview_stroke.stroke.material.metallic;
+    material.metallic = preview_stroke.stroke.material.metallic;
 
     var surface : Surface;
     surface.distance = sample_sdf_atlas(atlas_position);

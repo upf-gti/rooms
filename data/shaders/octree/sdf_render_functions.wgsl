@@ -50,7 +50,7 @@ fn apply_light(toEye : vec3f, position : vec3f, position_world : vec3f, normal_i
     // Material properties
 
     m.albedo = material.albedo;
-    m.metallic = material.metalness;
+    m.metallic = material.metallic;
     m.roughness = max(material.roughness, 0.04);
 
     m.c_diff = mix(m.albedo, vec3f(0.0), m.metallic);

@@ -14,7 +14,7 @@ fn compute()
     gpu_return_results.ray_sculpt_id = ray_intersection_info.sculpt_id;
     gpu_return_results.ray_t = ray_intersection_info.ray_t;
     gpu_return_results.ray_sculpt_instance_id = ray_intersection_info.instance_id;
-    gpu_return_results.ray_metalness = ray_intersection_info.ray_metalness;
+    gpu_return_results.ray_metallic = ray_intersection_info.ray_metallic;
     gpu_return_results.ray_roughness = ray_intersection_info.ray_roughness;
     gpu_return_results.ray_albedo_color = ray_intersection_info.ray_albedo_color;
 

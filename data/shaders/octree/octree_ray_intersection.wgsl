@@ -260,7 +260,7 @@ fn compute()
                             ray_intersection_info.ray_t = ray_t;
                             ray_intersection_info.ray_albedo_color = material.albedo;
                             ray_intersection_info.ray_roughness = material.roughness;
-                            ray_intersection_info.ray_metalness = material.metalness;
+                            ray_intersection_info.ray_metallic = material.metallic;
                         }
 
                         // ray_intersection_info.intersected = 1u;

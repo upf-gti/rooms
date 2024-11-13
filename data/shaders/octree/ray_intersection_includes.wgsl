@@ -14,7 +14,7 @@ struct RayIntersectionInfo
     ray_t               : f32,
     instance_id         : u32,
     pad0                : u32,
-    ray_metalness       : f32,
+    ray_metallic        : f32,
     ray_roughness       : f32,
     ray_albedo_color    : vec3f,
     pad1                : u32
