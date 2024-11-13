@@ -1,15 +1,15 @@
 #pragma once
 
 #include "framework/nodes/node_3d.h"
+
 #include "graphics/edit.h"
 #include "graphics/pipeline.h"
 
 #include <vector>
 
-//#define SHOW_SCULPT_AABB
-
 class Sculpt;
 class MeshInstance3D;
+class sGPU_RayIntersectionData;
 
 class SculptNode : public Node3D {
 
@@ -46,7 +46,7 @@ public:
 
     void clone(Node* new_node, bool copy = true) override;
     bool test_ray_collision(const glm::vec3& ray_origin, const glm::vec3& ray_direction, float& distance) override;
-    bool check_intersection(uint32_t sculpt_id, uint32_t instance_id);
+    bool check_intersection(sGPU_RayIntersectionData* data);
 
     inline void set_sculpt_data(Sculpt* new_data) { sculpt_gpu_data = new_data; }
     void set_out_of_focus(const bool oof);

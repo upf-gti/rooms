@@ -178,4 +178,5 @@ public:
     void set_inspector_dirty() { inspector_dirty = true; };
 
     Group3D* get_current_group() { return current_group; }
+    Node* get_selected_node() { return selected_node; }
 };

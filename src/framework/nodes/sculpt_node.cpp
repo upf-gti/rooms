@@ -2,18 +2,18 @@
 
 #include "framework/math/intersections.h"
 #include "framework/resources/sculpt.h"
+#include "framework/parsers/parse_scene.h"
 #include "framework/nodes/node_factory.h"
+#include "framework/nodes/mesh_instance_3d.h"
 
 #include "graphics/renderers/rooms_renderer.h"
+#include "graphics/renderer_storage.h"
 #include "graphics/managers/sculpt_manager.h"
 
 #include "tools/sculpt_editor.h"
 #include "tools/scene_editor.h"
 
-#include "framework/parsers/parse_scene.h"
-#include "graphics/renderer_storage.h"
 #include "shaders/AABB_shader.wgsl.gen.h"
-#include "framework/nodes/mesh_instance_3d.h"
 
 #include <engine/rooms_engine.h>
 
@@ -21,7 +21,7 @@
 
 REGISTER_NODE_CLASS(SculptNode)
 
-#define SHOW_SCULPT_AABB
+// #define SHOW_SCULPT_AABB
 
 SculptNode::SculptNode() : Node3D()
 {
@@ -65,9 +65,12 @@ void SculptNode::update(float delta_time)
     uint32_t flags = 0u;
     RoomsRenderer* renderer = static_cast<RoomsRenderer*>(Renderer::instance);
     RoomsEngine* engine = static_cast<RoomsEngine*>(Engine::instance);
-    const sGPU_RayIntersectionData& intersection_results = renderer->get_sculpt_manager()->read_results.loaded_results.ray_intersection;
+    auto scene_editor = engine->get_editor<SceneEditor*>(SCENE_EDITOR);
+    sGPU_RayIntersectionData& intersection_results = renderer->get_sculpt_manager()->read_results.loaded_results.ray_intersection;
+
     bool in_sculpt_editor = (engine->get_current_editor_type() == SCULPT_EDITOR);
-    bool editing_scene_group = (engine->get_current_editor_type() == SCENE_EDITOR) && (!!engine->get_editor<SceneEditor*>(SCENE_EDITOR)->get_current_group());
+    bool in_scene_editor = (engine->get_current_editor() == scene_editor);
+    bool editing_scene_group = in_scene_editor && (!!scene_editor->get_current_group());
 
     bool oof = false;
 
@@ -75,7 +78,7 @@ void SculptNode::update(float delta_time)
         oof |= (engine->get_editor<SculptEditor*>(SCULPT_EDITOR)->get_current_sculpt() != this);
     }
     else if (editing_scene_group) {
-        oof |= (!parent || parent != (Node*)engine->get_editor<SceneEditor*>(SCENE_EDITOR)->get_current_group());
+        oof |= (!parent || parent != (Node*)scene_editor->get_current_group());
     }
 
     if (oof) {
@@ -87,20 +90,25 @@ void SculptNode::update(float delta_time)
     * 2) In sculpt mode
     * 3) No intersection
     */
-    if (!oof && !in_sculpt_editor && intersection_results.has_intersected == 1u) {
+    if (!oof && !in_sculpt_editor) {
 
         // check its intersection and its sibling ones if not in group editor
-        bool hovered = check_intersection(intersection_results.sculpt_id, intersection_results.instance_id);
+        bool hovered = check_intersection(&intersection_results);
+        bool selected = (scene_editor->get_selected_node() == this);
 
         if (!editing_scene_group && parent) {
             for (auto child : parent->get_children()) {
                 SculptNode* sculpt_child = dynamic_cast<SculptNode*>(child);
-                hovered |= (sculpt_child && sculpt_child->check_intersection(intersection_results.sculpt_id, intersection_results.instance_id));
+                hovered |= (sculpt_child && sculpt_child->check_intersection(&intersection_results));
+                selected |= (scene_editor->get_selected_node() == sculpt_child);
             }
         }
 
         if (hovered) {
-            flags |= SCULPT_IS_POINTED;
+            flags |= SCULPT_IS_HOVERED;
+        }
+        else if (selected) {
+            flags |= SCULPT_IS_SELECTED;
         }
     }
     
@@ -199,9 +207,9 @@ void SculptNode::clone(Node* new_node, bool copy)
     }
 }
 
-bool SculptNode::check_intersection(uint32_t sculpt_id, uint32_t instance_id)
+bool SculptNode::check_intersection(sGPU_RayIntersectionData* data)
 {
-    return (sculpt_gpu_data->get_sculpt_id() == sculpt_id) && (in_frame_sculpt_render_list_id == instance_id);
+    return data->has_intersected == 1u && (sculpt_gpu_data->get_sculpt_id() == data->sculpt_id) && (in_frame_sculpt_render_list_id == data->instance_id);
 }
 
 bool SculptNode::test_ray_collision(const glm::vec3& ray_origin, const glm::vec3& ray_direction, float& distance)
@@ -213,9 +221,9 @@ bool SculptNode::test_ray_collision(const glm::vec3& ray_origin, const glm::vec3
     const bool intersecting = intersection::ray_AABB(ray_origin, ray_direction, center, aabb.half_size, distance);
 
     if (intersecting) {
-        sculpt_flags |= SCULPT_IS_POINTED;
+        sculpt_flags |= SCULPT_IS_HOVERED;
     } else {
-        sculpt_flags &= ~SCULPT_IS_POINTED;
+        sculpt_flags &= ~SCULPT_IS_HOVERED;
     }
 
     return intersecting;

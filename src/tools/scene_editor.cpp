@@ -93,7 +93,7 @@ void SceneEditor::initialize()
 
         SculptManager::sGPU_ReadResults* gpu_result = reinterpret_cast<SculptManager::sGPU_ReadResults*>(data);
         assert(gpu_result);
-        const sGPU_RayIntersectionData& intersection = gpu_result->loaded_results.ray_intersection;
+        sGPU_RayIntersectionData& intersection = gpu_result->loaded_results.ray_intersection;
 
         if (intersection.has_intersected == 0u) {
             return;
@@ -101,7 +101,7 @@ void SceneEditor::initialize()
 
         std::function<void(Node* node)> check_intersections = [&](Node* node) {
             SculptNode* sculpt_node = dynamic_cast<SculptNode*>(node);
-            if (sculpt_node && sculpt_node->check_intersection(intersection.sculpt_id, intersection.instance_id)) {
+            if (sculpt_node && sculpt_node->check_intersection(&intersection)) {
                 // hover the group
                 if (!current_group && sculpt_node->get_parent()) {
                     hovered_node = sculpt_node->get_parent();

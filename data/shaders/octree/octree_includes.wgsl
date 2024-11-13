@@ -283,8 +283,16 @@ struct SculptInstanceData {
 
 const SCULPT_INSTANCE_NOT_SELECTED = 0u;
 const SCULPT_INSTANCE_IS_OUT_OF_FOCUS = 1u;
-const SCULPT_INSTANCE_IS_POINTED = 2u;
+const SCULPT_INSTANCE_IS_HOVERED = 2u;
 const SCULPT_INSTANCE_IS_SELECTED = 4u;
+
+const COLOR_PRIMARY         = pow(vec3f(0.976, 0.976, 0.976), vec3f(2.2));
+const COLOR_SECONDARY       = pow(vec3f(0.967, 0.882, 0.863), vec3f(2.2));
+const COLOR_TERCIARY        = pow(vec3f(1.0, 0.404, 0.0), vec3f(2.2));
+const COLOR_HIGHLIGHT_LIGHT = pow(vec3f(0.467, 0.333, 0.933), vec3f(2.2));
+const COLOR_HIGHLIGHT       = pow(vec3f(0.26, 0.2, 0.533), vec3f(2.2));
+const COLOR_HIGHLIGHT_DARK  = pow(vec3f(0.082, 0.086, 0.196), vec3f(2.2));
+const COLOR_DARK            = pow(vec3f(0.172, 0.172, 0.172), vec3f(2.2));
 
 struct CullingStroke {
     stroke_idx : u32,

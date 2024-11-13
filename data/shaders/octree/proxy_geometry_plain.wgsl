@@ -311,18 +311,23 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
         let curr_sculpt_flags : u32 = sculpt_instance_data[model_index].flags;
 
         if ((curr_sculpt_flags & SCULPT_INSTANCE_IS_OUT_OF_FOCUS) == SCULPT_INSTANCE_IS_OUT_OF_FOCUS) {
-            let light_dir : vec3f = normalize(lightPos - world_space_position);
-            let n_dot_l : f32 = clamp(dot(light_dir, normal_world), 0.0, 1.0);
+            let v_dot_n : f32 = clamp(dot(-ray_dir_world, normal_world), 0.0, 1.0);
             let grey : f32 = 0.21 * material.albedo.r + 0.71 * material.albedo.g + 0.07 * material.albedo.b;
-            final_color = vec3f(n_dot_l * grey) * 0.25;
+            final_color = vec3f(v_dot_n * grey) * 0.25;
         } else {
             final_color = apply_light(-ray_dir_world, world_space_position, world_space_position, normal_world, lightPos + lightOffset, material);
 
-            if ((curr_sculpt_flags & SCULPT_INSTANCE_IS_POINTED) == SCULPT_INSTANCE_IS_POINTED) {
+            if ((curr_sculpt_flags & SCULPT_INSTANCE_IS_HOVERED) == SCULPT_INSTANCE_IS_HOVERED) {
                 let v_dot_n : f32 = clamp(dot(-ray_dir_world, normal_world), 0.0, 1.0);
                 var fresnel : f32 = pow(1.0 - v_dot_n, 3.0) + 0.5;
                 fresnel = smoothstep(0.5, 1.0, fresnel);
-                let hightlight_color : vec3f = mix(pow(vec3f(0.467, 0.333, 0.933), vec3f(2.2)), pow(vec3f(1.0, 0.404, 0.0), vec3f(2.2)), (-normal.y)*0.5+0.5);
+                let hightlight_color : vec3f = mix(COLOR_PRIMARY, COLOR_SECONDARY, normal.y*0.5+0.5);
+                final_color = mix(final_color, hightlight_color, fresnel);
+            } else if ((curr_sculpt_flags & SCULPT_INSTANCE_IS_SELECTED) == SCULPT_INSTANCE_IS_SELECTED) {
+                let v_dot_n : f32 = clamp(dot(-ray_dir_world, normal_world), 0.0, 1.0);
+                var fresnel : f32 = pow(1.0 - v_dot_n, 3.0) + 0.5;
+                fresnel = smoothstep(0.5, 1.0, fresnel);
+                let hightlight_color : vec3f = mix(COLOR_TERCIARY, COLOR_HIGHLIGHT_LIGHT, 0.5);
                 final_color = mix(final_color, hightlight_color, fresnel);
             }
         }

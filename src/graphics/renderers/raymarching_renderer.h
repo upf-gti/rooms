@@ -26,7 +26,7 @@ class MeshInstance3D;
 enum eSculptInstanceFlags : uint32_t {
     SCULPT_NOT_SELECTED = 0u,
     SCULPT_IS_OUT_OF_FOCUS = 0b1u,
-    SCULPT_IS_POINTED = 0b10u,
+    SCULPT_IS_HOVERED = 0b10u,
     SCULPT_IS_SELECTED = 0b100u
 };
 
