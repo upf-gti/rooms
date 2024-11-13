@@ -96,7 +96,7 @@ void AnimationEditor::initialize()
 
 void AnimationEditor::clean()
 {
-    BaseEditor::clean();
+    Stage::clean();
 
     delete keyframe_markers_render_instance;
     delete animation_trajectory_instance;
@@ -189,7 +189,7 @@ void AnimationEditor::update(float delta_time)
 {
     player->update(delta_time);
 
-    BaseEditor::update(delta_time);
+    Stage::update(delta_time);
 
     update_gizmo(delta_time);
 
@@ -236,7 +236,7 @@ void AnimationEditor::update(float delta_time)
                 create_keyframe();
             }
             else if (Input::was_button_pressed(XR_BUTTON_B)) {
-                RoomsEngine::switch_editor(SCENE_EDITOR);
+                RoomsEngine::switch_stage(SCENE_EDITOR);
             }
         }
         // Creating keyframe
@@ -258,7 +258,7 @@ void AnimationEditor::render()
 {
     RoomsEngine::render_controllers();
 
-    BaseEditor::render();
+    Stage::render();
 
     inspector->render();
 
@@ -298,7 +298,7 @@ void AnimationEditor::update_gizmo(float delta_time)
     Transform t = current_node->get_transform();
     Transform parent_transform;
 
-    auto scene_editor = static_cast<RoomsEngine*>(Engine::instance)->get_editor<SceneEditor*>(SCENE_EDITOR);
+    auto scene_editor = static_cast<RoomsEngine*>(Engine::instance)->get_stage<SceneEditor*>(SCENE_EDITOR);
     Group3D* current_group = scene_editor->get_current_group();
 
     if (current_group) {
@@ -325,7 +325,7 @@ void AnimationEditor::render_gizmo()
     Transform t = current_node->get_transform();
     Transform parent_transform;
 
-    auto scene_editor = static_cast<RoomsEngine*>(Engine::instance)->get_editor<SceneEditor*>(SCENE_EDITOR);
+    auto scene_editor = static_cast<RoomsEngine*>(Engine::instance)->get_stage<SceneEditor*>(SCENE_EDITOR);
     Group3D* current_group = scene_editor->get_current_group();
 
     if (current_group) {
@@ -885,7 +885,7 @@ void AnimationEditor::generate_shortcuts()
         shortcuts[shortcuts::PLAY_ANIMATION] = true;
     }
 
-    BaseEditor::update_shortcuts(shortcuts);
+    Stage::update_shortcuts(shortcuts);
 }
 
 void AnimationEditor::update_panel_transform()

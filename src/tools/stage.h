@@ -104,7 +104,7 @@ enum InspectNodeFlags {
     NODE_GROUP = NODE_STANDARD | NODE_EDIT | NODE_CHILDREN
 };
 
-class BaseEditor {
+class Stage {
 
     std::string name;
 
@@ -145,8 +145,8 @@ protected:
 
 public:
 
-    BaseEditor() {};
-    BaseEditor(const std::string& name) : name(name) {};
+    Stage() {};
+    Stage(const std::string& name) : name(name) {};
 
     virtual void initialize() {};
     virtual void clean();

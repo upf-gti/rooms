@@ -9,15 +9,16 @@ class Node;
 class Node3D;
 class SculptNode;
 class Environment3D;
-class BaseEditor;
+class Stage;
 
-enum EditorType : uint8_t {
+enum StageType : uint8_t {
     SCENE_EDITOR,
     SCULPT_EDITOR,
     ANIMATION_EDITOR,
-    TUTORIAL_EDITOR,
-    PLAYER_EDITOR,
-    EDITOR_COUNT
+    TUTORIAL_STAGE,
+    PLAYER_STAGE,
+    MENU_STAGE,
+    STAGE_COUNT
 };
 
 class RoomsEngine : public Engine
@@ -25,15 +26,15 @@ class RoomsEngine : public Engine
     static bool use_environment_map;
     static bool use_grid;
 
-    // Editors
+    // Stages
 
     bool skip_tutorial = false;
 
-    EditorType current_editor_type;
+    StageType current_stage_type;
 
-    std::vector<BaseEditor*> editors;
+    std::vector<Stage*> stages;
 
-    BaseEditor* current_editor = nullptr;
+    Stage* current_stage = nullptr;
 
     void render_gui();
 
@@ -65,16 +66,16 @@ public:
 
     static void render_controllers();
 
-    static void switch_editor(uint8_t editor_idx, void* data = nullptr);
+    static void switch_stage(uint8_t stage_idx, void* data = nullptr);
     static void toggle_use_grid();
     static void toggle_use_environment_map();
 
     void set_current_sculpt(SculptNode* sculpt_instance);
 
     inline Gizmo3D* get_gizmo() { return &gizmo; }
-    inline BaseEditor* get_current_editor() const { return current_editor; }
-    inline EditorType get_current_editor_type() const { return current_editor_type; }
+    inline Stage* get_current_stage() const { return current_stage; }
+    inline StageType get_current_stage_type() const { return current_stage_type; }
 
-    template <typename T = BaseEditor*>
-    inline T get_editor(uint8_t editor_idx) const { return static_cast<T>(editors[editor_idx]); }
+    template <typename T = Stage*>
+    inline T get_stage(uint8_t stage_idx) const { return static_cast<T>(stages[stage_idx]); }
 };

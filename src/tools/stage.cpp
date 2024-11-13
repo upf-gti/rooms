@@ -1,4 +1,4 @@
-#include "base_editor.h"
+#include "stage.h"
 
 #include "engine/rooms_engine.h"
 
@@ -9,12 +9,12 @@
 
 #include "graphics/renderers/rooms_renderer.h"
 
-void BaseEditor::clean()
+void Stage::clean()
 {
 
 }
 
-void BaseEditor::update(float delta_time)
+void Stage::update(float delta_time)
 {
     if (renderer->get_openxr_available()) {
 
@@ -80,7 +80,7 @@ void BaseEditor::update(float delta_time)
     main_panel->update(delta_time);
 }
 
-void BaseEditor::render()
+void Stage::render()
 {
     // Shortcuts panels
     if (renderer->get_openxr_available()) {
@@ -91,7 +91,7 @@ void BaseEditor::render()
     main_panel->render();
 }
 
-void BaseEditor::update_shortcuts(const std::unordered_map<uint8_t, bool>& active_shortcuts)
+void Stage::update_shortcuts(const std::unordered_map<uint8_t, bool>& active_shortcuts)
 {
     assert(renderer->get_openxr_available() && "Updating shortcuts in non-XR mode!");
 
@@ -127,7 +127,7 @@ void BaseEditor::update_shortcuts(const std::unordered_map<uint8_t, bool>& activ
     }
 }
 
-bool BaseEditor::is_something_hovered()
+bool Stage::is_something_hovered()
 {
     if (!IO::any_hover()) {
         return false;
@@ -138,7 +138,7 @@ bool BaseEditor::is_something_hovered()
     return !xr_panel || (xr_panel && xr_panel->get_is_button());
 }
 
-bool BaseEditor::is_something_focused()
+bool Stage::is_something_focused()
 {
     if (!IO::any_focus()) {
         return false;

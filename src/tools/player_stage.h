@@ -1,17 +1,17 @@
 #pragma once
 
-#include "base_editor.h"
+#include "stage.h"
 
 class Room;
 
-class PlayerEditor : public BaseEditor {
+class PlayerStage : public Stage {
 
     Room* current_room = nullptr;
 
 public:
 
-    PlayerEditor() {};
-    PlayerEditor(const std::string& name) : BaseEditor(name) {};
+    PlayerStage() {};
+    PlayerStage(const std::string& name) : Stage(name) {};
 
     void initialize() override;
     void clean() override;

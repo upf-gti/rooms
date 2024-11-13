@@ -22,8 +22,9 @@
 #include "tools/sculpt_editor.h"
 #include "tools/scene_editor.h"
 #include "tools/animation_editor.h"
-#include "tools/player_editor.h"
-#include "tools/tutorial_editor.h"
+#include "tools/player_stage.h"
+#include "tools/menu_stage.h"
+#include "tools/tutorial_stage.h"
 #include "framework/nodes/sculpt_node.h"
 
 #include "spdlog/spdlog.h"
@@ -84,25 +85,26 @@ int RoomsEngine::post_initialize()
 
     // Instantiate and initialize editors
     {
-        editors.resize(EDITOR_COUNT);
+        stages.resize(STAGE_COUNT);
 
-        editors[SCENE_EDITOR] = new SceneEditor("Scene Editor");
-        editors[SCULPT_EDITOR] = new SculptEditor("Sculpt Editor");
-        editors[ANIMATION_EDITOR] = new AnimationEditor("Animation Editor");
-        editors[TUTORIAL_EDITOR] = new TutorialEditor("Tutorial Editor");
-        editors[PLAYER_EDITOR] = new PlayerEditor("Player Editor");
+        stages[SCENE_EDITOR] = new SceneEditor("Scene Editor");
+        stages[SCULPT_EDITOR] = new SculptEditor("Sculpt Editor");
+        stages[ANIMATION_EDITOR] = new AnimationEditor("Animation Editor");
+        stages[TUTORIAL_STAGE] = new TutorialStage("Tutorial Stage");
+        stages[PLAYER_STAGE] = new PlayerStage("Player Stage");
+        stages[MENU_STAGE] = new MenuStage("Menu Stage");
     }
 
-    for (auto editor : editors) {
+    for (auto editor : stages) {
         editor->initialize();
     }
 
     if (1 || skip_tutorial) {
-        get_editor<TutorialEditor*>(TUTORIAL_EDITOR)->end();
+        get_stage<TutorialStage*>(TUTORIAL_STAGE)->end();
     }
 
     // Set default editor..
-    switch_editor(SCENE_EDITOR);
+    switch_stage(MENU_STAGE);
 
     // Grid
     {
@@ -145,7 +147,7 @@ void RoomsEngine::clean()
 {
     Engine::clean();
 
-    for (auto editor : editors) {
+    for (auto editor : stages) {
         editor->clean();
     }
 
@@ -156,8 +158,8 @@ void RoomsEngine::set_main_scene(const std::string& scene_path)
 {
     Engine::set_main_scene(scene_path);
 
-    get_editor<SculptEditor*>(SCULPT_EDITOR)->set_current_sculpt(nullptr);
-    get_editor<SceneEditor*>(SCENE_EDITOR)->set_main_scene(main_scene);
+    get_stage<SculptEditor*>(SCULPT_EDITOR)->set_current_sculpt(nullptr);
+    get_stage<SceneEditor*>(SCENE_EDITOR)->set_main_scene(main_scene);
 }
 
 void RoomsEngine::add_to_main_scene(const std::string& scene_path)
@@ -174,27 +176,29 @@ void RoomsEngine::update(float delta_time)
 
     ui::Keyboard::update(delta_time);
 
-    // NOTE: main update was before env_map update, test if this here breacks anything
-    main_scene->update(delta_time);
+    if (current_stage_type != MENU_STAGE) {
+        // NOTE: main update was before env_map update, test if this here breacks anything
+        main_scene->update(delta_time);
+    }
 
-    if (current_editor) {
-
-        current_editor->update(delta_time);
-
-        get_editor<TutorialEditor*>(TUTORIAL_EDITOR)->update(delta_time);
+    if (current_stage) {
+        current_stage->update(delta_time);
+        get_stage(TUTORIAL_STAGE)->update(delta_time);
     }
 
     cursor.update(delta_time);
 
     Node::check_controller_signals();
 
-    if (use_environment_map) {
-        environment->update(delta_time);
-    }
+    if (current_stage_type != MENU_STAGE) {
+        if (use_environment_map) {
+            environment->update(delta_time);
+        }
 
-    if (is_xr) {
-        controller_mesh_right->set_transform(Transform::mat4_to_transform(Input::get_controller_pose(HAND_RIGHT)));
-        controller_mesh_left->set_transform(Transform::mat4_to_transform(Input::get_controller_pose(HAND_LEFT)));
+        if (is_xr) {
+            controller_mesh_right->set_transform(Transform::mat4_to_transform(Input::get_controller_pose(HAND_RIGHT)));
+            controller_mesh_left->set_transform(Transform::mat4_to_transform(Input::get_controller_pose(HAND_LEFT)));
+        }
     }
 
     Engine::update(delta_time);
@@ -206,37 +210,42 @@ void RoomsEngine::render()
         render_gui();
     }
 
-    cursor.render();
-
     ui::Keyboard::render();
 
-    if (use_environment_map) {
-        environment->render();
+    cursor.render();
+
+    bool playing_scene = (current_stage_type == PLAYER_STAGE);
+
+    if (current_stage_type != MENU_STAGE) {
+
+        if (use_grid && !playing_scene) {
+            grid->render();
+        }
+
+        main_scene->render();
     }
 
-    bool playing_scene = dynamic_cast<PlayerEditor*>(current_editor);
-
-    if (use_grid && !playing_scene) {
-        grid->render();
+    if (current_stage) {
+        current_stage->render();
+        get_stage(TUTORIAL_STAGE)->render();
     }
 
-    main_scene->render();
+    if (current_stage_type != MENU_STAGE) {
+        if (use_environment_map) {
+            environment->render();
+        }
 
-    if (current_editor) {
-        current_editor->render();
-        get_editor<TutorialEditor*>(TUTORIAL_EDITOR)->render();
-    }
+        if (Renderer::instance->get_openxr_available() && !playing_scene) {
+            const glm::mat4x4& raycast_transform = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
+            ray_pointer->set_transform(Transform::mat4_to_transform(raycast_transform));
+            float xr_ray_distance = IO::get_xr_ray_distance();
+            ray_pointer->scale(glm::vec3(1.0f, 1.0f, xr_ray_distance < 0.0f ? 0.5f : xr_ray_distance));
+            ray_pointer->render();
 
-    if (Renderer::instance->get_openxr_available() && !playing_scene) {
-        const glm::mat4x4& raycast_transform = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
-        ray_pointer->set_transform(Transform::mat4_to_transform(raycast_transform));
-        float xr_ray_distance = IO::get_xr_ray_distance();
-        ray_pointer->scale(glm::vec3(1.0f, 1.0f, xr_ray_distance < 0.0f ? 0.5f : xr_ray_distance));
-        ray_pointer->render();
-
-        sphere_pointer->set_transform(Transform::mat4_to_transform(raycast_transform));
-        sphere_pointer->scale(glm::vec3(0.1f));
-        sphere_pointer->render();
+            sphere_pointer->set_transform(Transform::mat4_to_transform(raycast_transform));
+            sphere_pointer->scale(glm::vec3(0.1f));
+            sphere_pointer->render();
+        }
     }
 
     Engine::render();
@@ -253,22 +262,22 @@ void RoomsEngine::render_controllers()
     i->controller_mesh_left->render();
 }
 
-void RoomsEngine::switch_editor(uint8_t editor_idx, void* data)
+void RoomsEngine::switch_stage(uint8_t editor_idx, void* data)
 {
-    if (editor_idx >= EDITOR_COUNT) {
-        assert(0 && "Editor is not created!");
+    if (editor_idx >= STAGE_COUNT) {
+        assert(0 && "Stage is not created!");
         return;
     }
 
     RoomsEngine* i = static_cast<RoomsEngine*>(instance);
 
-    if (i->current_editor) {
-        i->current_editor->on_exit();
+    if (i->current_stage) {
+        i->current_stage->on_exit();
     }
 
-    i->current_editor = i->get_editor(editor_idx);
-    i->current_editor_type = static_cast<EditorType>(editor_idx);
-    i->current_editor->on_enter(data);
+    i->current_stage = i->get_stage(editor_idx);
+    i->current_stage_type = static_cast<StageType>(editor_idx);
+    i->current_stage->on_enter(data);
 }
 
 void RoomsEngine::toggle_use_grid()
@@ -283,7 +292,7 @@ void RoomsEngine::toggle_use_environment_map()
 
 void RoomsEngine::set_current_sculpt(SculptNode* sculpt_instance)
 {
-    get_editor<SculptEditor*>(SCULPT_EDITOR)->set_current_sculpt(sculpt_instance);
+    get_stage<SculptEditor*>(SCULPT_EDITOR)->set_current_sculpt(sculpt_instance);
 }
 
 void RoomsEngine::render_gui()
@@ -339,9 +348,9 @@ void RoomsEngine::render_gui()
     ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
     if (ImGui::BeginTabBar("TabBar", tab_bar_flags))
     {
-        if (current_editor && ImGui::BeginTabItem(current_editor->get_name().c_str()))
+        if (current_stage && ImGui::BeginTabItem(current_stage->get_name().c_str()))
         {
-            current_editor->render_gui();
+            current_stage->render_gui();
             ImGui::EndTabItem();
         }
         if (ImGui::BeginTabItem("Rooms Debugger"))

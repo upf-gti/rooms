@@ -1,6 +1,6 @@
 #pragma once
 
-#include "base_editor.h"
+#include "stage.h"
 
 #include "framework/animation/track.h"
 
@@ -41,7 +41,7 @@ struct sAnimationData {
     std::vector<sAnimationState> states;
 };
 
-class AnimationEditor : public BaseEditor {
+class AnimationEditor : public Stage {
 
     Node3D* current_node = nullptr;
     Animation* current_animation = nullptr;
@@ -117,7 +117,7 @@ class AnimationEditor : public BaseEditor {
 public:
 
     AnimationEditor() {};
-    AnimationEditor(const std::string& name) : BaseEditor(name) {};
+    AnimationEditor(const std::string& name) : Stage(name) {};
 
     void initialize() override;
     void clean() override;

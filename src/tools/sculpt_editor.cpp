@@ -148,9 +148,9 @@ void SculptEditor::initialize()
 
     Node::bind("@on_gpu_results", [&](const std::string& sg, void* data) {
 
-        // Do nothing if it's not the current editor..
+        // Do nothing if it's not the current stage..
         auto engine = static_cast<RoomsEngine*>(RoomsEngine::instance);
-        if (engine->get_current_editor() != this) {
+        if (engine->get_current_stage() != this) {
             return;
         }
 
@@ -218,7 +218,7 @@ void SculptEditor::clean()
     if(mesh_preview) delete mesh_preview;
     if(mesh_preview_outline) delete mesh_preview_outline;
 
-    BaseEditor::clean();
+    Stage::clean();
 }
 
 bool SculptEditor::is_tool_being_used(bool stamp_enabled)
@@ -530,7 +530,7 @@ void SculptEditor::update(float delta_time)
         return;
     }
 
-    BaseEditor::update(delta_time);
+    Stage::update(delta_time);
 
     // Update controller UI
     if (renderer->get_openxr_available()) {
@@ -552,7 +552,7 @@ void SculptEditor::update(float delta_time)
                 enable_tool(current_tool == PAINT ? SCULPT : PAINT);
             }
             else {
-                RoomsEngine::switch_editor(SCENE_EDITOR);
+                RoomsEngine::switch_stage(SCENE_EDITOR);
             }
         }
 
@@ -979,7 +979,7 @@ void SculptEditor::render()
         mirror_mesh->render();
     }
 
-    BaseEditor::render();
+    Stage::render();
 
     RoomsEngine::render_controllers();
 
@@ -1251,7 +1251,7 @@ void SculptEditor::generate_shortcuts()
         shortcuts[shortcuts::BACK_TO_SCENE] = !is_shift_right_pressed;
     }
 
-    BaseEditor::update_shortcuts(shortcuts);
+    Stage::update_shortcuts(shortcuts);
 }
 
 void SculptEditor::init_ui()
@@ -1529,10 +1529,7 @@ void SculptEditor::init_ui()
 
 void SculptEditor::bind_events()
 {
-    Node::bind("go_back", [&](const std::string& signal, void* button) {
-        //static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(nullptr);
-        RoomsEngine::switch_editor(SCENE_EDITOR);
-    });
+    Node::bind("go_back", [&](const std::string& signal, void* button) { RoomsEngine::switch_stage(SCENE_EDITOR); });
 
     Node::bind("add", [&](const std::string& signal, void* button) {
         enable_tool(SCULPT);

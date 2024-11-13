@@ -1,4 +1,4 @@
-#include "tutorial_editor.h"
+#include "tutorial_stage.h"
 
 #include "framework/nodes/panel_2d.h"
 #include "framework/nodes/viewport_3d.h"
@@ -12,7 +12,7 @@
 
 #include "glm/gtx/quaternion.hpp"
 
-void TutorialEditor::initialize()
+void TutorialStage::initialize()
 {
     renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
 
@@ -49,7 +49,7 @@ void TutorialEditor::initialize()
             next_panel();
 
             Node::emit_signal("@on_tutorial_step", (int)TUTORIAL_ADD_NODE);
-        });
+            });
 
         Node::bind("@on_sculpt_added", [&](const std::string& signal, void* data) {
 
@@ -58,7 +58,7 @@ void TutorialEditor::initialize()
             }
 
             next_panel();
-        });
+            });
 
         Node::bind("@on_sculpt_edited", [&](const std::string& signal, void* data) {
 
@@ -67,16 +67,16 @@ void TutorialEditor::initialize()
             }
 
             next_panel();
-        });
+            });
     }
 }
 
-void TutorialEditor::clean()
+void TutorialStage::clean()
 {
-    BaseEditor::clean();
+    Stage::clean();
 }
 
-void TutorialEditor::update(float delta_time)
+void TutorialStage::update(float delta_time)
 {
     if (Input::was_button_pressed(XR_BUTTON_MENU) || Input::was_key_pressed(GLFW_KEY_T)) {
         active = false;
@@ -97,7 +97,7 @@ void TutorialEditor::update(float delta_time)
         grabbing = false;
     }
 
-    if(renderer->get_openxr_available()) {
+    if (renderer->get_openxr_available()) {
 
         if (!placed) {
             glm::mat4x4 m(1.0f);
@@ -114,7 +114,7 @@ void TutorialEditor::update(float delta_time)
 
             Transform raycast_transform = Transform::mat4_to_transform(Input::get_controller_pose(HAND_RIGHT, POSE_AIM));
             const glm::vec3& forward = raycast_transform.get_front();
-            
+
             glm::mat4x4 m(1.0f);
             glm::vec3 eye = raycast_transform.get_position();
             glm::vec3 delta_grab = (eye - last_grab_position) * 2.0f;
@@ -136,7 +136,7 @@ void TutorialEditor::update(float delta_time)
     panel->update(delta_time);
 }
 
-void TutorialEditor::render()
+void TutorialStage::render()
 {
     if (!active) {
         return;
@@ -145,14 +145,14 @@ void TutorialEditor::render()
     panel->render();
 }
 
-void TutorialEditor::end()
+void TutorialStage::end()
 {
     active = false;
 
     Node::emit_signal("@on_tutorial_ended", (void*)nullptr);
 }
 
-void TutorialEditor::next_panel()
+void TutorialStage::next_panel()
 {
     current_panel_idx++;
     current_panel->set_visibility(false);
@@ -161,7 +161,7 @@ void TutorialEditor::next_panel()
     current_panel = panels[current_panel_idx];
 }
 
-ui::XRPanel* TutorialEditor::generate_panel(const std::string& name, const std::string& path, uint8_t prev, uint8_t next)
+ui::XRPanel* TutorialStage::generate_panel(const std::string& name, const std::string& path, uint8_t prev, uint8_t next)
 {
     auto webgpu_context = Renderer::instance->get_webgpu_context();
     glm::vec2 size = glm::vec2(static_cast<float>(webgpu_context->render_width), static_cast<float>(webgpu_context->render_height)) * 0.5f;

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tools/base_editor.h"
+#include "tools/stage.h"
 
 #include "graphics/edit.h"
 
@@ -29,7 +29,7 @@ struct PrimitiveState {
     // modifiers?
 };
 
-class SculptEditor : public BaseEditor {
+class SculptEditor : public Stage {
 
     MeshInstance3D* sculpt_area_box = nullptr;
 
@@ -191,7 +191,7 @@ class SculptEditor : public BaseEditor {
 public:
 
     SculptEditor() {};
-    SculptEditor(const std::string& name) : BaseEditor(name) {};
+    SculptEditor(const std::string& name) : Stage(name) {};
 
     void initialize() override;
     void clean() override;

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "base_editor.h"
+#include "stage.h"
 
 class RoomsRenderer;
 
@@ -8,7 +8,7 @@ namespace ui {
     class XRPanel;
 };
 
-class TutorialEditor : public BaseEditor {
+class TutorialStage : public Stage {
 protected:
 
     RoomsRenderer* renderer = nullptr;
@@ -31,8 +31,8 @@ protected:
 
 public:
 
-    TutorialEditor() {};
-    TutorialEditor(const std::string& name) : BaseEditor(name) {};
+    TutorialStage() {};
+    TutorialStage(const std::string& name) : Stage(name) {};
 
     void initialize() override;
     void clean() override;

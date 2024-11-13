@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tools/base_editor.h"
+#include "tools/stage.h"
 
 #include "framework/math/transform.h"
 #include "framework/colors.h"
@@ -36,7 +36,7 @@ struct sActionData {
     ActionDataParameter param_2;
 };
 
-class SceneEditor : public BaseEditor {
+class SceneEditor : public Stage {
 
     Scene* main_scene = nullptr;
     Room* current_room = nullptr;
@@ -163,7 +163,7 @@ class SceneEditor : public BaseEditor {
 public:
 
     SceneEditor() {};
-    SceneEditor(const std::string& name) : BaseEditor(name) {};
+    SceneEditor(const std::string& name) : Stage(name) {};
 
     void initialize() override;
     void clean() override;

@@ -1,37 +1,37 @@
-#include "player_editor.h"
+#include "player_stage.h"
 
 #include "engine/rooms_engine.h"
 
 #include "framework/input.h"
 #include "framework/resources/room.h"
 
-void PlayerEditor::initialize()
-{
-    
-}
-
-void PlayerEditor::clean()
+void PlayerStage::initialize()
 {
 
 }
 
-void PlayerEditor::on_enter(void* data)
+void PlayerStage::clean()
+{
+
+}
+
+void PlayerStage::on_enter(void* data)
 {
     current_room = reinterpret_cast<Room*>(data);
 }
 
-void PlayerEditor::on_exit()
+void PlayerStage::on_exit()
 {
     if (current_room) {
         current_room->stop();
     }
 }
 
-void PlayerEditor::update(float delta_time)
+void PlayerStage::update(float delta_time)
 {
     // debug, exit player..
     if (Input::was_key_pressed(GLFW_KEY_ESCAPE) || Input::was_button_pressed(XR_BUTTON_Y)) {
-        RoomsEngine::switch_editor(SCENE_EDITOR);
+        RoomsEngine::switch_stage(SCENE_EDITOR);
     }
 
     if (!current_room) {
@@ -41,7 +41,7 @@ void PlayerEditor::update(float delta_time)
     current_room->update(delta_time);
 }
 
-void PlayerEditor::render()
+void PlayerStage::render()
 {
     if (!current_room) {
         return;

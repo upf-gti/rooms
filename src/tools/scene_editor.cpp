@@ -79,9 +79,9 @@ void SceneEditor::initialize()
 
     Node::bind("@on_gpu_results", [&](const std::string& sg, void* data) {
 
-        // Do nothing if it's not the current editor..
+        // Do nothing if it's not the current stage..
         auto engine = static_cast<RoomsEngine*>(RoomsEngine::instance);
-        if (engine->get_current_editor() != this) {
+        if (engine->get_current_stage() != this) {
             return;
         }
 
@@ -126,7 +126,7 @@ void SceneEditor::initialize()
 
 void SceneEditor::clean()
 {
-    BaseEditor::clean();
+    Stage::clean();
 
     // Clean nodes deleted still stored for undo/redo
     for (const auto& node_data : deleted_nodes) {
@@ -138,7 +138,7 @@ void SceneEditor::clean()
 
 void SceneEditor::update(float delta_time)
 {
-    BaseEditor::update(delta_time);
+    Stage::update(delta_time);
 
     // Update input actions
     {
@@ -222,7 +222,7 @@ void SceneEditor::update(float delta_time)
     }
 
     if (renderer->get_openxr_available()) {
-        BaseEditor::update_shortcuts(shortcuts);
+        Stage::update_shortcuts(shortcuts);
     }
 
     inspector->update(delta_time);
@@ -234,7 +234,7 @@ void SceneEditor::render()
 
     render_gizmo();
 
-    BaseEditor::render();
+    Stage::render();
 
     inspector->render();
 }
@@ -351,7 +351,7 @@ void SceneEditor::process_node_hovered()
         }
         else if (b_pressed) {
             selected_node = hovered_node;
-            RoomsEngine::switch_editor(ANIMATION_EDITOR, hovered_node);
+            RoomsEngine::switch_stage(ANIMATION_EDITOR, hovered_node);
         }
         else if (select_action_pressed) {
             if (current_group) {
@@ -370,7 +370,7 @@ void SceneEditor::process_node_hovered()
         }
         else if (b_pressed && sculpt_hovered) {
             select_node(hovered_node, false);
-            RoomsEngine::switch_editor(SCULPT_EDITOR, static_cast<SculptNode*>(hovered_node));
+            RoomsEngine::switch_stage(SCULPT_EDITOR, static_cast<SculptNode*>(hovered_node));
         }
         else if (select_action_pressed) {
             select_node(hovered_node, false);
@@ -380,7 +380,7 @@ void SceneEditor::process_node_hovered()
 
 void SceneEditor::enter_room()
 {
-    RoomsEngine::switch_editor(PLAYER_EDITOR, current_room);
+    RoomsEngine::switch_stage(PLAYER_STAGE, current_room);
 }
 
 void SceneEditor::init_ui()
@@ -693,7 +693,7 @@ void SceneEditor::deselect()
 {
     // hack by now: Do nothing if it's not the current editor..
     auto engine = static_cast<RoomsEngine*>(RoomsEngine::instance);
-    if (engine->get_current_editor() != this) {
+    if (engine->get_current_stage() != this) {
         return;
     }
 
@@ -1184,7 +1184,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
             // Set as current sculpt and go to sculpt editor
             if (dynamic_cast<SculptNode*>(n)) {
                 Node::emit_signal("@on_sculpt_edited", (void*)nullptr);
-                RoomsEngine::switch_editor(SCULPT_EDITOR, static_cast<SculptNode*>(n));
+                RoomsEngine::switch_stage(SCULPT_EDITOR, static_cast<SculptNode*>(n));
             }
             else if (dynamic_cast<Group3D*>(n)) {
                 edit_group(static_cast<Group3D*>(n));
@@ -1203,7 +1203,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
             // TODO CHECK: This corrupts the pointer to the node "n"
             // select_node(n, false);
 
-            RoomsEngine::switch_editor(ANIMATION_EDITOR, n);
+            RoomsEngine::switch_stage(ANIMATION_EDITOR, n);
         });
     }
 
