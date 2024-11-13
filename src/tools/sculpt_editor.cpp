@@ -1337,8 +1337,10 @@ void SculptEditor::init_ui()
             }*/
 
             // Put directly these two props until there are more pbr props to show
-            material_editor_submenu->add_child(new ui::FloatSlider2D("roughness", "data/textures/roughness.png", stroke_material.roughness));
-            material_editor_submenu->add_child(new ui::FloatSlider2D("metallic", "data/textures/metallic.png", stroke_material.metallic));
+            ui::ItemGroup2D* g_edit_pbr = new ui::ItemGroup2D("g_edit_pbr");
+            g_edit_pbr->add_child(new ui::FloatSlider2D("roughness", "data/textures/roughness.png", stroke_material.roughness));
+            g_edit_pbr->add_child(new ui::FloatSlider2D("metallic", "data/textures/metallic.png", stroke_material.metallic));
+            material_editor_submenu->add_child(g_edit_pbr);
 
             // Shuffle
             {
