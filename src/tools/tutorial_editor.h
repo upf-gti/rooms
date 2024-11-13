@@ -17,6 +17,8 @@ protected:
     bool placed         = false;
     bool grabbing       = false;
 
+    glm::vec3 last_grab_position;
+
     // Tutorial
     Node2D* panel = nullptr;
     ui::XRPanel* current_panel = nullptr;

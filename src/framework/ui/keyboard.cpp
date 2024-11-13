@@ -172,18 +172,18 @@ namespace ui {
 
         keyboard_2d = new Node2D(name, { 0.0f, 0.0f }, { 1.0f, 1.0f }, ui::CREATE_3D);
 
-        root_common = new ui::XRPanel(name + "_common", panel_color, { 0.0f, 0.f }, keyboard_size);
+        root_common = new ui::XRPanel(name + "_common", { 0.0f, 0.f }, keyboard_size, 0u, panel_color);
         root_common->render_background = false;
         keyboard_2d->add_child(root_common);
 
-        root_lc = new ui::XRPanel(name + "_letters", panel_color, { 0.0f, 0.f }, keyboard_size);
+        root_lc = new ui::XRPanel(name + "_letters", { 0.0f, 0.f }, keyboard_size, 0u, panel_color);
         keyboard_2d->add_child(root_lc);
 
-        root_uc = new ui::XRPanel(name + "_uppercase", panel_color, { 0.0f, 0.f }, keyboard_size);
+        root_uc = new ui::XRPanel(name + "_uppercase", { 0.0f, 0.f }, keyboard_size, 0u, panel_color);
         root_uc->set_visibility(false);
         keyboard_2d->add_child(root_uc);
 
-        root_sym = new ui::XRPanel(name + "_symbols", panel_color, { 0.0f, 0.f }, keyboard_size);
+        root_sym = new ui::XRPanel(name + "_symbols", { 0.0f, 0.f }, keyboard_size, 0u, panel_color);
         root_sym->set_visibility(false);
         keyboard_2d->add_child(root_sym);
 

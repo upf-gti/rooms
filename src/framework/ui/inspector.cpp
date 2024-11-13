@@ -5,6 +5,7 @@
 #include "framework/nodes/slider_2d.h"
 #include "framework/nodes/container_2d.h"
 #include "framework/nodes/button_2d.h"
+#include "framework/nodes/viewport_3d.h"
 
 #include "graphics/renderer.h"
 
@@ -25,7 +26,7 @@ namespace ui {
         on_close = desc.close_fn;
         on_back = desc.back_fn;
 
-        root = new ui::XRPanel(name + "_background", panel_color, { 0.0f, 0.f }, panel_size);
+        root = new ui::XRPanel(name + "_background", { 0.0f, 0.f }, panel_size, 0u, panel_color);
         add_child(root);
 
         ui::VContainer2D* column = new ui::VContainer2D(name + "_column", glm::vec2(padding));
@@ -76,7 +77,7 @@ namespace ui {
             }
 
             // Scroll to max_scroll
-            last_grab_position = { 0.0f, 0.0f };
+            last_scroll_position = { 0.0f, 0.0f };
             scroll_top = -glm::max(body_height - body->get_size().y, 0.0f);
 
             for (auto child : b->get_children()) {
@@ -90,6 +91,7 @@ namespace ui {
     {
         if ((IO::get_hover() == root) && Input::was_grab_pressed(HAND_RIGHT)) {
             grabbing = true;
+            last_grab_position = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
         }
 
         if (Input::was_grab_released(HAND_RIGHT)) {
@@ -124,9 +126,11 @@ namespace ui {
                 auto webgpu_context = Renderer::instance->get_webgpu_context();
                 float width = static_cast<float>(webgpu_context->render_width);
                 float height = static_cast<float>(webgpu_context->render_height);
-
                 glm::vec2 size = panel_size * 0.5f / glm::vec2(width, height);
-                glm::vec3 new_pos = eye + forward * 0.35f;
+
+                // glm::vec3 delta_grab = (eye - last_grab_position) * 2.0f;
+                // float distance = glm::distance(eye - delta_grab, get_xr_viewport()->get_translation());
+                glm::vec3 new_pos = eye + forward * 0.35f;// distance;
 
                 m = glm::translate(m, new_pos);
                 m = m * glm::toMat4(get_rotation_to_face(new_pos, renderer->get_camera_eye(), { 0.0f, 1.0f, 0.0f }));
@@ -151,14 +155,14 @@ namespace ui {
             }
 
             if (data.is_pressed && !IO::is_focus_type(Node2DClassType::HSLIDER)) {
-                scroll_dt += (last_grab_position.y - data.local_position.y);
+                scroll_dt += (last_scroll_position.y - data.local_position.y);
             }
 
             if (data.was_released) {
                 IO::set_focus(nullptr);
             }
 
-            last_grab_position = data.local_position;
+            last_scroll_position = data.local_position;
 
             float max_scroll = glm::max(body_height - body->get_size().y, 0.0f);
             float new_scroll = scroll_top + scroll_dt;
