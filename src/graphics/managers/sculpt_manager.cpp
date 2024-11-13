@@ -774,10 +774,10 @@ void SculptManager::init_uniforms()
         ray_info_uniform.binding = 0u;
         ray_info_uniform.buffer_size = sizeof(sGPU_RayData);
 
-        sGPU_RayIntersection intialization;
-        ray_intersection_info_uniform.data = webgpu_context->create_buffer(sizeof(sGPU_RayIntersection), WGPUBufferUsage_Storage | WGPUBufferUsage_CopySrc | WGPUBufferUsage_CopyDst, &intialization, "Ray intersection result to copy");
+        sGPU_RayIntersectionData intialization;
+        ray_intersection_info_uniform.data = webgpu_context->create_buffer(sizeof(sGPU_RayIntersectionData), WGPUBufferUsage_Storage | WGPUBufferUsage_CopySrc | WGPUBufferUsage_CopyDst, &intialization, "Ray intersection result to copy");
         ray_intersection_info_uniform.binding = 0u;
-        ray_intersection_info_uniform.buffer_size = sizeof(sGPU_RayIntersection);
+        ray_intersection_info_uniform.buffer_size = sizeof(sGPU_RayIntersectionData);
 
         ray_sculpt_instances_uniform.data = webgpu_context->create_buffer(sizeof(uint32_t) * 4u, WGPUBufferUsage_Storage | WGPUBufferUsage_CopySrc | WGPUBufferUsage_CopyDst, nullptr, "Sculpt index counter");
         ray_sculpt_instances_uniform.binding = 1u;

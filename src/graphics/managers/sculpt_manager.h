@@ -12,6 +12,19 @@
         - Compute preview
 */
 
+struct sGPU_RayIntersectionData {
+    uint32_t    has_intersected = 0u;
+    uint32_t    tile_pointer = 0u;
+    uint32_t    sculpt_id = 0u;
+    float       ray_t = -FLT_MAX;
+    uint32_t    instance_id = 0u;
+    uint32_t    pad0;
+    float       intersection_metallic;
+    float       intersection_roughness;
+    glm::vec3   intersection_albedo;
+    uint32_t    pad1;
+};
+
 // GPU return data
 struct sGPU_SculptResults {
     struct sGPU_SculptEvalData {
@@ -21,18 +34,7 @@ struct sGPU_SculptResults {
         uint32_t sculpt_id = 0u;
     } sculpt_eval_data;
 
-    struct sGPU_IntersectionData{
-        uint32_t    has_intersected = 0u;
-        uint32_t    tile_pointer = 0u;
-        uint32_t    sculpt_id = 0u;
-        float       ray_t = -FLT_MAX;
-        uint32_t    instance_id = 0u;
-        uint32_t    pad0;
-        float       intersection_metalness;
-        float       intersection_roughness;
-        glm::vec3   intersection_albedo;
-        uint32_t    pad1;
-    } ray_intersection;
+    sGPU_RayIntersectionData ray_intersection;
 };
 
 class SculptNode;
@@ -83,19 +85,6 @@ class SculptManager {
         glm::vec3   ray_direction;
         uint32_t    padd1;
     } ray_to_upload;
-
-    struct sGPU_RayIntersection {
-        uint32_t    has_intersected = 0u;
-        uint32_t    tile_pointer = 0u;
-        uint32_t    sculpt_id = 0u;
-        float       ray_t = -FLT_MAX;
-        uint32_t    instance_id = 0u;
-        uint32_t    pad0;
-        float       intersection_metalness;
-        float       intersection_roughness;
-        glm::vec3   intersection_albedo;
-        uint32_t    pad1;
-    };
 
     Uniform         ray_info_uniform;
     Uniform         ray_sculpt_instances_uniform;

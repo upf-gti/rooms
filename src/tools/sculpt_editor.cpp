@@ -14,7 +14,6 @@
 
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/renderer_storage.h"
-#include "graphics/managers/sculpt_manager.h"
 
 #include "shaders/mesh_forward.wgsl.gen.h"
 #include "shaders/mesh_transparent.wgsl.gen.h"
@@ -158,9 +157,11 @@ void SculptEditor::initialize()
         SculptManager::sGPU_ReadResults* gpu_result = reinterpret_cast<SculptManager::sGPU_ReadResults*>(data);
         assert(gpu_result);
 
+        last_gpu_results = gpu_result->loaded_results;
+
         // Computing sculpt AABB
         {
-            const sGPU_SculptResults::sGPU_SculptEvalData& eval_data = gpu_result->loaded_results.sculpt_eval_data;
+            const sGPU_SculptResults::sGPU_SculptEvalData& eval_data = last_gpu_results.sculpt_eval_data;
 
             // If there has been an eval, assign the AABB to the sculpt
             if (static_cast<RoomsRenderer*>(engine->get_renderer())->has_performed_evaluation()) {
@@ -173,10 +174,9 @@ void SculptEditor::initialize()
 
         // Computing intersection for surface snap
         {
-            const sGPU_SculptResults::sGPU_IntersectionData& intersection = gpu_result->loaded_results.ray_intersection;
-            ray_intersected = intersection.has_intersected;
+            const sGPU_RayIntersectionData& intersection = last_gpu_results.ray_intersection;
 
-            if (ray_intersected) {
+            if (intersection.has_intersected) {
                 last_snap_position = ray_origin + ray_direction * intersection.ray_t;
             }
         }
@@ -233,7 +233,12 @@ bool SculptEditor::is_tool_being_used(bool stamp_enabled)
     was_tool_pressed = is_tool_pressed;
     is_tool_pressed = is_currently_pressed;
 
-    return Input::was_key_pressed(GLFW_KEY_SPACE) || add_edit_with_tool;
+    if (renderer->get_openxr_available()) {
+        return add_edit_with_tool;
+    }
+    else {
+        return is_picking_material ? Input::was_mouse_pressed(GLFW_MOUSE_BUTTON_LEFT) : Input::was_key_pressed(GLFW_KEY_SPACE);
+    }
 #else
     return Input::is_key_pressed(GLFW_KEY_SPACE);
 #endif
@@ -246,10 +251,40 @@ bool SculptEditor::edit_update(float delta_time)
     // Poll action using stamp mode when picking material also mode to detect once
     bool is_tool_used = is_tool_being_used(stamp_enabled || is_picking_material);
 
-    if (is_picking_material && is_tool_used)
+    if (is_picking_material)
     {
-        pick_material();
-        return false;
+        // Send rays each frame to detect hovered sculpts and other nodes
+        {
+            if (Renderer::instance->get_openxr_available()) {
+                ray_origin = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
+                glm::mat4x4 select_hand_pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
+                ray_direction = get_front(select_hand_pose);
+            }
+            else {
+                Camera* camera = Renderer::instance->get_camera();
+                glm::vec3 ray_dir = camera->screen_to_ray(Input::get_mouse_position());
+                ray_origin = camera->get_eye();
+                ray_direction = glm::normalize(ray_dir);
+            }
+
+            RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
+            rooms_renderer->get_sculpt_manager()->set_ray_to_test(ray_origin, ray_direction);
+        }
+
+        const sGPU_RayIntersectionData& intersection = last_gpu_results.ray_intersection;
+
+        if (intersection.has_intersected) {
+            StrokeMaterial tmp = stroke_parameters.get_material();
+            tmp.color = Color(intersection.intersection_albedo, 1.0f);
+            tmp.roughness = intersection.intersection_roughness;
+            tmp.metallic = intersection.intersection_metallic;
+            update_gui_from_stroke_material(tmp);
+        }
+
+        if (is_tool_used) {
+            pick_material();
+            return false;
+        }
     }
 
     // Move the edit a little away
@@ -989,7 +1024,7 @@ void SculptEditor::render_gui()
 
 bool SculptEditor::can_snap_to_surface()
 {
-    return snap_to_surface && ray_intersected && (stamp_enabled || current_tool == PAINT);
+    return snap_to_surface && last_gpu_results.ray_intersection.has_intersected && (stamp_enabled || current_tool == PAINT);
 }
 
 bool SculptEditor::must_render_mesh_preview_outline()
@@ -1743,37 +1778,22 @@ void SculptEditor::update_stroke_from_material(const std::string& name)
 
 void SculptEditor::pick_material()
 {
-    //if (renderer->get_openxr_available())
-    //{
-    //    glm::mat4x4 pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
-    //    glm::vec3 ray_dir = get_front(pose);
-    //    //renderer->get_raymarching_renderer()->octree_ray_intersect(pose[3], ray_dir);
-    //}else
-    //{
-    //    Camera* camera = Renderer::instance->get_camera();
-    //    glm::vec3 ray_dir = camera->screen_to_ray(Input::get_mouse_position());
-    //    //renderer->get_raymarching_renderer()->octree_ray_intersect(camera->get_eye(), glm::normalize(ray_dir));
-    //}
+    const sGPU_RayIntersectionData& intersection = last_gpu_results.ray_intersection;
 
-    //const RayIntersectionInfo& info = static_cast<RoomsRenderer*>(RoomsRenderer::instance)->get_raymarching_renderer()->get_ray_intersection_info();
+    // Do not check _has_intersected_ since we can assume we triggered the action..
 
-    //if (info.intersected)
-    //{
-    //    // Set all data
-    //    stroke_parameters.set_material_color(Color(info.material_albedo, 1.0f));
-    //    stroke_parameters.set_material_roughness(info.material_roughness);
-    //    stroke_parameters.set_material_metallic(info.material_metalness);
-    //    // stroke_parameters.set_material_noise(-1.0f);
+    // Set all data
+    stroke_parameters.set_material_color(Color(intersection.intersection_albedo, 1.0f));
+    stroke_parameters.set_material_roughness(intersection.intersection_roughness);
+    stroke_parameters.set_material_metallic(intersection.intersection_metallic);
+    // stroke_parameters.set_material_noise(-1.0f);
 
-    //    update_gui_from_stroke_material(stroke_parameters.get_material());
-    //}
+    // Disable picking..
+    if (is_picking_material) {
+        Node::emit_signal("pick_material@pressed", (void*)nullptr);
+        is_picking_material = false;
+    }
 
-    //// Disable picking..
-    //if (is_picking_material) {
-    //    Node::emit_signal("pick_material", (void*)nullptr);
-    //}
-
-    //// Manage interactions, set stamp mode until tool is used again
-    //was_material_picked = true;
-    was_material_picked = false;
+    // Manage interactions, set stamp mode until tool is used again
+    was_material_picked = true;
 }

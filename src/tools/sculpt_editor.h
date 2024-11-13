@@ -3,11 +3,13 @@
 #include "tools/base_editor.h"
 
 #include "graphics/edit.h"
+
 #include "framework/nodes/text.h"
 #include "framework/ui/gizmo_3d.h"
 #include "framework/math/spline.h"
 
 #include "graphics/managers/stroke_manager.h"
+#include "graphics/managers/sculpt_manager.h"
 
 #include <map>
 
@@ -98,7 +100,7 @@ class SculptEditor : public BaseEditor {
     // Intersections
     glm::vec3 ray_origin;
     glm::vec3 ray_direction;
-    bool ray_intersected = false;
+    sGPU_SculptResults last_gpu_results;
 
     // Edit
     glm::quat edit_rotation_diff = { 0.0, 0.0, 0.0, 1.0 };

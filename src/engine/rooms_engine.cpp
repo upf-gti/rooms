@@ -351,7 +351,7 @@ void RoomsEngine::render_gui()
             ImGui::Text("Ray Intersection: %s", intersected.c_str());
             ImGui::Text("Tile pointer: %d", intersection_info.ray_intersection.tile_pointer);
             ImGui::ColorEdit3("Picked albedo:", (float*)&intersection_info.ray_intersection.intersection_albedo);
-            ImGui::Text("Picked metalness: %.3f", intersection_info.ray_intersection.intersection_metalness);
+            ImGui::Text("Picked metallic: %.3f", intersection_info.ray_intersection.intersection_metallic);
             ImGui::Text("Picked roughness: %.3f", intersection_info.ray_intersection.intersection_roughness);
             if (intersection_info.ray_intersection.has_intersected) {
                 ImGui::Text("Intersection t : %.3f", intersection_info.ray_intersection.ray_t);

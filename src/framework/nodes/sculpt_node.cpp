@@ -65,7 +65,7 @@ void SculptNode::update(float delta_time)
     uint32_t flags = 0u;
     RoomsRenderer* renderer = static_cast<RoomsRenderer*>(Renderer::instance);
     RoomsEngine* engine = static_cast<RoomsEngine*>(Engine::instance);
-    const sGPU_SculptResults::sGPU_IntersectionData& intersection_results = renderer->get_sculpt_manager()->read_results.loaded_results.ray_intersection;
+    const sGPU_RayIntersectionData& intersection_results = renderer->get_sculpt_manager()->read_results.loaded_results.ray_intersection;
     bool in_sculpt_editor = (engine->get_current_editor_type() == SCULPT_EDITOR);
     bool editing_scene_group = (engine->get_current_editor_type() == SCENE_EDITOR) && (!!engine->get_editor<SceneEditor*>(SCENE_EDITOR)->get_current_group());
 

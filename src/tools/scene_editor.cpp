@@ -93,7 +93,7 @@ void SceneEditor::initialize()
 
         SculptManager::sGPU_ReadResults* gpu_result = reinterpret_cast<SculptManager::sGPU_ReadResults*>(data);
         assert(gpu_result);
-        const sGPU_SculptResults::sGPU_IntersectionData& intersection = gpu_result->loaded_results.ray_intersection;
+        const sGPU_RayIntersectionData& intersection = gpu_result->loaded_results.ray_intersection;
 
         if (intersection.has_intersected == 0u) {
             return;
