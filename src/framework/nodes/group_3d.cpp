@@ -31,6 +31,24 @@ void Group3D::parse(std::ifstream& binary_scene_file)
     update_pivot();
 }
 
+void Group3D::clone(Node* new_node, bool copy)
+{
+    Node3D::clone(new_node, copy);
+
+    size_t child_count = children.size();
+
+    Group3D* new_group = static_cast<Group3D*>(new_node);
+
+    for (size_t i = 0u; i < child_count; ++i) {
+        Node* child = children[i];
+        Node* child_clone = NodeRegistry::get_instance()->create_node(child->get_node_type());
+        child->clone(child_clone, copy);
+        new_group->add_node(static_cast<Node3D*>(child_clone));
+    }
+
+    new_group->update_pivot();
+}
+
 void Group3D::update_pivot()
 {
     size_t child_count = get_children().size();
