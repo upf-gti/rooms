@@ -97,10 +97,12 @@ void SculptNode::update(float delta_time)
         bool selected = (scene_editor->get_selected_node() == this);
 
         if (!editing_scene_group && parent) {
+
+            selected |= (scene_editor->get_selected_node() == parent);
+
             for (auto child : parent->get_children()) {
                 SculptNode* sculpt_child = dynamic_cast<SculptNode*>(child);
                 hovered |= (sculpt_child && sculpt_child->check_intersection(&intersection_results));
-                selected |= (scene_editor->get_selected_node() == sculpt_child);
             }
         }
 

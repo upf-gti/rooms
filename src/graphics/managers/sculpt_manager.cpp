@@ -477,7 +477,7 @@ void SculptManager::evaluate_preview(WGPUComputePassEncoder compute_pass)
 
     // Set preview flag if needed
     if (!performed_evaluation) {
-        uint32_t set_as_preview = 0x02u;
+        uint32_t set_as_preview = PREVIEW_EVAL_FLAG;
         webgpu_context->update_buffer(std::get<WGPUBuffer>(preview.sculpt->get_octree_uniform().data), sizeof(uint32_t) * 2u, &set_as_preview, sizeof(uint32_t));
     }
 
