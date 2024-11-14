@@ -321,14 +321,13 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
         } else {
             final_color = apply_light(-ray_dir_world, world_space_position, world_space_position, normal_world, lightPos + lightOffset, material);
 
+            var fresnel : f32 = pow(1.0 - v_dot_n, 3.0) + 0.5;
+            fresnel = smoothstep(0.5, 1.0, fresnel);
+
             if ((curr_sculpt_flags & SCULPT_INSTANCE_IS_HOVERED) == SCULPT_INSTANCE_IS_HOVERED) {
-                var fresnel : f32 = pow(1.0 - v_dot_n, 3.0) + 0.5;
-                fresnel = smoothstep(0.5, 1.0, fresnel);
                 let hightlight_color : vec3f = mix(COLOR_PRIMARY, COLOR_SECONDARY, normal.y*0.5+0.5);
                 final_color = mix(final_color, hightlight_color, fresnel);
             } else if ((curr_sculpt_flags & SCULPT_INSTANCE_IS_SELECTED) == SCULPT_INSTANCE_IS_SELECTED) {
-                var fresnel : f32 = pow(1.0 - v_dot_n, 3.0) + 0.5;
-                fresnel = smoothstep(0.5, 1.0, fresnel);
                 let hightlight_color : vec3f = mix(COLOR_TERCIARY, COLOR_HIGHLIGHT_LIGHT, 0.5);
                 final_color = mix(final_color, hightlight_color, fresnel);
             }
@@ -389,8 +388,12 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     let ray_origin : vec3f = in.in_atlas_pos.xyz + raymarch_distance * (-ray_dir_atlas);
 
     var ray_result : vec4f;
-    let tmp = preview_stroke.stroke.material.color.x;
-    if (in.has_previews == 1) {
+    // let tmp = preview_stroke.stroke.material.color.x;
+
+    let curr_sculpt_flags : u32 = sculpt_instance_data[model_index].flags;
+    let oof : bool = (curr_sculpt_flags & SCULPT_INSTANCE_IS_OUT_OF_FOCUS) == SCULPT_INSTANCE_IS_OUT_OF_FOCUS;
+
+    if (in.has_previews == 1 && !oof) {
         ray_result = raymarch_with_previews(ray_origin, ray_origin_sculpt_space, ray_dir_atlas, raymarch_distance, camera_data.view_projection);
     } else {
         ray_result = raymarch(ray_origin, ray_origin_sculpt_space, ray_dir_atlas, raymarch_distance, camera_data.view_projection);
