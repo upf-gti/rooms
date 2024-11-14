@@ -75,7 +75,7 @@ void SculptNode::update(float delta_time)
     bool oof = false;
 
     if (in_sculpt_editor) {
-        oof |= (engine->get_editor<SculptEditor*>(SCULPT_EDITOR)->get_current_sculpt() != this);
+        oof |= engine->get_editor<SculptEditor*>(SCULPT_EDITOR)->is_out_of_focus(this);
     }
     else if (editing_scene_group) {
         oof |= (!parent || parent != (Node*)scene_editor->get_current_group());

@@ -167,7 +167,7 @@ void SculptEditor::initialize()
             if (static_cast<RoomsRenderer*>(engine->get_renderer())->has_performed_evaluation()) {
                 glm::vec3 half_size = (eval_data.aabb_max - eval_data.aabb_min) / 2.0f;
                 AABB result = { result.half_size + eval_data.aabb_min, half_size };
-                result = result.rotate(current_sculpt->get_transform().get_rotation());
+                result = result.transform(Transform::transform_to_mat4(get_current_transform()));
                 current_sculpt->get_sculpt_data()->set_AABB(result);
             }
         }
@@ -201,6 +201,13 @@ void SculptEditor::on_enter(void* data)
     assert(sculpt_node);
     set_current_sculpt(sculpt_node);
 
+    if (sculpt_node->get_parent()) {
+        current_instance_transform = sculpt_node->get_parent<Node3D*>()->get_transform();
+    }
+    else {
+        current_instance_transform = sculpt_node->get_transform();
+    }
+
     /*
     * If loaded from memory, we can assume it has a defined position,
     * so do not move it and start now the sculpt.
@@ -219,6 +226,15 @@ void SculptEditor::clean()
     if(mesh_preview_outline) delete mesh_preview_outline;
 
     BaseEditor::clean();
+}
+
+bool SculptEditor::is_out_of_focus(SculptNode* sculpt_node)
+{
+    if (!renderer->get_openxr_available()) {
+        return get_current_sculpt() != sculpt_node;
+    }
+
+    return true;
 }
 
 bool SculptEditor::is_tool_being_used(bool stamp_enabled)
@@ -467,7 +483,7 @@ bool SculptEditor::edit_update(float delta_time)
         if (!renderer->get_openxr_available()) {
 
             if (is_tool_being_used(stamp_enabled)) {
-                edit_to_add.position = current_sculpt->get_translation() + glm::vec3(glm::vec3(0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1)));
+                edit_to_add.position = get_current_transform().get_position() + glm::vec3(glm::vec3(0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1)));
                 glm::vec3 euler_angles(glm::pi<float>() * random_f(), glm::pi<float>()* random_f(), glm::pi<float>()* random_f());
                 // edit_to_add.dimensions = glm::vec4(0.05f, 0.05f, 0.05f, 0.0f) * 1.0f;
                 //edit_to_add.dimensions = (edit_to_add.operation == OP_SUBSTRACTION) ? 3.0f * glm::vec4(0.2f, 0.2f, 0.2f, 0.2f) : glm::vec4(0.2f, 0.2f, 0.2f, 0.2f);
@@ -485,8 +501,8 @@ bool SculptEditor::edit_update(float delta_time)
             }
             else {
                 // Make sure we don't get NaNs in preview rotation due to polling XR controllers in 2D mode
-                edit_to_add.position = current_sculpt->get_translation();
-                edit_to_add.rotation = current_sculpt->get_rotation();
+                edit_to_add.position = get_current_transform().get_position();
+                edit_to_add.rotation = get_current_transform().get_rotation();
             }
         }
     }
@@ -496,9 +512,6 @@ bool SculptEditor::edit_update(float delta_time)
     edit_rotation_world = edit_to_add.rotation;
 
     // Add edit based on controller movement
-    //spdlog::info("Dist: {}", glm::length(controller_position_data.prev_edit_position - edit_position_world), glm::length(controller_position_data.controller_velocity), glm::length(controller_position_data.controller_acceleration));
-
-    //if (glm::length(controller_position_data.controller_velocity) < 0.1f && glm::length(controller_position_data.controller_acceleration) < 10.1f) {
     // TODO(Juan): Check rotation?
     if (!stamp_enabled && was_tool_pressed && is_tool_used) {
         if (glm::length(controller_movement_data[HAND_RIGHT].prev_edit_position - edit_position_world) < (edit_to_add.dimensions.x / 3.0f)) {
@@ -625,14 +638,16 @@ void SculptEditor::update(float delta_time)
         // Set center of sculpture and reuse it as mirror center
         if (!sculpt_started) {
 
+            const glm::vec3& position = edit_to_add.position;
+
             if (renderer->get_openxr_available()) {
-                current_sculpt->set_position(edit_to_add.position);
+                get_current_transform().set_position(position);
             }
 
             Transform& mirror_transform = mirror_gizmo.get_transform();
-            mirror_transform.set_position(current_sculpt->get_translation());
+            mirror_transform.set_position(position);
             Transform& lock_axis_transform = axis_lock_gizmo.get_transform();
-            lock_axis_transform.set_position(current_sculpt->get_translation());
+            lock_axis_transform.set_position(position);
         }
 
         // Mark the start of the sculpture for the origin
@@ -751,6 +766,15 @@ void SculptEditor::update(float delta_time)
 
     was_tool_used = is_tool_used;
 
+    // Render current instance
+    if(renderer->get_openxr_available()) {
+        uint32_t flags = 0u;
+        RoomsRenderer* renderer = static_cast<RoomsRenderer*>(Renderer::instance);
+        in_frame_sculpt_render_list_id = renderer->add_sculpt_render_call(
+            current_sculpt->get_sculpt_data(), Transform::transform_to_mat4(get_current_transform()), flags);
+        in_frame_sculpt_render_list_id += current_sculpt->get_sculpt_data()->get_in_frame_model_buffer_index();
+    }
+
     stroke_manager.update();
 
     /*if (was_tool_used) {
@@ -776,7 +800,11 @@ void SculptEditor::set_preview_edits(const std::vector<Edit>& edit_previews)
     preview_stroke.aabb_min = stroke_aabb.center - stroke_aabb.half_size;
     preview_stroke.aabb_max = stroke_aabb.center + stroke_aabb.half_size;
 
-    renderer->get_sculpt_manager()->set_preview_stroke(current_sculpt->get_sculpt_data(), current_sculpt->get_in_frame_model_idx(), preview_stroke, edit_previews);
+    renderer->get_sculpt_manager()->set_preview_stroke(
+        current_sculpt->get_sculpt_data(),
+        renderer->get_openxr_available() ? in_frame_sculpt_render_list_id : current_sculpt->get_in_frame_model_idx(),
+        preview_stroke, edit_previews
+    );
 }
 
 void SculptEditor::apply_mirror_position(glm::vec3& position)
@@ -825,10 +853,10 @@ glm::vec3 SculptEditor::world_to_texture3d(const glm::vec3& position, bool skip_
     glm::vec3 pos_texture_space = position;
 
     if (!skip_translation) {
-        pos_texture_space -= (current_sculpt->get_translation());
+        pos_texture_space -= (get_current_transform().get_position());
     }
 
-    pos_texture_space = glm::inverse(current_sculpt->get_rotation()) * pos_texture_space;
+    pos_texture_space = glm::inverse(get_current_transform().get_rotation()) * pos_texture_space;
 
     return pos_texture_space;
 }
@@ -837,14 +865,18 @@ glm::vec3 SculptEditor::texture3d_to_world(const glm::vec3& position)
 {
     glm::vec3 pos_world_space;
 
-    pos_world_space = glm::inverse(current_sculpt->get_rotation()) * position;
-    pos_world_space = pos_world_space + (current_sculpt->get_translation());
+    pos_world_space = glm::inverse(get_current_transform().get_rotation()) * position;
+    pos_world_space = pos_world_space + (get_current_transform().get_position());
 
     return pos_world_space;
 }
 
 void SculptEditor::update_sculpt_rotation()
 {
+    if (Input::was_key_pressed(GLFW_KEY_R)) {
+        get_current_transform().translate(glm::vec3(0.5, 0.0f, 0.0f));
+    }
+
     // Do not rotate sculpt if shift -> we might be rotating the edit
     if (is_rotation_being_used() && !is_shift_left_pressed) {
 
@@ -859,8 +891,8 @@ void SculptEditor::update_sculpt_rotation()
         glm::quat rotation_diff = (current_hand_rotation * glm::inverse(last_hand_rotation));
         glm::vec3 translation_diff = current_hand_translation - last_hand_translation;
 
-        current_sculpt->rotate_world(rotation_diff);
-        current_sculpt->translate(translation_diff);
+        get_current_transform().rotate_world(rotation_diff);
+        get_current_transform().translate(translation_diff);
 
         rotation_started = true;
 
@@ -876,7 +908,7 @@ void SculptEditor::update_sculpt_rotation()
 
     // Push edits in 3d texture space
     edit_to_add.position = world_to_texture3d(edit_to_add.position);
-    edit_to_add.rotation *= (current_sculpt->get_rotation());
+    edit_to_add.rotation *= (get_current_transform().get_rotation());
 }
 
 void SculptEditor::update_edit_rotation()
@@ -985,9 +1017,9 @@ void SculptEditor::render()
 
     // Render always or only XR?
     sculpt_area_box->set_transform(Transform::identity());
-    sculpt_area_box->translate(current_sculpt->get_translation());
+    sculpt_area_box->translate(get_current_transform().get_position());
     sculpt_area_box->scale(glm::vec3(SCULPT_MAX_SIZE * 0.5f));
-    sculpt_area_box->rotate(current_sculpt->get_rotation());
+    sculpt_area_box->rotate(get_current_transform().get_rotation());
     sculpt_area_box->render();
 }
 
@@ -1181,6 +1213,19 @@ void SculptEditor::enable_tool(eTool tool)
 
     // Set this to allow the mesh preview to give a little mergin in the outline mode
     dimensions_dirty = true;
+}
+
+/*
+*   In 2D, current_instance_transform is not used,
+*   so use always the transform of the current sculpt
+*/
+Transform& SculptEditor::get_current_transform()
+{
+    if (!renderer->get_openxr_available()) {
+        return current_sculpt->get_transform();
+    }
+
+    return current_instance_transform;
 }
 
 bool SculptEditor::is_rotation_being_used()
