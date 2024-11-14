@@ -1,6 +1,7 @@
 #include "tutorial_editor.h"
 
 #include "framework/nodes/panel_2d.h"
+#include "framework/nodes/viewport_3d.h"
 #include "framework/input.h"
 #include "framework/ui/io.h"
 #include "framework/math/math_utils.h"
@@ -89,6 +90,7 @@ void TutorialEditor::update(float delta_time)
 
     if ((IO::get_hover() == current_panel) && Input::was_grab_pressed(HAND_RIGHT)) {
         grabbing = true;
+        last_grab_position = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
     }
 
     if (Input::was_grab_released(HAND_RIGHT)) {
@@ -106,16 +108,19 @@ void TutorialEditor::update(float delta_time)
             m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
             m = glm::rotate(m, glm::radians(180.f), { 1.0f, 0.0f, 0.0f });
             panel->set_xr_transform(Transform::mat4_to_transform(m));
-            placed = true;
         }
-        else if (grabbing) {
+
+        if (grabbing) {
 
             Transform raycast_transform = Transform::mat4_to_transform(Input::get_controller_pose(HAND_RIGHT, POSE_AIM));
             const glm::vec3& forward = raycast_transform.get_front();
             
             glm::mat4x4 m(1.0f);
             glm::vec3 eye = raycast_transform.get_position();
-            glm::vec3 new_pos = eye + forward;
+            glm::vec3 delta_grab = (eye - last_grab_position) * 2.0f;
+            float distance = glm::distance(eye - delta_grab, panel->get_xr_viewport()->get_translation());
+
+            glm::vec3 new_pos = eye + forward * distance;
 
             m = glm::translate(m, new_pos);
             m = m * glm::toMat4(get_rotation_to_face(new_pos, renderer->get_camera_eye(), { 0.0f, 1.0f, 0.0f }));
@@ -123,6 +128,8 @@ void TutorialEditor::update(float delta_time)
             panel->set_xr_transform(Transform::mat4_to_transform(m));
 
             current_panel->set_priority(DRAGGABLE);
+            placed = true;
+            last_grab_position = eye;
         }
     }
 
@@ -168,7 +175,7 @@ ui::XRPanel* TutorialEditor::generate_panel(const std::string& name, const std::
     const glm::vec2& button_size = { size.x * 0.4f, size.y * 0.25f };
     const glm::vec2& mini_button_size = { size.x * 0.2f, size.y * 0.125f };
 
-    ui::XRPanel* new_panel = new ui::XRPanel(name, path, pos, size);
+    ui::XRPanel* new_panel = new ui::XRPanel(name, path, pos, size, ui::CURVED_PANEL);
     new_panel->set_visibility(false);
     panel->add_child(new_panel);
 

@@ -63,7 +63,8 @@ namespace ui {
         InspectorFunc on_close = nullptr;
         InspectorFunc on_back = nullptr;
 
-        glm::vec2 last_grab_position = {};
+        glm::vec2 last_scroll_position = {};
+        glm::vec3 last_grab_position = {};
 
         std::map<std::string, Node2D*> items;
         std::map<std::string, std::variant<glm::fvec2, glm::fvec3, glm::fvec4, glm::ivec2, glm::ivec3, glm::ivec4>> inner_data;
