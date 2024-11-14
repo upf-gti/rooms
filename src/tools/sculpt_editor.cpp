@@ -225,6 +225,9 @@ void SculptEditor::clean()
     if(mesh_preview) delete mesh_preview;
     if(mesh_preview_outline) delete mesh_preview_outline;
 
+    mirror_gizmo.clean();
+    axis_lock_gizmo.clean();
+
     BaseEditor::clean();
 }
 
