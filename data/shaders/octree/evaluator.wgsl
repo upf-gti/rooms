@@ -267,6 +267,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     let aabb_half_size : mat4x3f = get_loose_half_size_mat(preview_stroke.stroke.primitive);
     let is_evaluating_preview : bool = ((octree.evaluation_mode & EVALUATE_PREVIEW_STROKE_FLAG) == EVALUATE_PREVIEW_STROKE_FLAG);
     let is_evaluating_undo : bool = (stroke_history.is_undo & UNDO_EVAL_FLAG) == UNDO_EVAL_FLAG;
+    let is_evaluating_undo_paint : bool = (stroke_history.is_undo & PAINT_UNDO_EVAL_FLAG) == PAINT_UNDO_EVAL_FLAG;
 
     let octant_min : vec3f = octant_center - vec3f(level_half_size);
     let octant_max : vec3f = octant_center + vec3f(level_half_size);
@@ -331,8 +332,8 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                     // Non-culled part
                     let culled_part : u32 = (min(stroke_history.count, MAX_STROKE_INFLUENCE_COUNT));
                     let non_culled_count : u32 = ( (stroke_history.count) - culled_part);
-                    for(var i : u32 = 0u; i < non_culled_count; i++) {
-                        let index : u32 = i + MAX_STROKE_INFLUENCE_COUNT;
+                    for(var i : u32 = 0u; i < stroke_history.count; i++) {
+                        let index : u32 = i;// + MAX_STROKE_INFLUENCE_COUNT;
                         if (intersection_AABB_AABB(eval_aabb_min, 
                                                eval_aabb_max, 
                                                stroke_history.strokes[index].aabb_min, 
@@ -382,7 +383,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             // Non-culled part
             let culled_part : u32 = (min(stroke_history.count, MAX_STROKE_INFLUENCE_COUNT));
             let non_culled_count : u32 = ( (stroke_history.count) - culled_part);
-            for(var i : u32 = 0u; i < non_culled_count; i++) {
+            for(var i : u32 = 0u; i < stroke_history.count; i++) {
                 let index : u32 = i + MAX_STROKE_INFLUENCE_COUNT;
                 if (intersection_AABB_AABB(eval_aabb_min, 
                                             eval_aabb_max, 
@@ -410,7 +411,9 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
 
             let int_distance = abs(distance(prev_interval, surface_interval));
             
-            if (int_distance > 0.0001) {
+            if ((is_evaluating_undo_paint || brick_has_paint) && is_current_brick_filled) {
+                brick_reevaluate(octree_index);
+            } else if (int_distance > 0.0001) {
                 if (surface_interval.x > 0.0) {
                     if (is_current_brick_filled) {
                         // delete any brick outside surface that was previosly filled
@@ -425,8 +428,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
                 } else if (surface_interval.x < 0.0) {
                     brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
                 }
-            } else if (brick_has_paint && is_current_brick_filled) {
-                brick_reevaluate(octree_index);
             }
         }
     } else {

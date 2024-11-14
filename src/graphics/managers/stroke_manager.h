@@ -8,6 +8,11 @@
 
 class SculptNode;
 
+enum eEvaluationFlags : uint32_t {
+    UNDO_EVAL_FLAG = 1u,
+    PREVIEW_EVAL_FLAG = 1u << 1u,
+    PAINT_UNDO_EVAL_FLAG = 1u << 2u,
+};
 
 struct StrokeManager {
     Stroke in_frame_stroke = {
