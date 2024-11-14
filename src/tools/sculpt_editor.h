@@ -94,7 +94,7 @@ class SculptEditor : public BaseEditor {
     bool edit_rotation_started  = false;
     bool snap_to_surface        = false;
     bool is_picking_material    = false;
-    bool was_material_picked    = false;
+    bool should_pick_material   = false;
 
     glm::quat last_hand_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
     glm::vec3 last_hand_translation = {};
@@ -184,6 +184,8 @@ class SculptEditor : public BaseEditor {
 
     glm::vec3 world_to_texture3d(const glm::vec3& position, bool skip_translation = false);
     glm::vec3 texture3d_to_world(const glm::vec3& position);
+
+    void test_ray_to_sculpts();
 
     void update_sculpt_rotation();
     void update_edit_rotation();

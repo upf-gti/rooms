@@ -178,6 +178,10 @@ void SculptEditor::initialize()
 
             if (intersection.has_intersected) {
                 last_snap_position = ray_origin + ray_direction * intersection.ray_t;
+
+                if (should_pick_material) {
+                    pick_material();
+                }
             }
         }
     });
@@ -272,23 +276,7 @@ bool SculptEditor::edit_update(float delta_time)
 
     if (is_picking_material)
     {
-        // Send rays each frame to detect hovered sculpts and other nodes
-        {
-            if (Renderer::instance->get_openxr_available()) {
-                ray_origin = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
-                glm::mat4x4 select_hand_pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
-                ray_direction = get_front(select_hand_pose);
-            }
-            else {
-                Camera* camera = Renderer::instance->get_camera();
-                glm::vec3 ray_dir = camera->screen_to_ray(Input::get_mouse_position());
-                ray_origin = camera->get_eye();
-                ray_direction = glm::normalize(ray_dir);
-            }
-
-            RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
-            rooms_renderer->get_sculpt_manager()->set_ray_to_test(ray_origin, ray_direction);
-        }
+        test_ray_to_sculpts();
 
         const sGPU_RayIntersectionData& intersection = last_gpu_results.ray_intersection;
 
@@ -328,15 +316,8 @@ bool SculptEditor::edit_update(float delta_time)
         // Snap surface
 
         if (snap_to_surface) {
-            // Send rays each frame to detect hovered sculpts and other nodes
-            {
-                ray_origin = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
-                glm::mat4x4 select_hand_pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
-                ray_direction = get_front(select_hand_pose);
 
-                RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
-                rooms_renderer->get_sculpt_manager()->set_ray_to_test(ray_origin, ray_direction);
-            }
+            test_ray_to_sculpts();
 
             if (can_snap_to_surface()) {
                 edit_to_add.position = last_snap_position;
@@ -578,7 +559,10 @@ void SculptEditor::update(float delta_time)
                 end_spline();
             }
             else if (is_shift_right_pressed) {
-                pick_material();
+
+                test_ray_to_sculpts();
+
+                should_pick_material = true;
             }
             // Add/Substract toggle
             else {
@@ -694,9 +678,9 @@ void SculptEditor::update(float delta_time)
             add_recent_color(stroke_parameters.get_material().color);
 
             // Reset smear mode
-            if (was_material_picked) {
-                stamp_enabled = false;
-            }
+            //if (was_material_picked) {
+            //    stamp_enabled = false;
+            //}
         }
 
         // Submit spline edits in the next frame..
@@ -872,6 +856,25 @@ glm::vec3 SculptEditor::texture3d_to_world(const glm::vec3& position)
     pos_world_space = pos_world_space + (get_current_transform().get_position());
 
     return pos_world_space;
+}
+
+void SculptEditor::test_ray_to_sculpts()
+{
+    // Send rays each frame to detect hovered sculpts and other nodes
+    if (Renderer::instance->get_openxr_available()) {
+        ray_origin = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
+        glm::mat4x4 select_hand_pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
+        ray_direction = get_front(select_hand_pose);
+    }
+    else {
+        Camera* camera = Renderer::instance->get_camera();
+        glm::vec3 ray_dir = camera->screen_to_ray(Input::get_mouse_position());
+        ray_origin = camera->get_eye();
+        ray_direction = glm::normalize(ray_dir);
+    }
+
+    RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
+    rooms_renderer->get_sculpt_manager()->set_ray_to_test(ray_origin, ray_direction);
 }
 
 void SculptEditor::update_sculpt_rotation()
@@ -1842,6 +1845,7 @@ void SculptEditor::pick_material()
         is_picking_material = false;
     }
 
-    // Manage interactions, set stamp mode until tool is used again
-    was_material_picked = true;
+    should_pick_material = false;
+
+    update_gui_from_stroke_material(stroke_parameters.get_material());
 }
