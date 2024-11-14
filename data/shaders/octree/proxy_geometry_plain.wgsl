@@ -296,9 +296,15 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
         let position_in_sculpt : vec3f = ray_origin_in_sculpt_space + ray_dir * (depth / SCULPT_TO_ATLAS_CONVERSION_FACTOR);
         let world_space_position : vec3f = (sculpt_instance_data[model_index].model * vec4f(position_in_sculpt, 1.0)).xyz;
 
+        let curr_sculpt_flags : u32 = sculpt_instance_data[model_index].flags;
+        let oof : bool = (curr_sculpt_flags & SCULPT_INSTANCE_IS_OUT_OF_FOCUS) == SCULPT_INSTANCE_IS_OUT_OF_FOCUS;
+
         let epsilon : f32 = 0.000001; // avoids flashing when camera inside sdf
-        let proj_pos : vec4f = view_proj * vec4f(world_space_position + ray_dir * epsilon, 1.0);
-        depth = proj_pos.z / proj_pos.w;
+        var proj_pos : vec4f = view_proj * vec4f(world_space_position + ray_dir * epsilon, 1.0);
+        if(oof) {
+            proj_pos.z -= 0.005;
+        }
+        depth = (proj_pos.z) / proj_pos.w;
 
         let normal : vec3f = estimate_normal_atlas(position_in_atlas);
         let normal_world : vec3f = (sculpt_instance_data[model_index].model * vec4f(normal, 0.0)).xyz;
@@ -307,24 +313,20 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
         let material : SdfMaterial = sample_material_atlas(position_in_atlas);
 
         var final_color : vec3f = vec3f(0.0);
+        let v_dot_n : f32 = clamp(dot(-ray_dir_world, normal_world), 0.0, 1.0);
 
-        let curr_sculpt_flags : u32 = sculpt_instance_data[model_index].flags;
-
-        if ((curr_sculpt_flags & SCULPT_INSTANCE_IS_OUT_OF_FOCUS) == SCULPT_INSTANCE_IS_OUT_OF_FOCUS) {
-            let v_dot_n : f32 = clamp(dot(-ray_dir_world, normal_world), 0.0, 1.0);
+        if (oof) {
             let grey : f32 = 0.21 * material.albedo.r + 0.71 * material.albedo.g + 0.07 * material.albedo.b;
-            final_color = vec3f(v_dot_n * grey) * 0.25;
+            final_color = vec3f(v_dot_n * grey) * 0.5;
         } else {
             final_color = apply_light(-ray_dir_world, world_space_position, world_space_position, normal_world, lightPos + lightOffset, material);
 
             if ((curr_sculpt_flags & SCULPT_INSTANCE_IS_HOVERED) == SCULPT_INSTANCE_IS_HOVERED) {
-                let v_dot_n : f32 = clamp(dot(-ray_dir_world, normal_world), 0.0, 1.0);
                 var fresnel : f32 = pow(1.0 - v_dot_n, 3.0) + 0.5;
                 fresnel = smoothstep(0.5, 1.0, fresnel);
                 let hightlight_color : vec3f = mix(COLOR_PRIMARY, COLOR_SECONDARY, normal.y*0.5+0.5);
                 final_color = mix(final_color, hightlight_color, fresnel);
             } else if ((curr_sculpt_flags & SCULPT_INSTANCE_IS_SELECTED) == SCULPT_INSTANCE_IS_SELECTED) {
-                let v_dot_n : f32 = clamp(dot(-ray_dir_world, normal_world), 0.0, 1.0);
                 var fresnel : f32 = pow(1.0 - v_dot_n, 3.0) + 0.5;
                 fresnel = smoothstep(0.5, 1.0, fresnel);
                 let hightlight_color : vec3f = mix(COLOR_TERCIARY, COLOR_HIGHLIGHT_LIGHT, 0.5);
