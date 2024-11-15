@@ -15,19 +15,9 @@ enum eEvaluationFlags : uint32_t {
 };
 
 struct StrokeManager {
-    Stroke in_frame_stroke = {
-        .stroke_id = 0u,
-        .operation = OP_SMOOTH_UNION,
-    };
-    Stroke current_stroke = {
-        .operation = OP_SMOOTH_UNION
-    };
-
+    uint32_t current_top_stroke_id = 0u;
     std::vector<Stroke>* history = nullptr;
     std::vector<Stroke> redo_history;
-
-    uint32_t pop_count_from_history = 0u;
-    uint32_t redo_pop_count_from_history = 0u;
 
     glm::vec3 brick_world_size = {};
 
@@ -64,15 +54,13 @@ struct StrokeManager {
         dirty_stroke_params = params;
     }
 
-    void change_stroke(const StrokeParameters& params, const uint32_t index_increment = 1u);
-    void change_stroke(const uint32_t index_increment = 1u);
+    void change_stroke_params(const StrokeParameters& params, const uint32_t index_increment = 1u);
+    void change_stroke_params(const uint32_t index_increment = 1u);
 
     sStrokeInfluence* undo();
     sStrokeInfluence* redo();
     sStrokeInfluence* add(std::vector<Edit> new_edits);
     sStrokeInfluence* new_history_add(std::vector<Stroke>* history);
-
-    void update();
 
     uint32_t divide_AABB_on_max_eval_size(const AABB& base, AABB divided_bases[8]);
     AABB compute_grid_aligned_AABB(const AABB &base, const glm::vec3 &brick_world_size);

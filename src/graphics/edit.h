@@ -141,6 +141,16 @@ struct Stroke {
 
     Edit    edits[MAX_EDITS_PER_EVALUATION] = {};
 
+    inline void duplicate_stroke_config(Stroke &to_fill, const uint32_t id_delta = 0u) const {
+        to_fill.stroke_id = stroke_id + id_delta;
+        to_fill.edit_count = 0u;
+        to_fill.primitive = primitive;
+        to_fill.operation = operation;
+        to_fill.parameters = parameters;
+        to_fill.color_blending_op = color_blending_op;
+        to_fill.material = material;
+    }
+
     AABB get_edit_world_AABB(const uint16_t edit_index) const;
     AABB get_world_AABB() const;
     void get_AABB_intersecting_stroke(const AABB intersection_area, Stroke& resulting_stroke, const uint32_t item_to_exclude = 0u) const;

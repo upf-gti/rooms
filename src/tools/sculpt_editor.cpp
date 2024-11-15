@@ -133,7 +133,7 @@ void SculptEditor::initialize()
         stroke_parameters.set_operation(OP_SMOOTH_UNION);
         stroke_parameters.set_color_blend_operation(COLOR_OP_REPLACE);
         stroke_parameters.set_parameters({ 0.0f, -1.0f, 0.0f, 0.005f });
-        stroke_manager.change_stroke(stroke_parameters, 0u);
+        stroke_manager.change_stroke_params(stroke_parameters, 0u);
     }
 
     // Create UI and bind events
@@ -653,7 +653,7 @@ void SculptEditor::update(float delta_time)
         must_change_stroke |= force_new_stroke;
 
         if (must_change_stroke) {
-            stroke_manager.change_stroke(stroke_parameters);
+            stroke_manager.change_stroke_params(stroke_parameters);
             stroke_parameters.set_dirty(false);
             force_new_stroke = false;
         }
@@ -744,7 +744,7 @@ void SculptEditor::update(float delta_time)
     }
 
     if (force_new_stroke) {
-        stroke_manager.change_stroke();
+        stroke_manager.change_stroke_params();
     }
     
     if (is_tool_used) {
@@ -761,8 +761,6 @@ void SculptEditor::update(float delta_time)
             current_sculpt->get_sculpt_data(), Transform::transform_to_mat4(get_current_transform()), flags);
         in_frame_sculpt_render_list_id += current_sculpt->get_sculpt_data()->get_in_frame_model_buffer_index();
     }
-
-    stroke_manager.update();
 
     /*if (was_tool_used) {
         renderer->get_raymarching_renderer()->get_brick_usage([](float pct, uint32_t brick_count) {

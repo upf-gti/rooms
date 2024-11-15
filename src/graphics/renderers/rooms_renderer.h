@@ -129,8 +129,8 @@ public:
     *   Edits
     */
 
-    //void change_stroke(const StrokeParameters& params, const uint32_t index = 1u) {
-    //    raymarching_renderer.change_stroke(params, index);
+    //void change_stroke_params(const StrokeParameters& params, const uint32_t index = 1u) {
+    //    raymarching_renderer.change_stroke_params(params, index);
     //}
 
 //    void push_edit_list(std::vector<Edit> &edits) {
