@@ -79,6 +79,8 @@ class SculptManager {
     // Sculpt ray intersection
     uint32_t intersections_to_compute = 0u;
     SculptNode* intersection_node_to_test = nullptr;
+    Sculpt* sculpt_to_test = nullptr;
+    uint32_t model_to_test_idx = 0u;
     struct sGPU_RayData {
         glm::vec3   ray_origin;
         uint32_t    padd0;
@@ -191,6 +193,8 @@ public:
     void set_preview_stroke(Sculpt* sculpt, const uint32_t in_gpu_model_idx, sGPUStroke preview_stroke, const std::vector<Edit>& preview_edits);
 
     void set_ray_to_test(const glm::vec3& ray_origin, const glm::vec3& ray_dir, SculptNode* node_to_test = nullptr);
+    void set_ray_to_test(const glm::vec3& ray_origin, const glm::vec3& ray_dir, Sculpt * sculpt, const uint32_t model_id);
+
 
     Sculpt* create_sculpt();
     Sculpt* create_sculpt_from_history(const std::vector<Stroke>& stroke_history);

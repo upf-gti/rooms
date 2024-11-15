@@ -874,7 +874,7 @@ void SculptEditor::test_ray_to_sculpts()
     }
 
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
-    rooms_renderer->get_sculpt_manager()->set_ray_to_test(ray_origin, ray_direction);
+    rooms_renderer->get_sculpt_manager()->set_ray_to_test(ray_origin, ray_direction, current_sculpt->get_sculpt_data(), in_frame_sculpt_render_list_id);
 }
 
 void SculptEditor::update_sculpt_rotation()

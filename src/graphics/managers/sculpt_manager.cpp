@@ -181,6 +181,21 @@ void SculptManager::set_ray_to_test(const glm::vec3& ray_origin, const glm::vec3
     ray_to_upload.ray_direction = ray_dir;
     intersections_to_compute = 1u;
     intersection_node_to_test = node_to_test;
+    sculpt_to_test = nullptr;
+}
+
+void SculptManager::set_ray_to_test(const glm::vec3& ray_origin, const glm::vec3& ray_dir, Sculpt* sculpt, const uint32_t model_id) {
+    if (intersections_to_compute > 0u) {
+        spdlog::error("Only one ray test per frame!");
+        assert(0u);
+    }
+
+    ray_to_upload.ray_origin = ray_origin;
+    ray_to_upload.ray_direction = ray_dir;
+    intersections_to_compute = 1u;
+    model_to_test_idx = model_id;
+    sculpt_to_test = sculpt;
+    intersection_node_to_test = nullptr;
 }
 
 Sculpt* SculptManager::create_sculpt()
@@ -550,7 +565,9 @@ void SculptManager::evaluate_closest_ray_intersection(WGPUComputePassEncoder com
     webgpu_context->update_buffer(std::get<WGPUBuffer>(ray_info_uniform.data), 0u, &ray_to_upload, sizeof(sGPU_RayData));
     if (intersection_node_to_test != nullptr) {
         starting_idx = intersection_node_to_test->get_in_frame_render_instance_idx();
-    } 
+    } else if (sculpt_to_test != nullptr) {
+        starting_idx = model_to_test_idx;
+    }
     webgpu_context->update_buffer(std::get<WGPUBuffer>(ray_sculpt_instances_uniform.data), 0u, &starting_idx, sizeof(uint32_t));
     
 
@@ -571,7 +588,7 @@ void SculptManager::evaluate_closest_ray_intersection(WGPUComputePassEncoder com
             }
         }
     } else {
-        Sculpt* curr_sculpt = intersection_node_to_test->get_sculpt_data();
+        Sculpt* curr_sculpt = (sculpt_to_test) ? sculpt_to_test : intersection_node_to_test->get_sculpt_data();
 
         wgpuComputePassEncoderSetBindGroup(compute_pass, 2u, curr_sculpt->get_octree_bindgroup(), 0u, nullptr);
 
