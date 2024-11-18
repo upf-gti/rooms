@@ -13,11 +13,12 @@
 #include "framework/nodes/container_2d.h"
 #include "framework/nodes/button_2d.h"
 #include "framework/math/intersections.h"
+#include "framework/ui/io.h"
 #include "framework/ui/inspector.h"
 #include "framework/ui/keyboard.h"
+#include "framework/ui/context_menu.h"
 #include "framework/camera/camera.h"
 #include "framework/resources/room.h"
-#include "framework/ui/io.h"
 
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/renderer_storage.h"
@@ -374,6 +375,13 @@ void SceneEditor::process_node_hovered()
         }
         else if (select_action_pressed) {
             select_node(hovered_node, false);
+        }
+        else if (Input::was_mouse_pressed(GLFW_MOUSE_BUTTON_RIGHT)) {
+            new ui::ContextMenu(Input::get_mouse_position(), {
+                { "Duplicate", [&](const std::string& name, uint32_t index) { spdlog::info("clicked {} at ", name, index); }},
+                { "Animate", [&, n = hovered_node](const std::string& name, uint32_t index) { selected_node = n; RoomsEngine::switch_editor(ANIMATION_EDITOR, n); }},
+                { "Delete", [&, n = hovered_node](const std::string& name, uint32_t index) { delete_node(n); }}
+            });
         }
     }
 }
@@ -754,6 +762,10 @@ void SceneEditor::group_node(Node* node)
 
 void SceneEditor::delete_node(Node* node, bool push_undo)
 {
+    if (selected_node == node) {
+        deselect();
+    }
+
     uintptr_t idx = reinterpret_cast<uintptr_t>(node);
 
     Node* parent = node->get_parent();
@@ -1235,11 +1247,6 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
         inspector->button(signal, "data/textures/delete.png", ui::CONFIRM_BUTTON, "Delete");
 
         Node::bind(signal, [&, n = node](const std::string& sg, void* data) {
-
-            if (selected_node == n) {
-                deselect();
-            }
-
             delete_node(n);
         });
     }

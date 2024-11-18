@@ -10,6 +10,7 @@
 #include "framework/utils/tinyfiledialogs.h"
 #include "framework/ui/io.h"
 #include "framework/ui/keyboard.h"
+#include "framework/ui/context_menu.h"
 
 #include "engine/scene.h"
 
@@ -184,6 +185,10 @@ void RoomsEngine::update(float delta_time)
         get_editor<TutorialEditor*>(TUTORIAL_EDITOR)->update(delta_time);
     }
 
+    if (active_context_menu) {
+        active_context_menu->update(delta_time);
+    }
+
     cursor.update(delta_time);
 
     Node::check_controller_signals();
@@ -227,6 +232,10 @@ void RoomsEngine::render()
         get_editor<TutorialEditor*>(TUTORIAL_EDITOR)->render();
     }
 
+    if(active_context_menu) {
+        active_context_menu->render();
+    }
+
     if (Renderer::instance->get_openxr_available() && !playing_scene) {
         const glm::mat4x4& raycast_transform = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
         ray_pointer->set_transform(Transform::mat4_to_transform(raycast_transform));
@@ -240,6 +249,14 @@ void RoomsEngine::render()
     }
 
     Engine::render();
+
+    // destroy pending stuff
+
+    while (to_delete.size()) {
+        Node* node = to_delete.back();
+        delete node;
+        to_delete.pop_back();
+    }
 }
 
 void RoomsEngine::render_controllers()
@@ -284,6 +301,20 @@ void RoomsEngine::toggle_use_environment_map()
 void RoomsEngine::set_current_sculpt(SculptNode* sculpt_instance)
 {
     get_editor<SculptEditor*>(SCULPT_EDITOR)->set_current_sculpt(sculpt_instance);
+}
+
+void RoomsEngine::push_context_menu(ui::ContextMenu* cm)
+{
+    active_context_menu = cm;
+}
+
+void RoomsEngine::delete_context_menu(ui::ContextMenu* cm)
+{
+    active_context_menu = nullptr;
+
+    IO::blur();
+
+    to_delete.push_back(cm);
 }
 
 void RoomsEngine::render_gui()

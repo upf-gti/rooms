@@ -11,6 +11,10 @@ class SculptNode;
 class Environment3D;
 class BaseEditor;
 
+namespace ui {
+    class ContextMenu;
+}
+
 enum EditorType : uint8_t {
     SCENE_EDITOR,
     SCULPT_EDITOR,
@@ -34,6 +38,12 @@ class RoomsEngine : public Engine
     std::vector<BaseEditor*> editors;
 
     BaseEditor* current_editor = nullptr;
+
+    std::vector<Node*> to_delete;
+
+    // UI
+
+    ui::ContextMenu* active_context_menu = nullptr;
 
     void render_gui();
 
@@ -70,6 +80,9 @@ public:
     static void toggle_use_environment_map();
 
     void set_current_sculpt(SculptNode* sculpt_instance);
+
+    void push_context_menu(ui::ContextMenu* cm);
+    void delete_context_menu(ui::ContextMenu* cm);
 
     inline Gizmo3D* get_gizmo() { return &gizmo; }
     inline BaseEditor* get_current_editor() const { return current_editor; }
