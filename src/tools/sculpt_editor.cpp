@@ -220,6 +220,12 @@ void SculptEditor::on_enter(void* data)
     if (!sculpt_started && sculpt_node->get_from_memory()) {
         sculpt_started = true;
     }
+
+    static_cast<RoomsRenderer*>(RoomsRenderer::instance)->get_raymarching_renderer()->set_preview_render(true);
+}
+
+void SculptEditor::on_exit() {
+    static_cast<RoomsRenderer*>(RoomsRenderer::instance)->get_raymarching_renderer()->set_preview_render(false);
 }
 
 void SculptEditor::clean()
