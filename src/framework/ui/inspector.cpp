@@ -87,6 +87,22 @@ namespace ui {
         });
     }
 
+    Inspector::~Inspector()
+    {
+        std::function<void(Node* node)> fn_delete = [&](Node* node) {
+
+            if (!node) return;
+
+            while (node->get_children().size()) {
+                fn_delete(node->get_children().back());
+            }
+
+            delete node;
+        };
+
+        fn_delete(root);
+    }
+
     void Inspector::update(float delta_time)
     {
         if ((IO::get_hover() == root) && Input::was_grab_pressed(HAND_RIGHT)) {

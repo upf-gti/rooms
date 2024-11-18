@@ -73,6 +73,7 @@ namespace ui {
 
         Inspector() {};
         Inspector(const InspectorDesc& desc);
+        ~Inspector();
 
         void update(float delta_time);
         void clear(uint8_t reset_flags = INSPECTOR_FLAG_CLOSE_BUTTON, const std::string& new_title = "");
