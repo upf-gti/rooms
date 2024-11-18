@@ -166,8 +166,6 @@ void SculptManager::set_preview_stroke(Sculpt* sculpt, const uint32_t in_gpu_mod
     preview.sculpt_model_idx = in_gpu_model_idx;
 
     preview.needs_computing = true;
-
-    static_cast<RoomsRenderer*>(RoomsRenderer::instance)->get_raymarching_renderer()->set_preview_render(true);
 }
 
 void SculptManager::set_ray_to_test(const glm::vec3& ray_origin, const glm::vec3& ray_dir, SculptNode *node_to_test)

@@ -229,5 +229,5 @@ public:
     }
 
     void on_enter(void* data);
-    // void on_exit();
+    void on_exit();
 };
