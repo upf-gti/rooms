@@ -378,7 +378,7 @@ void SceneEditor::process_node_hovered()
         }
         else if (Input::was_mouse_pressed(GLFW_MOUSE_BUTTON_RIGHT)) {
             new ui::ContextMenu(Input::get_mouse_position(), {
-                { "Duplicate", [&](const std::string& name, uint32_t index) { spdlog::info("clicked {} at ", name, index); }},
+                { "Duplicate", [&, n = hovered_node](const std::string& name, uint32_t index) { clone_node(n, true); }},
                 { "Animate", [&, n = hovered_node](const std::string& name, uint32_t index) { selected_node = n; RoomsEngine::switch_editor(ANIMATION_EDITOR, n); }},
                 { "Delete", [&, n = hovered_node](const std::string& name, uint32_t index) { delete_node(n); }}
             });

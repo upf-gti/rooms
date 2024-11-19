@@ -19,7 +19,7 @@ namespace ui {
 
     uint32_t ContextMenu::row_id = 0;
 
-    ContextMenu::ContextMenu(const glm::vec2& position, std::vector<sContextMenuOption> new_options)
+    ContextMenu::ContextMenu(const glm::vec2& position, const std::vector<sContextMenuOption>& new_options)
         : Node2D(name, { 0.0f, 0.0f }, { 0.0f, 0.0f }, ui::CREATE_3D)
     {
         glm::vec2 body_padding = { 12.0f, 16.0f };
@@ -42,6 +42,20 @@ namespace ui {
         body->padding = body_padding;
         body->set_fixed_size(real_size);
         root->add_child(body);
+
+        // Set xr position
+        auto renderer = Renderer::instance;
+
+        if (renderer->get_openxr_available()) {
+            glm::mat4x4 m(1.0f);
+            glm::vec3 eye = renderer->get_camera_eye();
+            glm::vec3 new_pos = eye + renderer->get_camera_front() * 0.5f;
+
+            m = glm::translate(m, new_pos);
+            m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
+            m = glm::rotate(m, glm::radians(180.f), { 1.0f, 0.0f, 0.0f });
+            set_xr_transform(Transform::mat4_to_transform(m));
+        }
 
         for (const auto& option : new_options) {
             add_option(option);
@@ -68,22 +82,6 @@ namespace ui {
 
     void ContextMenu::update(float delta_time)
     {
-        root->set_priority(PANEL);
-
-        auto renderer = Renderer::instance;
-
-        if (renderer->get_openxr_available()) {
-
-            glm::mat4x4 m(1.0f);
-            glm::vec3 eye = renderer->get_camera_eye();
-            glm::vec3 new_pos = eye + renderer->get_camera_front() * 0.5f;
-
-            m = glm::translate(m, new_pos);
-            m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
-            m = glm::rotate(m, glm::radians(180.f), { 1.0f, 0.0f, 0.0f });
-            set_xr_transform(Transform::mat4_to_transform(m));
-        }
-
         Node2D::update(delta_time);
 
         // delete if unhovered..
