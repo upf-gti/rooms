@@ -42,6 +42,13 @@ class SceneEditor : public BaseEditor {
     Room* current_room = nullptr;
 
     /*
+    *   Intersections stuff
+    */
+
+    glm::vec3 ray_origin;
+    glm::vec3 ray_direction;
+
+    /*
     *   Input stuff
     */
 

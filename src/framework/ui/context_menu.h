@@ -37,7 +37,7 @@ namespace ui {
 
     public:
 
-        ContextMenu(const glm::vec2& position, const std::vector<sContextMenuOption>& new_options);
+        ContextMenu(const glm::vec2& position, const glm::vec3& position_3d, const std::vector<sContextMenuOption>& new_options);
         ~ContextMenu();
 
         void update(float delta_time);

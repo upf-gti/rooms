@@ -276,9 +276,6 @@ void SceneEditor::update_hovered_node()
 {
     // Send rays each frame to detect hovered sculpts and other nodes
 
-    glm::vec3 ray_origin;
-    glm::vec3 ray_direction;
-
     if (Renderer::instance->get_openxr_available()) {
         ray_origin = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
         glm::mat4x4 select_hand_pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
@@ -315,6 +312,7 @@ void SceneEditor::process_node_hovered()
     const bool group_hovered = !sculpt_hovered && !!dynamic_cast<Group3D*>(hovered_node);
     const bool a_pressed = Input::was_button_pressed(XR_BUTTON_A);
     const bool b_pressed = Input::was_button_pressed(XR_BUTTON_B);
+    const bool should_open_context_menu = Input::was_button_pressed(XR_BUTTON_B) || Input::was_mouse_pressed(GLFW_MOUSE_BUTTON_RIGHT);
 
     if (group_hovered) {
         if (grouping_node) {
@@ -331,6 +329,22 @@ void SceneEditor::process_node_hovered()
             }
             else if (select_action_pressed) {
                 select_node(hovered_node, false);
+            }
+            else if (should_open_context_menu) {
+
+                glm::vec2 position = Input::get_mouse_position();
+                glm::vec3 position_3d = glm::vec3(0.0f);
+
+                if (renderer->get_openxr_available()) {
+                    position = { 0.0f, 0.0f };
+                    const sGPU_SculptResults& gpu_results = renderer->get_sculpt_manager()->read_results.loaded_results;
+                    position_3d = ray_origin + ray_direction * gpu_results.ray_intersection.ray_t;
+                }
+
+                new ui::ContextMenu(position, position_3d, {
+                    { "Edit", [&, n = hovered_node](const std::string& name, uint32_t index) { edit_group(static_cast<Group3D*>(n)); }},
+                    { "Delete", [&, n = hovered_node](const std::string& name, uint32_t index) { delete_node(n); }}
+                });
             }
         }
     }
@@ -376,8 +390,18 @@ void SceneEditor::process_node_hovered()
         else if (select_action_pressed) {
             select_node(hovered_node, false);
         }
-        else if (Input::was_mouse_pressed(GLFW_MOUSE_BUTTON_RIGHT)) {
-            new ui::ContextMenu(Input::get_mouse_position(), {
+        else if (should_open_context_menu) {
+
+            glm::vec2 position = Input::get_mouse_position();
+            glm::vec3 position_3d = glm::vec3(0.0f);
+
+            if (renderer->get_openxr_available()) {
+                position = { 0.0f, 0.0f };
+                const sGPU_SculptResults& gpu_results = renderer->get_sculpt_manager()->read_results.loaded_results;
+                position_3d = ray_origin + ray_direction * gpu_results.ray_intersection.ray_t;
+            }
+
+            new ui::ContextMenu(position, position_3d, {
                 { "Duplicate", [&, n = hovered_node](const std::string& name, uint32_t index) { clone_node(n, true); }},
                 { "Animate", [&, n = hovered_node](const std::string& name, uint32_t index) { selected_node = n; RoomsEngine::switch_editor(ANIMATION_EDITOR, n); }},
                 { "Delete", [&, n = hovered_node](const std::string& name, uint32_t index) { delete_node(n); }}
