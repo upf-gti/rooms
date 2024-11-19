@@ -133,8 +133,25 @@ void SculptNode::render()
 
 void SculptNode::initialize()
 {
-    sculpt_gpu_data = static_cast<RoomsRenderer*>(Renderer::instance)->get_sculpt_manager()->create_sculpt();
-    sculpt_gpu_data->ref();
+    /*sculpt_gpu_data = static_cast<RoomsRenderer*>(Renderer::instance)->get_sculpt_manager()->create_sculpt();
+    sculpt_gpu_data->ref();*/
+
+    // Create default sculpt
+    Stroke default_stroke = {
+        .stroke_id = 0u,
+        .edit_count = 1u,
+        .primitive = SD_BOX,
+        .operation = OP_SMOOTH_UNION,
+        .parameters = { 0.f, -1.f, 0.f, 0.f },
+        .edits = {
+            {.position = {0.0f, 0.0f, 0.0f}, .dimensions = { 0.02f, 0.02f, 0.02f, 0.0f} }
+        }
+    };
+
+    std::vector<Stroke> history;
+    history.push_back(default_stroke);
+
+    from_history(history);
 }
 
 void SculptNode::from_history(const std::vector<Stroke>& new_history)
@@ -180,8 +197,7 @@ void SculptNode::parse(std::ifstream& binary_scene_file)
         binary_scene_file.read(reinterpret_cast<char*>(&stroke_history[0]), header.stroke_count * sizeof(Stroke));
         from_history(stroke_history);
     } else {
-        sculpt_gpu_data = rooms_renderer->get_sculpt_manager()->create_sculpt();
-        sculpt_gpu_data->ref();
+        initialize();
     }
 
 

@@ -103,9 +103,9 @@ void SculptManager::update(WGPUCommandEncoder command_encoder)
     if (!evaluations_to_process.empty()) {
         sEvaluateRequest& evaluate_request = evaluations_to_process.back();
 
-        evaluate(compute_pass, evaluate_request);
-
-        evaluations_to_process.pop_back();
+        if (evaluate(compute_pass, evaluate_request)) {
+            evaluations_to_process.pop_back();
+        }
     }
 
     if (previus_dispatch_had_preview) {
@@ -240,7 +240,14 @@ Sculpt* SculptManager::create_sculpt()
     uniforms = { &octree_uniform, &brick_index_buffer, &indirect_buffer, &sdf_globals.brick_buffers};
     WGPUBindGroup brick_copy_aabb_gen_bind_group = webgpu_context->create_bind_group(uniforms, brick_copy_aabb_gen_shader, 0u, "brick copy bindgroup");
 
-    return new Sculpt(sculpt_count++, octree_uniform, indirect_buffer, brick_index_buffer, octree_bindgroup, evaluate_sculpt_bindgroup, oct_indi_bindgroup, readonly_sculpt_buffer_bindgroup, brick_copy_aabb_gen_bind_group);
+    Sculpt* new_sculpt = new Sculpt(sculpt_count++, octree_uniform, indirect_buffer, brick_index_buffer, octree_bindgroup);
+
+    new_sculpt->set_brick_copy_bindgroup(brick_copy_aabb_gen_bind_group);
+    new_sculpt->set_readonly_octree_bindgroup(readonly_sculpt_buffer_bindgroup);
+    new_sculpt->set_indirect_buffers_bindgroup(oct_indi_bindgroup);
+    new_sculpt->set_sculpt_evaluation_bindgroup(evaluate_sculpt_bindgroup);
+
+    return new_sculpt;
 }
 
 Sculpt* SculptManager::create_sculpt_from_history(const std::vector<Stroke>& stroke_history)
@@ -307,15 +314,15 @@ void SculptManager::delete_sculpt(WGPUComputePassEncoder compute_pass, Sculpt* t
 #endif
 }
 
-void SculptManager::evaluate(WGPUComputePassEncoder compute_pass, const sEvaluateRequest& evaluate_request)
+bool SculptManager::evaluate(WGPUComputePassEncoder compute_pass, const sEvaluateRequest& evaluate_request)
 {
-    if (!evaluate_shader || !evaluate_shader->is_loaded()) return;
+    if (!evaluate_shader || !evaluate_shader->is_loaded()) return false;
     if (!evaluation_initialization_pipeline.is_loaded() ||
         !evaluate_pipeline.is_loaded() ||
         !increment_level_pipeline.is_loaded() ||
         !write_to_texture_pipeline.is_loaded() ||
         !brick_copy_aabb_gen_pipeline.is_loaded()) {
-        return;
+        return false;
     }
 
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
@@ -452,6 +459,8 @@ void SculptManager::evaluate(WGPUComputePassEncoder compute_pass, const sEvaluat
     }
 
     performed_evaluation = true;
+
+    return true;
 }
 
 void SculptManager::clean_previous_preview(WGPUComputePassEncoder compute_pass)

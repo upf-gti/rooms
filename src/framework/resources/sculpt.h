@@ -34,10 +34,9 @@ class Sculpt : public Resource {
     void on_delete() override;
 
 public:
-    Sculpt(const uint32_t id, const Uniform uniform, const Uniform indiret_buffer, const Uniform indices_buffer, const WGPUBindGroup octree_bind, const WGPUBindGroup eval_sculpt_bindgroup, const WGPUBindGroup oct_indir_bindroup, const WGPUBindGroup readonly_bindgroup, const WGPUBindGroup brick_copy_aabb_gen_bindgroup):
-        sculpt_id (id), octree_uniform(uniform), evaluate_sculpt_bindgroup(eval_sculpt_bindgroup), octree_bindgroup(octree_bind),
-        indirect_call_buffer(indiret_buffer), brick_indices_buffer(indices_buffer), readonly_octree_bindgroup(readonly_bindgroup),
-        octree_indirect_bindgroup(oct_indir_bindroup), octree_brick_copy_aabb_gen_bindgroup(brick_copy_aabb_gen_bindgroup) {};
+    Sculpt(const uint32_t id, const Uniform uniform, const Uniform indiret_buffer, const Uniform indices_buffer, const WGPUBindGroup octree_bind):
+        sculpt_id (id), octree_uniform(uniform), octree_bindgroup(octree_bind),
+        indirect_call_buffer(indiret_buffer), brick_indices_buffer(indices_buffer) {};
 
     /*void init();
     void clean();*/
@@ -45,6 +44,10 @@ public:
     void set_octree_uniform(Uniform octree_uniform) { this->octree_uniform = octree_uniform; }
     void set_octree_bindgroup(WGPUBindGroup octree_bindgroup) { this->octree_bindgroup = octree_bindgroup; }
     void set_stroke_history(const std::vector<Stroke>& stroke_history) { this->stroke_history = stroke_history; }
+    void set_brick_copy_bindgroup(const WGPUBindGroup brick_copy_aabb_gen_bindgroup) { octree_brick_copy_aabb_gen_bindgroup = brick_copy_aabb_gen_bindgroup; }
+    void set_readonly_octree_bindgroup(const WGPUBindGroup readonly_bindgroup) { readonly_octree_bindgroup = readonly_bindgroup; }
+    void set_indirect_buffers_bindgroup(const WGPUBindGroup oct_indir_bindroup) { octree_indirect_bindgroup = oct_indir_bindroup; }
+    void set_sculpt_evaluation_bindgroup(const WGPUBindGroup eval_sculpt_bindgroup) { evaluate_sculpt_bindgroup = eval_sculpt_bindgroup; }
     void mark_as_deleted() { deleted = true; }
 
     uint32_t get_sculpt_id() const { return sculpt_id; }

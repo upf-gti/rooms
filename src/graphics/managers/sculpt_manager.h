@@ -166,7 +166,7 @@ class SculptManager {
     void init_uniforms();
     void init_pipelines_and_bindgroups();
 
-    void evaluate(WGPUComputePassEncoder compute_pass, const sEvaluateRequest& evaluate_request);
+    bool evaluate(WGPUComputePassEncoder compute_pass, const sEvaluateRequest& evaluate_request);
     void evaluate_preview(WGPUComputePassEncoder compute_pass);
 
     void evaluate_closest_ray_intersection(WGPUComputePassEncoder compute_pass);
