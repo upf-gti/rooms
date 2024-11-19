@@ -23,6 +23,17 @@ REGISTER_NODE_CLASS(SculptNode)
 
 // #define SHOW_SCULPT_AABB
 
+Stroke SculptNode::default_stroke = {
+    .stroke_id = 0u,
+    .edit_count = 1u,
+    .primitive = SD_BOX,
+    .operation = OP_SMOOTH_UNION,
+    .parameters = { 0.f, -1.f, 0.f, 0.f },
+    .edits = {
+        { .position = {0.0f, 0.0f, 0.0f}, .dimensions = { 0.02f, 0.02f, 0.02f, 0.0f } }
+    }
+};
+
 SculptNode::SculptNode() : Node3D()
 {
     node_type = "SculptNode";
@@ -58,6 +69,14 @@ SculptNode::~SculptNode()
     if (sculpt_gpu_data->unref()) {
         static_cast<RoomsRenderer*>(Renderer::instance)->get_sculpt_manager()->delete_sculpt(sculpt_gpu_data);
     }
+}
+
+void SculptNode::initialize()
+{
+    // Create default sculpt
+    std::vector<Stroke> history;
+    history.push_back(default_stroke);
+    from_history(history, false);
 }
 
 void SculptNode::update(float delta_time)
@@ -131,36 +150,13 @@ void SculptNode::render()
 #endif
 }
 
-void SculptNode::initialize()
-{
-    /*sculpt_gpu_data = static_cast<RoomsRenderer*>(Renderer::instance)->get_sculpt_manager()->create_sculpt();
-    sculpt_gpu_data->ref();*/
-
-    // Create default sculpt
-    Stroke default_stroke = {
-        .stroke_id = 0u,
-        .edit_count = 1u,
-        .primitive = SD_BOX,
-        .operation = OP_SMOOTH_UNION,
-        .parameters = { 0.f, -1.f, 0.f, 0.f },
-        .edits = {
-            {.position = {0.0f, 0.0f, 0.0f}, .dimensions = { 0.02f, 0.02f, 0.02f, 0.0f} }
-        }
-    };
-
-    std::vector<Stroke> history;
-    history.push_back(default_stroke);
-
-    from_history(history);
-}
-
-void SculptNode::from_history(const std::vector<Stroke>& new_history)
+void SculptNode::from_history(const std::vector<Stroke>& new_history, bool loaded_from_memory)
 {
     if (!new_history.empty()) {
         RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(Renderer::instance);
         sculpt_gpu_data = rooms_renderer->get_sculpt_manager()->create_sculpt_from_history(new_history);
         sculpt_gpu_data->ref();
-        from_memory = true;
+        from_memory = loaded_from_memory;
     }
     else {
         initialize();

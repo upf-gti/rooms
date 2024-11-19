@@ -25,10 +25,12 @@ class SculptNode : public Node3D {
 
     Sculpt* sculpt_gpu_data = nullptr;
 
-    void from_history(const std::vector<Stroke>& new_history);
+    void from_history(const std::vector<Stroke>& new_history, bool loaded_from_memory = true);
 
     // DEBUG
     MeshInstance3D* AABB_mesh = nullptr;
+
+    static Stroke default_stroke;
 
 public: 
 

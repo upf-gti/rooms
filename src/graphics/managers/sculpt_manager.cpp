@@ -316,13 +316,18 @@ void SculptManager::delete_sculpt(WGPUComputePassEncoder compute_pass, Sculpt* t
 
 bool SculptManager::evaluate(WGPUComputePassEncoder compute_pass, const sEvaluateRequest& evaluate_request)
 {
-    if (!evaluate_shader || !evaluate_shader->is_loaded()) return false;
-    if (!evaluation_initialization_pipeline.is_loaded() ||
+    if (!evaluate_shader->is_loaded() ||
+        !evaluation_initialization_pipeline.is_loaded() ||
         !evaluate_pipeline.is_loaded() ||
         !increment_level_pipeline.is_loaded() ||
         !write_to_texture_pipeline.is_loaded() ||
         !brick_copy_aabb_gen_pipeline.is_loaded()) {
         return false;
+    }
+
+    // Sculpt might have been deleted since the request was sent
+    if (evaluate_request.sculpt->is_deleted()) {
+        return true;
     }
 
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
