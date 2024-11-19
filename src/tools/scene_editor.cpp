@@ -680,16 +680,17 @@ void SceneEditor::select_node(Node* node, bool place)
 
 void SceneEditor::add_node(Node* node, Node* parent, int idx)
 {
+    Node3D* node_3d = static_cast<Node3D*>(node);
+
     // Check for its own group first
     if (parent) {
         Group3D* group = static_cast<Group3D*>(parent);
-        Node3D* node_3d = static_cast<Node3D*>(node);
-
         node_3d->set_transform(Transform::combine(node_3d->get_transform(), group->get_transform()));
         group->add_node(node_3d);
     }
     else if (current_group) {
         node_to_group = node;
+        node_3d->set_transform(Transform::combine(node_3d->get_transform(), current_group->get_transform()));
         process_group(current_group, false);
     }
     else {
