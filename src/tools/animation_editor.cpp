@@ -4,6 +4,7 @@
 #include "framework/input.h"
 #include "framework/parsers/parse_obj.h"
 #include "framework/nodes/mesh_instance_3d.h"
+#include "framework/nodes/skeleton_instance_3d.h"
 #include "framework/nodes/animation_player.h"
 #include "framework/nodes/container_2d.h"
 #include "framework/nodes/slider_2d.h"
@@ -72,10 +73,10 @@ void AnimationEditor::initialize()
     keyframe_markers_render_instance->add_surface(RendererStorage::get_surface("sphere"));
     keyframe_markers_render_instance->set_surface_material_override(keyframe_markers_render_instance->get_surface(0), joint_material);
 
-    // Trjacoetry line
+    // Trajectory line
     animation_trajectory_instance = new MeshInstance3D();
     animation_trajectory_mesh = new Surface();
-    animation_trajectory_mesh->set_name("Animation trajecotry");
+    animation_trajectory_mesh->set_name("Animation trajectory");
     animation_trajectory_instance->set_frustum_culling_enabled(false);
 
     sInterleavedData empty;
@@ -223,6 +224,43 @@ void AnimationEditor::update(float delta_time)
         keyframe_list_dirty = false;
     }
 
+    // debug joint intersections
+    if(Input::was_mouse_pressed(GLFW_MOUSE_BUTTON_LEFT)) {
+        Node3D* node = nullptr;
+
+        std::function<Node* (Node*)> find_skeleton = [&](Node* node) {
+            for (auto child : node->get_children()) {
+                if (dynamic_cast<SkeletonInstance3D*>(child)) {
+                    return child;
+                }
+                return find_skeleton(node->get_children().back());
+            }
+            return node;
+        };
+
+        node = static_cast<Node3D*>(find_skeleton(current_node));
+
+        glm::vec3 ray_origin;
+        glm::vec3 ray_direction;
+        float distance = 1e9f;
+
+        if (Renderer::instance->get_openxr_available()) {
+            ray_origin = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
+            glm::mat4x4 select_hand_pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
+            ray_direction = get_front(select_hand_pose);
+        }
+        else {
+            Camera* camera = Renderer::instance->get_camera();
+            glm::vec3 ray_dir = camera->screen_to_ray(Input::get_mouse_position());
+            ray_origin = camera->get_eye();
+            ray_direction = glm::normalize(ray_dir);
+        }
+
+        if (node && node->test_ray_collision(ray_origin, ray_direction, distance)) {
+            current_skeleton_instance = static_cast<SkeletonInstance3D*>(node);
+        }
+    }
+
     if (renderer->get_openxr_available()) {
 
         if (!keyframe_dirty) {
@@ -295,7 +333,8 @@ void AnimationEditor::update_gizmo(float delta_time)
 
     glm::vec3 right_controller_pos = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
 
-    Transform t = current_node->get_transform();
+    Node3D* node = current_node;
+    Transform t = node->get_transform();
     Transform parent_transform;
 
     auto scene_editor = static_cast<RoomsEngine*>(Engine::instance)->get_editor<SceneEditor*>(SCENE_EDITOR);
@@ -312,7 +351,7 @@ void AnimationEditor::update_gizmo(float delta_time)
             t = Transform::combine(Transform::inverse(parent_transform), t);
         }
 
-        current_node->set_transform(t);
+        node->set_transform(t);
     }
 }
 
@@ -322,14 +361,22 @@ void AnimationEditor::render_gizmo()
         return;
     }
 
-    Transform t = current_node->get_transform();
-    Transform parent_transform;
+    Node3D* node = current_node;
+    Transform parent_transform = Transform::identity();
+
+    if (current_skeleton_instance) {
+        node = current_skeleton_instance->get_selected_joint();
+        parent_transform = current_skeleton_instance->get_selected_joint_transform();
+    }
+
+    Transform t = node->get_transform();
+    t = Transform::combine(parent_transform, t);
 
     auto scene_editor = static_cast<RoomsEngine*>(Engine::instance)->get_editor<SceneEditor*>(SCENE_EDITOR);
     Group3D* current_group = scene_editor->get_current_group();
 
     if (current_group) {
-        parent_transform = current_group->get_transform();
+        parent_transform = Transform::combine(current_group->get_transform(), parent_transform);
         t = Transform::combine(parent_transform, t);
     }
 
@@ -344,14 +391,13 @@ void AnimationEditor::render_gizmo()
     }
 
     if (transform_dirty) {
-
         Transform new_transform = gizmo->get_transform();
+        new_transform = Transform::combine(Transform::inverse(parent_transform), new_transform);
+        node->set_transform(new_transform);
 
-        if (current_group) {
-            new_transform = Transform::combine(Transform::inverse(parent_transform), new_transform);
+        if (current_skeleton_instance) {
+            current_skeleton_instance->set_transform_dirty(true);
         }
-
-        current_node->set_transform(new_transform);
     }
 }
 
@@ -584,7 +630,23 @@ void AnimationEditor::store_animation_state(sAnimationState& state)
         assert(0);
     }
 
-    const std::unordered_map<std::string, Node::AnimatableProperty>& properties = current_node->get_animatable_properties();
+    // Get properties from the root node or from SkeletonInstance3D (if any)
+
+    Node3D* node = current_node;
+
+    std::function<Node*(Node*)> find_skeleton = [&](Node* node) {
+        for(auto child : node->get_children()) {
+            if (dynamic_cast<SkeletonInstance3D*>(child)) {
+                return child;
+            }
+            return find_skeleton(node->get_children().back());
+        }
+        return node;
+    };
+
+    node = static_cast<Node3D*>(find_skeleton(node));
+
+    const std::unordered_map<std::string, Node::AnimatableProperty>& properties = node->get_animatable_properties();
 
     for (auto prop_it : properties) {
 
@@ -596,68 +658,27 @@ void AnimationEditor::store_animation_state(sAnimationState& state)
         }
 
         switch (prop_it.second.property_type) {
-        case Node::AnimatablePropertyType::INT8:
-            state.properties[prop_it.first].value = *((int8_t*)data);
-            break;
-        case Node::AnimatablePropertyType::INT16:
-            state.properties[prop_it.first].value = *((int16_t*)data);
-            break;
-        case Node::AnimatablePropertyType::INT32:
-            state.properties[prop_it.first].value = *((int32_t*)data);
-            break;
-        case Node::AnimatablePropertyType::INT64:
-            //state.properties[prop_it.first].value = *((int64_t*)data);
-            break;
-        case Node::AnimatablePropertyType::UINT8:
-            state.properties[prop_it.first].value = *((uint8_t*)data);
-            break;
-        case Node::AnimatablePropertyType::UINT16:
-            state.properties[prop_it.first].value = *((uint16_t*)data);
-            break;
-        case Node::AnimatablePropertyType::UINT32:
-            state.properties[prop_it.first].value = *((uint32_t*)data);
-            break;
-        case Node::AnimatablePropertyType::UINT64:
-            //state.properties[prop_it.first].value = *((uint64_t*)data);
-            break;
-        case Node::AnimatablePropertyType::FLOAT32:
-            state.properties[prop_it.first].value = *((float*)data);
-            break;
-        case Node::AnimatablePropertyType::FLOAT64:
-            //state.properties[prop_it.first].value = *((long float*)data);
-            break;
-        case Node::AnimatablePropertyType::IVEC2:
-            state.properties[prop_it.first].value = *((glm::ivec2*)data);
-            break;
-        case Node::AnimatablePropertyType::UVEC2:
-            state.properties[prop_it.first].value = *((glm::uvec2*)data);
-            break;
-        case Node::AnimatablePropertyType::FVEC2:
-            state.properties[prop_it.first].value = *((glm::vec2*)data);
-            break;
-        case Node::AnimatablePropertyType::IVEC3:
-            state.properties[prop_it.first].value = *((glm::ivec3*)data);
-            break;
-        case Node::AnimatablePropertyType::UVEC3:
-            state.properties[prop_it.first].value = *((glm::uvec3*)data);
-            break;
-        case Node::AnimatablePropertyType::FVEC3:
-            state.properties[prop_it.first].value = *((glm::vec3*)data);
-            break;
-        case Node::AnimatablePropertyType::IVEC4:
-            state.properties[prop_it.first].value = *((glm::ivec4*)data);
-            break;
-        case Node::AnimatablePropertyType::UVEC4:
-            state.properties[prop_it.first].value = *((glm::uvec4*)data);
-            break;
-        case Node::AnimatablePropertyType::FVEC4:
-            state.properties[prop_it.first].value = *((glm::vec4*)data);
-            break;
-        case Node::AnimatablePropertyType::QUAT:
-            state.properties[prop_it.first].value = *((glm::quat*)data);
-            break;
-        case Node::AnimatablePropertyType::UNDEFINED:
-            break;
+        case Node::AnimatablePropertyType::INT8: state.properties[prop_it.first].value = *((int8_t*)data); break;
+        case Node::AnimatablePropertyType::INT16: state.properties[prop_it.first].value = *((int16_t*)data); break;
+        case Node::AnimatablePropertyType::INT32: state.properties[prop_it.first].value = *((int32_t*)data); break;
+        case Node::AnimatablePropertyType::INT64: /*state.properties[prop_it.first].value = *((int64_t*)data);*/ break;
+        case Node::AnimatablePropertyType::UINT8: state.properties[prop_it.first].value = *((uint8_t*)data); break;
+        case Node::AnimatablePropertyType::UINT16: state.properties[prop_it.first].value = *((uint16_t*)data); break;
+        case Node::AnimatablePropertyType::UINT32: state.properties[prop_it.first].value = *((uint32_t*)data); break;
+        case Node::AnimatablePropertyType::UINT64: /*state.properties[prop_it.first].value = *((uint64_t*)data);*/ break;
+        case Node::AnimatablePropertyType::FLOAT32: state.properties[prop_it.first].value = *((float*)data); break;
+        case Node::AnimatablePropertyType::FLOAT64: /*state.properties[prop_it.first].value = *((long float*)data);*/ break;
+        case Node::AnimatablePropertyType::IVEC2: state.properties[prop_it.first].value = *((glm::ivec2*)data); break;
+        case Node::AnimatablePropertyType::UVEC2: state.properties[prop_it.first].value = *((glm::uvec2*)data); break;
+        case Node::AnimatablePropertyType::FVEC2: state.properties[prop_it.first].value = *((glm::vec2*)data); break;
+        case Node::AnimatablePropertyType::IVEC3: state.properties[prop_it.first].value = *((glm::ivec3*)data); break;
+        case Node::AnimatablePropertyType::UVEC3: state.properties[prop_it.first].value = *((glm::uvec3*)data); break;
+        case Node::AnimatablePropertyType::FVEC3: state.properties[prop_it.first].value = *((glm::vec3*)data); break;
+        case Node::AnimatablePropertyType::IVEC4: state.properties[prop_it.first].value = *((glm::ivec4*)data); break;
+        case Node::AnimatablePropertyType::UVEC4: state.properties[prop_it.first].value = *((glm::uvec4*)data); break;
+        case Node::AnimatablePropertyType::FVEC4: state.properties[prop_it.first].value = *((glm::vec4*)data); break;
+        case Node::AnimatablePropertyType::QUAT: state.properties[prop_it.first].value = *((glm::quat*)data); break;
+        case Node::AnimatablePropertyType::UNDEFINED: break;
         }
     }
 }
@@ -932,12 +953,12 @@ void AnimationEditor::inspect_keyframe()
 
 void AnimationEditor::inspect_keyframe_properties()
 {
-    inspector->label("empty", "Keyframe Properties");
+    /*inspector->label("empty", "Keyframe Properties");
     inspector->same_line();
-    /*std::string signal = node_name + std::to_string(node_signal_uid++) + "_intensity_slider";
-    inspector->add_slider(signal, light->get_intensity(), 0.0f, 10.0f, 2);*/
+    std::string signal = node_name + std::to_string(node_signal_uid++) + "_intensity_slider";
+    inspector->add_slider(signal, light->get_intensity(), 0.0f, 10.0f, 2);
     inspector->label("empty", "Interpolation", ui::SKIP_TEXT_RECT);
-    inspector->end_line();
+    inspector->end_line();*/
 }
 
 void AnimationEditor::inspect_node(Node* node)

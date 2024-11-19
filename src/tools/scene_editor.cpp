@@ -330,7 +330,7 @@ void SceneEditor::process_node_hovered()
             else if (select_action_pressed) {
                 select_node(hovered_node, false);
             }
-            else if (should_open_context_menu) {
+            /*else if (should_open_context_menu) {
 
                 glm::vec2 position = Input::get_mouse_position();
                 glm::vec3 position_3d = glm::vec3(0.0f);
@@ -345,7 +345,7 @@ void SceneEditor::process_node_hovered()
                     { "Edit", [&, n = hovered_node](const std::string& name, uint32_t index) { edit_group(static_cast<Group3D*>(n)); }},
                     { "Delete", [&, n = hovered_node](const std::string& name, uint32_t index) { delete_node(n); }}
                 });
-            }
+            }*/
         }
     }
     // In 2d, we have to select manually by click, so do not enter here!
@@ -390,7 +390,7 @@ void SceneEditor::process_node_hovered()
         else if (select_action_pressed) {
             select_node(hovered_node, false);
         }
-        else if (should_open_context_menu) {
+        /*else if (should_open_context_menu) {
 
             glm::vec2 position = Input::get_mouse_position();
             glm::vec3 position_3d = glm::vec3(0.0f);
@@ -406,7 +406,7 @@ void SceneEditor::process_node_hovered()
                 { "Animate", [&, n = hovered_node](const std::string& name, uint32_t index) { selected_node = n; RoomsEngine::switch_editor(ANIMATION_EDITOR, n); }},
                 { "Delete", [&, n = hovered_node](const std::string& name, uint32_t index) { delete_node(n); }}
             });
-        }
+        }*/
     }
 }
 
