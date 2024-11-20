@@ -49,8 +49,6 @@ class AnimationEditor : public BaseEditor {
     *   Animation stuff
     */
 
-    Node3D* current_node = nullptr;
-    Joint3D* current_joint = nullptr;
     Animation* current_animation = nullptr;
     Track* current_track = nullptr;
 
@@ -58,16 +56,31 @@ class AnimationEditor : public BaseEditor {
 
     std::unordered_map<uint32_t, sAnimationData> animations_data;
 
+    uint32_t get_animation_idx();
+
+    /*
+    *   Nodes
+    */
+
     Surface* animation_trajectory_mesh = nullptr;
     MeshInstance3D* animation_trajectory_instance = nullptr;
     MeshInstance3D* keyframe_markers_render_instance = nullptr;
 
-    uint32_t get_animation_idx();
+    Node3D* current_node = nullptr;
+    Joint3D* current_joint = nullptr;
+
+    bool rotation_started = false;
+    bool scale_started = false;
+    glm::quat last_left_hand_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
+    glm::vec3 last_left_hand_translation = {};
+    float last_hand_distance = 0.0f;
+
     Node3D* get_current_node();
 
-    SkeletonInstance3D* find_skeleton(Node* node);
-
     void update_node_from_state(const sAnimationState& state);
+    void update_node_transform();
+
+    SkeletonInstance3D* find_skeleton(Node* node);
 
     /*
     *   Keyframes
