@@ -8,7 +8,7 @@ class RoomsRenderer;
 class Node;
 class Node3D;
 class MeshInstance3D;
-class SkeletonInstance3D;
+class Joint3D;
 class Animation;
 class Surface;
 
@@ -45,7 +45,7 @@ struct sAnimationData {
 class AnimationEditor : public BaseEditor {
 
     Node3D* current_node = nullptr;
-    SkeletonInstance3D* current_skeleton_instance = nullptr;
+    Joint3D* current_joint = nullptr;
     Animation* current_animation = nullptr;
     Track* current_track = nullptr;
 

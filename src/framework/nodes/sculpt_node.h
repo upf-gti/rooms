@@ -47,7 +47,7 @@ public:
     virtual void parse(std::ifstream& binary_scene_file);
 
     void clone(Node* new_node, bool copy = true) override;
-    bool test_ray_collision(const glm::vec3& ray_origin, const glm::vec3& ray_direction, float& distance) override;
+    bool test_ray_collision(const glm::vec3& ray_origin, const glm::vec3& ray_direction, float& distance, Node3D** out = nullptr) override;
     bool check_intersection(sGPU_RayIntersectionData* data);
 
     inline void set_sculpt_data(Sculpt* new_data) { sculpt_gpu_data = new_data; }

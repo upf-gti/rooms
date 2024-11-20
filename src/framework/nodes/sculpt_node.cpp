@@ -226,7 +226,7 @@ bool SculptNode::check_intersection(sGPU_RayIntersectionData* data)
     return data->has_intersected == 1u && (sculpt_gpu_data->get_sculpt_id() == data->sculpt_id) && (in_frame_sculpt_render_list_id == data->instance_id);
 }
 
-bool SculptNode::test_ray_collision(const glm::vec3& ray_origin, const glm::vec3& ray_direction, float& distance)
+bool SculptNode::test_ray_collision(const glm::vec3& ray_origin, const glm::vec3& ray_direction, float& distance, Node3D** out)
 {
     const AABB& aabb = sculpt_gpu_data->get_AABB();
 

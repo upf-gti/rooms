@@ -3,8 +3,8 @@
 #include "framework/utils/utils.h"
 #include "framework/input.h"
 #include "framework/parsers/parse_obj.h"
-#include "framework/nodes/mesh_instance_3d.h"
 #include "framework/nodes/skeleton_instance_3d.h"
+#include "framework/nodes/joint_3d.h"
 #include "framework/nodes/animation_player.h"
 #include "framework/nodes/container_2d.h"
 #include "framework/nodes/slider_2d.h"
@@ -131,7 +131,6 @@ void AnimationEditor::on_enter(void* data)
         for (auto& p : initial_state.properties) {
 
             sPropertyState& p_state = p.second;
-
             p_state.track_id = current_animation->get_track_count();
 
             current_track = current_animation->add_track(p_state.track_id);
@@ -256,8 +255,8 @@ void AnimationEditor::update(float delta_time)
             ray_direction = glm::normalize(ray_dir);
         }
 
-        if (node && node->test_ray_collision(ray_origin, ray_direction, distance)) {
-            current_skeleton_instance = static_cast<SkeletonInstance3D*>(node);
+        if (node && node->test_ray_collision(ray_origin, ray_direction, distance, reinterpret_cast<Node3D**>(&current_joint))) {
+            // ...
         }
     }
 
@@ -309,10 +308,8 @@ void AnimationEditor::render()
     auto& states = animations_data[get_animation_idx()].states;
 
     for (uint32_t i = 0u; i < states.size(); i++) {
-        const glm::vec3 position = std::get<glm::vec3>(states[i].properties["translation"].value);
-
-        const glm::mat4 anim_position_model = glm::scale(glm::translate(glm::mat4(1.0f), position), glm::vec3(0.006f));
-
+        const glm::vec3& position = std::get<glm::vec3>(states[i].properties["translation"].value);
+        const glm::mat4& anim_position_model = glm::scale(glm::translate(glm::mat4(1.0f), position), glm::vec3(0.006f));
         Renderer::instance->add_renderable(keyframe_markers_render_instance, anim_position_model);
     }
 
@@ -362,21 +359,19 @@ void AnimationEditor::render_gizmo()
     }
 
     Node3D* node = current_node;
-    Transform parent_transform = Transform::identity();
-
-    if (current_skeleton_instance) {
-        node = current_skeleton_instance->get_selected_joint();
-        parent_transform = current_skeleton_instance->get_selected_joint_transform();
-    }
-
+    Transform parent_transform = Transform::identity();;
     Transform t = node->get_transform();
-    t = Transform::combine(parent_transform, t);
 
+    if (current_joint) {
+        node = current_joint;
+        t = current_joint->get_global_transform();
+    }
+    
     auto scene_editor = static_cast<RoomsEngine*>(Engine::instance)->get_editor<SceneEditor*>(SCENE_EDITOR);
     Group3D* current_group = scene_editor->get_current_group();
 
     if (current_group) {
-        parent_transform = Transform::combine(current_group->get_transform(), parent_transform);
+        parent_transform = current_group->get_transform();
         t = Transform::combine(parent_transform, t);
     }
 
@@ -391,12 +386,14 @@ void AnimationEditor::render_gizmo()
     }
 
     if (transform_dirty) {
-        Transform new_transform = gizmo->get_transform();
-        new_transform = Transform::combine(Transform::inverse(parent_transform), new_transform);
-        node->set_transform(new_transform);
+        Transform new_transform = Transform::combine(Transform::inverse(parent_transform), gizmo->get_transform());
 
-        if (current_skeleton_instance) {
-            current_skeleton_instance->set_transform_dirty(true);
+        if (current_joint) {
+            static_cast<Joint3D*>(node)->set_global_transform(new_transform);
+            current_joint->update_pose();
+        }
+        else {
+            node->set_transform(new_transform);
         }
     }
 }
