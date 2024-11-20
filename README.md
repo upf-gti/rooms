@@ -9,26 +9,26 @@
 
 Through VR headsets, users could have the possibility to create full XR experiences involving 3D sculpted assets, 3D animations and scripted element behaviours.
 
+Developed using [wgpuEngine](https://github.com/upf-gti/wgpuEngine), our UPF-GTI new C++ WebGPU based engine.
+
 <p align="center" width="100%">
     <img src="./data/images/demo_capture.png"> 
 </p>
 
 ## Current status
 
-Rooms is currently in the development stages. 
-
-### Roadmap
+Rooms is currently in development stages following this roadmap:
 
 - [x] Web export (Still no XR enabled)
 - [x] Flat screen + Desktop VR Rendering Supported
 - [x] 3D SDF Sculpting in VR
 - [x] Sparse SDF Storage and Evaluation solutions
-- [x] GLTF Parsing
 - [x] Physically Based Materials (PBR)
 - [x] VR Color and Material Sculpt Painting
 - [x] Support for Rigid and Skeletal animations
-- [ ] Skeletal Animation Editing in VR
-- [ ] Experience Generation
+- [x] Experience Export/Import (.room)
+- [x] Sculpt Groups/Layers
+- [x] Skeletal Animation Editing in VR
 - [ ] Experience Sharing
 - [ ] VR Animation Rigging
 - [ ] Visual Scripting in VR
