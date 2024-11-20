@@ -202,28 +202,7 @@ void AnimationEditor::update(float delta_time)
 
     // Update inspector for keyframes
     if(show_keyframe_dirty) {
-
-        // Set current node in keyframe state
-
-        for (auto& p : current_animation_state->properties) {
-
-            Node::AnimatableProperty node_property = current_node->get_animatable_property(p.first);
-            void* data = node_property.property;
-
-            current_animation->sample(current_animation_state->time, p.second.track_id, ANIMATION_LOOP_NONE, data);
-
-            // TODO: now the conversion void -> TYPE is done in the sample, but only supports 3 types
-            // ...
-        }
-
-        auto skeleton_instance = find_skeleton(current_node);
-        if (skeleton_instance) {
-            skeleton_instance->update_pose_from_joints();
-        }
-        else {
-            current_node->set_transform_dirty(true);
-        }
-
+        update_node_from_state(*current_animation_state);
         inspect_keyframe();
     }
 
@@ -387,6 +366,30 @@ uint32_t AnimationEditor::get_animation_idx()
     return reinterpret_cast<uintptr_t>(current_animation);
 }
 
+void AnimationEditor::update_node_from_state(const sAnimationState& state)
+{
+    // Set current node in keyframe state
+
+    for (auto& p : state.properties) {
+
+        Node::AnimatableProperty node_property = current_node->get_animatable_property(p.first);
+        void* data = node_property.property;
+
+        current_animation->sample(state.time, p.second.track_id, ANIMATION_LOOP_NONE, data, eInterpolationType::STEP);
+
+        // TODO: now the conversion void -> TYPE is done in the sample, but only supports 3 types
+        // ...
+    }
+
+    auto skeleton_instance = find_skeleton(current_node);
+    if (skeleton_instance) {
+        skeleton_instance->update_pose_from_joints();
+    }
+    else {
+        current_node->set_transform_dirty(true);
+    }
+}
+
 void AnimationEditor::update_animation_trajectory()
 {
     std::vector<sInterleavedData> vertices_to_upload;
@@ -425,17 +428,16 @@ void AnimationEditor::create_keyframe()
 
     // Get the last state to check changes later when adding new keyframes
     current_animation_state = &states.back();
+    update_node_from_state(*current_animation_state);
 
     keyframe_dirty = true;
 
     // Inspect useful data
     inspector->clear();
+    inspector->set_visibility(true);
 
     inspect_keyframe_properties();
-
     inspect_node(get_current_node());
-
-    inspector->set_visibility(true);
 
     // Manage other buttons
     {

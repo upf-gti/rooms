@@ -101,6 +101,9 @@ class SceneEditor : public BaseEditor {
     */
 
     static uint64_t node_signal_uid;
+    static Color COLOR_HIGHLIGHT_NODE;
+    static Color COLOR_HIGHLIGHT_GROUP;
+    static Color COLOR_HIGHLIGHT_LIGHT;
 
     bool inspector_dirty = false;
 

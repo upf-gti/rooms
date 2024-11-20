@@ -45,6 +45,10 @@ struct sAnimationData {
 
 class AnimationEditor : public BaseEditor {
 
+    /*
+    *   Animation stuff
+    */
+
     Node3D* current_node = nullptr;
     Joint3D* current_joint = nullptr;
     Animation* current_animation = nullptr;
@@ -58,15 +62,12 @@ class AnimationEditor : public BaseEditor {
     MeshInstance3D* animation_trajectory_instance = nullptr;
     MeshInstance3D* keyframe_markers_render_instance = nullptr;
 
-    void render_gizmo();
-    void update_gizmo(float delta_time);
-
-    void update_animation_trajectory();
-
     uint32_t get_animation_idx();
     Node3D* get_current_node();
 
     SkeletonInstance3D* find_skeleton(Node* node);
+
+    void update_node_from_state(const sAnimationState& state);
 
     /*
     *   Keyframes
@@ -119,6 +120,10 @@ class AnimationEditor : public BaseEditor {
     void inspect_node(Node* node);
 
     bool on_close_inspector(ui::Inspector* scope = nullptr);
+
+    void render_gizmo();
+    void update_gizmo(float delta_time);
+    void update_animation_trajectory();
 
 public:
 

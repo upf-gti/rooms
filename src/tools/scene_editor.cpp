@@ -38,6 +38,10 @@
 
 uint64_t SceneEditor::node_signal_uid = 0;
 
+Color SceneEditor::COLOR_HIGHLIGHT_NODE = Color(0.929f, 0.778f, 0.6f, 1.0f);
+Color SceneEditor::COLOR_HIGHLIGHT_GROUP = Color(0.187f, 0.089f, 0.858f, 1.0f);
+Color SceneEditor::COLOR_HIGHLIGHT_LIGHT = Color(1.0f, 0.136f, 0.0f, 1.0f);
+
 void SceneEditor::initialize()
 {
     renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
@@ -283,16 +287,14 @@ void SceneEditor::update_hovered_node()
 
 Color SceneEditor::get_node_highlight_color(Node* node)
 {
-    Color basic_color = Color(0.967f, 0.892f, 0.793f, 1.0f);
-
     if (dynamic_cast<Light3D*>(node)) {
-        return glm::pow(Color(1.0f, 0.404f, 0.0f, 1.0f), glm::vec4(2.2f));
+        return COLOR_HIGHLIGHT_LIGHT;
     }
     else if (dynamic_cast<Group3D*>(node)) {
-        return glm::pow(Color(0.467f, 0.333f, 0.933f, 1.0f), glm::vec4(2.2f));
+        return COLOR_HIGHLIGHT_GROUP;
     }
 
-    return glm::pow(basic_color, glm::vec4(2.2f));
+    return COLOR_HIGHLIGHT_NODE;
 }
 
 void SceneEditor::process_node_hovered()
