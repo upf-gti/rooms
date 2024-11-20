@@ -223,8 +223,8 @@ void AnimationEditor::update(float delta_time)
         keyframe_list_dirty = false;
     }
 
-    // debug joint intersections
-    if(Input::was_mouse_pressed(GLFW_MOUSE_BUTTON_LEFT)) {
+    bool select_pressed = Input::was_trigger_pressed(HAND_RIGHT) || Input::was_mouse_pressed(GLFW_MOUSE_BUTTON_LEFT);
+    if(select_pressed) {
         Node3D* node = nullptr;
 
         std::function<Node* (Node*)> find_skeleton = [&](Node* node) {
@@ -318,21 +318,21 @@ void AnimationEditor::render()
 
 void AnimationEditor::update_gizmo(float delta_time)
 {
-    if (!keyframe_dirty || !current_node) {
-        return;
-    }
+    Node3D* node = get_current_node();
 
     // Gizmo only needs to update for XR
-
-    if (!renderer->get_openxr_available()) {
+    if (!keyframe_dirty || !current_node || !renderer->get_openxr_available()) {
         return;
     }
 
     glm::vec3 right_controller_pos = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
-
-    Node3D* node = current_node;
+    Transform parent_transform = Transform::identity();
     Transform t = node->get_transform();
-    Transform parent_transform;
+    bool is_joint = dynamic_cast<Joint3D*>(node);
+
+    if (is_joint) {
+        t = node->get_global_transform();
+    }
 
     auto scene_editor = static_cast<RoomsEngine*>(Engine::instance)->get_editor<SceneEditor*>(SCENE_EDITOR);
     Group3D* current_group = scene_editor->get_current_group();
@@ -344,27 +344,33 @@ void AnimationEditor::update_gizmo(float delta_time)
 
     if (gizmo->update(t, right_controller_pos, delta_time)) {
 
-        if (current_group) {
-            t = Transform::combine(Transform::inverse(parent_transform), t);
-        }
+        Transform new_transform = Transform::combine(Transform::inverse(parent_transform), t);
 
-        node->set_transform(t);
+        if (is_joint) {
+            Joint3D* j_node = static_cast<Joint3D*>(node);
+            j_node->set_global_transform(new_transform);
+            j_node->update_pose();
+        }
+        else {
+            node->set_transform(new_transform);
+        }
     }
 }
 
 void AnimationEditor::render_gizmo()
 {
-    if (!keyframe_dirty || !current_node) {
+    Node3D* node = get_current_node();
+
+    if (!keyframe_dirty || !node) {
         return;
     }
 
-    Node3D* node = current_node;
-    Transform parent_transform = Transform::identity();;
+    Transform parent_transform = Transform::identity();
     Transform t = node->get_transform();
+    bool is_joint = dynamic_cast<Joint3D*>(node);
 
-    if (current_joint) {
-        node = current_joint;
-        t = current_joint->get_global_transform();
+    if (is_joint) {
+        t = node->get_global_transform();
     }
     
     auto scene_editor = static_cast<RoomsEngine*>(Engine::instance)->get_editor<SceneEditor*>(SCENE_EDITOR);
@@ -388,14 +394,23 @@ void AnimationEditor::render_gizmo()
     if (transform_dirty) {
         Transform new_transform = Transform::combine(Transform::inverse(parent_transform), gizmo->get_transform());
 
-        if (current_joint) {
-            static_cast<Joint3D*>(node)->set_global_transform(new_transform);
-            current_joint->update_pose();
+        if (is_joint) {
+            Joint3D* j_node = static_cast<Joint3D*>(node);
+            j_node->set_global_transform(new_transform);
+            j_node->update_pose();
         }
         else {
             node->set_transform(new_transform);
         }
     }
+}
+
+Node3D* AnimationEditor::get_current_node()
+{
+    if (current_joint) {
+        return current_joint;
+    }
+    return current_node;
 }
 
 uint32_t AnimationEditor::get_animation_idx()

@@ -64,6 +64,8 @@ class AnimationEditor : public BaseEditor {
 
     uint32_t get_animation_idx();
 
+    Node3D* get_current_node();
+
     /*
     *   Keyframes
     */
