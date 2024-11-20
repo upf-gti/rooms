@@ -274,19 +274,8 @@ void SceneEditor::on_enter(void* data)
 
 void SceneEditor::update_hovered_node()
 {
-    // Send rays each frame to detect hovered sculpts and other nodes
-
-    if (Renderer::instance->get_openxr_available()) {
-        ray_origin = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
-        glm::mat4x4 select_hand_pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
-        ray_direction = get_front(select_hand_pose);
-    }
-    else {
-        Camera* camera = Renderer::instance->get_camera();
-        glm::vec3 ray_dir = camera->screen_to_ray(Input::get_mouse_position());
-        ray_origin = camera->get_eye();
-        ray_direction = glm::normalize(ray_dir);
-    }
+    // Send rays each frame to detect hovered sculpts and other
+    Engine::instance->get_scene_ray(ray_origin, ray_direction);
 
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     rooms_renderer->get_sculpt_manager()->set_ray_to_test(ray_origin, ray_direction);

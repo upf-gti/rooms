@@ -22,7 +22,6 @@
 
 #include "engine/rooms_engine.h"
 
-#include "tools/scene_editor.h"
 
 #include "glm/gtx/quaternion.hpp"
 #include "spdlog/spdlog.h"
@@ -107,12 +106,17 @@ void AnimationEditor::on_enter(void* data)
 {
     current_node = reinterpret_cast<Node3D*>(data);
 
+    // Set the root always in the animation editor
     player->set_root_node(current_node);
 
     // Create animation for current node
     // TODO: Use the uuid for registering the animation
     std::string animation_name = current_node->get_name() + "@animation";
     current_animation = RendererStorage::get_animation(animation_name);
+
+    // Search for any skeleton instance in the root
+    auto skeleton_instance = find_skeleton(current_node);
+    current_node = skeleton_instance ? skeleton_instance : current_node;
 
     if (!current_animation) {
 
@@ -160,8 +164,8 @@ void AnimationEditor::on_enter(void* data)
     if (renderer->get_openxr_available()) {
 
         glm::mat4x4 m(1.0f);
-        glm::vec3 eye = dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_camera_eye();
-        glm::vec3 new_pos = eye + dynamic_cast<RoomsRenderer*>(Renderer::instance)->get_camera_front() * 0.6f;
+        glm::vec3 eye = static_cast<RoomsRenderer*>(Renderer::instance)->get_camera_eye();
+        glm::vec3 new_pos = eye + static_cast<RoomsRenderer*>(Renderer::instance)->get_camera_front() * 0.6f;
 
         m = glm::translate(m, new_pos);
         m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
@@ -180,6 +184,11 @@ void AnimationEditor::on_enter(void* data)
 
 void AnimationEditor::on_exit()
 {
+    current_node = nullptr;
+    current_joint = nullptr;
+
+    stop_animation();
+
     // Store current time..
     auto& data = animations_data[get_animation_idx()];
     data.current_time = current_time;
@@ -190,8 +199,6 @@ void AnimationEditor::update(float delta_time)
     player->update(delta_time);
 
     BaseEditor::update(delta_time);
-
-    update_gizmo(delta_time);
 
     // Update inspector for keyframes
     if(show_keyframe_dirty) {
@@ -205,14 +212,22 @@ void AnimationEditor::update(float delta_time)
 
             current_animation->sample(current_animation_state->time, p.second.track_id, ANIMATION_LOOP_NONE, data);
 
-            current_node->set_transform_dirty(true);
-
             // TODO: now the conversion void -> TYPE is done in the sample, but only supports 3 types
             // ...
         }
 
+        auto skeleton_instance = find_skeleton(current_node);
+        if (skeleton_instance) {
+            skeleton_instance->update_pose_from_joints();
+        }
+        else {
+            current_node->set_transform_dirty(true);
+        }
+
         inspect_keyframe();
     }
+
+    update_gizmo(delta_time);
 
     if (keyframe_dirty) {
         update_animation_trajectory();
@@ -223,40 +238,19 @@ void AnimationEditor::update(float delta_time)
         keyframe_list_dirty = false;
     }
 
+    // Get joints from skeleton
     bool select_pressed = Input::was_trigger_pressed(HAND_RIGHT) || Input::was_mouse_pressed(GLFW_MOUSE_BUTTON_LEFT);
-    if(select_pressed) {
-        Node3D* node = nullptr;
-
-        std::function<Node* (Node*)> find_skeleton = [&](Node* node) {
-            for (auto child : node->get_children()) {
-                if (dynamic_cast<SkeletonInstance3D*>(child)) {
-                    return child;
-                }
-                return find_skeleton(node->get_children().back());
-            }
-            return node;
-        };
-
-        node = static_cast<Node3D*>(find_skeleton(current_node));
-
+    if(select_pressed && dynamic_cast<SkeletonInstance3D*>(current_node)) {
         glm::vec3 ray_origin;
         glm::vec3 ray_direction;
         float distance = 1e9f;
 
-        if (Renderer::instance->get_openxr_available()) {
-            ray_origin = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
-            glm::mat4x4 select_hand_pose = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
-            ray_direction = get_front(select_hand_pose);
-        }
-        else {
-            Camera* camera = Renderer::instance->get_camera();
-            glm::vec3 ray_dir = camera->screen_to_ray(Input::get_mouse_position());
-            ray_origin = camera->get_eye();
-            ray_direction = glm::normalize(ray_dir);
-        }
+        Engine::instance->get_scene_ray(ray_origin, ray_direction);
 
-        if (node && node->test_ray_collision(ray_origin, ray_direction, distance, reinterpret_cast<Node3D**>(&current_joint))) {
-            // ...
+        // This sets current_joint to a valid joint in the skeleton instance
+        if (static_cast<SkeletonInstance3D*>(current_node)->test_ray_collision(ray_origin, ray_direction, distance, reinterpret_cast<Node3D**>(&current_joint))) {
+            inspector->clear();
+            inspect_node(current_joint);
         }
     }
 
@@ -326,33 +320,15 @@ void AnimationEditor::update_gizmo(float delta_time)
     }
 
     glm::vec3 right_controller_pos = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
-    Transform parent_transform = Transform::identity();
-    Transform t = node->get_transform();
-    bool is_joint = dynamic_cast<Joint3D*>(node);
-
-    if (is_joint) {
-        t = node->get_global_transform();
-    }
-
-    auto scene_editor = static_cast<RoomsEngine*>(Engine::instance)->get_editor<SceneEditor*>(SCENE_EDITOR);
-    Group3D* current_group = scene_editor->get_current_group();
-
-    if (current_group) {
-        parent_transform = current_group->get_transform();
-        t = Transform::combine(parent_transform, t);
-    }
+    Transform t = node->get_global_transform();
 
     if (gizmo->update(t, right_controller_pos, delta_time)) {
 
-        Transform new_transform = Transform::combine(Transform::inverse(parent_transform), t);
+        node->set_global_transform(t);
 
-        if (is_joint) {
+        if (dynamic_cast<Joint3D*>(node)) {
             Joint3D* j_node = static_cast<Joint3D*>(node);
-            j_node->set_global_transform(new_transform);
             j_node->update_pose();
-        }
-        else {
-            node->set_transform(new_transform);
         }
     }
 }
@@ -365,43 +341,22 @@ void AnimationEditor::render_gizmo()
         return;
     }
 
-    Transform parent_transform = Transform::identity();
-    Transform t = node->get_transform();
-    bool is_joint = dynamic_cast<Joint3D*>(node);
-
-    if (is_joint) {
-        t = node->get_global_transform();
-    }
-    
-    auto scene_editor = static_cast<RoomsEngine*>(Engine::instance)->get_editor<SceneEditor*>(SCENE_EDITOR);
-    Group3D* current_group = scene_editor->get_current_group();
-
-    if (current_group) {
-        parent_transform = current_group->get_transform();
-        t = Transform::combine(parent_transform, t);
-    }
-
-    gizmo->set_transform(t);
-
-    bool transform_dirty = gizmo->render();
+    gizmo->set_transform(node->get_global_transform());
 
     // This is only for 2D since Gizmo.render will only return true if
     // Gizmo2D is used!
-    if (renderer->get_openxr_available()) {
+
+    bool transform_dirty = gizmo->render();
+
+    if (!transform_dirty || renderer->get_openxr_available()) {
         return;
     }
 
-    if (transform_dirty) {
-        Transform new_transform = Transform::combine(Transform::inverse(parent_transform), gizmo->get_transform());
+    node->set_global_transform(gizmo->get_transform());
 
-        if (is_joint) {
-            Joint3D* j_node = static_cast<Joint3D*>(node);
-            j_node->set_global_transform(new_transform);
-            j_node->update_pose();
-        }
-        else {
-            node->set_transform(new_transform);
-        }
+    if (dynamic_cast<Joint3D*>(node)) {
+        Joint3D* j_node = static_cast<Joint3D*>(node);
+        j_node->update_pose();
     }
 }
 
@@ -411,6 +366,20 @@ Node3D* AnimationEditor::get_current_node()
         return current_joint;
     }
     return current_node;
+}
+
+SkeletonInstance3D* AnimationEditor::find_skeleton(Node* node)
+{
+    if (dynamic_cast<SkeletonInstance3D*>(node)) {
+        return static_cast<SkeletonInstance3D*>(node);
+    }
+    for (auto child : node->get_children()) {
+        auto instance = find_skeleton(child);
+        if (dynamic_cast<SkeletonInstance3D*>(instance)) {
+            return instance;
+        }
+    }
+    return nullptr;
 }
 
 uint32_t AnimationEditor::get_animation_idx()
@@ -464,12 +433,7 @@ void AnimationEditor::create_keyframe()
 
     inspect_keyframe_properties();
 
-    inspect_node(current_node);
-
-    // Enable xr for the buttons that need it..
-    if (renderer->get_openxr_available()) {
-        inspector->disable_2d();
-    }
+    inspect_node(get_current_node());
 
     inspector->set_visibility(true);
 
@@ -619,7 +583,9 @@ sAnimationState* AnimationEditor::get_animation_state(uint32_t index)
 
 void AnimationEditor::set_animation_state(uint32_t index)
 {
-    if (!current_node) {
+    Node3D* node = get_current_node();
+
+    if (!node) {
         assert(0);
     }
 
@@ -627,38 +593,29 @@ void AnimationEditor::set_animation_state(uint32_t index)
 
     for (auto& p : current_animation_state->properties) {
 
-        Node::AnimatableProperty node_property = current_node->get_animatable_property(p.first);
+        Node::AnimatableProperty node_property = node->get_animatable_property(p.first);
         void* data = node_property.property;
 
         current_animation->sample(current_animation_state->time, p.second.track_id, ANIMATION_LOOP_NONE, data);
 
-        current_node->set_transform_dirty(true);
+        node->set_transform_dirty(true);
+
+        if (dynamic_cast<Joint3D*>(node)) {
+            static_cast<Joint3D*>(node)->update_pose();
+        }
     }
 }
 
 void AnimationEditor::store_animation_state(sAnimationState& state)
 {
+    // Get properties always from the root node, since is the one
+    // thas has all the properties!
+
     if (!current_node) {
         assert(0);
     }
 
-    // Get properties from the root node or from SkeletonInstance3D (if any)
-
-    Node3D* node = current_node;
-
-    std::function<Node*(Node*)> find_skeleton = [&](Node* node) {
-        for(auto child : node->get_children()) {
-            if (dynamic_cast<SkeletonInstance3D*>(child)) {
-                return child;
-            }
-            return find_skeleton(node->get_children().back());
-        }
-        return node;
-    };
-
-    node = static_cast<Node3D*>(find_skeleton(node));
-
-    const std::unordered_map<std::string, Node::AnimatableProperty>& properties = node->get_animatable_properties();
+    const std::unordered_map<std::string, Node::AnimatableProperty>& properties = current_node->get_animatable_properties();
 
     for (auto prop_it : properties) {
 
@@ -786,7 +743,7 @@ void AnimationEditor::init_ui()
     auto webgpu_context = Renderer::instance->get_webgpu_context();
     glm::vec2 screen_size = glm::vec2(static_cast<float>(webgpu_context->render_width), static_cast<float>(webgpu_context->render_height));
 
-    main_panel = new ui::HContainer2D("scene_editor_root", { 48.0f, screen_size.y - 200.f }, ui::CREATE_3D);
+    main_panel = new ui::HContainer2D("animation_editor_root", { 48.0f, screen_size.y - 200.f }, ui::CREATE_3D);
 
     ui::VContainer2D* vertical_container = new ui::VContainer2D("animation_vertical_container", { 0.0f, 0.0f });
     main_panel->add_child(vertical_container);
@@ -938,22 +895,11 @@ void AnimationEditor::update_panel_transform()
 
 void AnimationEditor::inspect_keyframe()
 {
-    inspector->clear();
-
-    std::string key_name = "Keyframe";// +std::to_string(active_keyframe.idx);
-
-    inspector->same_line();
-    inspector->icon("data/textures/keyframe.png");
-    inspector->label("empty", key_name);
-    inspector->end_line();
+    inspector->clear(ui::INSPECTOR_FLAG_CLOSE_BUTTON, "Keyframe");
 
     inspect_keyframe_properties();
-    inspect_node(current_node);
 
-    // Enable xr for the buttons that need it..
-    if (renderer->get_openxr_available()) {
-        inspector->disable_2d();
-    }
+    inspect_node(get_current_node());
 
     Node::emit_signal(inspector->get_name() + "@children_changed", (void*)nullptr);
 

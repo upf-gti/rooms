@@ -8,6 +8,7 @@ class RoomsRenderer;
 class Node;
 class Node3D;
 class MeshInstance3D;
+class SkeletonInstance3D;
 class Joint3D;
 class Animation;
 class Surface;
@@ -63,8 +64,9 @@ class AnimationEditor : public BaseEditor {
     void update_animation_trajectory();
 
     uint32_t get_animation_idx();
-
     Node3D* get_current_node();
+
+    SkeletonInstance3D* find_skeleton(Node* node);
 
     /*
     *   Keyframes
