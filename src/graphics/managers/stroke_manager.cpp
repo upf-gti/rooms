@@ -14,6 +14,16 @@ void StrokeManager::init()
     result_to_compute.strokes.resize(STROKE_CONTEXT_INITIAL_SIZE);
 }
 
+void StrokeManager::add_edit_to_upload(const Edit& edit)
+{
+    // Expand the edit to upload list by chunks
+    if (edit_list.size() == edit_list_count) {
+        edit_list.resize(edit_list.size() + EDIT_BUFFER_INCREASE);
+    }
+
+    edit_list[edit_list_count++] = edit;
+}
+
 void StrokeManager::add_stroke_to_upload_list(sStrokeInfluence& influence, const Stroke& stroke)
 {
     if (influence.strokes.size() == influence.stroke_count) {
@@ -66,6 +76,16 @@ AABB StrokeManager::compute_grid_aligned_AABB(const AABB& base, const glm::vec3&
     };
 }
 
+bool StrokeManager::can_undo()
+{
+    return !history->empty();
+}
+
+bool StrokeManager::can_redo()
+{
+    return !redo_history.empty();
+}
+
 sStrokeInfluence* StrokeManager::undo()
 {
     if (history->empty()) {
@@ -74,7 +94,7 @@ sStrokeInfluence* StrokeManager::undo()
 
     edit_list_count = 0u;
     uint32_t last_stroke_id = 0u;
-    uint32_t united_stroke_idx = 0;
+    uint32_t united_stroke_idx = 0u;
     uint32_t pop_count_from_history = 0u;
     float max_smooth_margin = 0.0f;
 
@@ -82,8 +102,8 @@ sStrokeInfluence* StrokeManager::undo()
 
     AABB in_frame_stroke_aabb;
     // Get the last stroke to undo, and compute the AABB
-    for (united_stroke_idx = history->size(); united_stroke_idx > 0; --united_stroke_idx) {
-        Stroke& prev = history->at(united_stroke_idx - 1);
+    for (united_stroke_idx = history->size(); united_stroke_idx > 0u; --united_stroke_idx) {
+        const Stroke& prev = history->at(united_stroke_idx - 1u);
 
         // if stroke changes
         if (last_stroke_id != 0u && prev.stroke_id != last_stroke_id) {
@@ -109,7 +129,6 @@ sStrokeInfluence* StrokeManager::undo()
     if (united_stroke_idx == 0) {
         Stroke prev = history->at(0);
         prev.operation = OP_SMOOTH_SUBSTRACTION;
-
         add_stroke_to_upload_list(result_to_compute, prev);
     } else {
         // Compute and fill intersection
@@ -129,16 +148,17 @@ sStrokeInfluence* StrokeManager::undo()
         history->pop_back();
     }
 
-    spdlog::info("Undo. History size: {}, to pop from history {}", history->size(), pop_count_from_history);
+    spdlog::trace("Undo. History size: {}, to pop from history {}", history->size(), pop_count_from_history);
 
     return &result_to_compute;
 }
 
 sStrokeInfluence* StrokeManager::redo()
 {
-    if (redo_history.size() <= 0u) {
+    if (redo_history.empty()) {
         return nullptr;
     }
+
     edit_list_count = 0u;
     uint32_t redo_pop_count_from_history = 0u;
     uint32_t strokes_to_redo_count = redo_history.size();
@@ -176,7 +196,7 @@ sStrokeInfluence* StrokeManager::redo()
         }
     }
     
-    spdlog::info("Redo size: {}, to pop {}", redo_history.size(), redo_pop_count_from_history);
+    spdlog::trace("Redo size: {}, to pop {}", redo_history.size(), redo_pop_count_from_history);
 
     result_to_compute.eval_aabb_min = in_frame_stroke_aabb.center - in_frame_stroke_aabb.half_size;
     result_to_compute.eval_aabb_max = in_frame_stroke_aabb.center + in_frame_stroke_aabb.half_size;
@@ -197,7 +217,7 @@ sStrokeInfluence* StrokeManager::add(std::vector<Edit> new_edits)
     result_to_compute.set_defaults();
 
     // If the stroke is being continued, append the edits to the last stroke in the history
-    if (must_change_stroke) {
+    if (must_change_stroke || history->empty()) {
         Stroke new_stroke;
 
         new_stroke.edit_count = 0u;

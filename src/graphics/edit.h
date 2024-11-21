@@ -14,6 +14,7 @@
 
 #define MAX_EDITS_PER_EVALUATION 256u
 #define MAX_EDITS_PER_SPLINE 255u
+#define MAX_KNOTS_PER_SPLINE 4u
 
 enum sdPrimitive : uint32_t {
 	SD_SPHERE = 0,

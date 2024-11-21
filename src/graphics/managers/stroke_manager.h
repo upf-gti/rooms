@@ -15,38 +15,29 @@ enum eEvaluationFlags : uint32_t {
 };
 
 struct StrokeManager {
+
+    bool must_change_stroke = false;
+
     uint32_t current_top_stroke_id = 0u;
+    uint32_t dirty_stroke_increment = 0u;
+    uint32_t edit_list_count = 0u;
+
     std::vector<Stroke>* history = nullptr;
     std::vector<Stroke> redo_history;
+    std::vector<Edit> edit_list;
 
     glm::vec3 brick_world_size = {};
 
     StrokeParameters dirty_stroke_params;
-    uint32_t dirty_stroke_increment = 0u;
-    bool must_change_stroke = false;
-
     sStrokeInfluence result_to_compute;
-    uint32_t edit_list_count = 0u;
-    std::vector<Edit> edit_list;
-
-    inline void add_edit_to_upload(const Edit& edit) {
-        // Expand the edit to upload list by chunks
-        if (edit_list.size() == edit_list_count) {
-            edit_list.resize(edit_list.size() + EDIT_BUFFER_INCREASE);
-        }
-
-        edit_list[edit_list_count++] = edit;
-    }
-
-    void add_stroke_to_upload_list(sStrokeInfluence& influence, const Stroke& stroke);
 
     void init();
 
-    void set_current_sculpt(SculptNode* sculpt_instance);
+    void add_edit_to_upload(const Edit& edit);
+    void add_stroke_to_upload_list(sStrokeInfluence& influence, const Stroke& stroke);
 
-    void set_brick_world_size(const glm::vec3& new_brick_world_size) {
-        brick_world_size = new_brick_world_size;
-    }
+    void set_current_sculpt(SculptNode* sculpt_instance);
+    void set_brick_world_size(const glm::vec3& new_brick_world_size) { brick_world_size = new_brick_world_size; }
 
     inline void request_new_stroke(const StrokeParameters& params, const uint32_t index_increment = 1u) {
         must_change_stroke = true;
@@ -57,8 +48,12 @@ struct StrokeManager {
     void change_stroke_params(const StrokeParameters& params, const uint32_t index_increment = 1u);
     void change_stroke_params(const uint32_t index_increment = 1u);
 
+    bool can_undo();
+    bool can_redo();
+
     sStrokeInfluence* undo();
     sStrokeInfluence* redo();
+
     sStrokeInfluence* add(std::vector<Edit> new_edits);
     sStrokeInfluence* new_history_add(std::vector<Stroke>* history);
 

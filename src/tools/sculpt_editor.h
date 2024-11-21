@@ -57,7 +57,6 @@ class SculptEditor : public BaseEditor {
     void generate_material_from_stroke(void* button);
     void generate_random_material();
     void update_stroke_from_material(const std::string& name);
-    void update_gui_from_stroke_material(const StrokeMaterial& mat);
     void pick_material();
 
     /*
@@ -154,6 +153,8 @@ class SculptEditor : public BaseEditor {
     void bind_events();
     void add_recent_color(const Color& color);
     void generate_shortcuts() override;
+    void update_ui_workflow_state();
+    void update_gui_from_stroke_material(const StrokeMaterial& mat);
 
     /*
     *	Splines
@@ -164,7 +165,7 @@ class SculptEditor : public BaseEditor {
     BezierSpline current_spline;
     BezierSpline preview_spline;
 
-    void start_spline();
+    void start_spline(bool update_ui = true);
     void reset_spline(bool update_ui = true);
     void end_spline();
 
