@@ -124,7 +124,7 @@ void AnimationEditor::on_enter(void* data)
 
     if (skeleton_instance) {
         current_node = skeleton_instance;
-        initialize_ik();
+        // initialize_ik();
     }
 
     if (!current_animation) {
@@ -219,7 +219,7 @@ void AnimationEditor::update(float delta_time)
 
     update_node_transform();
 
-    update_ik();
+    // update_ik();
 
     if (keyframe_dirty) {
         update_animation_trajectory();
@@ -287,7 +287,7 @@ void AnimationEditor::render()
 
     render_gizmo();
 
-    render_ik();
+    // render_ik();
 
     if (current_node) {
         current_node->render();
@@ -403,7 +403,7 @@ void AnimationEditor::initialize_ik()
 void AnimationEditor::update_ik()
 {
     auto instance = dynamic_cast<SkeletonInstance3D*>(current_node);
-    if (!instance) {
+    if (!instance || !keyframe_dirty) {
         return;
     }
 
@@ -425,19 +425,13 @@ void AnimationEditor::update_ik()
         pose.set_local_transform(joint_idx[i], ik_solver.get_local_transform(i));
     }
 
-    // TODO: "update joints from pose"?
-    // instance->update_pose_from_joints();
-
-    //// Update the global matrices of the struct animaiton
-    //IKInfo.posePalette = pose.getGlobalMatrices();
-    //// Update the poseHelper visualization with the current pose
-    //poseHelper->fromPose(pose);
+    instance->update_joints_from_pose();
 }
 
 void AnimationEditor::render_ik()
 {
     auto instance = dynamic_cast<SkeletonInstance3D*>(current_node);
-    if (!instance) {
+    if (!instance || !keyframe_dirty) {
         return;
     }
 
