@@ -124,7 +124,7 @@ void AnimationEditor::on_enter(void* data)
 
     if (skeleton_instance) {
         current_node = skeleton_instance;
-        // initialize_ik();
+        initialize_ik();
     }
 
     if (!current_animation) {
@@ -219,7 +219,7 @@ void AnimationEditor::update(float delta_time)
 
     update_node_transform();
 
-    // update_ik();
+    update_ik();
 
     if (keyframe_dirty) {
         update_animation_trajectory();
@@ -285,9 +285,9 @@ void AnimationEditor::render()
 
     inspector->render();
 
-    render_gizmo();
+    // render_gizmo();
 
-    // render_ik();
+    render_ik();
 
     if (current_node) {
         current_node->render();
