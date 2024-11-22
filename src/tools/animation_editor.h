@@ -57,6 +57,9 @@ class AnimationEditor : public BaseEditor {
     std::unordered_map<uint32_t, sAnimationData> animations_data;
 
     uint32_t get_animation_idx();
+    void initialize_ik();
+    void update_ik();
+    void render_ik();
 
     /*
     *   Nodes

@@ -12,6 +12,7 @@
 #include "framework/nodes/group_3d.h"
 #include "framework/ui/inspector.h"
 #include "framework/animation/track.h"
+#include "framework/animation/jacobian_solver.h"
 #include "framework/math/math_utils.h"
 #include "framework/camera/camera.h"
 
@@ -28,6 +29,10 @@
 #include "imgui.h"
 
 AnimationPlayer* player = nullptr;
+
+JacobianSolver ik_solver;
+Transform ik_target;
+Gizmo3D ik_gizmo;
 
 uint64_t AnimationEditor::keyframe_signal_uid = 0;
 uint64_t AnimationEditor::node_signal_uid = 0;
@@ -116,7 +121,11 @@ void AnimationEditor::on_enter(void* data)
 
     // Search for any skeleton instance in the root
     auto skeleton_instance = find_skeleton(current_node);
-    current_node = skeleton_instance ? skeleton_instance : current_node;
+
+    if (skeleton_instance) {
+        current_node = skeleton_instance;
+        initialize_ik();
+    }
 
     if (!current_animation) {
 
@@ -210,6 +219,8 @@ void AnimationEditor::update(float delta_time)
 
     update_node_transform();
 
+    update_ik();
+
     if (keyframe_dirty) {
         update_animation_trajectory();
     }
@@ -275,6 +286,8 @@ void AnimationEditor::render()
     inspector->render();
 
     render_gizmo();
+
+    render_ik();
 
     if (current_node) {
         current_node->render();
@@ -361,6 +374,82 @@ SkeletonInstance3D* AnimationEditor::find_skeleton(Node* node)
         }
     }
     return nullptr;
+}
+
+void AnimationEditor::initialize_ik()
+{
+    // Do left arm chain
+    std::vector<Transform> chain;
+
+    auto instance = static_cast<SkeletonInstance3D*>(current_node);
+
+    // Origin joint in global space
+    Pose& pose = instance->get_skeleton()->get_current_pose();
+    chain.push_back(pose.get_global_transform(6u));
+    // Rest of the joints in local space
+    chain.push_back(pose.get_local_transform(8u));
+    chain.push_back(pose.get_local_transform(10u));
+
+    ik_solver.resize(3u);
+    ik_solver.set_local_transform(0u, chain[0], 6u); // left arm
+    ik_solver.set_local_transform(1u, chain[1], 8u); // "" forearm
+    ik_solver.set_local_transform(2u, chain[2], 10u); // "" hand
+    ik_solver.set_rotation_axis();
+
+    // Set the target to the global position of the last joint of the chain
+    ik_target.set_position(pose.get_global_transform(10u).get_position());
+}
+
+void AnimationEditor::update_ik()
+{
+    auto instance = dynamic_cast<SkeletonInstance3D*>(current_node);
+    if (!instance) {
+        return;
+    }
+
+    // Solve IK for character chain depending of the selected solver type
+    ik_solver.solve(ik_target);
+
+    // Update skeleton and current pose with the IK chain transforms
+    // 1. Get origin joint in local space: Combine the inverse global transformation of its parent with its computed IK transformation
+    const std::vector<uint32_t>& joint_idx = ik_solver.get_joint_indices();
+
+    Pose& pose = instance->get_skeleton()->get_current_pose();
+    Transform world_parent = pose.get_global_transform(pose.get_parent(joint_idx[0]));
+    Transform world_child = ik_solver.get_local_transform(0);
+    Transform local_child = Transform::combine(Transform::inverse(world_parent), world_child);
+    // 2. Set the local transformation of the origin joint to the current pose
+    pose.set_local_transform(joint_idx[0], local_child);
+    // 3. For the rest of the chain, set the local transformation of each joint into the corresponding current pose joint
+    for (uint32_t i = 1; i < joint_idx.size(); i++) {
+        pose.set_local_transform(joint_idx[i], ik_solver.get_local_transform(i));
+    }
+
+    // TODO: "update joints from pose"?
+    // instance->update_pose_from_joints();
+
+    //// Update the global matrices of the struct animaiton
+    //IKInfo.posePalette = pose.getGlobalMatrices();
+    //// Update the poseHelper visualization with the current pose
+    //poseHelper->fromPose(pose);
+}
+
+void AnimationEditor::render_ik()
+{
+    auto instance = dynamic_cast<SkeletonInstance3D*>(current_node);
+    if (!instance) {
+        return;
+    }
+
+    // Render gizmo for updating the target
+    {
+        Transform global = instance->get_global_transform();
+        ik_gizmo.set_transform(Transform::combine(global, ik_target));
+
+        if (ik_gizmo.render()) {
+            ik_target = Transform::combine(Transform::inverse(global), ik_gizmo.get_transform());
+        }
+    }
 }
 
 uint32_t AnimationEditor::get_animation_idx()
