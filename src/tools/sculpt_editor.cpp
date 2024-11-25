@@ -205,13 +205,6 @@ void SculptEditor::on_enter(void* data)
     assert(sculpt_node);
     set_current_sculpt(sculpt_node);
 
-    if (sculpt_node->get_parent()) {
-        current_instance_transform = sculpt_node->get_parent<Node3D*>()->get_transform();
-    }
-    else {
-        current_instance_transform = sculpt_node->get_transform();
-    }
-
     /*
     * If loaded from memory, we can assume it has a defined position,
     * so do not move it and start now the sculpt.
@@ -221,6 +214,20 @@ void SculptEditor::on_enter(void* data)
         sculpt_started = true;
     }
 
+    if (sculpt_started) {
+        if (sculpt_node->get_parent()) {
+            current_instance_transform = sculpt_node->get_parent<Node3D*>()->get_transform();
+        }
+        else {
+            current_instance_transform = sculpt_node->get_transform();
+        }
+
+
+    }
+
+    // Store if we started from scratch the sculpt to assign or not its new position
+    sculpt_from_zero = !sculpt_started;
+
     static_cast<RoomsRenderer*>(RoomsRenderer::instance)->get_raymarching_renderer()->set_preview_render(true);
 
     update_ui_workflow_state();
@@ -228,6 +235,10 @@ void SculptEditor::on_enter(void* data)
 
 void SculptEditor::on_exit()
 {
+    if (sculpt_from_zero) {
+        current_sculpt->set_transform(current_instance_transform);
+    }
+
     static_cast<RoomsRenderer*>(RoomsRenderer::instance)->get_raymarching_renderer()->set_preview_render(false);
 }
 
