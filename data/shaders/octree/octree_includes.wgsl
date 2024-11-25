@@ -229,6 +229,7 @@ struct GPUReturnResults {
     // Evaluation
     sculpt_aabb_min :      vec3f,
     empty_brick_count :    u32,
+
     sculpt_aabb_max :      vec3f,
     evaluation_sculpt_id : u32,
 
@@ -236,7 +237,6 @@ struct GPUReturnResults {
     pad0 : u32,
     pad1 : u32,
     pad2 : u32,
-    pad3 : u32,
 
     // Ray interection
     ray_has_intersected : u32,
@@ -269,7 +269,6 @@ struct GPUReturnResults_Atomic {
     pad0 : u32,
     pad1 : u32,
     pad2 : u32,
-    pad3 : u32,
 
     // Ray interection
     ray_has_intersected : u32,
@@ -283,7 +282,7 @@ struct GPUReturnResults_Atomic {
     ray_roughness : f32,
 
     ray_albedo_color : vec3f,
-    pad : u32
+    pad5 : u32
 };
 
 struct SculptInstanceData {
