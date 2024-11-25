@@ -403,6 +403,7 @@ bool SculptEditor::edit_update(float delta_time)
             }
 
             primitive_default_states[stroke_parameters.get_primitive()].dimensions = edit_to_add.dimensions;
+            dimensions_dirty = true;
         }
 
         edit_to_add.rotation = glm::inverse(Input::get_controller_rotation(HAND_RIGHT, POSE_AIM));
@@ -414,12 +415,12 @@ bool SculptEditor::edit_update(float delta_time)
         if (is_stretching_edit) {
             sdPrimitive curr_primitive = stroke_parameters.get_primitive();
 
-            const glm::quat hand_rotation = (Input::get_controller_rotation(HAND_RIGHT, POSE_AIM));
-            const glm::vec3 hand_position = controller_pose[3];
+            const glm::quat& hand_rotation = Input::get_controller_rotation(HAND_RIGHT, POSE_AIM);
+            const glm::vec3& hand_position = controller_pose[3];
 
-            const glm::vec3 stamp_origin_to_hand = edit_origin_stamp - hand_position;
+            const glm::vec3& stamp_origin_to_hand = edit_origin_stamp - hand_position;
             const float stamp_to_hand_distance = glm::length(stamp_origin_to_hand);
-            const glm::vec3 stamp_to_hand_norm = stamp_origin_to_hand / (stamp_to_hand_distance);
+            const glm::vec3& stamp_to_hand_norm = stamp_origin_to_hand / (stamp_to_hand_distance);
 
             // Get rotation of the controller, along the stretch direction
             glm::quat swing, twist;
@@ -454,14 +455,12 @@ bool SculptEditor::edit_update(float delta_time)
             }
 
             edit_to_add.dimensions = glm::clamp(edit_to_add.dimensions, glm::vec4(MIN_PRIMITIVE_SIZE), glm::vec4(temp_limit));
+            dimensions_dirty = true;
         }
         else {
             // Only stretch the edit when the acceleration of the hand exceds a threshold
             is_stretching_edit = glm::length(glm::abs(controller_movement_data[HAND_RIGHT].velocity)) > 0.20f;
         }
-    }
-    else {
-        is_stretching_edit = false;
     }
 
     if (!creating_spline) {
@@ -756,6 +755,12 @@ void SculptEditor::update(float delta_time)
 
     if (is_tool_used) {
         renderer->toogle_frame_debug();
+
+        if (is_stretching_edit) {
+            is_stretching_edit = false;
+            edit_to_add.dimensions = primitive_default_states[stroke_parameters.get_primitive()].dimensions;
+            dimensions_dirty = true;
+        }
 
         /*renderer->get_raymarching_renderer()->get_brick_usage([](float pct, uint32_t brick_count) {
             Node::emit_signal("thermometer@changed", pct);
