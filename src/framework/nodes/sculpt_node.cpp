@@ -196,7 +196,6 @@ void SculptNode::parse(std::ifstream& binary_scene_file)
         initialize();
     }
 
-
     // TODO: Remove current
     //rooms_renderer->get_raymarching_renderer()->set_current_sculpt(this);
     rooms_renderer->toogle_frame_debug();
