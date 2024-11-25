@@ -985,6 +985,8 @@ void get_mapped_result_buffer(WGPUBufferMapAsyncStatus status, void* user_payloa
         Node::emit_signal("@on_gpu_intersection_results", (void*)result);
     }*/
 
+    //spdlog::info("Curr sculpt brick count {}", result->loaded_results.sculpt_eval_data.curr_sculpt_brick_count);
+
     result->loaded_results.sculpt_eval_data.aabb_min.x -= 5.0f;
     result->loaded_results.sculpt_eval_data.aabb_min.y -= 5.0f;
     result->loaded_results.sculpt_eval_data.aabb_min.z -= 5.0f;

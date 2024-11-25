@@ -141,6 +141,11 @@ sStrokeInfluence* StrokeManager::undo()
     if (history->at(united_stroke_idx).operation == OP_SMOOTH_PAINT) {
         result_to_compute.is_undo |= PAINT_UNDO_EVAL_FLAG;
     }
+    // Avoid over deleting from the history, and cleaning up the las element. If its causes any issue, delete this, its a safeguard
+    if (pop_count_from_history == history->size()) {
+        pop_count_from_history--;
+        history->at(0u).edit_count = 0u;
+    }
 
     // Remove undo strokes of history, and add them to the redo history
     for (uint32_t i = 0u; i < pop_count_from_history; i++) {
