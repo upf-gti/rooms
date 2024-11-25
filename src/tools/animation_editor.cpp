@@ -12,7 +12,7 @@
 #include "framework/nodes/group_3d.h"
 #include "framework/ui/inspector.h"
 #include "framework/animation/track.h"
-#include "framework/animation/jacobian_solver.h"
+#include "framework/animation/solvers/jacobian_solver.h"
 #include "framework/math/math_utils.h"
 #include "framework/camera/camera.h"
 
@@ -484,7 +484,7 @@ void AnimationEditor::update_node_transform()
     }
 
     // Do not rotate sculpt if shift -> we might be rotating the edit
-    if ((Input::get_trigger_value(HAND_LEFT) > 0.5)) {
+    if ((Input::get_trigger_value(HAND_LEFT) > 0.5f)) {
 
         Transform global_transform = node->get_global_transform();
 
