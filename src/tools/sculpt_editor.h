@@ -40,6 +40,7 @@ class SculptEditor : public BaseEditor {
     StrokeManager stroke_manager = {};
 
     bool sculpt_started = false;
+    bool sculpt_from_zero = false;
     bool was_tool_used = false;
 
     bool called_undo = false;

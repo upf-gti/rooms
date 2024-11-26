@@ -64,6 +64,8 @@ fn compute(@builtin(workgroup_id) id: vec3<u32>, @builtin(local_invocation_index
 
     var local_AABB : sPaddedAABB = sPaddedAABB(vec3f(2.0), 0u, vec3f(-2.0), 0u);
 
+    var brick_count_in_thread : u32 = 0u;
+
     if ((current_instance_in_use_flag & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG)
         //&& (current_instance_in_use_flag & BRICK_HIDE_FLAG) == 0)
     {
@@ -78,8 +80,17 @@ fn compute(@builtin(workgroup_id) id: vec3<u32>, @builtin(local_invocation_index
         let brick_position : vec3f = instance_data.position;
 
         local_AABB = sPaddedAABB(brick_position - brick_half_size, 1u, brick_position + brick_half_size, 0u);
-    }    
+
+        brick_count_in_thread = brick_count_in_thread + 1u;
+    }
+
     shared_AABB_buffer[local_id] = local_AABB;
+
+    // Set a count of the number of used bricks for a sculpt
+    // This could be a good usecase for subgroup operations
+    if (brick_count_in_thread > 0u) {
+        atomicAdd(&gpu_return_results.curr_sculpt_brick_count, brick_count_in_thread);
+    }
 
     workgroupBarrier();
 

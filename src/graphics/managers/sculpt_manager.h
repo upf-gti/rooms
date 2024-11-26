@@ -17,10 +17,12 @@ struct sGPU_RayIntersectionData {
     uint32_t    tile_pointer = 0u;
     uint32_t    sculpt_id = 0u;
     float       ray_t = -FLT_MAX;
+
     uint32_t    instance_id = 0u;
     uint32_t    pad0;
     float       intersection_metallic;
     float       intersection_roughness;
+
     glm::vec3   intersection_albedo;
     uint32_t    pad1;
 };
@@ -30,8 +32,14 @@ struct sGPU_SculptResults {
     struct sGPU_SculptEvalData {
         glm::vec3 aabb_min = glm::vec3(6.0f);
         uint32_t empty_brick_count = 0u;
+
         glm::vec3 aabb_max = glm::vec3(3.0f);
         uint32_t sculpt_id = 0u;
+
+        uint32_t curr_sculpt_brick_count = 0u;
+        uint32_t pad0 = 0u;
+        uint32_t pad1 = 0u;
+        uint32_t pad2 = 0u;
     } sculpt_eval_data;
 
     sGPU_RayIntersectionData ray_intersection;
