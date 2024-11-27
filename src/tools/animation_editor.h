@@ -3,6 +3,7 @@
 #include "base_editor.h"
 
 #include "framework/animation/track.h"
+#include "framework/animation/skeleton.h"
 
 class RoomsRenderer;
 class Node;
@@ -57,6 +58,7 @@ class AnimationEditor : public BaseEditor {
     std::unordered_map<uint32_t, sAnimationData> animations_data;
 
     uint32_t get_animation_idx();
+
     void initialize_ik();
     void update_ik();
     void render_ik();
@@ -130,6 +132,7 @@ class AnimationEditor : public BaseEditor {
     void update_panel_transform();
     void generate_shortcuts() override;
 
+    void inspect_character(bool force = false);
     void inspect_keyframes_list(bool force = false);
     void inspect_keyframe();
     void inspect_keyframe_properties();
