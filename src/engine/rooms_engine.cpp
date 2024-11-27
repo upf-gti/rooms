@@ -3,6 +3,7 @@
 #include "framework/nodes/environment_3d.h"
 #include "framework/nodes/viewport_3d.h"
 #include "framework/nodes/sculpt_node.h"
+#include "framework/nodes/skeleton_instance_3d.h"
 #include "framework/input.h"
 #include "framework/parsers/parse_scene.h"
 #include "framework/parsers/parse_gltf.h"
@@ -25,7 +26,6 @@
 #include "tools/animation_editor.h"
 #include "tools/player_editor.h"
 #include "tools/tutorial_editor.h"
-#include "framework/nodes/sculpt_node.h"
 
 #include "spdlog/spdlog.h"
 #include "imgui.h"
@@ -82,6 +82,8 @@ int RoomsEngine::post_initialize()
 
         sphere_pointer->set_surface_material_override(sphere_pointer->get_surface(0), sphere_pointer_material);
     }
+
+    init_default_skeleton();
 
     // Instantiate and initialize editors
     {
@@ -164,6 +166,37 @@ void RoomsEngine::set_main_scene(const std::string& scene_path)
 void RoomsEngine::add_to_main_scene(const std::string& scene_path)
 {
     main_scene->parse(scene_path);
+}
+
+void RoomsEngine::init_default_skeleton()
+{
+    std::vector<Node*> nodes;
+    parse_gltf("data/meshes/character.glb", nodes);
+    assert(nodes.size() == 1u);
+
+    std::function<SkeletonInstance3D*(Node*)> find_skeleton = [&](Node* node)
+    {
+        if (dynamic_cast<SkeletonInstance3D*>(node)) {
+            return static_cast<SkeletonInstance3D*>(node);
+        }
+        for (auto child : node->get_children()) {
+            auto instance = find_skeleton(child);
+            if (dynamic_cast<SkeletonInstance3D*>(instance)) {
+                return instance;
+            }
+        }
+        return (SkeletonInstance3D*)nullptr;
+    };
+
+    auto instance = find_skeleton(nodes[0]);
+
+    default_skeleton = *instance->get_skeleton();
+
+    delete nodes[0];
+
+    default_skeleton_instance = new SkeletonInstance3D();
+    default_skeleton_instance->set_skeleton(&default_skeleton);
+    default_skeleton_instance->generate_joints_from_pose();
 }
 
 void RoomsEngine::update(float delta_time)
