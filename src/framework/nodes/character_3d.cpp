@@ -36,7 +36,7 @@ Character3D::Character3D() : Node3D()
             SculptNode* new_sculpt = new SculptNode();
             new_sculpt->initialize();
             new_sculpt->set_name(names[i]);
-            new_sculpt->set_transform(pose.get_global_transform(i));
+            new_sculpt->set_transform(Transform::combine(get_global_transform(), pose.get_global_transform(i)));
             add_child(new_sculpt);
 
             Joint3D* joint_3d = new Joint3D();
@@ -68,10 +68,15 @@ void Character3D::update(float delta_time)
 
         Pose& pose = skeleton->get_current_pose();
 
+        // Set pose first
         for (size_t i = 0; i < joint_nodes.size(); ++i) {
             pose.set_local_transform(i, joint_nodes[i]->get_transform());
+        }
+
+        // Set transform when all joints in the pose have been updated
+        for (size_t i = 0; i < joint_nodes.size(); ++i) {
             Node3D* sculpt = static_cast<Node3D*>(children[i]);
-            sculpt->set_transform(pose.get_global_transform(i));
+            sculpt->set_transform(Transform::combine(get_global_transform(), pose.get_global_transform(i)));
         }
 
         transform.set_dirty(false);
