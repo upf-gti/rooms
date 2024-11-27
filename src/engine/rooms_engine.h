@@ -70,6 +70,8 @@ public:
 	void update(float delta_time) override;
 	void render() override;
 
+    void resize_window(int width, int height) override;
+
     void set_main_scene(const std::string& scene_path);
     void add_to_main_scene(const std::string& scene_path);
 

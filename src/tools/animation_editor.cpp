@@ -897,6 +897,10 @@ void AnimationEditor::init_ui()
 
     main_panel = new ui::HContainer2D("animation_editor_root", { 48.0f, screen_size.y - 200.f }, ui::CREATE_3D);
 
+    Node::bind("animation_editor_root@resize", (FuncUVec2)[&](const std::string& signal, glm::u32vec2 window_size) {
+        main_panel->set_position({ 48.0f, window_size.y - 200.f });
+    });
+
     ui::VContainer2D* vertical_container = new ui::VContainer2D("animation_vertical_container", { 0.0f, 0.0f });
     main_panel->add_child(vertical_container);
 

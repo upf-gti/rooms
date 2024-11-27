@@ -182,6 +182,7 @@ public:
     void render() override;
     void render_gui() override;
 
+    // void on_resize_window(uint32_t width, uint32_t height) override;
     void on_enter(void* data) override;
 
     void set_main_scene(Scene* new_scene) { main_scene = new_scene; };

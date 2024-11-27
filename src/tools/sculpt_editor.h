@@ -230,6 +230,7 @@ public:
         }
     }
 
-    void on_enter(void* data);
-    void on_exit();
+    // void on_resize_window(uint32_t width, uint32_t height) override;
+    void on_enter(void* data) override;
+    void on_exit() override;
 };

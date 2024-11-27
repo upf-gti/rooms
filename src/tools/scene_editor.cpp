@@ -413,6 +413,10 @@ void SceneEditor::init_ui()
 
     main_panel = new ui::HContainer2D("scene_editor_root", { 48.0f, screen_size.y - 216.f }, ui::CREATE_3D);
 
+    Node::bind("scene_editor_root@resize", (FuncUVec2)[&](const std::string& signal, glm::u32vec2 window_size) {
+        main_panel->set_position({ 48.0f, window_size.y - 216.f });
+    });
+
     ui::VContainer2D* vertical_container = new ui::VContainer2D("scene_vertical_container", { 0.0f, 0.0f });
     main_panel->add_child(vertical_container);
 

@@ -270,6 +270,15 @@ void RoomsEngine::render_controllers()
     i->controller_mesh_left->render();
 }
 
+void RoomsEngine::resize_window(int width, int height)
+{
+    Engine::resize_window(width, height);
+
+    if (current_editor) {
+        current_editor->on_resize_window(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
+    }
+}
+
 void RoomsEngine::switch_editor(uint8_t editor_idx, void* data)
 {
     if (editor_idx >= EDITOR_COUNT) {

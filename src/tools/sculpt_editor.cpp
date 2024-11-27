@@ -1333,7 +1333,11 @@ void SculptEditor::init_ui()
     auto webgpu_context = Renderer::instance->get_webgpu_context();
     glm::vec2 screen_size = glm::vec2(static_cast<float>(webgpu_context->render_width), static_cast<float>(webgpu_context->render_height));
 
-    main_panel = new ui::HContainer2D("root", { 48.0f, screen_size.y - 224.f }, ui::CREATE_3D);
+    main_panel = new ui::HContainer2D("sculpt_editor_root", { 48.0f, screen_size.y - 224.f }, ui::CREATE_3D);
+
+    Node::bind("sculpt_editor_root@resize", (FuncUVec2)[&](const std::string& signal, glm::u32vec2 window_size) {
+        main_panel->set_position({ 48.0f, window_size.y - 224.f });
+    });
 
     const StrokeMaterial& stroke_material = stroke_parameters.get_material();
 
