@@ -215,14 +215,7 @@ void SculptEditor::on_enter(void* data)
     }
 
     if (sculpt_started) {
-        if (sculpt_node->get_parent()) {
-            current_instance_transform = sculpt_node->get_parent<Node3D*>()->get_transform();
-        }
-        else {
-            current_instance_transform = sculpt_node->get_transform();
-        }
-
-
+        current_instance_transform = sculpt_node->get_transform();
     }
 
     // Store if we started from scratch the sculpt to assign or not its new position
@@ -236,7 +229,7 @@ void SculptEditor::on_enter(void* data)
 void SculptEditor::on_exit()
 {
     if (sculpt_from_zero) {
-        current_sculpt->set_transform(current_instance_transform);
+        current_sculpt->set_global_transform(current_instance_transform);
     }
 
     static_cast<RoomsRenderer*>(RoomsRenderer::instance)->get_raymarching_renderer()->set_preview_render(false);
@@ -1082,6 +1075,24 @@ void SculptEditor::render_gui()
 
     if (changed) {
         stroke_parameters.set_dirty(true);
+    }
+
+    ImGui::Text("Sculpt Instance Transform");
+
+    glm::vec3 position = current_instance_transform.get_position();
+    glm::quat rotation = current_instance_transform.get_rotation();
+    glm::vec3 scale = current_instance_transform.get_scale();
+
+    if (ImGui::DragFloat3("Translation", &position[0], 0.1f)) {
+        current_instance_transform.set_position(position);
+    }
+
+    if (ImGui::DragFloat4("Rotation", &rotation[0], 0.1f)) {
+        current_instance_transform.set_rotation(rotation);
+    }
+
+    if (ImGui::DragFloat3("Scale", &scale[0], 0.1f)) {
+        current_instance_transform.set_scale(scale);
     }
 }
 
