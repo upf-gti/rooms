@@ -82,7 +82,6 @@ class SceneEditor : public BaseEditor {
     void ungroup_all(Node* node);
     void create_light_node(uint8_t type);
     void process_node_hovered();
-    Color get_node_highlight_color(Node* node);
 
     /*
     *   Group stuff
@@ -101,9 +100,6 @@ class SceneEditor : public BaseEditor {
     */
 
     static uint64_t node_signal_uid;
-    static Color COLOR_HIGHLIGHT_NODE;
-    static Color COLOR_HIGHLIGHT_GROUP;
-    static Color COLOR_HIGHLIGHT_LIGHT;
 
     bool inspector_dirty = false;
 
@@ -172,6 +168,11 @@ class SceneEditor : public BaseEditor {
 
 public:
 
+    static Color COLOR_HIGHLIGHT_NODE;
+    static Color COLOR_HIGHLIGHT_GROUP;
+    static Color COLOR_HIGHLIGHT_LIGHT;
+    static Color COLOR_HIGHLIGHT_CHARACTER;
+
     SceneEditor() {};
     SceneEditor(const std::string& name) : BaseEditor(name) {};
 
@@ -182,6 +183,7 @@ public:
     void render() override;
     void render_gui() override;
 
+    // void on_resize_window(uint32_t width, uint32_t height) override;
     void on_enter(void* data) override;
 
     void set_main_scene(Scene* new_scene) { main_scene = new_scene; };
@@ -189,4 +191,6 @@ public:
 
     Group3D* get_current_group() { return current_group; }
     Node* get_selected_node() { return selected_node; }
+
+    static Color get_node_highlight_color(Node* node);
 };

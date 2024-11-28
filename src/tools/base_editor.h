@@ -154,6 +154,7 @@ public:
     virtual void render();
     virtual void render_gui() {};
 
+    virtual void on_resize_window(uint32_t width, uint32_t height);
     virtual void on_enter(void* data) {};
     virtual void on_exit() {};
 

@@ -91,6 +91,13 @@ void BaseEditor::render()
     main_panel->render();
 }
 
+void BaseEditor::on_resize_window(uint32_t width, uint32_t height)
+{
+    // Emit signal to resize main panel
+    std::string signal = main_panel->get_name() + "@resize";
+    Node::emit_signal(signal, glm::u32vec2(width, height));
+}
+
 void BaseEditor::update_shortcuts(const std::unordered_map<uint8_t, bool>& active_shortcuts)
 {
     assert(renderer->get_openxr_available() && "Updating shortcuts in non-XR mode!");

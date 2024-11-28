@@ -4,12 +4,14 @@
 
 #include "framework/ui/gizmo_3d.h"
 #include "framework/ui/cursor.h"
+#include "framework/animation/skeleton.h"
 
 class Node;
 class Node3D;
 class SculptNode;
 class Environment3D;
 class BaseEditor;
+class SkeletonInstance3D;
 
 namespace ui {
     class ContextMenu;
@@ -41,6 +43,13 @@ class RoomsEngine : public Engine
 
     std::vector<Node*> to_delete;
 
+    // Animation System
+
+    Skeleton default_skeleton;
+    SkeletonInstance3D* default_skeleton_instance = nullptr;
+
+    void init_default_skeleton();
+
     // UI
 
     ui::ContextMenu* active_context_menu = nullptr;
@@ -70,6 +79,8 @@ public:
 	void update(float delta_time) override;
 	void render() override;
 
+    void resize_window(int width, int height) override;
+
     void set_main_scene(const std::string& scene_path);
     void add_to_main_scene(const std::string& scene_path);
 
@@ -87,6 +98,9 @@ public:
     inline Gizmo3D* get_gizmo() { return &gizmo; }
     inline BaseEditor* get_current_editor() const { return current_editor; }
     inline EditorType get_current_editor_type() const { return current_editor_type; }
+
+    Skeleton* get_default_skeleton() { return &default_skeleton; }
+    SkeletonInstance3D* get_default_skeleton_instance() { return default_skeleton_instance; }
 
     template <typename T = BaseEditor*>
     inline T get_editor(uint8_t editor_idx) const { return static_cast<T>(editors[editor_idx]); }

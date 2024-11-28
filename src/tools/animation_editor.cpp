@@ -3,6 +3,7 @@
 #include "framework/utils/utils.h"
 #include "framework/input.h"
 #include "framework/parsers/parse_obj.h"
+#include "framework/parsers/parse_gltf.h"
 #include "framework/nodes/skeleton_instance_3d.h"
 #include "framework/nodes/joint_3d.h"
 #include "framework/nodes/animation_player.h"
@@ -10,6 +11,7 @@
 #include "framework/nodes/slider_2d.h"
 #include "framework/nodes/button_2d.h"
 #include "framework/nodes/group_3d.h"
+#include "framework/nodes/character_3d.h"
 #include "framework/ui/inspector.h"
 #include "framework/animation/track.h"
 #include "framework/animation/solvers/jacobian_solver.h"
@@ -23,6 +25,7 @@
 
 #include "engine/rooms_engine.h"
 
+#include "tools/scene_editor.h"
 
 #include "glm/gtx/quaternion.hpp"
 #include "spdlog/spdlog.h"
@@ -232,7 +235,8 @@ void AnimationEditor::update(float delta_time)
 
     // Get joints from skeleton
     bool select_pressed = Input::was_trigger_pressed(HAND_RIGHT) || Input::was_mouse_pressed(GLFW_MOUSE_BUTTON_LEFT);
-    if(select_pressed && dynamic_cast<SkeletonInstance3D*>(current_node)) {
+    if(select_pressed &&
+        (dynamic_cast<SkeletonInstance3D*>(current_node) || dynamic_cast<Character3D*>(current_node))) {
         glm::vec3 ray_origin;
         glm::vec3 ray_direction;
         float distance = 1e9f;
@@ -240,7 +244,7 @@ void AnimationEditor::update(float delta_time)
         Engine::instance->get_scene_ray(ray_origin, ray_direction);
 
         // This sets current_joint to a valid joint in the skeleton instance
-        if (static_cast<SkeletonInstance3D*>(current_node)->test_ray_collision(ray_origin, ray_direction, distance, reinterpret_cast<Node3D**>(&current_joint))) {
+        if (current_node->test_ray_collision(ray_origin, ray_direction, distance, reinterpret_cast<Node3D**>(&current_joint))) {
             inspector->clear();
             inspect_node(current_joint);
         }
@@ -321,8 +325,7 @@ void AnimationEditor::update_gizmo(float delta_time)
         node->set_global_transform(t);
 
         if (dynamic_cast<Joint3D*>(node)) {
-            Joint3D* j_node = static_cast<Joint3D*>(node);
-            j_node->update_pose();
+            current_node->set_transform_dirty(true);
         }
     }
 }
@@ -349,8 +352,8 @@ void AnimationEditor::render_gizmo()
     node->set_global_transform(gizmo->get_transform());
 
     if (dynamic_cast<Joint3D*>(node)) {
-        Joint3D* j_node = static_cast<Joint3D*>(node);
-        j_node->update_pose();
+        // Current node is skeletoninstance
+        current_node->set_transform_dirty(true);
     }
 }
 
@@ -524,8 +527,7 @@ void AnimationEditor::update_node_transform()
         node->set_global_transform(global_transform);
 
         if (dynamic_cast<Joint3D*>(node)) {
-            Joint3D* j_node = static_cast<Joint3D*>(node);
-            j_node->update_pose();
+            current_node->set_transform_dirty(true);
         }
 
         rotation_started = true;
@@ -753,7 +755,7 @@ void AnimationEditor::set_animation_state(uint32_t index)
         node->set_transform_dirty(true);
 
         if (dynamic_cast<Joint3D*>(node)) {
-            static_cast<Joint3D*>(node)->update_pose();
+            current_node->set_transform_dirty(true);
         }
     }
 }
@@ -897,6 +899,10 @@ void AnimationEditor::init_ui()
 
     main_panel = new ui::HContainer2D("animation_editor_root", { 48.0f, screen_size.y - 200.f }, ui::CREATE_3D);
 
+    Node::bind("animation_editor_root@resize", (FuncUVec2)[&](const std::string& signal, glm::u32vec2 window_size) {
+        main_panel->set_position({ 48.0f, window_size.y - 200.f });
+    });
+
     ui::VContainer2D* vertical_container = new ui::VContainer2D("animation_vertical_container", { 0.0f, 0.0f });
     main_panel->add_child(vertical_container);
 
@@ -922,6 +928,9 @@ void AnimationEditor::init_ui()
 
         first_row->add_child(loop_mode);
     }
+
+    // ** Go back to scene editor **
+    first_row->add_child(new ui::TextureButton2D("character_view", { "data/textures/sculpt.png" }));
 
     ui::HContainer2D* second_row = new ui::HContainer2D("row_1", { 0.0f, 0.0f });
     vertical_container->add_child(second_row);
@@ -1009,6 +1018,10 @@ void AnimationEditor::bind_events()
         Node::bind("loop_reverse", [&](const std::string& signal, void* button) { set_loop_type(ANIMATION_LOOP_REVERSE); });
         Node::bind("loop_ping_pong", [&](const std::string& signal, void* button) { set_loop_type(ANIMATION_LOOP_PING_PONG); });
     }
+
+    Node::bind("character_view", [&](const std::string& signal, void* button) {
+        inspect_character(true);
+    }); 
 
     Node::bind("animation_speed", (FuncFloat)[&](const std::string& signal, float value) { player->set_speed(value); });
 }
@@ -1154,6 +1167,50 @@ void AnimationEditor::inspect_node(Node* node)
     }
 }
 
+void AnimationEditor::inspect_character(bool force)
+{
+    if (!dynamic_cast<Character3D*>(current_node)) {
+        assert(0);
+        return;
+    }
+
+    inspector->clear();
+
+    auto character = static_cast<Character3D*>(current_node);
+    auto sculpt_nodes = character->get_children();
+
+    for (uint32_t i = 0; i < sculpt_nodes.size(); ++i) {
+
+        auto node = sculpt_nodes[i];
+
+        inspector->same_line();
+
+        {
+            std::string signal = node->get_name() + std::to_string(node_signal_uid++) + "_edit_character_set";
+            inspector->button(signal, "data/textures/edit.png", 0u, "Edit");
+
+            Node::bind(signal, [&, n = node](const std::string& sg, void* data) {
+                RoomsEngine::switch_editor(SCULPT_EDITOR, static_cast<SculptNode*>(n));
+            });
+        }
+
+        {
+            std::string signal = node->get_name() + std::to_string(node_signal_uid++) + "_label_character_set";
+            inspector->label(signal, node->get_name(), 0u, SceneEditor::COLOR_HIGHLIGHT_CHARACTER);
+        }
+
+        inspector->end_line();
+    }
+
+    Node::emit_signal(inspector->get_name() + "@children_changed", (void*)nullptr);
+
+    inspector_transform_dirty = !inspector->get_visibility() || force;
+
+    if (force) {
+        inspector->set_visibility(true);
+    }
+}
+
 void AnimationEditor::inspect_keyframes_list(bool force)
 {
     inspector->clear();
@@ -1216,11 +1273,6 @@ void AnimationEditor::inspect_keyframes_list(bool force)
     }
 
     Node::emit_signal(inspector->get_name() + "@children_changed", (void*)nullptr);
-
-    // Enable xr for the buttons that need it..
-    if (renderer->get_openxr_available()) {
-        inspector->disable_2d();
-    }
 
     inspector_transform_dirty = !inspector->get_visibility() || force;
 

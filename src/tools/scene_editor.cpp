@@ -5,6 +5,7 @@
 #include "framework/input.h"
 #include "framework/parsers/parse_scene.h"
 #include "framework/nodes/sculpt_node.h"
+#include "framework/nodes/character_3d.h"
 #include "framework/nodes/spot_light_3d.h"
 #include "framework/nodes/omni_light_3d.h"
 #include "framework/nodes/directional_light_3d.h"
@@ -41,6 +42,7 @@ uint64_t SceneEditor::node_signal_uid = 0;
 Color SceneEditor::COLOR_HIGHLIGHT_NODE = Color(0.929f, 0.778f, 0.6f, 1.0f);
 Color SceneEditor::COLOR_HIGHLIGHT_GROUP = Color(0.187f, 0.089f, 0.858f, 1.0f);
 Color SceneEditor::COLOR_HIGHLIGHT_LIGHT = Color(1.0f, 0.136f, 0.0f, 1.0f);
+Color SceneEditor::COLOR_HIGHLIGHT_CHARACTER = Color(0.154f, 0.85836f, 0.235f, 1.0f);
 
 void SceneEditor::initialize()
 {
@@ -110,7 +112,7 @@ void SceneEditor::initialize()
                 // hover the group
                 if (!current_group && sculpt_node->get_parent()) {
                     hovered_node = sculpt_node->get_parent();
-                    assert(dynamic_cast<Group3D*>(hovered_node));
+                    // assert(dynamic_cast<Group3D*>(hovered_node));
                 }
                 else {
                     hovered_node = sculpt_node;
@@ -293,6 +295,12 @@ Color SceneEditor::get_node_highlight_color(Node* node)
     else if (dynamic_cast<Group3D*>(node)) {
         return COLOR_HIGHLIGHT_GROUP;
     }
+    else if (dynamic_cast<Group3D*>(node)) {
+        return COLOR_HIGHLIGHT_GROUP;
+    }
+    else if (dynamic_cast<Character3D*>(node)) {
+        return COLOR_HIGHLIGHT_CHARACTER;
+    }
 
     return COLOR_HIGHLIGHT_NODE;
 }
@@ -413,6 +421,10 @@ void SceneEditor::init_ui()
 
     main_panel = new ui::HContainer2D("scene_editor_root", { 48.0f, screen_size.y - 216.f }, ui::CREATE_3D);
 
+    Node::bind("scene_editor_root@resize", (FuncUVec2)[&](const std::string& signal, glm::u32vec2 window_size) {
+        main_panel->set_position({ 48.0f, window_size.y - 216.f });
+    });
+
     ui::VContainer2D* vertical_container = new ui::VContainer2D("scene_vertical_container", { 0.0f, 0.0f });
     main_panel->add_child(vertical_container);
 
@@ -450,6 +462,7 @@ void SceneEditor::init_ui()
         ui::ButtonSubmenu2D* add_node_submenu = new ui::ButtonSubmenu2D("add_node", { "data/textures/add.png" });
 
         add_node_submenu->add_child(new ui::TextureButton2D("sculpt", { "data/textures/sculpt.png" }));
+        add_node_submenu->add_child(new ui::TextureButton2D("character", { "data/textures/sculpt.png" }));
 
         // Lights
         {
@@ -567,12 +580,17 @@ void SceneEditor::bind_events()
         static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(new_sculpt);
 
         select_node(new_sculpt);
-
         add_node(new_sculpt);
-
         set_inspector_dirty();
 
         Node::emit_signal("@on_sculpt_added", (void*)nullptr);
+    });
+
+    Node::bind("character", [&](const std::string& signal, void* button) {
+        Character3D* new_character = new Character3D();
+        select_node(new_character);
+        add_node(new_character);
+        set_inspector_dirty();
     });
 
     // Environment / Scene Lights
@@ -1238,7 +1256,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
     if (flags & NODE_NAME) {
         std::string signal = node_name + "_label";
         uint32_t flags = ui::TEXT_EVENTS | (node == selected_node ? ui::SELECTED : 0);
-        inspector->label(signal, node_name, flags, get_node_highlight_color(node));
+        inspector->label(signal, node_name, flags, SceneEditor::get_node_highlight_color(node));
 
         // Request keyboard and use the result to set the new node name. Not the nicest code, but anyway..
         {
