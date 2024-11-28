@@ -13,11 +13,6 @@
 
 #include <map>
 
-#define THUMBSTICK_NO_AXIS 0u
-#define THUMBSTICK_AXIS_X 1u
-#define THUMBSTICK_AXIS_Y 2u
-#define THUMBSTICK_DEADZONE 0.01f
-
 enum eTool : uint8_t {
     NONE = 0,
     SCULPT,
@@ -53,7 +48,7 @@ class SculptEditor : public BaseEditor {
 
     eTool current_tool = eTool::NONE;
 
-    uint8_t thumbstick_leading_axis = THUMBSTICK_NO_AXIS;
+    uint8_t thumbstick_leading_axis = 0u;
 
     static uint8_t last_generated_material_uid;
     uint8_t num_generated_materials = 0u;

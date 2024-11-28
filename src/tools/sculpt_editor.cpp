@@ -30,8 +30,6 @@ uint8_t SculptEditor::last_generated_material_uid = 0;
 
 //Viewport3D* test_slider_thermometer = nullptr;
 
-uint8_t get_leading_thumbstick_axis(const glm::vec2 thumb_axis);
-
 void SculptEditor::initialize()
 {
     renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
@@ -381,10 +379,8 @@ bool SculptEditor::edit_update(float delta_time)
         // Get the data from the primitive default
         edit_to_add.dimensions = primitive_default_states[stroke_parameters.get_primitive()].dimensions;
 
-        const glm::vec2 thumbstick_values = Input::get_thumbstick_value(HAND_RIGHT);
-
         // Disable the unused joystick axis until the joystick is released
-        uint8_t curr_thumbstick_axis = get_leading_thumbstick_axis(thumbstick_values);
+        uint8_t curr_thumbstick_axis = Input::get_leading_thumbstick_axis(HAND_RIGHT);
 
         if (thumbstick_leading_axis == THUMBSTICK_NO_AXIS) {
             thumbstick_leading_axis = curr_thumbstick_axis;
@@ -392,8 +388,8 @@ bool SculptEditor::edit_update(float delta_time)
             thumbstick_leading_axis = THUMBSTICK_NO_AXIS;
         }
 
-        bool use_x_axis = thumbstick_leading_axis == THUMBSTICK_AXIS_X;
-
+        bool use_x_axis = (thumbstick_leading_axis == THUMBSTICK_AXIS_X);
+        const glm::vec2& thumbstick_values = Input::get_thumbstick_value(HAND_RIGHT);
         float size_multiplier = (use_x_axis ? thumbstick_values.x : thumbstick_values.y * 0.1f) * delta_time;
 
         if (std::abs(size_multiplier) > 0.f) {
@@ -1884,18 +1880,4 @@ void SculptEditor::pick_material()
     should_pick_material = false;
 
     update_gui_from_stroke_material(stroke_parameters.get_material());
-}
-
-
-uint8_t get_leading_thumbstick_axis(const glm::vec2 thumb_axis) {
-    const glm::vec2 abs_axis = glm::abs(thumb_axis);
-    if (glm::abs(glm::length(abs_axis)) >= THUMBSTICK_DEADZONE) {
-        if (abs_axis.x > abs_axis.y) {
-            return THUMBSTICK_AXIS_X;
-        } else {
-            return THUMBSTICK_AXIS_Y;
-        }
-    }
-
-    return THUMBSTICK_NO_AXIS;
 }
