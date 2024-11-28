@@ -930,7 +930,7 @@ void AnimationEditor::init_ui()
     }
 
     // ** Go back to scene editor **
-    first_row->add_child(new ui::TextureButton2D("character_view", { "data/textures/sculpt.png" }));
+    first_row->add_child(new ui::TextureButton2D("character_view", { "data/textures/character.png" }));
 
     ui::HContainer2D* second_row = new ui::HContainer2D("row_1", { 0.0f, 0.0f });
     vertical_container->add_child(second_row);

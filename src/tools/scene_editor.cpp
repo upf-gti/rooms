@@ -462,7 +462,7 @@ void SceneEditor::init_ui()
         ui::ButtonSubmenu2D* add_node_submenu = new ui::ButtonSubmenu2D("add_node", { "data/textures/add.png" });
 
         add_node_submenu->add_child(new ui::TextureButton2D("sculpt", { "data/textures/sculpt.png" }));
-        add_node_submenu->add_child(new ui::TextureButton2D("character", { "data/textures/sculpt.png" }));
+        add_node_submenu->add_child(new ui::TextureButton2D("character", { "data/textures/character.png" }));
 
         // Lights
         {

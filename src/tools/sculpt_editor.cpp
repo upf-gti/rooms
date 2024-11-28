@@ -1591,9 +1591,9 @@ void SculptEditor::init_ui()
         // Right hand
         {
             right_hand_box = new ui::VContainer2D("right_controller_root", { 0.0f, 0.0f }, ui::CREATE_3D);
-            right_hand_box->add_child(new ui::ImageLabel2D("Main size", shortcuts::R_THUMBSTICK_PATH, shortcuts::MAIN_SIZE));
+            right_hand_box->add_child(new ui::ImageLabel2D("Main size", shortcuts::R_THUMBSTICK_Y_PATH, shortcuts::MAIN_SIZE));
             right_hand_box->add_child(new ui::ImageLabel2D("Sec size", shortcuts::R_GRIP_R_THUMBSTICK_PATH, shortcuts::SECONDARY_SIZE, double_size));
-            right_hand_box->add_child(new ui::ImageLabel2D("Round Shape", shortcuts::R_THUMBSTICK_PATH, shortcuts::ROUND_SHAPE));
+            right_hand_box->add_child(new ui::ImageLabel2D("Round Shape", shortcuts::R_THUMBSTICK_X_PATH, shortcuts::ROUND_SHAPE));
             right_hand_box->add_child(new ui::ImageLabel2D("Smooth", shortcuts::R_GRIP_R_THUMBSTICK_PATH, shortcuts::MODIFY_SMOOTH, double_size));
             right_hand_box->add_child(new ui::ImageLabel2D("Add Spline", shortcuts::B_BUTTON_PATH, shortcuts::ADD_SPLINE));
             right_hand_box->add_child(new ui::ImageLabel2D("Cancel Spline", shortcuts::B_BUTTON_PATH, shortcuts::CANCEL_SPLINE));

@@ -22,7 +22,8 @@ namespace shortcuts {
     const std::string L_GRIP_Y_BUTTON_PATH = "data/textures/buttons/l_grip_plus_y.png";
     const std::string L_TRIGGER_PATH = "data/textures/buttons/l_trigger.png";
     const std::string L_GRIP_L_TRIGGER_PATH = "data/textures/buttons/l_grip_plus_l_trigger.png";
-    const std::string L_THUMBSTICK_PATH = "data/textures/buttons/l_thumbstick.png";
+    const std::string L_THUMBSTICK_X_PATH = "data/textures/buttons/l_thumbstick_x.png";
+    const std::string L_THUMBSTICK_Y_PATH = "data/textures/buttons/l_thumbstick_y.png";
     const std::string L_GRIP_L_THUMBSTICK_PATH = "data/textures/buttons/l_grip_plus_l_thumbstick.png";
 
     // Right hand
@@ -32,7 +33,8 @@ namespace shortcuts {
     const std::string R_GRIP_B_BUTTON_PATH = "data/textures/buttons/r_grip_plus_b.png";
     const std::string R_TRIGGER_PATH = "data/textures/buttons/r_trigger.png";
     const std::string R_GRIP_R_TRIGGER_PATH = "data/textures/buttons/r_grip_plus_r_trigger.png";
-    const std::string R_THUMBSTICK_PATH = "data/textures/buttons/r_thumbstick.png";
+    const std::string R_THUMBSTICK_X_PATH = "data/textures/buttons/r_thumbstick_x.png";
+    const std::string R_THUMBSTICK_Y_PATH = "data/textures/buttons/r_thumbstick_y.png";
     const std::string R_GRIP_R_THUMBSTICK_PATH = "data/textures/buttons/r_grip_plus_r_thumbstick.png";
 
     enum : uint8_t {
