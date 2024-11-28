@@ -16,11 +16,14 @@ class Character3D : public Node3D {
 
     std::vector<Joint3D*> joint_nodes;
 
+    void generate_default_sculpts_skeleton();
+
 public:
 
     Character3D();
     ~Character3D();
 
+    void initialize();
     void update(float delta_time) override;
     void render() override;
     // void render_gui() override;
@@ -31,7 +34,7 @@ public:
 
     Skeleton* get_skeleton() { return skeleton; }
 
-    void set_skeleton(Skeleton* new_skeleton) { skeleton = new_skeleton; }
+    void set_skeleton(Skeleton* new_skeleton);
 
     bool test_ray_collision(const glm::vec3& ray_origin, const glm::vec3& ray_direction, float& distance, Node3D** out = nullptr) override;
 };

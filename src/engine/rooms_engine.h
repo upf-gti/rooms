@@ -11,7 +11,6 @@ class Node3D;
 class SculptNode;
 class Environment3D;
 class BaseEditor;
-class SkeletonInstance3D;
 
 namespace ui {
     class ContextMenu;
@@ -46,7 +45,6 @@ class RoomsEngine : public Engine
     // Animation System
 
     Skeleton default_skeleton;
-    SkeletonInstance3D* default_skeleton_instance = nullptr;
 
     void init_default_skeleton();
 
@@ -100,7 +98,6 @@ public:
     inline EditorType get_current_editor_type() const { return current_editor_type; }
 
     Skeleton* get_default_skeleton() { return &default_skeleton; }
-    SkeletonInstance3D* get_default_skeleton_instance() { return default_skeleton_instance; }
 
     template <typename T = BaseEditor*>
     inline T get_editor(uint8_t editor_idx) const { return static_cast<T>(editors[editor_idx]); }

@@ -588,6 +588,7 @@ void SceneEditor::bind_events()
 
     Node::bind("character", [&](const std::string& signal, void* button) {
         Character3D* new_character = new Character3D();
+        new_character->initialize();
         select_node(new_character);
         add_node(new_character);
         set_inspector_dirty();

@@ -191,12 +191,9 @@ void RoomsEngine::init_default_skeleton()
     auto instance = find_skeleton(nodes[0]);
 
     default_skeleton = *instance->get_skeleton();
+    default_skeleton.set_name("default_skeleton");
 
     delete nodes[0];
-
-    default_skeleton_instance = new SkeletonInstance3D();
-    default_skeleton_instance->set_skeleton(&default_skeleton);
-    default_skeleton_instance->generate_joints_from_pose();
 }
 
 void RoomsEngine::update(float delta_time)
