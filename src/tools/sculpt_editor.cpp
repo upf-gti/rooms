@@ -341,7 +341,7 @@ bool SculptEditor::edit_update(float delta_time)
             bool r = mirror_gizmo.update(Input::get_controller_position(HAND_RIGHT, POSE_AIM), delta_time);
             is_tool_used &= !r;
             is_tool_pressed &= !r;
-            mirror_normal = glm::normalize(mirror_gizmo.get_rotation() * glm::vec3(0.f, 0.f, 1.f));
+            mirror_normal = glm::normalize(mirror_gizmo.get_rotation() * normals::pZ);
         }
 
         if (snap_to_grid) {
@@ -852,7 +852,7 @@ void SculptEditor::apply_mirror_position(glm::vec3& position)
 
 void SculptEditor::apply_mirror_rotation(glm::quat& rotation) const
 {
-    glm::vec3 curr_dir = rotation * glm::vec3{ 0.0f, 0.0f, 1.0f };
+    glm::vec3 curr_dir = rotation * normals::pZ;
     glm::vec3 mirror_dir = glm::reflect(curr_dir, mirror_normal);
 
     rotation = get_quat_between_vec3(curr_dir, mirror_dir) * rotation;
@@ -1054,9 +1054,9 @@ void SculptEditor::render()
         mirror_mesh->translate(axis_lock_gizmo.get_position());
 
         if (axis_lock_mode & AXIS_LOCK_X)
-            mirror_mesh->rotate(glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+            mirror_mesh->rotate(glm::radians(90.0f), normals::pY);
         else if (axis_lock_mode & AXIS_LOCK_Y)
-            mirror_mesh->rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+            mirror_mesh->rotate(glm::radians(90.0f), normals::pX);
 
         mirror_mesh->render();
     }
@@ -1065,7 +1065,7 @@ void SculptEditor::render()
         mirror_gizmo.render();
 
         if (!renderer->get_openxr_available()) {
-            mirror_normal = glm::normalize(mirror_gizmo.get_rotation() * glm::vec3(0.f, 0.f, 1.f));
+            mirror_normal = glm::normalize(mirror_gizmo.get_rotation() * normals::pZ);
         }
 
         mirror_mesh->set_transform(mirror_gizmo.get_transform());
@@ -1350,6 +1350,17 @@ void SculptEditor::end_spline()
     dirty_spline = true;
 
     update_ui_workflow_state();
+}
+
+void SculptEditor::toggle_mirror()
+{
+    use_mirror = !use_mirror;
+
+    // Center gizmo in sculpt on enable
+    if (use_mirror) {
+        Transform t = get_current_transform();
+        mirror_gizmo.set_transform(t);
+    }
 }
 
 /*
@@ -1697,7 +1708,7 @@ void SculptEditor::bind_events()
     //Node::bind("onion_value", [&](const std::string& signal, float value) { set_onion_modifier(value); });
     Node::bind("cap_value", (FuncFloat)[&](const std::string& signal, float value) { set_cap_modifier(value); });
 
-    Node::bind("mirror_toggle", [&](const std::string& signal, void* button) { use_mirror = !use_mirror; });
+    Node::bind("mirror_toggle", [&](const std::string& signal, void* button) { toggle_mirror(); });
     Node::bind("mirror_translation", [&](const std::string& signal, void* button) { mirror_gizmo.set_operation(TRANSLATE); });
     Node::bind("mirror_rotation", [&](const std::string& signal, void* button) { mirror_gizmo.set_operation(ROTATE); });
     Node::bind("mirror_both", [&](const std::string& signal, void* button) { mirror_gizmo.set_operation(TRANSLATE | ROTATE); });

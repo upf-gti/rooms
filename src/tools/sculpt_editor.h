@@ -145,6 +145,8 @@ class SculptEditor : public BaseEditor {
     MeshInstance3D* mirror_mesh = nullptr;
     glm::vec3 mirror_normal = glm::vec3(0.f, 0.f, 1.f);
 
+    void toggle_mirror();
+
     /*
     *	UI
     */
