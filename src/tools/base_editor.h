@@ -35,7 +35,8 @@ namespace shortcuts {
     const std::string R_GRIP_R_TRIGGER_PATH = "data/textures/buttons/r_grip_plus_r_trigger.png";
     const std::string R_THUMBSTICK_X_PATH = "data/textures/buttons/r_thumbstick_x.png";
     const std::string R_THUMBSTICK_Y_PATH = "data/textures/buttons/r_thumbstick_y.png";
-    const std::string R_GRIP_R_THUMBSTICK_PATH = "data/textures/buttons/r_grip_plus_r_thumbstick.png";
+    const std::string R_GRIP_R_THUMBSTICK_X_PATH = "data/textures/buttons/r_grip_plus_r_thumbstick.png";
+    const std::string R_GRIP_R_THUMBSTICK_Y_PATH = "data/textures/buttons/r_grip_plus_r_thumbstick.png";
 
     enum : uint8_t {
         TOGGLE_SCENE_INSPECTOR,
@@ -62,8 +63,8 @@ namespace shortcuts {
         SECONDARY_SIZE,
         ADD_SUBSTRACT,
         ADD_SPLINE,
-        CONFIRM_SPLINE,
-        CANCEL_SPLINE,
+        TOGGLE_STRETCH_SPLINE,
+        SPLINE_DENSITY,
         ADD_KNOT,
         SNAP_SURFACE,
         PICK_MATERIAL,

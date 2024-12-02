@@ -312,16 +312,16 @@ bool SculptEditor::edit_update(float delta_time)
     controller_pose = glm::translate(controller_pose, glm::vec3(0.0f, 0.0f, -hand_to_edit_distance));
 
     // Update edit transform
-    if ((!stamp_enabled || !is_tool_pressed) && !is_released) {
+    if (stroke_mode == STROKE_MODE_STRETCH) {
+        edit_to_add.position = edit_position_stamp;
+        edit_to_add.rotation = edit_rotation_stamp;
+    }
+    else {
         edit_to_add.position = controller_pose[3];
         edit_to_add.rotation = glm::inverse(Input::get_controller_rotation(HAND_RIGHT, POSE_AIM));
         edit_position_stamp = edit_to_add.position;
         edit_origin_stamp = edit_to_add.position;
         edit_rotation_stamp = edit_to_add.rotation;
-    }
-    else {
-        edit_to_add.position = edit_position_stamp;
-        edit_to_add.rotation = edit_rotation_stamp;
     }
 
     // Guides: edit position modifiers
@@ -366,64 +366,87 @@ bool SculptEditor::edit_update(float delta_time)
         }
     }
 
-    // Update edit dimensions
-    if(!is_stretching_edit) {
-
-        // Get the data from the primitive default
-        edit_to_add.dimensions = primitive_default_states[stroke_parameters.get_primitive()].dimensions;
-
+    // Thumbsticks logic
+    {
         // Disable the unused joystick axis until the joystick is released
         uint8_t curr_thumbstick_axis = Input::get_leading_thumbstick_axis(HAND_RIGHT);
 
         if (thumbstick_leading_axis == THUMBSTICK_NO_AXIS) {
             thumbstick_leading_axis = curr_thumbstick_axis;
-        } else if (curr_thumbstick_axis == THUMBSTICK_NO_AXIS) {
+        }
+        else if (curr_thumbstick_axis == THUMBSTICK_NO_AXIS) {
             thumbstick_leading_axis = THUMBSTICK_NO_AXIS;
         }
 
         bool use_x_axis = (thumbstick_leading_axis == THUMBSTICK_AXIS_X);
         const glm::vec2& thumbstick_values = Input::get_thumbstick_value(HAND_RIGHT);
-        float size_multiplier = (use_x_axis ? thumbstick_values.x : thumbstick_values.y * 0.1f) * delta_time;
+        float size_multiplier = (use_x_axis ? thumbstick_values.x : thumbstick_values.y) * delta_time * 0.1f;
 
-        if (std::abs(size_multiplier) > 0.f) {
-            // Update primitive main size
-            // TODO: When smearing, always change main size (using y) by now!
-            if (!is_shift_right_pressed || (is_tool_pressed && !use_x_axis)) {
-                if (use_x_axis) {
-                    // Update rounded size
-                    edit_to_add.dimensions.w = glm::clamp(edit_to_add.dimensions.w + size_multiplier * 0.1f, 0.0f, MAX_PRIMITIVE_SIZE);
-                }
-                else {
-                    edit_to_add.dimensions.x = glm::clamp(size_multiplier + edit_to_add.dimensions.x, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE);
-                    if (stroke_parameters.get_primitive() == SD_BOX) {
-                        edit_to_add.dimensions = glm::vec4(glm::vec3(edit_to_add.dimensions.x), edit_to_add.dimensions.w);
+        // Update edit dimensions
+        if(stroke_mode == STROKE_MODE_NONE) {
+
+            // Get the data from the primitive default
+            edit_to_add.dimensions = primitive_default_states[stroke_parameters.get_primitive()].dimensions;
+
+            if (std::abs(size_multiplier) > 0.f) {
+                // Update primitive main size
+                if (!is_shift_right_pressed) {
+                    if (use_x_axis) {
+                        // Update rounded size
+                        edit_to_add.dimensions.w = glm::clamp(edit_to_add.dimensions.w + size_multiplier, 0.0f, MAX_PRIMITIVE_SIZE);
+                    }
+                    else {
+                        edit_to_add.dimensions.x = glm::clamp(size_multiplier + edit_to_add.dimensions.x, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE);
+                        if (stroke_parameters.get_primitive() == SD_BOX) {
+                            edit_to_add.dimensions = glm::vec4(glm::vec3(edit_to_add.dimensions.x), edit_to_add.dimensions.w);
+                        }
                     }
                 }
+                else {
+                    if (use_x_axis) {
+                        // Change smooth factor
+                        float current_smooth = stroke_parameters.get_smooth_factor();
+                        stroke_parameters.set_smooth_factor(glm::clamp(current_smooth + size_multiplier * 0.2f, MIN_SMOOTH_FACTOR, MAX_SMOOTH_FACTOR));
+                        Node::emit_signal("smooth_factor@changed", stroke_parameters.get_smooth_factor());
+                    }
+                    else {
+                        // Update primitive specific size (secondary size)
+                        edit_to_add.dimensions.y = glm::clamp(edit_to_add.dimensions.y + size_multiplier, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE);
+                    }
+                }
+
+                primitive_default_states[stroke_parameters.get_primitive()].dimensions = edit_to_add.dimensions;
+                dimensions_dirty = true;
             }
-            else {
+        }
+        else if (stroke_mode == STROKE_MODE_SPLINE) {
+
+            // Get the data from the primitive default
+            edit_to_add.dimensions = primitive_default_states[stroke_parameters.get_primitive()].dimensions;
+
+            if (std::abs(size_multiplier) > 0.f) {
+
+                // Change spline density
                 if (use_x_axis) {
-                    // Change smooth factor
-                    float current_smooth = stroke_parameters.get_smooth_factor();
-                    stroke_parameters.set_smooth_factor(glm::clamp(current_smooth + size_multiplier * 0.02f, MIN_SMOOTH_FACTOR, MAX_SMOOTH_FACTOR));
-                    Node::emit_signal("smooth_factor@changed", stroke_parameters.get_smooth_factor());
+                    float current_distance = current_spline.get_knot_distance();
+                    // Represented as "density" so the multiplier substracts instead of adding distance
+                    current_spline.set_knot_distance(glm::clamp(current_distance - size_multiplier, 0.005f, 0.1f));
                 }
                 else {
-                    // Update primitive specific size (secondary size)
-                    edit_to_add.dimensions.y = glm::clamp(edit_to_add.dimensions.y + size_multiplier, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE);
+                    // Update primitive uniform size
+                    edit_to_add.dimensions = glm::vec4(glm::vec3(glm::clamp(edit_to_add.dimensions + size_multiplier, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE)), edit_to_add.dimensions.w);
                 }
+
+                primitive_default_states[stroke_parameters.get_primitive()].dimensions = edit_to_add.dimensions;
+                dimensions_dirty = true;
             }
-
-            primitive_default_states[stroke_parameters.get_primitive()].dimensions = edit_to_add.dimensions;
-            dimensions_dirty = true;
         }
-
-        edit_to_add.rotation = glm::inverse(Input::get_controller_rotation(HAND_RIGHT, POSE_AIM));
     }
 
     // Stretch the edit using motion controls
-    if (stamp_enabled && is_tool_pressed && !creating_spline) {
+    if (stamp_enabled && is_tool_pressed) {
 
-        if (is_stretching_edit) {
+        if (stroke_mode == STROKE_MODE_STRETCH) {
             sdPrimitive curr_primitive = stroke_parameters.get_primitive();
 
             const glm::quat& hand_rotation = Input::get_controller_rotation(HAND_RIGHT, POSE_AIM);
@@ -468,13 +491,18 @@ bool SculptEditor::edit_update(float delta_time)
             edit_to_add.dimensions = glm::clamp(edit_to_add.dimensions, glm::vec4(MIN_PRIMITIVE_SIZE), glm::vec4(temp_limit));
             dimensions_dirty = true;
         }
-        else {
-            // Only stretch the edit when the acceleration of the hand exceds a threshold
-            is_stretching_edit = glm::length(glm::abs(controller_movement_data[HAND_RIGHT].velocity)) > 0.20f;
+
+        // Only enter spline mode when the acceleration of the hand exceds a threshold
+        // To stretch, toggle with 'B'
+        else if(!creating_path && glm::length(glm::abs(controller_movement_data[HAND_RIGHT].velocity)) > 0.20f) {
+            start_spline(true);
         }
     }
 
-    if (!creating_spline) {
+    if (!creating_path) {
+
+        stroke_mode = (is_tool_used && !stamp_enabled) ? STROKE_MODE_SMEAR : STROKE_MODE_NONE;
+
         update_edit_rotation();
     }
 
@@ -558,21 +586,22 @@ void SculptEditor::update(float delta_time)
     {
         if (Input::was_button_pressed(XR_BUTTON_B)) {
 
-            if (creating_spline) {
-                reset_spline();
+            if (creating_path) {
+                stroke_mode = (stroke_mode == STROKE_MODE_STRETCH) ? STROKE_MODE_SPLINE : STROKE_MODE_STRETCH;
             }
             else if (is_shift_right_pressed) {
                 snap_to_surface = !snap_to_surface;
             }
             else {
-                start_spline();
+                // Free slot!
+                // ...
             }
         }
 
         if (Input::was_button_pressed(XR_BUTTON_A)) {
 
-            if (creating_spline) {
-                end_spline();
+            if (creating_path) {
+                // do nothing here!
             }
             else if (is_shift_right_pressed) {
                 test_ray_to_sculpts();
@@ -618,7 +647,7 @@ void SculptEditor::update(float delta_time)
         }
     }
 
-    if (Input::was_button_pressed(XR_BUTTON_Y) && !creating_spline) {
+    if (Input::was_button_pressed(XR_BUTTON_Y) && !creating_path) {
         RoomsEngine::switch_editor(SCENE_EDITOR);
     }
 
@@ -662,33 +691,8 @@ void SculptEditor::update(float delta_time)
             force_new_stroke = false;
         }
 
-        // Upload the edit to the  edit list
-        if (is_tool_used) {
-
-            // Manage splines
-            if (creating_spline && stamp_enabled) {
-                current_spline.add_knot( { edit_to_add.position, edit_to_add.dimensions } );
-
-                if (current_spline.size() >= MAX_KNOTS_PER_SPLINE) {
-                    end_spline();
-                }
-            }
-            else {
-                new_edits.push_back(edit_to_add);
-
-                // a hack for flatscreen sculpting
-                if (!renderer->get_openxr_available() && new_edits.size() > 0u) {
-                    stroke_manager.change_stroke_params(stroke_parameters);
-                }
-            }
-
-            // Add recent color only when is used...
-            add_recent_color(stroke_parameters.get_material().color);
-        }
-
         // Submit spline edits in the next frame..
-        else if (dirty_spline) {
-
+        if (dirty_spline) {
             current_spline.for_each([&](const Knot& point) {
                 Edit edit;
                 edit.position = point.position;
@@ -699,11 +703,39 @@ void SculptEditor::update(float delta_time)
             force_new_stroke = true;
             reset_spline();
         }
+
+        // Manage spline knot additions
+        if (creating_spline()) {
+
+            if (!current_spline.size()) {
+                current_spline.add_knot({ edit_to_add.position, edit_to_add.dimensions });
+            }
+            else if (Input::was_button_pressed(XR_BUTTON_A)) {
+                current_spline.add_knot({ edit_to_add.position, edit_to_add.dimensions });
+
+                if (current_spline.size() >= MAX_KNOTS_PER_SPLINE) {
+                    end_spline();
+                }
+            }
+        }
+        // Upload the edit to the  edit list
+        else if (is_tool_used) {
+
+            new_edits.push_back(edit_to_add);
+
+            // a hack for flatscreen sculpting
+            if (!renderer->get_openxr_available() && new_edits.size() > 0u) {
+                stroke_manager.change_stroke_params(stroke_parameters);
+            }
+
+            // Add recent color only when is used...
+            add_recent_color(stroke_parameters.get_material().color);
+        }
     }
 
     // Add preview edits
 
-    if (creating_spline) {
+    if (creating_spline()) {
 
         preview_spline = current_spline;
 
@@ -767,11 +799,17 @@ void SculptEditor::update(float delta_time)
     if (is_tool_used) {
         renderer->toogle_frame_debug();
 
-        if (is_stretching_edit) {
-            is_stretching_edit = false;
+        if (stroke_mode == STROKE_MODE_STRETCH) {
             edit_to_add.dimensions = primitive_default_states[stroke_parameters.get_primitive()].dimensions;
             dimensions_dirty = true;
+            reset_spline();
+        } else if (creating_spline()) {
+            // Add last position
+            current_spline.add_knot({ edit_to_add.position, edit_to_add.dimensions });
+            end_spline();
         }
+
+        stroke_mode = STROKE_MODE_NONE;
 
         /*renderer->get_raymarching_renderer()->get_brick_usage([](float pct, uint32_t brick_count) {
             Node::emit_signal("thermometer@changed", pct);
@@ -953,7 +991,7 @@ void SculptEditor::update_ui_workflow_state()
     {
         bool can_undo = stroke_manager.can_undo();
 
-        if (creating_spline) {
+        if (creating_spline()) {
             can_undo = (current_spline.size() > 0u);
         }
 
@@ -961,7 +999,7 @@ void SculptEditor::update_ui_workflow_state()
         b_undo->set_disabled(!can_undo);
 
         // TODO: Spline knot cannot be redone by now!
-        bool can_redo = stroke_manager.can_redo() && !creating_spline;
+        bool can_redo = stroke_manager.can_redo() && !creating_spline();
         auto b_redo = static_cast<ui::Button2D*>(Node2D::get_widget_from_name("redo"));
         b_redo->set_disabled(!can_redo);
     }
@@ -969,7 +1007,7 @@ void SculptEditor::update_ui_workflow_state()
 
 void SculptEditor::undo()
 {
-    if (creating_spline) {
+    if (creating_spline()) {
         current_spline.pop_knot();
         return;
     }
@@ -981,7 +1019,7 @@ void SculptEditor::undo()
 
 void SculptEditor::redo()
 {
-    if (creating_spline) {
+    if (creating_spline()) {
         return;
     }
 
@@ -1281,12 +1319,13 @@ bool SculptEditor::is_rotation_being_used()
 
 void SculptEditor::start_spline(bool update_ui)
 {
-    if (creating_spline) {
+    if (creating_spline()) {
         reset_spline(false);
     }
     else {
-        creating_spline = true;
+        stroke_mode = STROKE_MODE_SPLINE;
         current_spline.clear();
+        creating_path = true;
 
         if (update_ui) {
             Node::emit_signal("create_spline@pressed", (void*)nullptr);
@@ -1297,7 +1336,8 @@ void SculptEditor::start_spline(bool update_ui)
 void SculptEditor::reset_spline(bool update_ui)
 {
     dirty_spline = false;
-    creating_spline = false;
+    creating_path = false;
+    stroke_mode = STROKE_MODE_NONE;
     current_spline.clear();
 
     if (update_ui) {
@@ -1325,10 +1365,10 @@ void SculptEditor::generate_shortcuts()
     shortcuts[shortcuts::REDO] = is_shift_left_pressed;
     shortcuts[shortcuts::UNDO] = !is_shift_left_pressed;
 
-    if (creating_spline) {
+    if (creating_spline()) {
         shortcuts[shortcuts::ADD_KNOT] = true;
-        shortcuts[shortcuts::CONFIRM_SPLINE] = true;
-        shortcuts[shortcuts::CANCEL_SPLINE] = true;
+        shortcuts[shortcuts::TOGGLE_STRETCH_SPLINE] = true;
+        shortcuts[shortcuts::SPLINE_DENSITY] = !is_shift_right_pressed;
     }
     else {
         shortcuts[shortcuts::ADD_SPLINE] = !is_shift_right_pressed;
@@ -1603,13 +1643,13 @@ void SculptEditor::init_ui()
         {
             right_hand_box = new ui::VContainer2D("right_controller_root", { 0.0f, 0.0f }, ui::CREATE_3D);
             right_hand_box->add_child(new ui::ImageLabel2D("Main size", shortcuts::R_THUMBSTICK_Y_PATH, shortcuts::MAIN_SIZE));
-            right_hand_box->add_child(new ui::ImageLabel2D("Sec size", shortcuts::R_GRIP_R_THUMBSTICK_PATH, shortcuts::SECONDARY_SIZE, double_size));
+            right_hand_box->add_child(new ui::ImageLabel2D("Sec size", shortcuts::R_GRIP_R_THUMBSTICK_Y_PATH, shortcuts::SECONDARY_SIZE, double_size));
             right_hand_box->add_child(new ui::ImageLabel2D("Round Shape", shortcuts::R_THUMBSTICK_X_PATH, shortcuts::ROUND_SHAPE));
-            right_hand_box->add_child(new ui::ImageLabel2D("Smooth", shortcuts::R_GRIP_R_THUMBSTICK_PATH, shortcuts::MODIFY_SMOOTH, double_size));
+            right_hand_box->add_child(new ui::ImageLabel2D("Smooth", shortcuts::R_GRIP_R_THUMBSTICK_X_PATH, shortcuts::MODIFY_SMOOTH, double_size));
+            right_hand_box->add_child(new ui::ImageLabel2D("Spline Density", shortcuts::R_THUMBSTICK_X_PATH, shortcuts::SPLINE_DENSITY));
             right_hand_box->add_child(new ui::ImageLabel2D("Add Spline", shortcuts::B_BUTTON_PATH, shortcuts::ADD_SPLINE));
-            right_hand_box->add_child(new ui::ImageLabel2D("Cancel Spline", shortcuts::B_BUTTON_PATH, shortcuts::CANCEL_SPLINE));
+            right_hand_box->add_child(new ui::ImageLabel2D("Stretch/Spline", shortcuts::B_BUTTON_PATH, shortcuts::TOGGLE_STRETCH_SPLINE));
             right_hand_box->add_child(new ui::ImageLabel2D("Surface Snap", shortcuts::R_GRIP_B_BUTTON_PATH, shortcuts::SNAP_SURFACE, double_size));
-            right_hand_box->add_child(new ui::ImageLabel2D("Confirm Spline", shortcuts::A_BUTTON_PATH, shortcuts::CONFIRM_SPLINE));
             right_hand_box->add_child(new ui::ImageLabel2D("Add/Substract", shortcuts::A_BUTTON_PATH, shortcuts::ADD_SUBSTRACT));
             right_hand_box->add_child(new ui::ImageLabel2D("Pick Material", shortcuts::R_GRIP_A_BUTTON_PATH, shortcuts::PICK_MATERIAL, double_size));
             right_hand_box->add_child(new ui::ImageLabel2D("Stamp", shortcuts::R_TRIGGER_PATH, shortcuts::STAMP));

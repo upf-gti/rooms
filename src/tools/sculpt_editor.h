@@ -163,7 +163,7 @@ class SculptEditor : public BaseEditor {
     *	Splines
     */
 
-    bool creating_spline = false;
+    bool creating_path = false;
     bool dirty_spline = false;
     BezierSpline current_spline;
     BezierSpline preview_spline;
@@ -171,6 +171,7 @@ class SculptEditor : public BaseEditor {
     void start_spline(bool update_ui = true);
     void reset_spline(bool update_ui = true);
     void end_spline();
+    bool creating_spline() { return creating_path && stroke_mode == STROKE_MODE_SPLINE; }
 
     /*
     *	Editor
@@ -179,7 +180,13 @@ class SculptEditor : public BaseEditor {
     bool is_tool_pressed = false;
     bool is_released = false;
     bool was_tool_pressed = false;
-    bool is_stretching_edit = false;
+
+    enum eStrokeMode {
+        STROKE_MODE_NONE,
+        STROKE_MODE_SMEAR,
+        STROKE_MODE_SPLINE,
+        STROKE_MODE_STRETCH
+    } stroke_mode = STROKE_MODE_NONE;
 
     bool edit_update(float delta_time);
     void mirror_current_edits(float delta_time);
