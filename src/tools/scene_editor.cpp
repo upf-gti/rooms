@@ -34,6 +34,8 @@
 #include "imgui.h"
 
 #include <filesystem>
+#include <glm/gtx/vector_angle.hpp>
+#include <glm/gtc/constants.hpp>
 
 #define MAX_UNDO_STEPS 64
 
@@ -62,6 +64,7 @@ void SceneEditor::initialize()
     default_sculpt->set_name("default_sculpt");
     default_sculpt->initialize();
     RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
+    default_sculpt->set_position({0.0f, 1.0f, 0.0f});
     //static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(default_sculpt);
     main_scene->add_node(default_sculpt);
 #endif
@@ -147,13 +150,22 @@ void SceneEditor::update(float delta_time)
 {
     BaseEditor::update(delta_time);
 
+    eTriggerAction trigger_state = get_trigger_action(delta_time);
+
     // Update input actions
     {
-        select_action_pressed = Input::was_trigger_pressed(HAND_RIGHT) || Input::was_mouse_pressed(GLFW_MOUSE_BUTTON_LEFT);
+        select_action_pressed = (trigger_state == TRIGGER_TAPPED) || Input::was_mouse_pressed(GLFW_MOUSE_BUTTON_LEFT);
 
         if (Input::was_key_pressed(GLFW_KEY_ESCAPE)) {
             deselect();
         }
+
+        if (trigger_state == TRIGGER_HOLDED && prev_trigger_state == NO_TRIGGER_ACTION) {
+            holded_node = hovered_node;
+        } else if (trigger_state == NO_TRIGGER_ACTION && prev_trigger_state == TRIGGER_HOLDED) {
+            holded_node = nullptr;
+        }
+        prev_trigger_state = trigger_state;
     }
 
     if (exports_dirty) {
@@ -162,7 +174,7 @@ void SceneEditor::update(float delta_time)
 
     update_gizmo(delta_time);
 
-    update_node_transform();
+    update_node_transform(delta_time, holded_node != nullptr);
 
     update_hovered_node();
 
@@ -280,6 +292,9 @@ void SceneEditor::on_enter(void* data)
 
 void SceneEditor::update_hovered_node()
 {
+    prev_ray_dir = ray_direction;
+    prev_ray_origin = ray_origin;
+
     // Send rays each frame to detect hovered sculpts and other
     Engine::instance->get_scene_ray(ray_origin, ray_direction);
 
@@ -1103,35 +1118,49 @@ bool SceneEditor::is_rotation_being_used()
     return Input::get_trigger_value(HAND_LEFT) > 0.5;
 }
 
-void SceneEditor::update_node_transform()
+void SceneEditor::update_node_transform(const float delta_time, const bool rotate_selected_node)
 {
     if (!selected_node) {
-        return;
+        if (!hovered_node) {
+            return;
+        }
+        selected_node = hovered_node;
     }
 
     Node3D* node_3d = static_cast<Node3D*>(selected_node);
 
     // Do not rotate sculpt if shift -> we might be rotating the edit
-    if (is_rotation_being_used() && !is_shift_left_pressed) {
+    if (rotate_selected_node && !is_shift_left_pressed) {
 
-        glm::quat left_hand_rotation = Input::get_controller_rotation(HAND_LEFT);
-        glm::vec3 left_hand_translation = Input::get_controller_position(HAND_LEFT);
-        glm::vec3 right_hand_translation = Input::get_controller_position(HAND_RIGHT);
-        float hand_distance = glm::length2(left_hand_translation - right_hand_translation);
+        glm::quat right_hand_rotation = Input::get_controller_rotation(HAND_RIGHT, POSE_AIM);
+        glm::vec3 right_hand_translation = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
+        glm::vec3 left_hand_translation = Input::get_controller_position(HAND_LEFT, POSE_AIM);
+        float hand_distance = glm::length2(right_hand_translation - left_hand_translation);
 
         if (!rotation_started) {
-            last_left_hand_rotation = left_hand_rotation;
-            last_left_hand_translation = left_hand_translation;
+            RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
+            const float ray_t = rooms_renderer->get_sculpt_manager()->read_results.loaded_results.ray_intersection.ray_t;
+            const glm::vec3 sculpt_intersection_pos = prev_ray_origin + prev_ray_dir * ray_t;
+
+            last_right_hand_rotation = right_hand_rotation;
+            last_right_hand_translation = right_hand_translation;
+            hand_sculpt_distance = glm::length(node_3d->get_translation() - right_hand_translation);
             push_undo_action({ sActionData::ACTION_TRANSFORM, node_3d, node_3d->get_transform() });
         }
 
-        glm::quat rotation_diff = (left_hand_rotation * glm::inverse(last_left_hand_rotation));
-        glm::vec3 translation_diff = left_hand_translation - last_left_hand_translation;
+        const glm::vec2 thumbstick_values = Input::get_thumbstick_value(HAND_RIGHT);
 
-        node_3d->rotate_world(rotation_diff);
-        node_3d->translate(translation_diff);
+        if (glm::abs(thumbstick_values.y) >= THUMBSTICK_DEADZONE) {
+            const float new_distance_delta = (thumbstick_values.y + glm::sign(thumbstick_values.y) * THUMBSTICK_DEADZONE) * delta_time;
+            hand_sculpt_distance = glm::clamp(hand_sculpt_distance + new_distance_delta, 0.0f, 5.0f);
+        }
 
-        if (Input::get_trigger_value(HAND_RIGHT) > 0.5) {
+        glm::quat hand_rotation_diff = (right_hand_rotation * glm::inverse(last_right_hand_rotation));
+
+        node_3d->set_position(hand_sculpt_distance * ray_direction + ray_origin);
+        node_3d->get_transform().rotate_world(hand_rotation_diff);
+
+        /*if (Input::get_trigger_value(HAND_RIGHT) > 0.5) {
 
             if (!scale_started) {
                 last_hand_distance = hand_distance;
@@ -1144,12 +1173,12 @@ void SceneEditor::update_node_transform()
         }
         else if (scale_started) {
             scale_started = false;
-        }
+        }*/
 
         rotation_started = true;
 
-        last_left_hand_rotation = left_hand_rotation;
-        last_left_hand_translation = left_hand_translation;
+        last_right_hand_rotation = right_hand_rotation;
+        last_right_hand_translation = right_hand_translation;
     }
 
     // If rotation has stopped
@@ -1606,4 +1635,26 @@ bool SceneEditor::scene_redo()
     }
 
     return true;
+}
+
+
+SceneEditor::eTriggerAction SceneEditor::get_trigger_action(const float delta_time)
+{
+    const bool is_pressed_now = Input::get_trigger_value(HAND_RIGHT) > 0.5;
+
+    if (is_pressed_now) {
+        time_pressed_storage += delta_time;
+
+        if (time_pressed_storage > TIME_UNTIL_LONG_PRESS) {
+            return TRIGGER_HOLDED;
+        }
+        return NO_TRIGGER_ACTION;
+
+    } else if (time_pressed_storage < TIME_UNTIL_LONG_PRESS) {
+        time_pressed_storage = 0u;
+        return TRIGGER_TAPPED;
+    }
+
+    time_pressed_storage = 0u;
+    return NO_TRIGGER_ACTION;
 }

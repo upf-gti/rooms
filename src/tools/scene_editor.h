@@ -18,6 +18,8 @@ namespace ui {
     class Inspector;
 }
 
+#define TIME_UNTIL_LONG_PRESS 0.15f
+
 struct sActionData {
 
     using ActionDataParameter = std::variant<Transform, Node*, Node3D*, bool>;
@@ -120,12 +122,12 @@ class SceneEditor : public BaseEditor {
 
     bool rotation_started = false;
     bool scale_started = false;
-    glm::quat last_left_hand_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
-    glm::vec3 last_left_hand_translation = {};
+    glm::quat last_right_hand_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
+    glm::vec3 last_right_hand_translation = {};
     float last_hand_distance = 0.0f;
 
     bool is_rotation_being_used();
-    void update_node_transform();
+    void update_node_transform(const float delta_time, const bool rotate_selected_node);
     void update_hovered_node();
 
     /*
@@ -165,6 +167,21 @@ class SceneEditor : public BaseEditor {
 
     void push_undo_action(const sActionData& step, bool clear_redo = true);
     void push_redo_action(const sActionData& step);
+
+    enum eTriggerAction : uint8_t {
+        NO_TRIGGER_ACTION = 0u,
+        TRIGGER_TAPPED,
+        TRIGGER_HOLDED
+    };
+    eTriggerAction prev_trigger_state = NO_TRIGGER_ACTION;
+    Node* holded_node = nullptr;
+    float time_pressed_storage = 0.0f;
+    float hand_sculpt_distance = 0.0f;
+
+    glm::vec3 prev_ray_origin = {};
+    glm::vec3 prev_ray_dir = {};
+
+    eTriggerAction get_trigger_action(const float delta_time);
 
 public:
 
