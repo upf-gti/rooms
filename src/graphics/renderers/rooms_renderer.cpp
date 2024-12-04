@@ -250,10 +250,10 @@ void RoomsRenderer::update(float delta_time)
 {
     Renderer::update(delta_time);
 
+    sculpt_manager->update(global_command_encoder);
+
     upload_sculpt_models_and_instances(global_command_encoder);
 
-    sculpt_manager->update(global_command_encoder);
-    
     update_sculpts_indirect_buffers(global_command_encoder);
 }
 
@@ -279,9 +279,9 @@ void RoomsRenderer::render()
 
 void RoomsRenderer::update_sculpts_indirect_buffers(WGPUCommandEncoder command_encoder)
 {
-    if (!sculpt_manager->has_performed_evaluation()) {
+    /*if (!sculpt_manager->has_performed_evaluation()) {
         return;
-    }
+    }*/
 
     WGPUComputePassDescriptor compute_pass_desc = {};
     WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(global_command_encoder, &compute_pass_desc);

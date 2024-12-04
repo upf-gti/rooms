@@ -582,6 +582,15 @@ void SculptEditor::update(float delta_time)
     preview_tmp_edits.clear();
     new_edits.clear();
 
+    // Render current instance
+    if (renderer->get_openxr_available()) {
+        uint32_t flags = 0u;
+        RoomsRenderer* renderer = static_cast<RoomsRenderer*>(Renderer::instance);
+        in_frame_sculpt_render_list_id = renderer->add_sculpt_render_call(
+            current_sculpt->get_sculpt_data(), Transform::transform_to_mat4(get_current_transform()), flags);
+        in_frame_sculpt_render_list_id += current_sculpt->get_sculpt_data()->get_in_frame_model_buffer_index();
+    }
+
     // Operation changer for the different tools
     {
         if (Input::was_button_pressed(XR_BUTTON_B)) {
@@ -786,15 +795,6 @@ void SculptEditor::update(float delta_time)
     }
     
     was_tool_used = is_tool_used;
-
-    // Render current instance
-    if(renderer->get_openxr_available()) {
-        uint32_t flags = 0u;
-        RoomsRenderer* renderer = static_cast<RoomsRenderer*>(Renderer::instance);
-        in_frame_sculpt_render_list_id = renderer->add_sculpt_render_call(
-            current_sculpt->get_sculpt_data(), Transform::transform_to_mat4(get_current_transform()), flags);
-        in_frame_sculpt_render_list_id += current_sculpt->get_sculpt_data()->get_in_frame_model_buffer_index();
-    }
 
     if (is_tool_used) {
         renderer->toogle_frame_debug();
