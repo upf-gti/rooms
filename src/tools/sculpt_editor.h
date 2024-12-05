@@ -39,8 +39,6 @@ class SculptEditor : public BaseEditor {
 
     StrokeManager stroke_manager = {};
 
-    bool sculpt_started = false;
-    bool sculpt_from_zero = false;
     bool was_tool_used = false;
 
     bool called_undo = false;
@@ -217,7 +215,6 @@ public:
     void render_gui() override;
 
     void enable_tool(eTool tool);
-    void set_sculpt_started(bool value);
 
     void set_preview_edits(const std::vector<Edit> &edit_previews);
 

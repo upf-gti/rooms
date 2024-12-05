@@ -210,27 +210,34 @@ void SculptEditor::on_enter(void* data)
     * so do not move it and start now the sculpt.
     */
 
-    if (!sculpt_started && sculpt_node->get_from_memory()) {
-        sculpt_started = true;
+    RoomsRenderer* renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
+    Transform& mirror_transform = mirror_gizmo.get_transform();
+    Transform& lock_axis_transform = axis_lock_gizmo.get_transform();
+
+    // Get head relative position for setting the sculpt instance
+    if (renderer->get_openxr_available()) {
+        const AABB sculpt_aabb = sculpt_node->get_sculpt_data()->get_AABB();
+        const glm::vec3 cam_origin = renderer->get_camera_eye();
+        const glm::vec3 to_sculpt_instance_pos = (renderer->get_camera_front() * (0.4f + glm::length(sculpt_aabb.half_size) * 1.25f)) + cam_origin;
+
+        current_instance_transform.set_position(to_sculpt_instance_pos);
+        mirror_transform.set_position(to_sculpt_instance_pos);
+        lock_axis_transform.set_position(to_sculpt_instance_pos);
+    } else {
+        mirror_transform.set_position(sculpt_node->get_translation());
+        lock_axis_transform.set_position(sculpt_node->get_translation());
     }
 
-    if (sculpt_started) {
-        current_instance_transform = sculpt_node->get_transform();
-    }
-
-    // Store if we started from scratch the sculpt to assign or not its new position
-    sculpt_from_zero = !sculpt_started;
-
-    static_cast<RoomsRenderer*>(RoomsRenderer::instance)->get_raymarching_renderer()->set_preview_render(true);
+    renderer->get_raymarching_renderer()->set_preview_render(true);
 
     update_ui_workflow_state();
 }
 
 void SculptEditor::on_exit()
 {
-    if (sculpt_from_zero) {
+    /*if (sculpt_from_zero) {
         current_sculpt->set_global_transform(current_instance_transform);
-    }
+    }*/
 
     static_cast<RoomsRenderer*>(RoomsRenderer::instance)->get_raymarching_renderer()->set_preview_render(false);
 }
@@ -661,29 +668,6 @@ void SculptEditor::update(float delta_time)
     }
 
     bool is_tool_used = edit_update(delta_time);
-
-    // Sculpt lifecicle
-    {
-        // Set center of sculpture and reuse it as mirror center
-        if (!sculpt_started) {
-
-            const glm::vec3& position = edit_to_add.position;
-
-            if (renderer->get_openxr_available()) {
-                get_current_transform().set_position(position);
-            }
-
-            Transform& mirror_transform = mirror_gizmo.get_transform();
-            mirror_transform.set_position(position);
-            Transform& lock_axis_transform = axis_lock_gizmo.get_transform();
-            lock_axis_transform.set_position(position);
-        }
-
-        // Mark the start of the sculpture for the origin
-        if (current_tool == SCULPT && is_tool_used) {
-            sculpt_started = true;
-        }
-    }
 
     update_sculpt_rotation();
 
@@ -1199,11 +1183,6 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
 
     // Update edit transform
     mesh_preview->set_transform(Transform::mat4_to_transform(preview_pose));
-}
-
-void SculptEditor::set_sculpt_started(bool value)
-{
-    sculpt_started = true;
 }
 
 void SculptEditor::set_primitive(sdPrimitive primitive)
