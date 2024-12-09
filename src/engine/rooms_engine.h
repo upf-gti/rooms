@@ -25,6 +25,7 @@ enum EditorType : uint8_t {
     EDITOR_COUNT
 };
 
+class PlayerNode;
 class RoomsEngine : public Engine
 {
     static bool use_environment_map;
@@ -66,6 +67,8 @@ class RoomsEngine : public Engine
 
     // make Cursor all static and remove this??
     ui::Cursor cursor;
+
+    PlayerNode* player = nullptr;
 
 public:
 

@@ -4,6 +4,7 @@
 #include "framework/nodes/viewport_3d.h"
 #include "framework/nodes/sculpt_node.h"
 #include "framework/nodes/skeleton_instance_3d.h"
+#include "framework/nodes/player_node.h"
 #include "framework/input.h"
 #include "framework/parsers/parse_scene.h"
 #include "framework/parsers/parse_gltf.h"
@@ -140,6 +141,9 @@ int RoomsEngine::post_initialize()
         Node::bind("rotate", [&](const std::string& signal, void* button) { gizmo.set_operation(ROTATE); });
         Node::bind("scale", [&](const std::string& signal, void* button) { gizmo.set_operation(SCALE); });
     }
+
+    player = new PlayerNode(this);
+    main_scene->add_node(player);
 
     return 0;
 }

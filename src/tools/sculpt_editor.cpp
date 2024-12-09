@@ -205,16 +205,11 @@ void SculptEditor::on_enter(void* data)
     assert(sculpt_node);
     set_current_sculpt(sculpt_node);
 
-    /*
-    * If loaded from memory, we can assume it has a defined position,
-    * so do not move it and start now the sculpt.
-    */
-
     RoomsRenderer* renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     Transform& mirror_transform = mirror_gizmo.get_transform();
     Transform& lock_axis_transform = axis_lock_gizmo.get_transform();
 
-    // Get head relative position for setting the sculpt instance
+    // Get head relative position for setting the sculpt instance if in XR
     if (renderer->get_openxr_available()) {
         const AABB sculpt_aabb = sculpt_node->get_sculpt_data()->get_AABB();
         const glm::vec3 cam_origin = renderer->get_camera_eye();
@@ -235,10 +230,6 @@ void SculptEditor::on_enter(void* data)
 
 void SculptEditor::on_exit()
 {
-    /*if (sculpt_from_zero) {
-        current_sculpt->set_global_transform(current_instance_transform);
-    }*/
-
     static_cast<RoomsRenderer*>(RoomsRenderer::instance)->get_raymarching_renderer()->set_preview_render(false);
 }
 
