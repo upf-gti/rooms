@@ -12,8 +12,13 @@
 
 
 PlayerNode::PlayerNode(RoomsEngine* engine_ref) : Node3D() {
-    // Sets this node 's transform as teh origin for the OpenXR
-    Renderer::instance->get_openxr_context()->root_transform = &transform;
+#ifdef XR_SUPPORT
+    if (RoomsRenderer::instance->get_openxr_available()) {
+        // Sets this node 's transform as teh origin for the OpenXR
+        Renderer::instance->get_openxr_context()->root_transform = &transform;
+    }
+#endif
+
     engine = engine_ref;
 }
 
