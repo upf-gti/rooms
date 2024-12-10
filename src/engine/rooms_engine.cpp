@@ -56,8 +56,9 @@ int RoomsEngine::post_initialize()
     if (renderer->get_openxr_available())
     {
         std::vector<Node*> entities;
-        parse_gltf("data/meshes/controllers/left_controller.glb", entities);
-        parse_gltf("data/meshes/controllers/right_controller.glb", entities);
+        GltfParser parser;
+        parser.parse("data/meshes/controllers/left_controller.glb", entities);
+        parser.parse("data/meshes/controllers/right_controller.glb", entities);
         controller_mesh_left = static_cast<MeshInstance3D*>(entities[0]);
         controller_mesh_right = static_cast<MeshInstance3D*>(entities[1]);
 
@@ -175,7 +176,8 @@ void RoomsEngine::add_to_main_scene(const std::string& scene_path)
 void RoomsEngine::init_default_skeleton()
 {
     std::vector<Node*> nodes;
-    parse_gltf("data/meshes/character.glb", nodes);
+    GltfParser parser;
+    parser.parse("data/meshes/character.glb", nodes);
     assert(nodes.size() == 1u);
 
     std::function<SkeletonInstance3D*(Node*)> find_skeleton = [&](Node* node)
