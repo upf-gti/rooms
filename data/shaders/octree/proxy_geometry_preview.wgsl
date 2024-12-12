@@ -139,15 +139,17 @@ fn raymarch_sculpt_space(ray_origin_sculpt_space : vec3f, ray_dir : vec3f, max_d
 	}
 
     if (exit == 1u) {
-        let position_in_world : vec3f = (sculpt_instance_data[preview_stroke.current_sculpt_idx].model * vec4f(pos, 1.0)).xyz;
+
+        let model_matrix = sculpt_instance_data[preview_stroke.current_sculpt_idx].model;
+        let position_in_world : vec3f = (model_matrix * vec4f(pos, 1.0)).xyz;
 
         let epsilon : f32 = 0.000001; // avoids flashing when camera inside sdf
         let proj_pos : vec4f = view_proj * vec4f(position_in_world + ray_dir * epsilon, 1.0);
         depth = proj_pos.z / proj_pos.w;
 
         let normal : vec3f = estimate_normal_preview(pos);
-        let normal_world : vec3f = (sculpt_instance_data[preview_stroke.current_sculpt_idx].model * vec4f(normal, 0.0)).xyz;
-        let ray_dir_world : vec3f = (sculpt_instance_data[preview_stroke.current_sculpt_idx].model * vec4f(ray_dir, 0.0)).xyz;
+        let normal_world : vec3f = normalize(adjoint(model_matrix) * normal);
+        let ray_dir_world : vec3f = normalize(adjoint(model_matrix) * ray_dir);
 
         let material : SdfMaterial = get_material_preview();
         //let material : SdfMaterial = interpolate_material((pos - normal * 0.001) * SDF_RESOLUTION);

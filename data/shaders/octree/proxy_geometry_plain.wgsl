@@ -220,15 +220,16 @@ fn raymarch_with_previews(ray_origin_atlas_space : vec3f, ray_origin_sculpt_spac
         // From atlas position, to sculpt, to world
         //position_in_sculpt = ray_origin_atlas_space + ray_dir * (depth / SCULPT_TO_ATLAS_CONVERSION_FACTOR);
         //position_in_atlas = ray_origin_atlas_space + ray_dir * depth;
-        let position_in_world : vec3f = (sculpt_instance_data[preview_stroke.current_sculpt_idx].model * vec4f(position_in_sculpt, 1.0)).xyz;
+        let model_matrix = sculpt_instance_data[preview_stroke.current_sculpt_idx].model;
+        let position_in_world : vec3f = (model_matrix * vec4f(position_in_sculpt, 1.0)).xyz;
 
         let epsilon : f32 = 0.000001; // avoids flashing when camera inside sdf
         let proj_pos : vec4f = view_proj * vec4f(position_in_world + ray_dir * epsilon, 1.0);
         depth = proj_pos.z / proj_pos.w;
 
         let normal : vec3f = estimate_normal_with_previews(position_in_sculpt, position_in_atlas);
-        let normal_world : vec3f = (sculpt_instance_data[preview_stroke.current_sculpt_idx].model * vec4f(normal, 0.0)).xyz;
-        let ray_dir_world : vec3f = (sculpt_instance_data[preview_stroke.current_sculpt_idx].model * vec4f(ray_dir, 0.0)).xyz;
+        let normal_world : vec3f = normalize(adjoint(model_matrix) * normal);
+        let ray_dir_world : vec3f = normalize(adjoint(model_matrix) * ray_dir);
 
         // let interpolant : f32 = (f32( i ) / f32(MAX_ITERATIONS)) * (M_PI / 2.0);
         // var heatmap_color : vec3f;
@@ -293,8 +294,9 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
 
     if (exit == 1u ) {
         // From atlas position, to sculpt, to world
+        let model_matrix : mat4x4f = sculpt_instance_data[model_index].model;
         let position_in_sculpt : vec3f = ray_origin_in_sculpt_space + ray_dir * (depth / SCULPT_TO_ATLAS_CONVERSION_FACTOR);
-        let world_space_position : vec3f = (sculpt_instance_data[model_index].model * vec4f(position_in_sculpt, 1.0)).xyz;
+        let world_space_position : vec3f = (model_matrix * vec4f(position_in_sculpt, 1.0)).xyz;
 
         let curr_sculpt_flags : u32 = sculpt_instance_data[model_index].flags;
         let oof : bool = (curr_sculpt_flags & SCULPT_INSTANCE_IS_OUT_OF_FOCUS) == SCULPT_INSTANCE_IS_OUT_OF_FOCUS;
@@ -307,8 +309,8 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
         depth = (proj_pos.z) / proj_pos.w;
 
         let normal : vec3f = estimate_normal_atlas(position_in_atlas);
-        let normal_world : vec3f = (sculpt_instance_data[model_index].model * vec4f(normal, 0.0)).xyz;
-        let ray_dir_world : vec3f = (sculpt_instance_data[model_index].model * vec4f(ray_dir, 0.0)).xyz;
+        let normal_world : vec3f = normalize(adjoint(model_matrix) * normal);
+        let ray_dir_world : vec3f = normalize(adjoint(model_matrix) * ray_dir);
 
         let material : SdfMaterial = sample_material_atlas(position_in_atlas);
 
@@ -376,7 +378,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     // watchouttt
     let ray_dir_sculpt : vec3f = normalize(in.vertex_in_sculpt_space.xyz - eye_in_sculpt.xyz);
-    let ray_dir_world : vec3f = (sculpt_instance_data[in.model_index].model * vec4f(ray_dir_sculpt, 0.0)).xyz;
+    let ray_dir_world : vec3f = normalize(adjoint(sculpt_instance_data[in.model_index].model) * ray_dir_sculpt);
     // ray dir in atlas coords :((
 
     let raymarch_distance_sculpt_space : f32 = ray_intersect_AABB_only_near(in.vertex_in_sculpt_space.xyz, -ray_dir_sculpt, in.brick_center_in_sculpt_space, vec3f(BRICK_WORLD_SIZE));
