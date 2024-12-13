@@ -12,25 +12,18 @@
 struct VertexInput {
     @builtin(instance_index) instance_id : u32,
     @location(0) position: vec3f,
-    @location(1) uv: vec2f,
-    @location(2) normal: vec3f,
-    @location(3) tangent: vec4f,
-    @location(4) color: vec3f,
-    @location(5) weights: vec4f,
-    @location(6) joints: vec4i
 };
 
 struct VertexOutput {
     @builtin(position) position: vec4f,
-    @location(0) uv: vec2f,
-    @location(1) @interpolate(flat) edit_range: vec2u,
-    @location(3) vertex_in_world_space : vec3f,
-    @location(4) vertex_in_sculpt_space : vec3f,
-    @location(5) @interpolate(flat) brick_center_in_sculpt_space : vec3f,
-    @location(6) @interpolate(flat) atlas_tile_coordinate : vec3f,
-    @location(7) in_atlas_pos : vec3f,
-    @location(8) @interpolate(flat) has_previews : u32,
-    @location(9) @interpolate(flat) model_index : u32
+    @location(0) @interpolate(flat) edit_range: vec2u,
+    @location(1) vertex_in_world_space : vec3f,
+    @location(2) vertex_in_sculpt_space : vec3f,
+    @location(3) @interpolate(flat) brick_center_in_sculpt_space : vec3f,
+    @location(4) @interpolate(flat) atlas_tile_coordinate : vec3f,
+    @location(5) in_atlas_pos : vec3f,
+    @location(6) @interpolate(flat) has_previews : u32,
+    @location(7) @interpolate(flat) model_index : u32
 };
 
 @group(0) @binding(1) var<storage, read> preview_stroke : PreviewStroke;
@@ -63,7 +56,6 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 
     var out: VertexOutput;
     out.position = camera_data.view_projection * vertex_in_world_space;
-    out.uv = in.uv; // forward to the fragment shader
 
     out.edit_range = vec2u(instance_data.edit_id_start, instance_data.edit_count);
 
