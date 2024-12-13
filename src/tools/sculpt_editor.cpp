@@ -908,8 +908,9 @@ void SculptEditor::update_sculpt_rotation()
         glm::quat rotation_diff = (current_hand_rotation * glm::inverse(last_hand_rotation));
         glm::vec3 translation_diff = current_hand_translation - last_hand_translation;
 
+        const glm::vec3 sculpt_pos_without_rot = get_current_transform().get_position() + translation_diff;
+        get_current_transform().set_position(rotation_diff * (sculpt_pos_without_rot - current_hand_translation) + current_hand_translation);
         get_current_transform().rotate_world(rotation_diff);
-        get_current_transform().translate(translation_diff);
 
         rotation_started = true;
 
