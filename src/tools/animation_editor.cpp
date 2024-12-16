@@ -73,7 +73,7 @@ void AnimationEditor::initialize()
     joint_material->set_priority(0);
     joint_material->set_transparency_type(ALPHA_BLEND);
     joint_material->set_color(glm::vec4(1.0f, 0.0f, 0.0f, 0.50f));
-    joint_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path));
+    joint_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, shaders::mesh_forward::libraries));
 
     keyframe_markers_render_instance->set_frustum_culling_enabled(false);
 
@@ -96,7 +96,7 @@ void AnimationEditor::initialize()
     skeleton_material->set_depth_read(false);
     skeleton_material->set_priority(0);
     skeleton_material->set_topology_type(eTopologyType::TOPOLOGY_LINE_LIST);
-    skeleton_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, skeleton_material));
+    skeleton_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, shaders::mesh_forward::libraries, skeleton_material));
 
     animation_trajectory_instance->set_surface_material_override(animation_trajectory_mesh, skeleton_material);
 }

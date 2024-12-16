@@ -48,7 +48,7 @@ void SculptEditor::initialize()
     mirror_material->set_cull_type(CULL_NONE);
     mirror_material->set_diffuse_texture(RendererStorage::get_texture("data/textures/mirror_quad_texture.png"));
     mirror_material->set_type(MATERIAL_UNLIT);
-    mirror_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, mirror_material));
+    mirror_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, shaders::mesh_forward::libraries, mirror_material));
 
     mirror_mesh->set_surface_material_override(mirror_mesh->get_surface(0), mirror_material);
 
@@ -85,8 +85,8 @@ void SculptEditor::initialize()
         ref_mat->set_type(MATERIAL_UNLIT);
         ref_mat->set_shader(RendererStorage::get_shader("data/shaders/axis.wgsl", ref_mat));
 
-        sculpt_area_box->set_surface_material_override(s, ref_mat);
         sculpt_area_box->add_surface(s);
+        sculpt_area_box->set_surface_material_override(s, ref_mat);
     }
 
     // Initialize default primitive states
@@ -112,7 +112,7 @@ void SculptEditor::initialize()
         preview_material->set_priority(1);
         preview_material->set_transparency_type(ALPHA_BLEND);
         preview_material->set_type(MATERIAL_UNLIT);
-        preview_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_transparent::source, shaders::mesh_transparent::path, preview_material));
+        preview_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_transparent::source, shaders::mesh_transparent::path, shaders::mesh_transparent::libraries, preview_material));
 
         mesh_preview->set_surface_material_override(sphere_surface, preview_material);
 
@@ -122,7 +122,7 @@ void SculptEditor::initialize()
         Material* outline_material = new Material();
         outline_material->set_cull_type(CULL_FRONT);
         outline_material->set_type(MATERIAL_UNLIT);
-        outline_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, outline_material));
+        outline_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, shaders::mesh_forward::libraries, outline_material));
 
         mesh_preview_outline->set_surface_material_override(sphere_surface, outline_material);
     }
