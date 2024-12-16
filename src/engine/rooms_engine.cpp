@@ -4,6 +4,7 @@
 #include "framework/nodes/viewport_3d.h"
 #include "framework/nodes/sculpt_node.h"
 #include "framework/nodes/skeleton_instance_3d.h"
+#include "framework/nodes/player_node.h"
 #include "framework/input.h"
 #include "framework/parsers/parse_scene.h"
 #include "framework/parsers/parse_gltf.h"
@@ -55,8 +56,9 @@ int RoomsEngine::post_initialize()
     if (renderer->get_openxr_available())
     {
         std::vector<Node*> entities;
-        parse_gltf("data/meshes/controllers/left_controller.glb", entities);
-        parse_gltf("data/meshes/controllers/right_controller.glb", entities);
+        GltfParser parser;
+        parser.parse("data/meshes/controllers/left_controller.glb", entities);
+        parser.parse("data/meshes/controllers/right_controller.glb", entities);
         controller_mesh_left = static_cast<MeshInstance3D*>(entities[0]);
         controller_mesh_right = static_cast<MeshInstance3D*>(entities[1]);
 
@@ -67,7 +69,7 @@ int RoomsEngine::post_initialize()
         pointer_material->set_transparency_type(ALPHA_BLEND);
         pointer_material->set_cull_type(CULL_NONE);
         pointer_material->set_type(MATERIAL_UNLIT);
-        pointer_material->set_shader(RendererStorage::get_shader_from_source(shaders::ui_ray_pointer::source, shaders::ui_ray_pointer::path, pointer_material));
+        pointer_material->set_shader(RendererStorage::get_shader_from_source(shaders::ui_ray_pointer::source, shaders::ui_ray_pointer::path, shaders::ui_ray_pointer::libraries, pointer_material));
 
         ray_pointer->set_surface_material_override(ray_pointer->get_surface(0), pointer_material);
 
@@ -78,7 +80,7 @@ int RoomsEngine::post_initialize()
         sphere_pointer_material->set_priority(0);
         sphere_pointer_material->set_transparency_type(ALPHA_BLEND);
         sphere_pointer_material->set_type(MATERIAL_UNLIT);
-        sphere_pointer_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, sphere_pointer_material));
+        sphere_pointer_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, shaders::mesh_forward::libraries, sphere_pointer_material));
 
         sphere_pointer->set_surface_material_override(sphere_pointer->get_surface(0), sphere_pointer_material);
     }
@@ -123,7 +125,7 @@ int RoomsEngine::post_initialize()
         grid_material->set_transparency_type(ALPHA_BLEND);
         grid_material->set_cull_type(CULL_NONE);
         grid_material->set_type(MATERIAL_UNLIT);
-        grid_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_grid::source, shaders::mesh_grid::path, grid_material));
+        grid_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_grid::source, shaders::mesh_grid::path, shaders::mesh_grid::libraries, grid_material));
         grid->set_surface_material_override(grid->get_surface(0), grid_material);
     }
 
@@ -140,6 +142,9 @@ int RoomsEngine::post_initialize()
         Node::bind("rotate", [&](const std::string& signal, void* button) { gizmo.set_operation(ROTATE); });
         Node::bind("scale", [&](const std::string& signal, void* button) { gizmo.set_operation(SCALE); });
     }
+
+    player = new PlayerNode(this);
+    main_scene->add_node(player);
 
     return 0;
 }
@@ -171,7 +176,8 @@ void RoomsEngine::add_to_main_scene(const std::string& scene_path)
 void RoomsEngine::init_default_skeleton()
 {
     std::vector<Node*> nodes;
-    parse_gltf("data/meshes/character.glb", nodes);
+    GltfParser parser;
+    parser.parse("data/meshes/character.glb", nodes);
     assert(nodes.size() == 1u);
 
     std::function<SkeletonInstance3D*(Node*)> find_skeleton = [&](Node* node)

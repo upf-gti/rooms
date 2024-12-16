@@ -48,7 +48,7 @@ void SculptEditor::initialize()
     mirror_material->set_cull_type(CULL_NONE);
     mirror_material->set_diffuse_texture(RendererStorage::get_texture("data/textures/mirror_quad_texture.png"));
     mirror_material->set_type(MATERIAL_UNLIT);
-    mirror_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, mirror_material));
+    mirror_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, shaders::mesh_forward::libraries, mirror_material));
 
     mirror_mesh->set_surface_material_override(mirror_mesh->get_surface(0), mirror_material);
 
@@ -85,8 +85,8 @@ void SculptEditor::initialize()
         ref_mat->set_type(MATERIAL_UNLIT);
         ref_mat->set_shader(RendererStorage::get_shader("data/shaders/axis.wgsl", ref_mat));
 
-        sculpt_area_box->set_surface_material_override(s, ref_mat);
         sculpt_area_box->add_surface(s);
+        sculpt_area_box->set_surface_material_override(s, ref_mat);
     }
 
     // Initialize default primitive states
@@ -112,7 +112,7 @@ void SculptEditor::initialize()
         preview_material->set_priority(1);
         preview_material->set_transparency_type(ALPHA_BLEND);
         preview_material->set_type(MATERIAL_UNLIT);
-        preview_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_transparent::source, shaders::mesh_transparent::path, preview_material));
+        preview_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_transparent::source, shaders::mesh_transparent::path, shaders::mesh_transparent::libraries, preview_material));
 
         mesh_preview->set_surface_material_override(sphere_surface, preview_material);
 
@@ -122,7 +122,7 @@ void SculptEditor::initialize()
         Material* outline_material = new Material();
         outline_material->set_cull_type(CULL_FRONT);
         outline_material->set_type(MATERIAL_UNLIT);
-        outline_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, outline_material));
+        outline_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, shaders::mesh_forward::libraries, outline_material));
 
         mesh_preview_outline->set_surface_material_override(sphere_surface, outline_material);
     }
@@ -205,33 +205,31 @@ void SculptEditor::on_enter(void* data)
     assert(sculpt_node);
     set_current_sculpt(sculpt_node);
 
-    /*
-    * If loaded from memory, we can assume it has a defined position,
-    * so do not move it and start now the sculpt.
-    */
+    RoomsRenderer* renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
+    Transform& mirror_transform = mirror_gizmo.get_transform();
+    Transform& lock_axis_transform = axis_lock_gizmo.get_transform();
 
-    if (!sculpt_started && sculpt_node->get_from_memory()) {
-        sculpt_started = true;
+    // Get head relative position for setting the sculpt instance if in XR
+    if (renderer->get_openxr_available()) {
+        const AABB sculpt_aabb = sculpt_node->get_sculpt_data()->get_AABB();
+        const glm::vec3 cam_origin = renderer->get_camera_eye();
+        const glm::vec3 to_sculpt_instance_pos = (renderer->get_camera_front() * (0.4f + glm::length(sculpt_aabb.half_size) * 1.25f)) + cam_origin;
+
+        current_instance_transform.set_position(to_sculpt_instance_pos);
+        mirror_transform.set_position(to_sculpt_instance_pos);
+        lock_axis_transform.set_position(to_sculpt_instance_pos);
+    } else {
+        mirror_transform.set_position(sculpt_node->get_translation());
+        lock_axis_transform.set_position(sculpt_node->get_translation());
     }
 
-    if (sculpt_started) {
-        current_instance_transform = sculpt_node->get_transform();
-    }
-
-    // Store if we started from scratch the sculpt to assign or not its new position
-    sculpt_from_zero = !sculpt_started;
-
-    static_cast<RoomsRenderer*>(RoomsRenderer::instance)->get_raymarching_renderer()->set_preview_render(true);
+    renderer->get_raymarching_renderer()->set_preview_render(true);
 
     update_ui_workflow_state();
 }
 
 void SculptEditor::on_exit()
 {
-    if (sculpt_from_zero) {
-        current_sculpt->set_global_transform(current_instance_transform);
-    }
-
     static_cast<RoomsRenderer*>(RoomsRenderer::instance)->get_raymarching_renderer()->set_preview_render(false);
 }
 
@@ -582,6 +580,15 @@ void SculptEditor::update(float delta_time)
     preview_tmp_edits.clear();
     new_edits.clear();
 
+    // Render current instance
+    if (renderer->get_openxr_available()) {
+        uint32_t flags = 0u;
+        RoomsRenderer* renderer = static_cast<RoomsRenderer*>(Renderer::instance);
+        in_frame_sculpt_render_list_id = renderer->add_sculpt_render_call(
+            current_sculpt->get_sculpt_data(), Transform::transform_to_mat4(get_current_transform()), flags);
+        in_frame_sculpt_render_list_id += current_sculpt->get_sculpt_data()->get_in_frame_model_buffer_index();
+    }
+
     // Operation changer for the different tools
     {
         if (Input::was_button_pressed(XR_BUTTON_B)) {
@@ -652,29 +659,6 @@ void SculptEditor::update(float delta_time)
     }
 
     bool is_tool_used = edit_update(delta_time);
-
-    // Sculpt lifecicle
-    {
-        // Set center of sculpture and reuse it as mirror center
-        if (!sculpt_started) {
-
-            const glm::vec3& position = edit_to_add.position;
-
-            if (renderer->get_openxr_available()) {
-                get_current_transform().set_position(position);
-            }
-
-            Transform& mirror_transform = mirror_gizmo.get_transform();
-            mirror_transform.set_position(position);
-            Transform& lock_axis_transform = axis_lock_gizmo.get_transform();
-            lock_axis_transform.set_position(position);
-        }
-
-        // Mark the start of the sculpture for the origin
-        if (current_tool == SCULPT && is_tool_used) {
-            sculpt_started = true;
-        }
-    }
 
     update_sculpt_rotation();
 
@@ -786,15 +770,6 @@ void SculptEditor::update(float delta_time)
     }
     
     was_tool_used = is_tool_used;
-
-    // Render current instance
-    if(renderer->get_openxr_available()) {
-        uint32_t flags = 0u;
-        RoomsRenderer* renderer = static_cast<RoomsRenderer*>(Renderer::instance);
-        in_frame_sculpt_render_list_id = renderer->add_sculpt_render_call(
-            current_sculpt->get_sculpt_data(), Transform::transform_to_mat4(get_current_transform()), flags);
-        in_frame_sculpt_render_list_id += current_sculpt->get_sculpt_data()->get_in_frame_model_buffer_index();
-    }
 
     if (is_tool_used) {
         renderer->toogle_frame_debug();
@@ -933,8 +908,9 @@ void SculptEditor::update_sculpt_rotation()
         glm::quat rotation_diff = (current_hand_rotation * glm::inverse(last_hand_rotation));
         glm::vec3 translation_diff = current_hand_translation - last_hand_translation;
 
+        const glm::vec3 sculpt_pos_without_rot = get_current_transform().get_position() + translation_diff;
+        get_current_transform().set_position(rotation_diff * (sculpt_pos_without_rot - current_hand_translation) + current_hand_translation);
         get_current_transform().rotate_world(rotation_diff);
-        get_current_transform().translate(translation_diff);
 
         rotation_started = true;
 
@@ -1199,11 +1175,6 @@ void SculptEditor::update_edit_preview(const glm::vec4& dims)
 
     // Update edit transform
     mesh_preview->set_transform(Transform::mat4_to_transform(preview_pose));
-}
-
-void SculptEditor::set_sculpt_started(bool value)
-{
-    sculpt_started = true;
 }
 
 void SculptEditor::set_primitive(sdPrimitive primitive)

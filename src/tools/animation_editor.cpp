@@ -73,7 +73,7 @@ void AnimationEditor::initialize()
     joint_material->set_priority(0);
     joint_material->set_transparency_type(ALPHA_BLEND);
     joint_material->set_color(glm::vec4(1.0f, 0.0f, 0.0f, 0.50f));
-    joint_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path));
+    joint_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, shaders::mesh_forward::libraries));
 
     keyframe_markers_render_instance->set_frustum_culling_enabled(false);
 
@@ -86,8 +86,7 @@ void AnimationEditor::initialize()
     animation_trajectory_mesh->set_name("Animation trajectory");
     animation_trajectory_instance->set_frustum_culling_enabled(false);
 
-    sInterleavedData empty;
-    const std::vector<sInterleavedData> empty_vertex = { empty };
+    const std::vector<glm::vec3> empty_vertex = { glm::vec3(0.0f)};
     animation_trajectory_mesh->update_vertex_buffer(empty_vertex);
 
     animation_trajectory_instance->add_surface(animation_trajectory_mesh);
@@ -97,7 +96,7 @@ void AnimationEditor::initialize()
     skeleton_material->set_depth_read(false);
     skeleton_material->set_priority(0);
     skeleton_material->set_topology_type(eTopologyType::TOPOLOGY_LINE_LIST);
-    skeleton_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, skeleton_material));
+    skeleton_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, shaders::mesh_forward::libraries, skeleton_material));
 
     animation_trajectory_instance->set_surface_material_override(animation_trajectory_mesh, skeleton_material);
 }
@@ -544,7 +543,7 @@ void AnimationEditor::update_node_transform()
 
 void AnimationEditor::update_animation_trajectory()
 {
-    std::vector<sInterleavedData> vertices_to_upload;
+    std::vector<glm::vec3> vertices_to_upload;
 
     auto& states = animations_data[get_animation_idx()].states;
 
@@ -553,13 +552,13 @@ void AnimationEditor::update_animation_trajectory()
     }
 
     for (uint32_t i = 0u; i < states.size(); i++) {
-        vertices_to_upload.push_back({ std::get<glm::vec3>(states[i].properties["translation"].value) });
+        vertices_to_upload.push_back(std::get<glm::vec3>(states[i].properties["translation"].value));
 
         if (i + 1 >= states.size()) {
-            vertices_to_upload.push_back({ std::get<glm::vec3>(states[i].properties["translation"].value) });
+            vertices_to_upload.push_back(std::get<glm::vec3>(states[i].properties["translation"].value));
         }
         else {
-            vertices_to_upload.push_back({ std::get<glm::vec3>(states[i + 1].properties["translation"].value) });
+            vertices_to_upload.push_back(std::get<glm::vec3>(states[i + 1].properties["translation"].value));
         }
     }
 

@@ -12,25 +12,18 @@
 struct VertexInput {
     @builtin(instance_index) instance_id : u32,
     @location(0) position: vec3f,
-    @location(1) uv: vec2f,
-    @location(2) normal: vec3f,
-    @location(3) tangent: vec4f,
-    @location(4) color: vec3f,
-    @location(5) weights: vec4f,
-    @location(6) joints: vec4i
 };
 
 struct VertexOutput {
     @builtin(position) position: vec4f,
-    @location(0) uv: vec2f,
-    @location(1) @interpolate(flat) edit_range: vec2u,
-    @location(3) vertex_in_world_space : vec3f,
-    @location(4) vertex_in_sculpt_space : vec3f,
-    @location(5) @interpolate(flat) brick_center_in_sculpt_space : vec3f,
-    @location(6) @interpolate(flat) atlas_tile_coordinate : vec3f,
-    @location(7) in_atlas_pos : vec3f,
-    @location(8) @interpolate(flat) has_previews : u32,
-    @location(9) @interpolate(flat) model_index : u32
+    @location(0) @interpolate(flat) edit_range: vec2u,
+    @location(1) vertex_in_world_space : vec3f,
+    @location(2) vertex_in_sculpt_space : vec3f,
+    @location(3) @interpolate(flat) brick_center_in_sculpt_space : vec3f,
+    @location(4) @interpolate(flat) atlas_tile_coordinate : vec3f,
+    @location(5) in_atlas_pos : vec3f,
+    @location(6) @interpolate(flat) has_previews : u32,
+    @location(7) @interpolate(flat) model_index : u32
 };
 
 @group(0) @binding(1) var<storage, read> preview_stroke : PreviewStroke;
@@ -63,7 +56,6 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 
     var out: VertexOutput;
     out.position = camera_data.view_projection * vertex_in_world_space;
-    out.uv = in.uv; // forward to the fragment shader
 
     out.edit_range = vec2u(instance_data.edit_id_start, instance_data.edit_count);
 
@@ -220,15 +212,16 @@ fn raymarch_with_previews(ray_origin_atlas_space : vec3f, ray_origin_sculpt_spac
         // From atlas position, to sculpt, to world
         //position_in_sculpt = ray_origin_atlas_space + ray_dir * (depth / SCULPT_TO_ATLAS_CONVERSION_FACTOR);
         //position_in_atlas = ray_origin_atlas_space + ray_dir * depth;
-        let position_in_world : vec3f = (sculpt_instance_data[preview_stroke.current_sculpt_idx].model * vec4f(position_in_sculpt, 1.0)).xyz;
+        let model_matrix = sculpt_instance_data[preview_stroke.current_sculpt_idx].model;
+        let position_in_world : vec3f = (model_matrix * vec4f(position_in_sculpt, 1.0)).xyz;
 
         let epsilon : f32 = 0.000001; // avoids flashing when camera inside sdf
         let proj_pos : vec4f = view_proj * vec4f(position_in_world + ray_dir * epsilon, 1.0);
         depth = proj_pos.z / proj_pos.w;
 
         let normal : vec3f = estimate_normal_with_previews(position_in_sculpt, position_in_atlas);
-        let normal_world : vec3f = (sculpt_instance_data[preview_stroke.current_sculpt_idx].model * vec4f(normal, 0.0)).xyz;
-        let ray_dir_world : vec3f = (sculpt_instance_data[preview_stroke.current_sculpt_idx].model * vec4f(ray_dir, 0.0)).xyz;
+        let normal_world : vec3f = normalize(adjoint(model_matrix) * normal);
+        let ray_dir_world : vec3f = normalize(adjoint(model_matrix) * ray_dir);
 
         // let interpolant : f32 = (f32( i ) / f32(MAX_ITERATIONS)) * (M_PI / 2.0);
         // var heatmap_color : vec3f;
@@ -259,7 +252,7 @@ fn estimate_normal_atlas(atlas_position : vec3f) -> vec3f
 }
 
 
-fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3f, ray_dir : vec3f, max_distance : f32, view_proj : mat4x4f) -> vec4f
+fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3f, ray_dir : vec3f, max_distance : f32, view_proj : mat4x4f, min_hit_dist : f32) -> vec4f
 {
     let ambientColor = vec3f(0.4);
 	let hitColor = vec3f(1.0, 1.0, 1.0);
@@ -277,7 +270,7 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
     {
 		position_in_atlas = ray_origin_in_atlas_space + ray_dir * depth;
         distance = sample_sdf_atlas(position_in_atlas);
-        depth += distance * step(MIN_HIT_DIST, distance);
+        depth += distance * step(min_hit_dist, distance);
         depth = min(depth, max_distance);
         
         // position_in_atlas = ray_origin_in_atlas_space + ray_dir * depth;
@@ -285,7 +278,7 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
         // depth += distance * step(MIN_HIT_DIST, distance);
         // depth = min(depth, max_distance);
 
-		if (distance < MIN_HIT_DIST) {
+		if (distance < min_hit_dist) {
             exit = 1u;
             break;
 		} 
@@ -293,8 +286,9 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
 
     if (exit == 1u ) {
         // From atlas position, to sculpt, to world
+        let model_matrix : mat4x4f = sculpt_instance_data[model_index].model;
         let position_in_sculpt : vec3f = ray_origin_in_sculpt_space + ray_dir * (depth / SCULPT_TO_ATLAS_CONVERSION_FACTOR);
-        let world_space_position : vec3f = (sculpt_instance_data[model_index].model * vec4f(position_in_sculpt, 1.0)).xyz;
+        let world_space_position : vec3f = (model_matrix * vec4f(position_in_sculpt, 1.0)).xyz;
 
         let curr_sculpt_flags : u32 = sculpt_instance_data[model_index].flags;
         let oof : bool = (curr_sculpt_flags & SCULPT_INSTANCE_IS_OUT_OF_FOCUS) == SCULPT_INSTANCE_IS_OUT_OF_FOCUS;
@@ -307,8 +301,8 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
         depth = (proj_pos.z) / proj_pos.w;
 
         let normal : vec3f = estimate_normal_atlas(position_in_atlas);
-        let normal_world : vec3f = (sculpt_instance_data[model_index].model * vec4f(normal, 0.0)).xyz;
-        let ray_dir_world : vec3f = (sculpt_instance_data[model_index].model * vec4f(ray_dir, 0.0)).xyz;
+        let normal_world : vec3f = normalize(adjoint(model_matrix) * normal);
+        let ray_dir_world : vec3f = normalize(adjoint(model_matrix) * ray_dir);
 
         let material : SdfMaterial = sample_material_atlas(position_in_atlas);
 
@@ -376,7 +370,9 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     // watchouttt
     let ray_dir_sculpt : vec3f = normalize(in.vertex_in_sculpt_space.xyz - eye_in_sculpt.xyz);
-    let ray_dir_world : vec3f = (sculpt_instance_data[in.model_index].model * vec4f(ray_dir_sculpt, 0.0)).xyz;
+    let ray_dir_world : vec3f = normalize(adjoint(sculpt_instance_data[in.model_index].model) * ray_dir_sculpt);
+
+    let eye_obj_distance : f32 = abs(length(in.vertex_in_sculpt_space.xyz - eye_in_sculpt.xyz));
     // ray dir in atlas coords :((
 
     let raymarch_distance_sculpt_space : f32 = ray_intersect_AABB_only_near(in.vertex_in_sculpt_space.xyz, -ray_dir_sculpt, in.brick_center_in_sculpt_space, vec3f(BRICK_WORLD_SIZE));
@@ -396,7 +392,8 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     if (in.has_previews == 1 && !oof) {
         ray_result = raymarch_with_previews(ray_origin, ray_origin_sculpt_space, ray_dir_atlas, raymarch_distance, camera_data.view_projection);
     } else {
-        ray_result = raymarch(ray_origin, ray_origin_sculpt_space, ray_dir_atlas, raymarch_distance, camera_data.view_projection);
+        let curr_min_hit_dist : f32 = MIN_HIT_DIST; // Basic raymarch LODding: mix(MIN_HIT_DIST, MAX_HIT_DIST, max((eye_obj_distance / 2.0), 0.0));
+        ray_result = raymarch(ray_origin, ray_origin_sculpt_space, ray_dir_atlas, raymarch_distance, camera_data.view_projection, curr_min_hit_dist);
     }
     var final_color : vec3f = ray_result.rgb; 
     

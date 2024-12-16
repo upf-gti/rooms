@@ -1,6 +1,8 @@
 const DERIVATIVE_STEP = 0.5 / SDF_RESOLUTION;
 const MAX_ITERATIONS = 60;
 const MIN_HIT_DIST = 0.0005;
+const MAX_HIT_DIST = 0.005;
+
 
 fn ray_intersect_AABB_only_near(rayOrigin : vec3f, rayDir: vec3f, box_origin: vec3f, box_size: vec3f) -> f32 {
     let box_min : vec3f = box_origin - (box_size / 2.0);
