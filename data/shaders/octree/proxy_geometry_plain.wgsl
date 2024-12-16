@@ -252,7 +252,7 @@ fn estimate_normal_atlas(atlas_position : vec3f) -> vec3f
 }
 
 
-fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3f, ray_dir : vec3f, max_distance : f32, view_proj : mat4x4f) -> vec4f
+fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3f, ray_dir : vec3f, max_distance : f32, view_proj : mat4x4f, min_hit_dist : f32) -> vec4f
 {
     let ambientColor = vec3f(0.4);
 	let hitColor = vec3f(1.0, 1.0, 1.0);
@@ -270,7 +270,7 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
     {
 		position_in_atlas = ray_origin_in_atlas_space + ray_dir * depth;
         distance = sample_sdf_atlas(position_in_atlas);
-        depth += distance * step(MIN_HIT_DIST, distance);
+        depth += distance * step(min_hit_dist, distance);
         depth = min(depth, max_distance);
         
         // position_in_atlas = ray_origin_in_atlas_space + ray_dir * depth;
@@ -278,7 +278,7 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
         // depth += distance * step(MIN_HIT_DIST, distance);
         // depth = min(depth, max_distance);
 
-		if (distance < MIN_HIT_DIST) {
+		if (distance < min_hit_dist) {
             exit = 1u;
             break;
 		} 
@@ -371,6 +371,8 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     // watchouttt
     let ray_dir_sculpt : vec3f = normalize(in.vertex_in_sculpt_space.xyz - eye_in_sculpt.xyz);
     let ray_dir_world : vec3f = normalize(adjoint(sculpt_instance_data[in.model_index].model) * ray_dir_sculpt);
+
+    let eye_obj_distance : f32 = abs(length(in.vertex_in_sculpt_space.xyz - eye_in_sculpt.xyz));
     // ray dir in atlas coords :((
 
     let raymarch_distance_sculpt_space : f32 = ray_intersect_AABB_only_near(in.vertex_in_sculpt_space.xyz, -ray_dir_sculpt, in.brick_center_in_sculpt_space, vec3f(BRICK_WORLD_SIZE));
@@ -390,7 +392,8 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     if (in.has_previews == 1 && !oof) {
         ray_result = raymarch_with_previews(ray_origin, ray_origin_sculpt_space, ray_dir_atlas, raymarch_distance, camera_data.view_projection);
     } else {
-        ray_result = raymarch(ray_origin, ray_origin_sculpt_space, ray_dir_atlas, raymarch_distance, camera_data.view_projection);
+        let curr_min_hit_dist : f32 = MIN_HIT_DIST; // Basic raymarch LODding: mix(MIN_HIT_DIST, MAX_HIT_DIST, max((eye_obj_distance / 2.0), 0.0));
+        ray_result = raymarch(ray_origin, ray_origin_sculpt_space, ray_dir_atlas, raymarch_distance, camera_data.view_projection, curr_min_hit_dist);
     }
     var final_color : vec3f = ray_result.rgb; 
     
