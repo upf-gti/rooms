@@ -422,7 +422,7 @@ void RoomsEngine::render_gui()
         }
         if (ImGui::BeginTabItem("Rooms Debugger"))
         {
-            sGPU_SculptResults &intersection_info = rooms_renderer->get_sculpt_manager()->read_results.loaded_results;
+            sGPU_SculptResults &intersection_info = rooms_renderer->get_sculpt_manager()->loaded_results;
             std::string intersected = (intersection_info.ray_intersection.has_intersected == 1u) ? "yes" : "no";
             ImGui::Text("Ray Intersection: %s", intersected.c_str());
             ImGui::Text("Tile pointer: %d", intersection_info.ray_intersection.tile_pointer);

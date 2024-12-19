@@ -261,17 +261,15 @@ void RoomsRenderer::render()
 {
     Renderer::render();
 
+#ifndef __EMSCRIPTEN__
+    if (!last_frame_timestamps.empty()) {
+        last_evaluation_time = last_frame_timestamps[0];
+    }
+#endif
+
     if (get_sculpt_manager()->has_performed_evaluation()) {
         sculpt_manager->read_GPU_results();
     }
-
-#ifndef __EMSCRIPTEN__
-    //last_frame_timestamps = get_timestamps();
-
-    //if (!last_frame_timestamps.empty() && sculpt_manager->has_performed_evaluation()) {
-    //    last_evaluation_time = last_frame_timestamps[0];
-    //}
-#endif
 
     // For the next frame
     sculpts_render_lists.clear();

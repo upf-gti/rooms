@@ -154,14 +154,11 @@ void SculptEditor::initialize()
             return;
         }
 
-        SculptManager::sGPU_ReadResults* gpu_result = reinterpret_cast<SculptManager::sGPU_ReadResults*>(data);
-        assert(gpu_result);
-
-        last_gpu_results = gpu_result->loaded_results;
+        sGPU_SculptResults* last_gpu_results = reinterpret_cast<sGPU_SculptResults*>(data);
 
         // Computing sculpt AABB
         {
-            const sGPU_SculptResults::sGPU_SculptEvalData& eval_data = last_gpu_results.sculpt_eval_data;
+            const sGPU_SculptResults::sGPU_SculptEvalData& eval_data = last_gpu_results->sculpt_eval_data;
 
             // If there has been an eval, assign the AABB to the sculpt
             if (static_cast<RoomsRenderer*>(engine->get_renderer())->has_performed_evaluation()) {
@@ -174,7 +171,7 @@ void SculptEditor::initialize()
 
         // Computing intersection for surface snap
         {
-            const sGPU_RayIntersectionData& intersection = last_gpu_results.ray_intersection;
+            const sGPU_RayIntersectionData& intersection = last_gpu_results->ray_intersection;
 
             if (intersection.has_intersected) {
                 last_snap_position = ray_origin + ray_direction * intersection.ray_t;

@@ -101,9 +101,9 @@ void SceneEditor::initialize()
             return;
         }
 
-        SculptManager::sGPU_ReadResults* gpu_result = reinterpret_cast<SculptManager::sGPU_ReadResults*>(data);
-        assert(gpu_result);
-        sGPU_RayIntersectionData& intersection = gpu_result->loaded_results.ray_intersection;
+        sGPU_SculptResults* last_gpu_results = reinterpret_cast<sGPU_SculptResults*>(data);
+        assert(last_gpu_results);
+        sGPU_RayIntersectionData& intersection = last_gpu_results->ray_intersection;
 
         if (intersection.has_intersected == 0u) {
             return;
@@ -1139,7 +1139,7 @@ void SceneEditor::update_node_transform(const float delta_time, const bool rotat
 
         if (!rotation_started) {
             RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
-            const float ray_t = rooms_renderer->get_sculpt_manager()->read_results.loaded_results.ray_intersection.ray_t;
+            const float ray_t = rooms_renderer->get_sculpt_manager()->loaded_results.ray_intersection.ray_t;
             const glm::vec3 sculpt_intersection_pos = prev_ray_origin + prev_ray_dir * ray_t;
 
             last_right_hand_rotation = right_hand_rotation;
