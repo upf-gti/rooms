@@ -99,8 +99,6 @@ class SculptEditor : public BaseEditor {
     glm::quat last_hand_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
     glm::vec3 last_hand_translation = {};
     glm::vec3 last_snap_position = {};
-    glm::vec3 left_hand_sculpt_ray = {};
-    float     left_hand_scultp_length = {};
 
     // Intersections
     glm::vec3 ray_origin;
