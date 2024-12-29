@@ -92,7 +92,7 @@ void RoomsRenderer::clean()
 void RoomsRenderer::init_sdf_globals()
 {
     // Size of penultimate level
-    sdf_globals.octants_max_size = pow(floorf(SDF_RESOLUTION / 10.0f), 3.0f);
+    sdf_globals.octants_max_size = pow(floorf(SDF_RESOLUTION / static_cast<float>(ATLAS_BRICK_SIZE)), 3.0f);
 
     sdf_globals.octree_depth = static_cast<uint8_t>(OCTREE_DEPTH);
 
@@ -101,16 +101,19 @@ void RoomsRenderer::init_sdf_globals()
 
     sdf_globals.octree_last_level_size = sdf_globals.octree_total_size - (pow(8, sdf_globals.octree_depth) - 1) / 7;
 
-    uint32_t brick_count_in_axis = static_cast<uint32_t>(SDF_RESOLUTION / BRICK_SIZE);
+    uint32_t brick_count_in_axis = static_cast<uint32_t>(SDF_RESOLUTION / ATLAS_BRICK_SIZE);
     sdf_globals.max_brick_count = brick_count_in_axis * brick_count_in_axis * brick_count_in_axis;
 
     sdf_globals.empty_brick_and_removal_buffer_count = sdf_globals.max_brick_count + (sdf_globals.max_brick_count % 4);
-    float octree_space_scale = powf(2.0, sdf_globals.octree_depth + 3);
 
-    uint32_t p = sdf_globals.octree_total_size - sdf_globals.octree_last_level_size;
+    // number of bricks that fit in one axis
+    float num_bricks_in_octree_axis = powf(2.0, sdf_globals.octree_depth);
 
-    // Scale the size of a brick
-    Shader::set_custom_define("WORLD_SPACE_SCALE", octree_space_scale); // Worldspace scale is 1/octree_max_width
+    //uint32_t p = sdf_globals.octree_total_size - sdf_globals.octree_last_level_size;
+
+    Shader::set_custom_define("NUM_BRICKS_IN_OCTREE_AXIS", num_bricks_in_octree_axis);
+    Shader::set_custom_define("ATLAS_BRICK_SIZE", static_cast<float>(ATLAS_BRICK_SIZE));
+    Shader::set_custom_define("ATLAS_BRICK_NO_BORDER_SIZE", static_cast<float>(ATLAS_BRICK_NO_BORDER_SIZE));
     Shader::set_custom_define("OCTREE_DEPTH", sdf_globals.octree_depth);
     Shader::set_custom_define("OCTREE_TOTAL_SIZE", sdf_globals.octree_total_size);
     Shader::set_custom_define("PREVIEW_PROXY_BRICKS_COUNT", PREVIEW_PROXY_BRICKS_COUNT);
@@ -122,7 +125,7 @@ void RoomsRenderer::init_sdf_globals()
     Shader::set_custom_define("SDF_RESOLUTION", SDF_RESOLUTION);
     Shader::set_custom_define("SCULPT_MAX_SIZE", SCULPT_MAX_SIZE);
 
-    sdf_globals.brick_world_size = (SCULPT_MAX_SIZE / octree_space_scale) * 8.0f;
+    sdf_globals.brick_world_size = (SCULPT_MAX_SIZE / num_bricks_in_octree_axis);
 
     {
         // Atlas texture

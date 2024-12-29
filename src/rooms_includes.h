@@ -1,7 +1,8 @@
 #pragma once
 
 #define OCTREE_DEPTH 6
-#define BRICK_SIZE 10u
+#define ATLAS_BRICK_SIZE 8u
+#define ATLAS_BRICK_NO_BORDER_SIZE (ATLAS_BRICK_SIZE - 2u)
 #define SSAA_SDF_WRITE_TO_TEXTURE false
 #define PREVIEW_EDITS_MAX 128
 #define SDF_RESOLUTION 400

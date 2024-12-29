@@ -66,13 +66,12 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     
     out.vertex_in_sculpt_space = vertex_in_sculpt_space;
     out.brick_center_in_sculpt_space = instance_data.position;
-    // This is in an attribute for debugging
-    out.atlas_tile_coordinate = vec3f(10 * vec3u(instance_data.atlas_tile_index % BRICK_COUNT,
-                                                  (instance_data.atlas_tile_index / BRICK_COUNT) % BRICK_COUNT,
-                                                   instance_data.atlas_tile_index / (BRICK_COUNT * BRICK_COUNT))) / SDF_RESOLUTION;
+    out.atlas_tile_coordinate = vec3f(u32(ATLAS_BRICK_SIZE) * vec3u(instance_data.atlas_tile_index % NUM_BRICKS_IN_ATLAS_AXIS,
+                                                  (instance_data.atlas_tile_index / NUM_BRICKS_IN_ATLAS_AXIS) % NUM_BRICKS_IN_ATLAS_AXIS,
+                                                   instance_data.atlas_tile_index / (NUM_BRICKS_IN_ATLAS_AXIS * NUM_BRICKS_IN_ATLAS_AXIS))) / SDF_RESOLUTION;
     out.vertex_in_world_space = vertex_in_world_space.xyz; 
-    // From mesh space -1 to 1, -> 0 to 8.0/SDF_RESOLUTION (plus a voxel for padding)
-    out.in_atlas_pos = (in.position * 0.5 + 0.5) * 8.0/SDF_RESOLUTION + 1.0/SDF_RESOLUTION + out.atlas_tile_coordinate;
+    // From mesh space -1 to 1, -> 0 to 6.0/SDF_RESOLUTION (plus a voxel for padding)
+    out.in_atlas_pos = (in.position * 0.5 + 0.5) * ATLAS_BRICK_NO_BORDER_SIZE/SDF_RESOLUTION + 1.0/SDF_RESOLUTION + out.atlas_tile_coordinate;
     out.model_index = model_idx;
     return out;
 }
@@ -341,7 +340,6 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
         //return vec4f(vec3f(material.albedo), depth);
 	}
 
-    // Use a two band spherical harmonic as a skymap
     return vec4f(0.0, 0.0, 0.0, 0.999);
 }
 
@@ -358,30 +356,32 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
 
     // TODO: move this to CPU!
     // From world to sculpt: make it relative to the sculpt center, and un-apply the rotation.
-    let eye_in_sculpt = sculpt_instance_data[in.model_index].inv_model * vec4f(camera_data.eye, 1.0);
+    let eye_sculpt_space = sculpt_instance_data[in.model_index].inv_model * vec4f(camera_data.eye, 1.0);
 
-    // Get the sculpt space position relative to the current brick
-    var eye_atlas_pos : vec3f = eye_in_sculpt.xyz - in.brick_center_in_sculpt_space;
-    // Atlas and sculpt space are aligned, the only difference is a change of scale, depednign on brick size. Now the coordinates are Atlas-brick relative
-    eye_atlas_pos *= SCULPT_TO_ATLAS_CONVERSION_FACTOR;
+    // Get the sculpt space position relative to the current brick (brick-space)
+    let eye_brick_space : vec3f = eye_sculpt_space.xyz - in.brick_center_in_sculpt_space;
+    // Atlas and sculpt space are aligned, the only difference is a change of scale, depending on brick size. Now the coordinates are Atlas-brick relative
+    var eye_atlas_pos : vec3f = eye_brick_space * SCULPT_TO_ATLAS_CONVERSION_FACTOR;
     // make the coordinate accurate to the "global" in-brick position
-    eye_atlas_pos += in.atlas_tile_coordinate + vec3f(5.0 / SDF_RESOLUTION);
+    eye_atlas_pos += in.atlas_tile_coordinate + vec3f(BRICK_ATLAS_HALF_SIZE);
     let ray_dir_atlas : vec3f = normalize(in.in_atlas_pos - eye_atlas_pos);
 
+
+    // let ray_dir_world : vec3f = normalize(in.vertex_in_world_space - eye_atlas_pos);
+
     // watchouttt
-    let ray_dir_sculpt : vec3f = normalize(in.vertex_in_sculpt_space.xyz - eye_in_sculpt.xyz);
-    let ray_dir_world : vec3f = normalize(adjoint(sculpt_instance_data[in.model_index].model) * ray_dir_sculpt);
+    let ray_dir_sculpt : vec3f = normalize(in.vertex_in_sculpt_space.xyz - eye_sculpt_space.xyz);
+    // let ray_dir_world : vec3f = normalize(adjoint(sculpt_instance_data[in.model_index].model) * ray_dir_sculpt);
 
-    let eye_obj_distance : f32 = abs(length(in.vertex_in_sculpt_space.xyz - eye_in_sculpt.xyz));
-    // ray dir in atlas coords :((
+    // let eye_obj_distance : f32 = abs(length(in.vertex_in_sculpt_space.xyz - eye_sculpt_space.xyz));
 
+    // Max raymarch distances
+    let raymarch_distance : f32 = ray_intersect_AABB_only_near(in.in_atlas_pos, -ray_dir_atlas, in.atlas_tile_coordinate + vec3f(BRICK_ATLAS_HALF_SIZE), vec3f(BRICK_NO_BORDER_ATLAS_SIZE));
     let raymarch_distance_sculpt_space : f32 = ray_intersect_AABB_only_near(in.vertex_in_sculpt_space.xyz, -ray_dir_sculpt, in.brick_center_in_sculpt_space, vec3f(BRICK_WORLD_SIZE));
-    let ray_origin_sculpt_space : vec3f = in.vertex_in_sculpt_space.xyz + raymarch_distance_sculpt_space * (-ray_dir_sculpt);
-    
-    // Raro
-    let raymarch_distance : f32 = ray_intersect_AABB_only_near(in.in_atlas_pos, -ray_dir_atlas, in.atlas_tile_coordinate + vec3f(5.0 / SDF_RESOLUTION), vec3f(BRICK_ATLAS_SIZE));
 
+    // Get proper ray origins as we render brick with back-faces
     let ray_origin : vec3f = in.in_atlas_pos.xyz + raymarch_distance * (-ray_dir_atlas);
+    let ray_origin_sculpt_space : vec3f = in.vertex_in_sculpt_space.xyz + raymarch_distance_sculpt_space * (-ray_dir_sculpt);
 
     var ray_result : vec4f;
     // let tmp = preview_stroke.stroke.material.color.x;

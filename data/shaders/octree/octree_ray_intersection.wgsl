@@ -227,9 +227,9 @@ fn compute()
                     intersected_distance = octants_to_visit[i].distance;
 
                     let atlas_tile_index : u32 = octree.data[octree_index].tile_pointer & OCTREE_TILE_INDEX_MASK;
-                    let in_atlas_tile_coordinate : vec3f = vec3f(10 * vec3u(atlas_tile_index % BRICK_COUNT,
-                                                (atlas_tile_index / BRICK_COUNT) % BRICK_COUNT,
-                                                atlas_tile_index / (BRICK_COUNT * BRICK_COUNT))) / SDF_RESOLUTION;
+                    let in_atlas_tile_coordinate : vec3f = ATLAS_BRICK_SIZE * vec3f(vec3u(atlas_tile_index % NUM_BRICKS_IN_ATLAS_AXIS,
+                                                (atlas_tile_index / NUM_BRICKS_IN_ATLAS_AXIS) % NUM_BRICKS_IN_ATLAS_AXIS,
+                                                atlas_tile_index / (NUM_BRICKS_IN_ATLAS_AXIS * NUM_BRICKS_IN_ATLAS_AXIS))) / SDF_RESOLUTION;
 
                     // Ray intersection in sculpt space
                     let in_sculpture_point : vec3f = local_ray_origin + local_ray_dir * octants_to_visit[i].distance;
@@ -240,7 +240,7 @@ fn compute()
                     in_atlas_position += in_atlas_tile_coordinate + vec3f(5.0 / SDF_RESOLUTION);
                     // From sculpt to  atlas space: (sculpt - brick_center) * SCULPT_TO_ATLAS + atlas_origin
 
-                    let raymarch_max_distance : f32 = ray_intersect_AABB_only_near(in_atlas_position, local_ray_dir, in_atlas_tile_coordinate + vec3f(5.0 / SDF_RESOLUTION), vec3f(BRICK_ATLAS_SIZE));
+                    let raymarch_max_distance : f32 = ray_intersect_AABB_only_near(in_atlas_position, local_ray_dir, in_atlas_tile_coordinate + vec3f(BRICK_ATLAS_HALF_SIZE), vec3f(BRICK_NO_BORDER_ATLAS_SIZE));
 
                     // Raymarching
                     let raymarch_result_distance = raymarch(in_atlas_position, local_ray_dir, raymarch_max_distance, &intersected);

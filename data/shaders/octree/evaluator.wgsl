@@ -253,6 +253,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
     //TODO(Juan): this could be LUT, but is it worthy at the expense of BIG SHADER
     // Compute the center and the half size of the current octree, in the current level, via iterating the octree index
     for (var i : u32 = 1; i <= level; i++) {
+        // +1 is added to the pow exponent to get the half-size of current octant (otherwise would be size)
         level_half_size = SCULPT_MAX_SIZE / pow(2.0, f32(i + 1));
 
         // For each level, select the octant position via the 3 corresponding bits and use the OCTREE_CHILD_OFFSET_LUT that
