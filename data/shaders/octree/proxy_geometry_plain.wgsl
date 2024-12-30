@@ -71,7 +71,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
                                                    instance_data.atlas_tile_index / (NUM_BRICKS_IN_ATLAS_AXIS * NUM_BRICKS_IN_ATLAS_AXIS))) / SDF_RESOLUTION;
     out.vertex_in_world_space = vertex_in_world_space.xyz; 
     // From mesh space -1 to 1, -> 0 to 6.0/SDF_RESOLUTION (plus a voxel for padding)
-    out.in_atlas_pos = (in.position * 0.5 + 0.5) * ATLAS_BRICK_NO_BORDER_SIZE/SDF_RESOLUTION + 1.0/SDF_RESOLUTION + out.atlas_tile_coordinate;
+    out.in_atlas_pos = (in.position * 0.5 + 0.5) * ATLAS_BRICK_NO_BORDER_SIZE/SDF_RESOLUTION + BRICK_VOXEL_ATLAS_SIZE + out.atlas_tile_coordinate;
     out.model_index = model_idx;
     return out;
 }

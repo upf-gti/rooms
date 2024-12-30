@@ -237,7 +237,7 @@ fn compute()
                     // Sculpt coords 2 brick data
                     in_atlas_position -= octants_to_visit[i].octant_center;
                     in_atlas_position *= SCULPT_TO_ATLAS_CONVERSION_FACTOR;
-                    in_atlas_position += in_atlas_tile_coordinate + vec3f(5.0 / SDF_RESOLUTION);
+                    in_atlas_position += in_atlas_tile_coordinate + BRICK_ATLAS_HALF_SIZE;
                     // From sculpt to  atlas space: (sculpt - brick_center) * SCULPT_TO_ATLAS + atlas_origin
 
                     let raymarch_max_distance : f32 = ray_intersect_AABB_only_near(in_atlas_position, local_ray_dir, in_atlas_tile_coordinate + vec3f(BRICK_ATLAS_HALF_SIZE), vec3f(BRICK_NO_BORDER_ATLAS_SIZE));
