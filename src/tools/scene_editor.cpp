@@ -499,9 +499,9 @@ void SceneEditor::init_ui()
         ui::ItemGroup2D* g_display = new ui::ItemGroup2D("g_display");
         g_display->add_child(new ui::TextureButton2D("use_grid", { "data/textures/grid.png", ui::ALLOW_TOGGLE | ui::SELECTED }));
         g_display->add_child(new ui::TextureButton2D("use_environment", { "data/textures/skybox.png", ui::ALLOW_TOGGLE | ui::SELECTED }));
-        g_display->add_child(new ui::FloatSlider2D("IBL_intensity", "data/textures/ibl_intensity.png", rooms_renderer->get_ibl_intensity(), ui::SliderMode::VERTICAL, ui::USER_RANGE/*ui::CURVE_INV_POW, 21.f, -6.0f*/, 0.0f, 4.0f, 2));
+        g_display->add_child(new ui::FloatSlider2D("IBL_intensity", { .path = "data/textures/ibl_intensity.png", .fvalue = rooms_renderer->get_ibl_intensity(), .flags = ui::USER_RANGE, .fvalue_max = 4.0f, .precision = 2 }));
         display_submenu->add_child(g_display);
-        display_submenu->add_child(new ui::FloatSlider2D("exposure", "data/textures/exposure.png", rooms_renderer->get_exposure(), ui::SliderMode::VERTICAL, ui::USER_RANGE/*ui::CURVE_INV_POW, 21.f, -6.0f*/, 0.0f, 4.0f, 2));
+        display_submenu->add_child(new ui::FloatSlider2D("exposure", { .path = "data/textures/exposure.png", .fvalue = rooms_renderer->get_exposure(), .flags = ui::USER_RANGE, .fvalue_max = 4.0f, .precision = 2 }));
         first_row->add_child(display_submenu);
     }
 
@@ -1221,8 +1221,7 @@ void SceneEditor::inspector_from_scene(bool force)
             continue;
         }
         else {
-            spdlog::error("{} node type not handled", node->get_node_type());
-            assert(0);
+            inspect_node(node);
         }
     }
 

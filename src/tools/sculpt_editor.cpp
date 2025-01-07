@@ -1431,17 +1431,17 @@ void SculptEditor::init_ui()
             // Edit sizes
             {
                 ui::ItemGroup2D* g_edit_sizes = new ui::ItemGroup2D("g_edit_sizes");
-                g_edit_sizes->add_child(new ui::FloatSlider2D("main_size", edit_to_add.dimensions.x, ui::SliderMode::HORIZONTAL, 0, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE, 3));
-                g_edit_sizes->add_child(new ui::FloatSlider2D("secondary_size", edit_to_add.dimensions.y, ui::SliderMode::HORIZONTAL, 0, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE, 3));
-                g_edit_sizes->add_child(new ui::FloatSlider2D("round_size", "data/textures/rounding.png", edit_to_add.dimensions.w, ui::SliderMode::VERTICAL, 0, 0.0f, MAX_PRIMITIVE_SIZE, 2));
+                g_edit_sizes->add_child(new ui::FloatSlider2D("main_size", { .fvalue = edit_to_add.dimensions.x, .mode = ui::SliderMode::HORIZONTAL, .fvalue_min = MIN_PRIMITIVE_SIZE, .fvalue_max = MAX_PRIMITIVE_SIZE, .precision = 3 }));
+                g_edit_sizes->add_child(new ui::FloatSlider2D("secondary_size", { .fvalue = edit_to_add.dimensions.y, .mode = ui::SliderMode::HORIZONTAL, .fvalue_min = MIN_PRIMITIVE_SIZE, .fvalue_max = MAX_PRIMITIVE_SIZE, .precision = 3 }));
+                g_edit_sizes->add_child(new ui::FloatSlider2D("round_size", { .path = "data/textures/rounding.png", .fvalue = edit_to_add.dimensions.w, .fvalue_max = MAX_PRIMITIVE_SIZE, .precision = 2 }));
                 shape_editor_submenu->add_child(g_edit_sizes);
             }
 
             // Edit modifiers
             {
                 ui::ItemGroup2D* g_edit_modifiers = new ui::ItemGroup2D("g_edit_modifiers");
-                //g_edit_modifiers->add_child(new ui::FloatSlider2D("onion_value", "data/textures/onion.png", 0.0f, ui::SliderMode::VERTICAL));
-                g_edit_modifiers->add_child(new ui::FloatSlider2D("cap_value", "data/textures/capped.png", 0.0f, ui::SliderMode::VERTICAL));
+                //g_edit_modifiers->add_child(new ui::FloatSlider2D("onion_value", { .path = "data/textures/onion.png" }));
+                g_edit_modifiers->add_child(new ui::FloatSlider2D("cap_value", { .path = "data/textures/capped.png" }));
                 shape_editor_submenu->add_child(g_edit_modifiers);
             }
 
@@ -1477,8 +1477,8 @@ void SculptEditor::init_ui()
 
             // Put directly these two props until there are more pbr props to show
             ui::ItemGroup2D* g_edit_pbr = new ui::ItemGroup2D("g_edit_pbr");
-            g_edit_pbr->add_child(new ui::FloatSlider2D("roughness", "data/textures/roughness.png", stroke_material.roughness));
-            g_edit_pbr->add_child(new ui::FloatSlider2D("metallic", "data/textures/metallic.png", stroke_material.metallic));
+            g_edit_pbr->add_child(new ui::FloatSlider2D("roughness", { .path = "data/textures/roughness.png", .fvalue = stroke_material.roughness }));
+            g_edit_pbr->add_child(new ui::FloatSlider2D("metallic", { .path = "data/textures/metallic.png", .fvalue = stroke_material.metallic }));
             material_editor_submenu->add_child(g_edit_pbr);
 
             // Shuffle
@@ -1585,7 +1585,7 @@ void SculptEditor::init_ui()
 
     // Smooth factor
     {
-        ui::Slider2D* smooth_factor_slider = new ui::FloatSlider2D("smooth_factor", "data/textures/smooth.png", stroke_parameters.get_smooth_factor(), ui::SliderMode::VERTICAL, ui::SKIP_VALUE, MIN_SMOOTH_FACTOR, MAX_SMOOTH_FACTOR, 3);
+        ui::Slider2D* smooth_factor_slider = new ui::FloatSlider2D("smooth_factor", { .path = "data/textures/smooth.png", .fvalue = stroke_parameters.get_smooth_factor(), .flags = ui::SKIP_VALUE, .fvalue_min = MIN_SMOOTH_FACTOR, .fvalue_max = MAX_SMOOTH_FACTOR, .precision = 3 });
         second_row->add_child(smooth_factor_slider);
     }
 
