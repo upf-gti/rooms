@@ -151,22 +151,27 @@ void SceneEditor::update(float delta_time)
 {
     BaseEditor::update(delta_time);
 
-    eTriggerAction trigger_state = get_trigger_action(delta_time);
-
     // Update input actions
     {
-        select_action_pressed = (trigger_state == TRIGGER_TAPPED) || Input::was_mouse_pressed(GLFW_MOUSE_BUTTON_LEFT);
+        select_action_pressed = Input::was_mouse_released<(GLFW_MOUSE_BUTTON_LEFT);
+
+        if (renderer->get_openxr_available()) {
+            eTriggerAction trigger_state = get_trigger_action(delta_time);
+            select_action_pressed |= (trigger_state == TRIGGER_TAPPED);
+
+            if (trigger_state == TRIGGER_HOLDED && prev_trigger_state == NO_TRIGGER_ACTION) {
+                holded_node = hovered_node;
+            }
+            else if (trigger_state == NO_TRIGGER_ACTION && prev_trigger_state == TRIGGER_HOLDED) {
+                holded_node = nullptr;
+            }
+
+            prev_trigger_state = trigger_state;
+        }
 
         if (Input::was_key_pressed(GLFW_KEY_ESCAPE)) {
             deselect();
         }
-
-        if (trigger_state == TRIGGER_HOLDED && prev_trigger_state == NO_TRIGGER_ACTION) {
-            holded_node = hovered_node;
-        } else if (trigger_state == NO_TRIGGER_ACTION && prev_trigger_state == TRIGGER_HOLDED) {
-            holded_node = nullptr;
-        }
-        prev_trigger_state = trigger_state;
     }
 
     if (exports_dirty) {
@@ -1005,7 +1010,8 @@ void SceneEditor::create_light_node(uint8_t type)
         new_light->rotate(glm::radians(-90.f), { 1.f, 0.0f, 0.f });
         break;
     default:
-        assert(0 && "Unsupported light type!");
+        spdlog::error("Unsupported light type: {}", type);
+        assert(0);
         break;
     }
 
@@ -1119,19 +1125,21 @@ void SceneEditor::render_gizmo()
 
 bool SceneEditor::is_rotation_being_used()
 {
-    return Input::get_trigger_value(HAND_LEFT) > 0.5;
+    return Input::get_trigger_value(HAND_LEFT) > 0.5f;
 }
 
 void SceneEditor::update_node_transform(const float delta_time, const bool rotate_selected_node)
 {
-    if (!selected_node) {
+    Node* node = selected_node;
+
+    if (!node) {
         if (!hovered_node) {
             return;
         }
-        selected_node = hovered_node;
+        node = hovered_node;
     }
 
-    Node3D* node_3d = static_cast<Node3D*>(selected_node);
+    Node3D* node_3d = static_cast<Node3D*>(node);
 
     // Do not rotate sculpt if shift -> we might be rotating the edit
     if (rotate_selected_node && !is_shift_left_pressed) {
