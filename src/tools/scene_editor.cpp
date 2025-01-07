@@ -6,6 +6,7 @@
 #include "framework/parsers/parse_scene.h"
 #include "framework/nodes/sculpt_node.h"
 #include "framework/nodes/character_3d.h"
+#include "framework/nodes/player_node.h"
 #include "framework/nodes/spot_light_3d.h"
 #include "framework/nodes/omni_light_3d.h"
 #include "framework/nodes/directional_light_3d.h"
@@ -689,8 +690,11 @@ bool SceneEditor::on_goback_inspector(ui::Inspector* scope)
     if (current_group) {
         current_group = nullptr;
         Node2D::get_widget_from_name<ui::TextureButton2D*>("group")->set_disabled(false);
-        set_inspector_dirty();
     }
+
+    deselect();
+
+    set_inspector_dirty();
 
     return true;
 }
@@ -1210,8 +1214,15 @@ void SceneEditor::inspector_from_scene(bool force)
         else if (dynamic_cast<Group3D*>(node)) {
             inspect_node(node, NODE_GROUP);
         }
+        else if (dynamic_cast<Character3D*>(node)) {
+            inspect_node(node, NODE_CHARACTER);
+        }
+        else if (dynamic_cast<PlayerNode*>(node)) {
+            continue;
+        }
         else {
-            inspect_node(node);
+            spdlog::error("{} node type not handled", node->get_node_type());
+            assert(0);
         }
     }
 
