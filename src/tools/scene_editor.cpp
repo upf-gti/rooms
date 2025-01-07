@@ -153,7 +153,7 @@ void SceneEditor::update(float delta_time)
 
     // Update input actions
     {
-        select_action_pressed = Input::was_mouse_released<(GLFW_MOUSE_BUTTON_LEFT);
+        select_action_pressed = Input::was_mouse_released(GLFW_MOUSE_BUTTON_LEFT);
 
         if (renderer->get_openxr_available()) {
             eTriggerAction trigger_state = get_trigger_action(delta_time);
@@ -385,10 +385,6 @@ void SceneEditor::process_node_hovered()
             clone_node(hovered_node, false);
         }
         else if (b_pressed) {
-            selected_node = hovered_node;
-            RoomsEngine::switch_editor(ANIMATION_EDITOR, hovered_node);
-        }
-        else if (select_action_pressed) {
             if (current_group) {
                 ungroup_node(hovered_node, true, false);
             }
@@ -398,35 +394,31 @@ void SceneEditor::process_node_hovered()
         }
     }
     else {
-        shortcuts[shortcuts::DUPLICATE_NODE] = true;
+        // shortcuts[shortcuts::DUPLICATE_NODE] = true;
         shortcuts[shortcuts::EDIT_SCULPT_NODE] = sculpt_hovered;
-        if (a_pressed) {
-            clone_node(hovered_node, true);
-        }
-        else if (b_pressed && sculpt_hovered) {
+        if (a_pressed && sculpt_hovered) {
             select_node(hovered_node, false);
             RoomsEngine::switch_editor(SCULPT_EDITOR, static_cast<SculptNode*>(hovered_node));
         }
-        else if (select_action_pressed) {
-            select_node(hovered_node, false);
-        }
-        /*else if (should_open_context_menu) {
-
+        else if (should_open_context_menu) {
             glm::vec2 position = Input::get_mouse_position();
             glm::vec3 position_3d = glm::vec3(0.0f);
 
             if (renderer->get_openxr_available()) {
                 position = { 0.0f, 0.0f };
-                const sGPU_SculptResults& gpu_results = renderer->get_sculpt_manager()->read_results.loaded_results;
+                const sGPU_SculptResults& gpu_results = renderer->get_sculpt_manager()->loaded_results;
                 position_3d = ray_origin + ray_direction * gpu_results.ray_intersection.ray_t;
             }
 
             new ui::ContextMenu(position, position_3d, {
-                { "Duplicate", [&, n = hovered_node](const std::string& name, uint32_t index) { clone_node(n, true); }},
                 { "Animate", [&, n = hovered_node](const std::string& name, uint32_t index) { selected_node = n; RoomsEngine::switch_editor(ANIMATION_EDITOR, n); }},
+                { "Make Unique", [&, n = hovered_node](const std::string& name, uint32_t index) { make_unique(n); }},
                 { "Delete", [&, n = hovered_node](const std::string& name, uint32_t index) { delete_node(n); }}
             });
-        }*/
+        }
+        else if (select_action_pressed) {
+            select_node(hovered_node, false);
+        }
     }
 }
 
@@ -473,7 +465,7 @@ void SceneEditor::init_ui()
         g_grouping->add_child(new ui::TextureButton2D("group", { "data/textures/group.png" }));
         g_grouping->add_child(new ui::TextureButton2D("ungroup", { "data/textures/ungroup.png" }));
         node_actions_submenu->add_child(g_grouping);
-        node_actions_submenu->add_child(new ui::TextureButton2D("duplicate", { "data/textures/clone.png" }));
+        // node_actions_submenu->add_child(new ui::TextureButton2D("duplicate", { "data/textures/clone.png" }));
         node_actions_submenu->add_child(new ui::TextureButton2D("clone", { "data/textures/clone_instance.png" }));
         first_row->add_child(node_actions_submenu);
     }
@@ -569,7 +561,7 @@ void SceneEditor::init_ui()
             right_hand_box->add_child(new ui::ImageLabel2D("Edit Sculpt", shortcuts::B_BUTTON_PATH, shortcuts::EDIT_SCULPT_NODE));
             right_hand_box->add_child(new ui::ImageLabel2D("Edit Group", shortcuts::B_BUTTON_PATH, shortcuts::EDIT_GROUP));
             right_hand_box->add_child(new ui::ImageLabel2D("Animate", shortcuts::R_GRIP_B_BUTTON_PATH, shortcuts::ANIMATE_NODE, double_size));
-            right_hand_box->add_child(new ui::ImageLabel2D("Duplicate Node", shortcuts::A_BUTTON_PATH, shortcuts::DUPLICATE_NODE));
+            // right_hand_box->add_child(new ui::ImageLabel2D("Duplicate Node", shortcuts::A_BUTTON_PATH, shortcuts::DUPLICATE_NODE));
             right_hand_box->add_child(new ui::ImageLabel2D("Create Group", shortcuts::A_BUTTON_PATH, shortcuts::CREATE_GROUP));
             right_hand_box->add_child(new ui::ImageLabel2D("Add to Group", shortcuts::A_BUTTON_PATH, shortcuts::ADD_TO_GROUP));
             right_hand_box->add_child(new ui::ImageLabel2D("Clone Node", shortcuts::R_GRIP_A_BUTTON_PATH, shortcuts::CLONE_NODE, double_size));
@@ -643,7 +635,7 @@ void SceneEditor::bind_events()
     Node::bind("deselect", [&](const std::string& signal, void* button) { deselect(); });
     Node::bind("group", [&](const std::string& signal, void* button) { group_node(selected_node); });
     Node::bind("ungroup", [&](const std::string& signal, void* button) { ungroup_node(selected_node, true, false); });
-    Node::bind("duplicate", [&](const std::string& signal, void* button) { clone_node(selected_node, true); });
+    // Node::bind("duplicate", [&](const std::string& signal, void* button) { clone_node(selected_node, true); });
     Node::bind("clone", [&](const std::string& signal, void* button) { clone_node(selected_node, false); });
 
     // Export / Import (.room) / Player
@@ -801,6 +793,20 @@ Node* SceneEditor::clone_node(Node* node, bool copy, bool push_undo)
     set_inspector_dirty();
 
     return new_node;
+}
+
+void SceneEditor::make_unique(Node* node)
+{
+    // TODO: Maybe this should be a overridable mwthod in Node since each one will make it differntly
+    // For now support only sculpts
+
+    SculptNode* sculpt_node = dynamic_cast<SculptNode*>(node);
+
+    if (!sculpt_node) {
+        return;
+    }
+
+    sculpt_node->make_unique();
 }
 
 void SceneEditor::group_node(Node* node)

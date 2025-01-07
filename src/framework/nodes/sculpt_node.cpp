@@ -201,6 +201,16 @@ void SculptNode::parse(std::ifstream& binary_scene_file)
     rooms_renderer->toogle_frame_debug();
 }
 
+void SculptNode::make_unique()
+{
+    // Get old gpudata history and create a new one using it
+    RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(Renderer::instance);
+    sculpt_gpu_data->unref();
+
+    sculpt_gpu_data = rooms_renderer->get_sculpt_manager()->create_sculpt_from_history(sculpt_gpu_data->get_stroke_history());
+    sculpt_gpu_data->ref();
+}
+
 void SculptNode::clone(Node* new_node, bool copy)
 {
     Node3D::clone(new_node, copy);

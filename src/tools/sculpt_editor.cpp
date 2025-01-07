@@ -182,9 +182,6 @@ void SculptEditor::initialize()
     });
 
     enable_tool(SCULPT);
-
-    // debug
-    rep_count = 2u;
 }
 
 void SculptEditor::on_enter(void* data)

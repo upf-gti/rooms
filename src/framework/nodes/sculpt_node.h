@@ -46,6 +46,7 @@ public:
     virtual void serialize(std::ofstream& binary_scene_file);
     virtual void parse(std::ifstream& binary_scene_file);
 
+    void make_unique();
     void clone(Node* new_node, bool copy = true) override;
     bool test_ray_collision(const glm::vec3& ray_origin, const glm::vec3& ray_direction, float& distance, Node3D** out = nullptr) override;
     bool check_intersection(sGPU_RayIntersectionData* data);
