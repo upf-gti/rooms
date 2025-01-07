@@ -77,6 +77,10 @@ class SculptEditor : public BaseEditor {
     MeshInstance3D* mesh_preview = nullptr;
     MeshInstance3D* mesh_preview_outline = nullptr;
 
+    // Repeat mode
+    uint32_t rep_count = 0u;
+    float rep_spacing = 0.02f;
+
     void set_edit_size(float main = -1.0f, float secondary = -1.0f, float round = -1.0f);
     void set_primitive(sdPrimitive primitive);
     void set_operation(sdOperation operation);
@@ -86,6 +90,7 @@ class SculptEditor : public BaseEditor {
     void update_edit_preview(const glm::vec4& dims);
     bool must_render_mesh_preview_outline();
     bool can_snap_to_surface();
+    void add_edit_repetitions(std::vector<Edit>& edits);
 
     bool dimensions_dirty       = true;
     bool force_new_stroke       = false;
@@ -216,7 +221,7 @@ public:
 
     void enable_tool(eTool tool);
 
-    void set_preview_edits(const std::vector<Edit> &edit_previews);
+    void set_preview_stroke();
 
     void set_current_sculpt(SculptNode* sculpt_instance);
     SculptNode* get_current_sculpt() { return current_sculpt; }
