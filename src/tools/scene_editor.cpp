@@ -377,7 +377,6 @@ void SceneEditor::process_node_hovered()
         }
     }
     else if (is_shift_right_pressed) {
-        shortcuts[shortcuts::ANIMATE_NODE] = true;
         shortcuts[shortcuts::CLONE_NODE] = true;
         shortcuts[shortcuts::UNGROUP] = !!current_group;
         shortcuts[shortcuts::GROUP_NODE] = !current_group;
@@ -394,7 +393,7 @@ void SceneEditor::process_node_hovered()
         }
     }
     else {
-        // shortcuts[shortcuts::DUPLICATE_NODE] = true;
+        shortcuts[shortcuts::OPEN_CONTEXT_MENU] = true;
         shortcuts[shortcuts::EDIT_SCULPT_NODE] = sculpt_hovered;
         if (a_pressed && sculpt_hovered) {
             select_node(hovered_node, false);
@@ -537,10 +536,8 @@ void SceneEditor::init_ui()
 
     main_panel->set_visibility(false);
 
-    if (renderer->get_openxr_available())
-    {
-        // Load controller UI labels
-
+    // Load controller UI labels
+    if (renderer->get_openxr_available()) {
         // Thumbsticks
         // Buttons
         // Triggers
@@ -550,25 +547,28 @@ void SceneEditor::init_ui()
         // Left hand
         {
             left_hand_box = new ui::VContainer2D("left_controller_root", { 0.0f, 0.0f }, ui::CREATE_3D);
-            left_hand_box->add_child(new ui::ImageLabel2D("Scene Panel", shortcuts::Y_BUTTON_PATH, shortcuts::TOGGLE_SCENE_INSPECTOR));
-            left_hand_box->add_child(new ui::ImageLabel2D("Redo", shortcuts::L_GRIP_X_BUTTON_PATH, shortcuts::SCENE_REDO, double_size));
-            left_hand_box->add_child(new ui::ImageLabel2D("Undo", shortcuts::X_BUTTON_PATH, shortcuts::SCENE_UNDO));
+            left_hand_box->add_childs({
+                new ui::ImageLabel2D("Scene Panel", shortcuts::Y_BUTTON_PATH, shortcuts::TOGGLE_SCENE_INSPECTOR),
+                new ui::ImageLabel2D("Redo", shortcuts::L_GRIP_X_BUTTON_PATH, shortcuts::SCENE_REDO, double_size),
+                new ui::ImageLabel2D("Redo", shortcuts::L_GRIP_X_BUTTON_PATH, shortcuts::SCENE_REDO, double_size)
+            });
         }
 
         // Right hand
         {
             right_hand_box = new ui::VContainer2D("right_controller_root", { 0.0f, 0.0f }, ui::CREATE_3D);
-            right_hand_box->add_child(new ui::ImageLabel2D("Edit Sculpt", shortcuts::B_BUTTON_PATH, shortcuts::EDIT_SCULPT_NODE));
-            right_hand_box->add_child(new ui::ImageLabel2D("Edit Group", shortcuts::B_BUTTON_PATH, shortcuts::EDIT_GROUP));
-            right_hand_box->add_child(new ui::ImageLabel2D("Animate", shortcuts::R_GRIP_B_BUTTON_PATH, shortcuts::ANIMATE_NODE, double_size));
-            // right_hand_box->add_child(new ui::ImageLabel2D("Duplicate Node", shortcuts::A_BUTTON_PATH, shortcuts::DUPLICATE_NODE));
-            right_hand_box->add_child(new ui::ImageLabel2D("Create Group", shortcuts::A_BUTTON_PATH, shortcuts::CREATE_GROUP));
-            right_hand_box->add_child(new ui::ImageLabel2D("Add to Group", shortcuts::A_BUTTON_PATH, shortcuts::ADD_TO_GROUP));
-            right_hand_box->add_child(new ui::ImageLabel2D("Clone Node", shortcuts::R_GRIP_A_BUTTON_PATH, shortcuts::CLONE_NODE, double_size));
-            right_hand_box->add_child(new ui::ImageLabel2D("Place Node", shortcuts::R_TRIGGER_PATH, shortcuts::PLACE_NODE));
-            right_hand_box->add_child(new ui::ImageLabel2D("Select Node", shortcuts::R_TRIGGER_PATH, shortcuts::SELECT_NODE));
-            right_hand_box->add_child(new ui::ImageLabel2D("Ungroup", shortcuts::R_GRIP_R_TRIGGER_PATH, shortcuts::UNGROUP, double_size));
-            right_hand_box->add_child(new ui::ImageLabel2D("Group Node", shortcuts::R_GRIP_R_TRIGGER_PATH, shortcuts::GROUP_NODE, double_size));
+            right_hand_box->add_childs({
+                new ui::ImageLabel2D("More Options", shortcuts::B_BUTTON_PATH, shortcuts::OPEN_CONTEXT_MENU),
+                new ui::ImageLabel2D("Edit Sculpt", shortcuts::A_BUTTON_PATH, shortcuts::EDIT_SCULPT_NODE),
+                new ui::ImageLabel2D("Edit Group", shortcuts::A_BUTTON_PATH, shortcuts::EDIT_GROUP),
+                new ui::ImageLabel2D("Create Group", shortcuts::R_GRIP_B_BUTTON_PATH, shortcuts::ANIMATE_NODE, double_size),
+                new ui::ImageLabel2D("Add to Group", shortcuts::R_GRIP_B_BUTTON_PATH, shortcuts::ANIMATE_NODE, double_size),
+                new ui::ImageLabel2D("Clone Node", shortcuts::R_GRIP_A_BUTTON_PATH, shortcuts::CLONE_NODE, double_size),
+                new ui::ImageLabel2D("Place Node", shortcuts::R_TRIGGER_PATH, shortcuts::PLACE_NODE),
+                new ui::ImageLabel2D("Select Node", shortcuts::R_TRIGGER_PATH, shortcuts::SELECT_NODE),
+                new ui::ImageLabel2D("Ungroup", shortcuts::R_GRIP_R_TRIGGER_PATH, shortcuts::UNGROUP, double_size),
+                new ui::ImageLabel2D("Group Node", shortcuts::R_GRIP_R_TRIGGER_PATH, shortcuts::GROUP_NODE, double_size)
+            });
         }
     }
 
@@ -1129,26 +1129,19 @@ void SceneEditor::render_gizmo()
     }
 }
 
-bool SceneEditor::is_rotation_being_used()
-{
-    return Input::get_trigger_value(HAND_LEFT) > 0.5f;
-}
-
 void SceneEditor::update_node_transform(const float delta_time, const bool rotate_selected_node)
 {
-    Node* node = selected_node;
-
-    if (!node) {
-        if (!hovered_node) {
-            return;
-        }
-        node = hovered_node;
-    }
-
-    Node3D* node_3d = static_cast<Node3D*>(node);
-
     // Do not rotate sculpt if shift -> we might be rotating the edit
     if (rotate_selected_node && !is_shift_left_pressed) {
+
+        if (!selected_node) {
+            if (!hovered_node) {
+                return;
+            }
+            selected_node = hovered_node;
+        }
+
+        Node3D* node_3d = static_cast<Node3D*>(selected_node);
 
         glm::quat right_hand_rotation = Input::get_controller_rotation(HAND_RIGHT, POSE_AIM);
         glm::vec3 right_hand_translation = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
@@ -1209,7 +1202,7 @@ void SceneEditor::inspector_from_scene(bool force)
 {
     uint8_t flags = ui::INSPECTOR_FLAG_CLOSE_BUTTON;
 
-    if (!inspector->get_visibility()) {
+    if (!inspector->get_visibility() || force) {
         flags |= ui::INSPECTOR_FLAG_FORCE_3D_POSITION;
     }
 
@@ -1664,21 +1657,20 @@ bool SceneEditor::scene_redo()
 
 SceneEditor::eTriggerAction SceneEditor::get_trigger_action(const float delta_time)
 {
-    const bool is_pressed_now = Input::get_trigger_value(HAND_RIGHT) > 0.5;
-
-    if (is_pressed_now) {
+    if (Input::is_trigger_pressed(HAND_RIGHT)) {
         time_pressed_storage += delta_time;
-
         if (time_pressed_storage > TIME_UNTIL_LONG_PRESS) {
             return TRIGGER_HOLDED;
         }
         return NO_TRIGGER_ACTION;
+    }
 
-    } else if (time_pressed_storage < TIME_UNTIL_LONG_PRESS) {
-        time_pressed_storage = 0u;
+    else if (Input::was_trigger_released(HAND_RIGHT) && time_pressed_storage < TIME_UNTIL_LONG_PRESS) {
+        time_pressed_storage = 0.0f;
         return TRIGGER_TAPPED;
     }
 
-    time_pressed_storage = 0u;
+    time_pressed_storage = 0.0f;
+
     return NO_TRIGGER_ACTION;
 }

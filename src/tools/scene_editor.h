@@ -127,7 +127,6 @@ class SceneEditor : public BaseEditor {
     glm::vec3 last_right_hand_translation = {};
     float last_hand_distance = 0.0f;
 
-    bool is_rotation_being_used();
     void update_node_transform(const float delta_time, const bool rotate_selected_node);
     void update_hovered_node();
 

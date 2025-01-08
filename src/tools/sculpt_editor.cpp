@@ -1337,7 +1337,7 @@ void SculptEditor::generate_shortcuts()
         shortcuts[shortcuts::SPLINE_DENSITY] = !is_shift_right_pressed;
     }
     else {
-        shortcuts[shortcuts::ADD_SPLINE] = !is_shift_right_pressed;
+        shortcuts[shortcuts::REPETITIONS] = !is_shift_right_pressed;
         shortcuts[shortcuts::BACK_TO_SCENE] = true;
         shortcuts[shortcuts::MAIN_SIZE] = !is_shift_right_pressed;
         shortcuts[shortcuts::SECONDARY_SIZE] = is_shift_right_pressed;
@@ -1620,7 +1620,7 @@ void SculptEditor::init_ui()
             right_hand_box->add_child(new ui::ImageLabel2D("Round Shape", shortcuts::R_THUMBSTICK_X_PATH, shortcuts::ROUND_SHAPE));
             right_hand_box->add_child(new ui::ImageLabel2D("Smooth", shortcuts::R_GRIP_R_THUMBSTICK_X_PATH, shortcuts::MODIFY_SMOOTH, double_size));
             right_hand_box->add_child(new ui::ImageLabel2D("Spline Density", shortcuts::R_THUMBSTICK_X_PATH, shortcuts::SPLINE_DENSITY));
-            right_hand_box->add_child(new ui::ImageLabel2D("Add Spline", shortcuts::B_BUTTON_PATH, shortcuts::ADD_SPLINE));
+            right_hand_box->add_child(new ui::ImageLabel2D("Repetition", shortcuts::B_BUTTON_PATH, shortcuts::REPETITIONS));
             right_hand_box->add_child(new ui::ImageLabel2D("Stretch/Spline", shortcuts::B_BUTTON_PATH, shortcuts::TOGGLE_STRETCH_SPLINE));
             right_hand_box->add_child(new ui::ImageLabel2D("Surface Snap", shortcuts::R_GRIP_B_BUTTON_PATH, shortcuts::SNAP_SURFACE, double_size));
             right_hand_box->add_child(new ui::ImageLabel2D("Add/Substract", shortcuts::A_BUTTON_PATH, shortcuts::ADD_SUBSTRACT));

@@ -40,6 +40,7 @@ namespace shortcuts {
 
     enum : uint8_t {
         TOGGLE_SCENE_INSPECTOR,
+        OPEN_CONTEXT_MENU,
         EDIT_SCULPT_NODE,
         EDIT_GROUP,
         ANIMATE_NODE,
@@ -62,7 +63,7 @@ namespace shortcuts {
         MAIN_SIZE,
         SECONDARY_SIZE,
         ADD_SUBSTRACT,
-        ADD_SPLINE,
+        REPETITIONS,
         TOGGLE_STRETCH_SPLINE,
         SPLINE_DENSITY,
         ADD_KNOT,
