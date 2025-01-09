@@ -10,7 +10,9 @@
 #include "xr/openxr_context.h"
 #endif
 
-PlayerNode::PlayerNode(RoomsEngine* engine_ref) : Node3D()
+REGISTER_NODE_CLASS(PlayerNode)
+
+PlayerNode::PlayerNode() : Node3D()
 {
     node_type = "PlayerNode";
 
@@ -21,7 +23,7 @@ PlayerNode::PlayerNode(RoomsEngine* engine_ref) : Node3D()
     }
 #endif
 
-    engine = engine_ref;
+    engine = static_cast<RoomsEngine*>(RoomsEngine::instance);
 }
 
 void PlayerNode::update(float delta_time)

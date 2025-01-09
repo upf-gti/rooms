@@ -143,7 +143,7 @@ int RoomsEngine::post_initialize()
         Node::bind("scale", [&](const std::string& signal, void* button) { gizmo.set_operation(SCALE); });
     }
 
-    player = new PlayerNode(this);
+    player = new PlayerNode();
     main_scene->add_node(player);
 
     return 0;

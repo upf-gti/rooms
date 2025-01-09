@@ -12,8 +12,7 @@ class PlayerNode : public Node3D {
     glm::vec3 prev_lcontroller_position = {};
 
 public:
-   
-    PlayerNode(RoomsEngine* engine_ref);
+    PlayerNode();
 
     void update(float delta_time);
 };
