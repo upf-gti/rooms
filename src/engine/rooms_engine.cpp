@@ -143,7 +143,7 @@ int RoomsEngine::post_initialize()
         Node::bind("scale", [&](const std::string& signal, void* button) { gizmo.set_operation(SCALE); });
     }
 
-    player = new PlayerNode(this);
+    player = new PlayerNode();
     main_scene->add_node(player);
 
     return 0;
@@ -422,7 +422,7 @@ void RoomsEngine::render_gui()
         }
         if (ImGui::BeginTabItem("Rooms Debugger"))
         {
-            sGPU_SculptResults &intersection_info = rooms_renderer->get_sculpt_manager()->read_results.loaded_results;
+            sGPU_SculptResults &intersection_info = rooms_renderer->get_sculpt_manager()->loaded_results;
             std::string intersected = (intersection_info.ray_intersection.has_intersected == 1u) ? "yes" : "no";
             ImGui::Text("Ray Intersection: %s", intersected.c_str());
             ImGui::Text("Tile pointer: %d", intersection_info.ray_intersection.tile_pointer);

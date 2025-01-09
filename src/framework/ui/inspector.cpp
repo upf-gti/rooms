@@ -309,7 +309,10 @@ namespace ui {
             flex_container = create_row();
         }
 
-        auto w = new ui::FloatSlider2D(name, "", value, { 0.0f, 0.0f }, glm::vec2(panel_size.x / 4.0f, 24.f), ui::SliderMode::HORIZONTAL, ui::SKIP_NAME | ui::SKIP_VALUE | ui::SCROLLABLE, min, max, precision);
+        sSliderDescription desc = { .fvalue = value, .mode = ui::SliderMode::HORIZONTAL, .flags = ui::SKIP_NAME | ui::SKIP_VALUE | ui::SCROLLABLE,
+            .fvalue_min = min, .fvalue_max = max, .precision = precision, .size = glm::vec2(panel_size.x / 4.0f, 24.f) };
+
+        auto w = new ui::FloatSlider2D(name, desc);
         flex_container->add_child(w);
         items[name] = w;
 
@@ -338,7 +341,10 @@ namespace ui {
             flex_container = create_row();
         }
 
-        auto w = new ui::IntSlider2D(name, "", value, { 0.0f, 0.0f }, glm::vec2(panel_size.x / 4.0f, 24.f), ui::SliderMode::HORIZONTAL, ui::SKIP_NAME | ui::SKIP_VALUE | ui::SCROLLABLE, min, max);
+        sSliderDescription desc = { .ivalue = value, .mode = ui::SliderMode::HORIZONTAL, .flags = ui::SKIP_NAME | ui::SKIP_VALUE | ui::SCROLLABLE,
+            .ivalue_min = min, .ivalue_max = max, .size = glm::vec2(panel_size.x / 4.0f, 24.f) };
+
+        auto w = new ui::IntSlider2D(name, desc);
         flex_container->add_child(w);
         items[name] = w;
 

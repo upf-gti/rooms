@@ -40,11 +40,12 @@ namespace shortcuts {
 
     enum : uint8_t {
         TOGGLE_SCENE_INSPECTOR,
+        OPEN_CONTEXT_MENU,
         EDIT_SCULPT_NODE,
         EDIT_GROUP,
         ANIMATE_NODE,
         SELECT_NODE,
-        DUPLICATE_NODE,
+        // DUPLICATE_NODE,
         CLONE_NODE,
         PLACE_NODE,
         GROUP_NODE,
@@ -62,7 +63,7 @@ namespace shortcuts {
         MAIN_SIZE,
         SECONDARY_SIZE,
         ADD_SUBSTRACT,
-        ADD_SPLINE,
+        REPETITIONS,
         TOGGLE_STRETCH_SPLINE,
         SPLINE_DENSITY,
         ADD_KNOT,
@@ -103,6 +104,7 @@ enum InspectNodeFlags {
     NODE_STANDARD = NODE_NAME | NODE_VISIBILITY | NODE_ANIMATE | NODE_DELETE,
     NODE_LIGHT = NODE_STANDARD,
     NODE_SCULPT = NODE_STANDARD | NODE_EDIT,
+    NODE_CHARACTER = NODE_STANDARD,
     NODE_GROUP = NODE_STANDARD | NODE_EDIT | NODE_CHILDREN
 };
 

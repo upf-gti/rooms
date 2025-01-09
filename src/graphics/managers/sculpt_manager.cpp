@@ -28,7 +28,6 @@ void SculptManager::clean()
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
 
-    wgpuBufferRelease(read_results.gpu_results_read_buffer);
     wgpuBindGroupRelease(evaluate_bind_group);
     wgpuBindGroupRelease(increment_level_bind_group);
     wgpuBindGroupRelease(write_to_texture_bind_group);
@@ -147,7 +146,6 @@ void SculptManager::update(WGPUCommandEncoder command_encoder)
     wgpuComputePassEncoderRelease(compute_pass);
 
     if (intersections_to_compute > 0u || has_performed_evaluation()) {
-        wgpuCommandEncoderCopyBufferToBuffer(command_encoder, std::get<WGPUBuffer>(gpu_results_uniform.data), 0u, read_results.gpu_results_read_buffer, 0u, sizeof(sGPU_SculptResults));
         intersections_to_compute = 0u;
     }
 }
@@ -465,6 +463,8 @@ bool SculptManager::evaluate(WGPUComputePassEncoder compute_pass, const sEvaluat
 
     performed_evaluation = true;
 
+    rooms_renderer->request_timestamps();
+
     return true;
 }
 
@@ -737,7 +737,6 @@ void SculptManager::init_uniforms()
 
     // GPU return data buffer
     sGPU_SculptResults defaults;
-    read_results.gpu_results_read_buffer = webgpu_context->create_buffer(sizeof(sGPU_SculptResults), WGPUBufferUsage_MapRead | WGPUBufferUsage_CopyDst, &defaults, "Evaluation results read buffer");
     gpu_results_uniform.data = webgpu_context->create_buffer(sizeof(sGPU_SculptResults), WGPUBufferUsage_Storage | WGPUBufferUsage_CopySrc | WGPUBufferUsage_CopyDst, &defaults, "Evaluation results buffer");
     gpu_results_uniform.binding = 0u;
     gpu_results_uniform.buffer_size = sizeof(sGPU_SculptResults);
@@ -953,47 +952,18 @@ void SculptManager::read_GPU_results()
 {
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
+    uint32_t frame_counter = rooms_renderer->get_frame_counter();
 
-    read_results.map_in_progress = true;
+    if (!reading_gpu_results && (frame_counter - frame_of_last_gpu_read > 10)) {
+        reading_gpu_results = true;
+        frame_of_last_gpu_read = frame_counter;
 
-    wgpuBufferMapAsync(read_results.gpu_results_read_buffer, WGPUMapMode_Read, 0u, sizeof(sGPU_SculptResults), get_mapped_result_buffer, (void*)&read_results);
-
-    while (read_results.map_in_progress) {
-        wgpuDeviceTick(webgpu_context->device);
+        webgpu_context->read_buffer_async(std::get<WGPUBuffer>(gpu_results_uniform.data), sizeof(sGPU_SculptResults), [&](const void* output_buffer, void* user_data) {
+            memcpy(&loaded_results, output_buffer, sizeof(sGPU_SculptResults));
+            Node::emit_signal("@on_gpu_results", (void*)&loaded_results);
+            reading_gpu_results = false;
+        }, nullptr);
     }
-
-    wgpuBufferUnmap(read_results.gpu_results_read_buffer);
 
     performed_evaluation = false;
-}
-
-void get_mapped_result_buffer(WGPUBufferMapAsyncStatus status, void* user_payload)
-{
-    SculptManager::sGPU_ReadResults* result = (SculptManager::sGPU_ReadResults*)(user_payload);
-
-    result->map_in_progress = false;
-
-    if (status != WGPUBufferMapAsyncStatus_Success) {
-        return;
-    }
-
-    size_t size = sizeof(sGPU_SculptResults);
-    const void* gpu_buffer = wgpuBufferGetConstMappedRange(result->gpu_results_read_buffer, 0, size);
-    memcpy_s(&result->loaded_results, size, gpu_buffer, size);
-
-    /*if (result->loaded_results.ray_intersection.has_intersected == 1u) {
-        Node::emit_signal("@on_gpu_intersection_results", (void*)result);
-    }*/
-
-    //spdlog::info("Curr sculpt brick count {}", result->loaded_results.sculpt_eval_data.curr_sculpt_brick_count);
-
-    result->loaded_results.sculpt_eval_data.aabb_min.x -= 5.0f;
-    result->loaded_results.sculpt_eval_data.aabb_min.y -= 5.0f;
-    result->loaded_results.sculpt_eval_data.aabb_min.z -= 5.0f;
-
-    result->loaded_results.sculpt_eval_data.aabb_max.x -= 5.0f;
-    result->loaded_results.sculpt_eval_data.aabb_max.y -= 5.0f;
-    result->loaded_results.sculpt_eval_data.aabb_max.z -= 5.0f;
-
-    Node::emit_signal("@on_gpu_results", (void*)result);
 }

@@ -76,6 +76,7 @@ class SceneEditor : public BaseEditor {
     void select_node(Node* node, bool place = true);
     void add_node(Node* node, Node* parent = nullptr, int idx = -1);
     void deselect();
+    void make_unique(Node* node); // not undo/redo supported right now
     Node* clone_node(Node* node, bool copy = true, bool push_undo = true);
     void group_node(Node* node);
     void delete_node(Node* node, bool push_undo = true);
@@ -126,7 +127,6 @@ class SceneEditor : public BaseEditor {
     glm::vec3 last_right_hand_translation = {};
     float last_hand_distance = 0.0f;
 
-    bool is_rotation_being_used();
     void update_node_transform(const float delta_time, const bool rotate_selected_node);
     void update_hovered_node();
 

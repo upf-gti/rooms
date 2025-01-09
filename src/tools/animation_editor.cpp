@@ -81,14 +81,12 @@ void AnimationEditor::initialize()
     keyframe_markers_render_instance->set_surface_material_override(keyframe_markers_render_instance->get_surface(0), joint_material);
 
     // Trajectory line
-    animation_trajectory_instance = new MeshInstance3D();
     animation_trajectory_mesh = new Surface();
     animation_trajectory_mesh->set_name("Animation trajectory");
+    animation_trajectory_mesh->create_surface_data({{ glm::vec3(0.0f) }});
+
+    animation_trajectory_instance = new MeshInstance3D();
     animation_trajectory_instance->set_frustum_culling_enabled(false);
-
-    const std::vector<glm::vec3> empty_vertex = { glm::vec3(0.0f)};
-    animation_trajectory_mesh->update_vertex_buffer(empty_vertex);
-
     animation_trajectory_instance->add_surface(animation_trajectory_mesh);
 
     Material* skeleton_material = new Material();
@@ -567,7 +565,7 @@ void AnimationEditor::update_animation_trajectory()
         vertices_to_upload.push_back({ current_node->get_translation()});
     }
 
-    animation_trajectory_mesh->update_vertex_buffer(vertices_to_upload);
+    animation_trajectory_mesh->update_surface_data({ vertices_to_upload });
 }
 
 /*
@@ -909,7 +907,7 @@ void AnimationEditor::init_ui()
     ui::HContainer2D* first_row = new ui::HContainer2D("row_0", { 0.0f, 0.0f });
     vertical_container->add_child(first_row);
 
-    first_row->add_child(new ui::FloatSlider2D("animation_speed", "data/textures/animation_speed.png", player->get_speed()));
+    first_row->add_child(new ui::FloatSlider2D("animation_speed", { .path = "data/textures/animation_speed.png", .fvalue = player->get_speed() }));
 
     // Animation settings
     {

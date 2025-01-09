@@ -154,6 +154,8 @@ class SculptManager {
     Uniform         octant_usage_initialization_uniform[2];
     WGPUBindGroup   octant_usage_ping_pong_bind_groups[2] = {};
 
+    bool reading_gpu_results = false;
+    uint32_t frame_of_last_gpu_read = 0;
     // Preview evaluation
 
 
@@ -183,11 +185,7 @@ class SculptManager {
 
 public:
 
-    struct sGPU_ReadResults {
-        WGPUBuffer              gpu_results_read_buffer = nullptr;
-        bool                    map_in_progress = false;
-        sGPU_SculptResults      loaded_results;
-    } read_results;
+    sGPU_SculptResults loaded_results;
 
     void init();
     void clean();

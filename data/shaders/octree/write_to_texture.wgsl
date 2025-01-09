@@ -36,7 +36,7 @@ var<workgroup> used_pixels : atomic<u32>;
     del evaluador.
 */
 
-@compute @workgroup_size(10,10,10)
+@compute @workgroup_size(8, 8, 8)
 fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation_id) local_id: vec3<u32>)
 {
     let id : u32 = group_id.x;
@@ -54,12 +54,12 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     let proxy_data : ProxyInstanceData = brick_buffers.brick_instance_data[brick_index];
     let local_id_vec : vec3f = vec3f(local_id);
 
-    let voxel_world_coords : vec3f = proxy_data.position + (10.0 / local_id_vec - 5.0) * PIXEL_WORLD_SIZE;
+    // let voxel_world_coords : vec3f = proxy_data.position + (ATLAS_BRICK_SIZE / local_id_vec - (ATLAS_BRICK_SIZE * 0.5)) * BRICK_VOXEL_WORLD_SIZE;
 
-    // Get the 3D atlas coords of the brick, with a stride of 10 (the size of the brick)
-    let atlas_tile_coordinate : vec3u = 10 * vec3u(proxy_data.atlas_tile_index % BRICK_COUNT,
-                                                  (proxy_data.atlas_tile_index / BRICK_COUNT) % BRICK_COUNT,
-                                                   proxy_data.atlas_tile_index / (BRICK_COUNT * BRICK_COUNT));
+    // Get the 3D atlas coords of the brick, with a stride of ATLAS_BRICK_SIZE
+    let atlas_tile_coordinate : vec3u = u32(ATLAS_BRICK_SIZE) * vec3u(proxy_data.atlas_tile_index % NUM_BRICKS_IN_ATLAS_AXIS,
+                                                  (proxy_data.atlas_tile_index / NUM_BRICKS_IN_ATLAS_AXIS) % NUM_BRICKS_IN_ATLAS_AXIS,
+                                                   proxy_data.atlas_tile_index / (NUM_BRICKS_IN_ATLAS_AXIS * NUM_BRICKS_IN_ATLAS_AXIS));
     
     let octant_center : vec3f = proxy_data.position;
 
@@ -74,12 +74,14 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     } else {
         sSurface.distance = 10000.0;
     }
-    // Offset for a 10 pixel wide brick
-    let pixel_offset : vec3f = (local_id_vec - 4.5) * PIXEL_WORLD_SIZE;
+
+    // Offset to cover negative and positive
+    // for example, for threads going from 0 to 7 -> -3.5 to 3.5
+    const offset : f32 = (ATLAS_BRICK_SIZE - 1.0) * 0.5;
+    let pixel_offset : vec3f = (local_id_vec - offset) * BRICK_VOXEL_WORLD_SIZE;
 
     var result_surface : Surface;
     result_surface.distance = 0.0;
-
 
     var curr_surface : Surface = sSurface;
     let pos = octant_center + pixel_offset;

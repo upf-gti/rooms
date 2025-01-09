@@ -36,16 +36,17 @@ fn irradiance_spherical_harmonics(n : vec3f) -> vec3f {
 fn apply_light(toEye : vec3f, position : vec3f, position_world : vec3f, normal_i : vec3f, lightPosition : vec3f, material : SdfMaterial) -> vec3f
 {
     //var normal : vec3f = estimate_normal(position, position_world);
-    let normal : vec3f = normalize(normal_i);
 
     let toLight : vec3f = normalize(lightPosition - position_world);
 
     var m : PbrMaterial;
 
     m.pos = position_world;
-    m.normal = normal;
-    m.view_dir = normalize(toEye);
-    m.reflected_dir = reflect( -m.view_dir, m.normal);
+    m.normal = normal_i;
+    m.view_dir = toEye;
+
+    m.n_dot_v = clamp(dot(m.normal, m.view_dir), 0.0, 1.0);
+    m.reflected_dir = reflect(-m.view_dir, m.normal);
 
     // Material properties
 
@@ -61,8 +62,8 @@ fn apply_light(toEye : vec3f, position : vec3f, position_world : vec3f, normal_i
     m.ao = 1.0;
 
     var final_color : vec3f = vec3f(0.0);
-    final_color += get_indirect_light(m);
-    final_color += get_direct_light(m);
+    final_color += get_indirect_light(&m);
+    final_color += get_direct_light(&m);
     final_color += m.emissive;
 
     final_color *= camera_data.exposure;

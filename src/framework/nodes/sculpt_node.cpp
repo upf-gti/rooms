@@ -85,7 +85,7 @@ void SculptNode::update(float delta_time)
     RoomsRenderer* renderer = static_cast<RoomsRenderer*>(Renderer::instance);
     RoomsEngine* engine = static_cast<RoomsEngine*>(Engine::instance);
     auto scene_editor = engine->get_editor<SceneEditor*>(SCENE_EDITOR);
-    sGPU_RayIntersectionData& intersection_results = renderer->get_sculpt_manager()->read_results.loaded_results.ray_intersection;
+    sGPU_RayIntersectionData& intersection_results = renderer->get_sculpt_manager()->loaded_results.ray_intersection;
 
     bool in_sculpt_editor = (engine->get_current_editor_type() == SCULPT_EDITOR);
     bool in_scene_editor = (engine->get_current_editor() == scene_editor);
@@ -199,6 +199,16 @@ void SculptNode::parse(std::ifstream& binary_scene_file)
     // TODO: Remove current
     //rooms_renderer->get_raymarching_renderer()->set_current_sculpt(this);
     rooms_renderer->toogle_frame_debug();
+}
+
+void SculptNode::make_unique()
+{
+    // Get old gpudata history and create a new one using it
+    RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(Renderer::instance);
+    sculpt_gpu_data->unref();
+
+    sculpt_gpu_data = rooms_renderer->get_sculpt_manager()->create_sculpt_from_history(sculpt_gpu_data->get_stroke_history());
+    sculpt_gpu_data->ref();
 }
 
 void SculptNode::clone(Node* new_node, bool copy)

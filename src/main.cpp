@@ -11,7 +11,7 @@ int main()
     rooms_render_config.required_limits.limits.maxBufferSize = 536870912;
     rooms_render_config.required_limits.limits.maxStorageBufferBindingSize = SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION * sizeof(float);
     rooms_render_config.required_limits.limits.maxStorageBuffersPerShaderStage = 8; // GTX 1080 friendly :(
-    rooms_render_config.required_limits.limits.maxComputeInvocationsPerWorkgroup = 1024;
+    rooms_render_config.required_limits.limits.maxComputeInvocationsPerWorkgroup = 512;
 #endif
 
     RoomsRenderer* renderer = new RoomsRenderer(rooms_render_config);

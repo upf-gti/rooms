@@ -10,8 +10,12 @@
 #include "xr/openxr_context.h"
 #endif
 
+REGISTER_NODE_CLASS(PlayerNode)
 
-PlayerNode::PlayerNode(RoomsEngine* engine_ref) : Node3D() {
+PlayerNode::PlayerNode() : Node3D()
+{
+    node_type = "PlayerNode";
+
 #ifdef XR_SUPPORT
     if (RoomsRenderer::instance->get_openxr_available()) {
         // Sets this node 's transform as teh origin for the OpenXR
@@ -19,11 +23,11 @@ PlayerNode::PlayerNode(RoomsEngine* engine_ref) : Node3D() {
     }
 #endif
 
-    engine = engine_ref;
+    engine = static_cast<RoomsEngine*>(RoomsEngine::instance);
 }
 
-
-void PlayerNode::update(float delta_time) {
+void PlayerNode::update(float delta_time)
+{
     if (engine->get_current_editor_type() != SCENE_EDITOR) {
         return;
     }

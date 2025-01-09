@@ -23,19 +23,17 @@
 
 #include "spdlog/spdlog.h"
 #include "imgui.h"
+
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtx/string_cast.hpp>
 
 uint8_t SculptEditor::last_generated_material_uid = 0;
 
-//Viewport3D* test_slider_thermometer = nullptr;
-
 void SculptEditor::initialize()
 {
     renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
 
-    sSDFGlobals& sdf_globals = renderer->get_sdf_globals();
-
+    const sSDFGlobals& sdf_globals = renderer->get_sdf_globals();
     stroke_manager.set_brick_world_size(glm::vec3(sdf_globals.brick_world_size));
 
     mirror_mesh = new MeshInstance3D();
@@ -154,14 +152,11 @@ void SculptEditor::initialize()
             return;
         }
 
-        SculptManager::sGPU_ReadResults* gpu_result = reinterpret_cast<SculptManager::sGPU_ReadResults*>(data);
-        assert(gpu_result);
-
-        last_gpu_results = gpu_result->loaded_results;
+        sGPU_SculptResults* last_gpu_results = reinterpret_cast<sGPU_SculptResults*>(data);
 
         // Computing sculpt AABB
         {
-            const sGPU_SculptResults::sGPU_SculptEvalData& eval_data = last_gpu_results.sculpt_eval_data;
+            const sGPU_SculptResults::sGPU_SculptEvalData& eval_data = last_gpu_results->sculpt_eval_data;
 
             // If there has been an eval, assign the AABB to the sculpt
             if (static_cast<RoomsRenderer*>(engine->get_renderer())->has_performed_evaluation()) {
@@ -174,7 +169,7 @@ void SculptEditor::initialize()
 
         // Computing intersection for surface snap
         {
-            const sGPU_RayIntersectionData& intersection = last_gpu_results.ray_intersection;
+            const sGPU_RayIntersectionData& intersection = last_gpu_results->ray_intersection;
 
             if (intersection.has_intersected) {
                 last_snap_position = ray_origin + ray_direction * intersection.ray_t;
@@ -187,16 +182,6 @@ void SculptEditor::initialize()
     });
 
     enable_tool(SCULPT);
-
-    /*ui::VContainer2D* test_root = new ui::VContainer2D("test_root", { 0.0f, 0.0f });
-    test_root->set_centered(true);
-
-    test_root->add_child(new ui::Slider2D("thermometer", 0.0f, ui::SliderMode::HORIZONTAL, ui::DISABLED));*/
-
-    /*test_slider_thermometer = new Viewport3D(test_root);
-    test_slider_thermometer->set_active(true);
-
-    RoomsEngine::entities.push_back(test_slider_thermometer);*/
 }
 
 void SculptEditor::on_enter(void* data)
@@ -556,16 +541,6 @@ bool SculptEditor::edit_update(float delta_time)
 
 void SculptEditor::update(float delta_time)
 {
-    /*glm::mat4x4 m(1.0f);
-
-    glm::vec3 eye = renderer->get_camera_eye();
-    glm::vec3 new_pos = eye + renderer->get_camera_front() * 0.5f;
-
-    m = glm::translate(m, new_pos);
-    m = m * glm::toMat4(get_rotation_to_face(new_pos, eye, { 0.0f, 1.0f, 0.0f }));
-
-    test_slider_thermometer->set_model(m);*/
-
     if (current_tool == NONE) {
         return;
     }
@@ -707,6 +682,8 @@ void SculptEditor::update(float delta_time)
 
             new_edits.push_back(edit_to_add);
 
+            add_edit_repetitions(new_edits);
+
             // a hack for flatscreen sculpting
             if (!renderer->get_openxr_available() && new_edits.size() > 0u) {
                 stroke_manager.change_stroke_params(stroke_parameters);
@@ -741,7 +718,7 @@ void SculptEditor::update(float delta_time)
         mirror_current_edits(delta_time);
     }
 
-    set_preview_edits(preview_tmp_edits);
+    set_preview_stroke();
 
     bool needs_evaluation = false;
     if (called_undo) {
@@ -785,15 +762,14 @@ void SculptEditor::update(float delta_time)
         }
 
         stroke_mode = STROKE_MODE_NONE;
-
-        /*renderer->get_raymarching_renderer()->get_brick_usage([](float pct, uint32_t brick_count) {
-            Node::emit_signal("thermometer@changed", pct);
-        });*/
     }
 }
 
-void SculptEditor::set_preview_edits(const std::vector<Edit>& edit_previews)
+void SculptEditor::set_preview_stroke()
 {
+    // Add repetitions before setting preview stroke
+    add_edit_repetitions(preview_tmp_edits);
+
     sGPUStroke preview_stroke;
 
     preview_stroke.color_blending_op = stroke_parameters.get_color_blend_operation();
@@ -801,18 +777,37 @@ void SculptEditor::set_preview_edits(const std::vector<Edit>& edit_previews)
     preview_stroke.material = stroke_parameters.get_material();
     preview_stroke.operation = stroke_parameters.get_operation();
     preview_stroke.parameters = stroke_parameters.get_parameters();
-
     preview_stroke.edit_count = preview_tmp_edits.size();
 
-    AABB stroke_aabb = preview_stroke.get_world_AABB_of_edit_list(edit_previews);
+    AABB stroke_aabb = preview_stroke.get_world_AABB_of_edit_list(preview_tmp_edits);
     preview_stroke.aabb_min = stroke_aabb.center - stroke_aabb.half_size;
     preview_stroke.aabb_max = stroke_aabb.center + stroke_aabb.half_size;
 
     renderer->get_sculpt_manager()->set_preview_stroke(
         current_sculpt->get_sculpt_data(),
         renderer->get_openxr_available() ? in_frame_sculpt_render_list_id : current_sculpt->get_in_frame_model_idx(),
-        preview_stroke, edit_previews
+        preview_stroke, preview_tmp_edits
     );
+}
+
+void SculptEditor::add_edit_repetitions(std::vector<Edit>& edits)
+{
+    if (rep_count == 0u) {
+        return;
+    }
+
+    size_t edit_count = edits.size();
+
+    float offset = rep_count * rep_spacing * 0.5f;
+
+    for (size_t i = 0u; i < edit_count; i++) {
+        edits[i].position.z -= offset;
+        for (uint8_t k = 1u; k <= rep_count; k++) {
+            Edit rep_edit = edits[i];
+            rep_edit.position.z += rep_spacing * k;
+            edits.push_back(rep_edit);
+        }
+    }
 }
 
 void SculptEditor::apply_mirror_position(glm::vec3& position)
@@ -1298,9 +1293,9 @@ void SculptEditor::start_spline(bool update_ui)
         current_spline.clear();
         creating_path = true;
 
-        if (update_ui) {
+        /*if (update_ui) {
             Node::emit_signal("create_spline@pressed", (void*)nullptr);
-        }
+        }*/
     }
 }
 
@@ -1311,9 +1306,9 @@ void SculptEditor::reset_spline(bool update_ui)
     stroke_mode = STROKE_MODE_NONE;
     current_spline.clear();
 
-    if (update_ui) {
+    /*if (update_ui) {
         Node::emit_signal("create_spline@pressed", (void*)nullptr);
-    }
+    }*/
 }
 
 void SculptEditor::end_spline()
@@ -1353,7 +1348,7 @@ void SculptEditor::generate_shortcuts()
         shortcuts[shortcuts::SPLINE_DENSITY] = !is_shift_right_pressed;
     }
     else {
-        shortcuts[shortcuts::ADD_SPLINE] = !is_shift_right_pressed;
+        shortcuts[shortcuts::REPETITIONS] = !is_shift_right_pressed;
         shortcuts[shortcuts::BACK_TO_SCENE] = true;
         shortcuts[shortcuts::MAIN_SIZE] = !is_shift_right_pressed;
         shortcuts[shortcuts::SECONDARY_SIZE] = is_shift_right_pressed;
@@ -1431,8 +1426,15 @@ void SculptEditor::init_ui()
         first_row->add_child(prim_selector);
     }
 
-    // DEBUG SPLINES: REMOVE THIS!!
-    first_row->add_child(new ui::TextureButton2D("create_spline", { "data/textures/bezier.png", ui::ALLOW_TOGGLE }));
+    {
+        ui::ItemGroup2D* g_reps = new ui::ItemGroup2D("g_reps");
+        g_reps->add_child(new ui::IntSlider2D("rep_count", { .path = "data/textures/a.png", .flags = ui::USER_RANGE, .ivalue_max = 8, .p_data = &rep_count }));
+        g_reps->add_child(new ui::FloatSlider2D("rep_spacing", { .path = "data/textures/a.png", .flags = ui::USER_RANGE, .fvalue_max = 0.2f, .precision = 2, .p_data = &rep_spacing }));
+        first_row->add_child(g_reps);
+    }
+
+    // debug
+    // first_row->add_child(new ui::TextureButton2D("create_spline", { "data/textures/bezier.png", ui::ALLOW_TOGGLE }));
 
     // ** Shape, Brush, Material Editors **
     {
@@ -1445,17 +1447,17 @@ void SculptEditor::init_ui()
             // Edit sizes
             {
                 ui::ItemGroup2D* g_edit_sizes = new ui::ItemGroup2D("g_edit_sizes");
-                g_edit_sizes->add_child(new ui::FloatSlider2D("main_size", edit_to_add.dimensions.x, ui::SliderMode::HORIZONTAL, 0, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE, 3));
-                g_edit_sizes->add_child(new ui::FloatSlider2D("secondary_size", edit_to_add.dimensions.y, ui::SliderMode::HORIZONTAL, 0, MIN_PRIMITIVE_SIZE, MAX_PRIMITIVE_SIZE, 3));
-                g_edit_sizes->add_child(new ui::FloatSlider2D("round_size", "data/textures/rounding.png", edit_to_add.dimensions.w, ui::SliderMode::VERTICAL, 0, 0.0f, MAX_PRIMITIVE_SIZE, 2));
+                g_edit_sizes->add_child(new ui::FloatSlider2D("main_size", { .fvalue = edit_to_add.dimensions.x, .mode = ui::SliderMode::HORIZONTAL, .fvalue_min = MIN_PRIMITIVE_SIZE, .fvalue_max = MAX_PRIMITIVE_SIZE, .precision = 3 }));
+                g_edit_sizes->add_child(new ui::FloatSlider2D("secondary_size", { .fvalue = edit_to_add.dimensions.y, .mode = ui::SliderMode::HORIZONTAL, .fvalue_min = MIN_PRIMITIVE_SIZE, .fvalue_max = MAX_PRIMITIVE_SIZE, .precision = 3 }));
+                g_edit_sizes->add_child(new ui::FloatSlider2D("round_size", { .path = "data/textures/rounding.png", .fvalue = edit_to_add.dimensions.w, .fvalue_max = MAX_PRIMITIVE_SIZE, .precision = 2 }));
                 shape_editor_submenu->add_child(g_edit_sizes);
             }
 
             // Edit modifiers
             {
                 ui::ItemGroup2D* g_edit_modifiers = new ui::ItemGroup2D("g_edit_modifiers");
-                //g_edit_modifiers->add_child(new ui::FloatSlider2D("onion_value", "data/textures/onion.png", 0.0f, ui::SliderMode::VERTICAL));
-                g_edit_modifiers->add_child(new ui::FloatSlider2D("cap_value", "data/textures/capped.png", 0.0f, ui::SliderMode::VERTICAL));
+                //g_edit_modifiers->add_child(new ui::FloatSlider2D("onion_value", { .path = "data/textures/onion.png" }));
+                g_edit_modifiers->add_child(new ui::FloatSlider2D("cap_value", { .path = "data/textures/capped.png" }));
                 shape_editor_submenu->add_child(g_edit_modifiers);
             }
 
@@ -1491,8 +1493,8 @@ void SculptEditor::init_ui()
 
             // Put directly these two props until there are more pbr props to show
             ui::ItemGroup2D* g_edit_pbr = new ui::ItemGroup2D("g_edit_pbr");
-            g_edit_pbr->add_child(new ui::FloatSlider2D("roughness", "data/textures/roughness.png", stroke_material.roughness));
-            g_edit_pbr->add_child(new ui::FloatSlider2D("metallic", "data/textures/metallic.png", stroke_material.metallic));
+            g_edit_pbr->add_child(new ui::FloatSlider2D("roughness", { .path = "data/textures/roughness.png", .fvalue = stroke_material.roughness }));
+            g_edit_pbr->add_child(new ui::FloatSlider2D("metallic", { .path = "data/textures/metallic.png", .fvalue = stroke_material.metallic }));
             material_editor_submenu->add_child(g_edit_pbr);
 
             // Shuffle
@@ -1599,7 +1601,7 @@ void SculptEditor::init_ui()
 
     // Smooth factor
     {
-        ui::Slider2D* smooth_factor_slider = new ui::FloatSlider2D("smooth_factor", "data/textures/smooth.png", stroke_parameters.get_smooth_factor(), ui::SliderMode::VERTICAL, ui::SKIP_VALUE, MIN_SMOOTH_FACTOR, MAX_SMOOTH_FACTOR, 3);
+        ui::Slider2D* smooth_factor_slider = new ui::FloatSlider2D("smooth_factor", { .path = "data/textures/smooth.png", .fvalue = stroke_parameters.get_smooth_factor(), .flags = ui::SKIP_VALUE, .fvalue_min = MIN_SMOOTH_FACTOR, .fvalue_max = MAX_SMOOTH_FACTOR, .precision = 3 });
         second_row->add_child(smooth_factor_slider);
     }
 
@@ -1629,7 +1631,7 @@ void SculptEditor::init_ui()
             right_hand_box->add_child(new ui::ImageLabel2D("Round Shape", shortcuts::R_THUMBSTICK_X_PATH, shortcuts::ROUND_SHAPE));
             right_hand_box->add_child(new ui::ImageLabel2D("Smooth", shortcuts::R_GRIP_R_THUMBSTICK_X_PATH, shortcuts::MODIFY_SMOOTH, double_size));
             right_hand_box->add_child(new ui::ImageLabel2D("Spline Density", shortcuts::R_THUMBSTICK_X_PATH, shortcuts::SPLINE_DENSITY));
-            right_hand_box->add_child(new ui::ImageLabel2D("Add Spline", shortcuts::B_BUTTON_PATH, shortcuts::ADD_SPLINE));
+            right_hand_box->add_child(new ui::ImageLabel2D("Repetition", shortcuts::B_BUTTON_PATH, shortcuts::REPETITIONS));
             right_hand_box->add_child(new ui::ImageLabel2D("Stretch/Spline", shortcuts::B_BUTTON_PATH, shortcuts::TOGGLE_STRETCH_SPLINE));
             right_hand_box->add_child(new ui::ImageLabel2D("Surface Snap", shortcuts::R_GRIP_B_BUTTON_PATH, shortcuts::SNAP_SURFACE, double_size));
             right_hand_box->add_child(new ui::ImageLabel2D("Add/Substract", shortcuts::A_BUTTON_PATH, shortcuts::ADD_SUBSTRACT));
@@ -1670,7 +1672,7 @@ void SculptEditor::bind_events()
     Node::bind("torus", [&](const std::string& signal, void* button) { set_primitive(SD_TORUS); });
     Node::bind("vesica", [&](const std::string& signal, void* button) { set_primitive(SD_VESICA); });
 
-    Node::bind("create_spline", [&](const std::string& signal, void* button) { start_spline(false); });
+    // Node::bind("create_spline", [&](const std::string& signal, void* button) { start_spline(false); });
 
     Node::bind("main_size", (FuncFloat)[&](const std::string& signal, float value) { set_edit_size(value); });
     Node::bind("secondary_size", (FuncFloat)[&](const std::string& signal, float value) { set_edit_size(-1.0f, value); });
