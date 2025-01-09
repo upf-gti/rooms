@@ -79,9 +79,15 @@ void StrokeParameters::set_color_blend_operation(ColorBlendOp op)
     dirty = true;
 }
 
-void StrokeParameters::set_smooth_factor(const float smooth_factor)
+void StrokeParameters::set_smooth_factor(float smooth_factor)
 {
     parameters.w = smooth_factor;
+    dirty = true;
+}
+
+void StrokeParameters::set_color_override_factor(float color_override_factor)
+{
+    parameters.z = color_override_factor;
     dirty = true;
 }
 

@@ -130,7 +130,7 @@ void SculptEditor::initialize()
         stroke_parameters.set_primitive(SD_SPHERE);
         stroke_parameters.set_operation(OP_SMOOTH_UNION);
         stroke_parameters.set_color_blend_operation(COLOR_OP_REPLACE);
-        stroke_parameters.set_parameters({ 0.0f, -1.0f, 0.0f, 0.005f });
+        stroke_parameters.set_parameters({ 0.0f, -1.0f, 1.0f, 0.005f });
         stroke_manager.change_stroke_params(stroke_parameters, 0u);
     }
 
@@ -1464,8 +1464,8 @@ void SculptEditor::init_ui()
             // Edit modifiers
             {
                 ui::ItemGroup2D* g_edit_modifiers = new ui::ItemGroup2D("g_edit_modifiers");
-                //g_edit_modifiers->add_child(new ui::FloatSlider2D("onion_value", { .path = "data/textures/onion.png" }));
-                g_edit_modifiers->add_child(new ui::FloatSlider2D("cap_value", { .path = "data/textures/capped.png" }));
+                //g_edit_modifiers->add_child(new ui::FloatSlider2D("onion_value", { .path = "data/textures/onion.png", .fvalue = stroke_parameters.get_parameters().x }));
+                g_edit_modifiers->add_child(new ui::FloatSlider2D("cap_value", { .path = "data/textures/capped.png", .fvalue = stroke_parameters.get_parameters().y }));
                 shape_editor_submenu->add_child(g_edit_modifiers);
             }
 
@@ -1535,6 +1535,8 @@ void SculptEditor::init_ui()
         {
 
             ui::ButtonSubmenu2D* brush_editor_submenu = new ui::ButtonSubmenu2D("brush_editor", { "data/textures/brush_editor.png", ui::DISABLED });
+
+            brush_editor_submenu->add_child(new ui::FloatSlider2D("color_override", { .path = "data/textures/r.png", .fvalue = stroke_parameters.get_parameters().z }));
 
             {
                 ui::ButtonSelector2D* color_blend_selector = new ui::ButtonSelector2D("color_blend", { "data/textures/color_blend.png" });
@@ -1714,6 +1716,7 @@ void SculptEditor::bind_events()
     Node::bind("redo", [&](const std::string& signal, void* button) { redo(); });
 
     Node::bind("smooth_factor", (FuncFloat)[&](const std::string& signal, float value) { stroke_parameters.set_smooth_factor(value); });
+    Node::bind("color_override", (FuncFloat)[&](const std::string& signal, float value) { stroke_parameters.set_color_override_factor(value); });
 
     // Bind colors callback...
 

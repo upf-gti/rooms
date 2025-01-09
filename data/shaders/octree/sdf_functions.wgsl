@@ -137,7 +137,7 @@ fn opIntersection( s1 : Surface, s2 : Surface ) -> Surface
     return s;
 }
 
-fn opPaint( s1 : Surface, s2 : Surface, material : SdfMaterial, color_blend_op : u32 ) -> Surface
+fn opPaint( s1 : Surface, s2 : Surface, material : SdfMaterial, color_blend_op : u32, color_blend_override_factor : f32 ) -> Surface
 {
     var sColorInter : Surface = opIntersection(s1, s2);
     var new_mat : SdfMaterial;
@@ -168,7 +168,7 @@ fn opPaint( s1 : Surface, s2 : Surface, material : SdfMaterial, color_blend_op :
     if(color_blend_op > 0u) {
         // Since we add too many edits in smear, we need to force blending colors
         // to be more realistic..
-        result_color = mix(base_color, result_color, 0.5);
+        result_color = mix(base_color, result_color, 0.5 * color_blend_override_factor);
     }
 
     new_mat.albedo = clamp(result_color, vec3f(0.0), vec3f(1.0));
@@ -197,7 +197,7 @@ fn opSmoothIntersection( s1 : Surface, s2 : Surface, k : f32 ) -> Surface
     return s;
 }
 
-fn opSmoothPaint( s1 : Surface, s2 : Surface, color_blend_op : u32, material : SdfMaterial, k : f32 ) -> Surface
+fn opSmoothPaint( s1 : Surface, s2 : Surface, color_blend_op : u32, color_blend_override_factor : f32, material : SdfMaterial, k : f32 ) -> Surface
 {
     // Permorm the color blending on the incomming material, and then blend it with the other material
     var tmp_material : SdfMaterial = material;
@@ -227,7 +227,7 @@ fn opSmoothPaint( s1 : Surface, s2 : Surface, color_blend_op : u32, material : S
     if(color_blend_op > 0u) {
         // Since we add too many edits in smear, we need to force blending colors
         // to be more realistic..
-        tmp_material.albedo = mix(base_color, tmp_material.albedo, 0.5);
+        tmp_material.albedo = mix(base_color, tmp_material.albedo, color_blend_override_factor);
     }
 
     tmp_material.albedo = clamp(tmp_material.albedo, vec3f(0.0), vec3f(1.0));
@@ -312,9 +312,9 @@ fn eval_stroke_sphere_union( position : vec3f, current_surface : Surface, curr_s
 
     let stroke_material = curr_stroke.material;
     let parameters : vec4f = curr_stroke.parameters;
-    let smooth_factor : f32 = parameters.w;
     let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
     let cap_value : f32 = parameters.y;
+    let smooth_factor : f32 = parameters.w;
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -343,9 +343,9 @@ fn eval_stroke_sphere_substraction( position : vec3f, current_surface : Surface,
 
     let stroke_material = curr_stroke.material;
     let parameters : vec4f = curr_stroke.parameters;
-    let smooth_factor : f32 = parameters.w;
     let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
     let cap_value : f32 = parameters.y;
+    let smooth_factor : f32 = parameters.w;
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -376,8 +376,9 @@ fn eval_stroke_sphere_paint( position : vec3f, current_surface : Surface, curr_s
     let parameters : vec4f = curr_stroke.parameters;
     let stroke_blend_mode : u32 = curr_stroke.color_blend_op;
     let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
-    let smooth_factor : f32 = parameters.w;
     let cap_value : f32 = parameters.y;
+    let color_blend_override_factor : f32 = parameters.z;
+    let smooth_factor : f32 = parameters.w;
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -386,13 +387,13 @@ fn eval_stroke_sphere_paint( position : vec3f, current_surface : Surface, curr_s
         for(var i : u32 = edit_starting_idx; i < ending_idx; i++) {
             let curr_edit : Edit = curr_edit_list[i];
             tmp_surface = sdCutSphere(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
-            result_surface = opSmoothPaint(result_surface, tmp_surface, stroke_blend_mode, material, smooth_factor);
+            result_surface = opSmoothPaint(result_surface, tmp_surface, stroke_blend_mode, color_blend_override_factor, material, smooth_factor);
         }
     } else {
         for(var i : u32 = edit_starting_idx; i < ending_idx; i++) {
             let curr_edit : Edit = curr_edit_list[i];
             tmp_surface = sdSphere(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
-            result_surface = opSmoothPaint(result_surface, tmp_surface, stroke_blend_mode, material, smooth_factor);
+            result_surface = opSmoothPaint(result_surface, tmp_surface, stroke_blend_mode, color_blend_override_factor, material, smooth_factor);
         }
     }
     
@@ -452,8 +453,8 @@ fn eval_stroke_box_substraction( position : vec3f, current_surface : Surface, cu
     
     let stroke_material = curr_stroke.material;
     let parameters : vec4f = curr_stroke.parameters;
-    let smooth_factor : f32 = parameters.w;
     let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let smooth_factor : f32 = parameters.w;
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -475,8 +476,9 @@ fn eval_stroke_box_paint( position : vec3f, current_surface : Surface, curr_stro
     let stroke_material = curr_stroke.material;
     let parameters : vec4f = curr_stroke.parameters;
     let stroke_blend_mode : u32 = curr_stroke.color_blend_op;
-    let smooth_factor : f32 = parameters.w;
     let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let color_blend_override_factor : f32 = parameters.z;
+    let smooth_factor : f32 = parameters.w;
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -484,7 +486,7 @@ fn eval_stroke_box_paint( position : vec3f, current_surface : Surface, curr_stro
     for(var i : u32 = edit_starting_idx; i < ending_idx; i++) {
         let curr_edit : Edit = curr_edit_list[i];
         tmp_surface = sdBox(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
-        result_surface = opSmoothPaint(result_surface, tmp_surface, stroke_blend_mode, material, smooth_factor);
+        result_surface = opSmoothPaint(result_surface, tmp_surface, stroke_blend_mode, color_blend_override_factor, material, smooth_factor);
     }
 
     return result_surface;
@@ -527,8 +529,8 @@ fn eval_stroke_capsule_union( position : vec3f, current_surface : Surface, curr_
     
     let stroke_material = curr_stroke.material;
     let parameters : vec4f = curr_stroke.parameters;
-    let smooth_factor : f32 = parameters.w;
     let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let smooth_factor : f32 = parameters.w;
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -549,8 +551,8 @@ fn eval_stroke_capsule_substraction( position : vec3f, current_surface : Surface
     
     let stroke_material = curr_stroke.material;
     let parameters : vec4f = curr_stroke.parameters;
-    let smooth_factor : f32 = parameters.w;
     let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let smooth_factor : f32 = parameters.w;
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -572,8 +574,9 @@ fn eval_stroke_capsule_paint( position : vec3f, current_surface : Surface, curr_
     let stroke_material = curr_stroke.material;
     let parameters : vec4f = curr_stroke.parameters;
     let stroke_blend_mode : u32 = curr_stroke.color_blend_op;
-    let smooth_factor : f32 = parameters.w;
     let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let color_blend_override_factor : f32 = parameters.z;
+    let smooth_factor : f32 = parameters.w;
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -581,7 +584,7 @@ fn eval_stroke_capsule_paint( position : vec3f, current_surface : Surface, curr_
     for(var i : u32 = edit_starting_idx; i < ending_idx; i++) {
         let curr_edit : Edit = curr_edit_list[i];
         tmp_surface = sdCapsule(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
-        result_surface = opSmoothPaint(result_surface, tmp_surface, stroke_blend_mode, material, smooth_factor);
+        result_surface = opSmoothPaint(result_surface, tmp_surface, stroke_blend_mode, color_blend_override_factor, material, smooth_factor);
     }
 
     return result_surface;
@@ -632,8 +635,8 @@ fn eval_stroke_cone_union( position : vec3f, current_surface : Surface, curr_str
     
     let stroke_material = curr_stroke.material;
     let parameters : vec4f = curr_stroke.parameters;
-    let smooth_factor : f32 = parameters.w;
     let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let smooth_factor : f32 = parameters.w;
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -654,8 +657,8 @@ fn eval_stroke_cone_substraction( position : vec3f, current_surface : Surface, c
     
     let stroke_material = curr_stroke.material;
     let parameters : vec4f = curr_stroke.parameters;
-    let smooth_factor : f32 = parameters.w;
     let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let smooth_factor : f32 = parameters.w;
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -677,8 +680,9 @@ fn eval_stroke_cone_paint( position : vec3f, current_surface : Surface, curr_str
     let stroke_material = curr_stroke.material;
     let parameters : vec4f = curr_stroke.parameters;
     let stroke_blend_mode : u32 = curr_stroke.color_blend_op;
-    let smooth_factor : f32 = parameters.w;
     let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let color_blend_override_factor : f32 = parameters.z;
+    let smooth_factor : f32 = parameters.w;
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -686,7 +690,7 @@ fn eval_stroke_cone_paint( position : vec3f, current_surface : Surface, curr_str
     for(var i : u32 = edit_starting_idx; i < ending_idx; i++) {
         let curr_edit : Edit = curr_edit_list[i];
         tmp_surface = sdCone(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
-        result_surface = opSmoothPaint(result_surface, tmp_surface, stroke_blend_mode, material, smooth_factor);
+        result_surface = opSmoothPaint(result_surface, tmp_surface, stroke_blend_mode, color_blend_override_factor, material, smooth_factor);
     }
 
     return result_surface;
@@ -729,8 +733,8 @@ fn eval_stroke_cylinder_union( position : vec3f, current_surface : Surface, curr
     
     let stroke_material = curr_stroke.material;
     let parameters : vec4f = curr_stroke.parameters;
-    let smooth_factor : f32 = parameters.w;
     let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let smooth_factor : f32 = parameters.w;
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -751,8 +755,8 @@ fn eval_stroke_cylinder_substraction( position : vec3f, current_surface : Surfac
     
     let stroke_material = curr_stroke.material;
     let parameters : vec4f = curr_stroke.parameters;
-    let smooth_factor : f32 = parameters.w;
     let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let smooth_factor : f32 = parameters.w;
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -774,8 +778,9 @@ fn eval_stroke_cylinder_paint( position : vec3f, current_surface : Surface, curr
     let stroke_material = curr_stroke.material;
     let parameters : vec4f = curr_stroke.parameters;
     let stroke_blend_mode : u32 = curr_stroke.color_blend_op;
-    let smooth_factor : f32 = parameters.w;
     let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let color_blend_override_factor : f32 = parameters.z;
+    let smooth_factor : f32 = parameters.w;
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -783,7 +788,7 @@ fn eval_stroke_cylinder_paint( position : vec3f, current_surface : Surface, curr
     for(var i : u32 = edit_starting_idx; i < ending_idx; i++) {
         let curr_edit : Edit = curr_edit_list[i];
         tmp_surface = sdCylinder(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
-        result_surface = opSmoothPaint(result_surface, tmp_surface, stroke_blend_mode, material, smooth_factor);
+        result_surface = opSmoothPaint(result_surface, tmp_surface, stroke_blend_mode, color_blend_override_factor, material, smooth_factor);
     }
 
     return result_surface;
@@ -837,9 +842,9 @@ fn eval_stroke_torus_union( position : vec3f, current_surface : Surface, curr_st
 
     let stroke_material = curr_stroke.material;
     let parameters : vec4f = curr_stroke.parameters;
-    let smooth_factor : f32 = parameters.w;
     let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
     let cap_value : f32 = parameters.y;
+    let smooth_factor : f32 = parameters.w;
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -868,9 +873,9 @@ fn eval_stroke_torus_substraction( position : vec3f, current_surface : Surface, 
 
     let stroke_material = curr_stroke.material;
     let parameters : vec4f = curr_stroke.parameters;
-    let smooth_factor : f32 = parameters.w;
     let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
     let cap_value : f32 = parameters.y;
+    let smooth_factor : f32 = parameters.w;
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -901,8 +906,9 @@ fn eval_stroke_torus_paint( position : vec3f, current_surface : Surface, curr_st
     let parameters : vec4f = curr_stroke.parameters;
     let stroke_blend_mode : u32 = curr_stroke.color_blend_op;
     let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
-    let smooth_factor : f32 = parameters.w;
     let cap_value : f32 = parameters.y;
+    let color_blend_override_factor : f32 = parameters.z;
+    let smooth_factor : f32 = parameters.w;
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -911,13 +917,13 @@ fn eval_stroke_torus_paint( position : vec3f, current_surface : Surface, curr_st
         for(var i : u32 = edit_starting_idx; i < ending_idx; i++) {
             let curr_edit : Edit = curr_edit_list[i];
             tmp_surface = sdCappedTorus(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
-            result_surface = opSmoothPaint(result_surface, tmp_surface, stroke_blend_mode, material, smooth_factor);
+            result_surface = opSmoothPaint(result_surface, tmp_surface, stroke_blend_mode, color_blend_override_factor, material, smooth_factor);
         }
     } else {
         for(var i : u32 = edit_starting_idx; i < ending_idx; i++) {
             let curr_edit : Edit = curr_edit_list[i];
             tmp_surface = sdTorus(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
-            result_surface = opSmoothPaint(result_surface, tmp_surface, stroke_blend_mode, material, smooth_factor);
+            result_surface = opSmoothPaint(result_surface, tmp_surface, stroke_blend_mode, color_blend_override_factor, material, smooth_factor);
         }
     }
     
@@ -967,8 +973,8 @@ fn eval_stroke_vesica_union( position : vec3f, current_surface : Surface, curr_s
     
     let stroke_material = curr_stroke.material;
     let parameters : vec4f = curr_stroke.parameters;
-    let smooth_factor : f32 = parameters.w;
     let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let smooth_factor : f32 = parameters.w;
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -989,8 +995,8 @@ fn eval_stroke_vesica_substraction( position : vec3f, current_surface : Surface,
     
     let stroke_material = curr_stroke.material;
     let parameters : vec4f = curr_stroke.parameters;
-    let smooth_factor : f32 = parameters.w;
     let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let smooth_factor : f32 = parameters.w;
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -1012,8 +1018,9 @@ fn eval_stroke_vesica_paint( position : vec3f, current_surface : Surface, curr_s
     let stroke_material = curr_stroke.material;
     let parameters : vec4f = curr_stroke.parameters;
     let stroke_blend_mode : u32 = curr_stroke.color_blend_op;
-    let smooth_factor : f32 = parameters.w;
     let material : SdfMaterial = SdfMaterial(stroke_material.color.xyz, stroke_material.roughness, stroke_material.metallic);
+    let color_blend_override_factor : f32 = parameters.z;
+    let smooth_factor : f32 = parameters.w;
 
     let starting_idx : u32 = edit_starting_idx;
     let ending_idx : u32 = edit_count + edit_starting_idx;
@@ -1021,7 +1028,7 @@ fn eval_stroke_vesica_paint( position : vec3f, current_surface : Surface, curr_s
     for(var i : u32 = edit_starting_idx; i < ending_idx; i++) {
         let curr_edit : Edit = curr_edit_list[i];
         tmp_surface = sdVesica(position, curr_edit.position, curr_edit.dimensions, parameters.xy, curr_edit.rotation, material);
-        result_surface = opSmoothPaint(result_surface, tmp_surface, stroke_blend_mode, material, smooth_factor);
+        result_surface = opSmoothPaint(result_surface, tmp_surface, stroke_blend_mode, color_blend_override_factor, material, smooth_factor);
     }
 
     return result_surface;
@@ -1144,11 +1151,12 @@ fn evaluate_single_edit( position : vec3f, primitive : u32, operation : u32, par
     var radius : f32 = edit.dimensions.x;
     var size_param : f32 = edit.dimensions.w;
 
+    var onion_thickness : f32 = parameters.x;
+    let do_onion = onion_thickness > 0.0;
     // 0 no cap ... 1 fully capped
     var cap_value : f32 = clamp(parameters.y, 0.0, 0.99);
 
-    var onion_thickness : f32 = parameters.x;
-    let do_onion = onion_thickness > 0.0;
+    let color_blend_override_factor : f32 = parameters.z;
 
     let edit_parameters : vec2f = vec2f(onion_thickness, cap_value);
 
@@ -1232,7 +1240,7 @@ fn evaluate_single_edit( position : vec3f, primitive : u32, operation : u32, par
             break;
         }
         case OP_SMOOTH_PAINT: {
-            pSurface = opSmoothPaint(current_surface, pSurface, color_blend_op, stroke_material, smooth_factor);
+            pSurface = opSmoothPaint(current_surface, pSurface, color_blend_op, color_blend_override_factor, stroke_material, smooth_factor);
             break;
         }
         default: {

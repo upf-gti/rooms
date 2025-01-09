@@ -77,12 +77,16 @@ struct StrokeMaterial {
     Color       noise_color     = colors::WHITE;
 };
 
+/*
+* Note: "parameters" in Strokes are configured as: { onion_value, cap_value, color_override_factor, smooth_value }
+*/
+
 struct sGPUStroke {
     uint32_t        stroke_id = 0u;
     uint32_t        edit_count = 0u;
     sdPrimitive     primitive = SD_SPHERE;
     sdOperation     operation = OP_SMOOTH_UNION;//4
-    glm::vec4	    parameters = { 0.f, -1.f, 0.f, 0.f }; // 4
+    glm::vec4	    parameters = { 0.f, -1.f, 1.f, 0.f }; // 4
     glm::vec3	    aabb_min;// 4
     ColorBlendOp    color_blending_op = ColorBlendOp::COLOR_OP_REPLACE;
     glm::vec3	    aabb_max;
@@ -98,7 +102,7 @@ class StrokeParameters {
     sdPrimitive     primitive = SD_SPHERE;
     sdOperation     operation = OP_UNION;
     ColorBlendOp    color_blend_op = COLOR_OP_REPLACE;
-    glm::vec4       parameters = { 0.f, -1.f, 0.f, 0.005f };
+    glm::vec4       parameters = { 0.f, -1.f, 1.f, 0.005f };
     StrokeMaterial  material = {};
 
     bool dirty = false;
@@ -108,7 +112,8 @@ public:
     void set_operation(sdOperation op);
     void set_parameters(const glm::vec4& parameters);
     void set_color_blend_operation(ColorBlendOp op);
-    void set_smooth_factor(const float smooth_factor);
+    void set_smooth_factor(float smooth_factor);
+    void set_color_override_factor(float color_override_factor);
     void set_material(const StrokeMaterial& material);
     void set_material_color(const Color& color);
     void set_material_roughness(float roughness);
@@ -133,7 +138,7 @@ struct Stroke {
     uint32_t        edit_count = 0u;
     sdPrimitive     primitive;
     sdOperation     operation;//4
-    glm::vec4	    parameters = { 0.f, -1.f, 0.f, 0.f }; // 4
+    glm::vec4	    parameters = { 0.f, -1.f, 1.f, 0.f }; // 4
     glm::vec3	    _dummy_;//4
     ColorBlendOp    color_blending_op = ColorBlendOp::COLOR_OP_REPLACE;
     glm::vec4	    _dummy2_;//4
