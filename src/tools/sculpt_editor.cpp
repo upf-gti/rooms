@@ -349,7 +349,7 @@ bool SculptEditor::edit_update(float delta_time)
         }
     }
 
-    // Thumbsticks logic
+    // Right Thumbstick logic
     {
         // Disable the unused joystick axis until the joystick is released
         uint8_t curr_thumbstick_axis = Input::get_leading_thumbstick_axis(HAND_RIGHT);
@@ -424,6 +424,13 @@ bool SculptEditor::edit_update(float delta_time)
                 dimensions_dirty = true;
             }
         }
+    }
+
+    // Left Thumbstick logic: Change "hand_to_edit_distance" using Y axis
+    {
+        float lthumbstick_y_value = Input::get_thumbstick_value(HAND_LEFT).y;
+        float size_multiplier = lthumbstick_y_value * delta_time * 0.1f;
+        hand_to_edit_distance = glm::clamp(hand_to_edit_distance + size_multiplier, 0.01f, 0.1f);
     }
 
     // Stretch the edit using motion controls
@@ -798,13 +805,16 @@ void SculptEditor::add_edit_repetitions(std::vector<Edit>& edits)
 
     size_t edit_count = edits.size();
 
-    float offset = rep_count * rep_spacing * 0.5f;
+    float og_offset = rep_count * rep_spacing * 0.5f;
 
     for (size_t i = 0u; i < edit_count; i++) {
-        edits[i].position.z -= offset;
+
+        Edit& edit = edits[i];
+        edit.position -= (glm::vec3(0.0f, 0.0f, og_offset) * edit.rotation);
+
         for (uint8_t k = 1u; k <= rep_count; k++) {
-            Edit rep_edit = edits[i];
-            rep_edit.position.z += rep_spacing * k;
+            Edit rep_edit = edit;
+            rep_edit.position += (glm::vec3(0.0f, 0.0f, rep_spacing * k) * edit.rotation);
             edits.push_back(rep_edit);
         }
     }
@@ -1243,13 +1253,11 @@ void SculptEditor::enable_tool(eTool tool)
     {
     case SCULPT:
         stroke_parameters.set_operation(OP_SMOOTH_UNION);
-        hand_to_edit_distance = 0.05f;
         static_cast<ui::ButtonSubmenu2D*>(brush_editor_submenu)->set_disabled(true);
         Node::emit_signal("add@pressed", (void*)nullptr);
         break;
     case PAINT:
         stroke_parameters.set_operation(OP_SMOOTH_PAINT);
-        hand_to_edit_distance = 0.15f;
         static_cast<ui::ButtonSubmenu2D*>(brush_editor_submenu)->set_disabled(false);
         Node::emit_signal("paint@pressed", (void*)nullptr);
         break;

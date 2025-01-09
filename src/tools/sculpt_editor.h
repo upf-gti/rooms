@@ -121,7 +121,7 @@ class SculptEditor : public BaseEditor {
     glm::vec3 edit_origin_stamp = {};
     glm::quat edit_rotation_stamp = { 0.0f, 0.0f, 0.0f, 1.0f };
 
-    float hand_to_edit_distance = 0.0f;
+    float hand_to_edit_distance = 0.05f;
 
     // Axis lock
 
