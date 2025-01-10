@@ -1,6 +1,5 @@
 #include math.wgsl
 #include octree_includes.wgsl
-#include sdf_commons.wgsl
 
 @group(0) @binding(6) var<storage, read> stroke_history : StrokeHistory;
 //@group(0) @binding(9) var<storage, read_write> stroke_culling : array<u32>;
@@ -42,7 +41,7 @@ var<workgroup> workgroup_job_starting_idx : i32;
 var<workgroup> workgroup_job_count : i32;
 var<workgroup> workgroup_empy_thread_count : u32;
 
-const MAX_IT_COUNT : u32 = 1u;
+//const MAX_IT_COUNT : u32 = 1u;
 
 // TODO: Only do one atomicAdd to shared memory per workgroup, and only write to shared memory with the same thread
 
@@ -71,6 +70,9 @@ fn compute(@builtin(local_invocation_index) thread_id: u32, @builtin(num_workgro
         
             // Reduce the number of jobs in a thread if there is no more
             let work_count_tmp : i32 = prev_work_count - 512;
+            // there needs to be a batter way of doing this: this is supposed to be the "remainder":
+            //      2000 jobs - 500 workers -> 500 job execution
+            //      200 jobs - 500 workers -> 200 jobs
             workgroup_job_count = 512 + (work_count_tmp) * i32(step(0.0, f32(work_count_tmp)));
         }
 
