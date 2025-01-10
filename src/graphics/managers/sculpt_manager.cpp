@@ -357,6 +357,23 @@ bool SculptManager::evaluate(WGPUComputePassEncoder compute_pass, const sEvaluat
     // Compute dispatches
     {
 #ifndef NDEBUG
+        wgpuComputePassEncoderPushDebugGroup(compute_pass, "Test culling");
+#endif
+        // prepare buffers
+        uint32_t to_fill = 0u;
+        int32_t to_fill2 = sdf_globals.octants_max_size;
+        webgpu_context->update_buffer(std::get<WGPUBuffer>(evaluation_job_result_aabb_count_uniform.data), 0, &to_fill, sizeof(uint32_t));
+        webgpu_context->update_buffer(std::get<WGPUBuffer>(evaluation_aabb_culling_count_uniform.data), 0, &to_fill2, sizeof(int32_t));
+
+        evaluator_aabb_culling_step_pipeline.set(compute_pass);
+        wgpuComputePassEncoderSetBindGroup(compute_pass, 0, evaluator_stroke_history_bind_group, 0, nullptr);
+        wgpuComputePassEncoderSetBindGroup(compute_pass, 1, evaluator_aabb_culling_step_bind_group, 0u, nullptr);
+        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, (uint32_t)glm::ceil(sdf_globals.octants_max_size/512.0), 1, 1);
+
+#ifndef NDEBUG
+        wgpuComputePassEncoderPopDebugGroup(compute_pass);
+#endif
+#ifndef NDEBUG
         wgpuComputePassEncoderPushDebugGroup(compute_pass, "Stroke Evaluation");
 #endif
 
@@ -812,6 +829,17 @@ void SculptManager::init_uniforms()
         ray_sculpt_instances_uniform.buffer_size = sizeof(uint32_t) * 4;
     }
 
+    // New Evaluator passes uniforms
+    {
+        evaluation_aabb_culling_count_uniform.data = webgpu_context->create_buffer(sizeof(int32_t), WGPUBufferUsage_Storage | WGPUBufferUsage_CopyDst, nullptr, "Job to eval count");
+        evaluation_aabb_culling_count_uniform.binding = 2u;
+        evaluation_aabb_culling_count_uniform.buffer_size = sizeof(int32_t);
+
+        evaluation_job_result_aabb_count_uniform.data = webgpu_context->create_buffer(sizeof(uint32_t), WGPUBufferUsage_Storage | WGPUBufferUsage_CopyDst, nullptr, "AABB counter");
+        evaluation_job_result_aabb_count_uniform.binding = 0u;
+        evaluation_job_result_aabb_count_uniform.buffer_size = sizeof(uint32_t);
+    }
+
     // TODO: compute AABB per sculpt
     //// AABB sculpt compute
     //{
@@ -825,6 +853,8 @@ void SculptManager::init_uniforms()
 
 void SculptManager::init_shaders()
 {
+    evaluator_aabb_culling_step_shader = RendererStorage::get_shader("data/shaders/octree/evaluator_culling_step.wgsl");
+
     evaluate_shader = RendererStorage::get_shader("data/shaders/octree/evaluator.wgsl");
     increment_level_shader = RendererStorage::get_shader("data/shaders/octree/increment_level.wgsl");
     write_to_texture_shader = RendererStorage::get_shader("data/shaders/octree/write_to_texture.wgsl");
@@ -932,6 +962,19 @@ void SculptManager::init_pipelines_and_bindgroups()
         ray_intersection_info_bind_group = webgpu_context->create_bind_group(uniforms, ray_intersection_shader, 0u);
     }
 
+    // Evaluator pipelines
+    {
+        // Coarse AABB culling
+        {
+            std::vector<Uniform*> uniforms = { &evaluation_job_result_aabb_count_uniform, &evaluation_aabb_culling_count_uniform, &octant_usage_ping_pong_uniforms[1]};
+            evaluator_aabb_culling_step_bind_group = webgpu_context->create_bind_group(uniforms, evaluator_aabb_culling_step_shader, 1u);
+
+            uniforms = { &stroke_context_list };
+            evaluator_stroke_history_bind_group = webgpu_context->create_bind_group(uniforms, evaluator_aabb_culling_step_shader, 0u);
+
+        }
+    }
+
     // Create pipelines
     {
         evaluate_pipeline.create_compute_async(evaluate_shader);
@@ -944,7 +987,7 @@ void SculptManager::init_pipelines_and_bindgroups()
         sculpt_delete_pipeline.create_compute_async(sculpt_delete_shader);
         ray_intersection_pipeline.create_compute_async(ray_intersection_shader);
         ray_intersection_result_and_clean_pipeline.create_compute_async(ray_intersection_result_and_clean_shader);
-
+        evaluator_aabb_culling_step_pipeline.create_compute_async(evaluator_aabb_culling_step_shader);
     }
 }
 

@@ -114,6 +114,9 @@ class SculptManager {
     Shader*         evaluation_initialization_shader = nullptr;
     WGPUBindGroup   evaluation_initialization_bind_group = nullptr;
 
+    Uniform         evaluation_job_result_aabb_count_uniform;
+    Uniform         evaluation_aabb_culling_count_uniform;
+
     Uniform         aabb_calculation_temp_buffer;
     WGPUBindGroup   aabb_calculation_temp_bind_group = nullptr;
 
@@ -124,6 +127,7 @@ class SculptManager {
     Pipeline brick_removal_pipeline;
     Pipeline brick_copy_aabb_gen_pipeline;
     Pipeline brick_unmark_pipeline;
+    Pipeline evaluator_aabb_culling_step_pipeline;
 
     Shader* evaluate_shader = nullptr;
     Shader* increment_level_shader = nullptr;
@@ -131,6 +135,7 @@ class SculptManager {
     Shader* brick_removal_shader = nullptr;
     Shader* brick_copy_aabb_gen_shader = nullptr;
     Shader* brick_unmark_shader = nullptr;
+    Shader* evaluator_aabb_culling_step_shader = nullptr;
 
     WGPUBindGroup   sdf_atlases_sampler_bindgroup = nullptr;
     WGPUBindGroup   evaluate_bind_group = nullptr;
@@ -140,6 +145,8 @@ class SculptManager {
     WGPUBindGroup   sculpt_delete_bindgroup = nullptr;
     WGPUBindGroup   brick_unmark_bind_group = nullptr;
     WGPUBindGroup   preview_stroke_bind_group = nullptr;
+    WGPUBindGroup   evaluator_aabb_culling_step_bind_group = nullptr;
+    WGPUBindGroup   evaluator_stroke_history_bind_group = nullptr;
 
     // Evaluator uniforms
     uint32_t        octree_edit_list_size = 0u;
