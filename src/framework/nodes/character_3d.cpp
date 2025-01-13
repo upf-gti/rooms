@@ -12,7 +12,7 @@
 
 REGISTER_NODE_CLASS(Character3D)
 
-Character3D::Character3D() : Node3D()
+Character3D::Character3D() : SkeletonInstance3D()
 {
     node_type = "Character3D";
 
@@ -72,6 +72,24 @@ void Character3D::render()
     }
 
     helper->render();
+}
+
+void Character3D::render_gui()
+{
+    Node3D::render_gui();
+
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(ImColor(150, 50, 230)));
+    bool is_open = ImGui::TreeNodeEx("Skeleton");
+    ImGui::PopStyleColor();
+
+    if (is_open || selected)
+    {
+        for (size_t i = 0; i < joint_nodes.size(); ++i) {
+            ImGui::Text("%s [%d]", skeleton->get_joint_name(i).c_str(), i);
+        }
+
+        ImGui::TreePop();
+    }
 }
 
 void Character3D::serialize(std::ofstream& binary_scene_file)
@@ -155,27 +173,21 @@ void Character3D::generate_default_sculpts_skeleton()
     }
 }
 
-bool Character3D::test_ray_collision(const glm::vec3& ray_origin, const glm::vec3& ray_direction, float& distance, Node3D** out)
+void Character3D::update_joints_from_pose()
 {
-    Pose& pose = skeleton->get_current_pose();
+    uint32_t joint_count = skeleton->get_joints_count();
 
-    bool result = false;
-
-    float joint_distance = 1e9f;
-
-    const Transform& global_transform = get_global_transform();
-
-    for (size_t i = 0; i < joint_nodes.size(); ++i) {
-        Transform joint_global_transform = Transform::combine(global_transform, pose.get_global_transform(i));
-        if (intersection::ray_sphere(ray_origin, ray_direction, joint_global_transform.get_position(), 0.01f, joint_distance)) {
-            if (joint_distance < distance) {
-                distance = joint_distance;
-                result |= true;
-                *out = joint_nodes[i];
-                Joint3D::selected_joint = static_cast<Joint3D*>(*out);
-            }
-        }
+    if (joint_count == 0u) {
+        assert("Character must have a skeleton with joints!");
+        return;
     }
 
-    return result;
+    Pose& pose = skeleton->get_current_pose();
+
+    for (size_t i = 0; i < joint_count; ++i) {
+        joint_nodes[i]->set_transform(pose.get_local_transform(i));
+
+        SculptNode* new_sculpt = static_cast<SculptNode*>(get_children()[i]);
+        new_sculpt->set_transform(Transform::combine(get_global_transform(), pose.get_global_transform(i)));
+    }
 }
