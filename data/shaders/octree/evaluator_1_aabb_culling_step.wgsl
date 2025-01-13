@@ -1,13 +1,22 @@
 #include math.wgsl
 #include octree_includes.wgsl
 
+struct sEvaluatorDispatchCounter {
+    wg_x : atomic<u32>,
+    wg_y : u32,
+    wg_z : u32,
+    //pad : u32
+};
+
 @group(0) @binding(6) var<storage, read> stroke_history : StrokeHistory;
 //@group(0) @binding(9) var<storage, read_write> stroke_culling : array<u32>;
 
 
-@group(1) @binding(0) var<storage, read_write> job_result_bricks_to_eval_count : atomic<u32>;
+@group(1) @binding(0) var<storage, read_write> job_result_bricks_to_eval_count : atomic<i32>;
 @group(1) @binding(1) var<storage, read_write> job_result_bricks_to_eval : array<u32>;
 @group(1) @binding(2) var<storage, read_write> aabb_culling_count : atomic<i32>;
+@group(1) @binding(3) var<storage, read_write> dispatch_counter : sEvaluatorDispatchCounter;
+
 
 
 //@group(3) @binding(0) var<storage, read> preview_stroke : PreviewStroke;
@@ -46,8 +55,20 @@ var<workgroup> workgroup_empy_thread_count : u32;
 // TODO: Only do one atomicAdd to shared memory per workgroup, and only write to shared memory with the same thread
 
 fn add_brick_to_next_job_queue(brick_id : u32) {
-    let idx : u32 = atomicAdd(&job_result_bricks_to_eval_count, 1u);
+    let idx : i32 = atomicAdd(&job_result_bricks_to_eval_count, 1);
+    atomicAdd(&dispatch_counter.wg_x, 1u);
     job_result_bricks_to_eval[idx] = brick_id;
+}
+
+fn get_brick_center(brick_id : u32) -> vec3f {
+    let idx_f : f32 = f32(brick_id);
+
+    let z_axis : f32 = round(idx_f / (NUM_BRICKS_IN_OCTREE_AXIS * NUM_BRICKS_IN_OCTREE_AXIS));
+    let y_axis : f32 = round((idx_f - (z_axis * NUM_BRICKS_IN_OCTREE_AXIS * NUM_BRICKS_IN_OCTREE_AXIS)) / NUM_BRICKS_IN_OCTREE_AXIS);
+    let x_axis : f32 = idx_f - NUM_BRICKS_IN_OCTREE_AXIS * (y_axis + z_axis * NUM_BRICKS_IN_OCTREE_AXIS);
+
+    let brick_origin = (vec3f(x_axis, y_axis, z_axis)/NUM_BRICKS_IN_OCTREE_AXIS) * SCULPT_MAX_SIZE;
+    return brick_origin;// + BRICK_WORLD_SIZE * 0.50;
 }
 
 @compute @workgroup_size(8, 8, 8)
@@ -69,11 +90,11 @@ fn compute(@builtin(local_invocation_index) thread_id: u32, @builtin(num_workgro
             workgroup_job_starting_idx = prev_work_count;
         
             // Reduce the number of jobs in a thread if there is no more
-            let work_count_tmp : i32 = prev_work_count - 512;
+            //let work_count_tmp : i32 = prev_work_count - 512;
             // there needs to be a batter way of doing this: this is supposed to be the "remainder":
             //      2000 jobs - 500 workers -> 500 job execution
             //      200 jobs - 500 workers -> 200 jobs
-            workgroup_job_count = 512 + (work_count_tmp) * i32(step(0.0, f32(work_count_tmp)));
+            workgroup_job_count = (clamp(prev_work_count, 0, 512)); //512 + (work_count_tmp) * i32(step(0.0, f32(work_count_tmp)));
         }
 
         workgroupBarrier();
@@ -84,51 +105,42 @@ fn compute(@builtin(local_invocation_index) thread_id: u32, @builtin(num_workgro
 
             // Get the octree_idx from the last layer id
             //let octree_index : u32 = current_brick_id + u32((pow(8.0, f32(OCTREE_DEPTH)) - 1) / 7);
-            var octant_center : vec3f = vec3f(0.0);
-            var level_half_size : f32 = 0.5 * SCULPT_MAX_SIZE;
+            var brick_center : vec3f = get_brick_center(current_brick_id);
 
-            // Need a way to compute this WITHOUT the loop :(
-            for (var i : u32 = 1; i <= OCTREE_DEPTH; i++) {
-                // +1 is added to the pow exponent to get the half-size of current octant (otherwise would be size)
-                level_half_size = SCULPT_MAX_SIZE / pow(2.0, f32(i + 1));
+            var brick_half_size : f32 = 0.5 * BRICK_WORLD_SIZE;
 
-                // For each level, select the octant position via the 3 corresponding bits and use the OCTREE_CHILD_OFFSET_LUT that
-                // indicates the relative position of an octant in a layer
-                // We offset the octant id depending on the layer that we are, and remove all the trailing bits (if any)
-                octant_center += level_half_size * OCTREE_CHILD_OFFSET_LUT[(current_brick_id >> (3 * (i - 1))) & 0x7];
-            }
-
-            let eval_aabb_min : vec3f = octant_center - vec3f(level_half_size);
-            let eval_aabb_max : vec3f = octant_center + vec3f(level_half_size);
+            let eval_aabb_min : vec3f = brick_center - vec3f(brick_half_size);
+            let eval_aabb_max : vec3f = brick_center + vec3f(brick_half_size);
 
             // Test if it intersect with the current history to eval
             if (intersection_AABB_AABB( eval_aabb_min, 
                                         eval_aabb_max, 
                                         stroke_history_aabb_min, 
                                         stroke_history_aabb_max )) {
-                if (is_evaluating_undo) {
-                    // Add to the next work queue and early out
-                    add_brick_to_next_job_queue(current_brick_id);
-                } else {
-                    // TODO: No Stroke history culling yet, only no crash (at this stage)
-                    var any_stroke_inside : bool = false;
-                    for(var i : u32 = 0u; i < stroke_count; i++) {
-                        if (intersection_AABB_AABB( eval_aabb_min, 
-                                                    eval_aabb_max, 
-                                                    stroke_history.strokes[i].aabb_min, 
-                                                    stroke_history.strokes[i].aabb_max  )) {
-                            // Added to the current list
-                            //curr_stroke_count = curr_stroke_count + 1u;
-                            any_stroke_inside = true;
-                            break; // <- early out
-                        }
-                    }
+                add_brick_to_next_job_queue(current_brick_id);
+                // if (is_evaluating_undo) {
+                //     // Add to the next work queue and early out
+                //     add_brick_to_next_job_queue(current_brick_id);
+                // } else {
+                //     // TODO: No Stroke history culling yet, only no crash (at this stage)
+                //     var any_stroke_inside : bool = false;
+                //     for(var i : u32 = 0u; i < stroke_count; i++) {
+                //         if (intersection_AABB_AABB( eval_aabb_min, 
+                //                                     eval_aabb_max, 
+                //                                     stroke_history.strokes[i].aabb_min, 
+                //                                     stroke_history.strokes[i].aabb_max  )) {
+                //             // Added to the current list
+                //             //curr_stroke_count = curr_stroke_count + 1u;
+                //             any_stroke_inside = true;
+                //             break; // <- early out
+                //         }
+                //     }
 
-                    if (any_stroke_inside) {
-                        // Add to the work queue
-                        add_brick_to_next_job_queue(current_brick_id);
-                    }
-                }
+                //     if (any_stroke_inside) {
+                //         // Add to the work queue
+                //         add_brick_to_next_job_queue(current_brick_id);
+                //     }
+                // }
             } 
         }
     //}

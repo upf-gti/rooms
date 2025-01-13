@@ -361,120 +361,138 @@ bool SculptManager::evaluate(WGPUComputePassEncoder compute_pass, const sEvaluat
 #endif
         // prepare buffers
         uint32_t to_fill = 0u;
-        int32_t to_fill2 = sdf_globals.octants_max_size;
-        webgpu_context->update_buffer(std::get<WGPUBuffer>(evaluation_job_result_aabb_count_uniform.data), 0, &to_fill, sizeof(uint32_t));
+        int32_t to_fill2 = sdf_globals.octree_last_level_size;
+        uint32_t to_fill3[3] = { 0u, 1u, 1u };
+        webgpu_context->update_buffer(std::get<WGPUBuffer>(evaluation_job_result_count_uniform.data), 0, &to_fill, sizeof(uint32_t));
         webgpu_context->update_buffer(std::get<WGPUBuffer>(evaluation_aabb_culling_count_uniform.data), 0, &to_fill2, sizeof(int32_t));
+        webgpu_context->update_buffer(std::get<WGPUBuffer>(evaluation_write_to_tex_count_uniform.data), 0, &to_fill, sizeof(int32_t));
+        webgpu_context->update_buffer(std::get<WGPUBuffer>(evaluation_culling_dispatch_uniform.data), 0, to_fill3, sizeof(int32_t) * 3u);
 
-        evaluator_aabb_culling_step_pipeline.set(compute_pass);
+        evaluator_1_aabb_culling_step_pipeline.set(compute_pass);
         wgpuComputePassEncoderSetBindGroup(compute_pass, 0, evaluator_stroke_history_bind_group, 0, nullptr);
         wgpuComputePassEncoderSetBindGroup(compute_pass, 1, evaluator_aabb_culling_step_bind_group, 0u, nullptr);
-        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, (uint32_t)glm::ceil(sdf_globals.octants_max_size/512.0), 1, 1);
+        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, (uint32_t)glm::ceil(sdf_globals.octree_last_level_size / 512.0), 1, 1);
+
+        evaluator_1_5_interval_culling_step_pipeline.set(compute_pass);
+        wgpuComputePassEncoderSetBindGroup(compute_pass, 0, evaluator_aabb_culling_step_bind_group, 0u, nullptr);
+        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1u, 1u, 1u);
+
+        evaluator_2_interval_culling_step_pipeline.set(compute_pass);
+        wgpuComputePassEncoderSetBindGroup(compute_pass, 0, evaluator_interval_culling_step_bind_group, 0u, nullptr);
+        wgpuComputePassEncoderSetBindGroup(compute_pass, 1, evaluate_request.sculpt->get_octree_bindgroup(), 0u, nullptr);
+        wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(evaluation_culling_dispatch_uniform.data), 0u);
+
+
+        brick_copy_aabb_gen_pipeline.set(compute_pass);
+        wgpuComputePassEncoderSetBindGroup(compute_pass, 0u, evaluate_request.sculpt->get_brick_copy_aabb_gen_bindgroup(), 0u, nullptr);
+        wgpuComputePassEncoderSetBindGroup(compute_pass, 1u, gpu_results_bindgroup, 0u, nullptr);
+        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, sdf_globals.octree_last_level_size / (512.0f), 1, 1);
 
 #ifndef NDEBUG
         wgpuComputePassEncoderPopDebugGroup(compute_pass);
 #endif
-#ifndef NDEBUG
-        wgpuComputePassEncoderPushDebugGroup(compute_pass, "Stroke Evaluation");
-#endif
+//#ifndef NDEBUG
+//        wgpuComputePassEncoderPushDebugGroup(compute_pass, "Stroke Evaluation");
+//#endif
 
         //TODO: the evaluator only handle ONE stroke, the other should be added to the history/context
         // First pass: evaluate the incomming strokes
         // Must be updated per stroke, also make sure the area is reevaluated on undo
         uint16_t eval_steps = 1;//(is_undo && strokes.empty()) ? 1 : strokes.size();
-        for (uint16_t i = 0; i < eval_steps; ++i)
-        {
-#ifndef NDEBUG
-            wgpuComputePassEncoderPushDebugGroup(compute_pass, "Octree evaluation");
-#endif
-            evaluation_initialization_pipeline.set(compute_pass);
+//        for (uint16_t i = 0; i < eval_steps; ++i)
+//        {
+//#ifndef NDEBUG
+//            wgpuComputePassEncoderPushDebugGroup(compute_pass, "Octree evaluation");
+//#endif
+//            evaluation_initialization_pipeline.set(compute_pass);
+//
+//            wgpuComputePassEncoderSetBindGroup(compute_pass, 0, evaluation_initialization_bind_group, 0, nullptr);
+//            wgpuComputePassEncoderSetBindGroup(compute_pass, 1, evaluate_request.sculpt->get_octree_indirect_bindgroup(), 0u, nullptr);
+//
+//            wgpuComputePassEncoderSetBindGroup(compute_pass, 3, preview_stroke_bind_group, 0, nullptr);
+//
+//            //uint32_t stroke_dynamic_offset = i * sizeof(Stroke);
+//
+//            //wgpuComputePassEncoderSetBindGroup(compute_pass, 1, compute_stroke_buffer_bind_group, 1, &stroke_dynamic_offset);
+//
+//            //wgpuComputePassEncoderSetBindGroup(compute_pass, 1, preview_stroke_bind_group, 0, nullptr);
+//
+//            wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
+//
+//            int ping_pong_idx = 0;
+//            wgpuComputePassEncoderSetBindGroup(compute_pass, 1, evaluate_request.sculpt->get_octree_bindgroup(), 0u, nullptr);
+//
+//
+//            for (int j = 0; j <= sdf_globals.octree_depth; ++j) {
+//
+//                evaluate_pipeline.set(compute_pass);
+//
+//                wgpuComputePassEncoderSetBindGroup(compute_pass, 0, evaluate_bind_group, 0, nullptr);
+//                wgpuComputePassEncoderSetBindGroup(compute_pass, 2, octant_usage_ping_pong_bind_groups[ping_pong_idx], 0, nullptr);
+//
+//                wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(sdf_globals.indirect_buffers.data), sizeof(uint32_t) * 12u);
+//
+//                increment_level_pipeline.set(compute_pass);
+//
+//                wgpuComputePassEncoderSetBindGroup(compute_pass, 0, increment_level_bind_group, 0, nullptr);
+//                wgpuComputePassEncoderSetBindGroup(compute_pass, 2u, gpu_results_bindgroup, 0u, nullptr);
+//                //wgpuComputePassEncoderSetBindGroup(compute_pass, 1, sculpt.octree_bindgroup, 0u, nullptr);
+//
+//                wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
+//
+//                ping_pong_idx = (ping_pong_idx + 1) % 2;
+//            }
+//
+//#ifndef NDEBUG
+//            wgpuComputePassEncoderPopDebugGroup(compute_pass);
+//#endif
+//
+//#ifndef NDEBUG
+//            wgpuComputePassEncoderPushDebugGroup(compute_pass, "Write to texture");
+//#endif
+//            // Write to texture dispatch
+//            write_to_texture_pipeline.set(compute_pass);
+//
+//            wgpuComputePassEncoderSetBindGroup(compute_pass, 0, write_to_texture_bind_group, 0, nullptr);
+//            //wgpuComputePassEncoderSetBindGroup(compute_pass, 1, sculpt.octree_bindgroup, 0u, nullptr);
+//            wgpuComputePassEncoderSetBindGroup(compute_pass, 2, octant_usage_ping_pong_bind_groups[ping_pong_idx], 0, nullptr);
+//
+//            wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(sdf_globals.indirect_buffers.data), sizeof(uint32_t) * 12u);
+//
+//#ifndef NDEBUG
+//            wgpuComputePassEncoderPopDebugGroup(compute_pass);
+//#endif
+//
+//            increment_level_pipeline.set(compute_pass);
+//            wgpuComputePassEncoderSetBindGroup(compute_pass, 0, increment_level_bind_group, 0, nullptr);
+//            wgpuComputePassEncoderSetBindGroup(compute_pass, 2u, gpu_results_bindgroup, 0u, nullptr);
+//            //wgpuComputePassEncoderSetBindGroup(compute_pass, 1, sculpt.octree_bindgroup, 0u, nullptr);
+//            wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
+//
+//            // Clean the texture atlas bricks dispatch
+//            brick_removal_pipeline.set(compute_pass);
+//
+//            wgpuComputePassEncoderSetBindGroup(compute_pass, 0, indirect_brick_removal_bind_group, 0, nullptr);
+//
+//            wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(sdf_globals.indirect_buffers.data), sizeof(uint32_t) * 8u);
+//
+//        }
 
-            wgpuComputePassEncoderSetBindGroup(compute_pass, 0, evaluation_initialization_bind_group, 0, nullptr);
-            wgpuComputePassEncoderSetBindGroup(compute_pass, 1, evaluate_request.sculpt->get_octree_indirect_bindgroup(), 0u, nullptr);
+//#ifndef NDEBUG
+//        wgpuComputePassEncoderPopDebugGroup(compute_pass);
+//#endif
 
-            wgpuComputePassEncoderSetBindGroup(compute_pass, 3, preview_stroke_bind_group, 0, nullptr);
+        //brick_copy_aabb_gen_pipeline.set(compute_pass);
+        //wgpuComputePassEncoderSetBindGroup(compute_pass, 0u, evaluate_request.sculpt->get_brick_copy_aabb_gen_bindgroup(), 0u, nullptr);
+        //wgpuComputePassEncoderSetBindGroup(compute_pass, 1u, gpu_results_bindgroup, 0u, nullptr);
 
-            //uint32_t stroke_dynamic_offset = i * sizeof(Stroke);
+        ////wgpuComputePassEncoderSetBindGroup(compute_pass, 1, sculpt.octree_bindgroup, 0, nullptr);
+        //wgpuComputePassEncoderDispatchWorkgroups(compute_pass, sdf_globals.octree_last_level_size / (8u * 8u * 8u), 1, 1);
 
-            //wgpuComputePassEncoderSetBindGroup(compute_pass, 1, compute_stroke_buffer_bind_group, 1, &stroke_dynamic_offset);
-
-            //wgpuComputePassEncoderSetBindGroup(compute_pass, 1, preview_stroke_bind_group, 0, nullptr);
-
-            wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
-
-            int ping_pong_idx = 0;
-            wgpuComputePassEncoderSetBindGroup(compute_pass, 1, evaluate_request.sculpt->get_octree_bindgroup(), 0u, nullptr);
-
-
-            for (int j = 0; j <= sdf_globals.octree_depth; ++j) {
-
-                evaluate_pipeline.set(compute_pass);
-
-                wgpuComputePassEncoderSetBindGroup(compute_pass, 0, evaluate_bind_group, 0, nullptr);
-                wgpuComputePassEncoderSetBindGroup(compute_pass, 2, octant_usage_ping_pong_bind_groups[ping_pong_idx], 0, nullptr);
-
-                wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(sdf_globals.indirect_buffers.data), sizeof(uint32_t) * 12u);
-
-                increment_level_pipeline.set(compute_pass);
-
-                wgpuComputePassEncoderSetBindGroup(compute_pass, 0, increment_level_bind_group, 0, nullptr);
-                wgpuComputePassEncoderSetBindGroup(compute_pass, 2u, gpu_results_bindgroup, 0u, nullptr);
-                //wgpuComputePassEncoderSetBindGroup(compute_pass, 1, sculpt.octree_bindgroup, 0u, nullptr);
-
-                wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
-
-                ping_pong_idx = (ping_pong_idx + 1) % 2;
-            }
-
-#ifndef NDEBUG
-            wgpuComputePassEncoderPopDebugGroup(compute_pass);
-#endif
-
-#ifndef NDEBUG
-            wgpuComputePassEncoderPushDebugGroup(compute_pass, "Write to texture");
-#endif
-            // Write to texture dispatch
-            write_to_texture_pipeline.set(compute_pass);
-
-            wgpuComputePassEncoderSetBindGroup(compute_pass, 0, write_to_texture_bind_group, 0, nullptr);
-            //wgpuComputePassEncoderSetBindGroup(compute_pass, 1, sculpt.octree_bindgroup, 0u, nullptr);
-            wgpuComputePassEncoderSetBindGroup(compute_pass, 2, octant_usage_ping_pong_bind_groups[ping_pong_idx], 0, nullptr);
-
-            wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(sdf_globals.indirect_buffers.data), sizeof(uint32_t) * 12u);
-
-#ifndef NDEBUG
-            wgpuComputePassEncoderPopDebugGroup(compute_pass);
-#endif
-
-            increment_level_pipeline.set(compute_pass);
-            wgpuComputePassEncoderSetBindGroup(compute_pass, 0, increment_level_bind_group, 0, nullptr);
-            wgpuComputePassEncoderSetBindGroup(compute_pass, 2u, gpu_results_bindgroup, 0u, nullptr);
-            //wgpuComputePassEncoderSetBindGroup(compute_pass, 1, sculpt.octree_bindgroup, 0u, nullptr);
-            wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
-
-            // Clean the texture atlas bricks dispatch
-            brick_removal_pipeline.set(compute_pass);
-
-            wgpuComputePassEncoderSetBindGroup(compute_pass, 0, indirect_brick_removal_bind_group, 0, nullptr);
-
-            wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(sdf_globals.indirect_buffers.data), sizeof(uint32_t) * 8u);
-
-        }
-
-#ifndef NDEBUG
-        wgpuComputePassEncoderPopDebugGroup(compute_pass);
-#endif
-
-        brick_copy_aabb_gen_pipeline.set(compute_pass);
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 0u, evaluate_request.sculpt->get_brick_copy_aabb_gen_bindgroup(), 0u, nullptr);
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 1u, gpu_results_bindgroup, 0u, nullptr);
-
-        //wgpuComputePassEncoderSetBindGroup(compute_pass, 1, sculpt.octree_bindgroup, 0, nullptr);
-        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, sdf_globals.octree_last_level_size / (8u * 8u * 8u), 1, 1);
-
-        increment_level_pipeline.set(compute_pass);
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 0, increment_level_bind_group, 0, nullptr);
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 1, evaluate_request.sculpt->get_octree_bindgroup(), 0u, nullptr);
-        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
+        //increment_level_pipeline.set(compute_pass);
+        //wgpuComputePassEncoderSetBindGroup(compute_pass, 0, increment_level_bind_group, 0, nullptr);
+        //wgpuComputePassEncoderSetBindGroup(compute_pass, 1, evaluate_request.sculpt->get_octree_bindgroup(), 0u, nullptr);
+        //wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
 
     }
 
@@ -831,13 +849,24 @@ void SculptManager::init_uniforms()
 
     // New Evaluator passes uniforms
     {
-        evaluation_aabb_culling_count_uniform.data = webgpu_context->create_buffer(sizeof(int32_t), WGPUBufferUsage_Storage | WGPUBufferUsage_CopyDst, nullptr, "Job to eval count");
+        evaluation_aabb_culling_count_uniform.data = webgpu_context->create_buffer(sizeof(int32_t), WGPUBufferUsage_Storage | WGPUBufferUsage_CopyDst, nullptr, "AABB count");
         evaluation_aabb_culling_count_uniform.binding = 2u;
         evaluation_aabb_culling_count_uniform.buffer_size = sizeof(int32_t);
 
-        evaluation_job_result_aabb_count_uniform.data = webgpu_context->create_buffer(sizeof(uint32_t), WGPUBufferUsage_Storage | WGPUBufferUsage_CopyDst, nullptr, "AABB counter");
-        evaluation_job_result_aabb_count_uniform.binding = 0u;
-        evaluation_job_result_aabb_count_uniform.buffer_size = sizeof(uint32_t);
+        evaluation_job_result_count_uniform.data = webgpu_context->create_buffer(sizeof(uint32_t), WGPUBufferUsage_Storage | WGPUBufferUsage_CopyDst, nullptr, "Job result count");
+        evaluation_job_result_count_uniform.binding = 0u;
+        evaluation_job_result_count_uniform.buffer_size = sizeof(uint32_t);
+
+        evaluation_culling_dispatch_uniform.data = webgpu_context->create_buffer(sizeof(uint32_t)*3u, WGPUBufferUsage_Storage | WGPUBufferUsage_CopyDst | WGPUBufferUsage_Indirect, nullptr, "Culling indirect buffer counter");
+        evaluation_culling_dispatch_uniform.binding = 3u;
+        evaluation_culling_dispatch_uniform.buffer_size = sizeof(uint32_t) * 3u;
+
+        evaluation_write_to_tex_count_uniform.data = webgpu_context->create_buffer(sizeof(uint32_t), WGPUBufferUsage_Storage | WGPUBufferUsage_CopyDst, nullptr, "Write 2 tex job counter");
+        evaluation_write_to_tex_count_uniform.binding = 2u;
+        evaluation_write_to_tex_count_uniform.buffer_size = sizeof(uint32_t);
+
+        evaluation_write_to_tex_buffer_uniform = octant_usage_ping_pong_uniforms[2];
+        evaluation_write_to_tex_buffer_uniform.binding = 3u;
     }
 
     // TODO: compute AABB per sculpt
@@ -853,7 +882,9 @@ void SculptManager::init_uniforms()
 
 void SculptManager::init_shaders()
 {
-    evaluator_aabb_culling_step_shader = RendererStorage::get_shader("data/shaders/octree/evaluator_culling_step.wgsl");
+    evaluator_1_aabb_culling_step_shader = RendererStorage::get_shader("data/shaders/octree/evaluator_1_aabb_culling_step.wgsl");
+    evaluator_1_5_interval_culling_step_shader = RendererStorage::get_shader("data/shaders/octree/evaluator_1-5_interval_setup.wgsl");
+    evaluator_2_interval_culling_step_shader = RendererStorage::get_shader("data/shaders/octree/evaluator_2_interval_culling_step.wgsl");
 
     evaluate_shader = RendererStorage::get_shader("data/shaders/octree/evaluator.wgsl");
     increment_level_shader = RendererStorage::get_shader("data/shaders/octree/increment_level.wgsl");
@@ -966,12 +997,14 @@ void SculptManager::init_pipelines_and_bindgroups()
     {
         // Coarse AABB culling
         {
-            std::vector<Uniform*> uniforms = { &evaluation_job_result_aabb_count_uniform, &evaluation_aabb_culling_count_uniform, &octant_usage_ping_pong_uniforms[1]};
-            evaluator_aabb_culling_step_bind_group = webgpu_context->create_bind_group(uniforms, evaluator_aabb_culling_step_shader, 1u);
+            std::vector<Uniform*> uniforms = { &evaluation_job_result_count_uniform, &evaluation_aabb_culling_count_uniform, &octant_usage_ping_pong_uniforms[1], &evaluation_culling_dispatch_uniform };
+            evaluator_aabb_culling_step_bind_group = webgpu_context->create_bind_group(uniforms, evaluator_1_aabb_culling_step_shader, 1u);
 
             uniforms = { &stroke_context_list };
-            evaluator_stroke_history_bind_group = webgpu_context->create_bind_group(uniforms, evaluator_aabb_culling_step_shader, 0u);
+            evaluator_stroke_history_bind_group = webgpu_context->create_bind_group(uniforms, evaluator_1_aabb_culling_step_shader, 0u);
 
+            uniforms = { &octree_edit_list, &stroke_context_list, &sdf_globals.brick_buffers, &evaluation_job_result_count_uniform, &octant_usage_ping_pong_uniforms[1], &evaluation_write_to_tex_count_uniform , &evaluation_write_to_tex_buffer_uniform };
+            evaluator_interval_culling_step_bind_group = webgpu_context->create_bind_group(uniforms, evaluator_2_interval_culling_step_shader, 0u);
         }
     }
 
@@ -987,7 +1020,9 @@ void SculptManager::init_pipelines_and_bindgroups()
         sculpt_delete_pipeline.create_compute_async(sculpt_delete_shader);
         ray_intersection_pipeline.create_compute_async(ray_intersection_shader);
         ray_intersection_result_and_clean_pipeline.create_compute_async(ray_intersection_result_and_clean_shader);
-        evaluator_aabb_culling_step_pipeline.create_compute_async(evaluator_aabb_culling_step_shader);
+        evaluator_1_aabb_culling_step_pipeline.create_compute_async(evaluator_1_aabb_culling_step_shader);
+        evaluator_2_interval_culling_step_pipeline.create_compute_async(evaluator_2_interval_culling_step_shader);
+        evaluator_1_5_interval_culling_step_pipeline.create_compute_async(evaluator_1_5_interval_culling_step_shader);
     }
 }
 

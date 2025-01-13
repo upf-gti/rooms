@@ -114,8 +114,11 @@ class SculptManager {
     Shader*         evaluation_initialization_shader = nullptr;
     WGPUBindGroup   evaluation_initialization_bind_group = nullptr;
 
-    Uniform         evaluation_job_result_aabb_count_uniform;
+    Uniform         evaluation_job_result_count_uniform;
     Uniform         evaluation_aabb_culling_count_uniform;
+    Uniform         evaluation_culling_dispatch_uniform;
+    Uniform         evaluation_write_to_tex_count_uniform;
+    Uniform         evaluation_write_to_tex_buffer_uniform;
 
     Uniform         aabb_calculation_temp_buffer;
     WGPUBindGroup   aabb_calculation_temp_bind_group = nullptr;
@@ -127,7 +130,9 @@ class SculptManager {
     Pipeline brick_removal_pipeline;
     Pipeline brick_copy_aabb_gen_pipeline;
     Pipeline brick_unmark_pipeline;
-    Pipeline evaluator_aabb_culling_step_pipeline;
+    Pipeline evaluator_1_aabb_culling_step_pipeline;
+    Pipeline evaluator_1_5_interval_culling_step_pipeline;
+    Pipeline evaluator_2_interval_culling_step_pipeline;
 
     Shader* evaluate_shader = nullptr;
     Shader* increment_level_shader = nullptr;
@@ -135,7 +140,9 @@ class SculptManager {
     Shader* brick_removal_shader = nullptr;
     Shader* brick_copy_aabb_gen_shader = nullptr;
     Shader* brick_unmark_shader = nullptr;
-    Shader* evaluator_aabb_culling_step_shader = nullptr;
+    Shader* evaluator_1_aabb_culling_step_shader = nullptr;
+    Shader* evaluator_1_5_interval_culling_step_shader = nullptr;
+    Shader* evaluator_2_interval_culling_step_shader = nullptr;
 
     WGPUBindGroup   sdf_atlases_sampler_bindgroup = nullptr;
     WGPUBindGroup   evaluate_bind_group = nullptr;
@@ -147,6 +154,7 @@ class SculptManager {
     WGPUBindGroup   preview_stroke_bind_group = nullptr;
     WGPUBindGroup   evaluator_aabb_culling_step_bind_group = nullptr;
     WGPUBindGroup   evaluator_stroke_history_bind_group = nullptr;
+    WGPUBindGroup   evaluator_interval_culling_step_bind_group = nullptr;
 
     // Evaluator uniforms
     uint32_t        octree_edit_list_size = 0u;
