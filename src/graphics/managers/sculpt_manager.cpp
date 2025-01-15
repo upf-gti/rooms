@@ -374,20 +374,20 @@ bool SculptManager::evaluate(WGPUComputePassEncoder compute_pass, const sEvaluat
         wgpuComputePassEncoderSetBindGroup(compute_pass, 1, evaluator_aabb_culling_step_bind_group, 0u, nullptr);
         wgpuComputePassEncoderDispatchWorkgroups(compute_pass, (uint32_t)glm::ceil(sdf_globals.octree_last_level_size / 512.0), 1, 1);
 
-        evaluator_1_5_interval_culling_step_pipeline.set(compute_pass);
+        /*evaluator_1_5_interval_culling_step_pipeline.set(compute_pass);
         wgpuComputePassEncoderSetBindGroup(compute_pass, 0, evaluator_aabb_culling_step_bind_group, 0u, nullptr);
-        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1u, 1u, 1u);
+        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1u, 1u, 1u);*/
 
-        evaluator_2_interval_culling_step_pipeline.set(compute_pass);
+        /*evaluator_2_interval_culling_step_pipeline.set(compute_pass);
         wgpuComputePassEncoderSetBindGroup(compute_pass, 0, evaluator_interval_culling_step_bind_group, 0u, nullptr);
         wgpuComputePassEncoderSetBindGroup(compute_pass, 1, evaluate_request.sculpt->get_octree_bindgroup(), 0u, nullptr);
-        wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(evaluation_culling_dispatch_uniform.data), 0u);
+        wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(evaluation_culling_dispatch_uniform.data), 0u);*/
 
 
-        brick_copy_aabb_gen_pipeline.set(compute_pass);
+        /*brick_copy_aabb_gen_pipeline.set(compute_pass);
         wgpuComputePassEncoderSetBindGroup(compute_pass, 0u, evaluate_request.sculpt->get_brick_copy_aabb_gen_bindgroup(), 0u, nullptr);
         wgpuComputePassEncoderSetBindGroup(compute_pass, 1u, gpu_results_bindgroup, 0u, nullptr);
-        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, sdf_globals.octree_last_level_size / (512.0f), 1, 1);
+        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, sdf_globals.octree_last_level_size / (512.0f), 1, 1);*/
 
 #ifndef NDEBUG
         wgpuComputePassEncoderPopDebugGroup(compute_pass);

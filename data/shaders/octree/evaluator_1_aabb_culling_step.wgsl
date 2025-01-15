@@ -22,6 +22,12 @@ struct sEvaluatorDispatchCounter {
 //@group(3) @binding(0) var<storage, read> preview_stroke : PreviewStroke;
 
 /**
+    NOTE: the biggest bottlenecks of the evaluator are 2 constnat costs:
+    Culling step & brick copy, each takes like 0.3 ms, so its a fixed cost of 0.6 ms (ROUGHT!)
+    The culling can be reduced if we change the dispatch size to match the aabb of the 
+    stroke history (currently there are a lot of wasted work in here)
+     The briuck_copy / AABB gen is much more difficult to optimize atm
+    
     Since the number of bricks to test is always the same, we just use an atomic for the job
     counter, there is no need for a job queue:
 
@@ -65,6 +71,11 @@ fn compute(@builtin(workgroup_id) wg_id: vec3u, @builtin(local_invocation_index)
     let stroke_count : u32 = stroke_history.count;
     let stroke_history_aabb_min : vec3f = stroke_history.eval_aabb_min;
     let stroke_history_aabb_max : vec3f = stroke_history.eval_aabb_max;
+
+    for(var i : u32 = 0u; i < stroke_count; i++) {
+        let p = 3 + 4;
+        workgroupBarrier();
+    }
 
     // If the job count is bigger than the thread ID, there is no work for this thread
     if (global_id < u32(aabb_culling_count)) {

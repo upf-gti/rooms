@@ -13,17 +13,20 @@
 
 @group(1) @binding(0) var<storage, read_write> octree : Octree;
 
-@group(2) @binding(0) var<storage, read> octant_usage_read : array<u32>;
-@group(2) @binding(1) var<storage, read_write> octant_usage_write : array<u32>;
+@group(2) @binding(0) var<storage, read> num_brinks_by_workgroup : u32;
+@group(2) @binding(2) var<storage, read_write> bricks_to_write_to_tex_count : atomic<i32>;
+@group(2) @binding(3) var<storage, read_write> bricks_to_write_to_tex_buffer : array<u32>;
 
 #include sdf_functions.wgsl
 
 var<workgroup> used_pixels : atomic<u32>;
 
+var<workgroup> current_brick_to_process : i32;
+
 /**
     Este shader se ejecuta despues de la ultima pasada del evaluador, y su funcion es evaluar y escribir en el
     Atlas 3D la SDF, para que pueda ser renderizada mas eficientemente.
-    Este shader utiliza llamadas de work group de tamano de 10x10x10, ya que cada hilo escribe un texel
+    Este shader utiliza llamadas de work group de tamano de 8x8x8, ya que cada hilo escribe un texel
     en el Atlas.
     En cada hilo, evaluamos primero el "contexto" del stroke actual (que es todos los edits a su alrededor que 
     pueden influir) para luego evaular el stroke actual. Esto es importante para que la evaluacion Smooth 
@@ -39,6 +42,102 @@ var<workgroup> used_pixels : atomic<u32>;
 @compute @workgroup_size(8, 8, 8)
 fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation_id) local_id: vec3<u32>)
 {
+    // PROTO:
+
+    var result_surface : Surface;
+    for(var i : u32 = 0u; i < num_brinks_by_workgroup; i++) {
+        if (thread_id == 0) {
+            let current_brick_to_do : i32 = atomicSub(&bricks_to_write_to_tex_count, 1) - 1u;
+
+            current_brick_to_process = current_brick_to_do;
+
+            atomicSet(&used_pixels, 0u);
+        }
+
+        workgroupBarrier();
+
+        if (current_brick_to_do > 0) {
+            // Init baking the SDF to the texture
+            // TODO: Get brick atlas idx
+
+            // TODO: Get evaluation texels
+
+            let is_interior_brick : bool = (INTERIOR_BRICK_FLAG & brick_pointer) == INTERIOR_BRICK_FLAG;
+
+            if (is_interior_brick) {
+                sSurface.distance = -100.0;
+            } else {
+                sSurface.distance = 10000.0;
+            }
+
+            // SDF compute per pixel
+            for(var i : u32 = 0u; i < non_culled_count; i++) {
+                let index : u32 = i + MAX_STROKE_INFLUENCE_COUNT;
+                curr_surface = evaluate_stroke(pos, &(stroke_history.strokes[index]), &edit_list, curr_surface, stroke_history.strokes[index].edit_list_index, stroke_history.strokes[index].edit_count);
+            }
+
+            // validate if there is something in hte brick
+            if (result_surface.distance < MIN_HIT_DIST) {
+                atomicAdd(&used_pixels, 1);
+            }
+
+            // Note, maybe this can be moved before the barrier, to avoid storing on a empty block
+            textureStore(write_sdf, texture_coordinates, vec4f(result_surface.distance));
+            textureStore(write_material_sdf, texture_coordinates, vec4<u32>((pack_material(result_surface.material))));
+        }
+
+        workgroupBarrier();
+
+        // Check if the current brick is empty
+        if (thread_id == 0u && current_brick_to_do > 0u) {
+            let filled_pixel_count : u32 = atomicLoad(&used_pixels);
+            if (filled_pixel_count == 0u || filled_pixel_count == 1000u) {
+                
+                brick_buffers.brick_instance_data[brick_index].in_use = 0;
+                // Add the brick to the indirect
+                let brick_to_delete_idx = atomicAdd(&brick_buffers.brick_removal_counter, 1u);
+                brick_buffers.brick_removal_buffer[brick_to_delete_idx] = brick_index;
+
+                if (filled_pixel_count == 1000u) {
+                    octree.data[octree_leaf_id].octant_center_distance = vec2f(-10000.0, -10000.0);
+                    octree.data[octree_leaf_id].tile_pointer = INTERIOR_BRICK_FLAG;
+                } else {
+                    octree.data[octree_leaf_id].octant_center_distance = vec2f(10000.0, 10000.0);
+                    octree.data[octree_leaf_id].tile_pointer = 0u;
+                }
+            } 
+        }
+
+        // NOTE: version of the prev block that only stores in teh atlas the non-emtpy bricks
+        // if (current_brick_to_do > 0u) {
+        //     let filled_pixel_count : u32 = atomicLoad(&used_pixels);
+        //     // If its empty (0 pixels with surface) or full (512 piixels with surface),
+        //     // We do not store the values to the atlas, and the trhead_0 adds it to the 
+        //     // empty brick pile
+        //     if (filled_pixel_count == 0u || filled_pixel_count == 512u) {
+        //         if (thread_id == 0u) {
+        //             // Remove the brick
+        //             brick_buffers.brick_instance_data[brick_index].in_use = 0;
+        //             // Add the brick to the indirect
+        //             let brick_to_delete_idx = atomicAdd(&brick_buffers.brick_removal_counter, 1u);
+        //             brick_buffers.brick_removal_buffer[brick_to_delete_idx] = brick_index;
+
+        //             if (filled_pixel_count == 512u) {
+        //                 octree.data[octree_leaf_id].octant_center_distance = vec2f(-10000.0, -10000.0);
+        //                 octree.data[octree_leaf_id].tile_pointer = INTERIOR_BRICK_FLAG;
+        //             } else {
+        //                 octree.data[octree_leaf_id].octant_center_distance = vec2f(10000.0, 10000.0);
+        //                 octree.data[octree_leaf_id].tile_pointer = 0u;
+        //             }
+        //         }
+        //     } else {
+        //         textureStore(write_sdf, texture_coordinates, vec4f(result_surface.distance));
+        //         textureStore(write_material_sdf, texture_coordinates, vec4<u32>((pack_material(result_surface.material))));
+        //     }
+        // }
+        
+    }
+
     let id : u32 = group_id.x;
     let octree_leaf_id : u32 = octant_usage_read[id];
 
