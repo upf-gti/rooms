@@ -11,6 +11,7 @@
 #define MAX_STROKE_INFLUENCE_COUNT
 #define OCTREE_LAST_LEVEL_STARTING_IDX
 
+const INT_NUM_BRICKS_IN_OCTREE_AXIS = u32(NUM_BRICKS_IN_OCTREE_AXIS);
 const BRICK_WORLD_SIZE = SCULPT_MAX_SIZE / NUM_BRICKS_IN_OCTREE_AXIS;
 const BRICK_VOXEL_WORLD_SIZE = BRICK_WORLD_SIZE / ATLAS_BRICK_NO_BORDER_SIZE;
 const BRICK_VOXEL_ATLAS_SIZE = 1.0 / SDF_RESOLUTION;
@@ -353,3 +354,27 @@ struct sPaddedAABB {
     max    : vec3f,
     pad1        : u32
 };
+
+fn get_brick_center(brick_id : u32) -> vec3f {
+    let z : u32 = brick_id % INT_NUM_BRICKS_IN_OCTREE_AXIS;
+    let y : u32 = (brick_id / INT_NUM_BRICKS_IN_OCTREE_AXIS) % INT_NUM_BRICKS_IN_OCTREE_AXIS;
+    let x : u32 = brick_id / (INT_NUM_BRICKS_IN_OCTREE_AXIS * INT_NUM_BRICKS_IN_OCTREE_AXIS);
+
+    // (0 - NUM_BRICKS_OCTREE_AXIS)
+    // (0 - 1)
+    // (-0.5 - 0.5)
+    // (-SCULPT_MAX_SIZE/2 - SCULPT_MAX_SIZE/2)
+    let brick_origin = ((vec3f(vec3u(x, y, z)) / NUM_BRICKS_IN_OCTREE_AXIS) - vec3(0.5)) * SCULPT_MAX_SIZE;
+    return brick_origin + BRICK_WORLD_SIZE * 0.50;
+}
+
+// fn get_brick_center(brick_id : u32) -> vec3f {
+//     let idx_f : f32 = f32(brick_id);
+
+//     let z_axis : f32 = round(idx_f / (NUM_BRICKS_IN_OCTREE_AXIS * NUM_BRICKS_IN_OCTREE_AXIS));
+//     let y_axis : f32 = round((idx_f - (z_axis * NUM_BRICKS_IN_OCTREE_AXIS * NUM_BRICKS_IN_OCTREE_AXIS)) / NUM_BRICKS_IN_OCTREE_AXIS);
+//     let x_axis : f32 = idx_f - NUM_BRICKS_IN_OCTREE_AXIS * (y_axis + z_axis * NUM_BRICKS_IN_OCTREE_AXIS);
+
+//     let brick_origin = (vec3f(x_axis, y_axis, z_axis)/NUM_BRICKS_IN_OCTREE_AXIS) * SCULPT_MAX_SIZE;
+//     return brick_origin;// + BRICK_WORLD_SIZE * 0.50;
+// }

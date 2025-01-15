@@ -361,9 +361,10 @@ bool SculptManager::evaluate(WGPUComputePassEncoder compute_pass, const sEvaluat
 #endif
         // prepare buffers
         uint32_t to_fill = 0u;
+        uint32_t to_fill4 = 0u;
         int32_t to_fill2 = sdf_globals.octree_last_level_size;
         uint32_t to_fill3[3] = { 0u, 1u, 1u };
-        webgpu_context->update_buffer(std::get<WGPUBuffer>(evaluation_job_result_count_uniform.data), 0, &to_fill, sizeof(uint32_t));
+        webgpu_context->update_buffer(std::get<WGPUBuffer>(evaluation_job_result_count_uniform.data), 0, &to_fill4, sizeof(uint32_t));
         webgpu_context->update_buffer(std::get<WGPUBuffer>(evaluation_aabb_culling_count_uniform.data), 0, &to_fill2, sizeof(int32_t));
         webgpu_context->update_buffer(std::get<WGPUBuffer>(evaluation_write_to_tex_count_uniform.data), 0, &to_fill, sizeof(int32_t));
         webgpu_context->update_buffer(std::get<WGPUBuffer>(evaluation_culling_dispatch_uniform.data), 0, to_fill3, sizeof(int32_t) * 3u);

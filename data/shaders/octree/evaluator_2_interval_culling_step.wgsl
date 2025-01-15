@@ -14,7 +14,6 @@
 @group(1) @binding(0) var<storage, read_write> octree : Octree;
 
 
-
 #include sdf_interval_functions.wgsl
 
 fn intersection_AABB_AABB(b1_min : vec3f, b1_max : vec3f, b2_min : vec3f, b2_max : vec3f) -> bool {
@@ -85,17 +84,6 @@ fn brick_reevaluate(octree_index : u32)
 //     brick_buffers.brick_instance_data[octree.data[octree_index].tile_pointer & OCTREE_TILE_INDEX_MASK].edit_count = edit_count;
 // }
 
-fn get_brick_center(brick_id : u32) -> vec3f {
-    let idx_f : f32 = f32(brick_id);
-
-    let z_axis : f32 = round(idx_f / (NUM_BRICKS_IN_OCTREE_AXIS * NUM_BRICKS_IN_OCTREE_AXIS));
-    let y_axis : f32 = round((idx_f - (z_axis * NUM_BRICKS_IN_OCTREE_AXIS * NUM_BRICKS_IN_OCTREE_AXIS)) / NUM_BRICKS_IN_OCTREE_AXIS);
-    let x_axis : f32 = idx_f - NUM_BRICKS_IN_OCTREE_AXIS * (y_axis + z_axis * NUM_BRICKS_IN_OCTREE_AXIS);
-
-    let brick_origin = (vec3f(x_axis, y_axis, z_axis)/NUM_BRICKS_IN_OCTREE_AXIS) * SCULPT_MAX_SIZE;
-    return brick_origin;// + BRICK_WORLD_SIZE * 0.50;
-}
-
 var<workgroup> brick_to_eval_wg_size : u32;
 var<workgroup> bricks_to_eval_wg_buffer : array<u32, 512u>;
 
@@ -115,14 +103,14 @@ fn compute(@builtin(local_invocation_index) thread_id: u32, @builtin(num_workgro
 
         //let work_count_tmp : i32 = starting_brick_idx - 512;
         // Check evaluator_culling_step for the math on this
-        let work_count : u32 = u32(clamp(starting_brick_idx, 0, 512));
+        let work_count : i32 = clamp(starting_brick_idx, 0, 512);
 
         // Store the work count & bricks to the workgroup memory
         // is this needed?? maybe its not really neede due cache. TODO: test directly with VRAM
-        brick_to_eval_wg_size = work_count;
-        let signed_work_count : i32 = i32(work_count);
-        for(var i : i32 = 0; i < signed_work_count; i++) {
-            bricks_to_eval_wg_buffer[i] = bricks_to_interval_eval_buffer[starting_brick_idx - i];
+        brick_to_eval_wg_size = u32(work_count);
+        for(var i : i32 = 0; i <= work_count; i++) {
+            let brick_id = bricks_to_interval_eval_buffer[starting_brick_idx - i - 1];
+            bricks_to_eval_wg_buffer[i] = brick_id;
         }  
     }
 
@@ -133,18 +121,9 @@ fn compute(@builtin(local_invocation_index) thread_id: u32, @builtin(num_workgro
         let octree_index : u32 = brick_id + OCTREE_LAST_LEVEL_STARTING_IDX;
 
         var brick_center : vec3f = get_brick_center(brick_id);
-        var level_half_size : f32 = 0.5 * SCULPT_MAX_SIZE;
-        level_half_size = 0.5 * BRICK_WORLD_SIZE;
-        // Need a way to compute this WITHOUT the loop :(
-        // for (var i : u32 = 1; i <= OCTREE_DEPTH; i++) {
-        //     // +1 is added to the pow exponent to get the half-size of current octant (otherwise would be size)
-            
+        var level_half_size : f32 = 0.5 * BRICK_WORLD_SIZE;
 
-        //     // For each level, select the octant position via the 3 corresponding bits and use the OCTREE_CHILD_OFFSET_LUT that
-        //     // indicates the relative position of an octant in a layer
-        //     // We offset the octant id depending on the layer that we are, and remove all the trailing bits (if any)
-        //     //octant_center += level_half_size * OCTREE_CHILD_OFFSET_LUT[(octant_id >> (3 * (i - 1))) & 0x7];
-        // }
+        //brick_create_or_reevaluate(octree_index, false, false, brick_center);
 
         let eval_aabb_min : vec3f = brick_center - vec3f(level_half_size);
         let eval_aabb_max : vec3f = brick_center + vec3f(level_half_size);
@@ -179,6 +158,7 @@ fn compute(@builtin(local_invocation_index) thread_id: u32, @builtin(num_workgro
                 brick_has_paint = true;
             }
         }
+        let edit = edit_list[0];
 
         // TODO: re-do culling stuff
         //octree.data[octree_index].stroke_count = curr_stroke_count;
@@ -188,27 +168,25 @@ fn compute(@builtin(local_invocation_index) thread_id: u32, @builtin(num_workgro
         let prev_interval = octree.data[octree_index].octant_center_distance;
         octree.data[octree_index].octant_center_distance = surface_interval;
 
-        brick_create_or_reevaluate(octree_index, false, false, brick_center);
-
         let int_distance = abs(distance(prev_interval, surface_interval));
-            
-        // if ((is_evaluating_undo_paint || brick_has_paint) && is_current_brick_filled) {
-        //     brick_reevaluate(octree_index);
-        // } else if (int_distance > 0.0001) {
-        //     if (surface_interval.x > 0.0) {
-        //         if (is_current_brick_filled) {
-        //             // delete any brick outside surface that was previosly filled
-        //             brick_remove(octree_index);
-        //         } else {
-        //             // // reset flags for potential interior bricks
-        //             octree.data[octree_index].tile_pointer = 0;
-        //             octree.data[octree_index].octant_center_distance = vec2f(10000.0, 10000.0);
-        //         }
-        //     } else if (surface_interval.y < 0.0) {
-        //         brick_remove_and_mark_as_inside(octree_index, is_current_brick_filled);
-        //     } else if (surface_interval.x < 0.0) {
-        //         brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, octant_center);
-        //     }
-        // }
+
+        if ((is_evaluating_undo_paint || brick_has_paint) && is_current_brick_filled) {
+            brick_reevaluate(octree_index);
+        } else if (int_distance > 0.0001) {
+            if (surface_interval.x > 0.0) {
+                if (is_current_brick_filled) {
+                    // delete any brick outside surface that was previosly filled
+                    brick_remove(octree_index);
+                } else {
+                    // // reset flags for potential interior bricks
+                    octree.data[octree_index].tile_pointer = 0;
+                    octree.data[octree_index].octant_center_distance = vec2f(10000.0, 10000.0);
+                }
+            } else if (surface_interval.y < 0.0) {
+                //brick_remove_and_mark_as_inside(octree_index, is_current_brick_filled);
+            } else if (surface_interval.x < 0.0) {
+                brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, brick_center);
+            }
+        }
     }
 }
