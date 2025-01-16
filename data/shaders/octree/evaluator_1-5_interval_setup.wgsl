@@ -12,7 +12,7 @@ struct sEvaluatorDispatchCounter {
 
 
 @compute @workgroup_size(1, 1, 1)
-fn compute(@builtin(local_invocation_index) thread_id: u32, @builtin(num_workgroups) workgroup_size : vec3u) 
+fn compute() 
 {
     let t = aabb_culling_count;
     let j = job_result_bricks_to_eval[0];

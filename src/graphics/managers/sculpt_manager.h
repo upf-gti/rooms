@@ -120,6 +120,10 @@ class SculptManager {
     Uniform         evaluation_write_to_tex_count_uniform;
     Uniform         evaluation_write_to_tex_buffer_uniform;
 
+    Uniform         evaluator_num_bricks_by_wg_uniform;
+    Uniform         evaluation_culling_dispatch_alt_uniform;
+    Uniform         evaluation_write_to_tex_buffer_alt_uniform;
+
     Uniform         aabb_calculation_temp_buffer;
     WGPUBindGroup   aabb_calculation_temp_bind_group = nullptr;
 
@@ -133,6 +137,7 @@ class SculptManager {
     Pipeline evaluator_1_aabb_culling_step_pipeline;
     Pipeline evaluator_1_5_interval_culling_step_pipeline;
     Pipeline evaluator_2_interval_culling_step_pipeline;
+    Pipeline evaluator_2_5_write_to_texture_setup_pipeline;
 
     Shader* evaluate_shader = nullptr;
     Shader* increment_level_shader = nullptr;
@@ -143,6 +148,7 @@ class SculptManager {
     Shader* evaluator_1_aabb_culling_step_shader = nullptr;
     Shader* evaluator_1_5_interval_culling_step_shader = nullptr;
     Shader* evaluator_2_interval_culling_step_shader = nullptr;
+    Shader* evaluator_2_5_write_to_texture_setup_step_shader = nullptr;
 
     WGPUBindGroup   sdf_atlases_sampler_bindgroup = nullptr;
     WGPUBindGroup   evaluate_bind_group = nullptr;
@@ -155,6 +161,8 @@ class SculptManager {
     WGPUBindGroup   evaluator_aabb_culling_step_bind_group = nullptr;
     WGPUBindGroup   evaluator_stroke_history_bind_group = nullptr;
     WGPUBindGroup   evaluator_interval_culling_step_bind_group = nullptr;
+    WGPUBindGroup   evaluator_write_to_texture_setup_bind_group = nullptr;
+    WGPUBindGroup   evaluator_write_to_texture_step_bind_group = nullptr;
 
     // Evaluator uniforms
     uint32_t        octree_edit_list_size = 0u;
