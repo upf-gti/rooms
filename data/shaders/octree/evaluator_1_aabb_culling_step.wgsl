@@ -60,11 +60,12 @@ fn add_brick_to_next_job_queue(brick_id : u32) {
     job_result_bricks_to_eval[idx] = brick_id;
 }
 
-@compute @workgroup_size(8, 8, 8)
+// A trheadgrounp of 64 should be better for occupancy
+@compute @workgroup_size(4,4,4)
 fn compute(@builtin(workgroup_id) wg_id: vec3u, @builtin(local_invocation_index) thread_id: u32, @builtin(num_workgroups) workgroup_size : vec3u) 
 {
     // Compute intersections for the last level directly
-    let global_id : u32 = 512u * wg_id.x + thread_id;
+    let global_id : u32 = (64u * wg_id.x + thread_id) * 8u;
 
     let is_evaluating_undo : bool = (stroke_history.is_undo & UNDO_EVAL_FLAG) == UNDO_EVAL_FLAG;
 
@@ -72,44 +73,48 @@ fn compute(@builtin(workgroup_id) wg_id: vec3u, @builtin(local_invocation_index)
     let stroke_history_aabb_min : vec3f = stroke_history.eval_aabb_min;
     let stroke_history_aabb_max : vec3f = stroke_history.eval_aabb_max;
 
-    // If the job count is bigger than the thread ID, there is no work for this thread
-    if (global_id < u32(aabb_culling_count)) {
-        // Get the octree_idx from the last layer id
-        var brick_center : vec3f = get_brick_center(global_id);
+    // Reduce the threadcount, but do more work per thread
+    for(var j : u32 = 0u; j < 8u; j++) {
+        let operation_id : u32 = global_id + j;
+        // If the job count is bigger than the thread ID, there is no work for this thread
+        if (operation_id < u32(aabb_culling_count)) {
+            // Get the octree_idx from the last layer id
+            var brick_center : vec3f = get_brick_center(operation_id);
 
-        var brick_half_size : f32 = 0.5 * BRICK_WORLD_SIZE;
+            var brick_half_size : f32 = 0.5 * BRICK_WORLD_SIZE;
 
-        let eval_aabb_min : vec3f = brick_center - vec3f(brick_half_size);
-        let eval_aabb_max : vec3f = brick_center + vec3f(brick_half_size);
+            let eval_aabb_min : vec3f = brick_center - vec3f(brick_half_size);
+            let eval_aabb_max : vec3f = brick_center + vec3f(brick_half_size);
 
-        // Test if it intersect with the current history to eval
-        if (intersection_AABB_AABB( eval_aabb_min, 
-                                    eval_aabb_max, 
-                                    stroke_history_aabb_min, 
-                                    stroke_history_aabb_max )) {
-            if (is_evaluating_undo) {
-                // Add to the next work queue and early out
-                add_brick_to_next_job_queue(global_id);
-            } else {
-                // TODO: No Stroke history culling yet, only no crash (at this stage)
-                var any_stroke_inside : bool = false;
-                for(var i : u32 = 0u; i < stroke_count; i++) {
-                    if (intersection_AABB_AABB( eval_aabb_min, 
-                                                eval_aabb_max, 
-                                                stroke_history.strokes[i].aabb_min, 
-                                                stroke_history.strokes[i].aabb_max  )) {
-                        // Added to the current list
-                        //curr_stroke_count = curr_stroke_count + 1u;
-                        any_stroke_inside = true;
-                        break; // <- early out
+            // Test if it intersect with the current history to eval
+            if (intersection_AABB_AABB( eval_aabb_min, 
+                                        eval_aabb_max, 
+                                        stroke_history_aabb_min, 
+                                        stroke_history_aabb_max )) {
+                if (is_evaluating_undo) {
+                    // Add to the next work queue and early out
+                    add_brick_to_next_job_queue(operation_id);
+                } else {
+                    // TODO: No Stroke history culling yet, only no crash (at this stage)
+                    var any_stroke_inside : bool = false;
+                    for(var i : u32 = 0u; i < stroke_count; i++) {
+                        if (intersection_AABB_AABB( eval_aabb_min, 
+                                                    eval_aabb_max, 
+                                                    stroke_history.strokes[i].aabb_min, 
+                                                    stroke_history.strokes[i].aabb_max  )) {
+                            // Added to the current list
+                            //curr_stroke_count = curr_stroke_count + 1u;
+                            any_stroke_inside = true;
+                            break; // <- early out
+                        }
+                    }
+
+                    if (any_stroke_inside) {
+                        // Add to the work queue
+                        add_brick_to_next_job_queue(operation_id);
                     }
                 }
-
-                if (any_stroke_inside) {
-                    // Add to the work queue
-                    add_brick_to_next_job_queue(global_id);
-                }
-            }
-        } 
+            } 
+        }
     }
 }
