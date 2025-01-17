@@ -52,39 +52,44 @@ fn merge_padded_aabb(aabb1 : sPaddedAABB, aabb2 : sPaddedAABB) -> sPaddedAABB {
 
 var<workgroup> shared_AABB_buffer : array<sPaddedAABB, 512u>;
 
-@compute @workgroup_size(8u, 8u, 8u)
+@compute @workgroup_size(4, 4, 4)
 fn compute(@builtin(workgroup_id) id: vec3<u32>, @builtin(local_invocation_index) local_id: u32)
 {
     // 512 is 8 x 8 x 8, which is the number of threads in a group
-    let current_instance_index : u32 = OCTREE_LAST_LEVEL_STARTING_IDX + (id.x) * 512u + local_id;
-
-    let current_instance_in_use_flag : u32 = octree.data[current_instance_index].tile_pointer;
-
+    let wg_id : u32 = ((id.x) * 64u + local_id) * 8u;
+    let wg_instance_index : u32 = OCTREE_LAST_LEVEL_STARTING_IDX + wg_id;
     let brick_half_size : vec3f = vec3f(SCULPT_MAX_SIZE / pow(2.0, f32(OCTREE_DEPTH + 1)));
-
-    var local_AABB : sPaddedAABB = sPaddedAABB(vec3f(2.0), 0u, vec3f(-2.0), 0u);
-
     var brick_count_in_thread : u32 = 0u;
 
-    if ((current_instance_in_use_flag & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG)
-        //&& (current_instance_in_use_flag & BRICK_HIDE_FLAG) == 0)
-    {
-        let prev_index : u32 = atomicAdd(&sculpt_indirect.brick_count, 1u);
+    var local_AABB : sPaddedAABB;
 
-        let proxy_data_idx : u32 = current_instance_in_use_flag & OCTREE_TILE_INDEX_MASK;
+    for(var j = 0u; j < 8u; j++) {
+        let current_instance_index : u32 = wg_instance_index + j;
 
-        brick_index_buffer[prev_index] = proxy_data_idx;
+        let current_instance_in_use_flag : u32 = octree.data[current_instance_index].tile_pointer;
 
-        let instance_data : ptr<storage, ProxyInstanceData, read> = &brick_buffers.brick_instance_data[proxy_data_idx];
+        local_AABB = sPaddedAABB(vec3f(2.0), 0u, vec3f(-2.0), 0u);
 
-        let brick_position : vec3f = instance_data.position;
+        if ((current_instance_in_use_flag & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG)
+            //&& (current_instance_in_use_flag & BRICK_HIDE_FLAG) == 0)
+        {
+            let prev_index : u32 = atomicAdd(&sculpt_indirect.brick_count, 1u);
 
-        local_AABB = sPaddedAABB(brick_position - brick_half_size, 1u, brick_position + brick_half_size, 0u);
+            let proxy_data_idx : u32 = current_instance_in_use_flag & OCTREE_TILE_INDEX_MASK;
 
-        brick_count_in_thread = brick_count_in_thread + 1u;
+            brick_index_buffer[prev_index] = proxy_data_idx;
+
+            let instance_data : ptr<storage, ProxyInstanceData, read> = &brick_buffers.brick_instance_data[proxy_data_idx];
+
+            let brick_position : vec3f = instance_data.position;
+
+            local_AABB = sPaddedAABB(brick_position - brick_half_size, 1u, brick_position + brick_half_size, 0u);
+
+            brick_count_in_thread = brick_count_in_thread + 1u;
+        }
+
+        shared_AABB_buffer[wg_id + j] = local_AABB;
     }
-
-    shared_AABB_buffer[local_id] = local_AABB;
 
     // Set a count of the number of used bricks for a sculpt
     // This could be a good usecase for subgroup operations
