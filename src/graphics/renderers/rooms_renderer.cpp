@@ -266,7 +266,14 @@ void RoomsRenderer::render()
 
 #ifndef __EMSCRIPTEN__
     if (!last_frame_timestamps.empty()) {
-        last_evaluation_time = last_frame_timestamps[0];
+        std::map<uint8_t, std::string>& queries_map = get_queries_label_map();
+        for (int i = 0; i < last_frame_timestamps.size(); ++i) {
+            std::string label = queries_map[i * 2 + 1];
+
+            if (label == "evaluation") {
+                last_evaluation_time = last_frame_timestamps[i];
+            }
+        }
     }
 #endif
 
