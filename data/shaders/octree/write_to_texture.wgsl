@@ -84,7 +84,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
         workgroupBarrier();
 
-        if (wg_current_brick_to_process > 0) {
+        if (wg_current_brick_to_process >= 0) {
             // Init baking the SDF to the texture
             let pos = wg_brick_center + pixel_offset;
 

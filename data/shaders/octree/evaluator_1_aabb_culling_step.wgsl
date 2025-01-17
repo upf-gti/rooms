@@ -72,11 +72,6 @@ fn compute(@builtin(workgroup_id) wg_id: vec3u, @builtin(local_invocation_index)
     let stroke_history_aabb_min : vec3f = stroke_history.eval_aabb_min;
     let stroke_history_aabb_max : vec3f = stroke_history.eval_aabb_max;
 
-    for(var i : u32 = 0u; i < stroke_count; i++) {
-        let p = 3 + 4;
-        workgroupBarrier();
-    }
-
     // If the job count is bigger than the thread ID, there is no work for this thread
     if (global_id < u32(aabb_culling_count)) {
         // Get the octree_idx from the last layer id
