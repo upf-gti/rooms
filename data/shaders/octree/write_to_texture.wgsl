@@ -43,10 +43,10 @@ var<workgroup> wg_atlas_tile_coord : vec3u;
     del evaluador.
 */
 
+// TODO: needs the culling back!!
 @compute @workgroup_size(8, 8, 8)
 fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation_id) local_id: vec3<u32>, @builtin(local_invocation_index) thread_id: u32)
 {
-    // PROTO:
     let local_id_vec : vec3f = vec3f(local_id);
     // Offset to cover negative and positive
     // for example, for threads going from 0 to 7 -> -3.5 to 3.5
@@ -63,6 +63,12 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
 
             // let culling_count : u32 = octree.data[octree_leaf_id].stroke_count;
             // let curr_culling_layer_index = octree.data[octree_leaf_id].culling_id;
+            atomicStore(&wg_used_pixels, 0u);
+        }
+
+        workgroupBarrier();
+
+        if (wg_current_brick_to_process >= 0) {
             wg_octree_leaf_id = bricks_to_write_to_tex_buffer[wg_current_brick_to_process];
             wg_brick_pointer = octree.data[wg_octree_leaf_id].tile_pointer;
 
@@ -79,12 +85,6 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
                                                         (atlas_tile_index / NUM_BRICKS_IN_ATLAS_AXIS) % NUM_BRICKS_IN_ATLAS_AXIS,
                                                         atlas_tile_index / (NUM_BRICKS_IN_ATLAS_AXIS * NUM_BRICKS_IN_ATLAS_AXIS));
 
-            atomicStore(&wg_used_pixels, 0u);
-        }
-
-        workgroupBarrier();
-
-        if (wg_current_brick_to_process >= 0) {
             // Init baking the SDF to the texture
             let pos = wg_brick_center + pixel_offset;
 
@@ -114,6 +114,10 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
             textureStore(write_material_sdf, texture_coordinates, vec4<u32>((pack_material(result_surface.material))));
         }
 
+        // i dont think that this is that bad. NOTE: it might be
+        let w = brick_buffers.brick_instance_data[0].in_use;
+        let t = stroke_culling[0];
+        let p = octree.data[wg_octree_leaf_id].octant_center_distance;
         workgroupBarrier();
 
         // Check if the current brick is empty
@@ -167,19 +171,4 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
         // }
         
     }
-
-    // // Evaluating the edit context
-    // //let p = stroke_culling[0];
-    // for (var j : u32 = 0; j < culling_count; j++) {
-    //     let index : u32 = culling_get_stroke_index(stroke_culling[j + curr_culling_layer_index]);
-    //     curr_surface = evaluate_stroke(pos, &(stroke_history.strokes[index]), &edit_list, curr_surface, stroke_history.strokes[index].edit_list_index, stroke_history.strokes[index].edit_count);
-    // }
-
-    // // Non-culled part
-    // let culled_part : u32 = (min(stroke_history.count, MAX_STROKE_INFLUENCE_COUNT));
-    // let non_culled_count : u32 = ( (stroke_history.count) - culled_part);
-    // for(var i : u32 = 0u; i < non_culled_count; i++) {
-    //     let index : u32 = i + MAX_STROKE_INFLUENCE_COUNT;
-    //     curr_surface = evaluate_stroke(pos, &(stroke_history.strokes[index]), &edit_list, curr_surface, stroke_history.strokes[index].edit_list_index, stroke_history.strokes[index].edit_count);
-    // }
 }

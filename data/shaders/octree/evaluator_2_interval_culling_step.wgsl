@@ -87,6 +87,10 @@ fn brick_reevaluate(octree_index : u32)
 var<workgroup> brick_to_eval_wg_size : u32;
 var<workgroup> bricks_to_eval_wg_buffer : array<u32, 512u>;
 
+// TODO: remove bricks is a bit funky
+
+// NOTE: do not NAIVELY reduce thread group by doing more iterations per trehad
+// brings perf down: occupancy might suffer. TODO: rethink how to reduce thread count
 @compute @workgroup_size(8,8,8)
 fn compute(@builtin(local_invocation_index) thread_id: u32, @builtin(num_workgroups) workgroup_size : vec3u) 
 {
@@ -183,7 +187,7 @@ fn compute(@builtin(local_invocation_index) thread_id: u32, @builtin(num_workgro
                     octree.data[octree_index].octant_center_distance = vec2f(10000.0, 10000.0);
                 }
             } else if (surface_interval.y < 0.0) {
-                //brick_remove_and_mark_as_inside(octree_index, is_current_brick_filled);
+                brick_remove_and_mark_as_inside(octree_index, is_current_brick_filled);
             } else if (surface_interval.x < 0.0) {
                 brick_create_or_reevaluate(octree_index, is_current_brick_filled, is_interior_brick, brick_center);
             }

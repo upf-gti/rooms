@@ -551,7 +551,7 @@ void SculptManager::evaluate_preview(WGPUComputePassEncoder compute_pass)
         !increment_level_pipeline.is_loaded()) {
         return;
     }
-
+    return;
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
     sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();
