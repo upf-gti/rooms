@@ -49,6 +49,18 @@ class RoomsRenderer : public Renderer {
 
     sSDFGlobals sdf_globals;
 
+    // custom mirror camera render
+    bool use_custom_mirror = false;
+    WGPUTexture custom_mirror_texture = nullptr;
+    WGPUTextureView custom_mirror_texture_view = nullptr;
+    WGPUTexture custom_mirror_depth_texture = nullptr;
+    WGPUTextureView custom_mirror_depth_texture_view = nullptr;
+    Uniform custom_mirror_fbo_uniform;
+    WGPUBindGroup custom_mirror_fbo_bind_group = nullptr;
+    Uniform custom_mirror_camera_uniform;
+    WGPUBindGroup custom_mirror_camera_bind_group = nullptr;
+    sInstanceData custom_mirror_instances_data;
+
     struct ProxyInstanceData {
         glm::vec3 position;
         uint32_t atlas_index;
@@ -104,6 +116,8 @@ public:
 
     void update(float delta_time) override;
     void render() override;
+
+    void render_custom_mirror_fbo();
 
     uint32_t add_sculpt_render_call(Sculpt* sculpt, const glm::mat4& model, const uint32_t flags = 0u);
 

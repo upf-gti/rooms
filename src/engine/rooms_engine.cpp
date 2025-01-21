@@ -51,6 +51,7 @@ int RoomsEngine::post_initialize()
     main_scene = new Scene("main_scene");
 
     environment = new Environment3D();
+    environment->set_scale({ 10.0f, 10.0f, 10.0f });
 
     // Load Meta Quest Controllers and Controller pointer
     if (renderer->get_openxr_available())

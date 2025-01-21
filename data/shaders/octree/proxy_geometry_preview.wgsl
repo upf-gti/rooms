@@ -23,12 +23,12 @@ struct VertexOutput {
     @location(4) @interpolate(flat) voxel_center_sculpt_space : vec3f,
 };
 
-#dynamic @group(0) @binding(0) var<uniform> camera_data : CameraData;
+// @group(0) @binding(0) var<uniform> sculpt_data : SculptData;
+@group(0) @binding(1) var<storage, read> preview_stroke : PreviewStroke;
+@group(0) @binding(5) var<storage, read> brick_buffers: BrickBuffers_ReadOnly;
+@group(0) @binding(9) var<storage, read> sculpt_instance_data: array<SculptInstanceData>;
 
-// @group(1) @binding(0) var<uniform> sculpt_data : SculptData;
-@group(1) @binding(1) var<storage, read> preview_stroke : PreviewStroke;
-@group(1) @binding(5) var<storage, read> brick_buffers: BrickBuffers_ReadOnly;
-@group(1) @binding(9) var<storage, read> sculpt_instance_data: array<SculptInstanceData>;
+#dynamic @group(1) @binding(0) var<uniform> camera_data : CameraData;
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {

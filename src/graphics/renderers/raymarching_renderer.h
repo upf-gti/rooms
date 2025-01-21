@@ -46,7 +46,6 @@ class RaymarchingRenderer {
 
     Pipeline        render_preview_proxy_geometry_pipeline;
     Shader*         render_preview_proxy_shader = nullptr;
-    WGPUBindGroup   render_preview_camera_bind_group = nullptr;
 
     WGPUBindGroup   sculpt_data_bind_preview_group = nullptr;
 
@@ -74,9 +73,9 @@ class RaymarchingRenderer {
 
     void init_raymarching_proxy_pipeline();
 
-    void render_raymarching_proxy(WGPURenderPassEncoder render_pass, uint32_t camera_buffer_stride = 0);
+    void render_raymarching_proxy(WGPURenderPassEncoder render_pass, WGPUBindGroup camera_bind_group, uint32_t camera_buffer_stride = 0);
 
-    void render_preview_raymarching_proxy(WGPURenderPassEncoder render_pass, uint32_t camera_buffer_stride = 0);
+    void render_preview_raymarching_proxy(WGPURenderPassEncoder render_pass, WGPUBindGroup camera_bind_group, uint32_t camera_buffer_stride = 0);
 
 
     // DEBUG
@@ -86,11 +85,11 @@ public:
 
     RaymarchingRenderer();
 
-    int initialize(bool use_mirror_screen);
+    int initialize();
 
     void clean();
 
-    void render(WGPURenderPassEncoder render_pass, uint32_t camera_buffer_stride = 0u);
+    void render(WGPURenderPassEncoder render_pass, WGPUBindGroup camera_bind_group, uint32_t camera_buffer_stride = 0u);
 
     inline void set_preview_render(const bool need_to_render_preview) {
         render_preview = need_to_render_preview;

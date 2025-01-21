@@ -91,6 +91,8 @@ public:
     static void toggle_use_grid();
     static void toggle_use_environment_map();
 
+    Environment3D* get_environment() { return environment; }
+
     void set_current_sculpt(SculptNode* sculpt_instance);
 
     void push_context_menu(ui::ContextMenu* cm);
