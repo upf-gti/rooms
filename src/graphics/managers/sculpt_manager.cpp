@@ -28,11 +28,6 @@ void SculptManager::clean()
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
 
-    wgpuBindGroupRelease(evaluate_bind_group);
-    wgpuBindGroupRelease(increment_level_bind_group);
-    wgpuBindGroupRelease(write_to_texture_bind_group);
-    wgpuBindGroupRelease(octant_usage_ping_pong_bind_groups[0]);
-    wgpuBindGroupRelease(octant_usage_ping_pong_bind_groups[1]);
     wgpuBindGroupRelease(gpu_results_bindgroup);
     wgpuBindGroupRelease(ray_sculpt_info_bind_group);
     wgpuBindGroupRelease(ray_intersection_info_bind_group);
@@ -53,15 +48,12 @@ void SculptManager::clean()
     octant_usage_ping_pong_uniforms[1].destroy();
     octant_usage_initialization_uniform[0].destroy();
 
-    delete evaluate_shader;
-    delete increment_level_shader;
     delete write_to_texture_shader;
     delete brick_removal_shader;
     delete brick_copy_aabb_gen_shader;
     delete brick_unmark_shader;
     delete sculpt_delete_shader;
     delete ray_intersection_shader;
-    delete evaluation_initialization_shader;
     delete ray_intersection_result_and_clean_shader;
 #endif
 }
@@ -227,13 +219,11 @@ Sculpt* SculptManager::create_sculpt()
     WGPUBindGroup evaluate_sculpt_bindgroup = webgpu_context->create_bind_group(uniforms, RendererStorage::get_shader("data/shaders/octree/prepare_indirect_sculpt_render.wgsl"), 1u, "Write read octree bindgroup");
 
     uniforms = { &octree_uniform };
-    WGPUBindGroup octree_bindgroup = webgpu_context->create_bind_group(uniforms, evaluate_shader, 1u, "Octree bindgroup");
+    WGPUBindGroup octree_bindgroup = webgpu_context->create_bind_group(uniforms, evaluator_2_interval_culling_step_shader, 1u, "Octree bindgroup");
 
     uniforms = { &brick_index_buffer, &indirect_buffer };
     WGPUBindGroup readonly_sculpt_buffer_bindgroup = webgpu_context->create_bind_group(uniforms, RendererStorage::get_shader("data/shaders/octree/proxy_geometry_plain.wgsl"), 2u, "Read only octree bindgroup");
 
-    uniforms = { &octree_uniform, &indirect_buffer };
-    WGPUBindGroup oct_indi_bindgroup = webgpu_context->create_bind_group(uniforms, evaluation_initialization_shader, 1u, "Read only octree bindgroup");
 
     uniforms = { &octree_uniform, &brick_index_buffer, &indirect_buffer, &sdf_globals.brick_buffers};
     WGPUBindGroup brick_copy_aabb_gen_bind_group = webgpu_context->create_bind_group(uniforms, brick_copy_aabb_gen_shader, 0u, "brick copy bindgroup");
@@ -242,7 +232,6 @@ Sculpt* SculptManager::create_sculpt()
 
     new_sculpt->set_brick_copy_bindgroup(brick_copy_aabb_gen_bind_group);
     new_sculpt->set_readonly_octree_bindgroup(readonly_sculpt_buffer_bindgroup);
-    new_sculpt->set_indirect_buffers_bindgroup(oct_indi_bindgroup);
     new_sculpt->set_sculpt_evaluation_bindgroup(evaluate_sculpt_bindgroup);
 
     return new_sculpt;
@@ -314,10 +303,10 @@ void SculptManager::delete_sculpt(WGPUComputePassEncoder compute_pass, Sculpt* t
 
 bool SculptManager::evaluate(WGPUComputePassEncoder compute_pass, const sEvaluateRequest& evaluate_request)
 {
-    if (!evaluate_shader->is_loaded() ||
-        !evaluation_initialization_pipeline.is_loaded() ||
-        !evaluate_pipeline.is_loaded() ||
-        !increment_level_pipeline.is_loaded() ||
+    if (!evaluator_1_aabb_culling_step_pipeline.is_loaded() ||
+        !evaluator_1_5_interval_culling_step_pipeline.is_loaded() ||
+        !evaluator_2_interval_culling_step_pipeline.is_loaded() ||
+        !evaluator_2_5_write_to_texture_setup_pipeline.is_loaded() ||
         !write_to_texture_pipeline.is_loaded() ||
         !brick_copy_aabb_gen_pipeline.is_loaded()) {
         return false;
@@ -410,108 +399,6 @@ bool SculptManager::evaluate(WGPUComputePassEncoder compute_pass, const sEvaluat
 #ifndef NDEBUG
         wgpuComputePassEncoderPopDebugGroup(compute_pass);
 #endif
-//#ifndef NDEBUG
-//        wgpuComputePassEncoderPushDebugGroup(compute_pass, "Stroke Evaluation");
-//#endif
-
-        //TODO: the evaluator only handle ONE stroke, the other should be added to the history/context
-        // First pass: evaluate the incomming strokes
-        // Must be updated per stroke, also make sure the area is reevaluated on undo
-        uint16_t eval_steps = 1;//(is_undo && strokes.empty()) ? 1 : strokes.size();
-//        for (uint16_t i = 0; i < eval_steps; ++i)
-//        {
-//#ifndef NDEBUG
-//            wgpuComputePassEncoderPushDebugGroup(compute_pass, "Octree evaluation");
-//#endif
-//            evaluation_initialization_pipeline.set(compute_pass);
-//
-//            wgpuComputePassEncoderSetBindGroup(compute_pass, 0, evaluation_initialization_bind_group, 0, nullptr);
-//            wgpuComputePassEncoderSetBindGroup(compute_pass, 1, evaluate_request.sculpt->get_octree_indirect_bindgroup(), 0u, nullptr);
-//
-//            wgpuComputePassEncoderSetBindGroup(compute_pass, 3, preview_stroke_bind_group, 0, nullptr);
-//
-//            //uint32_t stroke_dynamic_offset = i * sizeof(Stroke);
-//
-//            //wgpuComputePassEncoderSetBindGroup(compute_pass, 1, compute_stroke_buffer_bind_group, 1, &stroke_dynamic_offset);
-//
-//            //wgpuComputePassEncoderSetBindGroup(compute_pass, 1, preview_stroke_bind_group, 0, nullptr);
-//
-//            wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
-//
-//            int ping_pong_idx = 0;
-//            wgpuComputePassEncoderSetBindGroup(compute_pass, 1, evaluate_request.sculpt->get_octree_bindgroup(), 0u, nullptr);
-//
-//
-//            for (int j = 0; j <= sdf_globals.octree_depth; ++j) {
-//
-//                evaluate_pipeline.set(compute_pass);
-//
-//                wgpuComputePassEncoderSetBindGroup(compute_pass, 0, evaluate_bind_group, 0, nullptr);
-//                wgpuComputePassEncoderSetBindGroup(compute_pass, 2, octant_usage_ping_pong_bind_groups[ping_pong_idx], 0, nullptr);
-//
-//                wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(sdf_globals.indirect_buffers.data), sizeof(uint32_t) * 12u);
-//
-//                increment_level_pipeline.set(compute_pass);
-//
-//                wgpuComputePassEncoderSetBindGroup(compute_pass, 0, increment_level_bind_group, 0, nullptr);
-//                wgpuComputePassEncoderSetBindGroup(compute_pass, 2u, gpu_results_bindgroup, 0u, nullptr);
-//                //wgpuComputePassEncoderSetBindGroup(compute_pass, 1, sculpt.octree_bindgroup, 0u, nullptr);
-//
-//                wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
-//
-//                ping_pong_idx = (ping_pong_idx + 1) % 2;
-//            }
-//
-//#ifndef NDEBUG
-//            wgpuComputePassEncoderPopDebugGroup(compute_pass);
-//#endif
-//
-//#ifndef NDEBUG
-//            wgpuComputePassEncoderPushDebugGroup(compute_pass, "Write to texture");
-//#endif
-//            // Write to texture dispatch
-//            write_to_texture_pipeline.set(compute_pass);
-//
-//            wgpuComputePassEncoderSetBindGroup(compute_pass, 0, write_to_texture_bind_group, 0, nullptr);
-//            //wgpuComputePassEncoderSetBindGroup(compute_pass, 1, sculpt.octree_bindgroup, 0u, nullptr);
-//            wgpuComputePassEncoderSetBindGroup(compute_pass, 2, octant_usage_ping_pong_bind_groups[ping_pong_idx], 0, nullptr);
-//
-//            wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(sdf_globals.indirect_buffers.data), sizeof(uint32_t) * 12u);
-//
-//#ifndef NDEBUG
-//            wgpuComputePassEncoderPopDebugGroup(compute_pass);
-//#endif
-//
-//            increment_level_pipeline.set(compute_pass);
-//            wgpuComputePassEncoderSetBindGroup(compute_pass, 0, increment_level_bind_group, 0, nullptr);
-//            wgpuComputePassEncoderSetBindGroup(compute_pass, 2u, gpu_results_bindgroup, 0u, nullptr);
-//            //wgpuComputePassEncoderSetBindGroup(compute_pass, 1, sculpt.octree_bindgroup, 0u, nullptr);
-//            wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
-//
-//            // Clean the texture atlas bricks dispatch
-//            brick_removal_pipeline.set(compute_pass);
-//
-//            wgpuComputePassEncoderSetBindGroup(compute_pass, 0, indirect_brick_removal_bind_group, 0, nullptr);
-//
-//            wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(sdf_globals.indirect_buffers.data), sizeof(uint32_t) * 8u);
-//
-//        }
-
-//#ifndef NDEBUG
-//        wgpuComputePassEncoderPopDebugGroup(compute_pass);
-//#endif
-
-        //brick_copy_aabb_gen_pipeline.set(compute_pass);
-        //wgpuComputePassEncoderSetBindGroup(compute_pass, 0u, evaluate_request.sculpt->get_brick_copy_aabb_gen_bindgroup(), 0u, nullptr);
-        //wgpuComputePassEncoderSetBindGroup(compute_pass, 1u, gpu_results_bindgroup, 0u, nullptr);
-
-        ////wgpuComputePassEncoderSetBindGroup(compute_pass, 1, sculpt.octree_bindgroup, 0, nullptr);
-        //wgpuComputePassEncoderDispatchWorkgroups(compute_pass, sdf_globals.octree_last_level_size / (8u * 8u * 8u), 1, 1);
-
-        //increment_level_pipeline.set(compute_pass);
-        //wgpuComputePassEncoderSetBindGroup(compute_pass, 0, increment_level_bind_group, 0, nullptr);
-        //wgpuComputePassEncoderSetBindGroup(compute_pass, 1, evaluate_request.sculpt->get_octree_bindgroup(), 0u, nullptr);
-        //wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
 
     }
 
@@ -546,66 +433,66 @@ void SculptManager::clean_previous_preview(WGPUComputePassEncoder compute_pass)
 
 void SculptManager::evaluate_preview(WGPUComputePassEncoder compute_pass)
 {
-    if (!evaluation_initialization_pipeline.is_loaded() ||
-        !evaluate_pipeline.is_loaded() ||
-        !increment_level_pipeline.is_loaded()) {
-        return;
-    }
-    return;
-    RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
-    WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
-    sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();
-
-    // Set preview flag if needed
-    if (!performed_evaluation) {
-        uint32_t set_as_preview = PREVIEW_EVAL_FLAG;
-        webgpu_context->update_buffer(std::get<WGPUBuffer>(preview.sculpt->get_octree_uniform().data), sizeof(uint32_t) * 2u, &set_as_preview, sizeof(uint32_t));
-    }
-
-    upload_preview_strokes();
-
-#ifndef NDEBUG
-    wgpuComputePassEncoderPushDebugGroup(compute_pass, "Preview evaluation");
-#endif
-
-    // Initializate the evaluator sequence
-    evaluation_initialization_pipeline.set(compute_pass);
-
-    uint32_t stroke_dynamic_offset = 0;
-    wgpuComputePassEncoderSetBindGroup(compute_pass, 0, evaluation_initialization_bind_group, 0, nullptr);
-    wgpuComputePassEncoderSetBindGroup(compute_pass, 1, preview.sculpt->get_octree_indirect_bindgroup(), 0, nullptr);
-
-    wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
-
-    int ping_pong_idx = 0;
-
-    for (int j = 0; j <= sdf_globals.octree_depth; ++j) {
-
-        evaluate_pipeline.set(compute_pass);
-
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 0, evaluate_bind_group, 0, nullptr);
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 1, preview.sculpt->get_octree_bindgroup(), 0, nullptr);
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 2, octant_usage_ping_pong_bind_groups[ping_pong_idx], 0, nullptr);
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 3, preview_stroke_bind_group, 0, nullptr);
-
-        wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(sdf_globals.indirect_buffers.data), sizeof(uint32_t) * 12u);
-
-        increment_level_pipeline.set(compute_pass);
-
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 0, increment_level_bind_group, 0, nullptr);
-        wgpuComputePassEncoderSetBindGroup(compute_pass, 2u, gpu_results_bindgroup, 0u, nullptr);
-
-        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
-
-        ping_pong_idx = (ping_pong_idx + 1) % 2;
-    }
-
-#ifndef NDEBUG
-    wgpuComputePassEncoderPopDebugGroup(compute_pass);
-#endif
-
-    preview.needs_computing = false;
-    previus_dispatch_had_preview = true;
+//    if (!evaluation_initialization_pipeline.is_loaded() ||
+//        !evaluate_pipeline.is_loaded() ||
+//        !increment_level_pipeline.is_loaded()) {
+//        return;
+//    }
+//    return;
+//    RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
+//    WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
+//    sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();
+//
+//    // Set preview flag if needed
+//    if (!performed_evaluation) {
+//        uint32_t set_as_preview = PREVIEW_EVAL_FLAG;
+//        webgpu_context->update_buffer(std::get<WGPUBuffer>(preview.sculpt->get_octree_uniform().data), sizeof(uint32_t) * 2u, &set_as_preview, sizeof(uint32_t));
+//    }
+//
+//    upload_preview_strokes();
+//
+//#ifndef NDEBUG
+//    wgpuComputePassEncoderPushDebugGroup(compute_pass, "Preview evaluation");
+//#endif
+//
+//    // Initializate the evaluator sequence
+//    evaluation_initialization_pipeline.set(compute_pass);
+//
+//    uint32_t stroke_dynamic_offset = 0;
+//    wgpuComputePassEncoderSetBindGroup(compute_pass, 0, evaluation_initialization_bind_group, 0, nullptr);
+//    wgpuComputePassEncoderSetBindGroup(compute_pass, 1, preview.sculpt->get_octree_indirect_bindgroup(), 0, nullptr);
+//
+//    wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
+//
+//    int ping_pong_idx = 0;
+//
+//    for (int j = 0; j <= sdf_globals.octree_depth; ++j) {
+//
+//        evaluate_pipeline.set(compute_pass);
+//
+//        wgpuComputePassEncoderSetBindGroup(compute_pass, 0, evaluate_bind_group, 0, nullptr);
+//        wgpuComputePassEncoderSetBindGroup(compute_pass, 1, preview.sculpt->get_octree_bindgroup(), 0, nullptr);
+//        wgpuComputePassEncoderSetBindGroup(compute_pass, 2, octant_usage_ping_pong_bind_groups[ping_pong_idx], 0, nullptr);
+//        wgpuComputePassEncoderSetBindGroup(compute_pass, 3, preview_stroke_bind_group, 0, nullptr);
+//
+//        wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(sdf_globals.indirect_buffers.data), sizeof(uint32_t) * 12u);
+//
+//        increment_level_pipeline.set(compute_pass);
+//
+//        wgpuComputePassEncoderSetBindGroup(compute_pass, 0, increment_level_bind_group, 0, nullptr);
+//        wgpuComputePassEncoderSetBindGroup(compute_pass, 2u, gpu_results_bindgroup, 0u, nullptr);
+//
+//        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
+//
+//        ping_pong_idx = (ping_pong_idx + 1) % 2;
+//    }
+//
+//#ifndef NDEBUG
+//    wgpuComputePassEncoderPopDebugGroup(compute_pass);
+//#endif
+//
+//    preview.needs_computing = false;
+//    previus_dispatch_had_preview = true;
 }
 
 void SculptManager::evaluate_closest_ray_intersection(WGPUComputePassEncoder compute_pass)
@@ -716,24 +603,22 @@ void SculptManager::upload_strokes_and_edits(const uint32_t stroke_count, const 
     // If one of the buffers was recreated/resized, then recreate the necessary bindgroups
     if (recreated_stroke_context_buffer || recreated_edit_buffer) {
         std::vector<Uniform*> uniforms = { &sdf_globals.sdf_texture_uniform, &octree_edit_list, &stroke_culling_buffer,
-                                           &stroke_context_list, &sdf_globals.brick_buffers, &sdf_globals.sdf_material_texture_uniform };
+                                                &stroke_context_list, &sdf_globals.brick_buffers, &sdf_globals.sdf_material_texture_uniform ,
+                                                &evaluator_num_bricks_by_wg_uniform, &evaluation_write_to_tex_count_uniform, &evaluation_write_to_tex_buffer_alt_uniform };
 
-        wgpuBindGroupRelease(write_to_texture_bind_group);
-        write_to_texture_bind_group = webgpu_context->create_bind_group(uniforms, write_to_texture_shader, 0);
+        wgpuBindGroupRelease(evaluator_write_to_texture_step_bind_group);
+        evaluator_write_to_texture_step_bind_group = webgpu_context->create_bind_group(uniforms, write_to_texture_shader, 0);
 
 
-        uniforms = { &octree_edit_list,
-                     &stroke_context_list, &sdf_globals.brick_buffers, &stroke_culling_buffer };
+        uniforms = { &stroke_context_list };
 
-        wgpuBindGroupRelease(evaluate_bind_group);
-        evaluate_bind_group = webgpu_context->create_bind_group(uniforms, evaluate_shader, 0);
-    }
+        wgpuBindGroupRelease(evaluator_stroke_history_bind_group);
+        evaluator_stroke_history_bind_group = webgpu_context->create_bind_group(uniforms, evaluator_1_aabb_culling_step_shader, 0);
 
-    if (recreated_stroke_context_buffer) {
-        std::vector<Uniform*> uniforms = { &sdf_globals.indirect_buffers, &octant_usage_initialization_uniform[0], &octant_usage_initialization_uniform[1],
-                                        &sdf_globals.brick_buffers, &stroke_culling_buffer, &stroke_context_list };
+        uniforms = { &octree_edit_list, &stroke_context_list, &sdf_globals.brick_buffers, &evaluation_job_result_count_uniform, &octant_usage_ping_pong_uniforms[1], &evaluation_write_to_tex_count_uniform , &evaluation_write_to_tex_buffer_uniform };
 
-        evaluation_initialization_bind_group = webgpu_context->create_bind_group(uniforms, evaluation_initialization_shader, 0);
+        wgpuBindGroupRelease(evaluator_interval_culling_step_bind_group);
+        evaluator_interval_culling_step_bind_group = webgpu_context->create_bind_group(uniforms, evaluator_2_interval_culling_step_shader, 0u);
     }
 
     // TODO: This is sending all the edits & strokes from the buffer. The array is created once
@@ -916,12 +801,9 @@ void SculptManager::init_shaders()
     evaluator_2_interval_culling_step_shader = RendererStorage::get_shader("data/shaders/octree/evaluator_2_interval_culling_step.wgsl");
     evaluator_2_5_write_to_texture_setup_step_shader = RendererStorage::get_shader("data/shaders/octree/evaluator_2-5_write_to_texture_step.wgsl");
 
-    evaluate_shader = RendererStorage::get_shader("data/shaders/octree/evaluator.wgsl");
-    increment_level_shader = RendererStorage::get_shader("data/shaders/octree/increment_level.wgsl");
     write_to_texture_shader = RendererStorage::get_shader("data/shaders/octree/write_to_texture.wgsl");
     brick_removal_shader = RendererStorage::get_shader("data/shaders/octree/brick_removal.wgsl");
     brick_copy_aabb_gen_shader = RendererStorage::get_shader("data/shaders/octree/brick_copy_aabb_gen.wgsl");
-    evaluation_initialization_shader = RendererStorage::get_shader("data/shaders/octree/initialization.wgsl");
     brick_unmark_shader = RendererStorage::get_shader("data/shaders/octree/brick_unmark.wgsl");
     sculpt_delete_shader = RendererStorage::get_shader("data/shaders/octree/sculpture_delete.wgsl");
     ray_intersection_result_and_clean_shader = RendererStorage::get_shader("data/shaders/octree/octree_ray_intersection_clean.wgsl");
@@ -942,31 +824,10 @@ void SculptManager::init_pipelines_and_bindgroups()
     }
 
 
-    // Create bindgroups
-    {
-        std::vector<Uniform*> uniforms = {&octree_edit_list,
-                                       &stroke_context_list, &sdf_globals.brick_buffers,&stroke_culling_buffer };
-        evaluate_bind_group = webgpu_context->create_bind_group(uniforms, evaluate_shader, 0);
-    }
-
     // Brick removal pass
     {
         std::vector<Uniform*> uniforms = { &sdf_globals.brick_buffers };
         indirect_brick_removal_bind_group = webgpu_context->create_bind_group(uniforms, brick_removal_shader, 0);
-    }
-
-    // Octree increment iteration pass
-    {
-        std::vector<Uniform*> uniforms = { &sdf_globals.indirect_buffers, &sdf_globals.brick_buffers };
-        increment_level_bind_group = webgpu_context->create_bind_group(uniforms, increment_level_shader, 0);
-    }
-
-    // Octant usage, for propagating worl on the evalutor
-    {
-        for (int i = 0; i < 2; ++i) {
-            std::vector<Uniform*> uniforms = { &octant_usage_ping_pong_uniforms[i], &octant_usage_ping_pong_uniforms[3 - i] }; // im sorry
-            octant_usage_ping_pong_bind_groups[i] = webgpu_context->create_bind_group(uniforms, evaluate_shader, 2);
-        }
     }
 
     // Write to texture
@@ -982,14 +843,6 @@ void SculptManager::init_pipelines_and_bindgroups()
         sdf_atlases_sampler_bindgroup = webgpu_context->create_bind_group(uniforms, ray_intersection_shader, 3);
     }
 
-    // Octree initialiation bindgroup
-    {
-        std::vector<Uniform*> uniforms = { &sdf_globals.indirect_buffers, &octant_usage_initialization_uniform[0], &octant_usage_initialization_uniform[1],
-                                            &sdf_globals.brick_buffers, &stroke_culling_buffer, &stroke_context_list };
-
-        evaluation_initialization_bind_group = webgpu_context->create_bind_group(uniforms, evaluation_initialization_shader, 0);
-    }
-
     // Sculpt delete
     {
         Uniform alt_brick_uniform = sdf_globals.brick_buffers;
@@ -1002,7 +855,7 @@ void SculptManager::init_pipelines_and_bindgroups()
     // Preview data bindgroup
     {
         std::vector<Uniform*> uniforms = { &sdf_globals.preview_stroke_uniform };
-        preview_stroke_bind_group = webgpu_context->create_bind_group(uniforms, evaluate_shader, 3);
+        //preview_stroke_bind_group = webgpu_context->create_bind_group(uniforms, evaluate_shader, 3);
     }
 
     // Brick unmarking bindgroup
@@ -1050,12 +903,9 @@ void SculptManager::init_pipelines_and_bindgroups()
 
     // Create pipelines
     {
-        evaluate_pipeline.create_compute_async(evaluate_shader);
-        increment_level_pipeline.create_compute_async(increment_level_shader);
         write_to_texture_pipeline.create_compute_async(write_to_texture_shader);
         brick_removal_pipeline.create_compute_async(brick_removal_shader);
         brick_copy_aabb_gen_pipeline.create_compute_async(brick_copy_aabb_gen_shader);
-        evaluation_initialization_pipeline.create_compute_async(evaluation_initialization_shader);
         brick_unmark_pipeline.create_compute_async(brick_unmark_shader);
         sculpt_delete_pipeline.create_compute_async(sculpt_delete_shader);
         ray_intersection_pipeline.create_compute_async(ray_intersection_shader);

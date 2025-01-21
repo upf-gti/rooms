@@ -109,11 +109,6 @@ class SculptManager {
     Pipeline        ray_intersection_result_and_clean_pipeline;
     Shader*         ray_intersection_result_and_clean_shader = nullptr;
 
-    // Evaluation initialization
-    Pipeline        evaluation_initialization_pipeline;
-    Shader*         evaluation_initialization_shader = nullptr;
-    WGPUBindGroup   evaluation_initialization_bind_group = nullptr;
-
     Uniform         evaluation_job_result_count_uniform;
     Uniform         evaluation_aabb_culling_count_uniform;
     Uniform         evaluation_culling_dispatch_uniform;
@@ -128,8 +123,6 @@ class SculptManager {
     WGPUBindGroup   aabb_calculation_temp_bind_group = nullptr;
 
     // Sculpt evaluation
-    Pipeline evaluate_pipeline;
-    Pipeline increment_level_pipeline;
     Pipeline write_to_texture_pipeline;
     Pipeline brick_removal_pipeline;
     Pipeline brick_copy_aabb_gen_pipeline;
@@ -139,8 +132,6 @@ class SculptManager {
     Pipeline evaluator_2_interval_culling_step_pipeline;
     Pipeline evaluator_2_5_write_to_texture_setup_pipeline;
 
-    Shader* evaluate_shader = nullptr;
-    Shader* increment_level_shader = nullptr;
     Shader* write_to_texture_shader = nullptr;
     Shader* brick_removal_shader = nullptr;
     Shader* brick_copy_aabb_gen_shader = nullptr;
@@ -151,9 +142,6 @@ class SculptManager {
     Shader* evaluator_2_5_write_to_texture_setup_step_shader = nullptr;
 
     WGPUBindGroup   sdf_atlases_sampler_bindgroup = nullptr;
-    WGPUBindGroup   evaluate_bind_group = nullptr;
-    WGPUBindGroup   increment_level_bind_group = nullptr;
-    WGPUBindGroup   write_to_texture_bind_group = nullptr;
     WGPUBindGroup   indirect_brick_removal_bind_group = nullptr;
     WGPUBindGroup   sculpt_delete_bindgroup = nullptr;
     WGPUBindGroup   brick_unmark_bind_group = nullptr;
