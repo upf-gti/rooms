@@ -315,33 +315,33 @@ fn compute(@builtin(workgroup_id) group_id: vec3u, @builtin(num_workgroups) work
             subdivide = intersection_AABB_AABB(eval_aabb_min, eval_aabb_max, stroke_history.eval_aabb_min, stroke_history.eval_aabb_max);
             
             if (subdivide) {
-                    // Stroke history culling
-                    var curr_stroke_count : u32 = 0u;
-                    var any_stroke_inside : bool = false;
-                    for(var i : u32 = 0u; i < octree.data[parent_octree_index].stroke_count; i++) {
-                        let index : u32 = culling_get_stroke_index(stroke_culling[prev_culling_layer_index + i]);
-                        if (intersection_AABB_AABB(eval_aabb_min, 
-                                               eval_aabb_max, 
-                                               stroke_history.strokes[index].aabb_min, 
-                                               stroke_history.strokes[index].aabb_max)) {
-                            // Added to the current list
-                            stroke_culling[curr_culling_layer_index + curr_stroke_count] = culling_get_culling_data(index, 0u, 0u);
-                            curr_stroke_count = curr_stroke_count + 1u;
-                            any_stroke_inside = true;
-                        }
+                // Stroke history culling
+                var curr_stroke_count : u32 = 0u;
+                var any_stroke_inside : bool = false;
+                for(var i : u32 = 0u; i < octree.data[parent_octree_index].stroke_count; i++) {
+                    let index : u32 = culling_get_stroke_index(stroke_culling[prev_culling_layer_index + i]);
+                    if (intersection_AABB_AABB(eval_aabb_min, 
+                                           eval_aabb_max, 
+                                           stroke_history.strokes[index].aabb_min, 
+                                           stroke_history.strokes[index].aabb_max)) {
+                        // Added to the current list
+                        stroke_culling[curr_culling_layer_index + curr_stroke_count] = culling_get_culling_data(index, 0u, 0u);
+                        curr_stroke_count = curr_stroke_count + 1u;
+                        any_stroke_inside = true;
                     }
-                    // Non-culled part
-                    let culled_part : u32 = (min(stroke_history.count, MAX_STROKE_INFLUENCE_COUNT));
-                    let non_culled_count : u32 = ( (stroke_history.count) - culled_part);
-                    for(var i : u32 = 0u; i < non_culled_count; i++) {
-                        let index : u32 = i + MAX_STROKE_INFLUENCE_COUNT;
-                        if (intersection_AABB_AABB(eval_aabb_min, 
-                                               eval_aabb_max, 
-                                               stroke_history.strokes[index].aabb_min, 
-                                               stroke_history.strokes[index].aabb_max)) {
-                            any_stroke_inside = true;
-                        }
+                }
+                // Non-culled part
+                let culled_part : u32 = (min(stroke_history.count, MAX_STROKE_INFLUENCE_COUNT));
+                let non_culled_count : u32 = ( (stroke_history.count) - culled_part);
+                for(var i : u32 = 0u; i < non_culled_count; i++) {
+                    let index : u32 = i + MAX_STROKE_INFLUENCE_COUNT;
+                    if (intersection_AABB_AABB(eval_aabb_min, 
+                                           eval_aabb_max, 
+                                           stroke_history.strokes[index].aabb_min, 
+                                           stroke_history.strokes[index].aabb_max)) {
+                        any_stroke_inside = true;
                     }
+                }
 
                 octree.data[octree_index].stroke_count = curr_stroke_count;
 

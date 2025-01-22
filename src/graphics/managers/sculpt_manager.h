@@ -112,7 +112,7 @@ class SculptManager {
     Uniform         evaluation_job_result_count_uniform;
     Uniform         evaluation_aabb_culling_count_uniform;
     Uniform         evaluation_culling_dispatch_uniform;
-    Uniform         evaluation_write_to_tex_count_uniform;
+    //Uniform         evaluation_write_to_tex_count_uniform;
     Uniform         evaluation_write_to_tex_buffer_uniform;
 
     Uniform         evaluator_num_bricks_by_wg_uniform;

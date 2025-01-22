@@ -122,7 +122,7 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
     wgpuRenderPassEncoderSetBindGroup(render_pass, 3, Renderer::instance->get_lighting_bind_group(), 0, nullptr);
 
     for (auto& it : rooms_renderer->get_sculpts_render_list()) {
-        Sculpt* curr_sculpt = it.second->sculpt;
+        Sculpt* curr_sculpt = it.second.sculpt;
 
         if (curr_sculpt->is_deleted()) {
             continue;

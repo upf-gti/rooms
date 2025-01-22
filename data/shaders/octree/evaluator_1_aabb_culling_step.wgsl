@@ -8,13 +8,18 @@ struct sEvaluatorDispatchCounter {
     //pad : u32
 };
 
+struct sJobCounters {
+    bricks_to_interval_eval_count : atomic<i32>,
+    bricks_to_write_to_tex_count : atomic<i32>
+};
+
 @group(0) @binding(6) var<storage, read> stroke_history : StrokeHistory;
-//@group(0) @binding(9) var<storage, read_write> stroke_culling : array<u32>;
+@group(0) @binding(9) var<storage, read_write> stroke_culling : array<u32>;
 
 
-@group(1) @binding(0) var<storage, read_write> job_result_bricks_to_eval_count : atomic<i32>;
+@group(1) @binding(2) var<storage, read_write> job_counter : sJobCounters;
 @group(1) @binding(1) var<storage, read_write> job_result_bricks_to_eval : array<u32>;
-@group(1) @binding(2) var<storage, read_write> aabb_culling_count : i32;
+@group(1) @binding(0) var<storage, read_write> aabb_culling_count : i32;
 @group(1) @binding(3) var<storage, read_write> dispatch_counter : sEvaluatorDispatchCounter;
 
 
@@ -55,7 +60,7 @@ fn intersection_AABB_AABB(b1_min : vec3f, b1_max : vec3f, b2_min : vec3f, b2_max
 // TODO: Only do one atomicAdd to shared memory per workgroup, and only write to shared memory with the same thread
 
 fn add_brick_to_next_job_queue(brick_id : u32) {
-    let idx : i32 = atomicAdd(&job_result_bricks_to_eval_count, 1);
+    let idx : i32 = atomicAdd(&job_counter.bricks_to_interval_eval_count, 1);
     atomicAdd(&dispatch_counter.wg_x, 1u);
     job_result_bricks_to_eval[idx] = brick_id;
 }
@@ -73,6 +78,8 @@ fn compute(@builtin(workgroup_id) wg_id: vec3u, @builtin(local_invocation_index)
     let stroke_history_aabb_min : vec3f = stroke_history.eval_aabb_min;
     let stroke_history_aabb_max : vec3f = stroke_history.eval_aabb_max;
 
+    var in_brick_stroke_count : u32 = 0u;
+
     // Reduce the threadcount, but do more work per thread
     for(var j : u32 = 0u; j < 8u; j++) {
         let operation_id : u32 = global_id + j;
@@ -80,6 +87,11 @@ fn compute(@builtin(workgroup_id) wg_id: vec3u, @builtin(local_invocation_index)
         if (operation_id < u32(aabb_culling_count)) {
             // Get the octree_idx from the last layer id
             var brick_center : vec3f = get_brick_center(operation_id);
+
+            // Culling list indices
+            // level is zero
+            //let curr_culling_layer_index = octant_id * stroke_history.count +  (level % 2) * MAX_SUBDIVISION_SIZE * stroke_history.count;
+            let curr_culling_layer_index = operation_id * MAX_STROKE_INFLUENCE_COUNT;
 
             var brick_half_size : f32 = 0.5 * BRICK_WORLD_SIZE;
 
@@ -104,14 +116,19 @@ fn compute(@builtin(workgroup_id) wg_id: vec3u, @builtin(local_invocation_index)
                                                     stroke_history.strokes[i].aabb_max  )) {
                             // Added to the current list
                             //curr_stroke_count = curr_stroke_count + 1u;
+                            if (in_brick_stroke_count < MAX_STROKE_INFLUENCE_COUNT) {
+                                stroke_culling[curr_culling_layer_index + in_brick_stroke_count] = i;
+                                in_brick_stroke_count = in_brick_stroke_count + 1u;
+                            }
+                            
                             any_stroke_inside = true;
-                            break; // <- early out
+                            //break; // <- early out
                         }
                     }
 
                     if (any_stroke_inside) {
                         // Add to the work queue
-                        add_brick_to_next_job_queue(operation_id);
+                        add_brick_to_next_job_queue((operation_id << 8u) | in_brick_stroke_count);
                     }
                 }
             } 

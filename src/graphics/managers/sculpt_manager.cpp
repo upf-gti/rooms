@@ -353,9 +353,8 @@ bool SculptManager::evaluate(WGPUComputePassEncoder compute_pass, const sEvaluat
         uint32_t to_fill4 = 0u;
         int32_t to_fill2 = sdf_globals.octree_last_level_size;
         uint32_t to_fill3[3] = { 0u, 1u, 1u };
-        webgpu_context->update_buffer(std::get<WGPUBuffer>(evaluation_job_result_count_uniform.data), 0, &to_fill4, sizeof(uint32_t));
+        webgpu_context->update_buffer(std::get<WGPUBuffer>(evaluation_job_result_count_uniform.data), 0, &to_fill3, sizeof(uint32_t) * 2u);
         webgpu_context->update_buffer(std::get<WGPUBuffer>(evaluation_aabb_culling_count_uniform.data), 0, &to_fill2, sizeof(int32_t));
-        webgpu_context->update_buffer(std::get<WGPUBuffer>(evaluation_write_to_tex_count_uniform.data), 0, &to_fill, sizeof(int32_t));
         webgpu_context->update_buffer(std::get<WGPUBuffer>(evaluation_culling_dispatch_uniform.data), 0, to_fill3, sizeof(int32_t) * 3u);
 
         evaluator_1_aabb_culling_step_pipeline.set(compute_pass);
@@ -531,8 +530,8 @@ void SculptManager::evaluate_closest_ray_intersection(WGPUComputePassEncoder com
 
     if (intersection_node_to_test == nullptr) {
         for (auto& it : rooms_renderer->get_sculpts_render_list()) {
-            Sculpt* curr_sculpt = it.second->sculpt;
-            const uint32_t instances_count = it.second->instance_count;
+            Sculpt* curr_sculpt = it.second.sculpt;
+            const uint32_t instances_count = it.second.instance_count;
 
             wgpuComputePassEncoderSetBindGroup(compute_pass, 2u, curr_sculpt->get_octree_bindgroup(), 0u, nullptr);
 
@@ -604,7 +603,7 @@ void SculptManager::upload_strokes_and_edits(const uint32_t stroke_count, const 
     if (recreated_stroke_context_buffer || recreated_edit_buffer) {
         std::vector<Uniform*> uniforms = { &sdf_globals.sdf_texture_uniform, &octree_edit_list, &stroke_culling_buffer,
                                                 &stroke_context_list, &sdf_globals.brick_buffers, &sdf_globals.sdf_material_texture_uniform ,
-                                                &evaluator_num_bricks_by_wg_uniform, &evaluation_write_to_tex_count_uniform, &evaluation_write_to_tex_buffer_alt_uniform };
+                                                &evaluator_num_bricks_by_wg_uniform, &evaluation_job_result_count_uniform, &evaluation_write_to_tex_buffer_alt_uniform };
 
         wgpuBindGroupRelease(evaluator_write_to_texture_step_bind_group);
         evaluator_write_to_texture_step_bind_group = webgpu_context->create_bind_group(uniforms, write_to_texture_shader, 0);
@@ -615,7 +614,7 @@ void SculptManager::upload_strokes_and_edits(const uint32_t stroke_count, const 
         wgpuBindGroupRelease(evaluator_stroke_history_bind_group);
         evaluator_stroke_history_bind_group = webgpu_context->create_bind_group(uniforms, evaluator_1_aabb_culling_step_shader, 0);
 
-        uniforms = { &octree_edit_list, &stroke_context_list, &sdf_globals.brick_buffers, &evaluation_job_result_count_uniform, &octant_usage_ping_pong_uniforms[1], &evaluation_write_to_tex_count_uniform , &evaluation_write_to_tex_buffer_uniform };
+        uniforms = { &stroke_culling_buffer, &octree_edit_list, &stroke_context_list, &sdf_globals.brick_buffers, &evaluation_job_result_count_uniform, &octant_usage_ping_pong_uniforms[1] , &evaluation_write_to_tex_buffer_uniform };
 
         wgpuBindGroupRelease(evaluator_interval_culling_step_bind_group);
         evaluator_interval_culling_step_bind_group = webgpu_context->create_bind_group(uniforms, evaluator_2_interval_culling_step_shader, 0u);
@@ -703,7 +702,7 @@ void SculptManager::init_uniforms()
 
     // Evaluator stroke culling buffers
     {
-        uint32_t culling_size = sizeof(uint32_t) * (2u * sdf_globals.octree_last_level_size * MAX_STROKE_INFLUENCE_COUNT);
+        uint32_t culling_size = sizeof(uint32_t) * (sdf_globals.octree_last_level_size * MAX_STROKE_INFLUENCE_COUNT);
         stroke_culling_buffer.data = webgpu_context->create_buffer(culling_size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, nullptr, "stroke_culling_data");
         stroke_culling_buffer.binding = 9;
         stroke_culling_buffer.buffer_size = culling_size;
@@ -754,12 +753,12 @@ void SculptManager::init_uniforms()
     // New Evaluator passes uniforms
     {
         evaluation_aabb_culling_count_uniform.data = webgpu_context->create_buffer(sizeof(int32_t), WGPUBufferUsage_Storage | WGPUBufferUsage_CopyDst, nullptr, "AABB count");
-        evaluation_aabb_culling_count_uniform.binding = 2u;
+        evaluation_aabb_culling_count_uniform.binding = 0u;
         evaluation_aabb_culling_count_uniform.buffer_size = sizeof(int32_t);
 
-        evaluation_job_result_count_uniform.data = webgpu_context->create_buffer(sizeof(uint32_t), WGPUBufferUsage_Storage | WGPUBufferUsage_CopyDst, nullptr, "Job result count");
-        evaluation_job_result_count_uniform.binding = 0u;
-        evaluation_job_result_count_uniform.buffer_size = sizeof(uint32_t);
+        evaluation_job_result_count_uniform.data = webgpu_context->create_buffer(sizeof(uint32_t) * 2u, WGPUBufferUsage_Storage | WGPUBufferUsage_CopyDst, nullptr, "Job result count");
+        evaluation_job_result_count_uniform.binding = 2u;
+        evaluation_job_result_count_uniform.buffer_size = sizeof(uint32_t) * 2u;
 
         evaluation_culling_dispatch_uniform.data = webgpu_context->create_buffer(sizeof(uint32_t) * 3u, WGPUBufferUsage_Storage | WGPUBufferUsage_CopyDst | WGPUBufferUsage_Indirect, nullptr, "Culling indirect buffer counter");
         evaluation_culling_dispatch_uniform.binding = 3u;
@@ -768,9 +767,6 @@ void SculptManager::init_uniforms()
         evaluation_culling_dispatch_alt_uniform = evaluation_culling_dispatch_uniform;
         evaluation_culling_dispatch_alt_uniform.binding = 4u;
 
-        evaluation_write_to_tex_count_uniform.data = webgpu_context->create_buffer(sizeof(uint32_t), WGPUBufferUsage_Storage | WGPUBufferUsage_CopyDst, nullptr, "Write 2 tex job counter");
-        evaluation_write_to_tex_count_uniform.binding = 2u;
-        evaluation_write_to_tex_count_uniform.buffer_size = sizeof(uint32_t);
 
         evaluation_write_to_tex_buffer_uniform = octant_usage_ping_pong_uniforms[2];
         evaluation_write_to_tex_buffer_uniform.binding = 3u;
@@ -883,20 +879,20 @@ void SculptManager::init_pipelines_and_bindgroups()
             std::vector<Uniform*> uniforms = { &evaluation_job_result_count_uniform, &evaluation_aabb_culling_count_uniform, &octant_usage_ping_pong_uniforms[1], &evaluation_culling_dispatch_uniform };
             evaluator_aabb_culling_step_bind_group = webgpu_context->create_bind_group(uniforms, evaluator_1_aabb_culling_step_shader, 1u);
 
-            uniforms = { &stroke_context_list };
+            uniforms = { &stroke_context_list, &stroke_culling_buffer };
             evaluator_stroke_history_bind_group = webgpu_context->create_bind_group(uniforms, evaluator_1_aabb_culling_step_shader, 0u);
 
-            uniforms = { &octree_edit_list, &stroke_context_list, &sdf_globals.brick_buffers, &evaluation_job_result_count_uniform, &octant_usage_ping_pong_uniforms[1], &evaluation_write_to_tex_count_uniform , &evaluation_write_to_tex_buffer_uniform };
+            uniforms = { &stroke_culling_buffer, &octree_edit_list, &stroke_context_list, &sdf_globals.brick_buffers, &evaluation_job_result_count_uniform, &octant_usage_ping_pong_uniforms[1] , &evaluation_write_to_tex_buffer_uniform };
             evaluator_interval_culling_step_bind_group = webgpu_context->create_bind_group(uniforms, evaluator_2_interval_culling_step_shader, 0u);
         }
 
         {
-            std::vector<Uniform*> uniforms = { &sdf_globals.sdf_texture_uniform, &octree_edit_list, &stroke_culling_buffer,
+            std::vector<Uniform*> uniforms = { &evaluation_job_result_count_uniform, &sdf_globals.sdf_texture_uniform, &octree_edit_list, &stroke_culling_buffer,
                                                 &stroke_context_list, &sdf_globals.brick_buffers, &sdf_globals.sdf_material_texture_uniform ,
-                                                &evaluator_num_bricks_by_wg_uniform, &evaluation_write_to_tex_count_uniform, &evaluation_write_to_tex_buffer_alt_uniform };
+                                                &evaluator_num_bricks_by_wg_uniform, &evaluation_write_to_tex_buffer_alt_uniform };
             evaluator_write_to_texture_step_bind_group = webgpu_context->create_bind_group(uniforms, write_to_texture_shader, 0u);
 
-            uniforms = { &evaluation_culling_dispatch_alt_uniform, &evaluator_num_bricks_by_wg_uniform, &evaluation_write_to_tex_count_uniform, &evaluation_write_to_tex_buffer_uniform };
+            uniforms = { &evaluation_job_result_count_uniform, &evaluation_culling_dispatch_alt_uniform, &evaluator_num_bricks_by_wg_uniform, &evaluation_write_to_tex_buffer_uniform };
             evaluator_write_to_texture_setup_bind_group = webgpu_context->create_bind_group(uniforms, evaluator_2_5_write_to_texture_setup_step_shader, 0u);
         }
     }

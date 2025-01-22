@@ -316,38 +316,6 @@ const COLOR_HIGHLIGHT       = pow(vec3f(0.26, 0.2, 0.533), vec3f(2.2));
 const COLOR_HIGHLIGHT_DARK  = pow(vec3f(0.082, 0.086, 0.196), vec3f(2.2));
 const COLOR_DARK            = pow(vec3f(0.172, 0.172, 0.172), vec3f(2.2));
 
-struct CullingStroke {
-    stroke_idx : u32,
-    edit_start_idx : u32,
-    edit_count : u32
-};
-/**
-    0-16 bits -> stroke id (0-65535 # of strokes)
-    17-25 bits -> edit start (0-256)
-    26-32 bits -> edit count (0-256)
-*/
-fn culling_stroke_get_edit_start_and_count(culling_data : u32, stroke_list : ptr<storage, array<Stroke>, read>) -> CullingStroke {
-    let stroke_id : u32 = culling_data >> 16;
-    let edit_start : u32 = (culling_data & 0xFF00u) >> 8;
-    let edit_count : u32 = (culling_data & 0xFFu);
-
-    let stroke_pointer : ptr<storage, Stroke, read> = &stroke_list[stroke_id];
-
-    return CullingStroke(stroke_id, edit_start + stroke_pointer.edit_list_index, stroke_pointer.edit_count);
-}
-
-fn culling_get_culling_data(stroke_pointer : u32, edit_start : u32, edit_count : u32) -> u32 {
-    var result : u32 = stroke_pointer << 16;
-    // result |= (edit_start & 0xFFu) << 8;
-    // result |= (edit_count & 0xFFu);
-
-    return result;
-}
-
-fn culling_get_stroke_index(culling_data : u32) -> u32 {
-    return (culling_data) >> 16;
-}
-
 struct sPaddedAABB {
     min    : vec3f,
     pad0        : u32,

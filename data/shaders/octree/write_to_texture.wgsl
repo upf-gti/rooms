@@ -4,6 +4,11 @@
 #include material_packing.wgsl
 #include ../noise.wgsl
 
+struct sJobCounters {
+    bricks_to_interval_eval_count : atomic<i32>,
+    bricks_to_write_to_tex_count : atomic<i32>
+};
+
 @group(0) @binding(3) var write_sdf: texture_storage_3d<r32float, write>;
 @group(0) @binding(5) var<storage, read_write> brick_buffers: BrickBuffers;
 @group(0) @binding(6) var<storage, read> stroke_history : StrokeHistory; 
@@ -12,7 +17,7 @@
 @group(0) @binding(9) var<storage, read_write> stroke_culling : array<u32>;
 
 @group(0) @binding(0) var<storage, read> num_brinks_by_workgroup : u32;
-@group(0) @binding(2) var<storage, read_write> bricks_to_write_to_tex_count : atomic<i32>;
+@group(0) @binding(2) var<storage, read_write> job_counter : sJobCounters;
 @group(0) @binding(4) var<storage, read_write> bricks_to_write_to_tex_buffer : array<u32>;
 
 @group(1) @binding(0) var<storage, read_write> octree : Octree;
@@ -57,20 +62,24 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
         var result_surface : Surface;
 
         if (thread_id == 0) {
-            let current_brick_to_do : i32 = atomicSub(&bricks_to_write_to_tex_count, 1) - 1;
+            let current_brick_to_do : i32 = atomicSub(&job_counter.bricks_to_write_to_tex_count, 1) - 1;
 
             wg_current_brick_to_process = current_brick_to_do;
 
-            // let culling_count : u32 = octree.data[octree_leaf_id].stroke_count;
-            // let curr_culling_layer_index = octree.data[octree_leaf_id].culling_id;
             atomicStore(&wg_used_pixels, 0u);
         }
 
         workgroupBarrier();
 
         if (wg_current_brick_to_process >= 0) {
-            wg_octree_leaf_id = bricks_to_write_to_tex_buffer[wg_current_brick_to_process];
+            let raw_brick_id_count : u32 = bricks_to_write_to_tex_buffer[wg_current_brick_to_process];
+            let brick_id : u32 = raw_brick_id_count >> 8u;
+            wg_octree_leaf_id = brick_id + OCTREE_LAST_LEVEL_STARTING_IDX;
+            let in_stroke_brick_count : u32 = raw_brick_id_count & 0xFF;
+            
             wg_brick_pointer = octree.data[wg_octree_leaf_id].tile_pointer;
+
+            let curr_culling_layer_index = brick_id * stroke_history.count;
 
             // Get the brick index, without the MSb that signals if it has an already initialized brick
             let brick_index : u32 = wg_brick_pointer & OCTREE_TILE_INDEX_MASK;
@@ -96,10 +105,17 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
                 result_surface.distance = 10000.0;
             }
 
-            // SDF compute per pixel
-            let stroke_count : u32 = stroke_history.count;
-            for(var i : u32 = 0u; i < stroke_count; i++) {
-                result_surface = evaluate_stroke(pos, &(stroke_history.strokes[i]), &edit_list, result_surface, stroke_history.strokes[i].edit_list_index, stroke_history.strokes[i].edit_count);
+            // Evaluating the edit context
+            for (var j : u32 = 0; j < in_stroke_brick_count; j++) {
+                let index : u32 = stroke_culling[j + curr_culling_layer_index];
+                result_surface = evaluate_stroke(pos, &(stroke_history.strokes[index]), &edit_list, result_surface, stroke_history.strokes[index].edit_list_index, stroke_history.strokes[index].edit_count);
+            }
+
+            let culled_part : u32 = (min(stroke_history.count, MAX_STROKE_INFLUENCE_COUNT));
+            let non_culled_count : u32 = ( (stroke_history.count) - culled_part);
+            for(var i : u32 = 0u; i < non_culled_count; i++) {
+                let index : u32 = i + MAX_STROKE_INFLUENCE_COUNT;
+                result_surface = evaluate_stroke(pos, &(stroke_history.strokes[index]), &edit_list, result_surface, stroke_history.strokes[index].edit_list_index, stroke_history.strokes[index].edit_count);
             }
 
             // validate if there is something in hte brick
