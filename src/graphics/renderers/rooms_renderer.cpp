@@ -4,6 +4,14 @@
 
 #include "graphics/managers/sculpt_manager.h"
 
+#include "shaders/mesh_forward.wgsl.gen.h"
+#include "shaders/quad_mirror.wgsl.gen.h"
+
+#include "xr/openxr_context.h"
+
+#include "framework/nodes/environment_3d.h"
+#include "engine/rooms_engine.h"
+
 #include "graphics/renderer_storage.h"
 #include "framework/camera/camera.h"
 #include "framework/input.h"
@@ -19,7 +27,6 @@ void sSDFGlobals::clean()
     preview_stroke_uniform.destroy();
     linear_sampler_uniform.destroy();
 }
-#include <bit>
 
 RoomsRenderer::RoomsRenderer(const sRendererConfiguration& config) : Renderer(config)
 {
@@ -60,14 +67,73 @@ int RoomsRenderer::post_initialize()
     sculpt_manager = new SculptManager();
     sculpt_manager->init();
 
-    raymarching_renderer.initialize(use_mirror_screen);
+    raymarching_renderer.initialize();
 
     set_custom_pass_user_data(&raymarching_renderer);
 
+    if (is_openxr_available && use_mirror_screen && use_custom_mirror) {
+        custom_mirror_texture = webgpu_context->create_texture(
+            WGPUTextureDimension_2D,
+            webgpu_context->xr_swapchain_format,
+            { webgpu_context->screen_width, webgpu_context->screen_height, 1 },
+            WGPUTextureUsage_RenderAttachment | WGPUTextureUsage_TextureBinding,
+            1,
+            1
+        );
+
+        custom_mirror_texture_view = webgpu_context->create_texture_view(
+            custom_mirror_texture,
+            WGPUTextureViewDimension_2D,
+            webgpu_context->xr_swapchain_format,
+            WGPUTextureAspect_All,
+            0,
+            1,
+            0,
+            1,
+            "custom_mirror_fbo"
+        );
+
+        custom_mirror_depth_texture = webgpu_context->create_texture(
+            WGPUTextureDimension_2D,
+            WGPUTextureFormat_Depth32Float,
+            { webgpu_context->screen_width, webgpu_context->screen_height, 1 },
+            WGPUTextureUsage_RenderAttachment | WGPUTextureUsage_TextureBinding,
+            1,
+            1
+        );
+
+        custom_mirror_depth_texture_view = webgpu_context->create_texture_view(
+            custom_mirror_depth_texture,
+            WGPUTextureViewDimension_2D,
+            WGPUTextureFormat_Depth32Float,
+            WGPUTextureAspect_All,
+            0,
+            1,
+            0,
+            1,
+            "custom_mirror_fbo_depth"
+        );
+
+        custom_mirror_fbo_uniform.data = custom_mirror_texture_view;
+        custom_mirror_fbo_uniform.binding = 0;
+
+        std::vector<Uniform*> uniforms = { &custom_mirror_fbo_uniform, &linear_sampler_uniform };
+        custom_mirror_fbo_bind_group = webgpu_context->create_bind_group(uniforms, mirror_shader, 0);
+
+        set_custom_mirror_fbo_bind_group(custom_mirror_fbo_bind_group);
+
+        custom_mirror_camera_uniform.data = webgpu_context->create_buffer(camera_buffer_stride, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "custom_mirror_camera_buffer");
+        custom_mirror_camera_uniform.binding = 0;
+        custom_mirror_camera_uniform.buffer_size = sizeof(sCameraData);
+
+        uniforms = { &custom_mirror_camera_uniform };
+        custom_mirror_camera_bind_group = webgpu_context->create_bind_group(uniforms, RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, shaders::mesh_forward::libraries), 1);
+    }
+
 #ifndef DISABLE_RAYMARCHER
-    custom_post_opaque_pass = [](void* user_data, WGPURenderPassEncoder render_pass, uint32_t camera_stride_offset = 0) {
+    custom_post_opaque_pass = [](WGPURenderPassEncoder render_pass, WGPUBindGroup camera_bind_group, void* user_data, uint32_t camera_stride_offset = 0) {
         RaymarchingRenderer* raymarching_renderer = reinterpret_cast<RaymarchingRenderer*>(user_data);
-        raymarching_renderer->render(render_pass, camera_stride_offset);
+        raymarching_renderer->render(render_pass, camera_bind_group, camera_stride_offset);
     };
 #endif
 
@@ -87,6 +153,27 @@ void RoomsRenderer::clean()
     raymarching_renderer.clean();
 
     global_sculpts_instance_data_uniform.destroy();
+
+
+    if (is_openxr_available && use_mirror_screen && use_custom_mirror) {
+        wgpuTextureRelease(custom_mirror_texture);
+        wgpuTextureViewRelease(custom_mirror_texture_view);
+
+        wgpuTextureRelease(custom_mirror_depth_texture);
+        wgpuTextureViewRelease(custom_mirror_depth_texture_view);
+
+        custom_mirror_fbo_uniform.destroy();
+
+        wgpuBindGroupRelease(custom_mirror_fbo_bind_group);
+        custom_mirror_camera_uniform.destroy();
+
+        wgpuBindGroupRelease(custom_mirror_camera_bind_group);
+
+        for (int i = 0; i < RENDER_LIST_COUNT; ++i) {
+            custom_mirror_instances_data.instances_data_uniforms[i].destroy();
+            wgpuBindGroupRelease(custom_mirror_instances_data.instances_bind_groups[i]);
+        }
+    }
 }
 
 void RoomsRenderer::init_sdf_globals()
@@ -262,6 +349,18 @@ void RoomsRenderer::update(float delta_time)
 
 void RoomsRenderer::render()
 {
+    if (is_openxr_available && use_mirror_screen && use_custom_mirror) {
+
+        RoomsEngine* rooms_engine = static_cast<RoomsEngine*>(RoomsEngine::get_instance());
+        Environment3D* environment = rooms_engine->get_environment();
+
+        environment->set_position(camera_3d->get_eye());
+
+        render_custom_mirror_fbo();
+
+        environment->set_position(xr_context->per_view_data[0].position);
+    }
+
     Renderer::render();
 
 #ifndef __EMSCRIPTEN__
@@ -283,6 +382,28 @@ void RoomsRenderer::render()
 
     // For the next frame
     sculpts_render_lists.clear();
+}
+
+void RoomsRenderer::render_custom_mirror_fbo()
+{
+    camera_data.exposure = exposure;
+    camera_data.ibl_intensity = ibl_intensity;
+    camera_data.screen_size = { webgpu_context->screen_width, webgpu_context->screen_height };
+
+    std::vector<std::vector<sRenderData>> render_lists(RENDER_LIST_COUNT);
+
+    prepare_cull_instancing(*camera_3d, render_lists, custom_mirror_instances_data);
+
+    // Update main 3d camera
+
+    camera_data.eye = camera_3d->get_eye();
+    camera_data.view_projection = camera_3d->get_view_projection();
+    camera_data.view = camera_3d->get_view();
+    camera_data.projection = camera_3d->get_projection();
+
+    wgpuQueueWriteBuffer(webgpu_context->device_queue, std::get<WGPUBuffer>(custom_mirror_camera_uniform.data), 0, &camera_data, sizeof(sCameraData));
+
+    render_camera(render_lists, custom_mirror_texture_view, custom_mirror_depth_texture_view, custom_mirror_instances_data, custom_mirror_camera_bind_group, true, "custom_mirror_pass", 0);
 }
 
 void RoomsRenderer::update_sculpts_indirect_buffers(WGPUCommandEncoder command_encoder)
@@ -358,6 +479,7 @@ uint32_t RoomsRenderer::add_sculpt_render_call(Sculpt* sculpt, const glm::mat4& 
     if (!sculpts_render_lists.contains(sculpt_id)) {
         sculpts_render_lists[sculpt_id] = sSculptRenderInstances{ .sculpt = sculpt, .instance_count = 0u };
     }
+    
     render_instance = &sculpts_render_lists[sculpt_id];
 
     assert(render_instance->instance_count < MAX_INSTANCES_PER_SCULPT && "MAX NUM OF SCULPT INSTANCES");

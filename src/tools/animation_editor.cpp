@@ -14,7 +14,7 @@
 #include "framework/nodes/character_3d.h"
 #include "framework/ui/inspector.h"
 #include "framework/animation/track.h"
-#include "framework/animation/solvers/jacobian_solver.h"
+#include "framework/animation/solvers/fabrik_solver.h"
 #include "framework/math/math_utils.h"
 #include "framework/camera/camera.h"
 
@@ -33,7 +33,7 @@
 
 AnimationPlayer* player = nullptr;
 
-JacobianSolver ik_solver;
+FABRIKSolver ik_solver;
 Transform ik_target;
 Gizmo3D ik_gizmo;
 
@@ -121,10 +121,9 @@ void AnimationEditor::on_enter(void* data)
 
     // Search for any skeleton instance in the root
     auto skeleton_instance = find_skeleton(current_node);
-
     if (skeleton_instance) {
         current_node = skeleton_instance;
-        // initialize_ik();
+        initialize_ik();
     }
 
     if (!current_animation) {
@@ -219,7 +218,7 @@ void AnimationEditor::update(float delta_time)
 
     update_node_transform();
 
-    // update_ik();
+    update_ik();
 
     if (keyframe_dirty) {
         update_animation_trajectory();
@@ -286,9 +285,9 @@ void AnimationEditor::render()
 
     inspector->render();
 
-    render_gizmo();
+    // render_gizmo();
 
-    // render_ik();
+    render_ik();
 
     if (current_node) {
         current_node->render();
@@ -378,26 +377,82 @@ SkeletonInstance3D* AnimationEditor::find_skeleton(Node* node)
 
 void AnimationEditor::initialize_ik()
 {
+    // Standard Rooms character skeleton has 19 joints,
+    // but we need only N chains
+    ik_chains.resize(5u);
+
     // Do left arm chain
-    std::vector<Transform> chain;
+    sIKChain& chain = ik_chains[0];
 
-    auto instance = static_cast<SkeletonInstance3D*>(current_node);
+    Skeleton* skeleton = static_cast<SkeletonInstance3D*>(current_node)->get_skeleton();
+    assert(skeleton);
+    Pose& pose = skeleton->get_current_pose();
 
-    // Origin joint in global space
-    Pose& pose = instance->get_skeleton()->get_current_pose();
-    chain.push_back(pose.get_global_transform(6u));
-    // Rest of the joints in local space
-    chain.push_back(pose.get_local_transform(8u));
-    chain.push_back(pose.get_local_transform(10u));
+    // Left arm
+    {
+        sIKChain& chain = ik_chains[0];
+        // Origin joint in global space
+        chain.push(pose.get_global_transform(5u), 5u);
+        // Rest of the joints in local space
+        chain.push(pose.get_local_transform(6u), 6u);
+        chain.push(pose.get_local_transform(7u), 7u);
+    }
 
-    ik_solver.resize(3u);
-    ik_solver.set_local_transform(0u, chain[0], 6u); // left arm
-    ik_solver.set_local_transform(1u, chain[1], 8u); // "" forearm
-    ik_solver.set_local_transform(2u, chain[2], 10u); // "" hand
-    ik_solver.set_rotation_axis();
+    // Right arm
+    {
+        sIKChain& chain = ik_chains[1];
+        chain.push(pose.get_global_transform(8u), 8u);
+        chain.push(pose.get_local_transform(9u), 9u);
+        chain.push(pose.get_local_transform(10u), 10u);
+    }
 
-    // Set the target to the global position of the last joint of the chain
-    ik_target.set_position(pose.get_global_transform(10u).get_position());
+    // Left leg
+    {
+        sIKChain& chain = ik_chains[2];
+        chain.push(pose.get_global_transform(11u), 11u);
+        chain.push(pose.get_local_transform(12u), 12u);
+        chain.push(pose.get_local_transform(13u), 13u);
+        chain.push(pose.get_local_transform(14u), 14u);
+    }
+
+    // Right leg
+    {
+        sIKChain& chain = ik_chains[3];
+        chain.push(pose.get_global_transform(15u), 15u);
+        chain.push(pose.get_local_transform(16u), 16u);
+        chain.push(pose.get_local_transform(17u), 17u);
+        chain.push(pose.get_local_transform(18u), 18u);
+    }
+
+    // Torso
+    {
+        sIKChain& chain = ik_chains[4];
+        chain.push(pose.get_global_transform(0u), 0u);
+        chain.push(pose.get_local_transform(1u), 1u);
+        chain.push(pose.get_local_transform(2u), 2u);
+    }
+
+    // By default use first chain
+    set_active_chain(0u);
+}
+
+void AnimationEditor::set_active_chain(uint32_t chain_idx)
+{
+    const sIKChain& chain = ik_chains[chain_idx];
+
+    ik_solver.resize(chain.transforms.size());
+
+    for (int32_t i = 0u; i < chain.transforms.size(); ++i) {
+        ik_solver.set_local_transform(i, chain.transforms[i], chain.indices[i]);
+    }
+
+    // for jacobian solver
+    //ik_solver.set_rotation_axis();
+
+    Skeleton* skeleton = static_cast<SkeletonInstance3D*>(current_node)->get_skeleton();
+    assert(skeleton);
+    Pose& pose = skeleton->get_current_pose();
+    ik_target.set_position(pose.get_global_transform(chain.indices.back()).get_position());
 }
 
 void AnimationEditor::update_ik()
@@ -407,22 +462,47 @@ void AnimationEditor::update_ik()
         return;
     }
 
+    if (Input::was_key_pressed(GLFW_KEY_0)) {
+        set_active_chain(0u);
+    }
+    else if (Input::was_key_pressed(GLFW_KEY_1)) {
+        set_active_chain(1u);
+    }
+    else if (Input::was_key_pressed(GLFW_KEY_2)) {
+        set_active_chain(2);
+    }
+    else if (Input::was_key_pressed(GLFW_KEY_3)) {
+        set_active_chain(3u);
+    }
+    else if (Input::was_key_pressed(GLFW_KEY_4)) {
+        set_active_chain(4u);
+    }
+
     // Solve IK for character chain depending of the selected solver type
     ik_solver.solve(ik_target);
 
     // Update skeleton and current pose with the IK chain transforms
     // 1. Get origin joint in local space: Combine the inverse global transformation of its parent with its computed IK transformation
-    const std::vector<uint32_t>& joint_idx = ik_solver.get_joint_indices();
+    const std::vector<uint32_t>& joint_indices = ik_solver.get_joint_indices();
+    uint32_t root_idx = joint_indices[0];
 
     Pose& pose = instance->get_skeleton()->get_current_pose();
-    Transform world_parent = pose.get_global_transform(pose.get_parent(joint_idx[0]));
-    Transform world_child = ik_solver.get_local_transform(0);
-    Transform local_child = Transform::combine(Transform::inverse(world_parent), world_child);
+    Transform local_child;
+    if (pose.get_parent(root_idx) >= 0) {
+        Transform world_parent = pose.get_global_transform(pose.get_parent(root_idx));
+        Transform world_child = ik_solver.get_local_transform(0);
+        local_child = Transform::combine(Transform::inverse(world_parent), world_child);
+    }
+    else {
+        // Not sure this case is working properly...
+        local_child = pose.get_local_transform(root_idx);
+    }
+
     // 2. Set the local transformation of the origin joint to the current pose
-    pose.set_local_transform(joint_idx[0], local_child);
+    pose.set_local_transform(root_idx, local_child);
     // 3. For the rest of the chain, set the local transformation of each joint into the corresponding current pose joint
-    for (uint32_t i = 1; i < joint_idx.size(); i++) {
-        pose.set_local_transform(joint_idx[i], ik_solver.get_local_transform(i));
+    for (uint32_t i = 1; i < joint_indices.size(); i++) {
+        pose.set_local_transform(joint_indices[i], ik_solver.get_local_transform(i));
     }
 
     instance->update_joints_from_pose();

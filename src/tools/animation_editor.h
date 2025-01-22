@@ -44,6 +44,16 @@ struct sAnimationData {
     std::vector<sAnimationState> states;
 };
 
+struct sIKChain {
+    std::vector<Transform> transforms;
+    std::vector<uint32_t> indices;
+
+    void push(const Transform& t, uint32_t idx) {
+        transforms.push_back(t);
+        indices.push_back(idx);
+    }
+};
+
 class AnimationEditor : public BaseEditor {
 
     /*
@@ -58,10 +68,6 @@ class AnimationEditor : public BaseEditor {
     std::unordered_map<uint32_t, sAnimationData> animations_data;
 
     uint32_t get_animation_idx();
-
-    void initialize_ik();
-    void update_ik();
-    void render_ik();
 
     /*
     *   Nodes
@@ -105,6 +111,17 @@ class AnimationEditor : public BaseEditor {
     void set_animation_state(uint32_t index);
     void store_animation_state(sAnimationState& state);
     sAnimationState* get_animation_state(uint32_t index);
+
+    /*
+    *   IK
+    */
+
+    std::vector<sIKChain> ik_chains;
+
+    void initialize_ik();
+    void set_active_chain(uint32_t chain_idx);
+    void update_ik();
+    void render_ik();
 
     /*
         Animation Player

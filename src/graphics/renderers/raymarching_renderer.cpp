@@ -40,7 +40,7 @@ RaymarchingRenderer::RaymarchingRenderer()
 {
 }
 
-int RaymarchingRenderer::initialize(bool use_mirror_screen)
+int RaymarchingRenderer::initialize()
 {
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
     bool is_openxr_available = RoomsRenderer::instance->get_openxr_available();
@@ -65,7 +65,6 @@ void RaymarchingRenderer::clean()
 #ifndef DISABLE_RAYMARCHER
     wgpuBindGroupRelease(render_proxy_geometry_bind_group);
     wgpuBindGroupRelease(render_camera_bind_group);
-    wgpuBindGroupRelease(render_preview_camera_bind_group);
     wgpuBindGroupRelease(sculpt_data_bind_preview_group);
 
     delete render_proxy_shader;
@@ -85,16 +84,16 @@ AABB RaymarchingRenderer::sPreviewStroke::get_AABB() const
     return result;
 }
 
-void RaymarchingRenderer::render(WGPURenderPassEncoder render_pass, uint32_t camera_buffer_stride)
+void RaymarchingRenderer::render(WGPURenderPassEncoder render_pass, WGPUBindGroup camera_bind_group, uint32_t camera_buffer_stride)
 {
-    render_raymarching_proxy(render_pass, camera_buffer_stride);
+    render_raymarching_proxy(render_pass, camera_bind_group, camera_buffer_stride);
 
     if (render_preview) {
-        render_preview_raymarching_proxy(render_pass, camera_buffer_stride);
+        render_preview_raymarching_proxy(render_pass, camera_bind_group, camera_buffer_stride);
     }
 }
 
-void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_pass, uint32_t camera_buffer_stride)
+void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_pass, WGPUBindGroup camera_bind_group, uint32_t camera_buffer_stride)
 {
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();
@@ -117,7 +116,7 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
     wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, surface->get_vertex_buffer(), 0, surface->get_vertices_byte_size());
 
     wgpuRenderPassEncoderSetBindGroup(render_pass, 0, render_proxy_geometry_bind_group, 0, nullptr);
-    wgpuRenderPassEncoderSetBindGroup(render_pass, 1, render_camera_bind_group, 1, &camera_buffer_stride);
+    wgpuRenderPassEncoderSetBindGroup(render_pass, 1, camera_bind_group, 1, &camera_buffer_stride);
     //wgpuRenderPassEncoderSetBindGroup(render_pass, 2, sculpt_data_bind_proxy_group, 0, nullptr);
     wgpuRenderPassEncoderSetBindGroup(render_pass, 3, Renderer::instance->get_lighting_bind_group(), 0, nullptr);
 
@@ -143,7 +142,7 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
 #endif
 }
 
-void RaymarchingRenderer::render_preview_raymarching_proxy(WGPURenderPassEncoder render_pass, uint32_t camera_buffer_stride)
+void RaymarchingRenderer::render_preview_raymarching_proxy(WGPURenderPassEncoder render_pass, WGPUBindGroup camera_bind_group, uint32_t camera_buffer_stride)
 {
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();
@@ -169,8 +168,8 @@ void RaymarchingRenderer::render_preview_raymarching_proxy(WGPURenderPassEncoder
     uint8_t bind_group_index = 0;
 
     // Set bind groups
-    wgpuRenderPassEncoderSetBindGroup(render_pass, 0, render_preview_camera_bind_group, 1, &camera_buffer_stride);
-    wgpuRenderPassEncoderSetBindGroup(render_pass, 1, sculpt_data_bind_preview_group, 0, nullptr);
+    wgpuRenderPassEncoderSetBindGroup(render_pass, 0, sculpt_data_bind_preview_group, 0, nullptr);
+    wgpuRenderPassEncoderSetBindGroup(render_pass, 1, camera_bind_group, 1, &camera_buffer_stride);
     wgpuRenderPassEncoderSetBindGroup(render_pass, 2, Renderer::instance->get_lighting_bind_group(), 0, nullptr);
 
     // Set vertex buffer while encoding the render pass
@@ -222,12 +221,8 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
     render_preview_proxy_shader = RendererStorage::get_shader("data/shaders/octree/proxy_geometry_preview.wgsl");
     {
         std::vector<Uniform*> uniforms;
-
-        uniforms = { camera_uniform };
-        render_preview_camera_bind_group = webgpu_context->create_bind_group(uniforms, render_preview_proxy_shader, 0);
-
         uniforms = {&sdf_globals.preview_stroke_uniform_2, &sdf_globals.brick_buffers, &rooms_renderer->get_global_sculpts_instance_data() };
-        sculpt_data_bind_preview_group = webgpu_context->create_bind_group(uniforms, render_preview_proxy_shader, 1);
+        sculpt_data_bind_preview_group = webgpu_context->create_bind_group(uniforms, render_preview_proxy_shader, 0);
     }
 
     color_target = {};
