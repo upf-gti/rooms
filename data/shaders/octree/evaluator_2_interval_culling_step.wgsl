@@ -29,9 +29,11 @@ fn intersection_AABB_AABB(b1_min : vec3f, b1_max : vec3f, b2_min : vec3f, b2_max
 fn brick_remove(octree_index : u32) {
     // If its inside the new_edits, and the brick is filled, we delete it
     let brick_to_delete_idx = atomicAdd(&brick_buffers.brick_removal_counter, 1u);
+    
     let instance_index : u32 = octree.data[octree_index].tile_pointer & OCTREE_TILE_INDEX_MASK;
     brick_buffers.brick_removal_buffer[brick_to_delete_idx] = instance_index;
     brick_buffers.brick_instance_data[instance_index].in_use = 0u;
+
     octree.data[octree_index].tile_pointer = 0u;
     octree.data[octree_index].octant_center_distance = vec2f(10000.0, 10000.0);
 }
@@ -118,8 +120,8 @@ fn compute(@builtin(local_invocation_index) thread_id: u32, @builtin(num_workgro
         // is this needed?? maybe its not really neede due cache. TODO: test directly with VRAM
         brick_to_eval_wg_size = u32(work_count);
         for(var i : i32 = 0; i <= work_count; i++) {
-            let brick_id = bricks_to_interval_eval_buffer[starting_brick_idx - i - 1];
-            bricks_to_eval_wg_buffer[i] = brick_id;
+            let raw_brick_id_count = bricks_to_interval_eval_buffer[starting_brick_idx - i - 1];
+            bricks_to_eval_wg_buffer[i] = raw_brick_id_count;
         }  
     }
 
@@ -147,7 +149,6 @@ fn compute(@builtin(local_invocation_index) thread_id: u32, @builtin(num_workgro
     
         let current_subdivision_interval = iavec3_vecs(x_range, y_range, z_range);
 
-        let stroke_count : u32 = stroke_history.count;
 
         let culled_part : u32 = min(stroke_history.count, MAX_STROKE_INFLUENCE_COUNT);
         let non_culled_count : u32 = stroke_history.count - culled_part;
@@ -159,7 +160,7 @@ fn compute(@builtin(local_invocation_index) thread_id: u32, @builtin(num_workgro
 
         // Interval evaluation
         // Culled part
-        for(var i : u32 = 0u; i < stroke_count; i++) {
+        for(var i : u32 = 0u; i < in_stroke_brick_count; i++) {
             let culled_idx : u32 = stroke_culling[curr_culling_layer_index + i];
             if (stroke_history.strokes[i].operation != OP_SMOOTH_PAINT) {
                 surface_interval = evaluate_stroke_interval(current_subdivision_interval, 

@@ -89,9 +89,7 @@ fn compute(@builtin(workgroup_id) wg_id: vec3u, @builtin(local_invocation_index)
             var brick_center : vec3f = get_brick_center(operation_id);
 
             // Culling list indices
-            // level is zero
-            //let curr_culling_layer_index = octant_id * stroke_history.count +  (level % 2) * MAX_SUBDIVISION_SIZE * stroke_history.count;
-            let curr_culling_layer_index = operation_id * MAX_STROKE_INFLUENCE_COUNT;
+            let curr_culling_layer_index = operation_id * stroke_history.count;
 
             var brick_half_size : f32 = 0.5 * BRICK_WORLD_SIZE;
 
