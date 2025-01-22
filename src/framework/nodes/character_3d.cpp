@@ -21,7 +21,7 @@ Character3D::Character3D() : SkeletonInstance3D()
 
 Character3D::~Character3D()
 {
-    delete helper;
+    // delete helper;
 
     const auto& indices = skeleton->get_joint_indices();
     for (uint32_t i = 0u; i < indices.size(); ++i) {
