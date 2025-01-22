@@ -424,7 +424,7 @@ void RoomsRenderer::update_sculpts_indirect_buffers(WGPUCommandEncoder command_e
         wgpuComputePassEncoderSetBindGroup(compute_pass, 0u, sculpt_instances.count_bindgroup, 0u, nullptr);
 
         for (auto& it : sculpts_render_lists) {
-            Sculpt* current_sculpt = it.second->sculpt;
+            Sculpt* current_sculpt = it.second.sculpt;
             wgpuComputePassEncoderSetBindGroup(compute_pass, 1u, current_sculpt->get_sculpt_bindgroup(), 0u, nullptr);
             wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1u, 1u, 1u);
         }
@@ -454,13 +454,13 @@ void RoomsRenderer::upload_sculpt_models_and_instances(WGPUCommandEncoder comman
             models_for_upload.resize(models_for_upload.capacity() + 10u);
         }
 
-        it.second->sculpt->set_in_frame_model_buffer_index(in_frame_instance_count);
+        it.second.sculpt->set_in_frame_model_buffer_index(in_frame_instance_count);
 
-        for (uint16_t i = 0u; i < it.second->instance_count; i++) {
-            models_for_upload[in_frame_instance_count++] = (it.second->models[i]);
+        for (uint16_t i = 0u; i < it.second.instance_count; i++) {
+            models_for_upload[in_frame_instance_count++] = (it.second.models[i]);
         }
 
-        sculpt_instances.count_buffer[sculpt_to_render_count++] = it.second->instance_count;
+        sculpt_instances.count_buffer[sculpt_to_render_count++] = it.second.instance_count;
     }
 
     // Upload the count of instances per sculpt
@@ -477,13 +477,10 @@ uint32_t RoomsRenderer::add_sculpt_render_call(Sculpt* sculpt, const glm::mat4& 
     sSculptRenderInstances* render_instance = nullptr;
 
     if (!sculpts_render_lists.contains(sculpt_id)) {
-        render_instance = new sSculptRenderInstances{ .sculpt = sculpt, .instance_count = 0u };
+        sculpts_render_lists[sculpt_id] = sSculptRenderInstances{ .sculpt = sculpt, .instance_count = 0u };
+    }
 
-        sculpts_render_lists[sculpt_id] = render_instance;
-    }
-    else {
-        render_instance = sculpts_render_lists[sculpt_id];
-    }
+    render_instance = &sculpts_render_lists[sculpt_id];
 
     assert(render_instance->instance_count < MAX_INSTANCES_PER_SCULPT && "MAX NUM OF SCULPT INSTANCES");
 

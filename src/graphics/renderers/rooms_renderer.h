@@ -83,7 +83,7 @@ class RoomsRenderer : public Renderer {
         sSculptInstanceData models[MAX_INSTANCES_PER_SCULPT];
     };
 
-    std::map<uint32_t, sSculptRenderInstances*> sculpts_render_lists;
+    std::map<uint32_t, sSculptRenderInstances> sculpts_render_lists;
     std::vector<sSculptInstanceData> models_for_upload;
     Uniform         global_sculpts_instance_data_uniform;
 
@@ -128,7 +128,7 @@ public:
         return global_sculpts_instance_data_uniform;
     }
 
-    inline std::map<uint32_t, sSculptRenderInstances*>& get_sculpts_render_list() {
+    inline std::map<uint32_t, sSculptRenderInstances>& get_sculpts_render_list() {
         return sculpts_render_lists;
     }
 

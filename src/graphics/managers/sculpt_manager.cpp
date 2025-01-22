@@ -590,8 +590,8 @@ void SculptManager::evaluate_closest_ray_intersection(WGPUComputePassEncoder com
 
     if (intersection_node_to_test == nullptr) {
         for (auto& it : rooms_renderer->get_sculpts_render_list()) {
-            Sculpt* curr_sculpt = it.second->sculpt;
-            const uint32_t instances_count = it.second->instance_count;
+            Sculpt* curr_sculpt = it.second.sculpt;
+            const uint32_t instances_count = it.second.instance_count;
 
             wgpuComputePassEncoderSetBindGroup(compute_pass, 2u, curr_sculpt->get_octree_bindgroup(), 0u, nullptr);
 
