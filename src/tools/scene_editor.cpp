@@ -1,7 +1,5 @@
 #include "scene_editor.h"
 
-#include "includes.h"
-
 #include "framework/input.h"
 #include "framework/parsers/parse_scene.h"
 #include "framework/nodes/sculpt_node.h"
@@ -12,7 +10,6 @@
 #include "framework/nodes/directional_light_3d.h"
 #include "framework/nodes/group_3d.h"
 #include "framework/nodes/slider_2d.h"
-#include "framework/nodes/container_2d.h"
 #include "framework/nodes/button_2d.h"
 #include "framework/math/intersections.h"
 #include "framework/ui/io.h"
@@ -223,6 +220,9 @@ void SceneEditor::update(float delta_time)
         if (selected_node && dynamic_cast<Light3D*>(selected_node)) {
             inspect_light();
         }
+        if (selected_node && dynamic_cast<Character3D*>(selected_node)) {
+            inspect_character();
+        }
         else if (current_group) {
             inspect_group(true);
         }
@@ -350,22 +350,6 @@ void SceneEditor::process_node_hovered()
             else if (select_action_pressed) {
                 select_node(hovered_node, false);
             }
-            /*else if (should_open_context_menu) {
-
-                glm::vec2 position = Input::get_mouse_position();
-                glm::vec3 position_3d = glm::vec3(0.0f);
-
-                if (renderer->get_openxr_available()) {
-                    position = { 0.0f, 0.0f };
-                    const sGPU_SculptResults& gpu_results = renderer->get_sculpt_manager()->read_results.loaded_results;
-                    position_3d = ray_origin + ray_direction * gpu_results.ray_intersection.ray_t;
-                }
-
-                new ui::ContextMenu(position, position_3d, {
-                    { "Edit", [&, n = hovered_node](const std::string& name, uint32_t index) { edit_group(static_cast<Group3D*>(n)); }},
-                    { "Delete", [&, n = hovered_node](const std::string& name, uint32_t index) { delete_node(n); }}
-                });
-            }*/
         }
     }
     // In 2d, we have to select manually by click, so do not enter here!
@@ -1282,6 +1266,9 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
             else if (dynamic_cast<Group3D*>(n)) {
                 edit_group(static_cast<Group3D*>(n));
             }
+            else if (dynamic_cast<Character3D*>(n)) {
+                edit_character(static_cast<Character3D*>(n));
+            }
         });
     }
 
@@ -1383,6 +1370,58 @@ void SceneEditor::inspect_group(bool force)
         else {
             inspect_node(node);
         }
+    }
+
+    Node::emit_signal(inspector->get_name() + "@children_changed", (void*)nullptr);
+
+    inspector_dirty = false;
+
+    if (force) {
+        inspector->set_visibility(true);
+    }
+}
+
+
+void SceneEditor::inspect_character(bool force)
+{
+    if (!dynamic_cast<Character3D*>(selected_node)) {
+        assert(0);
+        return;
+    }
+
+    uint8_t flags = ui::INSPECTOR_FLAG_BACK_BUTTON | ui::INSPECTOR_FLAG_CLOSE_BUTTON;
+
+    if (!inspector->get_visibility()) {
+        flags |= ui::INSPECTOR_FLAG_FORCE_3D_POSITION;
+        inspector->set_visibility(true);
+    }
+
+    inspector->clear(flags, "Character");
+
+    auto character = static_cast<Character3D*>(selected_node);
+    auto sculpt_nodes = character->get_children();
+
+    for (uint32_t i = 0; i < sculpt_nodes.size(); ++i) {
+
+        auto node = sculpt_nodes[i];
+
+        inspector->same_line();
+
+        {
+            std::string signal = node->get_name() + std::to_string(node_signal_uid++) + "_edit_character_set";
+            inspector->button(signal, "data/textures/edit.png", 0u, "Edit");
+
+            Node::bind(signal, [&, n = node](const std::string& sg, void* data) {
+                RoomsEngine::switch_editor(SCULPT_EDITOR, static_cast<SculptNode*>(n));
+                });
+        }
+
+        {
+            std::string signal = node->get_name() + std::to_string(node_signal_uid++) + "_label_character_set";
+            inspector->label(signal, node->get_name(), 0u, SceneEditor::COLOR_HIGHLIGHT_CHARACTER);
+        }
+
+        inspector->end_line();
     }
 
     Node::emit_signal(inspector->get_name() + "@children_changed", (void*)nullptr);
@@ -1660,6 +1699,20 @@ bool SceneEditor::scene_redo()
     return true;
 }
 
+void SceneEditor::edit_character(Character3D* character)
+{
+    // show list of items
+    // ideally, hover proper sculpt on hover item
+    // edit button on sculpts
+
+    if (!character) {
+        assert(0);
+        return;
+    }
+
+    // this will inspect the character the next update
+    inspector_dirty = true;
+}
 
 SceneEditor::eTriggerAction SceneEditor::get_trigger_action(const float delta_time)
 {

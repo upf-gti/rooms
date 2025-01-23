@@ -149,7 +149,6 @@ class AnimationEditor : public BaseEditor {
     void update_panel_transform();
     void generate_shortcuts() override;
 
-    void inspect_character(bool force = false);
     void inspect_keyframes_list(bool force = false);
     void inspect_keyframe();
     void inspect_keyframe_properties();

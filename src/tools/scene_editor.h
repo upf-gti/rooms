@@ -13,6 +13,7 @@ class Node3D;
 class Group3D;
 class Scene;
 class Room;
+class Character3D;
 
 namespace ui {
     class Inspector;
@@ -47,8 +48,8 @@ class SceneEditor : public BaseEditor {
     *   Intersections stuff
     */
 
-    glm::vec3 ray_origin;
-    glm::vec3 ray_direction;
+    glm::vec3 ray_origin = {};
+    glm::vec3 ray_direction = {};
 
     /*
     *   Input stuff
@@ -87,6 +88,12 @@ class SceneEditor : public BaseEditor {
     void process_node_hovered();
 
     /*
+    *   Characters stuff
+    */
+
+    void edit_character(Character3D* character);
+
+    /*
     *   Group stuff
     */
 
@@ -120,6 +127,7 @@ class SceneEditor : public BaseEditor {
     void inspect_node(Node* node, uint32_t flags = NODE_STANDARD, const std::string& texture_path = "");
     void inspect_group(bool force = false);
     void inspect_light(bool force = false);
+    void inspect_character(bool force = false);
 
     bool rotation_started = false;
     bool scale_started = false;

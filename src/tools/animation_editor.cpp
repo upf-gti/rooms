@@ -1006,9 +1006,6 @@ void AnimationEditor::init_ui()
         first_row->add_child(loop_mode);
     }
 
-    // ** Go back to scene editor **
-    first_row->add_child(new ui::TextureButton2D("character_view", { "data/textures/character.png" }));
-
     ui::HContainer2D* second_row = new ui::HContainer2D("row_1", { 0.0f, 0.0f });
     vertical_container->add_child(second_row);
 
@@ -1095,10 +1092,6 @@ void AnimationEditor::bind_events()
         Node::bind("loop_reverse", [&](const std::string& signal, void* button) { set_loop_type(ANIMATION_LOOP_REVERSE); });
         Node::bind("loop_ping_pong", [&](const std::string& signal, void* button) { set_loop_type(ANIMATION_LOOP_PING_PONG); });
     }
-
-    Node::bind("character_view", [&](const std::string& signal, void* button) {
-        inspect_character(true);
-    }); 
 
     Node::bind("animation_speed", (FuncFloat)[&](const std::string& signal, float value) { player->set_speed(value); });
 }
@@ -1241,50 +1234,6 @@ void AnimationEditor::inspect_node(Node* node)
         }
 
         inspector->end_line();
-    }
-}
-
-void AnimationEditor::inspect_character(bool force)
-{
-    if (!dynamic_cast<Character3D*>(current_node)) {
-        assert(0);
-        return;
-    }
-
-    inspector->clear();
-
-    auto character = static_cast<Character3D*>(current_node);
-    auto sculpt_nodes = character->get_children();
-
-    for (uint32_t i = 0; i < sculpt_nodes.size(); ++i) {
-
-        auto node = sculpt_nodes[i];
-
-        inspector->same_line();
-
-        {
-            std::string signal = node->get_name() + std::to_string(node_signal_uid++) + "_edit_character_set";
-            inspector->button(signal, "data/textures/edit.png", 0u, "Edit");
-
-            Node::bind(signal, [&, n = node](const std::string& sg, void* data) {
-                RoomsEngine::switch_editor(SCULPT_EDITOR, static_cast<SculptNode*>(n));
-            });
-        }
-
-        {
-            std::string signal = node->get_name() + std::to_string(node_signal_uid++) + "_label_character_set";
-            inspector->label(signal, node->get_name(), 0u, SceneEditor::COLOR_HIGHLIGHT_CHARACTER);
-        }
-
-        inspector->end_line();
-    }
-
-    Node::emit_signal(inspector->get_name() + "@children_changed", (void*)nullptr);
-
-    inspector_transform_dirty = !inspector->get_visibility() || force;
-
-    if (force) {
-        inspector->set_visibility(true);
     }
 }
 
