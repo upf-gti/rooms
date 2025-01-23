@@ -91,6 +91,8 @@ class AnimationEditor : public BaseEditor {
     void update_node_from_state(const sAnimationState& state);
     void update_node_transform();
 
+    void on_select_joint();
+
     SkeletonInstance3D* find_skeleton(Node* node);
 
     /*
@@ -116,11 +118,14 @@ class AnimationEditor : public BaseEditor {
     *   IK
     */
 
-    std::vector<sIKChain> ik_chains;
+    bool ik_enabled = true;
+    bool ik_active = false;
+
+    std::unordered_map<uint8_t, sIKChain> ik_chains;
 
     void initialize_ik();
     void set_active_chain(uint32_t chain_idx);
-    void update_ik();
+    void update_ik(float delta_time);
     void render_ik();
 
     /*

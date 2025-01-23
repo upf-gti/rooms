@@ -63,6 +63,8 @@ void AnimationEditor::initialize()
 
     gizmo = static_cast<RoomsEngine*>(RoomsEngine::instance)->get_gizmo();
 
+    ik_gizmo.initialize(TRANSLATE | ROTATE);
+
     init_ui();
 
     // Animation UI visualizations
@@ -214,11 +216,14 @@ void AnimationEditor::update(float delta_time)
         inspect_keyframe();
     }
 
-    update_gizmo(delta_time);
+    if (ik_active) {
+        update_ik(delta_time);
+    }
+    else {
+        update_gizmo(delta_time);
+    }
 
     update_node_transform();
-
-    update_ik();
 
     if (keyframe_dirty) {
         update_animation_trajectory();
@@ -241,8 +246,7 @@ void AnimationEditor::update(float delta_time)
 
         // This sets current_joint to a valid joint in the skeleton instance
         if (current_node->test_ray_collision(ray_origin, ray_direction, distance, reinterpret_cast<Node3D**>(&current_joint))) {
-            inspector->clear();
-            inspect_node(current_joint);
+            on_select_joint();
         }
     }
 
@@ -285,9 +289,12 @@ void AnimationEditor::render()
 
     inspector->render();
 
-    // render_gizmo();
-
-    render_ik();
+    if (ik_active) {
+        render_ik();
+    }
+    else {
+        render_gizmo();
+    }
 
     if (current_node) {
         current_node->render();
@@ -309,7 +316,7 @@ void AnimationEditor::update_gizmo(float delta_time)
     Node3D* node = get_current_node();
 
     // Gizmo only needs to update for XR
-    if (!keyframe_dirty || !current_node || !renderer->get_openxr_available()) {
+    if (!keyframe_dirty || !node || !renderer->get_openxr_available()) {
         return;
     }
 
@@ -361,6 +368,25 @@ Node3D* AnimationEditor::get_current_node()
     return current_node;
 }
 
+void AnimationEditor::on_select_joint()
+{
+    inspector->clear();
+    inspect_node(current_joint);
+
+    Skeleton* skeleton = static_cast<SkeletonInstance3D*>(current_node)->get_skeleton();
+    assert(skeleton);
+    Pose& pose = skeleton->get_current_pose();
+
+    ik_active = false;
+
+    const auto& parents = pose.get_parents();
+    auto it = std::find(parents.begin(), parents.end(), current_joint->get_index());
+    if (it == parents.end()) {
+        // joint is not a parent -> use ik!
+        set_active_chain(current_joint->get_index());
+    }
+}
+
 SkeletonInstance3D* AnimationEditor::find_skeleton(Node* node)
 {
     if (dynamic_cast<SkeletonInstance3D*>(node)) {
@@ -377,12 +403,7 @@ SkeletonInstance3D* AnimationEditor::find_skeleton(Node* node)
 
 void AnimationEditor::initialize_ik()
 {
-    // Standard Rooms character skeleton has 19 joints,
-    // but we need only N chains
-    ik_chains.resize(5u);
-
-    // Do left arm chain
-    sIKChain& chain = ik_chains[0];
+    // Create default chains
 
     Skeleton* skeleton = static_cast<SkeletonInstance3D*>(current_node)->get_skeleton();
     assert(skeleton);
@@ -390,7 +411,7 @@ void AnimationEditor::initialize_ik()
 
     // Left arm
     {
-        sIKChain& chain = ik_chains[0];
+        sIKChain& chain = ik_chains[7u];
         // Origin joint in global space
         chain.push(pose.get_global_transform(5u), 5u);
         // Rest of the joints in local space
@@ -400,7 +421,7 @@ void AnimationEditor::initialize_ik()
 
     // Right arm
     {
-        sIKChain& chain = ik_chains[1];
+        sIKChain& chain = ik_chains[10u];
         chain.push(pose.get_global_transform(8u), 8u);
         chain.push(pose.get_local_transform(9u), 9u);
         chain.push(pose.get_local_transform(10u), 10u);
@@ -408,7 +429,7 @@ void AnimationEditor::initialize_ik()
 
     // Left leg
     {
-        sIKChain& chain = ik_chains[2];
+        sIKChain& chain = ik_chains[14u];
         chain.push(pose.get_global_transform(11u), 11u);
         chain.push(pose.get_local_transform(12u), 12u);
         chain.push(pose.get_local_transform(13u), 13u);
@@ -417,7 +438,7 @@ void AnimationEditor::initialize_ik()
 
     // Right leg
     {
-        sIKChain& chain = ik_chains[3];
+        sIKChain& chain = ik_chains[18u];
         chain.push(pose.get_global_transform(15u), 15u);
         chain.push(pose.get_local_transform(16u), 16u);
         chain.push(pose.get_local_transform(17u), 17u);
@@ -426,18 +447,21 @@ void AnimationEditor::initialize_ik()
 
     // Torso
     {
-        sIKChain& chain = ik_chains[4];
+        sIKChain& chain = ik_chains[2u];
         chain.push(pose.get_global_transform(0u), 0u);
         chain.push(pose.get_local_transform(1u), 1u);
         chain.push(pose.get_local_transform(2u), 2u);
     }
-
-    // By default use first chain
-    set_active_chain(0u);
 }
 
 void AnimationEditor::set_active_chain(uint32_t chain_idx)
 {
+    if (!ik_chains.contains(chain_idx)) {
+        return;
+    }
+
+    ik_active = ik_enabled;
+
     const sIKChain& chain = ik_chains[chain_idx];
 
     ik_solver.resize(chain.transforms.size());
@@ -455,11 +479,23 @@ void AnimationEditor::set_active_chain(uint32_t chain_idx)
     ik_target.set_position(pose.get_global_transform(chain.indices.back()).get_position());
 }
 
-void AnimationEditor::update_ik()
+void AnimationEditor::update_ik(float delta_time)
 {
     auto instance = dynamic_cast<SkeletonInstance3D*>(current_node);
-    if (!instance || !keyframe_dirty) {
+    if (!instance || !keyframe_dirty || !current_joint) {
         return;
+    }
+
+    // Update ik gizmo for XR
+    if (renderer->get_openxr_available()) {
+        Node3D* node = get_current_node();
+        glm::vec3 right_controller_pos = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
+        Transform t = node->get_global_transform();
+        Transform global = instance->get_global_transform();
+
+        if (ik_gizmo.update(t, right_controller_pos, delta_time)) {
+            ik_target = Transform::combine(Transform::inverse(global), t);
+        }
     }
 
     if (Input::was_key_pressed(GLFW_KEY_0)) {
@@ -469,7 +505,7 @@ void AnimationEditor::update_ik()
         set_active_chain(1u);
     }
     else if (Input::was_key_pressed(GLFW_KEY_2)) {
-        set_active_chain(2);
+        set_active_chain(2u);
     }
     else if (Input::was_key_pressed(GLFW_KEY_3)) {
         set_active_chain(3u);
@@ -520,9 +556,13 @@ void AnimationEditor::render_ik()
         Transform global = instance->get_global_transform();
         ik_gizmo.set_transform(Transform::combine(global, ik_target));
 
-        if (ik_gizmo.render()) {
-            ik_target = Transform::combine(Transform::inverse(global), ik_gizmo.get_transform());
+        bool transform_dirty = ik_gizmo.render();
+
+        if (!transform_dirty || renderer->get_openxr_available()) {
+            return;
         }
+
+        ik_target = Transform::combine(Transform::inverse(global), ik_gizmo.get_transform());
     }
 }
 
@@ -550,9 +590,8 @@ void AnimationEditor::update_node_from_state(const sAnimationState& state)
     if (skeleton_instance) {
         skeleton_instance->update_pose_from_joints();
     }
-    else {
-        current_node->set_transform_dirty(true);
-    }
+
+    current_node->set_transform_dirty(true);
 }
 
 void AnimationEditor::update_node_transform()
@@ -566,7 +605,7 @@ void AnimationEditor::update_node_transform()
     // Do not rotate sculpt if shift -> we might be rotating the edit
     if ((Input::get_trigger_value(HAND_LEFT) > 0.5f)) {
 
-        Transform global_transform = node->get_global_transform();
+        Transform global_transform = ik_active ? ik_target : node->get_global_transform();
 
         glm::quat left_hand_rotation = Input::get_controller_rotation(HAND_LEFT);
         glm::vec3 left_hand_translation = Input::get_controller_position(HAND_LEFT);
@@ -586,25 +625,32 @@ void AnimationEditor::update_node_transform()
             global_transform.translate(translation_diff);
         }
 
-        if (Input::get_trigger_value(HAND_RIGHT) > 0.5) {
+        // don't scale if using IK
+        if (!ik_active) {
+            if (Input::get_trigger_value(HAND_RIGHT) > 0.5) {
 
-            if (!scale_started) {
+                if (!scale_started) {
+                    last_hand_distance = hand_distance;
+                    scale_started = true;
+                }
+
+                float hand_distance_diff = hand_distance / last_hand_distance;
+                node->scale(glm::vec3(hand_distance_diff));
                 last_hand_distance = hand_distance;
-                scale_started = true;
+            }
+            else if (scale_started) {
+                scale_started = false;
             }
 
-            float hand_distance_diff = hand_distance / last_hand_distance;
-            node->scale(glm::vec3(hand_distance_diff));
-            last_hand_distance = hand_distance;
-        }
-        else if (scale_started) {
-            scale_started = false;
-        }
+            node->set_global_transform(global_transform);
 
-        node->set_global_transform(global_transform);
+            if (dynamic_cast<Joint3D*>(node)) {
+                current_node->set_transform_dirty(true);
+            }
 
-        if (dynamic_cast<Joint3D*>(node)) {
-            current_node->set_transform_dirty(true);
+        }
+        else {
+            ik_target = global_transform;
         }
 
         rotation_started = true;
@@ -1006,6 +1052,8 @@ void AnimationEditor::init_ui()
         first_row->add_child(loop_mode);
     }
 
+    first_row->add_child(new ui::TextureButton2D("enable_ik", { "data/textures/a.png", ui::ALLOW_TOGGLE | ui::SELECTED }));
+
     ui::HContainer2D* second_row = new ui::HContainer2D("row_1", { 0.0f, 0.0f });
     vertical_container->add_child(second_row);
 
@@ -1070,6 +1118,25 @@ void AnimationEditor::init_ui()
 
 void AnimationEditor::bind_events()
 {
+    Node::bind("enable_ik", [&](const std::string& signal, void* button) {
+        ik_enabled = !ik_enabled;
+        ik_active = false;
+
+        if (ik_enabled) {
+            Skeleton* skeleton = static_cast<SkeletonInstance3D*>(current_node)->get_skeleton();
+            if (!skeleton || !current_joint) {
+                return;
+            }
+
+            Pose& pose = skeleton->get_current_pose();
+            const auto& parents = pose.get_parents();
+            auto it = std::find(parents.begin(), parents.end(), current_joint->get_index());
+            if (it == parents.end()) {
+                set_active_chain(current_joint->get_index());
+            }
+        }
+    });
+
     // Keyframe events
     {
         Node::bind("open_list", [&](const std::string& signal, void* button) { inspect_keyframes_list(true); });
