@@ -8,6 +8,7 @@
 class RoomsRenderer;
 class Node2D;
 class Gizmo3D;
+class SculptNode;
 
 namespace ui {
     class HContainer2D;
@@ -45,7 +46,6 @@ namespace shortcuts {
         EDIT_GROUP,
         ANIMATE_NODE,
         SELECT_NODE,
-        // DUPLICATE_NODE,
         CLONE_NODE,
         PLACE_NODE,
         GROUP_NODE,
@@ -162,6 +162,8 @@ public:
     virtual void on_resize_window(uint32_t width, uint32_t height);
     virtual void on_enter(void* data) {};
     virtual void on_exit() {};
+
+    virtual uint32_t get_sculpt_context_flags(SculptNode* node) { return 0u; }
 
     void set_name(const std::string& new_name) { name = new_name; }
     const std::string& get_name() { return name; }

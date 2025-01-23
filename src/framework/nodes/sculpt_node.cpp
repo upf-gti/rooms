@@ -81,41 +81,28 @@ void SculptNode::initialize()
 
 void SculptNode::update(float delta_time)
 {
-    uint32_t flags = 0u;
     RoomsRenderer* renderer = static_cast<RoomsRenderer*>(Renderer::instance);
     RoomsEngine* engine = static_cast<RoomsEngine*>(Engine::instance);
+    auto editor = engine->get_current_editor();
     auto scene_editor = engine->get_editor<SceneEditor*>(SCENE_EDITOR);
-    sGPU_RayIntersectionData& intersection_results = renderer->get_sculpt_manager()->loaded_results.ray_intersection;
 
-    bool in_sculpt_editor = (engine->get_current_editor_type() == SCULPT_EDITOR);
-    bool in_scene_editor = (engine->get_current_editor() == scene_editor);
-    bool editing_scene_group = in_scene_editor && (!!scene_editor->get_current_group());
-
-    bool oof = false;
-
-    if (in_sculpt_editor) {
-        oof |= engine->get_editor<SculptEditor*>(SCULPT_EDITOR)->is_out_of_focus(this);
-    }
-    else if (editing_scene_group) {
-        oof |= (!parent || parent != (Node*)scene_editor->get_current_group());
-    }
-
-    if (oof) {
-        flags |= SCULPT_IS_OUT_OF_FOCUS;
-    }
+    uint32_t flags = editor->get_sculpt_context_flags(this);
 
     /* Do not highlight if:
     * 1) Out of focus
     * 2) In sculpt mode
     * 3) No intersection
     */
-    if (!oof && !in_sculpt_editor) {
+    if (!(flags & SCULPT_IS_OUT_OF_FOCUS) && (flags & SCULPT_IN_SCENE_EDITOR)) {
+
+        sGPU_RayIntersectionData& intersection_results = renderer->get_sculpt_manager()->loaded_results.ray_intersection;
 
         // check its intersection and its sibling ones if not in group editor
+        // to mark as hovered or not
         bool hovered = check_intersection(&intersection_results);
         bool selected = (scene_editor->get_selected_node() == this);
 
-        if (!editing_scene_group && parent) {
+        if ((flags & SCULPT_HOVER_CHECK_SIBLINGS) && parent) {
 
             selected |= (scene_editor->get_selected_node() == parent);
 
@@ -256,10 +243,10 @@ bool SculptNode::test_ray_collision(const glm::vec3& ray_origin, const glm::vec3
 void SculptNode::set_out_of_focus(const bool oof)
 {
     if (oof) {
-        sculpt_flags |= eSculptInstanceFlags::SCULPT_IS_OUT_OF_FOCUS;
+        sculpt_flags |= SCULPT_IS_OUT_OF_FOCUS;
     }
     else {
-        sculpt_flags &= ~eSculptInstanceFlags::SCULPT_IS_OUT_OF_FOCUS;
+        sculpt_flags &= ~SCULPT_IS_OUT_OF_FOCUS;
     }
 }
 

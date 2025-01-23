@@ -229,7 +229,7 @@ public:
     SculptNode* get_current_sculpt() { return current_sculpt; }
 
     bool is_tool_being_used(bool stamp_enabled);
-    bool is_out_of_focus(SculptNode* sculpt_node);
+    uint32_t get_sculpt_context_flags(SculptNode* node) override;
 
     void add_preview_edit_list(std::vector<Edit>& new_edit_lists) {
         for (Edit& edit : new_edit_lists) {

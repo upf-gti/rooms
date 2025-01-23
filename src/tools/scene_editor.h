@@ -14,6 +14,7 @@ class Group3D;
 class Scene;
 class Room;
 class Character3D;
+class SculptNode;
 
 namespace ui {
     class Inspector;
@@ -90,6 +91,8 @@ class SceneEditor : public BaseEditor {
     /*
     *   Characters stuff
     */
+
+    Character3D* current_character = nullptr;
 
     void edit_character(Character3D* character);
 
@@ -211,11 +214,13 @@ public:
     // void on_resize_window(uint32_t width, uint32_t height) override;
     void on_enter(void* data) override;
 
-    void set_main_scene(Scene* new_scene) { main_scene = new_scene; };
+    void set_main_scene(Scene* new_scene);
     void set_inspector_dirty() { inspector_dirty = true; };
 
     Group3D* get_current_group() { return current_group; }
     Node* get_selected_node() { return selected_node; }
+
+    uint32_t get_sculpt_context_flags(SculptNode* node) override;
 
     static Color get_node_highlight_color(Node* node);
 };

@@ -296,6 +296,14 @@ void SceneEditor::on_enter(void* data)
     Node::emit_signal("combo_gizmo_modes@changed", (void*)"translate");
 }
 
+void SceneEditor::set_main_scene(Scene* new_scene)
+{
+    current_group = nullptr;
+    current_character = nullptr;
+
+    main_scene = new_scene;
+}
+
 void SceneEditor::update_hovered_node()
 {
     prev_ray_dir = ray_direction;
@@ -306,6 +314,29 @@ void SceneEditor::update_hovered_node()
 
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     rooms_renderer->get_sculpt_manager()->set_ray_to_test(ray_origin, ray_direction);
+}
+
+uint32_t SceneEditor::get_sculpt_context_flags(SculptNode* node)
+{
+    uint32_t flags = SCULPT_IN_SCENE_EDITOR;
+
+    auto parent = node->get_parent();
+
+    if (current_group) {
+        if ((!parent || parent != (Node*)current_group)) {
+            flags |= SCULPT_IS_OUT_OF_FOCUS;
+        }
+    }
+    else if (current_character) {
+        if ((!parent || parent != (Node*)current_character)) {
+            flags |= SCULPT_IS_OUT_OF_FOCUS;
+        }
+    }
+    else if (parent) {
+        flags |= SCULPT_HOVER_CHECK_SIBLINGS;
+    }
+
+    return flags;
 }
 
 Color SceneEditor::get_node_highlight_color(Node* node)
@@ -330,6 +361,7 @@ void SceneEditor::process_node_hovered()
 {
     const bool sculpt_hovered = !!dynamic_cast<SculptNode*>(hovered_node);
     const bool group_hovered = !sculpt_hovered && !!dynamic_cast<Group3D*>(hovered_node);
+    const bool character_hovered = !sculpt_hovered && !group_hovered && !!dynamic_cast<Character3D*>(hovered_node);
     const bool a_pressed = Input::was_button_pressed(XR_BUTTON_A);
     const bool b_pressed = Input::was_button_pressed(XR_BUTTON_B);
     const bool should_open_context_menu = Input::was_button_pressed(XR_BUTTON_B) || Input::was_mouse_pressed(GLFW_MOUSE_BUTTON_RIGHT);
@@ -350,6 +382,23 @@ void SceneEditor::process_node_hovered()
             else if (select_action_pressed) {
                 select_node(hovered_node, false);
             }
+        }
+    }
+    else if (character_hovered) {
+        if (should_open_context_menu) {
+            glm::vec2 position = Input::get_mouse_position();
+            glm::vec3 position_3d = glm::vec3(0.0f);
+
+            if (renderer->get_openxr_available()) {
+                position = { 0.0f, 0.0f };
+                const sGPU_SculptResults& gpu_results = renderer->get_sculpt_manager()->loaded_results;
+                position_3d = ray_origin + ray_direction * gpu_results.ray_intersection.ray_t;
+            }
+
+            new ui::ContextMenu(position, position_3d, {
+                { "Animate", [&, n = hovered_node](const std::string& name, uint32_t index) { selected_node = n; RoomsEngine::switch_editor(ANIMATION_EDITOR, n); }},
+                { "Delete", [&, n = hovered_node](const std::string& name, uint32_t index) { delete_node(n); }}
+            });
         }
     }
     // In 2d, we have to select manually by click, so do not enter here!
@@ -673,6 +722,10 @@ bool SceneEditor::on_goback_inspector(ui::Inspector* scope)
         Node2D::get_widget_from_name<ui::TextureButton2D*>("group")->set_disabled(false);
     }
 
+    if (current_character) {
+        current_character = nullptr;
+    }
+
     deselect();
 
     set_inspector_dirty();
@@ -685,6 +738,10 @@ bool SceneEditor::on_close_inspector(ui::Inspector* scope)
     if (current_group) {
         current_group = nullptr;
         Node2D::get_widget_from_name<ui::TextureButton2D*>("group")->set_disabled(false);
+    }
+
+    if (current_character) {
+        current_character = nullptr;
     }
 
     return true;
@@ -1701,17 +1758,14 @@ bool SceneEditor::scene_redo()
 
 void SceneEditor::edit_character(Character3D* character)
 {
-    // show list of items
-    // ideally, hover proper sculpt on hover item
-    // edit button on sculpts
-
     if (!character) {
         assert(0);
         return;
     }
 
-    // this will inspect the character the next update
-    inspector_dirty = true;
+    current_character = character;
+
+    set_inspector_dirty();
 }
 
 SceneEditor::eTriggerAction SceneEditor::get_trigger_action(const float delta_time)

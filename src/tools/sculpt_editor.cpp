@@ -231,13 +231,15 @@ void SculptEditor::clean()
     BaseEditor::clean();
 }
 
-bool SculptEditor::is_out_of_focus(SculptNode* sculpt_node)
+uint32_t SculptEditor::get_sculpt_context_flags(SculptNode* node)
 {
-    if (!renderer->get_openxr_available()) {
-        return get_current_sculpt() != sculpt_node;
+    uint32_t flags = SCULPT_IN_SCULPT_EDITOR;
+
+    if (!renderer->get_openxr_available() && get_current_sculpt() == node) {
+        return flags;
     }
 
-    return true;
+    return (flags | SCULPT_IS_OUT_OF_FOCUS);
 }
 
 bool SculptEditor::is_tool_being_used(bool stamp_enabled)
