@@ -1463,6 +1463,10 @@ void SceneEditor::inspect_exports(bool force)
     if (!inspector->get_visibility()) {
         flags |= ui::INSPECTOR_FLAG_FORCE_3D_POSITION;
     }
+    else {
+        // In case of files being already displayed, a second click will update the files..
+        get_export_files();
+    }
 
     inspector->clear(flags, "Available Rooms");
 
@@ -1494,6 +1498,8 @@ void SceneEditor::inspect_exports(bool force)
     }
 
     Node::emit_signal(inspector->get_name() + "@children_changed", (void*)nullptr);
+
+    inspector->clear_scroll();
 }
 
 void SceneEditor::get_export_files()

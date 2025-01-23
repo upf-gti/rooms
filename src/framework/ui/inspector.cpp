@@ -207,6 +207,19 @@ namespace ui {
         title->set_text(new_title);
     }
 
+    void Inspector::clear_scroll()
+    {
+        last_scroll_position = {};
+
+        // do the scroll..
+        for (auto r : body->get_children()) {
+            Node2D* row = static_cast<Node2D*>(r);
+            row->translate({ 0.0f, -scroll_top });
+        }
+
+        scroll_top = 0.0f;
+    }
+
     void Inspector::clear(uint8_t reset_flags, const std::string& new_title)
     {
         if (reset_flags & INSPECTOR_FLAG_FORCE_3D_POSITION) {
@@ -241,6 +254,9 @@ namespace ui {
         }
 
         items.clear();
+
+        body_height = 0.0f;
+        scroll_top = 0.0f;
 
         IO::set_hover(nullptr, {});
 
