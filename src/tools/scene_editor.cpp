@@ -271,22 +271,7 @@ void SceneEditor::render_gui()
     }
 
     if (hovered_node) {
-
         ImGui::Text("Hovered Node");
-
-        //ImGui::OpenPopup("context_menu_popup");
-
-        //if (ImGui::BeginPopup("context_menu_popup")) {
-
-        //    if (ImGui::MenuItem("Clone")) {
-        //        // Handle clone action..
-        //    }
-        //    if (ImGui::MenuItem("Delete")) {
-        //        // Handle delete action..
-        //    }
-
-        //    ImGui::EndPopup();
-        //}
     }
 }
 

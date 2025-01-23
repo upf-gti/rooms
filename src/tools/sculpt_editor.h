@@ -34,19 +34,10 @@ class SculptEditor : public BaseEditor {
     MeshInstance3D* sculpt_area_box = nullptr;
 
     SculptNode* current_sculpt = nullptr;
-    Transform current_instance_transform;
-    uint32_t in_frame_sculpt_render_list_id;
+    // Transform current_instance_transform;
+    // uint32_t in_frame_sculpt_render_list_id;
 
     StrokeManager stroke_manager = {};
-
-    bool was_tool_used = false;
-
-    bool called_undo = false;
-    bool called_redo = false;
-
-    eTool current_tool = eTool::NONE;
-
-    uint8_t thumbstick_leading_axis = 0u;
 
     static uint8_t last_generated_material_uid;
     uint8_t num_generated_materials = 0u;
@@ -182,9 +173,16 @@ class SculptEditor : public BaseEditor {
     *	Editor
     */
 
-    bool is_tool_pressed = false;
-    bool is_released = false;
-    bool was_tool_pressed = false;
+    bool called_undo        = false;
+    bool called_redo        = false;
+    bool is_tool_pressed    = false;
+    bool is_released        = false;
+    bool was_tool_pressed   = false;
+    bool was_tool_used      = false;
+
+    eTool current_tool = eTool::NONE;
+
+    uint8_t thumbstick_leading_axis = 0u;
 
     enum eStrokeMode {
         STROKE_MODE_NONE,

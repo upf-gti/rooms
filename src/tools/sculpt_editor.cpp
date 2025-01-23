@@ -197,10 +197,11 @@ void SculptEditor::on_enter(void* data)
     // Get head relative position for setting the sculpt instance if in XR
     if (renderer->get_openxr_available()) {
         const AABB sculpt_aabb = sculpt_node->get_sculpt_data()->get_AABB();
-        const glm::vec3 cam_origin = renderer->get_camera_eye();
-        const glm::vec3 to_sculpt_instance_pos = (renderer->get_camera_front() * (0.4f + glm::length(sculpt_aabb.half_size) * 1.25f)) + cam_origin;
+        const glm::vec3& cam_origin = renderer->get_camera_eye();
+        // const glm::vec3& to_sculpt_instance_pos = (renderer->get_camera_front() * (0.4f + glm::length(sculpt_aabb.half_size) * 1.25f)) + cam_origin;
 
-        current_instance_transform.set_position(to_sculpt_instance_pos);
+        const glm::vec3& to_sculpt_instance_pos = sculpt_node->get_translation();
+        // current_instance_transform.set_position(to_sculpt_instance_pos);
         mirror_transform.set_position(to_sculpt_instance_pos);
         lock_axis_transform.set_position(to_sculpt_instance_pos);
     } else {
@@ -235,7 +236,7 @@ uint32_t SculptEditor::get_sculpt_context_flags(SculptNode* node)
 {
     uint32_t flags = SCULPT_IN_SCULPT_EDITOR;
 
-    if (!renderer->get_openxr_available() && get_current_sculpt() == node) {
+    if (get_current_sculpt() == node) {
         return flags;
     }
 
@@ -565,13 +566,17 @@ void SculptEditor::update(float delta_time)
     new_edits.clear();
 
     // Render current instance
-    if (renderer->get_openxr_available()) {
+    /*if (renderer->get_openxr_available()) {
         uint32_t flags = 0u;
         RoomsRenderer* renderer = static_cast<RoomsRenderer*>(Renderer::instance);
+        glm::mat4x4 model = Transform::transform_to_mat4(get_current_transform());
+        if (current_sculpt->get_parent()) {
+            model = current_sculpt->get_parent<Node3D*>()->get_global_model() * model;
+        }
         in_frame_sculpt_render_list_id = renderer->add_sculpt_render_call(
-            current_sculpt->get_sculpt_data(), Transform::transform_to_mat4(get_current_transform()), flags);
+            current_sculpt->get_sculpt_data(), model, flags);
         in_frame_sculpt_render_list_id += current_sculpt->get_sculpt_data()->get_in_frame_model_buffer_index();
-    }
+    }*/
 
     // Operation changer for the different tools
     {
@@ -794,7 +799,7 @@ void SculptEditor::set_preview_stroke()
 
     renderer->get_sculpt_manager()->set_preview_stroke(
         current_sculpt->get_sculpt_data(),
-        renderer->get_openxr_available() ? in_frame_sculpt_render_list_id : current_sculpt->get_in_frame_model_idx(),
+        /*renderer->get_openxr_available() ? in_frame_sculpt_render_list_id :*/ current_sculpt->get_in_frame_model_idx(),
         preview_stroke, preview_tmp_edits
     );
 }
@@ -892,7 +897,7 @@ void SculptEditor::test_ray_to_sculpts()
     Engine::instance->get_scene_ray(ray_origin, ray_direction);
 
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
-    rooms_renderer->get_sculpt_manager()->set_ray_to_test(ray_origin, ray_direction, current_sculpt->get_sculpt_data(), in_frame_sculpt_render_list_id);
+    rooms_renderer->get_sculpt_manager()->set_ray_to_test(ray_origin, ray_direction, current_sculpt->get_sculpt_data(), current_sculpt->get_in_frame_model_idx());
 }
 
 void SculptEditor::update_sculpt_rotation()
@@ -1098,23 +1103,23 @@ void SculptEditor::render_gui()
         stroke_parameters.set_dirty(true);
     }
 
-    ImGui::Text("Sculpt Instance Transform");
+    //ImGui::Text("Sculpt Instance Transform");
 
-    glm::vec3 position = current_instance_transform.get_position();
-    glm::quat rotation = current_instance_transform.get_rotation();
-    glm::vec3 scale = current_instance_transform.get_scale();
+    //glm::vec3 position = current_instance_transform.get_position();
+    //glm::quat rotation = current_instance_transform.get_rotation();
+    //glm::vec3 scale = current_instance_transform.get_scale();
 
-    if (ImGui::DragFloat3("Translation", &position[0], 0.1f)) {
-        current_instance_transform.set_position(position);
-    }
+    //if (ImGui::DragFloat3("Translation", &position[0], 0.1f)) {
+    //    current_instance_transform.set_position(position);
+    //}
 
-    if (ImGui::DragFloat4("Rotation", &rotation[0], 0.1f)) {
-        current_instance_transform.set_rotation(rotation);
-    }
+    //if (ImGui::DragFloat4("Rotation", &rotation[0], 0.1f)) {
+    //    current_instance_transform.set_rotation(rotation);
+    //}
 
-    if (ImGui::DragFloat3("Scale", &scale[0], 0.1f)) {
-        current_instance_transform.set_scale(scale);
-    }
+    //if (ImGui::DragFloat3("Scale", &scale[0], 0.1f)) {
+    //    current_instance_transform.set_scale(scale);
+    //}
 }
 
 bool SculptEditor::can_snap_to_surface()
@@ -1277,11 +1282,13 @@ void SculptEditor::enable_tool(eTool tool)
 */
 Transform& SculptEditor::get_current_transform()
 {
-    if (!renderer->get_openxr_available()) {
+    return current_sculpt->get_transform();
+
+    /*if (!renderer->get_openxr_available()) {
         return current_sculpt->get_transform();
     }
 
-    return current_instance_transform;
+    return current_instance_transform;*/
 }
 
 bool SculptEditor::is_rotation_being_used()
