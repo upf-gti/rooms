@@ -142,12 +142,33 @@ void AnimationEditor::on_enter(void* data)
 
             new_anim_data.states.resize(state_count);
 
+            float state_time = 0.0f;
+
             for (uint32_t i = 0; i < state_count; ++i) {
                 sAnimationState& state = new_anim_data.states[i];
-                // TODO: Recreate states based on keyframe data
-                // ...
+
+                state.time = state_time;
+
+                for (uint32_t i = 0; i < track_count; ++i) {
+                    Track* track = current_animation->get_track(i);
+
+                    // Sample node in that timestamp
+                    std::string p_name = track->get_name();
+                    Node::AnimatableProperty node_property = current_node->get_animatable_property(p_name);
+                    void* data = node_property.property;
+                    current_animation->sample(state.time, track->get_id(), ANIMATION_LOOP_NONE, data, eInterpolationType::STEP);
+
+                    sPropertyState& ps = state.properties[p_name];
+                    ps.track_id = track->get_id();
+                }
+
+                // Store state using the current node
+                store_animation_state(state);
+
+                state_time += 0.5f;
             }
 
+            current_time = state_time;
             animations_data[get_animation_idx()] = new_anim_data;
         }
     }
