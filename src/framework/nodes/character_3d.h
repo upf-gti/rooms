@@ -6,6 +6,8 @@ class Character3D : public SkeletonInstance3D {
 
     void generate_default_sculpts_skeleton();
 
+    std::vector<std::string> custom_animations;
+
 public:
 
     Character3D();
@@ -21,6 +23,8 @@ public:
     void clone(Node* new_node, bool copy = true) override;
 
     void set_skeleton(Skeleton* new_skeleton);
-
     void update_joints_from_pose() override;
+
+    void store_animation(const std::string& animation_name);
+    const std::vector<std::string>& get_custom_animations() { return custom_animations; }
 };

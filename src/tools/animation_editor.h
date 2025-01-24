@@ -67,7 +67,11 @@ class AnimationEditor : public BaseEditor {
 
     std::unordered_map<uint32_t, sAnimationData> animations_data;
 
+    void create_new_animation(const std::string& name);
+
     uint32_t get_animation_idx();
+
+    int custom_character_animation_idx = 0;
 
     /*
     *   Nodes
