@@ -50,7 +50,6 @@ class RoomsRenderer : public Renderer {
     sSDFGlobals sdf_globals;
 
     // custom mirror camera render
-    bool use_custom_mirror = false;
     WGPUTexture custom_mirror_texture = nullptr;
     WGPUTextureView custom_mirror_texture_view = nullptr;
     WGPUTexture custom_mirror_depth_texture = nullptr;

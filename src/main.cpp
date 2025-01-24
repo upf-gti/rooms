@@ -16,7 +16,11 @@ int main()
 
     RoomsRenderer* renderer = new RoomsRenderer(rooms_render_config);
 
-    if (engine->initialize(renderer, { .window_title = "ROOMS" })) {
+    sEngineConfiguration configuration;
+    configuration.window_title = "ROOMS";
+    //configuration.fullscreen = true;
+
+    if (engine->initialize(renderer, configuration)) {
         return 1;
     }
 
