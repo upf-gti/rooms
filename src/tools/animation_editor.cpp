@@ -63,8 +63,6 @@ void AnimationEditor::initialize()
 
     gizmo = static_cast<RoomsEngine*>(RoomsEngine::instance)->get_gizmo();
 
-    ik_gizmo.initialize(TRANSLATE | ROTATE);
-
     init_ui();
 
     // Animation UI visualizations
@@ -111,6 +109,8 @@ void AnimationEditor::clean()
 
 void AnimationEditor::on_enter(void* data)
 {
+    gizmo->set_operation(TRANSLATE | ROTATE);
+
     current_node = reinterpret_cast<Node3D*>(data);
 
     // Set the root always in the animation editor
@@ -121,6 +121,8 @@ void AnimationEditor::on_enter(void* data)
     if (skeleton_instance) {
         current_node = skeleton_instance;
         initialize_ik();
+        // force always rotate on skeletons
+        gizmo->set_operation(ROTATE);
     }
 
     if (current_node->get_node_type() == "Character3D") {
@@ -207,8 +209,6 @@ void AnimationEditor::on_enter(void* data)
     inspect_keyframes_list();
 
     update_animation_trajectory();
-
-    gizmo->set_operation(TRANSLATE | ROTATE);
 }
 
 void AnimationEditor::on_exit()
@@ -235,11 +235,10 @@ void AnimationEditor::update(float delta_time)
         inspect_keyframe();
     }
 
+    update_gizmo(delta_time);
+
     if (ik_active) {
         update_ik(delta_time);
-    }
-    else {
-        update_gizmo(delta_time);
     }
 
     update_node_transform();
@@ -308,12 +307,7 @@ void AnimationEditor::render()
 
     inspector->render();
 
-    if (ik_active) {
-        render_ik();
-    }
-    else {
-        render_gizmo();
-    }
+    render_gizmo();
 
     if (current_node) {
         current_node->render();
@@ -339,15 +333,33 @@ void AnimationEditor::update_gizmo(float delta_time)
         return;
     }
 
-    glm::vec3 right_controller_pos = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
     Transform t = node->get_global_transform();
+    glm::vec3 right_controller_pos = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
 
-    if (gizmo->update(t, right_controller_pos, delta_time)) {
+    if (!ik_active) {
+
+        gizmo_active = gizmo->update(t, right_controller_pos, delta_time);
+
+        if (!gizmo_active) {
+            return;
+        }
 
         node->set_global_transform(t);
 
         if (dynamic_cast<Joint3D*>(node)) {
             current_node->set_transform_dirty(true);
+        }
+    }
+    else {
+        auto instance = dynamic_cast<SkeletonInstance3D*>(current_node);
+        if (instance) {
+            return;
+        }
+
+        Transform global = instance->get_global_transform();
+
+        if (ik_gizmo.update(t, right_controller_pos, delta_time)) {
+            ik_target = Transform::combine(Transform::inverse(global), t);
         }
     }
 }
@@ -360,22 +372,40 @@ void AnimationEditor::render_gizmo()
         return;
     }
 
-    gizmo->set_transform(node->get_global_transform());
+    if (!ik_active) {
+        gizmo->set_transform(node->get_global_transform());
 
-    // This is only for 2D since Gizmo.render will only return true if
-    // Gizmo2D is used!
+        // This is only for 2D since Gizmo.render will only return true if
+        // Gizmo2D is used!
 
-    bool transform_dirty = gizmo->render();
+        gizmo_active = gizmo->render();
 
-    if (!transform_dirty || renderer->get_openxr_available()) {
-        return;
+        if (gizmo_active && !renderer->get_openxr_available()) {
+            node->set_global_transform(gizmo->get_transform());
+
+            if (dynamic_cast<Joint3D*>(node)) {
+                // Current node is skeletoninstance
+                current_node->set_transform_dirty(true);
+            }
+        }
     }
+    else {
+        auto instance = dynamic_cast<SkeletonInstance3D*>(current_node);
+        if (!instance) {
+            return;
+        }
 
-    node->set_global_transform(gizmo->get_transform());
+        // Render gizmo for updating the target
+        {
+            Transform global = instance->get_global_transform();
+            ik_gizmo.set_transform(Transform::combine(global, ik_target));
 
-    if (dynamic_cast<Joint3D*>(node)) {
-        // Current node is skeletoninstance
-        current_node->set_transform_dirty(true);
+            bool transform_dirty = ik_gizmo.render();
+
+            if (transform_dirty && !renderer->get_openxr_available()) {
+                ik_target = Transform::combine(Transform::inverse(global), ik_gizmo.get_transform());
+            }
+        }
     }
 }
 
@@ -431,19 +461,7 @@ void AnimationEditor::on_select_joint()
 {
     inspector->clear();
     inspect_node(current_joint);
-
-    Skeleton* skeleton = static_cast<SkeletonInstance3D*>(current_node)->get_skeleton();
-    assert(skeleton);
-    Pose& pose = skeleton->get_current_pose();
-
-    ik_active = false;
-
-    const auto& parents = pose.get_parents();
-    auto it = std::find(parents.begin(), parents.end(), current_joint->get_index());
-    if (it == parents.end()) {
-        // joint is not a parent -> use ik!
-        set_active_chain(current_joint->get_index());
-    }
+    set_active_chain(current_joint->get_index());
 }
 
 SkeletonInstance3D* AnimationEditor::find_skeleton(Node* node)
@@ -462,64 +480,61 @@ SkeletonInstance3D* AnimationEditor::find_skeleton(Node* node)
 
 void AnimationEditor::initialize_ik()
 {
+    ik_gizmo.initialize(TRANSLATE);
+
+    // Create default chains
+    create_ik_chain(SKELETON_HEAD, 1u);
+
+    // Arms
+    {
+        create_ik_chain(SKELETON_LEFT_FOREARM, 1u);
+        create_ik_chain(SKELETON_LEFT_HAND, 2u);
+
+        create_ik_chain(SKELETON_RIGHT_FOREARM, 1u);
+        create_ik_chain(SKELETON_RIGHT_HAND, 2u);
+    }
+
+    // Legs
+    {
+        create_ik_chain(SKELETON_LEFT_KNEE, 1u);
+        create_ik_chain(SKELETON_LEFT_ANKLE, 2u);
+        create_ik_chain(SKELETON_LEFT_FOOT, 3u);
+
+        create_ik_chain(SKELETON_RIGHT_KNEE, 1u);
+        create_ik_chain(SKELETON_RIGHT_ANKLE, 2u);
+        create_ik_chain(SKELETON_RIGHT_FOOT, 3u);
+    }
+}
+
+void AnimationEditor::create_ik_chain(uint32_t chain_endpoint_idx, uint32_t depth)
+{
     // Create default chains
 
     Skeleton* skeleton = static_cast<SkeletonInstance3D*>(current_node)->get_skeleton();
     assert(skeleton);
     Pose& pose = skeleton->get_current_pose();
 
-    // Left arm
     {
-        sIKChain& chain = ik_chains[7u];
+        sIKChain& chain = ik_chains[chain_endpoint_idx];
         // Origin joint in global space
-        chain.push(pose.get_global_transform(5u), 5u);
-        // Rest of the joints in local space
-        chain.push(pose.get_local_transform(6u), 6u);
-        chain.push(pose.get_local_transform(7u), 7u);
-    }
+        uint32_t origin_idx = chain_endpoint_idx - depth;
+        chain.push(pose.get_global_transform(origin_idx), origin_idx);
 
-    // Right arm
-    {
-        sIKChain& chain = ik_chains[10u];
-        chain.push(pose.get_global_transform(8u), 8u);
-        chain.push(pose.get_local_transform(9u), 9u);
-        chain.push(pose.get_local_transform(10u), 10u);
-    }
-
-    // Left leg
-    {
-        sIKChain& chain = ik_chains[14u];
-        chain.push(pose.get_global_transform(11u), 11u);
-        chain.push(pose.get_local_transform(12u), 12u);
-        chain.push(pose.get_local_transform(13u), 13u);
-        chain.push(pose.get_local_transform(14u), 14u);
-    }
-
-    // Right leg
-    {
-        sIKChain& chain = ik_chains[18u];
-        chain.push(pose.get_global_transform(15u), 15u);
-        chain.push(pose.get_local_transform(16u), 16u);
-        chain.push(pose.get_local_transform(17u), 17u);
-        chain.push(pose.get_local_transform(18u), 18u);
-    }
-
-    // Torso
-    {
-        sIKChain& chain = ik_chains[2u];
-        chain.push(pose.get_global_transform(0u), 0u);
-        chain.push(pose.get_local_transform(1u), 1u);
-        chain.push(pose.get_local_transform(2u), 2u);
+        for (int i = (depth - 1); i >= 0; i--) {
+            // Rest of the joints in local space
+            uint32_t j_idx = chain_endpoint_idx - i;
+            chain.push(pose.get_local_transform(j_idx), j_idx);
+        }
     }
 }
 
 void AnimationEditor::set_active_chain(uint32_t chain_idx)
 {
-    if (!ik_chains.contains(chain_idx)) {
+    ik_active = ik_enabled && ik_chains.contains(chain_idx);;
+
+    if (!ik_active) {
         return;
     }
-
-    ik_active = ik_enabled;
 
     const sIKChain& chain = ik_chains[chain_idx];
 
@@ -535,42 +550,14 @@ void AnimationEditor::set_active_chain(uint32_t chain_idx)
     Skeleton* skeleton = static_cast<SkeletonInstance3D*>(current_node)->get_skeleton();
     assert(skeleton);
     Pose& pose = skeleton->get_current_pose();
-    ik_target.set_position(pose.get_global_transform(chain.indices.back()).get_position());
+    ik_target = pose.get_global_transform(chain.indices.back());
 }
 
 void AnimationEditor::update_ik(float delta_time)
 {
     auto instance = dynamic_cast<SkeletonInstance3D*>(current_node);
-    if (!instance || !keyframe_dirty || !current_joint) {
+    if (!instance || !keyframe_dirty || gizmo_active) {
         return;
-    }
-
-    // Update ik gizmo for XR
-    if (renderer->get_openxr_available()) {
-        Node3D* node = get_current_node();
-        glm::vec3 right_controller_pos = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
-        Transform t = node->get_global_transform();
-        Transform global = instance->get_global_transform();
-
-        if (ik_gizmo.update(t, right_controller_pos, delta_time)) {
-            ik_target = Transform::combine(Transform::inverse(global), t);
-        }
-    }
-
-    if (Input::was_key_pressed(GLFW_KEY_0)) {
-        set_active_chain(0u);
-    }
-    else if (Input::was_key_pressed(GLFW_KEY_1)) {
-        set_active_chain(1u);
-    }
-    else if (Input::was_key_pressed(GLFW_KEY_2)) {
-        set_active_chain(2u);
-    }
-    else if (Input::was_key_pressed(GLFW_KEY_3)) {
-        set_active_chain(3u);
-    }
-    else if (Input::was_key_pressed(GLFW_KEY_4)) {
-        set_active_chain(4u);
     }
 
     // Solve IK for character chain depending of the selected solver type
@@ -601,28 +588,6 @@ void AnimationEditor::update_ik(float delta_time)
     }
 
     instance->update_joints_from_pose();
-}
-
-void AnimationEditor::render_ik()
-{
-    auto instance = dynamic_cast<SkeletonInstance3D*>(current_node);
-    if (!instance || !keyframe_dirty) {
-        return;
-    }
-
-    // Render gizmo for updating the target
-    {
-        Transform global = instance->get_global_transform();
-        ik_gizmo.set_transform(Transform::combine(global, ik_target));
-
-        bool transform_dirty = ik_gizmo.render();
-
-        if (!transform_dirty || renderer->get_openxr_available()) {
-            return;
-        }
-
-        ik_target = Transform::combine(Transform::inverse(global), ik_gizmo.get_transform());
-    }
 }
 
 uint32_t AnimationEditor::get_animation_idx()

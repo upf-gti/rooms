@@ -128,9 +128,9 @@ class AnimationEditor : public BaseEditor {
     std::unordered_map<uint8_t, sIKChain> ik_chains;
 
     void initialize_ik();
+    void create_ik_chain(uint32_t chain_endpoint_idx, uint32_t depth);
     void set_active_chain(uint32_t chain_idx);
     void update_ik(float delta_time);
-    void render_ik();
 
     /*
         Animation Player
@@ -149,6 +149,7 @@ class AnimationEditor : public BaseEditor {
     static uint64_t keyframe_signal_uid;
     static uint64_t node_signal_uid;
 
+    bool gizmo_active = false;
     bool inspector_transform_dirty = false;
 
     ui::Inspector* inspector = nullptr;
