@@ -817,11 +817,11 @@ void SculptEditor::add_edit_repetitions(std::vector<Edit>& edits)
     for (size_t i = 0u; i < edit_count; i++) {
 
         Edit& edit = edits[i];
-        edit.position -= (glm::vec3(0.0f, 0.0f, og_offset) * edit.rotation);
+        edit.position -= (glm::vec3(og_offset, 0.0f, 0.0f) * edit.rotation);
 
         for (uint8_t k = 1u; k <= rep_count; k++) {
             Edit rep_edit = edit;
-            rep_edit.position += (glm::vec3(0.0f, 0.0f, rep_spacing * k) * edit.rotation);
+            rep_edit.position += (glm::vec3(rep_spacing * k, 0.0f, 0.0f) * edit.rotation);
             edits.push_back(rep_edit);
         }
     }
@@ -1445,13 +1445,11 @@ void SculptEditor::init_ui()
 
     {
         ui::ItemGroup2D* g_reps = new ui::ItemGroup2D("g_reps");
-        g_reps->add_child(new ui::IntSlider2D("rep_count", { .path = "data/textures/a.png", .flags = ui::USER_RANGE, .ivalue_max = 8, .p_data = &rep_count }));
-        g_reps->add_child(new ui::FloatSlider2D("rep_spacing", { .path = "data/textures/a.png", .flags = ui::USER_RANGE, .fvalue_max = 0.2f, .precision = 2, .p_data = &rep_spacing }));
+        g_reps->add_child(new ui::IntSlider2D("rep_count", { .path = "data/textures/edit_repetition.png", .flags = ui::USER_RANGE, .ivalue_max = 8, .p_data = &rep_count }));
+        // in meters
+        g_reps->add_child(new ui::FloatSlider2D("rep_spacing", { .path = "data/textures/edit_repetition_spacing.png", .flags = ui::USER_RANGE, .fvalue_max = 0.1f, .precision = 2, .p_data = &rep_spacing }));
         first_row->add_child(g_reps);
     }
-
-    // debug
-    // first_row->add_child(new ui::TextureButton2D("create_spline", { "data/textures/bezier.png", ui::ALLOW_TOGGLE }));
 
     // ** Shape, Brush, Material Editors **
     {
