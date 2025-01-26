@@ -129,8 +129,7 @@ void Character3D::parse(std::ifstream& binary_scene_file)
     }
 
     // Parse animations
-    // still wip!!
-    /*{
+    {
         size_t animations_size = 0;
         binary_scene_file.read(reinterpret_cast<char*>(&animations_size), sizeof(size_t));
         custom_animations.resize(animations_size);
@@ -141,7 +140,7 @@ void Character3D::parse(std::ifstream& binary_scene_file)
             custom_animations[i] = animation->get_name();
             RendererStorage::register_animation(custom_animations[i], animation);
         }
-    }*/
+    }
 }
 
 void Character3D::clone(Node* new_node, bool copy)

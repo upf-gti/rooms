@@ -2,7 +2,7 @@
 
 #include "base_editor.h"
 
-#include "framework/animation/track.h"
+#include "framework/animation/animation.h"
 #include "framework/animation/skeleton.h"
 
 class RoomsRenderer;
@@ -11,7 +11,6 @@ class Node3D;
 class MeshInstance3D;
 class SkeletonInstance3D;
 class Joint3D;
-class Animation;
 class Surface;
 
 namespace ui {
@@ -39,8 +38,8 @@ struct sAnimationState {
 };
 
 struct sAnimationData {
-    float current_time = 0.0f;
     Animation* animation = nullptr;
+    float current_time = 0.0f;
     std::vector<sAnimationState> states;
 };
 
@@ -62,16 +61,16 @@ class AnimationEditor : public BaseEditor {
 
     Animation* current_animation = nullptr;
     Track* current_track = nullptr;
-
     sAnimationState* current_animation_state = nullptr;
 
     std::unordered_map<uint32_t, sAnimationData> animations_data;
 
     void create_new_animation(const std::string& name);
+    void set_animation(const std::string& name);
 
-    uint32_t get_animation_idx();
+    uint32_t get_animation_idx(Animation* animation = nullptr);
 
-    int custom_character_animation_idx = 0;
+    int custom_character_animation_idx = -1;
 
     /*
     *   Nodes
@@ -91,13 +90,12 @@ class AnimationEditor : public BaseEditor {
     float last_hand_distance = 0.0f;
 
     Node3D* get_current_node();
+    SkeletonInstance3D* find_skeleton(Node* node);
 
     void update_node_from_state(const sAnimationState& state);
     void update_node_transform();
-
     void on_select_joint();
-
-    SkeletonInstance3D* find_skeleton(Node* node);
+    void save_character_animation();
 
     /*
     *   Keyframes

@@ -7,13 +7,12 @@
 #include "framework/nodes/skeleton_instance_3d.h"
 #include "framework/nodes/joint_3d.h"
 #include "framework/nodes/animation_player.h"
-#include "framework/nodes/container_2d.h"
 #include "framework/nodes/slider_2d.h"
 #include "framework/nodes/button_2d.h"
 #include "framework/nodes/group_3d.h"
 #include "framework/nodes/character_3d.h"
 #include "framework/ui/inspector.h"
-#include "framework/animation/track.h"
+#include "framework/ui/keyboard.h"
 #include "framework/animation/solvers/fabrik_solver.h"
 #include "framework/math/math_utils.h"
 #include "framework/camera/camera.h"
@@ -129,22 +128,25 @@ void AnimationEditor::on_enter(void* data)
         auto character = static_cast<Character3D*>(current_node);
         const auto& animations = character->get_custom_animations();
         if (!animations.empty()) {
-            current_animation = RendererStorage::get_animation(animations[0]);
 
-            sAnimationData new_anim_data;
-            new_anim_data.animation = current_animation;
+            Animation* anim = RendererStorage::get_animation(animations[0]);
+            custom_character_animation_idx = 0;
 
-            uint32_t track_count = current_animation->get_track_count();
+            sAnimationData new_anim_data = { anim };
+
+            uint32_t track_count = anim->get_track_count();
             uint32_t state_count = 0u;
 
+            // When animating, any added keyframe creates a new state
+            // Get max track keyframes as its the number of states
             for (uint32_t i = 0; i < track_count; ++i) {
-                Track* track = current_animation->get_track(i);
+                Track* track = anim->get_track(i);
                 state_count = std::max(state_count, track->size());
             }
 
             new_anim_data.states.resize(state_count);
 
-            float state_time = 0.0f;
+            float& state_time = new_anim_data.current_time;
 
             for (uint32_t i = 0; i < state_count; ++i) {
                 sAnimationState& state = new_anim_data.states[i];
@@ -152,26 +154,26 @@ void AnimationEditor::on_enter(void* data)
                 state.time = state_time;
 
                 for (uint32_t i = 0; i < track_count; ++i) {
-                    Track* track = current_animation->get_track(i);
+                    Track* track = anim->get_track(i);
 
                     // Sample node in that timestamp
                     std::string p_name = track->get_name();
                     Node::AnimatableProperty node_property = current_node->get_animatable_property(p_name);
                     void* data = node_property.property;
-                    current_animation->sample(state.time, track->get_id(), ANIMATION_LOOP_NONE, data, eInterpolationType::STEP);
+                    anim->sample(state.time, track->get_id(), ANIMATION_LOOP_NONE, data, eInterpolationType::STEP);
 
                     sPropertyState& ps = state.properties[p_name];
                     ps.track_id = track->get_id();
                 }
 
-                // Store state using the current node
                 store_animation_state(state);
 
                 state_time += 0.5f;
             }
 
-            current_time = state_time;
-            animations_data[get_animation_idx()] = new_anim_data;
+            animations_data[get_animation_idx(anim)] = new_anim_data;
+
+            set_animation(animations[0]);
         }
     }
 
@@ -418,10 +420,6 @@ void AnimationEditor::create_new_animation(const std::string& name)
     current_animation->set_name(name);
     RendererStorage::register_animation(name, current_animation);
 
-    if (current_node->get_node_type() == "Character3D") {
-        static_cast<Character3D*>(current_node)->store_animation(name);
-    }
-
     sAnimationState initial_state;
     store_animation_state(initial_state);
 
@@ -440,13 +438,30 @@ void AnimationEditor::create_new_animation(const std::string& name)
         p_state.keyframe = &current_track->add_keyframe({ .value = p_state.value, .in = 0.0f, .out = 0.0f, .time = 0.0f });
     }
 
-    sAnimationData new_anim_data;
-    new_anim_data.animation = current_animation;
+    sAnimationData new_anim_data = { current_animation };
     new_anim_data.states.push_back(initial_state);
     animations_data[get_animation_idx()] = new_anim_data;
 
     current_time += 0.5f;
     current_animation->recalculate_duration();
+
+    keyframe_list_dirty = true;
+    custom_character_animation_idx = -1;
+}
+
+void AnimationEditor::set_animation(const std::string& name)
+{
+    // if needed..
+    stop_animation();
+
+    auto animation = RendererStorage::get_animation(name);
+    assert(animation);
+    current_animation = animation;
+
+    sAnimationData& data = animations_data[get_animation_idx()];
+    current_time = data.current_time;
+
+    keyframe_list_dirty = true;
 }
 
 Node3D* AnimationEditor::get_current_node()
@@ -462,6 +477,30 @@ void AnimationEditor::on_select_joint()
     inspector->clear();
     inspect_node(current_joint);
     set_active_chain(current_joint->get_index());
+}
+
+void AnimationEditor::save_character_animation()
+{
+    if (current_node->get_node_type() != "Character3D") {
+        return;
+    }
+
+    if (custom_character_animation_idx < 0) {
+        custom_character_animation_idx = 0;
+    }
+
+    auto callback = [&](const std::string& output) {
+        // remove prev registration
+        RendererStorage::erase_animation(current_animation->get_name());
+
+        current_animation->set_name(output);
+        static_cast<Character3D*>(current_node)->store_animation(output);
+
+        // re-register animation
+        RendererStorage::register_animation(output, current_animation);
+    };
+
+    ui::Keyboard::request(callback, current_animation->get_name());
 }
 
 SkeletonInstance3D* AnimationEditor::find_skeleton(Node* node)
@@ -590,9 +629,9 @@ void AnimationEditor::update_ik(float delta_time)
     instance->update_joints_from_pose();
 }
 
-uint32_t AnimationEditor::get_animation_idx()
+uint32_t AnimationEditor::get_animation_idx(Animation* animation)
 {
-    return reinterpret_cast<uintptr_t>(current_animation);
+    return reinterpret_cast<uintptr_t>(animation ? animation : current_animation);
 }
 
 void AnimationEditor::update_node_from_state(const sAnimationState& state)
@@ -1015,36 +1054,33 @@ void AnimationEditor::render_gui()
 
     ImGui::SeparatorText("Editor Animations");
 
-    for (const auto& a : animations_data) {
-        ImGui::Text("%s", a.second.animation->get_name().c_str());
+    const std::string& current_animation_name = current_animation->get_name();
+
+    if (ImGui::BeginCombo("Animation", current_animation_name.c_str(), 0u))
+    {
+        for (const auto& a : animations_data) {
+            const std::string& a_name = a.second.animation->get_name();
+            const bool is_selected = (a_name == current_animation_name);
+            if (ImGui::Selectable(a_name.c_str(), is_selected)) {
+                set_animation(a_name);
+            }
+            if (is_selected) {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
     }
 
     if (current_node->get_node_type() == "Character3D") {
 
-        ImGui::SeparatorText("Custom Animations");
-
         auto character = static_cast<Character3D*>(current_node);
         const auto& animations = character->get_custom_animations();
 
-        if (ImGui::BeginCombo("Animation", animations[custom_character_animation_idx].c_str(), 0u))
-        {
-            for (int n = 0; n < animations.size(); n++)
-            {
-                const bool is_selected = (custom_character_animation_idx == n);
-                if (ImGui::Selectable(animations[n].c_str(), is_selected)) {
-                    custom_character_animation_idx = n;
-                    auto animation = RendererStorage::get_animation(animations[n]);
-                    assert(animation);
-                    current_animation = animation;
-                    // do some reseting stuff
-                    auto& data = animations_data[get_animation_idx()];
-                    current_time = data.current_time;
-                }
-                if (is_selected) {
-                    ImGui::SetItemDefaultFocus();
-                }
+        if (!animations.empty()) {
+            ImGui::SeparatorText("Custom Animations");
+            for (int n = 0; n < animations.size(); n++) {
+                ImGui::Text(animations[n].c_str());
             }
-            ImGui::EndCombo();
         }
 
         if (ImGui::Button("Start New Animation")) {
@@ -1112,6 +1148,8 @@ void AnimationEditor::init_ui()
     }
 
     first_row->add_child(new ui::TextureButton2D("enable_ik", { "data/textures/a.png", ui::ALLOW_TOGGLE | ui::SELECTED }));
+
+    first_row->add_child(new ui::TextureButton2D("save_animation", { "data/textures/save.png" }));
 
     ui::HContainer2D* second_row = new ui::HContainer2D("row_1", { 0.0f, 0.0f });
     vertical_container->add_child(second_row);
@@ -1195,6 +1233,11 @@ void AnimationEditor::bind_events()
             }
         }
     });
+
+    // Animation events
+    {
+        Node::bind("save_animation", [&](const std::string& signal, void* button) { save_character_animation(); });
+    }
 
     // Keyframe events
     {
