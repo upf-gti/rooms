@@ -13,6 +13,7 @@
 #include "framework/nodes/character_3d.h"
 #include "framework/ui/inspector.h"
 #include "framework/ui/keyboard.h"
+#include "framework/ui/timeline.h"
 #include "framework/animation/solvers/fabrik_solver.h"
 #include "framework/math/math_utils.h"
 #include "framework/camera/camera.h"
@@ -38,6 +39,8 @@ Gizmo3D ik_gizmo;
 
 uint64_t AnimationEditor::keyframe_signal_uid = 0;
 uint64_t AnimationEditor::node_signal_uid = 0;
+
+ui::Timeline* timeline = nullptr;
 
 uint32_t get_changed_properties_from_states(const sAnimationState& prev_state,
                                             const sAnimationState& current_state,
@@ -249,6 +252,11 @@ void AnimationEditor::update(float delta_time)
         update_animation_trajectory();
     }
 
+    if (timeline_dirty) {
+        update_timeline();
+        timeline_dirty = false;
+    }
+
     if (keyframe_list_dirty) {
         inspect_keyframes_list(true);
         keyframe_list_dirty = false;
@@ -298,7 +306,25 @@ void AnimationEditor::update(float delta_time)
         generate_shortcuts();
     }
 
-    inspector->update(delta_time);
+    // inspector->update(delta_time);
+
+    timeline->update(delta_time);
+
+    if (timeline->is_time_dirty()) {
+
+        // player->set_playback_time(timeline->get_current_time());
+
+        auto& states = animations_data[get_animation_idx()].states;
+
+        auto it = std::find_if(states.begin(), states.end(), [t = timeline->get_current_time()](const sAnimationState& s) {
+            return s.time == t;
+        });
+
+        if (it != states.end()) {
+            current_animation_state = &(*it);
+            update_node_from_state(*current_animation_state);
+        }
+    }
 }
 
 void AnimationEditor::render()
@@ -307,13 +333,11 @@ void AnimationEditor::render()
 
     BaseEditor::render();
 
-    inspector->render();
+    // inspector->render();
+
+    timeline->render();
 
     render_gizmo();
-
-    if (current_node) {
-        current_node->render();
-    }
 
     auto& states = animations_data[get_animation_idx()].states;
 
@@ -324,6 +348,21 @@ void AnimationEditor::render()
     }
 
     animation_trajectory_instance->render();
+}
+
+void AnimationEditor::update_timeline()
+{
+    if (!current_animation) {
+        return;
+    }
+
+    timeline->clear();
+
+    auto& states = animations_data[get_animation_idx()].states;
+
+    for (auto& state : states) {
+        timeline->add_keyframe(state.time, nullptr);
+    }
 }
 
 void AnimationEditor::update_gizmo(float delta_time)
@@ -818,9 +857,23 @@ void AnimationEditor::process_keyframe()
         return;
     }
 
+    /*
+        Alex: Even it's a lot more keyframes, I think we want to go through every track and add a new keyframe,
+        if not it will interpolate using unsynced keyframes..
+
+        Let's say i make a waving animation using 1 hand and then the last state i rise the other hand
+        using only c will result in the second hand moving since the start, because
+        it only has 2 keyframes, 1 at the start and 1 at the beginning, which will be interpolated...
+
+        If we want to use only "changed_properties", we can't save the first keyframe for every track, since it
+        is the main problem. In the above ex. if the other hand didn't have the start keyframe, it would interpolate
+        correctly (no interp. in fact, because there's only one keyframe)
+    */
+
+    // for (auto& p : current_node->get_animatable_properties()) {
     for (uint32_t i = 0u; i < changed_properties_count; i++) {
 
-        std::string property_name = changed_properties[i];
+        std::string property_name = changed_properties[i]; // p.first;
 
         sPropertyState& c_state = current_animation_state->properties[property_name];
         sPropertyState& n_state = new_anim_state.properties[property_name];
@@ -1183,6 +1236,14 @@ void AnimationEditor::init_ui()
         // .back_fn = std::bind(&AnimationEditor::on_goback_inspector, this, std::placeholders::_1)
     });
 
+    timeline = new ui::Timeline({
+        .name = "inspector_root",
+        .title = "Animation Timeline",
+        .position = {32.0f, 32.f},
+        // .close_fn = std::bind(&AnimationEditor::on_close_inspector, this, std::placeholders::_1),
+        // .back_fn = std::bind(&AnimationEditor::on_goback_inspector, this, std::placeholders::_1)
+    });
+
     if (renderer->get_openxr_available())
     {
         // Load controller UI labels
@@ -1241,7 +1302,10 @@ void AnimationEditor::bind_events()
 
     // Keyframe events
     {
-        Node::bind("open_list", [&](const std::string& signal, void* button) { inspect_keyframes_list(true); });
+        Node::bind("open_list", [&](const std::string& signal, void* button) {
+            // inspect_keyframes_list(true);
+            timeline_dirty = true;
+        });
         Node::bind("record_action", [&](const std::string& signal, void* button) { });
         Node::bind("create_keyframe", [&](const std::string& signal, void* button) { create_keyframe(); });
         Node::bind("submit_keyframe", [&](const std::string& signal, void* button) { if (keyframe_dirty) { process_keyframe(); } });

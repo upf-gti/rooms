@@ -1562,6 +1562,7 @@ void SceneEditor::inspect_exports(bool force)
         Node::bind(signal, [&, str = full_name](const std::string& sg, void* data) {
             deselect();
             static_cast<RoomsEngine*>(RoomsEngine::instance)->set_main_scene(str);
+            set_inspector_dirty();
         });
 
         signal = name + std::to_string(node_signal_uid++) + "_add";

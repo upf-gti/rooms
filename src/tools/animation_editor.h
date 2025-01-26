@@ -141,6 +141,13 @@ class AnimationEditor : public BaseEditor {
     void stop_animation();
 
     /*
+        Timeline
+    */
+
+    bool timeline_dirty = true;
+    void update_timeline();
+
+    /*
         UI
     */
 
