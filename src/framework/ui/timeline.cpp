@@ -40,11 +40,13 @@ namespace ui {
         float title_y_corrected = desc.title_height * 0.5f - title_text_scale * 0.5f;
         ui::Container2D* title_container = new ui::Container2D(name + "_title", { 0.0f, 0.0f }, { inner_width - padding * 0.4f, desc.title_height });
         title = new ui::Text2D(desc.title.empty() ? "Inspector" : desc.title, { 0.0f, title_y_corrected }, title_text_scale, ui::TEXT_CENTERED | ui::SKIP_TEXT_RECT);
+        time_text = new ui::Text2D("0.0", { padding * 2.0f + 64.f + 10.f, title_y_corrected + 8.0f }, 20.f, ui::SKIP_TEXT_RECT);
         auto edit_button = new ui::TextureButton2D("edit_timeline_keyframe", { "data/textures/edit.png", 0u, { padding * 2.0f, title_y_corrected }, glm::vec2(32.0f), colors::WHITE, "Edit" });
         auto delete_button = new ui::TextureButton2D("delete_timeline_keyframe", { "data/textures/delete.png", 0u, { padding * 2.0f + 32.f + 4.f, title_y_corrected }, glm::vec2(32.0f), colors::WHITE, "Delete" });
         close_button = new ui::TextureButton2D("close_timeline", { "data/textures/cross.png", 0u, { inner_width - padding * 4.0f, title_y_corrected }, glm::vec2(32.0f), colors::WHITE, "Close" });
         title_container->add_child(edit_button);
         title_container->add_child(delete_button);
+        title_container->add_child(time_text);
         title_container->add_child(title);
         title_container->add_child(close_button);
         column->add_child(title_container);
@@ -261,6 +263,10 @@ namespace ui {
             time_dirty |= (new_time != current_time);
             current_time = new_time;
         }
+
+        std::string s = std::to_string(current_time);
+        size_t idx = s.find('.') + 1;
+        time_text->set_text(s.substr(0, idx + 2));
 
         Node2D::update(delta_time);
     }

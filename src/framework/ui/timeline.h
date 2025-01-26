@@ -68,6 +68,7 @@ namespace ui {
         Container2D* body = nullptr;
         Panel2D* playhead = nullptr;
         Text2D* title = nullptr;
+        Text2D* time_text = nullptr;
         TextureButton2D* close_button = nullptr;
         TimelineFunc on_close = nullptr;
         TimelineFunc on_edit_keyframe = nullptr;

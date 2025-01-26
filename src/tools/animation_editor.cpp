@@ -346,6 +346,8 @@ void AnimationEditor::update_timeline()
         return;
     }
 
+    timeline->set_visibility(true);
+
     timeline->clear();
 
     auto& states = animations_data[current_animation->get_name()].states;
