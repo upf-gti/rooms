@@ -26,6 +26,7 @@ namespace ui {
 
         on_close = desc.close_fn;
         on_edit_keyframe = desc.edit_keyframe_fn;
+        on_delete_keyframe = desc.delete_keyframe_fn;
 
         root = new ui::XRPanel(name + "_background", { 0.0f, 0.f }, panel_size, 0u, panel_color);
         add_child(root);
@@ -40,8 +41,10 @@ namespace ui {
         ui::Container2D* title_container = new ui::Container2D(name + "_title", { 0.0f, 0.0f }, { inner_width - padding * 0.4f, desc.title_height });
         title = new ui::Text2D(desc.title.empty() ? "Inspector" : desc.title, { 0.0f, title_y_corrected }, title_text_scale, ui::TEXT_CENTERED | ui::SKIP_TEXT_RECT);
         auto edit_button = new ui::TextureButton2D("edit_timeline_keyframe", { "data/textures/edit.png", 0u, { padding * 2.0f, title_y_corrected }, glm::vec2(32.0f), colors::WHITE, "Edit" });
+        auto delete_button = new ui::TextureButton2D("delete_timeline_keyframe", { "data/textures/delete.png", 0u, { padding * 2.0f + 32.f + 4.f, title_y_corrected }, glm::vec2(32.0f), colors::WHITE, "Delete" });
         close_button = new ui::TextureButton2D("close_timeline", { "data/textures/cross.png", 0u, { inner_width - padding * 4.0f, title_y_corrected }, glm::vec2(32.0f), colors::WHITE, "Close" });
         title_container->add_child(edit_button);
+        title_container->add_child(delete_button);
         title_container->add_child(title);
         title_container->add_child(close_button);
         column->add_child(title_container);
@@ -49,6 +52,16 @@ namespace ui {
         Node::bind("edit_timeline_keyframe", [&](const std::string& sg, void* data) {
             if (on_edit_keyframe) {
                 on_edit_keyframe(this);
+            }
+        });
+
+        Node::bind("delete_timeline_keyframe", [&](const std::string& sg, void* data) {
+            bool deleted = false;
+            if (on_delete_keyframe) {
+                deleted = on_delete_keyframe(this);
+            }
+            if (deleted) {
+                select_keyframe(nullptr);
             }
         });
 
@@ -110,10 +123,13 @@ namespace ui {
             selected_key->selected = false;
         }
 
-        key->selected = true;
-        selected_key = key;
+        if (key) {
+            key->selected = true;
+            current_time = key->time;
+        }
 
-        current_time = key->time;
+        selected_key = key;
+        
         time_dirty = true;
     }
 

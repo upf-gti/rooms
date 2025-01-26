@@ -28,6 +28,7 @@ namespace ui {
         glm::vec2 position = { 0.0f, 0.0f };
         TimelineFunc close_fn = nullptr;
         TimelineFunc edit_keyframe_fn = nullptr;
+        TimelineFunc delete_keyframe_fn = nullptr;
     };
 
     struct TimelineKeyframe {
@@ -70,6 +71,7 @@ namespace ui {
         TextureButton2D* close_button = nullptr;
         TimelineFunc on_close = nullptr;
         TimelineFunc on_edit_keyframe = nullptr;
+        TimelineFunc on_delete_keyframe = nullptr;
 
         /*
         *   Keyframes
