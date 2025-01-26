@@ -25,6 +25,7 @@ namespace ui {
         float inner_height = panel_size.y - padding * 2.0f;
 
         on_close = desc.close_fn;
+        on_edit_keyframe = desc.edit_keyframe_fn;
 
         root = new ui::XRPanel(name + "_background", { 0.0f, 0.f }, panel_size, 0u, panel_color);
         add_child(root);
@@ -38,10 +39,18 @@ namespace ui {
         float title_y_corrected = desc.title_height * 0.5f - title_text_scale * 0.5f;
         ui::Container2D* title_container = new ui::Container2D(name + "_title", { 0.0f, 0.0f }, { inner_width - padding * 0.4f, desc.title_height });
         title = new ui::Text2D(desc.title.empty() ? "Inspector" : desc.title, { 0.0f, title_y_corrected }, title_text_scale, ui::TEXT_CENTERED | ui::SKIP_TEXT_RECT);
-        close_button = new ui::TextureButton2D("close_timeline", { "data/textures/cross.png", 0u, { inner_width - padding * 3.0f, title_y_corrected }, glm::vec2(32.0f), colors::WHITE, "Close" });
+        auto edit_button = new ui::TextureButton2D("edit_timeline_keyframe", { "data/textures/edit.png", 0u, { padding * 2.0f, title_y_corrected }, glm::vec2(32.0f), colors::WHITE, "Edit" });
+        close_button = new ui::TextureButton2D("close_timeline", { "data/textures/cross.png", 0u, { inner_width - padding * 4.0f, title_y_corrected }, glm::vec2(32.0f), colors::WHITE, "Close" });
+        title_container->add_child(edit_button);
         title_container->add_child(title);
         title_container->add_child(close_button);
         column->add_child(title_container);
+
+        Node::bind("edit_timeline_keyframe", [&](const std::string& sg, void* data) {
+            if (on_edit_keyframe) {
+                on_edit_keyframe(this);
+            }
+        });
 
         Node::bind("close_timeline", [&](const std::string& sg, void* data) {
             bool should_close = true;
@@ -93,6 +102,19 @@ namespace ui {
         mesh_instance->set_surface_material_override(mesh_instance->get_surface(0), material);
 
         return mesh_instance;
+    }
+
+    void Timeline::select_keyframe(TimelineKeyframe* key)
+    {
+        if (selected_key) {
+            selected_key->selected = false;
+        }
+
+        key->selected = true;
+        selected_key = key;
+
+        current_time = key->time;
+        time_dirty = true;
     }
 
     void Timeline::render()
@@ -182,22 +204,47 @@ namespace ui {
             }
         }
 
-        float w_delta = Input::get_mouse_wheel_delta();
-
-        time_dirty = false;
-
-        if (Input::is_key_pressed(GLFW_KEY_LEFT_SHIFT)) {
+        // zooming
+        {
+            float w_delta = Input::get_mouse_wheel_delta();
             zoom -= w_delta * 0.10f;
             zoom = std::clamp(zoom, 0.3f, 3.0f);
         }
-        else {
-            float new_time = current_time - w_delta * 0.5f;
+
+        time_dirty = false;
+
+        const sInputData& keyframe_input_data = get_input_data();
+
+        // ...
+
+        const sInputData& root_input_data = root->get_input_data(true);
+
+        // Horizontal scrolling
+        if (root_input_data.is_hovered)
+        {
+            float scroll_dt = 0.0f;
+
+            if (root_input_data.was_pressed) {
+                IO::set_focus(root);
+            }
+
+            if (root_input_data.is_pressed && !IO::is_focus_type(Node2DClassType::HSLIDER)) {
+                scroll_dt += (last_scroll_position.x - root_input_data.local_position.x);
+            }
+
+            if (root_input_data.was_released) {
+                IO::set_focus(nullptr);
+            }
+
+            last_scroll_position = root_input_data.local_position;
+
+            float dt_time = x_to_time(scroll_dt);
+
+            float new_time = current_time + dt_time;
             new_time = std::clamp(new_time, 0.0f, keyframes.back().time);
-            time_dirty = (new_time != current_time);
+            time_dirty |= (new_time != current_time);
             current_time = new_time;
         }
-
-        sInputData data = get_input_data();
 
         Node2D::update(delta_time);
     }
@@ -279,32 +326,26 @@ namespace ui {
 
             if (data.was_pressed) {
                 pressed_inside = true;
-                key.selected = true;
-
-                if (selected_key) {
-                    selected_key->selected = false;
-                }
-
-                selected_key = &key;
             }
 
             data.was_released = was_input_released();
 
             if (data.was_released) {
+                if (data.is_hovered) {
+                    select_keyframe(&key);
+                }
                 pressed_inside = false;
             }
 
             data.is_pressed = pressed_inside && is_input_pressed();
-
-            if (!on_hover && data.is_hovered) {
-                data.was_hovered = true;
-            }
 
             if (data.is_hovered) {
                 key.hovered = true;
                 return data;
             }
         }
+
+        return {};
     }
 
     float Timeline::x_to_time(float x)

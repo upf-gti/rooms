@@ -27,6 +27,7 @@ namespace ui {
         glm::vec2 size = { 800.f, 190.f };
         glm::vec2 position = { 0.0f, 0.0f };
         TimelineFunc close_fn = nullptr;
+        TimelineFunc edit_keyframe_fn = nullptr;
     };
 
     struct TimelineKeyframe {
@@ -59,6 +60,8 @@ namespace ui {
 
         glm::vec2 panel_size = {};
         Color panel_color = { 0.01f, 0.01f, 0.01f, 0.95f };
+        glm::vec2 last_scroll_position = {};
+        glm::vec3 last_grab_position = {};
 
         XRPanel* root = nullptr;
         Container2D* body = nullptr;
@@ -66,7 +69,7 @@ namespace ui {
         Text2D* title = nullptr;
         TextureButton2D* close_button = nullptr;
         TimelineFunc on_close = nullptr;
-        glm::vec3 last_grab_position = {};
+        TimelineFunc on_edit_keyframe = nullptr;
 
         /*
         *   Keyframes
@@ -83,6 +86,7 @@ namespace ui {
         MeshInstance* frame_mesh_hovered = nullptr;
 
         MeshInstance* generate_keyframe_mesh(const Color& color);
+        void select_keyframe(TimelineKeyframe* key);
 
     public:
 
@@ -97,9 +101,11 @@ namespace ui {
 
         bool is_time_dirty() { return time_dirty; }
         float get_current_time() { return current_time; }
+        TimelineKeyframe* get_selected_key() { return selected_key; }
 
         void add_keyframe(float time, Keyframe* keyframe);
         void clear();
         void set_title(const std::string& new_title);
+        void set_current_time(float time) { current_time = time; }
     };
 }

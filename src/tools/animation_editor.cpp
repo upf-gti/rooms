@@ -153,7 +153,7 @@ void AnimationEditor::on_enter(void* data)
 
             for (uint32_t i = 0; i < state_count; ++i) {
                 sAnimationState& state = new_anim_data.states[i];
-
+                state.index = i;
                 state.time = state_time;
 
                 for (uint32_t i = 0; i < track_count; ++i) {
@@ -181,19 +181,15 @@ void AnimationEditor::on_enter(void* data)
     }
 
     if (!current_animation) {
-        // Create animation for current node
         // TODO: Use the uuid for registering the animation
         std::string animation_name = current_node->get_name() + "@animation";
-        current_animation = RendererStorage::get_animation(animation_name);
+        auto loaded_animation = RendererStorage::get_animation(animation_name);
 
-        if (!current_animation) {
-            create_new_animation(animation_name);
+        if (!loaded_animation) {
+            loaded_animation = create_new_animation(animation_name);
         }
-        else {
-            // Start with last keyframe added time
-            auto& data = animations_data[get_animation_idx()];
-            current_time = data.current_time;
-        }
+
+        set_animation(animation_name);
     }
 
     // Set inspector in front on VR mode
@@ -308,21 +304,14 @@ void AnimationEditor::update(float delta_time)
 
     // inspector->update(delta_time);
 
-    timeline->update(delta_time);
+    if (player->is_playing()) {
+        timeline->set_current_time(player->get_playback_time());
+    }
+    else {
+        timeline->update(delta_time);
 
-    if (timeline->is_time_dirty()) {
-
-        // player->set_playback_time(timeline->get_current_time());
-
-        auto& states = animations_data[get_animation_idx()].states;
-
-        auto it = std::find_if(states.begin(), states.end(), [t = timeline->get_current_time()](const sAnimationState& s) {
-            return s.time == t;
-        });
-
-        if (it != states.end()) {
-            current_animation_state = &(*it);
-            update_node_from_state(*current_animation_state);
+        if (timeline->is_time_dirty()) {
+            player->set_playback_time(timeline->get_current_time());
         }
     }
 }
@@ -450,14 +439,14 @@ void AnimationEditor::render_gizmo()
     }
 }
 
-void AnimationEditor::create_new_animation(const std::string& name)
+Animation* AnimationEditor::create_new_animation(const std::string& name)
 {
     current_time = 0.0f;
 
     // Generate new animation
-    current_animation = new Animation();
-    current_animation->set_name(name);
-    RendererStorage::register_animation(name, current_animation);
+    Animation* new_animation = new Animation();
+    new_animation->set_name(name);
+    RendererStorage::register_animation(name, new_animation);
 
     sAnimationState initial_state;
     store_animation_state(initial_state);
@@ -467,9 +456,9 @@ void AnimationEditor::create_new_animation(const std::string& name)
     for (auto& p : initial_state.properties) {
 
         sPropertyState& p_state = p.second;
-        p_state.track_id = current_animation->get_track_count();
+        p_state.track_id = new_animation->get_track_count();
 
-        current_track = current_animation->add_track(p_state.track_id);
+        current_track = new_animation->add_track(p_state.track_id);
         current_track->set_name(p.first);
         current_track->set_path(current_node->get_name() + "/" + p.first);
 
@@ -477,15 +466,18 @@ void AnimationEditor::create_new_animation(const std::string& name)
         p_state.keyframe = &current_track->add_keyframe({ .value = p_state.value, .in = 0.0f, .out = 0.0f, .time = 0.0f });
     }
 
-    sAnimationData new_anim_data = { current_animation };
+    sAnimationData new_anim_data = { new_animation };
+    initial_state.index = new_anim_data.states.size();
     new_anim_data.states.push_back(initial_state);
     animations_data[get_animation_idx()] = new_anim_data;
 
     current_time += 0.5f;
-    current_animation->recalculate_duration();
+    new_animation->recalculate_duration();
 
     keyframe_list_dirty = true;
     custom_character_animation_idx = -1;
+
+    return new_animation;
 }
 
 void AnimationEditor::set_animation(const std::string& name)
@@ -501,6 +493,10 @@ void AnimationEditor::set_animation(const std::string& name)
     current_time = data.current_time;
 
     keyframe_list_dirty = true;
+
+    // hack to set animation in the anim blender
+    play_animation();
+    stop_animation();
 }
 
 Node3D* AnimationEditor::get_current_node()
@@ -904,6 +900,7 @@ void AnimationEditor::process_keyframe()
         current_time += 0.5f;
         current_animation->recalculate_duration();
         auto& states = animations_data[get_animation_idx()].states;
+        new_anim_state.index = states.size();
         states.push_back(new_anim_state);
     }
 
@@ -959,6 +956,7 @@ void AnimationEditor::duplicate_keyframe(uint32_t index)
     current_time += 0.5f;
     current_animation->recalculate_duration();
     auto& states = animations_data[get_animation_idx()].states;
+    new_anim_state.index = states.size();
     states.push_back(new_anim_state);
     current_animation_state = nullptr;
     keyframe_list_dirty = true;
@@ -1057,7 +1055,7 @@ void AnimationEditor::set_loop_type(uint8_t type)
 
 void AnimationEditor::play_animation()
 {
-    player->play(current_animation);
+    player->play(current_animation, timeline->get_current_time());
 
     // Manage menu player buttons
     {
@@ -1089,6 +1087,8 @@ void AnimationEditor::pause_animation()
 void AnimationEditor::stop_animation()
 {
     player->stop(true);
+
+    timeline->set_current_time(0.0f);
 
     {
         // Show play button
@@ -1137,9 +1137,9 @@ void AnimationEditor::render_gui()
         }
 
         if (ImGui::Button("Start New Animation")) {
-
             std::string animation_name = current_node->get_name() + "@animation" + std::to_string(animations.size());
-            create_new_animation(animation_name);
+            auto anim = create_new_animation(animation_name);
+            set_animation(animation_name);
         }
     }
 
@@ -1241,7 +1241,7 @@ void AnimationEditor::init_ui()
         .title = "Animation Timeline",
         .position = {32.0f, 32.f},
         // .close_fn = std::bind(&AnimationEditor::on_close_inspector, this, std::placeholders::_1),
-        // .back_fn = std::bind(&AnimationEditor::on_goback_inspector, this, std::placeholders::_1)
+        .edit_keyframe_fn = std::bind(&AnimationEditor::on_edit_timeline_keyframe, this, std::placeholders::_1)
     });
 
     if (renderer->get_openxr_available())
@@ -1567,4 +1567,32 @@ bool AnimationEditor::on_close_inspector(ui::Inspector* scope)
     update_animation_trajectory();
 
     return should_close;
+}
+
+bool AnimationEditor::on_edit_timeline_keyframe(ui::Timeline* scope)
+{
+    // edit selected if any
+    auto selected = scope->get_selected_key();
+    uint32_t idx = 0u;
+
+    if (selected) {
+        auto& states = animations_data[get_animation_idx()].states;
+
+        auto it = std::find_if(states.begin(), states.end(), [t = selected->time](const sAnimationState& s) {
+            return s.time == t;
+        });
+        assert(it != states.end());
+        idx = (*it).index;
+    }
+    // edit the current state if there's no selection..
+    else {
+        if (!current_animation_state) {
+            return false;
+        }
+        idx = current_animation_state->index;
+    }
+
+    edit_keyframe(idx);
+
+    return true;
 }
