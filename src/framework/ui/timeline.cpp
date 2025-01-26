@@ -7,6 +7,9 @@
 #include "framework/nodes/button_2d.h"
 #include "framework/nodes/viewport_3d.h"
 #include "framework/animation/animation.h"
+#include "framework/math/intersections.h"
+
+#include "engine/engine.h"
 
 #include "graphics/renderer.h"
 
@@ -77,6 +80,8 @@ namespace ui {
             }
         });
 
+        render_background = false;
+
         // Body row
         body = new ui::Container2D(name + "_body", { 0.0f, 0.0f });
         body->set_fixed_size({ inner_width, panel_size.y - desc.title_height - padding * 3.0f });
@@ -112,6 +117,10 @@ namespace ui {
         material->set_priority(BUTTON);
         material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, shaders::mesh_forward::libraries, material));
 
+        if (Renderer::instance->get_openxr_available()) {
+            material->set_is_2D(false);
+        }
+
         MeshInstance* mesh_instance = new MeshInstance();
         mesh_instance->add_surface(quad_surface);
         mesh_instance->set_surface_material_override(mesh_instance->get_surface(0), material);
@@ -142,13 +151,13 @@ namespace ui {
 
         glm::vec2 scale = get_scale();
         glm::vec2 keyframe_size = { 16.0f, 48.0f };
-        glm::vec2 offset = glm::vec2(playhead->get_translation().x, body->get_translation().y + padding);
-        offset.x -= time_to_x(current_time);
+        glm::vec2 offset = glm::vec2(playhead->get_translation().x, body->get_translation().y + padding * scale.y);
+        offset.x -= time_to_x(current_time) * scale.x;
 
         for (auto& key : keyframes) {
-            glm::vec2 position = offset + glm::vec2(time_to_x(key.time), keyframe_size.y * 0.5f);
+            glm::vec2 position = offset + glm::vec2(time_to_x(key.time), keyframe_size.y * 0.5f) * scale;
 
-            if (position.x < (body->get_translation().x + padding) || (position.x + keyframe_size.x) > (body->get_translation().x + body->fixed_size.x)) {
+            if (position.x < (body->get_translation().x + padding * scale.x) || (position.x + keyframe_size.x * scale.x) >(body->get_translation().x + body->fixed_size.x * scale.x)) {
                 continue;
             }
 
@@ -161,7 +170,6 @@ namespace ui {
             // reset input stuff
             key.hovered = false;
         }
-
 
         Node2D::render();
     }
@@ -275,14 +283,13 @@ namespace ui {
     {
         glm::vec2 scale = get_scale();
         glm::vec2 keyframe_size = { 16.0f, 48.0f };
-        glm::vec2 offset = glm::vec2(playhead->get_translation().x, body->get_translation().y + padding);
-        offset.x -= time_to_x(current_time);
+        glm::vec2 offset = glm::vec2(playhead->get_translation().x, body->get_translation().y + padding * scale.y);
+        offset.x -= time_to_x(current_time) * scale.x;
 
         for (auto& key : keyframes) {
+            glm::vec2 position = offset + glm::vec2(time_to_x(key.time), keyframe_size.y * 0.5f) * scale;
 
-            glm::vec2 position = offset + glm::vec2(time_to_x(key.time), keyframe_size.y * 0.5f);
-
-            if (position.x < (body->get_translation().x + padding) || (position.x + keyframe_size.x) >(body->get_translation().x + body->fixed_size.x)) {
+            if (position.x < (body->get_translation().x + padding * scale.x) || (position.x + keyframe_size.x * scale.x) >(body->get_translation().x + body->fixed_size.x * scale.x)) {
                 continue;
             }
 
@@ -303,45 +310,45 @@ namespace ui {
             }
             else {
 
-                //glm::vec3 ray_origin;
-                //glm::vec3 ray_direction;
+                glm::vec3 ray_origin;
+                glm::vec3 ray_direction;
 
-                //Engine::instance->get_scene_ray(ray_origin, ray_direction);
+                Engine::instance->get_scene_ray(ray_origin, ray_direction);
 
-                //// Quad
-                //uint8_t priority = class_type;
-                //glm::mat4x4 model = glm::translate(glm::mat4x4(1.0f), glm::vec3(get_translation(), -priority * 1e-4));
-                //model = get_global_viewport_model() * model;
+                // Quad
+                uint8_t priority = class_type;
+                glm::mat4x4 model = glm::translate(glm::mat4x4(1.0f), glm::vec3(position - keyframe_size * 0.5f * get_scale(), -priority * 1e-4));
+                model = get_global_viewport_model() * model;
 
-                //glm::vec3 quad_position = model[3];
-                //glm::quat quad_rotation = glm::quat_cast(model);
-                //glm::vec2 quad_size = size * get_scale();
+                glm::vec3 quad_position = model[3];
+                glm::quat quad_rotation = glm::quat_cast(model);
+                glm::vec2 quad_size = keyframe_size * get_scale();
 
-                //float collision_dist;
-                //glm::vec3 intersection_point;
-                //glm::vec3 local_intersection_point;
+                float collision_dist;
+                glm::vec3 intersection_point;
+                glm::vec3 local_intersection_point;
 
-                //data.is_hovered = intersection::ray_quad(
-                //    ray_origin,
-                //    ray_direction,
-                //    quad_position,
-                //    quad_size,
-                //    quad_rotation,
-                //    intersection_point,
-                //    local_intersection_point,
-                //    collision_dist,
-                //    false
-                //);
+                data.is_hovered = intersection::ray_quad(
+                    ray_origin,
+                    ray_direction,
+                    quad_position,
+                    quad_size,
+                    quad_rotation,
+                    intersection_point,
+                    local_intersection_point,
+                    collision_dist,
+                    false
+                );
 
-                //if (data.is_hovered) {
-                //    if (Renderer::instance->get_openxr_available()) {
-                //        data.ray_intersection = intersection_point;
-                //        data.ray_distance = collision_dist;
-                //    }
+                if (data.is_hovered) {
+                    if (Renderer::instance->get_openxr_available()) {
+                        data.ray_intersection = intersection_point;
+                        data.ray_distance = collision_dist;
+                    }
 
-                //    glm::vec2 local_pos = glm::vec2(local_intersection_point) / get_scale();
-                //    data.local_position = glm::vec2(local_pos.x, size.y - local_pos.y);
-                //}
+                    glm::vec2 local_pos = glm::vec2(local_intersection_point) / get_scale();
+                    data.local_position = glm::vec2(local_pos.x, size.y - local_pos.y);
+                }
             }
 
             data.was_pressed = data.is_hovered && was_input_pressed();
