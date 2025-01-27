@@ -15,6 +15,7 @@ class Surface;
 
 namespace ui {
     class Inspector;
+    class Timeline;
 };
 
 namespace shortcuts {
@@ -29,11 +30,12 @@ namespace shortcuts {
 struct sPropertyState {
     TrackType value;
     int track_id = -1;
-    Keyframe* keyframe = nullptr;
+    int keyframe_idx = -1;
 };
 
 struct sAnimationState {
     float time = 0.0f;
+    uint32_t index = 0u;
     std::unordered_map<std::string, sPropertyState> properties;
 };
 
@@ -60,15 +62,12 @@ class AnimationEditor : public BaseEditor {
     */
 
     Animation* current_animation = nullptr;
-    Track* current_track = nullptr;
     sAnimationState* current_animation_state = nullptr;
 
-    std::unordered_map<uint32_t, sAnimationData> animations_data;
+    std::unordered_map<std::string, sAnimationData> animations_data;
 
-    void create_new_animation(const std::string& name);
+    Animation* create_new_animation(const std::string& name);
     void set_animation(const std::string& name);
-
-    uint32_t get_animation_idx(Animation* animation = nullptr);
 
     int custom_character_animation_idx = -1;
 
@@ -111,6 +110,7 @@ class AnimationEditor : public BaseEditor {
     void process_keyframe();
     void edit_keyframe(uint32_t index);
     void duplicate_keyframe(uint32_t index);
+    void delete_keyframe(uint32_t index);
 
     void set_animation_state(uint32_t index);
     void store_animation_state(sAnimationState& state);
@@ -141,6 +141,13 @@ class AnimationEditor : public BaseEditor {
     void stop_animation();
 
     /*
+        Timeline
+    */
+
+    bool timeline_dirty = true;
+    void update_timeline();
+
+    /*
         UI
     */
 
@@ -163,6 +170,8 @@ class AnimationEditor : public BaseEditor {
     void inspect_node(Node* node);
 
     bool on_close_inspector(ui::Inspector* scope = nullptr);
+    bool on_edit_timeline_keyframe(ui::Timeline* scope = nullptr);
+    bool on_delete_timeline_keyframe(ui::Timeline* scope = nullptr);
 
     void render_gizmo();
     void update_gizmo(float delta_time);
