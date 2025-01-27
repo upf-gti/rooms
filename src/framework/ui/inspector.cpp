@@ -38,14 +38,14 @@ namespace ui {
         float title_y_corrected = desc.title_height * 0.5f - title_text_scale * 0.5f;
         ui::Container2D* title_container = new ui::Container2D(name + "_title", { 0.0f, 0.0f }, { inner_width - padding * 0.4f, desc.title_height });
         title = new ui::Text2D(desc.title.empty() ? "Inspector" : desc.title, { 0.0f, title_y_corrected }, title_text_scale, ui::TEXT_CENTERED | ui::SKIP_TEXT_RECT);
-        back_button = new ui::TextureButton2D("back_button", { "data/textures/back.png", 0u, { padding, title_y_corrected }, glm::vec2(32.0f), colors::WHITE, "Back" });
-        close_button = new ui::TextureButton2D("close_button", { "data/textures/cross.png", 0u, { inner_width - padding * 3.0f, title_y_corrected }, glm::vec2(32.0f), colors::WHITE, "Close" });
+        back_button = new ui::TextureButton2D(name + "_back_button", { "data/textures/back.png", 0u, { padding, title_y_corrected }, glm::vec2(32.0f), colors::WHITE, "Back" });
+        close_button = new ui::TextureButton2D(name + "_close_button", { "data/textures/cross.png", 0u, { inner_width - padding * 3.0f, title_y_corrected }, glm::vec2(32.0f), colors::WHITE, "Close" });
         title_container->add_child(back_button);
         title_container->add_child(title);
         title_container->add_child(close_button);
         column->add_child(title_container);
 
-        Node::bind("close_button", [&](const std::string& sg, void* data) {
+        Node::bind(name + "_close_button", [&](const std::string& sg, void* data) {
             bool should_close = true;
             if (on_close) {
                 should_close = on_close(this);
@@ -55,7 +55,7 @@ namespace ui {
             }
         });
 
-        Node::bind("back_button", [&](const std::string& sg, void* data) {
+        Node::bind(name + "_back_button", [&](const std::string& sg, void* data) {
             if (on_back) {
                 on_back(this);
             }
