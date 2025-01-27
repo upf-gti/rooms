@@ -75,7 +75,7 @@ void SculptNode::initialize()
 {
     // Create default sculpt
     std::vector<Stroke> history;
-    history.push_back(default_stroke);
+    //history.push_back(default_stroke);
     from_history(history, false);
 }
 
@@ -139,14 +139,17 @@ void SculptNode::render()
 
 void SculptNode::from_history(const std::vector<Stroke>& new_history, bool loaded_from_memory)
 {
+    RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(Renderer::instance);
+
     if (!new_history.empty()) {
-        RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(Renderer::instance);
         sculpt_gpu_data = rooms_renderer->get_sculpt_manager()->create_sculpt_from_history(new_history);
         sculpt_gpu_data->ref();
         from_memory = loaded_from_memory;
     }
     else {
-        initialize();
+        sculpt_gpu_data = rooms_renderer->get_sculpt_manager()->create_sculpt();
+        sculpt_gpu_data->ref();
+        from_memory = loaded_from_memory;
     }
 }
 
