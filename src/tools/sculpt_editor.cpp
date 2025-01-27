@@ -323,7 +323,7 @@ bool SculptEditor::edit_update(float delta_time)
             }
         }
 
-        if (use_mirror) {
+        if (use_mirror && !hide_mirror) {
             bool r = mirror_gizmo.update(Input::get_controller_position(HAND_RIGHT, POSE_AIM), delta_time);
             is_tool_used &= !r;
             is_tool_pressed &= !r;
@@ -1048,7 +1048,7 @@ void SculptEditor::render()
 
         mirror_mesh->render();
     }
-    else if (use_mirror) {
+    else if (use_mirror && !hide_mirror) {
 
         mirror_gizmo.render();
 
@@ -1569,7 +1569,8 @@ void SculptEditor::init_ui()
         // Mirror
         {
             ui::ButtonSubmenu2D* mirror_submenu = new ui::ButtonSubmenu2D("mirror", { "data/textures/mirror.png" });
-            mirror_submenu->add_child(new ui::TextureButton2D("mirror_toggle", { "data/textures/mirror.png", ui::ALLOW_TOGGLE }));
+            mirror_submenu->add_child(new ui::TextureButton2D("use_mirror", { "data/textures/mirror.png", ui::ALLOW_TOGGLE }));
+            mirror_submenu->add_child(new ui::TextureButton2D("hide_mirror", { "data/textures/cross.png", ui::ALLOW_TOGGLE }));
             ui::ComboButtons2D* g_mirror = new ui::ComboButtons2D("g_mirror");
             g_mirror->add_child(new ui::TextureButton2D("mirror_translation", { "data/textures/translation_gizmo.png", ui::SELECTED }));
             g_mirror->add_child(new ui::TextureButton2D("mirror_rotation", { "data/textures/rotation_gizmo.png" }));
@@ -1698,7 +1699,8 @@ void SculptEditor::bind_events()
     //Node::bind("onion_value", [&](const std::string& signal, float value) { set_onion_modifier(value); });
     Node::bind("cap_value", (FuncFloat)[&](const std::string& signal, float value) { set_cap_modifier(value); });
 
-    Node::bind("mirror_toggle", [&](const std::string& signal, void* button) { toggle_mirror(); });
+    Node::bind("use_mirror", [&](const std::string& signal, void* button) { toggle_mirror(); });
+    Node::bind("hide_mirror", [&](const std::string& signal, void* button) { hide_mirror = !hide_mirror; });
     Node::bind("mirror_translation", [&](const std::string& signal, void* button) { mirror_gizmo.set_operation(TRANSLATE); });
     Node::bind("mirror_rotation", [&](const std::string& signal, void* button) { mirror_gizmo.set_operation(ROTATE); });
     Node::bind("mirror_both", [&](const std::string& signal, void* button) { mirror_gizmo.set_operation(TRANSLATE | ROTATE); });

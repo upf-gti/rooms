@@ -134,6 +134,7 @@ class SculptEditor : public BaseEditor {
     // Mirror
 
     bool use_mirror = false;
+    bool hide_mirror = false;
 
     Gizmo3D mirror_gizmo = {};
     MeshInstance3D* mirror_mesh = nullptr;

@@ -63,15 +63,8 @@ void SceneEditor::initialize()
     default_sculpt->initialize();
     RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
     default_sculpt->set_position({0.0f, 1.0f, 0.0f});
-    //static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(default_sculpt);
     main_scene->add_node(default_sculpt);
 #endif
-
-   /* auto e = parse_mesh("data/meshes/torus/torus.obj");
-    main_scene->add_node(e);
-
-    e = parse_mesh("data/meshes/cube/cube.obj");
-    main_scene->add_node(e);*/
 
     Node::bind(main_scene->get_name() + "@nodes_added", [&](const std::string& sg, void* data) {
         set_inspector_dirty();
@@ -218,10 +211,10 @@ void SceneEditor::update(float delta_time)
     if (inspector_dirty) {
 
         if (selected_node && dynamic_cast<Light3D*>(selected_node)) {
-            inspect_light();
+            inspect_light(true);
         }
-        if (selected_node && dynamic_cast<Character3D*>(selected_node)) {
-            inspect_character();
+        else if (selected_node && dynamic_cast<Character3D*>(selected_node)) {
+            inspect_character(true);
         }
         else if (current_group) {
             inspect_group(true);
@@ -1393,7 +1386,7 @@ void SceneEditor::inspect_group(bool force)
 
     uint8_t flags = ui::INSPECTOR_FLAG_BACK_BUTTON | ui::INSPECTOR_FLAG_CLOSE_BUTTON;
 
-    if (!inspector->get_visibility()) {
+    if (!inspector->get_visibility() || force) {
         flags |= ui::INSPECTOR_FLAG_FORCE_3D_POSITION;
     }
 
@@ -1433,9 +1426,8 @@ void SceneEditor::inspect_character(bool force)
 
     uint8_t flags = ui::INSPECTOR_FLAG_BACK_BUTTON | ui::INSPECTOR_FLAG_CLOSE_BUTTON;
 
-    if (!inspector->get_visibility()) {
+    if (!inspector->get_visibility() || force) {
         flags |= ui::INSPECTOR_FLAG_FORCE_3D_POSITION;
-        inspector->set_visibility(true);
     }
 
     inspector->clear(flags, "Character");
@@ -1479,7 +1471,7 @@ void SceneEditor::inspect_light(bool force)
 {
     uint8_t flags = ui::INSPECTOR_FLAG_BACK_BUTTON | ui::INSPECTOR_FLAG_CLOSE_BUTTON;
 
-    if (!inspector->get_visibility()) {
+    if (!inspector->get_visibility() || force) {
         flags |= ui::INSPECTOR_FLAG_FORCE_3D_POSITION;
     }
 
@@ -1541,7 +1533,7 @@ void SceneEditor::inspect_exports(bool force)
 {
     uint8_t flags = ui::INSPECTOR_FLAG_BACK_BUTTON | ui::INSPECTOR_FLAG_CLOSE_BUTTON;
 
-    if (!inspector->get_visibility()) {
+    if (!inspector->get_visibility() || force) {
         flags |= ui::INSPECTOR_FLAG_FORCE_3D_POSITION;
     }
     else {
