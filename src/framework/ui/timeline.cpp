@@ -234,7 +234,7 @@ namespace ui {
         {
             float w_delta = Input::get_mouse_wheel_delta();
             zoom -= w_delta * 0.10f;
-            zoom = std::clamp(zoom, 0.3f, 3.0f);
+            zoom = glm::clamp(zoom, 0.3f, 3.0f);
         }
 
         time_dirty = false;
@@ -267,7 +267,7 @@ namespace ui {
             float dt_time = x_to_time(scroll_dt);
 
             float new_time = current_time + dt_time;
-            new_time = std::clamp(new_time, 0.0f, keyframes.back().time);
+            new_time = glm::clamp(new_time, 0.0f, keyframes.back().time);
             time_dirty |= (new_time != current_time);
             current_time = new_time;
         }

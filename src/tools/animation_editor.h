@@ -30,7 +30,7 @@ namespace shortcuts {
 struct sPropertyState {
     TrackType value;
     int track_id = -1;
-    Keyframe* keyframe = nullptr;
+    int keyframe_idx = -1;
 };
 
 struct sAnimationState {

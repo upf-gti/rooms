@@ -168,7 +168,7 @@ void AnimationEditor::on_enter(void* data)
 
                     sPropertyState& ps = state.properties[p_name];
                     ps.track_id = track->get_id();
-                    ps.keyframe = track->get_keyframe(state.time);
+                    ps.keyframe_idx = track->get_keyframe_index(state.time);
                 }
 
                 store_animation_state(state);
@@ -464,7 +464,7 @@ Animation* AnimationEditor::create_new_animation(const std::string& name)
         track->set_path(current_node->get_name() + "/" + p.first);
 
         // Store keyframe in property state
-        p_state.keyframe = &track->add_keyframe({ .value = p_state.value, .in = 0.0f, .out = 0.0f, .time = 0.0f });
+        p_state.keyframe_idx = track->add_keyframe({ .value = p_state.value, .in = 0.0f, .out = 0.0f, .time = 0.0f });
     }
 
     sAnimationData new_anim_data = { new_animation, 0.5f };
@@ -871,27 +871,28 @@ void AnimationEditor::process_keyframe()
 
         std::string property_name = changed_properties[i]; // p.first;
 
-        sPropertyState& c_state = current_animation_state->properties[property_name];
-        sPropertyState& n_state = new_anim_state.properties[property_name];
-       
+        sPropertyState* c_state = &current_animation_state->properties[property_name];
+        sPropertyState* n_state = &new_anim_state.properties[property_name];
+
+        Track* track = current_animation->get_track_by_id(c_state->track_id);
+
         // Check if keyframe exists: modify value
-        if (editing_keyframe && c_state.keyframe) {
-            c_state.value = c_state.keyframe->value = n_state.value;
+        if (editing_keyframe && c_state->keyframe_idx != -1) {
+            Keyframe& keyframe = track->get_keyframe(c_state->keyframe_idx);
+            c_state->value = keyframe.value = n_state->value;
         }
         // No keyframe -> create one!
         else {
-
-            Track* track = current_animation->get_track_by_id(c_state.track_id);
 
             // Create and add keypoint to track
             std::cout << "Add keypoint to track " << property_name << std::endl;
 
             // Create and update keyframe in the state
             if (editing_keyframe) {
-                c_state.keyframe = &track->add_keyframe({ .value = n_state.value, .in = 0.0f, .out = 0.0f, .time = current_time });
+                c_state->keyframe_idx = track->add_keyframe({ .value = n_state->value, .in = 0.0f, .out = 0.0f, .time = current_time });
             }
             else {
-                n_state.keyframe = &track->add_keyframe({ .value = n_state.value, .in = 0.0f, .out = 0.0f, .time = current_time });
+                n_state->keyframe_idx = track->add_keyframe({ .value = n_state->value, .in = 0.0f, .out = 0.0f, .time = current_time });
             }
         }
     }
@@ -941,15 +942,10 @@ void AnimationEditor::duplicate_keyframe(uint32_t index)
     new_anim_state.time = current_time;
 
     for (auto prop : current_animation_state->properties) {
-
-        std::string property_name = prop.first;
-
+        const std::string& property_name = prop.first;
         sPropertyState state = current_animation_state->properties[property_name];
-
         Track* track = current_animation->get_track_by_id(state.track_id);
-
-        state.keyframe = &track->add_keyframe({ .value = state.value, .in = 0.0f, .out = 0.0f, .time = current_time });
-
+        state.keyframe_idx = track->add_keyframe({ .value = state.value, .in = 0.0f, .out = 0.0f, .time = current_time });
         new_anim_state.properties[property_name] = state;
     }
 
@@ -971,14 +967,14 @@ void AnimationEditor::delete_keyframe(uint32_t index)
     auto state = get_animation_state(index);
 
     // Remove tracks
-    for (auto prop : state->properties) {
+    for (const auto& prop : state->properties) {
 
         const std::string& property_name = prop.first;
         sPropertyState& p_state = state->properties[property_name];
 
         Track* track = current_animation->get_track_by_id(p_state.track_id);
-        if (p_state.keyframe) {
-            track->delete_keyframe(*p_state.keyframe);
+        if (p_state.keyframe_idx != -1) {
+            track->delete_keyframe(p_state.keyframe_idx);
         }
     }
 
