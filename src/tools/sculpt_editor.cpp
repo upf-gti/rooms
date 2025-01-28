@@ -357,14 +357,14 @@ bool SculptEditor::edit_update(float delta_time)
         // Disable the unused joystick axis until the joystick is released
         uint8_t curr_thumbstick_axis = Input::get_leading_thumbstick_axis(HAND_RIGHT);
 
-        if (thumbstick_leading_axis == THUMBSTICK_NO_AXIS) {
+        if (thumbstick_leading_axis == XR_THUMBSTICK_NO_AXIS) {
             thumbstick_leading_axis = curr_thumbstick_axis;
         }
-        else if (curr_thumbstick_axis == THUMBSTICK_NO_AXIS) {
-            thumbstick_leading_axis = THUMBSTICK_NO_AXIS;
+        else if (curr_thumbstick_axis == XR_THUMBSTICK_NO_AXIS) {
+            thumbstick_leading_axis = XR_THUMBSTICK_NO_AXIS;
         }
 
-        bool use_x_axis = (thumbstick_leading_axis == THUMBSTICK_AXIS_X);
+        bool use_x_axis = (thumbstick_leading_axis == XR_THUMBSTICK_AXIS_X);
         const glm::vec2& thumbstick_values = Input::get_thumbstick_value(HAND_RIGHT);
         float size_multiplier = (use_x_axis ? thumbstick_values.x : thumbstick_values.y) * delta_time * 0.1f;
 

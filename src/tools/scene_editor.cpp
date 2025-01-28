@@ -1180,8 +1180,8 @@ void SceneEditor::update_node_transform(const float delta_time, const bool rotat
 
         const glm::vec2 thumbstick_values = Input::get_thumbstick_value(HAND_RIGHT);
 
-        if (glm::abs(thumbstick_values.y) >= THUMBSTICK_DEADZONE) {
-            const float new_distance_delta = (thumbstick_values.y + glm::sign(thumbstick_values.y) * THUMBSTICK_DEADZONE) * delta_time;
+        if (glm::abs(thumbstick_values.y) >= XR_THUMBSTICK_DEADZONE) {
+            const float new_distance_delta = (thumbstick_values.y + glm::sign(thumbstick_values.y) * XR_THUMBSTICK_DEADZONE) * delta_time;
             hand_sculpt_distance = glm::clamp(hand_sculpt_distance + new_distance_delta, 0.0f, 5.0f);
         }
 

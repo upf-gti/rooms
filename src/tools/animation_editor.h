@@ -45,6 +45,8 @@ struct sAnimationData {
     std::vector<sAnimationState> states;
 };
 
+using NodeAnimationsMap = std::unordered_map<std::string, sAnimationData>;
+
 struct sIKChain {
     std::vector<Transform> transforms;
     std::vector<uint32_t> indices;
@@ -64,12 +66,11 @@ class AnimationEditor : public BaseEditor {
     Animation* current_animation = nullptr;
     sAnimationState* current_animation_state = nullptr;
 
-    std::unordered_map<std::string, sAnimationData> animations_data;
+    // this stores a list of animation data per node name
+    std::unordered_map<std::string, NodeAnimationsMap> animation_storage;
 
-    Animation* create_new_animation(const std::string& name);
+    Animation* create_new_animation();
     void set_animation(const std::string& name);
-
-    int custom_character_animation_idx = -1;
 
     /*
     *   Nodes
@@ -114,6 +115,7 @@ class AnimationEditor : public BaseEditor {
 
     void set_animation_state(uint32_t index);
     void store_animation_state(sAnimationState& state);
+    std::vector<sAnimationState>& get_animation_states();
     sAnimationState* get_animation_state(uint32_t index);
 
     /*

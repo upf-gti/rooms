@@ -127,71 +127,77 @@ void AnimationEditor::on_enter(void* data)
         gizmo->set_operation(ROTATE);
     }
 
-    if (current_node->get_node_type() == "Character3D") {
-        auto character = static_cast<Character3D*>(current_node);
-        const auto& animations = character->get_custom_animations();
-        if (!animations.empty()) {
+    auto& node_animations = animation_storage[current_node->get_scene_unique_id()];
 
-            const std::string& animation_name = animations[0];
-            Animation* anim = RendererStorage::get_animation(animation_name);
-            custom_character_animation_idx = 0;
+    // If no animations are stored inside the editor for the current_node
+    if (node_animations.empty())
+    {
+        // In case of Character3D, we can look for custom animations before creating one from scratch..
+        if (current_node->get_node_type() == "Character3D") {
+            auto character = static_cast<Character3D*>(current_node);
+            const auto& animations = character->get_custom_animations();
+            if (!animations.empty()) {
 
-            sAnimationData new_anim_data = { anim };
+                const std::string& animation_name = animations[0];
+                Animation* anim = RendererStorage::get_animation(animation_name);
 
-            uint32_t track_count = anim->get_track_count();
-            uint32_t state_count = 0u;
+                sAnimationData new_anim_data = { anim };
 
-            // When animating, any added keyframe creates a new state
-            // Get max track keyframes as its the number of states
-            for (uint32_t i = 0; i < track_count; ++i) {
-                Track* track = anim->get_track(i);
-                state_count = std::max(state_count, track->size());
-            }
+                uint32_t track_count = anim->get_track_count();
+                uint32_t state_count = 0u;
 
-            new_anim_data.states.resize(state_count);
-
-            float& state_time = new_anim_data.current_time;
-
-            for (uint32_t i = 0; i < state_count; ++i) {
-                sAnimationState& state = new_anim_data.states[i];
-                state.index = i;
-                state.time = state_time;
-
+                // When animating, any added keyframe creates a new state
+                // Get max track keyframes as its the number of states
                 for (uint32_t i = 0; i < track_count; ++i) {
                     Track* track = anim->get_track(i);
-
-                    // Sample node in that timestamp
-                    std::string p_name = track->get_name();
-                    Node::AnimatableProperty node_property = current_node->get_animatable_property(p_name);
-                    void* data = node_property.property;
-                    anim->sample(state.time, track->get_id(), ANIMATION_LOOP_NONE, data, eInterpolationType::STEP);
-
-                    sPropertyState& ps = state.properties[p_name];
-                    ps.track_id = track->get_id();
-                    ps.keyframe_idx = track->get_keyframe_index(state.time);
+                    state_count = std::max(state_count, track->size());
                 }
 
-                store_animation_state(state);
+                new_anim_data.states.resize(state_count);
 
-                state_time += 0.5f;
+                float& state_time = new_anim_data.current_time;
+
+                for (uint32_t i = 0; i < state_count; ++i) {
+                    sAnimationState& state = new_anim_data.states[i];
+                    state.index = i;
+                    state.time = state_time;
+
+                    for (uint32_t i = 0; i < track_count; ++i) {
+                        Track* track = anim->get_track(i);
+
+                        // Sample node in that timestamp
+                        std::string p_name = track->get_name();
+                        Node::AnimatableProperty node_property = current_node->get_animatable_property(p_name);
+                        void* data = node_property.property;
+                        anim->sample(state.time, track->get_id(), ANIMATION_LOOP_NONE, data, eInterpolationType::STEP);
+
+                        sPropertyState& ps = state.properties[p_name];
+                        ps.track_id = track->get_id();
+                        ps.keyframe_idx = track->get_keyframe_index(state.time);
+                    }
+
+                    store_animation_state(state);
+
+                    state_time += 0.5f;
+                }
+
+                auto& node_animations = animation_storage[current_node->get_scene_unique_id()];
+                node_animations[anim->get_scene_unique_id()] = new_anim_data;
+
+                set_animation(animation_name);
             }
-
-            animations_data[animation_name] = new_anim_data;
-
-            set_animation(animation_name);
         }
     }
+    // The node has animations stored in the editor
+    else {
+        auto* animation = (*node_animations.begin()).second.animation;
+        set_animation(animation->get_name());
+    }
 
+    // No custom animation and no animation stored inside the editor.. create new one!
     if (!current_animation) {
-        // TODO: Use the uuid for registering the animation
-        std::string animation_name = current_node->get_name() + "@animation";
-        auto loaded_animation = RendererStorage::get_animation(animation_name);
-
-        if (!loaded_animation) {
-            loaded_animation = create_new_animation(animation_name);
-        }
-
-        set_animation(animation_name);
+        Animation* new_animation = create_new_animation();
+        set_animation(new_animation->get_name());
     }
 
     // Set inspector in front on VR mode
@@ -218,13 +224,15 @@ void AnimationEditor::on_enter(void* data)
 
 void AnimationEditor::on_exit()
 {
+    // Store current time..
+    auto& node_animations = animation_storage[current_node->get_scene_unique_id()];
+    node_animations[current_animation->get_scene_unique_id()].current_time = current_time;
+
     current_node = nullptr;
     current_joint = nullptr;
+    current_animation = nullptr;
 
     stop_animation();
-
-    // Store current time..
-    animations_data[current_animation->get_name()].current_time = current_time;
 }
 
 void AnimationEditor::update(float delta_time)
@@ -329,7 +337,7 @@ void AnimationEditor::render()
 
     render_gizmo();
 
-    auto& states = animations_data[current_animation->get_name()].states;
+    auto& states = get_animation_states();
 
     for (uint32_t i = 0u; i < states.size(); i++) {
         const glm::vec3& position = std::get<glm::vec3>(states[i].properties["translation"].value);
@@ -350,7 +358,7 @@ void AnimationEditor::update_timeline()
 
     timeline->clear();
 
-    auto& states = animations_data[current_animation->get_name()].states;
+    auto& states = get_animation_states();
 
     for (auto& state : states) {
         timeline->add_keyframe(state.time, nullptr);
@@ -442,10 +450,11 @@ void AnimationEditor::render_gizmo()
     }
 }
 
-Animation* AnimationEditor::create_new_animation(const std::string& name)
+Animation* AnimationEditor::create_new_animation()
 {
     // Generate new animation
     Animation* new_animation = new Animation();
+    std::string name = new_animation->get_scene_unique_id() + "@animation";
     new_animation->set_name(name);
     RendererStorage::register_animation(name, new_animation);
 
@@ -470,12 +479,13 @@ Animation* AnimationEditor::create_new_animation(const std::string& name)
     sAnimationData new_anim_data = { new_animation, 0.5f };
     initial_state.index = new_anim_data.states.size();
     new_anim_data.states.push_back(initial_state);
-    animations_data[name] = new_anim_data;
+
+    auto& node_animations = animation_storage[current_node->get_scene_unique_id()];
+    node_animations[new_animation->get_scene_unique_id()] = new_anim_data;
 
     new_animation->recalculate_duration();
 
     keyframe_list_dirty = true;
-    custom_character_animation_idx = -1;
 
     return new_animation;
 }
@@ -489,8 +499,8 @@ void AnimationEditor::set_animation(const std::string& name)
     assert(animation);
     current_animation = animation;
 
-    sAnimationData& data = animations_data[current_animation->get_name()];
-    current_time = data.current_time;
+    auto& node_animations = animation_storage[current_node->get_scene_unique_id()];
+    current_time = node_animations[current_animation->get_scene_unique_id()].current_time;
 
     keyframe_list_dirty = true;
 
@@ -518,10 +528,6 @@ void AnimationEditor::save_character_animation()
 {
     if (current_node->get_node_type() != "Character3D") {
         return;
-    }
-
-    if (custom_character_animation_idx < 0) {
-        custom_character_animation_idx = 0;
     }
 
     auto callback = [&](const std::string& output) {
@@ -764,7 +770,7 @@ void AnimationEditor::update_animation_trajectory()
 {
     std::vector<glm::vec3> vertices_to_upload;
 
-    auto& states = animations_data[current_animation->get_name()].states;
+    auto& states = get_animation_states();
 
     if (states.size() <= 1u) {
         return;
@@ -794,11 +800,11 @@ void AnimationEditor::update_animation_trajectory()
 */
 void AnimationEditor::create_keyframe()
 {
-    auto& data = animations_data[current_animation->get_name()];
-    auto& states = data.states;
+    auto& node_animations = animation_storage[current_node->get_scene_unique_id()];
+    auto& data = node_animations[current_animation->get_scene_unique_id()];
 
     // Get the last state to check changes later when adding new keyframes
-    current_animation_state = &states.back();
+    current_animation_state = &data.states.back();
     update_node_from_state(*current_animation_state);
 
     current_time = data.current_time;
@@ -901,7 +907,8 @@ void AnimationEditor::process_keyframe()
         new_anim_state.time = current_time;
         current_time += 0.5f;
         current_animation->recalculate_duration();
-        auto& states = animations_data[current_animation->get_name()].states;
+
+        auto& states = get_animation_states();
         new_anim_state.index = states.size();
         states.push_back(new_anim_state);
     }
@@ -951,7 +958,8 @@ void AnimationEditor::duplicate_keyframe(uint32_t index)
 
     current_time += 0.5f;
     current_animation->recalculate_duration();
-    auto& states = animations_data[current_animation->get_name()].states;
+
+    auto& states = get_animation_states();
     new_anim_state.index = states.size();
     states.push_back(new_anim_state);
     current_animation_state = nullptr;
@@ -981,11 +989,12 @@ void AnimationEditor::delete_keyframe(uint32_t index)
     current_animation->recalculate_duration();
 
     // Remove state
-    auto& states = animations_data[current_animation->get_name()].states;
+    auto& states = get_animation_states();
     states.erase(states.begin() + index);
 
     // Recalculate current_time
-    auto& data = animations_data[current_animation->get_name()];
+    auto& node_animations = animation_storage[current_node->get_scene_unique_id()];
+    auto& data = node_animations[current_animation->get_scene_unique_id()];
     data.current_time = data.states.back().time + 0.5f;
 
     timeline_dirty = true;
@@ -993,9 +1002,16 @@ void AnimationEditor::delete_keyframe(uint32_t index)
     update_animation_trajectory();
 }
 
+std::vector<sAnimationState>& AnimationEditor::get_animation_states()
+{
+    auto& node_animations = animation_storage[current_node->get_scene_unique_id()];
+    return node_animations[current_animation->get_scene_unique_id()].states;
+}
+
 sAnimationState* AnimationEditor::get_animation_state(uint32_t index)
 {
-    return &(animations_data[current_animation->get_name()].states[index]);
+    auto& states = get_animation_states();
+    return &states[index];
 }
 
 void AnimationEditor::set_animation_state(uint32_t index)
@@ -1125,7 +1141,9 @@ void AnimationEditor::render_gui()
 
     if (ImGui::BeginCombo("Animation", current_animation_name.c_str(), 0u))
     {
-        for (const auto& a : animations_data) {
+        auto& node_animations = animation_storage[current_node->get_scene_unique_id()];
+
+        for (const auto& a : node_animations) {
             const std::string& a_name = a.second.animation->get_name();
             const bool is_selected = (a_name == current_animation_name);
             if (ImGui::Selectable(a_name.c_str(), is_selected)) {
@@ -1151,9 +1169,8 @@ void AnimationEditor::render_gui()
         }
 
         if (ImGui::Button("Start New Animation")) {
-            std::string animation_name = current_node->get_name() + "@animation" + std::to_string(animations.size());
-            auto anim = create_new_animation(animation_name);
-            set_animation(animation_name);
+            auto anim = create_new_animation();
+            set_animation(anim->get_name());
         }
     }
 
@@ -1164,7 +1181,7 @@ void AnimationEditor::render_gui()
         ImGui::Text("Animation %s", current_animation->get_name().c_str());
         ImGui::Text("Num Tracks %d", current_animation->get_track_count());
 
-        auto& states = animations_data[current_animation->get_name()].states;
+        auto& states = get_animation_states();
         ImGui::Text("Num States %zu", states.size());
 
         if (current_animation && ImGui::Button("Play")) {
@@ -1488,7 +1505,7 @@ void AnimationEditor::inspect_keyframes_list(bool force)
 {
     inspector->clear();
 
-    auto& states = animations_data[current_animation->get_name()].states;
+    auto& states = get_animation_states();
 
     for (uint32_t i = 0; i < states.size(); ++i) {
 
@@ -1591,7 +1608,7 @@ bool AnimationEditor::on_edit_timeline_keyframe(ui::Timeline* scope)
     uint32_t idx = 0u;
 
     if (selected) {
-        auto& states = animations_data[current_animation->get_name()].states;
+        auto& states = get_animation_states();
 
         auto it = std::find_if(states.begin(), states.end(), [t = selected->time](const sAnimationState& s) {
             return s.time == t;
@@ -1619,7 +1636,7 @@ bool AnimationEditor::on_delete_timeline_keyframe(ui::Timeline* scope)
     uint32_t idx = 0u;
 
     if (selected) {
-        auto& states = animations_data[current_animation->get_name()].states;
+        auto& states = get_animation_states();
 
         auto it = std::find_if(states.begin(), states.end(), [t = selected->time](const sAnimationState& s) {
             return s.time == t;
