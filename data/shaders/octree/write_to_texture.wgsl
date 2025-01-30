@@ -79,7 +79,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
             
             wg_brick_pointer = octree.data[wg_octree_leaf_id].tile_pointer;
 
-            let curr_culling_layer_index = brick_id * stroke_history.count;
+            let curr_culling_layer_index = brick_id * MAX_STROKE_INFLUENCE_COUNT;
 
             // Get the brick index, without the MSb that signals if it has an already initialized brick
             let brick_index : u32 = wg_brick_pointer & OCTREE_TILE_INDEX_MASK;
@@ -105,18 +105,23 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
                 result_surface.distance = 10000.0;
             }
 
+            // // Evaluating the edit context
+            // for (var j : u32 = 0; j < stroke_history.count; j++) {
+            //     result_surface = evaluate_stroke(pos, &(stroke_history.strokes[j]), &edit_list, result_surface, stroke_history.strokes[j].edit_list_index, stroke_history.strokes[j].edit_count);
+            // }
+
             // Evaluating the edit context
             for (var j : u32 = 0; j < in_stroke_brick_count; j++) {
                 let index : u32 = stroke_culling[j + curr_culling_layer_index];
                 result_surface = evaluate_stroke(pos, &(stroke_history.strokes[index]), &edit_list, result_surface, stroke_history.strokes[index].edit_list_index, stroke_history.strokes[index].edit_count);
             }
 
-            let culled_part : u32 = (min(stroke_history.count, MAX_STROKE_INFLUENCE_COUNT));
-            let non_culled_count : u32 = ( (stroke_history.count) - culled_part);
-            for(var i : u32 = 0u; i < non_culled_count; i++) {
-                let index : u32 = i + MAX_STROKE_INFLUENCE_COUNT;
-                result_surface = evaluate_stroke(pos, &(stroke_history.strokes[index]), &edit_list, result_surface, stroke_history.strokes[index].edit_list_index, stroke_history.strokes[index].edit_count);
-            }
+            // let culled_part : u32 = (min(stroke_history.count, MAX_STROKE_INFLUENCE_COUNT));
+            // let non_culled_count : u32 = ( (stroke_history.count) - culled_part);
+            // for(var i : u32 = 0u; i < non_culled_count; i++) {
+            //     let index : u32 = i + MAX_STROKE_INFLUENCE_COUNT;
+            //     result_surface = evaluate_stroke(pos, &(stroke_history.strokes[index]), &edit_list, result_surface, stroke_history.strokes[index].edit_list_index, stroke_history.strokes[index].edit_count);
+            // }
 
             // validate if there is something in hte brick
             if (result_surface.distance < MIN_HIT_DIST) {

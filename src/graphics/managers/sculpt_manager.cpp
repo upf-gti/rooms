@@ -357,6 +357,9 @@ bool SculptManager::evaluate(WGPUComputePassEncoder compute_pass, const sEvaluat
         webgpu_context->update_buffer(std::get<WGPUBuffer>(evaluation_aabb_culling_count_uniform.data), 0, &to_fill2, sizeof(int32_t));
         webgpu_context->update_buffer(std::get<WGPUBuffer>(evaluation_culling_dispatch_uniform.data), 0, to_fill3, sizeof(int32_t) * 3u);
 
+        webgpu_context->update_buffer(std::get<WGPUBuffer>(evaluate_request.sculpt->get_indirect_render_buffer().data), sizeof(uint32_t), &to_fill, sizeof(uint32_t));
+        webgpu_context->update_buffer(std::get<WGPUBuffer>(evaluate_request.sculpt->get_indirect_render_buffer().data), sizeof(uint32_t) * 4u, &to_fill, sizeof(uint32_t));
+
         evaluator_1_aabb_culling_step_pipeline.set(compute_pass);
         wgpuComputePassEncoderSetBindGroup(compute_pass, 0, evaluator_stroke_history_bind_group, 0, nullptr);
         wgpuComputePassEncoderSetBindGroup(compute_pass, 1, evaluator_aabb_culling_step_bind_group, 0u, nullptr);
@@ -394,6 +397,11 @@ bool SculptManager::evaluate(WGPUComputePassEncoder compute_pass, const sEvaluat
         wgpuComputePassEncoderSetBindGroup(compute_pass, 0u, evaluate_request.sculpt->get_brick_copy_aabb_gen_bindgroup(), 0u, nullptr);
         wgpuComputePassEncoderSetBindGroup(compute_pass, 1u, gpu_results_bindgroup, 0u, nullptr);
         wgpuComputePassEncoderDispatchWorkgroups(compute_pass, sdf_globals.octree_last_level_size / (512.0f), 1, 1);
+
+        // Clean the texture atlas bricks dispatch
+        brick_removal_pipeline.set(compute_pass);
+        wgpuComputePassEncoderSetBindGroup(compute_pass, 0, indirect_brick_removal_bind_group, 0, nullptr);
+        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1u, 1u, 1u);
 
 #ifndef NDEBUG
         wgpuComputePassEncoderPopDebugGroup(compute_pass);

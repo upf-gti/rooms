@@ -137,7 +137,7 @@ fn compute(@builtin(local_invocation_index) thread_id: u32, @builtin(num_workgro
         var level_half_size : f32 = 0.5 * BRICK_WORLD_SIZE;
 
         // Culling list indices
-        let curr_culling_layer_index = brick_id * stroke_history.count;
+        let curr_culling_layer_index = brick_id * MAX_STROKE_INFLUENCE_COUNT;
 
         let eval_aabb_min : vec3f = brick_center - vec3f(level_half_size);
         let eval_aabb_max : vec3f = brick_center + vec3f(level_half_size);
@@ -148,7 +148,6 @@ fn compute(@builtin(local_invocation_index) thread_id: u32, @builtin(num_workgro
         let z_range : vec2f = vec2f(brick_center.z - level_half_size, brick_center.z + level_half_size);
     
         let current_subdivision_interval = iavec3_vecs(x_range, y_range, z_range);
-
 
         let culled_part : u32 = min(stroke_history.count, MAX_STROKE_INFLUENCE_COUNT);
         let non_culled_count : u32 = stroke_history.count - culled_part;
@@ -162,7 +161,7 @@ fn compute(@builtin(local_invocation_index) thread_id: u32, @builtin(num_workgro
         // Culled part
         for(var i : u32 = 0u; i < in_stroke_brick_count; i++) {
             let culled_idx : u32 = stroke_culling[curr_culling_layer_index + i];
-            if (stroke_history.strokes[i].operation != OP_SMOOTH_PAINT) {
+            if (stroke_history.strokes[culled_idx].operation != OP_SMOOTH_PAINT) {
                 surface_interval = evaluate_stroke_interval(current_subdivision_interval, 
                                                             &(stroke_history.strokes[culled_idx]),
                                                             &edit_list, 
@@ -177,7 +176,7 @@ fn compute(@builtin(local_invocation_index) thread_id: u32, @builtin(num_workgro
         // Non-culled part
         for(var i : u32 = 0u; i < non_culled_count; i++) {
             let non_culled_idx : u32 = i + MAX_STROKE_INFLUENCE_COUNT;
-            if (stroke_history.strokes[i].operation != OP_SMOOTH_PAINT) {
+            if (stroke_history.strokes[non_culled_idx].operation != OP_SMOOTH_PAINT) {
                 surface_interval = evaluate_stroke_interval(current_subdivision_interval, 
                                                             &(stroke_history.strokes[non_culled_idx]),
                                                             &edit_list, 

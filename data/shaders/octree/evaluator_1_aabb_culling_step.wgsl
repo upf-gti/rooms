@@ -89,7 +89,7 @@ fn compute(@builtin(workgroup_id) wg_id: vec3u, @builtin(local_invocation_index)
             var brick_center : vec3f = get_brick_center(operation_id);
 
             // Culling list indices
-            let curr_culling_layer_index = operation_id * stroke_history.count;
+            let curr_culling_layer_index = operation_id * MAX_STROKE_INFLUENCE_COUNT;
 
             var brick_half_size : f32 = 0.5 * BRICK_WORLD_SIZE;
 
@@ -101,12 +101,12 @@ fn compute(@builtin(workgroup_id) wg_id: vec3u, @builtin(local_invocation_index)
                                         eval_aabb_max, 
                                         stroke_history_aabb_min, 
                                         stroke_history_aabb_max )) {
-                if (is_evaluating_undo) {
-                    // Add to the next work queue and early out
-                    add_brick_to_next_job_queue(operation_id);
-                } else {
+                // if (is_evaluating_undo) {
+                //     // Add to the next work queue and early out
+                //     add_brick_to_next_job_queue(operation_id);
+                // } else {
                     // TODO: No Stroke history culling yet, only no crash (at this stage)
-                    var any_stroke_inside : bool = false;
+                    //var any_stroke_inside : bool = false;
                     for(var i : u32 = 0u; i < stroke_count; i++) {
                         if (intersection_AABB_AABB( eval_aabb_min, 
                                                     eval_aabb_max, 
@@ -119,16 +119,16 @@ fn compute(@builtin(workgroup_id) wg_id: vec3u, @builtin(local_invocation_index)
                                 in_brick_stroke_count = in_brick_stroke_count + 1u;
                             }
                             
-                            any_stroke_inside = true;
+                            //any_stroke_inside = true;
                             //break; // <- early out
                         }
                     }
 
-                    if (any_stroke_inside) {
+                    if (in_brick_stroke_count > 0u || is_evaluating_undo) {
                         // Add to the work queue
                         add_brick_to_next_job_queue((operation_id << 8u) | in_brick_stroke_count);
                     }
-                }
+                //}
             } 
         }
     }
