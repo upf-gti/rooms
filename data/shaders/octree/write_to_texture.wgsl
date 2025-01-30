@@ -58,7 +58,7 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
     const offset : f32 = (ATLAS_BRICK_SIZE - 1.0) * 0.5;
     let pixel_offset : vec3f = (local_id_vec - offset) * BRICK_VOXEL_WORLD_SIZE;
 
-    for(var i : u32 = 0u; i < num_brinks_by_workgroup; i++) {
+    for(var cur_brick_it : u32 = 0u; cur_brick_it < num_brinks_by_workgroup; cur_brick_it++) {
         var result_surface : Surface;
 
         if (thread_id == 0) {
@@ -116,12 +116,12 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
                 result_surface = evaluate_stroke(pos, &(stroke_history.strokes[index]), &edit_list, result_surface, stroke_history.strokes[index].edit_list_index, stroke_history.strokes[index].edit_count);
             }
 
-            // let culled_part : u32 = (min(stroke_history.count, MAX_STROKE_INFLUENCE_COUNT));
-            // let non_culled_count : u32 = ( (stroke_history.count) - culled_part);
-            // for(var i : u32 = 0u; i < non_culled_count; i++) {
-            //     let index : u32 = i + MAX_STROKE_INFLUENCE_COUNT;
-            //     result_surface = evaluate_stroke(pos, &(stroke_history.strokes[index]), &edit_list, result_surface, stroke_history.strokes[index].edit_list_index, stroke_history.strokes[index].edit_count);
-            // }
+            let culled_part : u32 = min(stroke_history.count, MAX_STROKE_INFLUENCE_COUNT);
+            let non_culled_count : u32 = stroke_history.count - culled_part;
+            for(var j : u32 = 0u; j < non_culled_count; j++) {
+                let index : u32 = j + MAX_STROKE_INFLUENCE_COUNT;
+                result_surface = evaluate_stroke(pos, &(stroke_history.strokes[index]), &edit_list, result_surface, stroke_history.strokes[index].edit_list_index, stroke_history.strokes[index].edit_count);
+            }
 
             // validate if there is something in hte brick
             if (result_surface.distance < MIN_HIT_DIST) {

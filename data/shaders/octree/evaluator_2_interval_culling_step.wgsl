@@ -119,7 +119,7 @@ fn compute(@builtin(local_invocation_index) thread_id: u32, @builtin(num_workgro
         // Store the work count & bricks to the workgroup memory
         // is this needed?? maybe its not really neede due cache. TODO: test directly with VRAM
         brick_to_eval_wg_size = u32(work_count);
-        for(var i : i32 = 0; i <= work_count; i++) {
+        for(var i : i32 = 0; i < work_count; i++) {
             let raw_brick_id_count = bricks_to_interval_eval_buffer[starting_brick_idx - i - 1];
             bricks_to_eval_wg_buffer[i] = raw_brick_id_count;
         }  
