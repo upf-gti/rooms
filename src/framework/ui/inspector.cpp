@@ -107,7 +107,6 @@ namespace ui {
     {
         if ((IO::get_hover() == root) && Input::was_grab_pressed(HAND_RIGHT)) {
             grabbing = true;
-            last_grab_position = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
         }
 
         if (Input::was_grab_released(HAND_RIGHT)) {
@@ -142,16 +141,13 @@ namespace ui {
                 auto webgpu_context = Renderer::instance->get_webgpu_context();
                 float width = static_cast<float>(webgpu_context->render_width);
                 float height = static_cast<float>(webgpu_context->render_height);
-                glm::vec2 size = panel_size * 0.5f / glm::vec2(width, height);
-
-                // glm::vec3 delta_grab = (eye - last_grab_position) * 2.0f;
-                // float distance = glm::distance(eye - delta_grab, get_xr_viewport()->get_translation());
-                glm::vec3 new_pos = eye + forward * 0.35f;// distance;
+                glm::vec2 grab_offset = glm::vec2(last_grab_position.x, panel_size.y - last_grab_position.y) / glm::vec2(width, height);
+                glm::vec3 new_pos = eye + forward * last_grab_distance;
 
                 m = glm::translate(m, new_pos);
                 m = m * glm::toMat4(get_rotation_to_face(new_pos, renderer->get_camera_eye(), { 0.0f, 1.0f, 0.0f }));
                 m = glm::rotate(m, glm::radians(180.f), { 1.0f, 0.0f, 0.0f });
-                m = glm::translate(m, -glm::vec3(size, 0.0f));
+                m = glm::translate(m, -glm::vec3(grab_offset, 0.0f));
                 set_xr_transform(Transform::mat4_to_transform(m));
 
                 root->set_priority(DRAGGABLE);
@@ -196,6 +192,11 @@ namespace ui {
             for (auto r : body->get_children()) {
                 Node2D* row = static_cast<Node2D*>(r);
                 row->translate({ 0.0f, scroll_dt });
+            }
+
+            if (renderer->get_openxr_available() && grabbing && Input::was_grab_pressed(HAND_RIGHT)) {
+                last_grab_position = last_scroll_position;
+                last_grab_distance = data.ray_distance;
             }
         }
 
