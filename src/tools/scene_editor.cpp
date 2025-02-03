@@ -572,13 +572,13 @@ void SceneEditor::init_ui()
                 new ui::ImageLabel2D("More Options", shortcuts::B_BUTTON_PATH, shortcuts::OPEN_CONTEXT_MENU),
                 new ui::ImageLabel2D("Edit Sculpt", shortcuts::A_BUTTON_PATH, shortcuts::EDIT_SCULPT_NODE),
                 new ui::ImageLabel2D("Edit Group", shortcuts::A_BUTTON_PATH, shortcuts::EDIT_GROUP),
-                new ui::ImageLabel2D("Create Group", shortcuts::R_GRIP_B_BUTTON_PATH, shortcuts::ANIMATE_NODE, double_size),
-                new ui::ImageLabel2D("Add to Group", shortcuts::R_GRIP_B_BUTTON_PATH, shortcuts::ANIMATE_NODE, double_size),
+                new ui::ImageLabel2D("Create Group", shortcuts::A_BUTTON_PATH, shortcuts::CREATE_GROUP),
+                new ui::ImageLabel2D("Add to Group", shortcuts::A_BUTTON_PATH, shortcuts::ADD_TO_GROUP),
+                new ui::ImageLabel2D("Group Node", shortcuts::R_GRIP_B_BUTTON_PATH, shortcuts::GROUP_NODE, double_size),
                 new ui::ImageLabel2D("Clone Node", shortcuts::R_GRIP_A_BUTTON_PATH, shortcuts::CLONE_NODE, double_size),
                 new ui::ImageLabel2D("Place Node", shortcuts::R_TRIGGER_PATH, shortcuts::PLACE_NODE),
                 new ui::ImageLabel2D("Select Node", shortcuts::R_TRIGGER_PATH, shortcuts::SELECT_NODE),
-                new ui::ImageLabel2D("Ungroup", shortcuts::R_GRIP_R_TRIGGER_PATH, shortcuts::UNGROUP, double_size),
-                new ui::ImageLabel2D("Group Node", shortcuts::R_GRIP_R_TRIGGER_PATH, shortcuts::GROUP_NODE, double_size)
+                new ui::ImageLabel2D("Ungroup", shortcuts::R_GRIP_R_TRIGGER_PATH, shortcuts::UNGROUP, double_size)
             });
         }
     }
