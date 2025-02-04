@@ -136,6 +136,7 @@ class SceneEditor : public BaseEditor {
     bool scale_started = false;
     glm::quat last_right_hand_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
     glm::vec3 last_right_hand_translation = {};
+    glm::vec3 grab_offset = {};
     float last_hand_distance = 0.0f;
 
     void update_node_transform(const float delta_time, const bool rotate_selected_node);

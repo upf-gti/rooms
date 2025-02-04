@@ -354,7 +354,7 @@ void SceneEditor::process_node_hovered()
         }
         else {
             shortcuts[shortcuts::EDIT_GROUP] = true;
-            if (b_pressed) {
+            if (a_pressed) {
                 edit_group(static_cast<Group3D*>(hovered_node));
             }
             else if (select_action_pressed) {
@@ -1151,7 +1151,7 @@ void SceneEditor::render_gizmo()
 void SceneEditor::update_node_transform(const float delta_time, const bool rotate_selected_node)
 {
     // Do not rotate sculpt if shift -> we might be rotating the edit
-    if (rotate_selected_node && !is_shift_left_pressed) {
+    if (rotate_selected_node && !is_shift_left_pressed && !action_in_progress) {
 
         if (!selected_node) {
             if (!hovered_node) {
@@ -1165,16 +1165,16 @@ void SceneEditor::update_node_transform(const float delta_time, const bool rotat
         glm::quat right_hand_rotation = Input::get_controller_rotation(HAND_RIGHT, POSE_AIM);
         glm::vec3 right_hand_translation = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
         glm::vec3 left_hand_translation = Input::get_controller_position(HAND_LEFT, POSE_AIM);
-        float hand_distance = glm::length2(right_hand_translation - left_hand_translation);
+        // float hand_distance = glm::length2(right_hand_translation - left_hand_translation);
 
         if (!rotation_started) {
             RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
             const float ray_t = rooms_renderer->get_sculpt_manager()->loaded_results.ray_intersection.ray_t;
-            const glm::vec3 sculpt_intersection_pos = prev_ray_origin + prev_ray_dir * ray_t;
-
+            const glm::vec3& sculpt_intersection_pos = prev_ray_origin + prev_ray_dir * ray_t;
+            grab_offset = sculpt_intersection_pos - node_3d->get_translation();
             last_right_hand_rotation = right_hand_rotation;
             last_right_hand_translation = right_hand_translation;
-            hand_sculpt_distance = glm::length(node_3d->get_translation() - right_hand_translation);
+            hand_sculpt_distance = glm::length(sculpt_intersection_pos - right_hand_translation);
             push_undo_action({ sActionData::ACTION_TRANSFORM, node_3d, node_3d->get_transform() });
         }
 
@@ -1187,8 +1187,18 @@ void SceneEditor::update_node_transform(const float delta_time, const bool rotat
 
         glm::quat hand_rotation_diff = (right_hand_rotation * glm::inverse(last_right_hand_rotation));
 
-        node_3d->set_position(hand_sculpt_distance * ray_direction + ray_origin);
+        Transform parent_transform;
+
+        if (current_group || node_3d->get_parent()) {
+            parent_transform = get_group_global_transform(node_3d);
+        }
+
+        node_3d->set_position((hand_sculpt_distance * ray_direction + ray_origin) - grab_offset);
         node_3d->get_transform().rotate_world(hand_rotation_diff);
+
+        if (current_group || node_3d->get_parent()) {
+            node_3d->set_transform(Transform::combine(Transform::inverse(parent_transform), node_3d->get_transform()));
+        }
 
         /*if (Input::get_trigger_value(HAND_RIGHT) > 0.5) {
 
