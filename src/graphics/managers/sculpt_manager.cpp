@@ -441,66 +441,30 @@ void SculptManager::clean_previous_preview(WGPUComputePassEncoder compute_pass)
 
 void SculptManager::evaluate_preview(WGPUComputePassEncoder compute_pass)
 {
-//    if (!evaluation_initialization_pipeline.is_loaded() ||
-//        !evaluate_pipeline.is_loaded() ||
-//        !increment_level_pipeline.is_loaded()) {
-//        return;
-//    }
-//    return;
-//    RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
-//    WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
-//    sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();
-//
-//    // Set preview flag if needed
-//    if (!performed_evaluation) {
-//        uint32_t set_as_preview = PREVIEW_EVAL_FLAG;
-//        webgpu_context->update_buffer(std::get<WGPUBuffer>(preview.sculpt->get_octree_uniform().data), sizeof(uint32_t) * 2u, &set_as_preview, sizeof(uint32_t));
-//    }
-//
-//    upload_preview_strokes();
-//
-//#ifndef NDEBUG
-//    wgpuComputePassEncoderPushDebugGroup(compute_pass, "Preview evaluation");
-//#endif
-//
-//    // Initializate the evaluator sequence
-//    evaluation_initialization_pipeline.set(compute_pass);
-//
-//    uint32_t stroke_dynamic_offset = 0;
-//    wgpuComputePassEncoderSetBindGroup(compute_pass, 0, evaluation_initialization_bind_group, 0, nullptr);
-//    wgpuComputePassEncoderSetBindGroup(compute_pass, 1, preview.sculpt->get_octree_indirect_bindgroup(), 0, nullptr);
-//
-//    wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
-//
-//    int ping_pong_idx = 0;
-//
-//    for (int j = 0; j <= sdf_globals.octree_depth; ++j) {
-//
-//        evaluate_pipeline.set(compute_pass);
-//
-//        wgpuComputePassEncoderSetBindGroup(compute_pass, 0, evaluate_bind_group, 0, nullptr);
-//        wgpuComputePassEncoderSetBindGroup(compute_pass, 1, preview.sculpt->get_octree_bindgroup(), 0, nullptr);
-//        wgpuComputePassEncoderSetBindGroup(compute_pass, 2, octant_usage_ping_pong_bind_groups[ping_pong_idx], 0, nullptr);
-//        wgpuComputePassEncoderSetBindGroup(compute_pass, 3, preview_stroke_bind_group, 0, nullptr);
-//
-//        wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(sdf_globals.indirect_buffers.data), sizeof(uint32_t) * 12u);
-//
-//        increment_level_pipeline.set(compute_pass);
-//
-//        wgpuComputePassEncoderSetBindGroup(compute_pass, 0, increment_level_bind_group, 0, nullptr);
-//        wgpuComputePassEncoderSetBindGroup(compute_pass, 2u, gpu_results_bindgroup, 0u, nullptr);
-//
-//        wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1, 1, 1);
-//
-//        ping_pong_idx = (ping_pong_idx + 1) % 2;
-//    }
-//
-//#ifndef NDEBUG
-//    wgpuComputePassEncoderPopDebugGroup(compute_pass);
-//#endif
-//
-//    preview.needs_computing = false;
-//    previus_dispatch_had_preview = true;
+    if (!evaluator_preview_step_pipeline.is_loaded()) {
+        return;
+    }
+    RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
+    WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
+    sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();
+
+    upload_preview_strokes();
+
+#ifndef NDEBUG
+    wgpuComputePassEncoderPushDebugGroup(compute_pass, "Preview evaluation");
+#endif
+
+    evaluator_preview_step_pipeline.set(compute_pass);
+    wgpuComputePassEncoderSetBindGroup(compute_pass, 0, evaluator_stroke_history_bind_group, 0, nullptr);
+    wgpuComputePassEncoderSetBindGroup(compute_pass, 1, evaluator_aabb_culling_step_bind_group, 0u, nullptr);
+    wgpuComputePassEncoderDispatchWorkgroups(compute_pass, (uint32_t)glm::ceil(sdf_globals.octree_last_level_size / 512.0), 1, 1);
+ 
+#ifndef NDEBUG
+    wgpuComputePassEncoderPopDebugGroup(compute_pass);
+#endif
+
+    preview.needs_computing = false;
+    previus_dispatch_had_preview = true;
 }
 
 void SculptManager::evaluate_closest_ray_intersection(WGPUComputePassEncoder compute_pass)
