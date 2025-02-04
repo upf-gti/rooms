@@ -37,6 +37,7 @@ void SculptManager::clean()
     wgpuBindGroupRelease(brick_unmark_bind_group);
     wgpuBindGroupRelease(preview_stroke_bind_group);
 
+    // todo: THIS CRASHES
     gpu_results_uniform.destroy();
     ray_info_uniform.destroy();
     ray_sculpt_instances_uniform.destroy();
