@@ -787,16 +787,6 @@ void SculptManager::init_uniforms()
         evaluator_num_bricks_by_wg_uniform.binding = 0u;
         evaluator_num_bricks_by_wg_uniform.buffer_size = sizeof(uint32_t);
     }
-
-    // TODO: compute AABB per sculpt
-    //// AABB sculpt compute
-    //{
-    //    // ((vec3 + padd) * 2) -> AABB struct size * num of workgroups
-    //    const size_t aabb_buffer_size = sizeof(glm::vec4) * 2.0f * sdf_globals.octree_last_level_size / (8u * 8u * 8u);
-    //    aabb_calculation_temp_buffer.data = webgpu_context->create_buffer(aabb_buffer_size, WGPUBufferUsage_Storage, nullptr, "AABB sculpt calculation buffer");
-    //    aabb_calculation_temp_buffer.binding = 0u;
-    //    aabb_calculation_temp_buffer.buffer_size = aabb_buffer_size;
-    //}
 }
 
 void SculptManager::init_shaders()
@@ -805,6 +795,7 @@ void SculptManager::init_shaders()
     evaluator_1_5_interval_culling_step_shader = RendererStorage::get_shader("data/shaders/octree/evaluator_1-5_interval_setup.wgsl");
     evaluator_2_interval_culling_step_shader = RendererStorage::get_shader("data/shaders/octree/evaluator_2_interval_culling_step.wgsl");
     evaluator_2_5_write_to_texture_setup_step_shader = RendererStorage::get_shader("data/shaders/octree/evaluator_2-5_write_to_texture_step.wgsl");
+    evaluator_preview_step_shader = RendererStorage::get_shader("data/shaders/octree/evaluator_preview_culling.wgsl");
 
     write_to_texture_shader = RendererStorage::get_shader("data/shaders/octree/write_to_texture.wgsl");
     brick_removal_shader = RendererStorage::get_shader("data/shaders/octree/brick_removal.wgsl");
@@ -828,18 +819,10 @@ void SculptManager::init_pipelines_and_bindgroups()
         gpu_results_bindgroup = webgpu_context->create_bind_group(uniforms, ray_intersection_result_and_clean_shader, 1);
     }
 
-
     // Brick removal pass
     {
         std::vector<Uniform*> uniforms = { &sdf_globals.brick_buffers };
         indirect_brick_removal_bind_group = webgpu_context->create_bind_group(uniforms, brick_removal_shader, 0);
-    }
-
-    // Write to texture
-    {
-        std::vector<Uniform*> uniforms = { &sdf_globals.sdf_texture_uniform, &octree_edit_list, &stroke_culling_buffer,
-                                           &stroke_context_list, &sdf_globals.brick_buffers, &sdf_globals.sdf_material_texture_uniform };
-        //write_to_texture_bind_group = webgpu_context->create_bind_group(uniforms, write_to_texture_shader, 0);
     }
 
     // SDF atlases and samples bindgroup
@@ -855,12 +838,6 @@ void SculptManager::init_pipelines_and_bindgroups()
 
         std::vector<Uniform*> uniforms = { &alt_brick_uniform };
         sculpt_delete_bindgroup = webgpu_context->create_bind_group(uniforms, sculpt_delete_shader, 1u);
-    }
-
-    // Preview data bindgroup
-    {
-        std::vector<Uniform*> uniforms = { &sdf_globals.preview_stroke_uniform };
-        //preview_stroke_bind_group = webgpu_context->create_bind_group(uniforms, evaluate_shader, 3);
     }
 
     // Brick unmarking bindgroup
@@ -904,6 +881,12 @@ void SculptManager::init_pipelines_and_bindgroups()
             uniforms = { &evaluation_job_result_count_uniform, &evaluation_culling_dispatch_alt_uniform, &evaluator_num_bricks_by_wg_uniform, &evaluation_write_to_tex_buffer_uniform };
             evaluator_write_to_texture_setup_bind_group = webgpu_context->create_bind_group(uniforms, evaluator_2_5_write_to_texture_setup_step_shader, 0u);
         }
+
+        // Preview bd
+        {
+            std::vector<Uniform*> uniforms = { &sdf_globals.preview_stroke_uniform, &sdf_globals.brick_buffers };
+            evaluator_preview_bind_group = webgpu_context->create_bind_group(uniforms, evaluator_preview_step_shader, 2u);
+        }
     }
 
     // Create pipelines
@@ -920,6 +903,7 @@ void SculptManager::init_pipelines_and_bindgroups()
         evaluator_2_interval_culling_step_pipeline.create_compute_async(evaluator_2_interval_culling_step_shader);
         evaluator_1_5_interval_culling_step_pipeline.create_compute_async(evaluator_1_5_interval_culling_step_shader);
         evaluator_2_5_write_to_texture_setup_pipeline.create_compute_async(evaluator_2_5_write_to_texture_setup_step_shader);
+        evaluator_preview_step_pipeline.create_compute_async(evaluator_preview_step_shader);
     }
 }
 

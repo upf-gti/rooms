@@ -131,6 +131,7 @@ class SculptManager {
     Pipeline evaluator_1_5_interval_culling_step_pipeline;
     Pipeline evaluator_2_interval_culling_step_pipeline;
     Pipeline evaluator_2_5_write_to_texture_setup_pipeline;
+    Pipeline evaluator_preview_step_pipeline;
 
     Shader* write_to_texture_shader = nullptr;
     Shader* brick_removal_shader = nullptr;
@@ -140,6 +141,7 @@ class SculptManager {
     Shader* evaluator_1_5_interval_culling_step_shader = nullptr;
     Shader* evaluator_2_interval_culling_step_shader = nullptr;
     Shader* evaluator_2_5_write_to_texture_setup_step_shader = nullptr;
+    Shader* evaluator_preview_step_shader = nullptr;
 
     WGPUBindGroup   sdf_atlases_sampler_bindgroup = nullptr;
     WGPUBindGroup   indirect_brick_removal_bind_group = nullptr;
@@ -151,6 +153,8 @@ class SculptManager {
     WGPUBindGroup   evaluator_interval_culling_step_bind_group = nullptr;
     WGPUBindGroup   evaluator_write_to_texture_setup_bind_group = nullptr;
     WGPUBindGroup   evaluator_write_to_texture_step_bind_group = nullptr;
+    WGPUBindGroup   evaluator_preview_bind_group = nullptr;
+
 
     // Evaluator uniforms
     uint32_t        octree_edit_list_size = 0u;
@@ -167,8 +171,6 @@ class SculptManager {
 
     bool reading_gpu_results = false;
     uint32_t frame_of_last_gpu_read = 0;
-    // Preview evaluation
-
 
     // Octree struct reference
     struct sOctreeNode {
