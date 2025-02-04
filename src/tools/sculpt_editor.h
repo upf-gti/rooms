@@ -100,6 +100,7 @@ class SculptEditor : public BaseEditor {
     glm::vec3 ray_origin;
     glm::vec3 ray_direction;
     sGPU_SculptResults last_gpu_results;
+    StrokeMaterial last_used_material;
 
     // Edit
     glm::quat edit_rotation_diff = { 0.0, 0.0, 0.0, 1.0 };

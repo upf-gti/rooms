@@ -152,11 +152,11 @@ void SculptEditor::initialize()
             return;
         }
 
-        sGPU_SculptResults* last_gpu_results = reinterpret_cast<sGPU_SculptResults*>(data);
+        last_gpu_results = *(reinterpret_cast<sGPU_SculptResults*>(data));
 
         // Computing sculpt AABB
         {
-            const sGPU_SculptResults::sGPU_SculptEvalData& eval_data = last_gpu_results->sculpt_eval_data;
+            const sGPU_SculptResults::sGPU_SculptEvalData& eval_data = last_gpu_results.sculpt_eval_data;
 
             // If there has been an eval, assign the AABB to the sculpt
             if (static_cast<RoomsRenderer*>(engine->get_renderer())->has_performed_evaluation()) {
@@ -169,7 +169,7 @@ void SculptEditor::initialize()
 
         // Computing intersection for surface snap
         {
-            const sGPU_RayIntersectionData& intersection = last_gpu_results->ray_intersection;
+            const sGPU_RayIntersectionData& intersection = last_gpu_results.ray_intersection;
 
             if (intersection.has_intersected) {
                 last_snap_position = ray_origin + ray_direction * intersection.ray_t;
@@ -281,6 +281,7 @@ bool SculptEditor::edit_update(float delta_time)
 
         if (intersection.has_intersected) {
             StrokeMaterial tmp = stroke_parameters.get_material();
+            last_used_material = tmp;
             tmp.color = Color(intersection.intersection_albedo, 1.0f);
             tmp.roughness = intersection.intersection_roughness;
             tmp.metallic = intersection.intersection_metallic;
@@ -288,7 +289,10 @@ bool SculptEditor::edit_update(float delta_time)
         }
 
         if (is_tool_used) {
-            pick_material();
+            if (!intersection.has_intersected) {
+                update_gui_from_stroke_material(last_used_material);
+            }
+            should_pick_material = true;
             return false;
         }
     }
@@ -487,7 +491,7 @@ bool SculptEditor::edit_update(float delta_time)
 
         // Only enter spline mode when the acceleration of the hand exceds a threshold
         // To stretch, toggle with 'B'
-        else if(!creating_path && glm::length(glm::abs(controller_movement_data[HAND_RIGHT].velocity)) > 0.20f) {
+        else if(!creating_path && glm::length(glm::abs(controller_movement_data[HAND_RIGHT].velocity)) > 0.30f) {
             start_spline(true);
         }
     }
@@ -1611,16 +1615,17 @@ void SculptEditor::init_ui()
         second_row->add_child(combo_main_tools);
     }
 
+    // Smooth factor
+    {
+        ui::Slider2D* smooth_factor_slider = new ui::FloatSlider2D("smooth_factor", { .path = "data/textures/smooth.png", .fvalue = stroke_parameters.get_smooth_factor(), .flags = ui::SKIP_VALUE,
+            .fvalue_min = MIN_SMOOTH_FACTOR, .fvalue_max = MAX_SMOOTH_FACTOR, .precision = 3 });
+        second_row->add_child(smooth_factor_slider);
+    }
+
     // ** Undo/Redo **
     {
         second_row->add_child(new ui::TextureButton2D("undo", { "data/textures/undo.png" }));
         second_row->add_child(new ui::TextureButton2D("redo", { "data/textures/redo.png" }));
-    }
-
-    // Smooth factor
-    {
-        ui::Slider2D* smooth_factor_slider = new ui::FloatSlider2D("smooth_factor", { .path = "data/textures/smooth.png", .fvalue = stroke_parameters.get_smooth_factor(), .flags = ui::SKIP_VALUE, .fvalue_min = MIN_SMOOTH_FACTOR, .fvalue_max = MAX_SMOOTH_FACTOR, .precision = 3 });
-        second_row->add_child(smooth_factor_slider);
     }
 
     // Load controller UI labels
@@ -1689,8 +1694,6 @@ void SculptEditor::bind_events()
     Node::bind("cylinder", [&](const std::string& signal, void* button) { set_primitive(SD_CYLINDER); });
     Node::bind("torus", [&](const std::string& signal, void* button) { set_primitive(SD_TORUS); });
     Node::bind("vesica", [&](const std::string& signal, void* button) { set_primitive(SD_VESICA); });
-
-    // Node::bind("create_spline", [&](const std::string& signal, void* button) { start_spline(false); });
 
     Node::bind("main_size", (FuncFloat)[&](const std::string& signal, float value) { set_edit_size(value); });
     Node::bind("secondary_size", (FuncFloat)[&](const std::string& signal, float value) { set_edit_size(-1.0f, value); });
@@ -1916,16 +1919,6 @@ void SculptEditor::update_stroke_from_material(const std::string& name)
 
 void SculptEditor::pick_material()
 {
-    const sGPU_RayIntersectionData& intersection = last_gpu_results.ray_intersection;
-
-    // Do not check _has_intersected_ since we can assume we triggered the action..
-
-    // Set all data
-    stroke_parameters.set_material_color(Color(intersection.intersection_albedo, 1.0f));
-    stroke_parameters.set_material_roughness(intersection.intersection_roughness);
-    stroke_parameters.set_material_metallic(intersection.intersection_metallic);
-    // stroke_parameters.set_material_noise(-1.0f);
-
     // Disable picking..
     if (is_picking_material) {
         Node::emit_signal("pick_material@pressed", (void*)nullptr);
@@ -1933,6 +1926,18 @@ void SculptEditor::pick_material()
     }
 
     should_pick_material = false;
+
+    const sGPU_RayIntersectionData& intersection = last_gpu_results.ray_intersection;
+
+    if (intersection.has_intersected == 0u) {
+        return;
+    }
+
+    // Set all data
+    stroke_parameters.set_material_color(Color(intersection.intersection_albedo, 1.0f));
+    stroke_parameters.set_material_roughness(intersection.intersection_roughness);
+    stroke_parameters.set_material_metallic(intersection.intersection_metallic);
+    // stroke_parameters.set_material_noise(-1.0f);
 
     update_gui_from_stroke_material(stroke_parameters.get_material());
 }
