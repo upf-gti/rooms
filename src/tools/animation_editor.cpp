@@ -795,9 +795,6 @@ void AnimationEditor::update_animation_trajectory()
     animation_trajectory_mesh->update_surface_data({ vertices_to_upload });
 }
 
-/*
-*   Opens the inspector to manipulate node and allow submitting/creating new keyframe
-*/
 void AnimationEditor::create_keyframe()
 {
     auto& node_animations = animation_storage[current_node->get_scene_unique_id()];
@@ -828,7 +825,7 @@ void AnimationEditor::create_keyframe()
         w = Node2D::get_widget_from_name("submit_keyframe");
         w->set_visibility(true);
 
-        w = Node2D::get_widget_from_name("open_list");
+        w = Node2D::get_widget_from_name("open_timeline");
         static_cast<ui::Button2D*>(w)->set_disabled(true);
     }
 }
@@ -905,10 +902,13 @@ void AnimationEditor::process_keyframe()
 
     if (!editing_keyframe) {
         new_anim_state.time = current_time;
-        current_time += 0.5f;
         current_animation->recalculate_duration();
 
-        auto& states = get_animation_states();
+        auto& node_animations = animation_storage[current_node->get_scene_unique_id()];
+        auto& data = node_animations[current_animation->get_scene_unique_id()];
+        data.current_time = current_time + 0.5f;
+
+        auto& states = data.states;
         new_anim_state.index = states.size();
         states.push_back(new_anim_state);
     }
@@ -933,7 +933,7 @@ void AnimationEditor::edit_keyframe(uint32_t index)
     w->set_visibility(false);
 
     // Deactivate open list
-    w = Node2D::get_widget_from_name("open_list");
+    w = Node2D::get_widget_from_name("open_timeline");
     static_cast<ui::Button2D*>(w)->set_disabled(true);
 }
 
@@ -956,7 +956,6 @@ void AnimationEditor::duplicate_keyframe(uint32_t index)
         new_anim_state.properties[property_name] = state;
     }
 
-    current_time += 0.5f;
     current_animation->recalculate_duration();
 
     auto& states = get_animation_states();
@@ -986,10 +985,24 @@ void AnimationEditor::delete_keyframe(uint32_t index)
         }
     }
 
+    // Update keyframe ids for next states properties
+    auto& states = get_animation_states();
+    for (uint32_t i = index + 1u; i < states.size(); ++i) {
+
+        auto& state = states[i];
+
+        for (const auto& prop : state.properties) {
+            const std::string& property_name = prop.first;
+            sPropertyState& p_state = state.properties[property_name];
+            if (p_state.keyframe_idx != -1) {
+                p_state.keyframe_idx--;
+            }
+        }
+    }
+
     current_animation->recalculate_duration();
 
     // Remove state
-    auto& states = get_animation_states();
     states.erase(states.begin() + index);
 
     // Recalculate current_time
@@ -1011,7 +1024,16 @@ std::vector<sAnimationState>& AnimationEditor::get_animation_states()
 sAnimationState* AnimationEditor::get_animation_state(uint32_t index)
 {
     auto& states = get_animation_states();
-    return &states[index];
+
+    auto it = std::find_if(states.begin(), states.end(), [index](const sAnimationState& state) {
+        return state.index == index;
+    });
+
+    if (it != states.end()) {
+        return &(*it);
+    }
+
+    return nullptr;
 }
 
 void AnimationEditor::set_animation_state(uint32_t index)
@@ -1242,7 +1264,7 @@ void AnimationEditor::init_ui()
     second_row->add_child(new ui::TextureButton2D("go_back", { "data/textures/back.png" }));
 
     // ** Open keyframe list **
-    second_row->add_child(new ui::TextureButton2D("open_list", { "data/textures/keyframe_list.png" }));
+    second_row->add_child(new ui::TextureButton2D("open_timeline", { "data/textures/keyframe_list.png" }));
 
     // ** Keyframe actions
     {
@@ -1333,7 +1355,7 @@ void AnimationEditor::bind_events()
 
     // Keyframe events
     {
-        Node::bind("open_list", [&](const std::string& signal, void* button) {
+        Node::bind("open_timeline", [&](const std::string& signal, void* button) {
             // inspect_keyframes_list(true);
             timeline_dirty = true;
         });
@@ -1404,7 +1426,7 @@ void AnimationEditor::inspect_keyframe()
 
     show_keyframe_dirty = false;
 
-    auto w = Node2D::get_widget_from_name("open_list");
+    auto w = Node2D::get_widget_from_name("open_timeline");
     static_cast<ui::Button2D*>(w)->set_disabled(true);
 }
 
@@ -1588,7 +1610,7 @@ bool AnimationEditor::on_close_inspector(ui::Inspector* scope)
     w->set_visibility(true);
 
     // Reactivate open list
-    w = Node2D::get_widget_from_name("open_list");
+    w = Node2D::get_widget_from_name("open_timeline");
     static_cast<ui::Button2D*>(w)->set_disabled(false);
 
     timeline_dirty = true;

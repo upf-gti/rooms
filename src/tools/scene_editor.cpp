@@ -344,7 +344,7 @@ void SceneEditor::process_node_hovered()
     const bool b_pressed = Input::was_button_pressed(XR_BUTTON_B);
     const bool should_open_context_menu = Input::was_button_pressed(XR_BUTTON_B) || Input::was_mouse_pressed(GLFW_MOUSE_BUTTON_RIGHT);
 
-    if (group_hovered) {
+    if (group_hovered && renderer->get_openxr_available()) {
         if (grouping_node) {
             bool can_group = (hovered_node != node_to_group);
             shortcuts[shortcuts::ADD_TO_GROUP] = can_group;
@@ -360,23 +360,6 @@ void SceneEditor::process_node_hovered()
             else if (select_action_pressed) {
                 select_node(hovered_node, false);
             }
-        }
-    }
-    else if (character_hovered) {
-        if (should_open_context_menu) {
-            glm::vec2 position = Input::get_mouse_position();
-            glm::vec3 position_3d = glm::vec3(0.0f);
-
-            if (renderer->get_openxr_available()) {
-                position = { 0.0f, 0.0f };
-                const sGPU_SculptResults& gpu_results = renderer->get_sculpt_manager()->loaded_results;
-                position_3d = ray_origin + ray_direction * gpu_results.ray_intersection.ray_t;
-            }
-
-            new ui::ContextMenu(position, position_3d, {
-                { "Animate", [&, n = hovered_node](const std::string& name, uint32_t index) { selected_node = n; RoomsEngine::switch_editor(ANIMATION_EDITOR, n); }},
-                { "Delete", [&, n = hovered_node](const std::string& name, uint32_t index) { delete_node(n); }}
-            });
         }
     }
     // In 2d, we have to select manually by click, so do not enter here!
@@ -411,20 +394,7 @@ void SceneEditor::process_node_hovered()
             RoomsEngine::switch_editor(SCULPT_EDITOR, static_cast<SculptNode*>(hovered_node));
         }
         else if (should_open_context_menu) {
-            glm::vec2 position = Input::get_mouse_position();
-            glm::vec3 position_3d = glm::vec3(0.0f);
-
-            if (renderer->get_openxr_available()) {
-                position = { 0.0f, 0.0f };
-                const sGPU_SculptResults& gpu_results = renderer->get_sculpt_manager()->loaded_results;
-                position_3d = ray_origin + ray_direction * gpu_results.ray_intersection.ray_t;
-            }
-
-            new ui::ContextMenu(position, position_3d, {
-                { "Animate", [&, n = hovered_node](const std::string& name, uint32_t index) { selected_node = n; RoomsEngine::switch_editor(ANIMATION_EDITOR, n); }},
-                { "Make Unique", [&, n = hovered_node](const std::string& name, uint32_t index) { make_unique(n); }},
-                { "Delete", [&, n = hovered_node](const std::string& name, uint32_t index) { delete_node(n); }}
-            });
+            open_context_menu(hovered_node);
         }
         else if (select_action_pressed) {
             select_node(hovered_node, false);
@@ -691,6 +661,37 @@ void SceneEditor::bind_events()
             }
         });
     }
+}
+
+void SceneEditor::open_context_menu(Node* node)
+{
+    glm::vec2 position = Input::get_mouse_position();
+    glm::vec3 position_3d = glm::vec3(0.0f);
+
+    if (renderer->get_openxr_available()) {
+        position = { 0.0f, 0.0f };
+        const sGPU_SculptResults& gpu_results = renderer->get_sculpt_manager()->loaded_results;
+        position_3d = ray_origin + ray_direction * gpu_results.ray_intersection.ray_t;
+    }
+
+    auto callback = [&, n = node](const std::string& output) {
+        n->set_name(output);
+        set_inspector_dirty();
+    };
+
+    std::vector<ui::sContextMenuOption> options = {
+        { "Animate", [&, n = node](const std::string& name, uint32_t index) { selected_node = n; RoomsEngine::switch_editor(ANIMATION_EDITOR, n); }},
+        { "Rename", [fn = callback, str = node->get_name()](const std::string& name, uint32_t index) { ui::Keyboard::request(fn, str, 32u); }}
+    };
+
+    if (node->get_node_type() == "SculptNode") {
+        options.push_back({ "Make Unique", [&, n = node](const std::string& name, uint32_t index) { make_unique(n); } });
+    }
+
+    options.push_back({ "Delete", [&, n = node](const std::string& name, uint32_t index) { delete_node(n); } });
+
+    // this will be auto-deleted once loses focus
+    new ui::ContextMenu(position, position_3d, options);
 }
 
 bool SceneEditor::on_goback_inspector(ui::Inspector* scope)
@@ -1337,21 +1338,9 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
         uint32_t flags = ui::TEXT_EVENTS | (node == selected_node ? ui::SELECTED : 0);
         inspector->label(signal, node_name, flags, SceneEditor::get_node_highlight_color(node));
 
-        // Request keyboard and use the result to set the new node name. Not the nicest code, but anyway..
-        {
-            Node::bind(signal, [&, n = node](const std::string& sg, void* data) {
-                select_node(n, false);
-            });
-
-            auto callback = [&, n = node](const std::string& output) {
-                n->set_name(output);
-                set_inspector_dirty();
-            };
-
-            Node::bind(signal + "@long_click", [fn = callback, str = node_name](const std::string& sg, void* data) {
-                ui::Keyboard::request(fn, str, 24u);
-            });
-        }
+        Node::bind(signal, [&, n = node](const std::string& sg, void* data) {
+            select_node(n, false);
+        });
     }
 
     // Remove button

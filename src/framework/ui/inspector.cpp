@@ -431,7 +431,7 @@ namespace ui {
     HContainer2D* Inspector::create_row()
     {
         ui::HContainer2D* new_row = new ui::HContainer2D("row_" + std::to_string(row_id++), { 0.0f, 0.0f });
-        new_row->padding = glm::vec2(2.0f + indentation_level * 8.0f, 1.0f);
+        new_row->padding = glm::vec2(2.0f + indentation_level * 4.0f, 1.0f);
         new_row->item_margin = glm::vec2(4.0f, 0.0f);
         body->add_child(new_row);
 

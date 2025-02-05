@@ -123,6 +123,8 @@ class SceneEditor : public BaseEditor {
     void init_ui();
     void bind_events();
 
+    void open_context_menu(Node* node);
+
     bool on_goback_inspector(ui::Inspector* scope);
     bool on_close_inspector(ui::Inspector* scope);
 
