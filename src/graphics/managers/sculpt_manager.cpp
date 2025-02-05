@@ -35,9 +35,18 @@ void SculptManager::clean()
     wgpuBindGroupRelease(indirect_brick_removal_bind_group);
     wgpuBindGroupRelease(sculpt_delete_bindgroup);
     wgpuBindGroupRelease(brick_unmark_bind_group);
-    wgpuBindGroupRelease(preview_stroke_bind_group);
+    wgpuBindGroupRelease(evaluator_preview_bind_group);
+    wgpuBindGroupRelease(evaluator_aabb_culling_step_bind_group);
+    wgpuBindGroupRelease(evaluator_interval_culling_step_bind_group);
+    wgpuBindGroupRelease(evaluator_write_to_texture_setup_bind_group);
+    wgpuBindGroupRelease(evaluator_write_to_texture_step_bind_group);
 
     // todo: THIS CRASHES
+    evaluation_job_result_count_uniform.destroy();
+    evaluation_aabb_culling_count_uniform.destroy();
+    evaluation_culling_dispatch_uniform.destroy();
+    evaluator_num_bricks_by_wg_uniform.destroy();
+    evaluation_write_to_tex_buffer_alt_uniform.destroy();
     gpu_results_uniform.destroy();
     ray_info_uniform.destroy();
     ray_sculpt_instances_uniform.destroy();
@@ -634,11 +643,6 @@ void SculptManager::upload_preview_strokes()
     //    uniforms = { &sculpts_instance_data_uniform, &preview_stroke_uniform_2, &octree_brick_buffers };
     //    wgpuBindGroupRelease(sculpt_data_bind_preview_group);
     //    sculpt_data_bind_preview_group = webgpu_context->create_bind_group(uniforms, render_preview_proxy_shader, 1);
-
-    //    uniforms = { &sdf_globals.preview_stroke_uniform };
-    //    wgpuBindGroupRelease(preview_stroke_bind_group);
-    //    preview_stroke_bind_group = webgpu_context->create_bind_group(uniforms, compute_octree_evaluate_shader, 3);
-    //}
 
     // Upload preview data, first the stoke and tehn the edit list, since we are storing it in a vector
     webgpu_context->update_buffer(std::get<WGPUBuffer>(sdf_globals.preview_stroke_uniform.data), 0u, &preview.sculpt_model_idx, sizeof(uint32_t));

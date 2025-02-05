@@ -24,4 +24,5 @@
 #define STROKE_CONTEXT_INCREASE 100u
 #define AREA_MAX_EVALUATION_SIZE  (1.0f / 4.0f)
 
+// TODO: use 16 bit stroke indices for culling -> double the culling capacity
 #define MAX_STROKE_INFLUENCE_COUNT 240u

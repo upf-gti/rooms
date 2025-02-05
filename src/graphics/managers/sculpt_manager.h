@@ -112,15 +112,12 @@ class SculptManager {
     Uniform         evaluation_job_result_count_uniform;
     Uniform         evaluation_aabb_culling_count_uniform;
     Uniform         evaluation_culling_dispatch_uniform;
-    //Uniform         evaluation_write_to_tex_count_uniform;
     Uniform         evaluation_write_to_tex_buffer_uniform;
 
     Uniform         evaluator_num_bricks_by_wg_uniform;
     Uniform         evaluation_culling_dispatch_alt_uniform;
     Uniform         evaluation_write_to_tex_buffer_alt_uniform;
 
-    Uniform         aabb_calculation_temp_buffer;
-    WGPUBindGroup   aabb_calculation_temp_bind_group = nullptr;
 
     // Sculpt evaluation
     Pipeline write_to_texture_pipeline;
@@ -147,14 +144,12 @@ class SculptManager {
     WGPUBindGroup   indirect_brick_removal_bind_group = nullptr;
     WGPUBindGroup   sculpt_delete_bindgroup = nullptr;
     WGPUBindGroup   brick_unmark_bind_group = nullptr;
-    WGPUBindGroup   preview_stroke_bind_group = nullptr;
     WGPUBindGroup   evaluator_aabb_culling_step_bind_group = nullptr;
     WGPUBindGroup   evaluator_stroke_history_bind_group = nullptr;
     WGPUBindGroup   evaluator_interval_culling_step_bind_group = nullptr;
     WGPUBindGroup   evaluator_write_to_texture_setup_bind_group = nullptr;
     WGPUBindGroup   evaluator_write_to_texture_step_bind_group = nullptr;
     WGPUBindGroup   evaluator_preview_bind_group = nullptr;
-
 
     // Evaluator uniforms
     uint32_t        octree_edit_list_size = 0u;
