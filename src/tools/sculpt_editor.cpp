@@ -502,7 +502,7 @@ bool SculptEditor::edit_update(float delta_time)
         if (!renderer->get_openxr_available()) {
 
             if (is_tool_being_used(stamp_enabled)) {
-                edit_to_add.position = get_current_transform().get_position() + glm::vec3(glm::vec3(0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1), 0.2f * (random_f() * 2 - 1)));
+                edit_to_add.position = get_current_transform().get_position() + glm::vec3(glm::vec3(0.2f * (random_f() * 4 - 2), 0.2f * (random_f() * 4 - 2), 0.2f * (random_f() * 4 - 2)));
                 glm::vec3 euler_angles(glm::pi<float>() * random_f(), glm::pi<float>()* random_f(), glm::pi<float>()* random_f());
                 // edit_to_add.dimensions = glm::vec4(0.05f, 0.05f, 0.05f, 0.0f) * 1.0f;
                 //edit_to_add.dimensions = (edit_to_add.operation == OP_SUBSTRACTION) ? 3.0f * glm::vec4(0.2f, 0.2f, 0.2f, 0.2f) : glm::vec4(0.2f, 0.2f, 0.2f, 0.2f);

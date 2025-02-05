@@ -171,6 +171,7 @@ struct sStrokeInfluence {
     float pad1;
     glm::vec3 eval_aabb_max;
     float pad2;
+
     glm::vec4 pad3;
     std::vector<sGPUStroke> strokes;
 

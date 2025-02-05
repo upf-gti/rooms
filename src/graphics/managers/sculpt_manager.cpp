@@ -351,18 +351,15 @@ bool SculptManager::evaluate(WGPUComputePassEncoder compute_pass, const sEvaluat
     uint32_t zero = 0u;
     webgpu_context->update_buffer(std::get<WGPUBuffer>(sdf_globals.brick_buffers.data), sizeof(uint32_t), &(zero), sizeof(uint32_t));
 
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(stroke_context_list.data), 0, &evaluate_request.strokes_to_process, sizeof(uint32_t) * 4 * 4);
-
-    // TODO: debug render eval AABB
-    uint32_t set_as_preview = 0u;
-    webgpu_context->update_buffer(std::get<WGPUBuffer>(evaluate_request.sculpt->get_octree_uniform().data), sizeof(uint32_t) * 2u, &set_as_preview, sizeof(uint32_t));
     // Upload strokes
     upload_strokes_and_edits(evaluate_request.strokes_to_process.stroke_count, evaluate_request.strokes_to_process.strokes, evaluate_request.edit_count, evaluate_request.edit_to_process);
+    // Upload stroke count and stroke context AABB
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(stroke_context_list.data), 0, &evaluate_request.strokes_to_process, sizeof(glm::vec4) * 3);
 
     // Compute dispatches
     {
 #ifndef NDEBUG
-        wgpuComputePassEncoderPushDebugGroup(compute_pass, "Test culling");
+        wgpuComputePassEncoderPushDebugGroup(compute_pass, "SDF Evaluator");
 #endif
         // prepare buffers
         uint32_t to_fill = 0u;
@@ -596,14 +593,11 @@ void SculptManager::upload_strokes_and_edits(const uint32_t stroke_count, const 
         wgpuBindGroupRelease(evaluator_write_to_texture_step_bind_group);
         evaluator_write_to_texture_step_bind_group = webgpu_context->create_bind_group(uniforms, write_to_texture_shader, 0);
 
-
-        uniforms = { &stroke_context_list };
-
+        uniforms = { &stroke_context_list, &stroke_culling_buffer };
         wgpuBindGroupRelease(evaluator_stroke_history_bind_group);
-        evaluator_stroke_history_bind_group = webgpu_context->create_bind_group(uniforms, evaluator_1_aabb_culling_step_shader, 0);
+        evaluator_stroke_history_bind_group = webgpu_context->create_bind_group(uniforms, evaluator_1_aabb_culling_step_shader, 0u);
 
         uniforms = { &stroke_culling_buffer, &octree_edit_list, &stroke_context_list, &sdf_globals.brick_buffers, &evaluation_job_result_count_uniform, &octant_usage_ping_pong_uniforms[1] , &evaluation_write_to_tex_buffer_uniform };
-
         wgpuBindGroupRelease(evaluator_interval_culling_step_bind_group);
         evaluator_interval_culling_step_bind_group = webgpu_context->create_bind_group(uniforms, evaluator_2_interval_culling_step_shader, 0u);
     }
