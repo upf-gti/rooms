@@ -27,6 +27,9 @@ namespace ui {
         float inner_width = panel_size.x - padding * 2.0f;
         float inner_height = panel_size.y - padding * 2.0f;
 
+        // Used when hovering a keyframe..
+        set_priority(BUTTON);
+
         on_close = desc.close_fn;
         on_edit_keyframe = desc.edit_keyframe_fn;
         on_duplicate_keyframe = desc.duplicate_keyframe_fn;
@@ -193,7 +196,6 @@ namespace ui {
 
         if ((IO::get_hover() == root) && Input::was_grab_pressed(HAND_RIGHT)) {
             grabbing = true;
-            last_grab_position = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
         }
 
         if (Input::was_grab_released(HAND_RIGHT)) {
@@ -228,13 +230,13 @@ namespace ui {
                 auto webgpu_context = Renderer::instance->get_webgpu_context();
                 float width = static_cast<float>(webgpu_context->render_width);
                 float height = static_cast<float>(webgpu_context->render_height);
-                glm::vec2 size = panel_size * 0.5f / glm::vec2(width, height);
-                glm::vec3 new_pos = eye + forward * 0.35f;
+                glm::vec2 grab_offset = glm::vec2(last_grab_position.x, panel_size.y - last_grab_position.y) / glm::vec2(width, height);
+                glm::vec3 new_pos = eye + forward * last_grab_distance;
 
                 m = glm::translate(m, new_pos);
                 m = m * glm::toMat4(get_rotation_to_face(new_pos, renderer->get_camera_eye(), { 0.0f, 1.0f, 0.0f }));
                 m = glm::rotate(m, glm::radians(180.f), { 1.0f, 0.0f, 0.0f });
-                m = glm::translate(m, -glm::vec3(size, 0.0f));
+                m = glm::translate(m, -glm::vec3(grab_offset, 0.0f));
                 set_xr_transform(Transform::mat4_to_transform(m));
 
                 root->set_priority(DRAGGABLE);
@@ -249,8 +251,15 @@ namespace ui {
         }
 
         time_dirty = false;
+        on_hover = false;
 
-        const sInputData& keyframe_input_data = get_input_data();
+        sInputData keyframe_input_data = get_input_data();
+
+        // is any keyframe hovered
+        if (keyframe_input_data.is_hovered) {
+            keyframe_input_data.is_pressed &= IO::is_focused(this);
+            IO::push_input(this, keyframe_input_data);
+        }
 
         // ...
 
@@ -281,6 +290,11 @@ namespace ui {
             new_time = glm::clamp(new_time, 0.0f, keyframes.back().time);
             time_dirty |= (new_time != current_time);
             current_time = new_time;
+
+            if (renderer->get_openxr_available() && grabbing && Input::was_grab_pressed(HAND_RIGHT)) {
+                last_grab_position = root_input_data.local_position;
+                last_grab_distance = root_input_data.ray_distance;
+            }
         }
 
         std::string s = std::to_string(current_time);
@@ -297,6 +311,8 @@ namespace ui {
         glm::vec2 offset = glm::vec2(playhead->get_translation().x, body->get_translation().y + padding * scale.y);
         offset.x -= time_to_x(current_time) * scale.x;
 
+        sInputData data = {};
+
         for (auto& key : keyframes) {
             glm::vec2 position = offset + glm::vec2(time_to_x(key.time), keyframe_size.y * 0.5f) * scale;
 
@@ -304,7 +320,7 @@ namespace ui {
                 continue;
             }
 
-            sInputData data;
+            data = {};
 
             Material* material = frame_mesh->get_surface_material_override(frame_mesh->get_surface(0));
 
@@ -379,13 +395,30 @@ namespace ui {
 
             data.is_pressed = pressed_inside && is_input_pressed();
 
+            if (!on_hover && data.is_hovered) {
+                data.was_hovered = true;
+            }
+
             if (data.is_hovered) {
                 key.hovered = true;
                 return data;
             }
         }
 
-        return {};
+        return data;
+    }
+
+    bool Timeline::on_input(sInputData data)
+    {
+        IO::set_hover(this, data);
+
+        if (data.was_hovered) {
+            Engine::instance->vibrate_hand(HAND_RIGHT, HOVER_HAPTIC_AMPLITUDE, HOVER_HAPTIC_DURATION);
+        }
+
+        on_hover = true;
+
+        return true;
     }
 
     float Timeline::x_to_time(float x)

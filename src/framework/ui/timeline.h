@@ -64,7 +64,8 @@ namespace ui {
         glm::vec2 panel_size = {};
         Color panel_color = { 0.01f, 0.01f, 0.01f, 0.95f };
         glm::vec2 last_scroll_position = {};
-        glm::vec3 last_grab_position = {};
+        glm::vec2 last_grab_position = {};
+        float last_grab_distance = 0.0f;
 
         XRPanel* root = nullptr;
         Container2D* body = nullptr;
@@ -103,6 +104,7 @@ namespace ui {
         void update(float delta_time) override;
 
         sInputData get_input_data(bool ignore_focus = false) override;
+        bool on_input(sInputData data) override;
 
         bool is_time_dirty() { return time_dirty; }
         float get_current_time() { return current_time; }
