@@ -193,6 +193,8 @@ void RoomsRenderer::init_sdf_globals()
 
     sdf_globals.empty_brick_and_removal_buffer_count = sdf_globals.max_brick_count + (sdf_globals.max_brick_count % 4);
 
+    sdf_globals.workgroup_brick_process_count = (uint32_t)glm::ceil(sdf_globals.octree_last_level_size / 512.0);
+
     // number of bricks that fit in one axis
     float num_bricks_in_octree_axis = powf(2.0, sdf_globals.octree_depth);
 
@@ -208,6 +210,8 @@ void RoomsRenderer::init_sdf_globals()
     Shader::set_custom_define("MAX_SUBDIVISION_SIZE", sdf_globals.octree_last_level_size);
     Shader::set_custom_define("MAX_STROKE_INFLUENCE_COUNT", MAX_STROKE_INFLUENCE_COUNT);
     Shader::set_custom_define("OCTREE_LAST_LEVEL_STARTING_IDX", sdf_globals.octree_total_size - sdf_globals.octree_last_level_size);
+
+    //Shader::set_custom_define("WORKGROUP_BRICK_COUNT", sdf_globals.workgroup_brick_process_count);
 
     Shader::set_custom_define("SDF_RESOLUTION", SDF_RESOLUTION);
     Shader::set_custom_define("SCULPT_MAX_SIZE", SCULPT_MAX_SIZE);

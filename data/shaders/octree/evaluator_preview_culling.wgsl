@@ -7,16 +7,11 @@ struct sJobCounters {
     bricks_to_write_to_tex_count : atomic<i32>
 };
 
-@group(0) @binding(6) var<storage, read> stroke_history : StrokeHistory;
+@group(0) @binding(0) var<storage, read> preview_stroke : PreviewStroke;
+@group(0) @binding(5) var<storage, read_write> brick_buffers: BrickBuffers;
+@group(0) @binding(8) var<storage, read_write> indirect_buffers : IndirectBuffers;
 
-@group(1) @binding(2) var<storage, read_write> job_counter : sJobCounters;
-@group(1) @binding(1) var<storage, read_write> job_result_bricks_to_eval : array<u32>;
-@group(1) @binding(0) var<storage, read_write> aabb_culling_count : i32;
-
-@group(2) @binding(0) var<storage, read> preview_stroke : PreviewStroke;
-@group(2) @binding(5) var<storage, read_write> brick_buffers: BrickBuffers;
-
-@group(3) @binding(0) var<storage, read_write> octree : Octree;
+@group(1) @binding(0) var<storage, read_write> octree : Octree;
 
 #include sdf_interval_functions.wgsl
 
@@ -63,6 +58,8 @@ fn preview_brick_create(octree_index : u32, octant_center : vec3f, is_interior_b
     if (is_interior_brick) {
         brick_buffers.preview_instance_data[preview_brick].in_use = INTERIOR_BRICK_FLAG; 
     }
+
+    atomicAdd(&indirect_buffers.preview_instance_count, 1u);
 }
 
 fn brick_unmark_preview(octree_index : u32) {
@@ -110,19 +107,13 @@ fn compute(@builtin(workgroup_id) wg_id: vec3u, @builtin(local_invocation_index)
     // Compute intersections for the last level directly
     let global_id : u32 = (64u * wg_id.x + thread_id) * 8u;
 
-    let is_evaluating_undo : bool = (stroke_history.is_undo & UNDO_EVAL_FLAG) == UNDO_EVAL_FLAG;
-
-    let stroke_count : u32 = stroke_history.count;
-    let stroke_history_aabb_min : vec3f = stroke_history.eval_aabb_min;
-    let stroke_history_aabb_max : vec3f = stroke_history.eval_aabb_max;
-
     // Reduce the threadcount, but do more work per thread
     for(var j : u32 = 0u; j < 8u; j++) {
         let operation_id : u32 = global_id + j;
         var in_brick_stroke_count : u32 = 0u;
 
         // If the job count is bigger than the thread ID, there is no work for this thread
-        if (operation_id < u32(aabb_culling_count)) {
+        if (operation_id < MAX_SUBDIVISION_SIZE) {
             // Get the octree_idx from the last layer id
             var brick_center : vec3f = get_brick_center(operation_id);
 

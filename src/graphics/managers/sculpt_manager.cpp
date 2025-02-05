@@ -61,6 +61,10 @@ void SculptManager::clean()
 
 void SculptManager::update(WGPUCommandEncoder command_encoder)
 {
+    RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
+    WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
+    sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();
+
     // New render pass for the interseccions
     if (intersections_to_compute > 0u) {
         WGPUComputePassDescriptor compute_pass_desc = {};
@@ -91,6 +95,12 @@ void SculptManager::update(WGPUCommandEncoder command_encoder)
     compute_pass_desc.timestampWrites = timestampWrites.data();
 
     WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
+
+    // TODO: only do this when necessary
+    // Clean preview indirect
+    uint32_t zero = 0u;
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(sdf_globals.brick_buffers.data), sizeof(uint32_t) * 2u, &zero, sizeof(uint32_t));
+    webgpu_context->update_buffer(std::get<WGPUBuffer>(sdf_globals.indirect_buffers.data), sizeof(uint32_t) * 5u, &zero, sizeof(uint32_t));
 
     if (!evaluations_to_process.empty()) {
         sEvaluateRequest& evaluate_request = evaluations_to_process.back();
@@ -155,6 +165,11 @@ void SculptManager::set_preview_stroke(Sculpt* sculpt, const uint32_t in_gpu_mod
     preview.to_upload_stroke.edit_count = preview_edits.size();
     preview.sculpt = sculpt;
     preview.sculpt_model_idx = in_gpu_model_idx;
+
+    AABB preview_aabb = preview.to_upload_stroke.get_world_AABB_of_edit_list(preview_edits);
+
+    preview.to_upload_stroke.aabb_min = preview_aabb.center - preview_aabb.half_size;
+    preview.to_upload_stroke.aabb_max = preview_aabb.center + preview_aabb.half_size;
 
     preview.needs_computing = true;
 }
@@ -455,9 +470,9 @@ void SculptManager::evaluate_preview(WGPUComputePassEncoder compute_pass)
 #endif
 
     evaluator_preview_step_pipeline.set(compute_pass);
-    wgpuComputePassEncoderSetBindGroup(compute_pass, 0, evaluator_stroke_history_bind_group, 0, nullptr);
-    wgpuComputePassEncoderSetBindGroup(compute_pass, 1, evaluator_aabb_culling_step_bind_group, 0u, nullptr);
-    wgpuComputePassEncoderDispatchWorkgroups(compute_pass, (uint32_t)glm::ceil(sdf_globals.octree_last_level_size / 512.0), 1, 1);
+    wgpuComputePassEncoderSetBindGroup(compute_pass, 0u, evaluator_preview_bind_group, 0u, nullptr);
+    wgpuComputePassEncoderSetBindGroup(compute_pass, 1u, preview.sculpt->get_octree_bindgroup(), 0u, nullptr);
+    wgpuComputePassEncoderDispatchWorkgroups(compute_pass, (uint32_t)glm::ceil(sdf_globals.octree_last_level_size / 512.0), 1u, 1u);
  
 #ifndef NDEBUG
     wgpuComputePassEncoderPopDebugGroup(compute_pass);
@@ -848,8 +863,8 @@ void SculptManager::init_pipelines_and_bindgroups()
 
         // Preview bd
         {
-            std::vector<Uniform*> uniforms = { &sdf_globals.preview_stroke_uniform, &sdf_globals.brick_buffers };
-            evaluator_preview_bind_group = webgpu_context->create_bind_group(uniforms, evaluator_preview_step_shader, 2u);
+            std::vector<Uniform*> uniforms = { &sdf_globals.preview_stroke_uniform, &sdf_globals.brick_buffers, &sdf_globals.indirect_buffers };
+            evaluator_preview_bind_group = webgpu_context->create_bind_group(uniforms, evaluator_preview_step_shader, 0u);
         }
     }
 
