@@ -29,6 +29,7 @@ namespace ui {
 
         on_close = desc.close_fn;
         on_edit_keyframe = desc.edit_keyframe_fn;
+        on_duplicate_keyframe = desc.duplicate_keyframe_fn;
         on_delete_keyframe = desc.delete_keyframe_fn;
 
         root = new ui::XRPanel(name + "_background", { 0.0f, 0.f }, panel_size, 0u, panel_color);
@@ -39,15 +40,19 @@ namespace ui {
         root->add_child(column);
 
         // Title
+        float button_start = padding * 2.0f;
+        float button_space = 36.0f; // size + Xpadding
         float title_text_scale = 22.0f;
         float title_y_corrected = desc.title_height * 0.5f - title_text_scale * 0.5f;
         ui::Container2D* title_container = new ui::Container2D(name + "_title", { 0.0f, 0.0f }, { inner_width - padding * 0.4f, desc.title_height });
         title = new ui::Text2D(desc.title.empty() ? "Inspector" : desc.title, { 0.0f, title_y_corrected }, title_text_scale, ui::TEXT_CENTERED | ui::SKIP_TEXT_RECT);
-        time_text = new ui::Text2D("0.0", { padding * 2.0f + 64.f + 10.f, title_y_corrected + 8.0f }, 20.f, ui::SKIP_TEXT_RECT);
-        auto edit_button = new ui::TextureButton2D("edit_timeline_keyframe", { "data/textures/edit.png", 0u, { padding * 2.0f, title_y_corrected }, glm::vec2(32.0f), colors::WHITE, "Edit" });
-        auto delete_button = new ui::TextureButton2D("delete_timeline_keyframe", { "data/textures/delete.png", 0u, { padding * 2.0f + 32.f + 4.f, title_y_corrected }, glm::vec2(32.0f), colors::WHITE, "Delete" });
-        close_button = new ui::TextureButton2D("close_timeline", { "data/textures/cross.png", 0u, { inner_width - padding * 4.0f, title_y_corrected }, glm::vec2(32.0f), colors::WHITE, "Close" });
+        auto edit_button = new ui::TextureButton2D("edit_timeline_keyframe", { "data/textures/edit.png", 0u, { button_start, title_y_corrected }, glm::vec2(32.0f), colors::WHITE, "Edit" });
+        auto duplicate_button = new ui::TextureButton2D("duplicate_timeline_keyframe", { "data/textures/duplicate_key.png", 0u, { button_start + button_space, title_y_corrected }, glm::vec2(32.0f), colors::WHITE, "Duplicate" });
+        auto delete_button = new ui::TextureButton2D("delete_timeline_keyframe", { "data/textures/delete.png", 0u, { button_start + button_space * 2.0f, title_y_corrected }, glm::vec2(32.0f), colors::WHITE, "Delete" });
+        auto close_button = new ui::TextureButton2D("close_timeline", { "data/textures/cross.png", 0u, { inner_width - padding * 4.0f, title_y_corrected }, glm::vec2(32.0f), colors::WHITE, "Close" });
+        time_text = new ui::Text2D("0.0", { button_start + button_space * 3.0f + 2.0f, title_y_corrected + 8.0f }, 20.f, ui::SKIP_TEXT_RECT);
         title_container->add_child(edit_button);
+        title_container->add_child(duplicate_button);
         title_container->add_child(delete_button);
         title_container->add_child(time_text);
         title_container->add_child(title);
@@ -57,6 +62,12 @@ namespace ui {
         Node::bind("edit_timeline_keyframe", [&](const std::string& sg, void* data) {
             if (on_edit_keyframe) {
                 on_edit_keyframe(this);
+            }
+        });
+
+        Node::bind("duplicate_timeline_keyframe", [&](const std::string& sg, void* data) {
+            if (on_duplicate_keyframe) {
+                on_duplicate_keyframe(this);
             }
         });
 
@@ -392,9 +403,9 @@ namespace ui {
         keyframes.clear();
     }
 
-    void Timeline::add_keyframe(float time, Keyframe* keyframe)
+    void Timeline::add_keyframe(float time, Keyframe* keyframe, uint32_t index)
     {
-        keyframes.push_back({ time, keyframe });
+        keyframes.push_back({ time, keyframe, index });
     }
 
     void Timeline::set_title(const std::string& new_title)

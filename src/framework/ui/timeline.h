@@ -28,12 +28,14 @@ namespace ui {
         glm::vec2 position = { 0.0f, 0.0f };
         TimelineFunc close_fn = nullptr;
         TimelineFunc edit_keyframe_fn = nullptr;
+        TimelineFunc duplicate_keyframe_fn = nullptr;
         TimelineFunc delete_keyframe_fn = nullptr;
     };
 
     struct TimelineKeyframe {
         float time = 0.0f;
         Keyframe* keyframe = nullptr;
+        uint32_t index = 0u;
         bool hovered = false;
         bool selected = false;
     };
@@ -69,9 +71,9 @@ namespace ui {
         Panel2D* playhead = nullptr;
         Text2D* title = nullptr;
         Text2D* time_text = nullptr;
-        TextureButton2D* close_button = nullptr;
         TimelineFunc on_close = nullptr;
         TimelineFunc on_edit_keyframe = nullptr;
+        TimelineFunc on_duplicate_keyframe = nullptr;
         TimelineFunc on_delete_keyframe = nullptr;
 
         /*
@@ -106,7 +108,7 @@ namespace ui {
         float get_current_time() { return current_time; }
         TimelineKeyframe* get_selected_key() { return selected_key; }
 
-        void add_keyframe(float time, Keyframe* keyframe);
+        void add_keyframe(float time, Keyframe* keyframe, uint32_t index);
         void clear();
         void set_title(const std::string& new_title);
         void set_current_time(float time) { current_time = time; }

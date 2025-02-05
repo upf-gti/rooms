@@ -171,9 +171,10 @@ class AnimationEditor : public BaseEditor {
     void inspect_keyframe_properties();
     void inspect_node(Node* node);
 
-    bool on_close_inspector(ui::Inspector* scope = nullptr);
     bool on_edit_timeline_keyframe(ui::Timeline* scope = nullptr);
+    bool on_duplicate_timeline_keyframe(ui::Timeline* scope = nullptr);
     bool on_delete_timeline_keyframe(ui::Timeline* scope = nullptr);
+    bool on_close_inspector(ui::Inspector* scope = nullptr);
 
     void render_gizmo();
     void update_gizmo(float delta_time);
