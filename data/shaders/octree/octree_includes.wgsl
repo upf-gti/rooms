@@ -323,16 +323,66 @@ struct sPaddedAABB {
     pad1        : u32
 };
 
-fn get_brick_center(brick_id : u32) -> vec3f {
-    let z : u32 = brick_id % INT_NUM_BRICKS_IN_OCTREE_AXIS;
-    let y : u32 = (brick_id / INT_NUM_BRICKS_IN_OCTREE_AXIS) % INT_NUM_BRICKS_IN_OCTREE_AXIS;
-    let x : u32 = brick_id / (INT_NUM_BRICKS_IN_OCTREE_AXIS * INT_NUM_BRICKS_IN_OCTREE_AXIS);
+// From z-order from https://developer.nvidia.com/blog/thinking-parallel-part-iii-tree-construction-gpu/
+fn zorder_expand_bits(v : u32) -> u32 {
+    var res : u32 = v;
 
-    // (0 - NUM_BRICKS_OCTREE_AXIS)
-    // (0 - 1)
-    // (-0.5 - 0.5)
-    // (-SCULPT_MAX_SIZE/2 - SCULPT_MAX_SIZE/2)
-    let brick_origin = ((vec3f(vec3u(x, y, z)) / NUM_BRICKS_IN_OCTREE_AXIS) - vec3(0.5)) * SCULPT_MAX_SIZE;
+    res = (res * 0x00010001u) & 0xFF0000FFu;
+    res = (res * 0x00000101u) & 0x0F00F00Fu;
+    res = (res * 0x00000011u) & 0xC30C30C3u;
+    res = (res * 0x00000005u) & 0x49249249u;
+
+    return res;
+}
+
+// From: https://github.com/Forceflow/libmorton/blob/main/include/libmorton/morton3D.h
+const MORTON_MAGIC_BITS_ENCODE : array<u32, 6> = array<u32, 6>(
+    0x000003ffu, 0u, 0x30000ffu, 0x0300f00fu, 0x30c30c3u, 0x9249249u
+);
+const MORTON_MAGIC_BITS_DECODE : array<u32, 6> = array<u32, 6>(
+    0u, 0x000003ffu, 0x30000ffu, 0x0300f00fu, 0x30c30c3u, 0x9249249u
+);
+
+fn morton_get_third_bits(morton_code : u32) -> u32 {
+    var x : u32 = morton_code & MORTON_MAGIC_BITS_DECODE[5];
+    x = (x ^ (x >> 2)) & MORTON_MAGIC_BITS_DECODE[4];
+	x = (x ^ (x >> 4)) & MORTON_MAGIC_BITS_DECODE[3];
+	x = (x ^ (x >> 8)) & MORTON_MAGIC_BITS_DECODE[2];
+	x = (x ^ (x >> 16)) & MORTON_MAGIC_BITS_DECODE[1];
+
+    return x;
+}
+
+fn morton_split_by_third_bits(coord : u32) -> u32 {
+    var x : u32 = coord & MORTON_MAGIC_BITS_ENCODE[0];
+    x = (x | (x << 16)) & MORTON_MAGIC_BITS_ENCODE[2];
+	x = (x | (x << 8))  & MORTON_MAGIC_BITS_ENCODE[3];
+	x = (x | (x << 4))  & MORTON_MAGIC_BITS_ENCODE[4];
+	x = (x | (x << 2))  & MORTON_MAGIC_BITS_ENCODE[5];
+
+    return x;
+}
+
+fn morton_decode(morton_id : u32) -> vec3u {
+    let x : u32 = morton_get_third_bits(morton_id);
+    let y : u32 = morton_get_third_bits(morton_id >> 1);
+    let z : u32 = morton_get_third_bits(morton_id >> 2);
+
+    return vec3u(x,y,z);
+}
+
+fn morton_encode(morton_coords : vec3u) -> u32 {
+    return  morton_split_by_third_bits(morton_coords.x) | 
+            (morton_split_by_third_bits(morton_coords.y) << 1u) | 
+            (morton_split_by_third_bits(morton_coords.z) << 2u);
+}
+
+fn get_brick_center(brick_id : u32) -> vec3f {
+    // // (0 - NUM_BRICKS_OCTREE_AXIS)
+    // // (0 - 1)
+    // // (-0.5 - 0.5)
+    // // (-SCULPT_MAX_SIZE/2 - SCULPT_MAX_SIZE/2)
+    let brick_origin = ((vec3f(morton_decode(brick_id)) / NUM_BRICKS_IN_OCTREE_AXIS) - vec3(0.5)) * SCULPT_MAX_SIZE;
     return brick_origin + BRICK_WORLD_SIZE * 0.50;
 }
 

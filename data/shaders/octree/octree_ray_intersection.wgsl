@@ -30,23 +30,21 @@ fn ray_AABB_intersection(ray_origin : vec3f, ray_dir : vec3f, box_min : vec3f, b
 
 struct IterationData {
     level : u32,
-    octant : u32,
     octant_id : u32,
     octant_center : vec3f
 }
 
 struct VisitedOctantData {
-    octant: u32,
+    octant_id: u32,
     distance : f32,
     octant_center : vec3f
 }
 
 var<workgroup> iteration_data_stack: array<IterationData, 100>;
 
-fn push_iteration_data(stack_pointer : ptr<function, u32>, level : u32, octant : u32, octant_id : u32, octant_center : vec3f)
+fn push_iteration_data(stack_pointer : ptr<function, u32>, level : u32, octant_id : u32, octant_center : vec3f)
 {
     iteration_data_stack[*stack_pointer].level = level;
-    iteration_data_stack[*stack_pointer].octant = octant;
     iteration_data_stack[*stack_pointer].octant_id = octant_id;
     iteration_data_stack[*stack_pointer].octant_center = octant_center;
     *stack_pointer++;
@@ -134,6 +132,21 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_dir : vec3f, max_distance : f
     return -1000.0;
 }
 
+fn get_octant_center_at_level(octant_id : u32, level : u32, level_half_size : f32) -> vec3f {
+    let octants_in_level : u32 = 1u << level; // <- pow(2u, level)
+
+    // (0 - octants_in_level)
+    // (0 - 1)
+    // (-0.5 - 0.5)
+    // (-SCULPT_MAX_SIZE/2 - SCULPT_MAX_SIZE/2)
+    let morton_res = morton_decode(octant_id);
+    let brick_origin = ((vec3f(morton_res) /  f32(octants_in_level-1u)) - vec3(0.5)) * level_half_size * 2.0;
+    return brick_origin;
+}
+
+fn get_octree_starting_idx_of_level(level : u32) -> u32 {
+    return ( u32(pow(8.0, f32(level))) - 1u) / 7u;
+}
 
 @compute @workgroup_size(1, 1, 1)
 fn compute()
@@ -150,7 +163,6 @@ fn compute()
     var stack_pointer : u32 = 0;
 
     var last_level : u32 = 0;
-    var last_octant : u32 = 0;
 
     var intersected_distance : f32 = 10000000.0;
 
@@ -173,7 +185,7 @@ fn compute()
     var parent_octant_id : u32 = 0;
 
     var level : u32 = 1;
-    push_iteration_data(&stack_pointer, level, 0, 0, vec3f(0.0, 0.0, 0.0));
+    push_iteration_data(&stack_pointer, level, 0, vec3f(0.0, 0.0, 0.0));
 
     // Compute the center and the half size of the current octree level
     while (level <= OCTREE_DEPTH && stack_pointer > 0 && !intersected) {
@@ -182,17 +194,17 @@ fn compute()
 
         level = iteration_data.level;
         parent_octant_id = iteration_data.octant_id;
-        let parent_octant_center : vec3f = iteration_data.octant_center;
 
         let level_half_size = SCULPT_MAX_SIZE / pow(2.0, f32(level + 1));
 
         var octants_count : u32 = 0;
 
         for (var octant : u32 = 0; octant < 8; octant++) {
-            let octant_center = parent_octant_center + level_half_size * OCTREE_CHILD_OFFSET_LUT[octant];
+            let octant_id : u32 = parent_octant_id * 8u + octant;
+            let octant_center : vec3f = get_octant_center_at_level(octant_id, level, level_half_size);
 
             if (ray_AABB_intersection(local_ray_origin, local_ray_dir, octant_center - level_half_size, octant_center + level_half_size, &t_near, &t_far)) {
-                octants_to_visit[octants_count].octant = octant;
+                octants_to_visit[octants_count].octant_id = octant_id;
                 octants_to_visit[octants_count].distance = t_near;
                 octants_to_visit[octants_count].octant_center = octant_center;
                 octants_count++;
@@ -213,16 +225,16 @@ fn compute()
 
         for (var i : u32 = 0; i < octants_count && !intersected; i++) {
 
-            let octant_id : u32 = parent_octant_id | (octants_to_visit[i].octant << (3 * (level - 1)));
+            let octant_id : u32 = octants_to_visit[i].octant_id;
             let is_last_level : bool = level == OCTREE_DEPTH;
 
             if (!is_last_level) {
-                push_iteration_data(&stack_pointer, level + 1, 0, octant_id, octants_to_visit[i].octant_center);
+                push_iteration_data(&stack_pointer, level + 1, octant_id, octants_to_visit[i].octant_center);
             } else {
                 last_level = level;
-                last_octant = octants_to_visit[i].octant;
+
                 // If the brick is filled
-                let octree_index : u32 = octant_id + u32((pow(8.0, f32(level)) - 1) / 7);
+                let octree_index : u32 = octant_id + OCTREE_LAST_LEVEL_STARTING_IDX;
                 if ((octree.data[octree_index].tile_pointer & FILLED_BRICK_FLAG) == FILLED_BRICK_FLAG) {
                     intersected_distance = octants_to_visit[i].distance;
 

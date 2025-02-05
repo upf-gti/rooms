@@ -65,7 +65,7 @@ fn add_brick_to_next_job_queue(brick_id : u32) {
     job_result_bricks_to_eval[idx] = brick_id;
 }
 
-// A trheadgrounp of 64 should be better for occupancy
+// A threadgroup of 64 should be better for occupancy
 @compute @workgroup_size(4,4,4)
 fn compute(@builtin(workgroup_id) wg_id: vec3u, @builtin(local_invocation_index) thread_id: u32, @builtin(num_workgroups) workgroup_size : vec3u) 
 {
