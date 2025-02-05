@@ -33,6 +33,7 @@ namespace ui {
         on_close = desc.close_fn;
         on_edit_keyframe = desc.edit_keyframe_fn;
         on_duplicate_keyframe = desc.duplicate_keyframe_fn;
+        on_move_keyframe = desc.move_keyframe_fn;
         on_delete_keyframe = desc.delete_keyframe_fn;
 
         root = new ui::XRPanel(name + "_background", { 0.0f, 0.f }, panel_size, 0u, panel_color);
@@ -63,21 +64,21 @@ namespace ui {
         column->add_child(title_container);
 
         Node::bind("edit_timeline_keyframe", [&](const std::string& sg, void* data) {
-            if (on_edit_keyframe) {
-                on_edit_keyframe(this);
+            if (selected_key && on_edit_keyframe) {
+                on_edit_keyframe(this, selected_key->index);
             }
         });
 
         Node::bind("duplicate_timeline_keyframe", [&](const std::string& sg, void* data) {
-            if (on_duplicate_keyframe) {
-                on_duplicate_keyframe(this);
+            if (selected_key && on_duplicate_keyframe) {
+                on_duplicate_keyframe(this, selected_key->index);
             }
         });
 
         Node::bind("delete_timeline_keyframe", [&](const std::string& sg, void* data) {
             bool deleted = false;
-            if (on_delete_keyframe) {
-                deleted = on_delete_keyframe(this);
+            if (selected_key && on_delete_keyframe) {
+                deleted = on_delete_keyframe(this, selected_key->index);
             }
             if (deleted) {
                 select_keyframe(nullptr);
@@ -87,7 +88,7 @@ namespace ui {
         Node::bind("close_timeline", [&](const std::string& sg, void* data) {
             bool should_close = true;
             if (on_close) {
-                should_close = on_close(this);
+                should_close = on_close(this, 0u);
             }
             if (should_close) {
                 set_visibility(false);
@@ -253,20 +254,50 @@ namespace ui {
         time_dirty = false;
         on_hover = false;
 
+        // keyframes input
         sInputData keyframe_input_data = get_input_data();
 
-        // is any keyframe hovered
-        if (keyframe_input_data.is_hovered) {
-            keyframe_input_data.is_pressed &= IO::is_focused(this);
-            IO::push_input(this, keyframe_input_data);
-        }
-
-        // ...
-
+        // timeline panel input
         const sInputData& root_input_data = root->get_input_data(true);
 
+        // is any keyframe hovered
+        if (keyframe_input_data.was_released) {
+            moving_key = false;
+        }
+
+        if (keyframe_input_data.is_hovered) {
+            IO::push_input(this, keyframe_input_data);
+
+            if (keyframe_input_data.is_pressed) {
+                if (!moving_key) {
+                    last_move_positionX = root_input_data.local_position.x;
+                }
+                moving_key = true;
+            }
+        }
+
+        if (selected_key && moving_key) {
+            float move_dt = (last_move_positionX - root_input_data.local_position.x);
+            float dt_time = x_to_time(move_dt);
+
+            if (glm::abs(dt_time) > 0.0f) {
+                uint32_t idx = selected_key->ordered_idx;
+                float prev_time = idx > 0 ? keyframes[idx - 1u].time : 0.0f;
+                float next_time = idx == (keyframes.size() - 1u) ? selected_key->time : keyframes[idx + 1u].time;
+
+                selected_key->time -= dt_time;
+                selected_key->time = glm::clamp(selected_key->time, prev_time, next_time);
+
+                if (on_move_keyframe) {
+                    on_move_keyframe(this, selected_key->index);
+                }
+            }
+
+            last_move_positionX = root_input_data.local_position.x;
+        }
+
         // Horizontal scrolling
-        if (root_input_data.is_hovered)
+        if (root_input_data.is_hovered && !moving_key)
         {
             float scroll_dt = 0.0f;
 
@@ -275,14 +306,14 @@ namespace ui {
             }
 
             if (root_input_data.is_pressed && !IO::is_focus_type(Node2DClassType::HSLIDER)) {
-                scroll_dt += (last_scroll_position.x - root_input_data.local_position.x);
+                scroll_dt += (last_scroll_positionX - root_input_data.local_position.x);
             }
 
             if (root_input_data.was_released) {
                 IO::set_focus(nullptr);
             }
 
-            last_scroll_position = root_input_data.local_position;
+            last_scroll_positionX = root_input_data.local_position.x;
 
             float dt_time = x_to_time(scroll_dt);
 
@@ -438,7 +469,8 @@ namespace ui {
 
     void Timeline::add_keyframe(float time, Keyframe* keyframe, uint32_t index)
     {
-        keyframes.push_back({ time, keyframe, index });
+        uint32_t ordered_idx = keyframes.size();
+        keyframes.push_back({ time, keyframe, index, ordered_idx });
     }
 
     void Timeline::set_title(const std::string& new_title)

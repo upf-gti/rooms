@@ -17,7 +17,7 @@ namespace ui {
     class Timeline;
     class Keyframe;
 
-    using TimelineFunc = std::function<bool(Timeline*)>;
+    using TimelineFunc = std::function<bool(Timeline*, uint32_t)>;
 
     struct TimelineDesc {
         std::string name = "";
@@ -29,6 +29,7 @@ namespace ui {
         TimelineFunc close_fn = nullptr;
         TimelineFunc edit_keyframe_fn = nullptr;
         TimelineFunc duplicate_keyframe_fn = nullptr;
+        TimelineFunc move_keyframe_fn = nullptr;
         TimelineFunc delete_keyframe_fn = nullptr;
     };
 
@@ -36,6 +37,7 @@ namespace ui {
         float time = 0.0f;
         Keyframe* keyframe = nullptr;
         uint32_t index = 0u;
+        uint32_t ordered_idx = 0u;
         bool hovered = false;
         bool selected = false;
     };
@@ -60,11 +62,13 @@ namespace ui {
 
         bool placed = false;
         bool grabbing = false;
+        bool moving_key = false;
 
-        glm::vec2 panel_size = {};
         Color panel_color = { 0.01f, 0.01f, 0.01f, 0.95f };
-        glm::vec2 last_scroll_position = {};
+        glm::vec2 panel_size = {};
         glm::vec2 last_grab_position = {};
+        float last_scroll_positionX = {};
+        float last_move_positionX = {};
         float last_grab_distance = 0.0f;
 
         XRPanel* root = nullptr;
@@ -75,6 +79,7 @@ namespace ui {
         TimelineFunc on_close = nullptr;
         TimelineFunc on_edit_keyframe = nullptr;
         TimelineFunc on_duplicate_keyframe = nullptr;
+        TimelineFunc on_move_keyframe = nullptr;
         TimelineFunc on_delete_keyframe = nullptr;
 
         /*

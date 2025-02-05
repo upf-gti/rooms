@@ -41,7 +41,6 @@ struct sAnimationState {
 
 struct sAnimationData {
     Animation* animation = nullptr;
-    float current_time = 0.0f;
     std::vector<sAnimationState> states;
 };
 
@@ -171,9 +170,10 @@ class AnimationEditor : public BaseEditor {
     void inspect_keyframe_properties();
     void inspect_node(Node* node);
 
-    bool on_edit_timeline_keyframe(ui::Timeline* scope = nullptr);
-    bool on_duplicate_timeline_keyframe(ui::Timeline* scope = nullptr);
-    bool on_delete_timeline_keyframe(ui::Timeline* scope = nullptr);
+    bool on_edit_timeline_keyframe(ui::Timeline* scope, uint32_t index);
+    bool on_duplicate_timeline_keyframe(ui::Timeline* scope, uint32_t index);
+    bool on_move_timeline_keyframe(ui::Timeline* scope, uint32_t index);
+    bool on_delete_timeline_keyframe(ui::Timeline* scope, uint32_t index);
     bool on_close_inspector(ui::Inspector* scope = nullptr);
 
     void render_gizmo();

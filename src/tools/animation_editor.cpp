@@ -15,7 +15,6 @@
 #include "framework/ui/keyboard.h"
 #include "framework/ui/timeline.h"
 #include "framework/animation/solvers/fabrik_solver.h"
-#include "framework/math/math_utils.h"
 #include "framework/camera/camera.h"
 
 #include "graphics/renderers/rooms_renderer.h"
@@ -155,7 +154,7 @@ void AnimationEditor::on_enter(void* data)
 
                 new_anim_data.states.resize(state_count);
 
-                float& state_time = new_anim_data.current_time;
+                float state_time = 0.0f;
 
                 for (uint32_t i = 0; i < state_count; ++i) {
                     sAnimationState& state = new_anim_data.states[i];
@@ -178,6 +177,7 @@ void AnimationEditor::on_enter(void* data)
 
                     store_animation_state(state);
 
+                    // TODO Important: This assumes every keyframe is 0.5s apart from the others
                     state_time += 0.5f;
                 }
 
@@ -224,10 +224,6 @@ void AnimationEditor::on_enter(void* data)
 
 void AnimationEditor::on_exit()
 {
-    // Store current time..
-    auto& node_animations = animation_storage[current_node->get_scene_unique_id()];
-    node_animations[current_animation->get_scene_unique_id()].current_time = current_time;
-
     current_node = nullptr;
     current_joint = nullptr;
     current_animation = nullptr;
@@ -476,7 +472,7 @@ Animation* AnimationEditor::create_new_animation()
         p_state.keyframe_idx = track->add_keyframe({ .value = p_state.value, .in = 0.0f, .out = 0.0f, .time = 0.0f });
     }
 
-    sAnimationData new_anim_data = { new_animation, 0.5f };
+    sAnimationData new_anim_data = { new_animation };
     initial_state.index = new_anim_data.states.size();
     new_anim_data.states.push_back(initial_state);
 
@@ -498,9 +494,6 @@ void AnimationEditor::set_animation(const std::string& name)
     auto animation = RendererStorage::get_animation(name);
     assert(animation);
     current_animation = animation;
-
-    auto& node_animations = animation_storage[current_node->get_scene_unique_id()];
-    current_time = node_animations[current_animation->get_scene_unique_id()].current_time;
 
     keyframe_list_dirty = true;
 
@@ -804,7 +797,7 @@ void AnimationEditor::create_keyframe()
     current_animation_state = &data.states.back();
     update_node_from_state(*current_animation_state);
 
-    current_time = data.current_time;
+    current_time = data.states.back().time + 0.5f;
 
     keyframe_dirty = true;
 
@@ -901,11 +894,7 @@ void AnimationEditor::process_keyframe()
         new_anim_state.time = current_time;
         current_animation->recalculate_duration();
 
-        auto& node_animations = animation_storage[current_node->get_scene_unique_id()];
-        auto& data = node_animations[current_animation->get_scene_unique_id()];
-        data.current_time = current_time + 0.5f;
-
-        auto& states = data.states;
+        auto& states = get_animation_states();
         new_anim_state.index = states.size();
         states.push_back(new_anim_state);
     }
@@ -1008,11 +997,6 @@ void AnimationEditor::delete_keyframe(uint32_t index)
 
     // Remove state
     states.erase(states.begin() + index);
-
-    // Recalculate current_time
-    auto& node_animations = animation_storage[current_node->get_scene_unique_id()];
-    auto& data = node_animations[current_animation->get_scene_unique_id()];
-    data.current_time = data.states.back().time + 0.5f;
 
     timeline_dirty = true;
 
@@ -1296,9 +1280,10 @@ void AnimationEditor::init_ui()
         .name = "inspector_root",
         .title = "Animation Timeline",
         .position = {32.0f, 32.f},
-        .edit_keyframe_fn = std::bind(&AnimationEditor::on_edit_timeline_keyframe, this, std::placeholders::_1),
-        .duplicate_keyframe_fn = std::bind(&AnimationEditor::on_duplicate_timeline_keyframe, this, std::placeholders::_1),
-        .delete_keyframe_fn = std::bind(&AnimationEditor::on_delete_timeline_keyframe, this, std::placeholders::_1)
+        .edit_keyframe_fn = std::bind(&AnimationEditor::on_edit_timeline_keyframe, this, std::placeholders::_1, std::placeholders::_2),
+        .duplicate_keyframe_fn = std::bind(&AnimationEditor::on_duplicate_timeline_keyframe, this, std::placeholders::_1, std::placeholders::_2),
+        .move_keyframe_fn = std::bind(&AnimationEditor::on_move_timeline_keyframe, this, std::placeholders::_1, std::placeholders::_2),
+        .delete_keyframe_fn = std::bind(&AnimationEditor::on_delete_timeline_keyframe, this, std::placeholders::_1, std::placeholders::_2)
     });
 
     if (renderer->get_openxr_available()) {
@@ -1625,57 +1610,49 @@ bool AnimationEditor::on_close_inspector(ui::Inspector* scope)
     return should_close;
 }
 
-bool AnimationEditor::on_edit_timeline_keyframe(ui::Timeline* scope)
+bool AnimationEditor::on_edit_timeline_keyframe(ui::Timeline* scope, uint32_t index)
 {
-    // edit selected if any
-    auto selected = scope->get_selected_key();
-    uint32_t idx = 0u;
+    edit_keyframe(index);
+    return true;
+}
 
-    if (selected) {
-        idx = selected->index;
+bool AnimationEditor::on_duplicate_timeline_keyframe(ui::Timeline* scope, uint32_t index)
+{
+    duplicate_keyframe(index);
+    return true;
+}
+
+bool AnimationEditor::on_move_timeline_keyframe(ui::Timeline* scope, uint32_t index)
+{
+    if (!current_node) {
+        assert(0);
     }
-    // edit the current state if there's no selection..
-    else {
-        if (!current_animation_state) {
-            return false;
+
+    auto state = get_animation_state(index);
+    assert(state);
+    float new_time = scope->get_selected_key()->time;
+    state->time = new_time;
+
+    for (auto prop : state->properties) {
+        const std::string& property_name = prop.first;
+        const sPropertyState& p_state = state->properties[property_name];
+        if (p_state.keyframe_idx == -1) {
+            continue;
         }
-        idx = current_animation_state->index;
+        Track* track = current_animation->get_track_by_id(p_state.track_id);
+        Keyframe& keyframe = track->get_keyframe(p_state.keyframe_idx);
+        keyframe.time = new_time;
     }
 
-    edit_keyframe(idx);
+    current_animation->recalculate_duration();
+
+    update_animation_trajectory();
 
     return true;
 }
 
-bool AnimationEditor::on_duplicate_timeline_keyframe(ui::Timeline* scope)
+bool AnimationEditor::on_delete_timeline_keyframe(ui::Timeline* scope, uint32_t index)
 {
-    auto selected = scope->get_selected_key();
-    uint32_t idx = 0u;
-
-    if (selected) {
-        idx = selected->index;
-    }
-    else {
-        if (!current_animation_state) {
-            return false;
-        }
-        idx = current_animation_state->index;
-    }
-
-    duplicate_keyframe(idx);
-
-    return true;
-}
-
-bool AnimationEditor::on_delete_timeline_keyframe(ui::Timeline* scope)
-{
-    auto selected = scope->get_selected_key();
-
-    if (!selected) {
-        return false;
-    }
-
-    delete_keyframe(selected->index);
-
+    delete_keyframe(index);
     return true;
 }
