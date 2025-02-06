@@ -112,6 +112,10 @@ namespace ui {
         frame_mesh = generate_keyframe_mesh(colors::GRAY);
         frame_mesh_hovered = generate_keyframe_mesh(colors::WHITE);
         frame_mesh_selected = generate_keyframe_mesh(Color(1.0f, 0.136f, 0.0f, 1.0f));
+
+        if (Renderer::instance->get_openxr_available()) {
+            disable_2d();
+        }
     }
 
     Timeline::~Timeline()
