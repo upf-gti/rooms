@@ -141,22 +141,23 @@ void AnimationEditor::on_enter(void* data)
                 sAnimationData new_anim_data = { anim };
 
                 uint32_t track_count = anim->get_track_count();
-                uint32_t state_count = 0u;
 
-                // When animating, any added keyframe creates a new state
-                // Get max track keyframes as its the number of states
+                // silly way to get what are the times for the states to support states at any given times..
+                std::map<float, bool> times;
+
                 for (uint32_t i = 0; i < track_count; ++i) {
                     Track* track = anim->get_track(i);
-                    state_count = std::max(state_count, track->size());
+
+                    for (uint32_t k = 0; k < track->size(); ++k) {
+                        auto keyframe = track->get_keyframe(k);
+                        times[keyframe.time] = true;
+                    }
                 }
 
-                new_anim_data.states.resize(state_count);
+                for (auto p : times) {
 
-                float state_time = 0.0f;
-
-                for (uint32_t i = 0; i < state_count; ++i) {
-                    sAnimationState& state = new_anim_data.states[i];
-                    state.time = state_time;
+                    sAnimationState state;
+                    state.time = p.first;
 
                     for (uint32_t i = 0; i < track_count; ++i) {
                         Track* track = anim->get_track(i);
@@ -174,8 +175,7 @@ void AnimationEditor::on_enter(void* data)
 
                     store_animation_state(state);
 
-                    // TODO Important: This assumes every keyframe is 0.5s apart from the others
-                    state_time += 0.5f;
+                    new_anim_data.states.push_back(state);
                 }
 
                 auto& node_animations = animation_storage[current_node->get_scene_unique_id()];
