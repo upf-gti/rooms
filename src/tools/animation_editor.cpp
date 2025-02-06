@@ -77,7 +77,6 @@ void AnimationEditor::initialize()
     joint_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, shaders::mesh_forward::libraries));
 
     keyframe_markers_render_instance->set_frustum_culling_enabled(false);
-
     keyframe_markers_render_instance->add_surface(RendererStorage::get_surface("sphere"));
     keyframe_markers_render_instance->set_surface_material_override(keyframe_markers_render_instance->get_surface(0), joint_material);
 
@@ -86,10 +85,6 @@ void AnimationEditor::initialize()
     animation_trajectory_mesh->set_name("Animation trajectory");
     animation_trajectory_mesh->create_surface_data({{ glm::vec3(0.0f) }});
 
-    animation_trajectory_instance = new MeshInstance3D();
-    animation_trajectory_instance->set_frustum_culling_enabled(false);
-    animation_trajectory_instance->add_surface(animation_trajectory_mesh);
-
     Material* skeleton_material = new Material();
     skeleton_material->set_color({ 1.0f, 0.0f, 0.0f, 1.0f });
     skeleton_material->set_depth_read(false);
@@ -97,6 +92,9 @@ void AnimationEditor::initialize()
     skeleton_material->set_topology_type(eTopologyType::TOPOLOGY_LINE_LIST);
     skeleton_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, shaders::mesh_forward::libraries, skeleton_material));
 
+    animation_trajectory_instance = new MeshInstance3D();
+    animation_trajectory_instance->set_frustum_culling_enabled(false);
+    animation_trajectory_instance->add_surface(animation_trajectory_mesh);
     animation_trajectory_instance->set_surface_material_override(animation_trajectory_mesh, skeleton_material);
 }
 
@@ -158,7 +156,6 @@ void AnimationEditor::on_enter(void* data)
 
                 for (uint32_t i = 0; i < state_count; ++i) {
                     sAnimationState& state = new_anim_data.states[i];
-                    state.index = i;
                     state.time = state_time;
 
                     for (uint32_t i = 0; i < track_count; ++i) {
@@ -239,7 +236,7 @@ void AnimationEditor::update(float delta_time)
 
     // Update inspector for keyframes
     if(show_keyframe_dirty) {
-        update_node_from_state(*current_animation_state);
+        update_node_from_state(last_animation_state_idx);
         inspect_keyframe();
     }
 
@@ -357,7 +354,7 @@ void AnimationEditor::update_timeline()
     auto& states = get_animation_states();
 
     for (auto& state : states) {
-        timeline->add_keyframe(state.time, nullptr, state.index);
+        timeline->add_keyframe(state.time, nullptr);
     }
 }
 
@@ -473,7 +470,6 @@ Animation* AnimationEditor::create_new_animation()
     }
 
     sAnimationData new_anim_data = { new_animation };
-    initial_state.index = new_anim_data.states.size();
     new_anim_data.states.push_back(initial_state);
 
     auto& node_animations = animation_storage[current_node->get_scene_unique_id()];
@@ -663,18 +659,21 @@ void AnimationEditor::update_ik(float delta_time)
     instance->update_joints_from_pose();
 }
 
-void AnimationEditor::update_node_from_state(const sAnimationState& state)
+void AnimationEditor::update_node_from_state(uint32_t index)
 {
+    auto state = get_animation_state(index);
+    assert(state);
+
     Node3D* node = get_current_node();
 
     // Set current node in keyframe state
 
-    for (auto& p : state.properties) {
+    for (auto& p : state->properties) {
 
         Node::AnimatableProperty node_property = current_node->get_animatable_property(p.first);
         void* data = node_property.property;
 
-        current_animation->sample(state.time, p.second.track_id, ANIMATION_LOOP_NONE, data, eInterpolationType::STEP);
+        current_animation->sample(state->time, p.second.track_id, ANIMATION_LOOP_NONE, data, eInterpolationType::STEP);
 
         // TODO: now the conversion void -> TYPE is done in the sample, but only supports 3 types
         // ...
@@ -794,8 +793,8 @@ void AnimationEditor::create_keyframe()
     auto& data = node_animations[current_animation->get_scene_unique_id()];
 
     // Get the last state to check changes later when adding new keyframes
-    current_animation_state = &data.states.back();
-    update_node_from_state(*current_animation_state);
+    last_animation_state_idx = data.states.size() - 1u;
+    update_node_from_state(last_animation_state_idx);
 
     current_time = data.states.back().time + 0.5f;
 
@@ -829,8 +828,9 @@ void AnimationEditor::create_keyframe()
 
 void AnimationEditor::process_keyframe()
 {
-    if (!current_node) {
+    if (!current_node || (last_animation_state_idx == -1)) {
         assert(0);
+        return;
     }
 
     // Read the properties in order to see if there is any change
@@ -841,7 +841,8 @@ void AnimationEditor::process_keyframe()
     std::vector<std::string> changed_properties;
     changed_properties.resize(new_anim_state.properties.size());
 
-    uint32_t changed_properties_count = get_changed_properties_from_states(*current_animation_state, new_anim_state, changed_properties);
+    auto current_state = get_animation_state(last_animation_state_idx);
+    uint32_t changed_properties_count = get_changed_properties_from_states(*current_state, new_anim_state, changed_properties);
 
     // Keyframe changes state
     if (changed_properties.empty()) {
@@ -867,7 +868,7 @@ void AnimationEditor::process_keyframe()
 
         std::string property_name = changed_properties[i]; // p.first;
 
-        sPropertyState* c_state = &current_animation_state->properties[property_name];
+        sPropertyState* c_state = &current_state->properties[property_name];
         sPropertyState* n_state = &new_anim_state.properties[property_name];
 
         Track* track = current_animation->get_track_by_id(c_state->track_id);
@@ -895,7 +896,6 @@ void AnimationEditor::process_keyframe()
         current_animation->recalculate_duration();
 
         auto& states = get_animation_states();
-        new_anim_state.index = states.size();
         states.push_back(new_anim_state);
     }
 
@@ -908,7 +908,8 @@ void AnimationEditor::edit_keyframe(uint32_t index)
     keyframe_dirty = true;
     editing_keyframe = true;
 
-    set_animation_state(index);
+    last_animation_state_idx = index;
+    set_animation_state(last_animation_state_idx);
 
     // Show submit_keyframe button
     auto w = Node2D::get_widget_from_name("submit_keyframe");
@@ -923,10 +924,11 @@ void AnimationEditor::edit_keyframe(uint32_t index)
     static_cast<ui::Button2D*>(w)->set_disabled(true);
 }
 
-void AnimationEditor::duplicate_keyframe(uint32_t index)
+bool AnimationEditor::duplicate_keyframe(uint32_t index)
 {
     if (!current_node) {
         assert(0);
+        return false;
     }
 
     auto state = get_animation_state(index);
@@ -950,15 +952,16 @@ void AnimationEditor::duplicate_keyframe(uint32_t index)
     current_animation->recalculate_duration();
 
     auto& states = data.states;
-    new_anim_state.index = states.size();
     states.push_back(new_anim_state);
     keyframe_list_dirty = true;
 
     set_animation_state(states.size() - 1u);
 
-    timeline_dirty = true;
+    update_timeline();
 
     update_animation_trajectory();
+
+    return true;
 }
 
 void AnimationEditor::delete_keyframe(uint32_t index)
@@ -998,7 +1001,9 @@ void AnimationEditor::delete_keyframe(uint32_t index)
     // Remove state
     states.erase(states.begin() + index);
 
-    timeline_dirty = true;
+    update_timeline();
+
+    player->set_playback_time(timeline->get_current_time());
 
     update_animation_trajectory();
 }
@@ -1013,15 +1018,12 @@ sAnimationState* AnimationEditor::get_animation_state(uint32_t index)
 {
     auto& states = get_animation_states();
 
-    auto it = std::find_if(states.begin(), states.end(), [index](const sAnimationState& state) {
-        return state.index == index;
-    });
-
-    if (it != states.end()) {
-        return &(*it);
+    if (index > (states.size() - 1u)) {
+        assert(0);
+        return nullptr;
     }
 
-    return nullptr;
+    return &states[index];
 }
 
 void AnimationEditor::set_animation_state(uint32_t index)
@@ -1030,11 +1032,10 @@ void AnimationEditor::set_animation_state(uint32_t index)
 
     if (!node) {
         assert(0);
+        return;
     }
 
-    current_animation_state = get_animation_state(index);
-
-    update_node_from_state(*current_animation_state);
+    update_node_from_state(index);
 }
 
 void AnimationEditor::store_animation_state(sAnimationState& state)
@@ -1053,8 +1054,9 @@ void AnimationEditor::store_animation_state(sAnimationState& state)
         void* data = prop_it.second.property;
 
         // The tracks ids are always shared
-        if (current_animation_state) {
-            state.properties[prop_it.first].track_id = current_animation_state->properties[prop_it.first].track_id;
+        if (last_animation_state_idx != -1) {
+            auto current_state = get_animation_state(last_animation_state_idx);
+            state.properties[prop_it.first].track_id = current_state->properties[prop_it.first].track_id;
         }
 
         switch (prop_it.second.property_type) {
@@ -1603,7 +1605,7 @@ bool AnimationEditor::on_close_inspector(ui::Inspector* scope)
     timeline_dirty = true;
     editing_keyframe = false;
     keyframe_dirty = false;
-    current_animation_state = nullptr;
+    last_animation_state_idx = -1;
 
     update_animation_trajectory();
 
@@ -1618,14 +1620,15 @@ bool AnimationEditor::on_edit_timeline_keyframe(ui::Timeline* scope, uint32_t in
 
 bool AnimationEditor::on_duplicate_timeline_keyframe(ui::Timeline* scope, uint32_t index)
 {
-    duplicate_keyframe(index);
-    return true;
+    bool ok = duplicate_keyframe(index);
+    return ok;
 }
 
 bool AnimationEditor::on_move_timeline_keyframe(ui::Timeline* scope, uint32_t index)
 {
-    if (!current_node) {
+    if (!current_node || !current_animation) {
         assert(0);
+        return false;
     }
 
     auto state = get_animation_state(index);
@@ -1653,6 +1656,13 @@ bool AnimationEditor::on_move_timeline_keyframe(ui::Timeline* scope, uint32_t in
 
 bool AnimationEditor::on_delete_timeline_keyframe(ui::Timeline* scope, uint32_t index)
 {
+    // Allow only delete when 2 or more keys
+    auto& states = get_animation_states();
+    if (states.size() <= 1u) {
+        return false;
+    }
+
     delete_keyframe(index);
+
     return true;
 }

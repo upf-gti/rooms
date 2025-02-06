@@ -64,24 +64,26 @@ namespace ui {
         column->add_child(title_container);
 
         Node::bind("edit_timeline_keyframe", [&](const std::string& sg, void* data) {
-            if (selected_key && on_edit_keyframe) {
-                on_edit_keyframe(this, selected_key->index);
+            auto key = get_selected_key();
+            if (key && on_edit_keyframe) {
+                on_edit_keyframe(this, key->index);
             }
         });
 
         Node::bind("duplicate_timeline_keyframe", [&](const std::string& sg, void* data) {
-            if (selected_key && on_duplicate_keyframe) {
-                on_duplicate_keyframe(this, selected_key->index);
+            auto key = get_selected_key();
+            if (key && on_duplicate_keyframe) {
+                bool must_select_new = on_duplicate_keyframe(this, key->index);
+                if (must_select_new) {
+                    select_keyframe_by_index(keyframes.size() - 1u);
+                }
             }
         });
 
         Node::bind("delete_timeline_keyframe", [&](const std::string& sg, void* data) {
-            bool deleted = false;
-            if (selected_key && on_delete_keyframe) {
-                deleted = on_delete_keyframe(this, selected_key->index);
-            }
-            if (deleted) {
-                select_keyframe(nullptr);
+            auto key = get_selected_key();
+            if (key && on_delete_keyframe) {
+                on_delete_keyframe(this, key->index);
             }
         });
 
@@ -149,17 +151,25 @@ namespace ui {
 
     void Timeline::select_keyframe(TimelineKeyframe* key)
     {
+        select_keyframe_by_index(key ? key->index : -1);
+    }
+
+    void Timeline::select_keyframe_by_index(int index)
+    {
+        auto selected_key = get_selected_key();
+
         if (selected_key) {
             selected_key->selected = false;
         }
 
-        if (key) {
-            key->selected = true;
-            current_time = key->time;
+        if (index != -1) {
+            auto& new_key = keyframes[index];
+            new_key.selected = true;
+            current_time = new_key.time;
         }
 
-        selected_key = key;
-        
+        selected_key_index = index;
+
         time_dirty = true;
     }
 
@@ -280,20 +290,21 @@ namespace ui {
             }
         }
 
-        if (selected_key && moving_key) {
+        if ((selected_key_index != -1) && moving_key) {
             float move_dt = (last_move_positionX - root_input_data.local_position.x);
             float dt_time = x_to_time(move_dt);
 
             if (glm::abs(dt_time) > 0.0f) {
-                uint32_t idx = selected_key->ordered_idx;
+                uint32_t idx = selected_key_index;
+                auto key = get_selected_key();
                 float prev_time = idx > 0 ? keyframes[idx - 1u].time : 0.0f;
-                float next_time = idx == (keyframes.size() - 1u) ? selected_key->time : keyframes[idx + 1u].time;
+                float next_time = idx == (keyframes.size() - 1u) ? key->time : keyframes[idx + 1u].time;
 
-                selected_key->time -= dt_time;
-                selected_key->time = glm::clamp(selected_key->time, prev_time, next_time);
+                key->time -= dt_time;
+                key->time = glm::clamp(key->time, prev_time, next_time);
 
                 if (on_move_keyframe) {
-                    on_move_keyframe(this, selected_key->index);
+                    on_move_keyframe(this, key->index);
                 }
             }
 
@@ -469,12 +480,23 @@ namespace ui {
     void Timeline::clear()
     {
         keyframes.clear();
+
+        selected_key_index = -1;
     }
 
-    void Timeline::add_keyframe(float time, Keyframe* keyframe, uint32_t index)
+    TimelineKeyframe* Timeline::get_selected_key()
     {
-        uint32_t ordered_idx = keyframes.size();
-        keyframes.push_back({ time, keyframe, index, ordered_idx });
+        if (selected_key_index != -1) {
+            return &keyframes[selected_key_index];
+        }
+
+        return nullptr;
+    }
+
+    void Timeline::add_keyframe(float time, Keyframe* keyframe)
+    {
+        uint32_t index = keyframes.size();
+        keyframes.push_back({ time, keyframe, index });
     }
 
     void Timeline::set_title(const std::string& new_title)

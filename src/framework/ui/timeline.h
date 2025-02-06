@@ -37,7 +37,6 @@ namespace ui {
         float time = 0.0f;
         Keyframe* keyframe = nullptr;
         uint32_t index = 0u;
-        uint32_t ordered_idx = 0u;
         bool hovered = false;
         bool selected = false;
     };
@@ -86,7 +85,7 @@ namespace ui {
         *   Keyframes
         */
 
-        TimelineKeyframe* selected_key = nullptr;
+        int selected_key_index = -1;
 
         std::vector<TimelineKeyframe> keyframes;
 
@@ -98,6 +97,7 @@ namespace ui {
 
         MeshInstance* generate_keyframe_mesh(const Color& color);
         void select_keyframe(TimelineKeyframe* key);
+        void select_keyframe_by_index(int index);
 
     public:
 
@@ -113,9 +113,9 @@ namespace ui {
 
         bool is_time_dirty() { return time_dirty; }
         float get_current_time() { return current_time; }
-        TimelineKeyframe* get_selected_key() { return selected_key; }
+        TimelineKeyframe* get_selected_key();
 
-        void add_keyframe(float time, Keyframe* keyframe, uint32_t index);
+        void add_keyframe(float time, Keyframe* keyframe);
         void clear();
         void set_title(const std::string& new_title);
         void set_current_time(float time) { current_time = time; }

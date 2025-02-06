@@ -35,7 +35,6 @@ struct sPropertyState {
 
 struct sAnimationState {
     float time = 0.0f;
-    uint32_t index = 0u;
     std::unordered_map<std::string, sPropertyState> properties;
 };
 
@@ -63,7 +62,7 @@ class AnimationEditor : public BaseEditor {
     */
 
     Animation* current_animation = nullptr;
-    sAnimationState* current_animation_state = nullptr;
+    int last_animation_state_idx = -1;
 
     // this stores a list of animation data per node name
     std::unordered_map<std::string, NodeAnimationsMap> animation_storage;
@@ -91,7 +90,7 @@ class AnimationEditor : public BaseEditor {
     Node3D* get_current_node();
     SkeletonInstance3D* find_skeleton(Node* node);
 
-    void update_node_from_state(const sAnimationState& state);
+    void update_node_from_state(uint32_t index);
     void update_node_transform();
     void on_select_joint();
     void save_character_animation();
@@ -109,7 +108,7 @@ class AnimationEditor : public BaseEditor {
     void create_keyframe();
     void process_keyframe();
     void edit_keyframe(uint32_t index);
-    void duplicate_keyframe(uint32_t index);
+    bool duplicate_keyframe(uint32_t index);
     void delete_keyframe(uint32_t index);
 
     void set_animation_state(uint32_t index);
