@@ -115,7 +115,8 @@ fn compute(@builtin(workgroup_id) wg_id: vec3u, @builtin(local_invocation_index)
         // If the job count is bigger than the thread ID, there is no work for this thread
         if (operation_id < MAX_SUBDIVISION_SIZE) {
             // Get the octree_idx from the last layer id
-            var brick_center : vec3f = get_brick_center(operation_id);
+            var brick_center : vec3f = get_octant_center_at_level_wo_halfsize(operation_id, OCTREE_DEPTH);
+
 
             let octree_index : u32 = operation_id + OCTREE_LAST_LEVEL_STARTING_IDX;
             var brick_half_size : f32 = 0.5 * BRICK_WORLD_SIZE;

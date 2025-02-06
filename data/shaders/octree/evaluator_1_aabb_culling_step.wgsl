@@ -86,7 +86,7 @@ fn compute(@builtin(workgroup_id) wg_id: vec3u, @builtin(local_invocation_index)
         // If the job count is bigger than the thread ID, there is no work for this thread
         if (operation_id < u32(aabb_culling_count)) {
             // Get the octree_idx from the last layer id
-            var brick_center : vec3f = get_brick_center(operation_id);
+            var brick_center : vec3f = get_octant_center_at_level_wo_halfsize(operation_id, OCTREE_DEPTH);
 
             // Culling list indices
             let curr_culling_layer_index = operation_id * MAX_STROKE_INFLUENCE_COUNT;

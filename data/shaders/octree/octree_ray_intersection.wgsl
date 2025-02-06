@@ -132,18 +132,6 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_dir : vec3f, max_distance : f
     return -1000.0;
 }
 
-fn get_octant_center_at_level(octant_id : u32, level : u32, level_half_size : f32) -> vec3f {
-    let octants_in_level : u32 = 1u << level; // <- pow(2u, level)
-
-    // (0 - octants_in_level)
-    // (0 - 1)
-    // (-0.5 - 0.5)
-    // (-SCULPT_MAX_SIZE/2 - SCULPT_MAX_SIZE/2)
-    let morton_res = morton_decode(octant_id);
-    let brick_origin = ((vec3f(morton_res) /  f32(octants_in_level-1u)) - vec3(0.5)) * level_half_size * 2.0;
-    return brick_origin;
-}
-
 fn get_octree_starting_idx_of_level(level : u32) -> u32 {
     return ( u32(pow(8.0, f32(level))) - 1u) / 7u;
 }
@@ -195,7 +183,7 @@ fn compute()
         level = iteration_data.level;
         parent_octant_id = iteration_data.octant_id;
 
-        let level_half_size = SCULPT_MAX_SIZE / pow(2.0, f32(level + 1));
+        let level_half_size =SCULPT_MAX_SIZE / f32(1 << (level+1));
 
         var octants_count : u32 = 0;
 

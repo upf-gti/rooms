@@ -377,22 +377,27 @@ fn morton_encode(morton_coords : vec3u) -> u32 {
             (morton_split_by_third_bits(morton_coords.z) << 2u);
 }
 
-fn get_brick_center(brick_id : u32) -> vec3f {
-    // // (0 - NUM_BRICKS_OCTREE_AXIS)
-    // // (0 - 1)
-    // // (-0.5 - 0.5)
-    // // (-SCULPT_MAX_SIZE/2 - SCULPT_MAX_SIZE/2)
-    let brick_origin = ((vec3f(morton_decode(brick_id)) / NUM_BRICKS_IN_OCTREE_AXIS) - vec3(0.5)) * SCULPT_MAX_SIZE;
-    return brick_origin + BRICK_WORLD_SIZE * 0.50;
+fn get_octant_center_at_level(octant_id : u32, level : u32, level_half_size : f32) -> vec3f {
+    let octants_in_level : u32 = 1u << level; // <- pow(2u, level)
+
+    // (0 - octants_in_level)
+    // (0 - 1)
+    // (-0.5 - 0.5)
+    // (-SCULPT_MAX_SIZE/2 - SCULPT_MAX_SIZE/2)
+    let morton_res = morton_decode(octant_id);
+    let brick_origin = ((vec3f(morton_res) /  f32(octants_in_level)) - vec3(0.5)) * SCULPT_MAX_SIZE;
+    return brick_origin + level_half_size;
 }
 
-// fn get_brick_center(brick_id : u32) -> vec3f {
-//     let idx_f : f32 = f32(brick_id);
+fn get_octant_center_at_level_wo_halfsize(octant_id : u32, level : u32) -> vec3f {
+    let octants_in_level : u32 = 1u << level; // <- pow(2u, level)
+    let hs : vec3f = vec3f(SCULPT_MAX_SIZE / f32(1 << (level+1)));
 
-//     let z_axis : f32 = round(idx_f / (NUM_BRICKS_IN_OCTREE_AXIS * NUM_BRICKS_IN_OCTREE_AXIS));
-//     let y_axis : f32 = round((idx_f - (z_axis * NUM_BRICKS_IN_OCTREE_AXIS * NUM_BRICKS_IN_OCTREE_AXIS)) / NUM_BRICKS_IN_OCTREE_AXIS);
-//     let x_axis : f32 = idx_f - NUM_BRICKS_IN_OCTREE_AXIS * (y_axis + z_axis * NUM_BRICKS_IN_OCTREE_AXIS);
-
-//     let brick_origin = (vec3f(x_axis, y_axis, z_axis)/NUM_BRICKS_IN_OCTREE_AXIS) * SCULPT_MAX_SIZE;
-//     return brick_origin;// + BRICK_WORLD_SIZE * 0.50;
-// }
+    // (0 - octants_in_level)
+    // (0 - 1)
+    // (-0.5 - 0.5)
+    // (-SCULPT_MAX_SIZE/2 - SCULPT_MAX_SIZE/2)
+    let morton_res = morton_decode(octant_id);
+    let brick_origin = ((vec3f(morton_res) /  f32(octants_in_level)) - vec3(0.5)) * SCULPT_MAX_SIZE;
+    return brick_origin + hs;
+}

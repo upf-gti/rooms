@@ -133,7 +133,7 @@ fn compute(@builtin(local_invocation_index) thread_id: u32, @builtin(num_workgro
         let in_stroke_brick_count : u32 = raw_brick_id_count & 0xFF;
         let octree_index : u32 = brick_id + OCTREE_LAST_LEVEL_STARTING_IDX;
 
-        var brick_center : vec3f = get_brick_center(brick_id);
+        var brick_center : vec3f = get_octant_center_at_level_wo_halfsize(brick_id, OCTREE_DEPTH);
         var level_half_size : f32 = 0.5 * BRICK_WORLD_SIZE;
 
         // Culling list indices
