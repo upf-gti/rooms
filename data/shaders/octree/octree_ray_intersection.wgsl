@@ -183,7 +183,7 @@ fn compute()
         level = iteration_data.level;
         parent_octant_id = iteration_data.octant_id;
 
-        let level_half_size =SCULPT_MAX_SIZE / f32(1 << (level+1));
+        let level_half_size = SCULPT_MAX_SIZE / f32(1 << (level+1));
 
         var octants_count : u32 = 0;
 
