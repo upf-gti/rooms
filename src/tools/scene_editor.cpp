@@ -1315,6 +1315,9 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
             else if (dynamic_cast<Character3D*>(n)) {
                 edit_character(static_cast<Character3D*>(n));
             }
+            else if (dynamic_cast<Light3D*>(n)) {
+                set_inspector_dirty();
+            }
         });
     }
 
@@ -1446,7 +1449,7 @@ void SceneEditor::inspect_character(bool force)
 
             Node::bind(signal, [&, n = node](const std::string& sg, void* data) {
                 RoomsEngine::switch_editor(SCULPT_EDITOR, static_cast<SculptNode*>(n));
-                });
+            });
         }
 
         {

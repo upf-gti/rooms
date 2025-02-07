@@ -108,8 +108,10 @@ namespace ui {
         playhead->set_priority(BUTTON_MARK);
         body->add_child(playhead);
 
+        keyframe_size = { 16.0f, 48.0f };
+
         quad_surface = new Surface();
-        quad_surface->create_quad(16.0f, 48.0f, true);
+        quad_surface->create_quad(keyframe_size.x, keyframe_size.y, true);
 
         frame_mesh = generate_keyframe_mesh(colors::GRAY);
         frame_mesh_hovered = generate_keyframe_mesh(colors::WHITE);
@@ -179,7 +181,6 @@ namespace ui {
             return;
 
         glm::vec2 scale = get_scale();
-        glm::vec2 keyframe_size = { 16.0f, 48.0f };
         glm::vec2 offset = glm::vec2(playhead->get_translation().x, body->get_translation().y + padding * scale.y);
         offset.x -= time_to_x(current_time) * scale.x;
 
@@ -291,17 +292,30 @@ namespace ui {
         }
 
         if ((selected_key_index != -1) && moving_key) {
+
+            if (root_input_data.was_pressed) {
+                IO::set_focus(root);
+            }
+
+            if (root_input_data.was_released) {
+                IO::set_focus(nullptr);
+            }
+
             float move_dt = (last_move_positionX - root_input_data.local_position.x);
             float dt_time = x_to_time(move_dt);
+            float size_offset_time = x_to_time(keyframe_size.x);
 
             if (glm::abs(dt_time) > 0.0f) {
                 uint32_t idx = selected_key_index;
                 auto key = get_selected_key();
-                float prev_time = idx > 0 ? keyframes[idx - 1u].time : 0.0f;
-                float next_time = idx == (keyframes.size() - 1u) ? key->time : keyframes[idx + 1u].time;
+                float prev_time = (idx > 0 ? keyframes[idx - 1u].time : 0.0f) + size_offset_time;
+                float max_allowed_time = 1e10f;
+                float next_time = ((idx == (keyframes.size() - 1u)) ? max_allowed_time : keyframes[idx + 1u].time) - size_offset_time;
 
                 key->time -= dt_time;
                 key->time = glm::clamp(key->time, prev_time, next_time);
+
+                current_time = key->time;
 
                 if (on_move_keyframe) {
                     on_move_keyframe(this, key->index);
@@ -353,7 +367,6 @@ namespace ui {
     sInputData Timeline::get_input_data(bool ignore_focus)
     {
         glm::vec2 scale = get_scale();
-        glm::vec2 keyframe_size = { 16.0f, 48.0f };
         glm::vec2 offset = glm::vec2(playhead->get_translation().x, body->get_translation().y + padding * scale.y);
         offset.x -= time_to_x(current_time) * scale.x;
 

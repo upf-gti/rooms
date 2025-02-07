@@ -87,6 +87,8 @@ namespace ui {
 
         int selected_key_index = -1;
 
+        glm::vec2 keyframe_size = {};
+
         std::vector<TimelineKeyframe> keyframes;
 
         Surface* quad_surface = nullptr;

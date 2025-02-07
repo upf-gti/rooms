@@ -164,9 +164,8 @@ void AnimationEditor::on_enter(void* data)
 
                         // Sample node in that timestamp
                         std::string p_name = track->get_name();
-                        Node::AnimatableProperty node_property = current_node->get_animatable_property(p_name);
-                        void* data = node_property.property;
-                        anim->sample(state.time, track->get_id(), ANIMATION_LOOP_NONE, data, eInterpolationType::STEP);
+                        Node::AnimatableProperty& node_property = current_node->get_animatable_property(p_name);
+                        anim->sample(state.time, track->get_id(), ANIMATION_LOOP_NONE, &node_property, eInterpolationType::STEP);
 
                         sPropertyState& ps = state.properties[p_name];
                         ps.track_id = track->get_id();
@@ -230,6 +229,15 @@ void AnimationEditor::on_exit()
 
 void AnimationEditor::update(float delta_time)
 {
+    if (Input::was_key_pressed(GLFW_KEY_SPACE)) {
+        if (!player->is_playing() || player->is_paused()) {
+            play_animation();
+        }
+        else {
+            pause_animation();
+        }
+    }
+
     player->update(delta_time);
 
     BaseEditor::update(delta_time);
@@ -670,10 +678,8 @@ void AnimationEditor::update_node_from_state(uint32_t index)
 
     for (auto& p : state->properties) {
 
-        Node::AnimatableProperty node_property = current_node->get_animatable_property(p.first);
-        void* data = node_property.property;
-
-        current_animation->sample(state->time, p.second.track_id, ANIMATION_LOOP_NONE, data, eInterpolationType::STEP);
+        Node::AnimatableProperty& node_property = current_node->get_animatable_property(p.first);
+        current_animation->sample(state->time, p.second.track_id, ANIMATION_LOOP_NONE, &node_property, eInterpolationType::STEP);
 
         // TODO: now the conversion void -> TYPE is done in the sample, but only supports 3 types
         // ...
