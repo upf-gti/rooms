@@ -246,7 +246,7 @@ sStrokeInfluence* StrokeManager::add(std::vector<Edit> new_edits)
             history_top->duplicate_stroke_config(new_stroke);
 
             history->push_back(new_stroke);
-            Stroke* history_top = &history->back();
+            history_top = &history->back();
         }
 
         history_top->edits[history_top->edit_count++] = new_edits[i];
