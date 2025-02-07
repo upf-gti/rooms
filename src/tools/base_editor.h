@@ -8,6 +8,7 @@
 class RoomsRenderer;
 class Node2D;
 class Gizmo3D;
+class SculptNode;
 
 namespace ui {
     class HContainer2D;
@@ -35,8 +36,8 @@ namespace shortcuts {
     const std::string R_GRIP_R_TRIGGER_PATH = "data/textures/buttons/r_grip_plus_r_trigger.png";
     const std::string R_THUMBSTICK_X_PATH = "data/textures/buttons/r_thumbstick_x.png";
     const std::string R_THUMBSTICK_Y_PATH = "data/textures/buttons/r_thumbstick_y.png";
-    const std::string R_GRIP_R_THUMBSTICK_X_PATH = "data/textures/buttons/r_grip_plus_r_thumbstick.png";
-    const std::string R_GRIP_R_THUMBSTICK_Y_PATH = "data/textures/buttons/r_grip_plus_r_thumbstick.png";
+    const std::string R_GRIP_R_THUMBSTICK_X_PATH = "data/textures/buttons/r_grip_plus_r_thumbstick_x.png";
+    const std::string R_GRIP_R_THUMBSTICK_Y_PATH = "data/textures/buttons/r_grip_plus_r_thumbstick_y.png";
 
     enum : uint8_t {
         TOGGLE_SCENE_INSPECTOR,
@@ -45,7 +46,6 @@ namespace shortcuts {
         EDIT_GROUP,
         ANIMATE_NODE,
         SELECT_NODE,
-        // DUPLICATE_NODE,
         CLONE_NODE,
         PLACE_NODE,
         GROUP_NODE,
@@ -104,7 +104,7 @@ enum InspectNodeFlags {
     NODE_STANDARD = NODE_NAME | NODE_VISIBILITY | NODE_ANIMATE | NODE_DELETE,
     NODE_LIGHT = NODE_STANDARD,
     NODE_SCULPT = NODE_STANDARD | NODE_EDIT,
-    NODE_CHARACTER = NODE_STANDARD,
+    NODE_CHARACTER = NODE_STANDARD | NODE_EDIT,
     NODE_GROUP = NODE_STANDARD | NODE_EDIT | NODE_CHILDREN
 };
 
@@ -162,6 +162,8 @@ public:
     virtual void on_resize_window(uint32_t width, uint32_t height);
     virtual void on_enter(void* data) {};
     virtual void on_exit() {};
+
+    virtual uint32_t get_sculpt_context_flags(SculptNode* node) { return 0u; }
 
     void set_name(const std::string& new_name) { name = new_name; }
     const std::string& get_name() { return name; }

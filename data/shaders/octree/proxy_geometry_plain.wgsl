@@ -294,9 +294,9 @@ fn raymarch(ray_origin_in_atlas_space : vec3f, ray_origin_in_sculpt_space : vec3
 
         let epsilon : f32 = 0.000001; // avoids flashing when camera inside sdf
         var proj_pos : vec4f = view_proj * vec4f(world_space_position + ray_dir * epsilon, 1.0);
-        if(oof) {
-            proj_pos.z -= 0.005;
-        }
+        // if(oof) {
+        //     proj_pos.z -= 0.005;
+        // }
         depth = (proj_pos.z) / proj_pos.w;
 
         let normal : vec3f = estimate_normal_atlas(position_in_atlas);

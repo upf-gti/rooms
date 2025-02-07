@@ -7,15 +7,14 @@
 #include "framework/nodes/skeleton_instance_3d.h"
 #include "framework/nodes/joint_3d.h"
 #include "framework/nodes/animation_player.h"
-#include "framework/nodes/container_2d.h"
 #include "framework/nodes/slider_2d.h"
 #include "framework/nodes/button_2d.h"
 #include "framework/nodes/group_3d.h"
 #include "framework/nodes/character_3d.h"
 #include "framework/ui/inspector.h"
-#include "framework/animation/track.h"
+#include "framework/ui/keyboard.h"
+#include "framework/ui/timeline.h"
 #include "framework/animation/solvers/fabrik_solver.h"
-#include "framework/math/math_utils.h"
 #include "framework/camera/camera.h"
 
 #include "graphics/renderers/rooms_renderer.h"
@@ -39,6 +38,8 @@ Gizmo3D ik_gizmo;
 
 uint64_t AnimationEditor::keyframe_signal_uid = 0;
 uint64_t AnimationEditor::node_signal_uid = 0;
+
+ui::Timeline* timeline = nullptr;
 
 uint32_t get_changed_properties_from_states(const sAnimationState& prev_state,
                                             const sAnimationState& current_state,
@@ -76,7 +77,6 @@ void AnimationEditor::initialize()
     joint_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, shaders::mesh_forward::libraries));
 
     keyframe_markers_render_instance->set_frustum_culling_enabled(false);
-
     keyframe_markers_render_instance->add_surface(RendererStorage::get_surface("sphere"));
     keyframe_markers_render_instance->set_surface_material_override(keyframe_markers_render_instance->get_surface(0), joint_material);
 
@@ -85,10 +85,6 @@ void AnimationEditor::initialize()
     animation_trajectory_mesh->set_name("Animation trajectory");
     animation_trajectory_mesh->create_surface_data({{ glm::vec3(0.0f) }});
 
-    animation_trajectory_instance = new MeshInstance3D();
-    animation_trajectory_instance->set_frustum_culling_enabled(false);
-    animation_trajectory_instance->add_surface(animation_trajectory_mesh);
-
     Material* skeleton_material = new Material();
     skeleton_material->set_color({ 1.0f, 0.0f, 0.0f, 1.0f });
     skeleton_material->set_depth_read(false);
@@ -96,6 +92,9 @@ void AnimationEditor::initialize()
     skeleton_material->set_topology_type(eTopologyType::TOPOLOGY_LINE_LIST);
     skeleton_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, shaders::mesh_forward::libraries, skeleton_material));
 
+    animation_trajectory_instance = new MeshInstance3D();
+    animation_trajectory_instance->set_frustum_culling_enabled(false);
+    animation_trajectory_instance->add_surface(animation_trajectory_mesh);
     animation_trajectory_instance->set_surface_material_override(animation_trajectory_mesh, skeleton_material);
 }
 
@@ -109,63 +108,93 @@ void AnimationEditor::clean()
 
 void AnimationEditor::on_enter(void* data)
 {
+    gizmo->set_operation(TRANSLATE | ROTATE);
+
     current_node = reinterpret_cast<Node3D*>(data);
 
     // Set the root always in the animation editor
     player->set_root_node(current_node);
-
-    // Create animation for current node
-    // TODO: Use the uuid for registering the animation
-    std::string animation_name = current_node->get_name() + "@animation";
-    current_animation = RendererStorage::get_animation(animation_name);
 
     // Search for any skeleton instance in the root
     auto skeleton_instance = find_skeleton(current_node);
     if (skeleton_instance) {
         current_node = skeleton_instance;
         initialize_ik();
+        // force always rotate on skeletons
+        gizmo->set_operation(ROTATE);
     }
 
-    if (!current_animation) {
+    auto& node_animations = animation_storage[current_node->get_scene_unique_id()];
 
-        current_time = 0.0f;
+    // If no animations are stored inside the editor for the current_node
+    if (node_animations.empty())
+    {
+        // In case of Character3D, we can look for custom animations before creating one from scratch..
+        if (current_node->get_node_type() == "Character3D") {
+            auto character = static_cast<Character3D*>(current_node);
+            const auto& animations = character->get_custom_animations();
+            if (!animations.empty()) {
 
-        // Generate new animation
-        current_animation = new Animation();
-        current_animation->set_name(animation_name);
-        RendererStorage::register_animation(animation_name, current_animation);
+                const std::string& animation_name = animations[0];
+                Animation* anim = RendererStorage::get_animation(animation_name);
 
-        sAnimationState initial_state;
-        store_animation_state(initial_state);
+                sAnimationData new_anim_data = { anim };
 
-        // Generate a new track of every node property as a initial state
+                uint32_t track_count = anim->get_track_count();
 
-        for (auto& p : initial_state.properties) {
+                // silly way to get what are the times for the states to support states at any given times..
+                std::map<float, bool> times;
 
-            sPropertyState& p_state = p.second;
-            p_state.track_id = current_animation->get_track_count();
+                for (uint32_t i = 0; i < track_count; ++i) {
+                    Track* track = anim->get_track(i);
 
-            current_track = current_animation->add_track(p_state.track_id);
-            current_track->set_name(p.first);
-            current_track->set_path(current_node->get_name() + "/" + p.first);
-            current_track->set_type(current_track->get_type());
+                    for (uint32_t k = 0; k < track->size(); ++k) {
+                        auto keyframe = track->get_keyframe(k);
+                        times[keyframe.time] = true;
+                    }
+                }
 
-            // Store keyframe in property state
-            p_state.keyframe = &current_track->add_keyframe({ .value = p_state.value, .in = 0.0f, .out = 0.0f, .time = 0.0f });
+                for (auto p : times) {
+
+                    sAnimationState state;
+                    state.time = p.first;
+
+                    for (uint32_t i = 0; i < track_count; ++i) {
+                        Track* track = anim->get_track(i);
+
+                        // Sample node in that timestamp
+                        std::string p_name = track->get_name();
+                        Node::AnimatableProperty node_property = current_node->get_animatable_property(p_name);
+                        void* data = node_property.property;
+                        anim->sample(state.time, track->get_id(), ANIMATION_LOOP_NONE, data, eInterpolationType::STEP);
+
+                        sPropertyState& ps = state.properties[p_name];
+                        ps.track_id = track->get_id();
+                        ps.keyframe_idx = track->get_keyframe_index(state.time);
+                    }
+
+                    store_animation_state(state);
+
+                    new_anim_data.states.push_back(state);
+                }
+
+                auto& node_animations = animation_storage[current_node->get_scene_unique_id()];
+                node_animations[anim->get_scene_unique_id()] = new_anim_data;
+
+                set_animation(animation_name);
+            }
         }
-
-        sAnimationData new_anim_data;
-        new_anim_data.animation = current_animation;
-        new_anim_data.states.push_back(initial_state);
-        animations_data[get_animation_idx()] = new_anim_data;
-
-        current_time += 0.5f;
-        current_animation->recalculate_duration();
     }
+    // The node has animations stored in the editor
     else {
-        // Start with last keyframe added time
-        auto& data = animations_data[get_animation_idx()];
-        current_time = data.current_time;
+        auto* animation = (*node_animations.begin()).second.animation;
+        set_animation(animation->get_name());
+    }
+
+    // No custom animation and no animation stored inside the editor.. create new one!
+    if (!current_animation) {
+        Animation* new_animation = create_new_animation();
+        set_animation(new_animation->get_name());
     }
 
     // Set inspector in front on VR mode
@@ -185,21 +214,18 @@ void AnimationEditor::on_enter(void* data)
 
     inspect_keyframes_list();
 
-    update_animation_trajectory();
+    update_timeline();
 
-    gizmo->set_operation(TRANSLATE | ROTATE);
+    update_animation_trajectory();
 }
 
 void AnimationEditor::on_exit()
 {
     current_node = nullptr;
     current_joint = nullptr;
+    current_animation = nullptr;
 
     stop_animation();
-
-    // Store current time..
-    auto& data = animations_data[get_animation_idx()];
-    data.current_time = current_time;
 }
 
 void AnimationEditor::update(float delta_time)
@@ -210,18 +236,25 @@ void AnimationEditor::update(float delta_time)
 
     // Update inspector for keyframes
     if(show_keyframe_dirty) {
-        update_node_from_state(*current_animation_state);
+        update_node_from_state(last_animation_state_idx);
         inspect_keyframe();
     }
 
     update_gizmo(delta_time);
 
-    update_node_transform();
+    if (ik_active) {
+        update_ik(delta_time);
+    }
 
-    update_ik();
+    update_node_transform();
 
     if (keyframe_dirty) {
         update_animation_trajectory();
+    }
+
+    if (timeline_dirty) {
+        update_timeline();
+        timeline_dirty = false;
     }
 
     if (keyframe_list_dirty) {
@@ -241,8 +274,7 @@ void AnimationEditor::update(float delta_time)
 
         // This sets current_joint to a valid joint in the skeleton instance
         if (current_node->test_ray_collision(ray_origin, ray_direction, distance, reinterpret_cast<Node3D**>(&current_joint))) {
-            inspector->clear();
-            inspect_node(current_joint);
+            on_select_joint();
         }
     }
 
@@ -274,7 +306,16 @@ void AnimationEditor::update(float delta_time)
         generate_shortcuts();
     }
 
-    inspector->update(delta_time);
+    // inspector->update(delta_time);
+
+    timeline->update(delta_time);
+
+    if (timeline->is_time_dirty()) {
+        player->set_playback_time(timeline->get_current_time());
+    }
+    else if (player->is_playing()) {
+        timeline->set_current_time(player->get_playback_time());
+    }
 }
 
 void AnimationEditor::render()
@@ -283,17 +324,13 @@ void AnimationEditor::render()
 
     BaseEditor::render();
 
-    inspector->render();
+    // inspector->render();
 
-    // render_gizmo();
+    timeline->render();
 
-    render_ik();
+    render_gizmo();
 
-    if (current_node) {
-        current_node->render();
-    }
-
-    auto& states = animations_data[get_animation_idx()].states;
+    auto& states = get_animation_states();
 
     for (uint32_t i = 0u; i < states.size(); i++) {
         const glm::vec3& position = std::get<glm::vec3>(states[i].properties["translation"].value);
@@ -304,24 +341,59 @@ void AnimationEditor::render()
     animation_trajectory_instance->render();
 }
 
+void AnimationEditor::update_timeline()
+{
+    if (!current_animation) {
+        return;
+    }
+
+    timeline->set_visibility(true);
+
+    timeline->clear();
+
+    auto& states = get_animation_states();
+
+    for (auto& state : states) {
+        timeline->add_keyframe(state.time, nullptr);
+    }
+}
+
 void AnimationEditor::update_gizmo(float delta_time)
 {
     Node3D* node = get_current_node();
 
     // Gizmo only needs to update for XR
-    if (!keyframe_dirty || !current_node || !renderer->get_openxr_available()) {
+    if (!keyframe_dirty || !node || !renderer->get_openxr_available()) {
         return;
     }
 
-    glm::vec3 right_controller_pos = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
     Transform t = node->get_global_transform();
+    glm::vec3 right_controller_pos = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
 
-    if (gizmo->update(t, right_controller_pos, delta_time)) {
+    if (!ik_active) {
+
+        gizmo_active = gizmo->update(t, right_controller_pos, delta_time);
+
+        if (!gizmo_active) {
+            return;
+        }
 
         node->set_global_transform(t);
 
         if (dynamic_cast<Joint3D*>(node)) {
             current_node->set_transform_dirty(true);
+        }
+    }
+    else {
+        auto instance = dynamic_cast<SkeletonInstance3D*>(current_node);
+        if (instance) {
+            return;
+        }
+
+        Transform global = instance->get_global_transform();
+
+        if (ik_gizmo.update(t, right_controller_pos, delta_time)) {
+            ik_target = Transform::combine(Transform::inverse(global), t);
         }
     }
 }
@@ -334,23 +406,96 @@ void AnimationEditor::render_gizmo()
         return;
     }
 
-    gizmo->set_transform(node->get_global_transform());
+    if (!ik_active) {
+        gizmo->set_transform(node->get_global_transform());
 
-    // This is only for 2D since Gizmo.render will only return true if
-    // Gizmo2D is used!
+        // This is only for 2D since Gizmo.render will only return true if
+        // Gizmo2D is used!
 
-    bool transform_dirty = gizmo->render();
+        gizmo_active = gizmo->render();
 
-    if (!transform_dirty || renderer->get_openxr_available()) {
-        return;
+        if (gizmo_active && !renderer->get_openxr_available()) {
+            node->set_global_transform(gizmo->get_transform());
+
+            if (dynamic_cast<Joint3D*>(node)) {
+                // Current node is skeletoninstance
+                current_node->set_transform_dirty(true);
+            }
+        }
+    }
+    else {
+        auto instance = dynamic_cast<SkeletonInstance3D*>(current_node);
+        if (!instance) {
+            return;
+        }
+
+        // Render gizmo for updating the target
+        {
+            Transform global = instance->get_global_transform();
+            ik_gizmo.set_transform(Transform::combine(global, ik_target));
+
+            bool transform_dirty = ik_gizmo.render();
+
+            if (transform_dirty && !renderer->get_openxr_available()) {
+                ik_target = Transform::combine(Transform::inverse(global), ik_gizmo.get_transform());
+            }
+        }
+    }
+}
+
+Animation* AnimationEditor::create_new_animation()
+{
+    // Generate new animation
+    Animation* new_animation = new Animation();
+    std::string name = new_animation->get_scene_unique_id() + "@animation";
+    new_animation->set_name(name);
+    RendererStorage::register_animation(name, new_animation);
+
+    sAnimationState initial_state;
+    store_animation_state(initial_state);
+
+    // Generate a new track of every node property as a initial state
+
+    for (auto& p : initial_state.properties) {
+
+        sPropertyState& p_state = p.second;
+        p_state.track_id = new_animation->get_track_count();
+
+        Track* track = new_animation->add_track(p_state.track_id);
+        track->set_name(p.first);
+        track->set_path(current_node->get_name() + "/" + p.first);
+
+        // Store keyframe in property state
+        p_state.keyframe_idx = track->add_keyframe({ .value = p_state.value, .in = 0.0f, .out = 0.0f, .time = 0.0f });
     }
 
-    node->set_global_transform(gizmo->get_transform());
+    sAnimationData new_anim_data = { new_animation };
+    new_anim_data.states.push_back(initial_state);
 
-    if (dynamic_cast<Joint3D*>(node)) {
-        // Current node is skeletoninstance
-        current_node->set_transform_dirty(true);
-    }
+    auto& node_animations = animation_storage[current_node->get_scene_unique_id()];
+    node_animations[new_animation->get_scene_unique_id()] = new_anim_data;
+
+    new_animation->recalculate_duration();
+
+    keyframe_list_dirty = true;
+
+    return new_animation;
+}
+
+void AnimationEditor::set_animation(const std::string& name)
+{
+    // if needed..
+    stop_animation();
+
+    auto animation = RendererStorage::get_animation(name);
+    assert(animation);
+    current_animation = animation;
+
+    keyframe_list_dirty = true;
+
+    // hack to set animation in the anim blender
+    play_animation();
+    stop_animation();
 }
 
 Node3D* AnimationEditor::get_current_node()
@@ -359,6 +504,33 @@ Node3D* AnimationEditor::get_current_node()
         return current_joint;
     }
     return current_node;
+}
+
+void AnimationEditor::on_select_joint()
+{
+    inspector->clear();
+    inspect_node(current_joint);
+    set_active_chain(current_joint->get_index());
+}
+
+void AnimationEditor::save_character_animation()
+{
+    if (current_node->get_node_type() != "Character3D") {
+        return;
+    }
+
+    auto callback = [&](const std::string& output) {
+        // remove prev registration
+        RendererStorage::erase_animation(current_animation->get_name());
+
+        current_animation->set_name(output);
+        static_cast<Character3D*>(current_node)->store_animation(output);
+
+        // re-register animation
+        RendererStorage::register_animation(output, current_animation);
+    };
+
+    ui::Keyboard::request(callback, current_animation->get_name());
 }
 
 SkeletonInstance3D* AnimationEditor::find_skeleton(Node* node)
@@ -377,67 +549,62 @@ SkeletonInstance3D* AnimationEditor::find_skeleton(Node* node)
 
 void AnimationEditor::initialize_ik()
 {
-    // Standard Rooms character skeleton has 19 joints,
-    // but we need only N chains
-    ik_chains.resize(5u);
+    ik_gizmo.initialize(TRANSLATE);
 
-    // Do left arm chain
-    sIKChain& chain = ik_chains[0];
+    // Create default chains
+    create_ik_chain(SKELETON_HEAD, 1u);
+
+    // Arms
+    {
+        create_ik_chain(SKELETON_LEFT_FOREARM, 1u);
+        create_ik_chain(SKELETON_LEFT_HAND, 2u);
+
+        create_ik_chain(SKELETON_RIGHT_FOREARM, 1u);
+        create_ik_chain(SKELETON_RIGHT_HAND, 2u);
+    }
+
+    // Legs
+    {
+        create_ik_chain(SKELETON_LEFT_KNEE, 1u);
+        create_ik_chain(SKELETON_LEFT_ANKLE, 2u);
+        create_ik_chain(SKELETON_LEFT_FOOT, 3u);
+
+        create_ik_chain(SKELETON_RIGHT_KNEE, 1u);
+        create_ik_chain(SKELETON_RIGHT_ANKLE, 2u);
+        create_ik_chain(SKELETON_RIGHT_FOOT, 3u);
+    }
+}
+
+void AnimationEditor::create_ik_chain(uint32_t chain_endpoint_idx, uint32_t depth)
+{
+    // Create default chains
 
     Skeleton* skeleton = static_cast<SkeletonInstance3D*>(current_node)->get_skeleton();
     assert(skeleton);
     Pose& pose = skeleton->get_current_pose();
 
-    // Left arm
     {
-        sIKChain& chain = ik_chains[0];
+        sIKChain& chain = ik_chains[chain_endpoint_idx];
         // Origin joint in global space
-        chain.push(pose.get_global_transform(5u), 5u);
-        // Rest of the joints in local space
-        chain.push(pose.get_local_transform(6u), 6u);
-        chain.push(pose.get_local_transform(7u), 7u);
-    }
+        uint32_t origin_idx = chain_endpoint_idx - depth;
+        chain.push(pose.get_global_transform(origin_idx), origin_idx);
 
-    // Right arm
-    {
-        sIKChain& chain = ik_chains[1];
-        chain.push(pose.get_global_transform(8u), 8u);
-        chain.push(pose.get_local_transform(9u), 9u);
-        chain.push(pose.get_local_transform(10u), 10u);
+        for (int i = (depth - 1); i >= 0; i--) {
+            // Rest of the joints in local space
+            uint32_t j_idx = chain_endpoint_idx - i;
+            chain.push(pose.get_local_transform(j_idx), j_idx);
+        }
     }
-
-    // Left leg
-    {
-        sIKChain& chain = ik_chains[2];
-        chain.push(pose.get_global_transform(11u), 11u);
-        chain.push(pose.get_local_transform(12u), 12u);
-        chain.push(pose.get_local_transform(13u), 13u);
-        chain.push(pose.get_local_transform(14u), 14u);
-    }
-
-    // Right leg
-    {
-        sIKChain& chain = ik_chains[3];
-        chain.push(pose.get_global_transform(15u), 15u);
-        chain.push(pose.get_local_transform(16u), 16u);
-        chain.push(pose.get_local_transform(17u), 17u);
-        chain.push(pose.get_local_transform(18u), 18u);
-    }
-
-    // Torso
-    {
-        sIKChain& chain = ik_chains[4];
-        chain.push(pose.get_global_transform(0u), 0u);
-        chain.push(pose.get_local_transform(1u), 1u);
-        chain.push(pose.get_local_transform(2u), 2u);
-    }
-
-    // By default use first chain
-    set_active_chain(0u);
 }
 
 void AnimationEditor::set_active_chain(uint32_t chain_idx)
 {
+    ik_active = ik_enabled && ik_chains.contains(chain_idx);;
+
+    if (!ik_active) {
+        return;
+    }
+
     const sIKChain& chain = ik_chains[chain_idx];
 
     ik_solver.resize(chain.transforms.size());
@@ -452,30 +619,14 @@ void AnimationEditor::set_active_chain(uint32_t chain_idx)
     Skeleton* skeleton = static_cast<SkeletonInstance3D*>(current_node)->get_skeleton();
     assert(skeleton);
     Pose& pose = skeleton->get_current_pose();
-    ik_target.set_position(pose.get_global_transform(chain.indices.back()).get_position());
+    ik_target = pose.get_global_transform(chain.indices.back());
 }
 
-void AnimationEditor::update_ik()
+void AnimationEditor::update_ik(float delta_time)
 {
     auto instance = dynamic_cast<SkeletonInstance3D*>(current_node);
-    if (!instance || !keyframe_dirty) {
+    if (!instance || !keyframe_dirty || gizmo_active) {
         return;
-    }
-
-    if (Input::was_key_pressed(GLFW_KEY_0)) {
-        set_active_chain(0u);
-    }
-    else if (Input::was_key_pressed(GLFW_KEY_1)) {
-        set_active_chain(1u);
-    }
-    else if (Input::was_key_pressed(GLFW_KEY_2)) {
-        set_active_chain(2);
-    }
-    else if (Input::was_key_pressed(GLFW_KEY_3)) {
-        set_active_chain(3u);
-    }
-    else if (Input::was_key_pressed(GLFW_KEY_4)) {
-        set_active_chain(4u);
     }
 
     // Solve IK for character chain depending of the selected solver type
@@ -508,39 +659,21 @@ void AnimationEditor::update_ik()
     instance->update_joints_from_pose();
 }
 
-void AnimationEditor::render_ik()
+void AnimationEditor::update_node_from_state(uint32_t index)
 {
-    auto instance = dynamic_cast<SkeletonInstance3D*>(current_node);
-    if (!instance || !keyframe_dirty) {
-        return;
-    }
+    auto state = get_animation_state(index);
+    assert(state);
 
-    // Render gizmo for updating the target
-    {
-        Transform global = instance->get_global_transform();
-        ik_gizmo.set_transform(Transform::combine(global, ik_target));
+    Node3D* node = get_current_node();
 
-        if (ik_gizmo.render()) {
-            ik_target = Transform::combine(Transform::inverse(global), ik_gizmo.get_transform());
-        }
-    }
-}
-
-uint32_t AnimationEditor::get_animation_idx()
-{
-    return reinterpret_cast<uintptr_t>(current_animation);
-}
-
-void AnimationEditor::update_node_from_state(const sAnimationState& state)
-{
     // Set current node in keyframe state
 
-    for (auto& p : state.properties) {
+    for (auto& p : state->properties) {
 
         Node::AnimatableProperty node_property = current_node->get_animatable_property(p.first);
         void* data = node_property.property;
 
-        current_animation->sample(state.time, p.second.track_id, ANIMATION_LOOP_NONE, data, eInterpolationType::STEP);
+        current_animation->sample(state->time, p.second.track_id, ANIMATION_LOOP_NONE, data, eInterpolationType::STEP);
 
         // TODO: now the conversion void -> TYPE is done in the sample, but only supports 3 types
         // ...
@@ -550,9 +683,8 @@ void AnimationEditor::update_node_from_state(const sAnimationState& state)
     if (skeleton_instance) {
         skeleton_instance->update_pose_from_joints();
     }
-    else {
-        current_node->set_transform_dirty(true);
-    }
+
+    node->set_transform_dirty(true);
 }
 
 void AnimationEditor::update_node_transform()
@@ -566,7 +698,7 @@ void AnimationEditor::update_node_transform()
     // Do not rotate sculpt if shift -> we might be rotating the edit
     if ((Input::get_trigger_value(HAND_LEFT) > 0.5f)) {
 
-        Transform global_transform = node->get_global_transform();
+        Transform global_transform = ik_active ? ik_target : node->get_global_transform();
 
         glm::quat left_hand_rotation = Input::get_controller_rotation(HAND_LEFT);
         glm::vec3 left_hand_translation = Input::get_controller_position(HAND_LEFT);
@@ -586,25 +718,32 @@ void AnimationEditor::update_node_transform()
             global_transform.translate(translation_diff);
         }
 
-        if (Input::get_trigger_value(HAND_RIGHT) > 0.5) {
+        // don't scale if using IK
+        if (!ik_active) {
+            if (Input::get_trigger_value(HAND_RIGHT) > 0.5) {
 
-            if (!scale_started) {
+                if (!scale_started) {
+                    last_hand_distance = hand_distance;
+                    scale_started = true;
+                }
+
+                float hand_distance_diff = hand_distance / last_hand_distance;
+                node->scale(glm::vec3(hand_distance_diff));
                 last_hand_distance = hand_distance;
-                scale_started = true;
+            }
+            else if (scale_started) {
+                scale_started = false;
             }
 
-            float hand_distance_diff = hand_distance / last_hand_distance;
-            node->scale(glm::vec3(hand_distance_diff));
-            last_hand_distance = hand_distance;
-        }
-        else if (scale_started) {
-            scale_started = false;
-        }
+            node->set_global_transform(global_transform);
 
-        node->set_global_transform(global_transform);
+            if (dynamic_cast<Joint3D*>(node)) {
+                current_node->set_transform_dirty(true);
+            }
 
-        if (dynamic_cast<Joint3D*>(node)) {
-            current_node->set_transform_dirty(true);
+        }
+        else {
+            ik_target = global_transform;
         }
 
         rotation_started = true;
@@ -623,7 +762,7 @@ void AnimationEditor::update_animation_trajectory()
 {
     std::vector<glm::vec3> vertices_to_upload;
 
-    auto& states = animations_data[get_animation_idx()].states;
+    auto& states = get_animation_states();
 
     if (states.size() <= 1u) {
         return;
@@ -648,16 +787,16 @@ void AnimationEditor::update_animation_trajectory()
     animation_trajectory_mesh->update_surface_data({ vertices_to_upload });
 }
 
-/*
-*   Opens the inspector to manipulate node and allow submitting/creating new keyframe
-*/
 void AnimationEditor::create_keyframe()
 {
-    auto& states = animations_data[get_animation_idx()].states;
+    auto& node_animations = animation_storage[current_node->get_scene_unique_id()];
+    auto& data = node_animations[current_animation->get_scene_unique_id()];
 
     // Get the last state to check changes later when adding new keyframes
-    current_animation_state = &states.back();
-    update_node_from_state(*current_animation_state);
+    last_animation_state_idx = data.states.size() - 1u;
+    update_node_from_state(last_animation_state_idx);
+
+    current_time = data.states.back().time + 0.5f;
 
     keyframe_dirty = true;
 
@@ -678,7 +817,7 @@ void AnimationEditor::create_keyframe()
         w = Node2D::get_widget_from_name("submit_keyframe");
         w->set_visibility(true);
 
-        w = Node2D::get_widget_from_name("open_list");
+        w = Node2D::get_widget_from_name("open_timeline");
         static_cast<ui::Button2D*>(w)->set_disabled(true);
     }
 }
@@ -689,8 +828,9 @@ void AnimationEditor::create_keyframe()
 
 void AnimationEditor::process_keyframe()
 {
-    if (!current_node) {
+    if (!current_node || (last_animation_state_idx == -1)) {
         assert(0);
+        return;
     }
 
     // Read the properties in order to see if there is any change
@@ -701,7 +841,8 @@ void AnimationEditor::process_keyframe()
     std::vector<std::string> changed_properties;
     changed_properties.resize(new_anim_state.properties.size());
 
-    uint32_t changed_properties_count = get_changed_properties_from_states(*current_animation_state, new_anim_state, changed_properties);
+    auto current_state = get_animation_state(last_animation_state_idx);
+    uint32_t changed_properties_count = get_changed_properties_from_states(*current_state, new_anim_state, changed_properties);
 
     // Keyframe changes state
     if (changed_properties.empty()) {
@@ -709,39 +850,52 @@ void AnimationEditor::process_keyframe()
         return;
     }
 
+    /*
+        Alex: Even it's a lot more keyframes, I think we want to go through every track and add a new keyframe,
+        if not it will interpolate using unsynced keyframes..
+
+        Let's say i make a waving animation using 1 hand and then the last state i rise the other hand
+        using only c will result in the second hand moving since the start, because
+        it only has 2 keyframes, 1 at the start and 1 at the beginning, which will be interpolated...
+
+        If we want to use only "changed_properties", we can't save the first keyframe for every track, since it
+        is the main problem. In the above ex. if the other hand didn't have the start keyframe, it would interpolate
+        correctly (no interp. in fact, because there's only one keyframe)
+    */
+
+    // for (auto& p : current_node->get_animatable_properties()) {
     for (uint32_t i = 0u; i < changed_properties_count; i++) {
 
-        std::string property_name = changed_properties[i];
+        std::string property_name = changed_properties[i]; // p.first;
 
-        sPropertyState& c_state = current_animation_state->properties[property_name];
-        sPropertyState& n_state = new_anim_state.properties[property_name];
-       
-        current_track = current_animation->get_track_by_id(c_state.track_id);
+        sPropertyState* c_state = &current_state->properties[property_name];
+        sPropertyState* n_state = &new_anim_state.properties[property_name];
+
+        Track* track = current_animation->get_track_by_id(c_state->track_id);
 
         // Check if keyframe exists: modify value
-        if (editing_keyframe && c_state.keyframe) {
-            c_state.value = c_state.keyframe->value = n_state.value;
+        if (editing_keyframe && c_state->keyframe_idx != -1) {
+            Keyframe& keyframe = track->get_keyframe(c_state->keyframe_idx);
+            c_state->value = keyframe.value = n_state->value;
         }
         // No keyframe -> create one!
         else {
-            // Create and add keypoint to track
-            std::cout << "Add keypoint to track " << property_name << std::endl;
 
             // Create and update keyframe in the state
             if (editing_keyframe) {
-                c_state.keyframe = &current_track->add_keyframe({ .value = n_state.value, .in = 0.0f, .out = 0.0f, .time = current_time });
+                c_state->keyframe_idx = track->add_keyframe({ .value = n_state->value, .in = 0.0f, .out = 0.0f, .time = current_time });
             }
             else {
-                n_state.keyframe = &current_track->add_keyframe({ .value = n_state.value, .in = 0.0f, .out = 0.0f, .time = current_time });
+                n_state->keyframe_idx = track->add_keyframe({ .value = n_state->value, .in = 0.0f, .out = 0.0f, .time = current_time });
             }
         }
     }
 
     if (!editing_keyframe) {
         new_anim_state.time = current_time;
-        current_time += 0.5f;
         current_animation->recalculate_duration();
-        auto& states = animations_data[get_animation_idx()].states;
+
+        auto& states = get_animation_states();
         states.push_back(new_anim_state);
     }
 
@@ -754,8 +908,8 @@ void AnimationEditor::edit_keyframe(uint32_t index)
     keyframe_dirty = true;
     editing_keyframe = true;
 
-    auto& states = animations_data[get_animation_idx()].states;
-    current_animation_state = &states[index];
+    last_animation_state_idx = index;
+    set_animation_state(last_animation_state_idx);
 
     // Show submit_keyframe button
     auto w = Node2D::get_widget_from_name("submit_keyframe");
@@ -766,49 +920,109 @@ void AnimationEditor::edit_keyframe(uint32_t index)
     w->set_visibility(false);
 
     // Deactivate open list
-    w = Node2D::get_widget_from_name("open_list");
+    w = Node2D::get_widget_from_name("open_timeline");
     static_cast<ui::Button2D*>(w)->set_disabled(true);
 }
 
-void AnimationEditor::duplicate_keyframe(uint32_t index)
+bool AnimationEditor::duplicate_keyframe(uint32_t index)
 {
     if (!current_node) {
         assert(0);
+        return false;
     }
 
-    current_animation_state = get_animation_state(index);
+    auto state = get_animation_state(index);
+    assert(state);
+
+    auto& node_animations = animation_storage[current_node->get_scene_unique_id()];
+    auto& data = node_animations[current_animation->get_scene_unique_id()];
+    float new_time = data.states.back().time + 0.5f;
 
     sAnimationState new_anim_state;
-    new_anim_state.time = current_time;
+    new_anim_state.time = new_time;
 
-    for (auto prop : current_animation_state->properties) {
-
-        std::string property_name = prop.first;
-
-        sPropertyState state = current_animation_state->properties[property_name];
-
-        Track* track = current_animation->get_track_by_id(state.track_id);
-
-        state.keyframe = &track->add_keyframe({ .value = state.value, .in = 0.0f, .out = 0.0f, .time = current_time });
-
-        new_anim_state.properties[property_name] = state;
+    for (auto prop : state->properties) {
+        const std::string& property_name = prop.first;
+        sPropertyState p_state = state->properties[property_name];
+        Track* track = current_animation->get_track_by_id(p_state.track_id);
+        p_state.keyframe_idx = track->add_keyframe({ .value = p_state.value, .in = 0.0f, .out = 0.0f, .time = new_time });
+        new_anim_state.properties[property_name] = p_state;
     }
 
-    current_time += 0.5f;
     current_animation->recalculate_duration();
-    auto& states = animations_data[get_animation_idx()].states;
+
+    auto& states = data.states;
     states.push_back(new_anim_state);
-    current_animation_state = nullptr;
     keyframe_list_dirty = true;
 
     set_animation_state(states.size() - 1u);
 
+    update_timeline();
+
     update_animation_trajectory();
+
+    return true;
+}
+
+void AnimationEditor::delete_keyframe(uint32_t index)
+{
+    auto state = get_animation_state(index);
+    assert(state);
+
+    // Remove tracks
+    for (const auto& prop : state->properties) {
+
+        const std::string& property_name = prop.first;
+        sPropertyState& p_state = state->properties[property_name];
+
+        Track* track = current_animation->get_track_by_id(p_state.track_id);
+        if (p_state.keyframe_idx != -1) {
+            track->delete_keyframe(p_state.keyframe_idx);
+        }
+    }
+
+    // Update keyframe ids for next states properties
+    auto& states = get_animation_states();
+    for (uint32_t i = index + 1u; i < states.size(); ++i) {
+
+        auto& state = states[i];
+
+        for (const auto& prop : state.properties) {
+            const std::string& property_name = prop.first;
+            sPropertyState& p_state = state.properties[property_name];
+            if (p_state.keyframe_idx != -1) {
+                p_state.keyframe_idx--;
+            }
+        }
+    }
+
+    current_animation->recalculate_duration();
+
+    // Remove state
+    states.erase(states.begin() + index);
+
+    update_timeline();
+
+    player->set_playback_time(timeline->get_current_time());
+
+    update_animation_trajectory();
+}
+
+std::vector<sAnimationState>& AnimationEditor::get_animation_states()
+{
+    auto& node_animations = animation_storage[current_node->get_scene_unique_id()];
+    return node_animations[current_animation->get_scene_unique_id()].states;
 }
 
 sAnimationState* AnimationEditor::get_animation_state(uint32_t index)
 {
-    auto& states = animations_data[get_animation_idx()].states;
+    auto& states = get_animation_states();
+
+    if (index > (states.size() - 1u)) {
+        assert(0);
+        return nullptr;
+    }
+
     return &states[index];
 }
 
@@ -818,23 +1032,10 @@ void AnimationEditor::set_animation_state(uint32_t index)
 
     if (!node) {
         assert(0);
+        return;
     }
 
-    current_animation_state = get_animation_state(index);
-
-    for (auto& p : current_animation_state->properties) {
-
-        Node::AnimatableProperty node_property = node->get_animatable_property(p.first);
-        void* data = node_property.property;
-
-        current_animation->sample(current_animation_state->time, p.second.track_id, ANIMATION_LOOP_NONE, data);
-
-        node->set_transform_dirty(true);
-
-        if (dynamic_cast<Joint3D*>(node)) {
-            current_node->set_transform_dirty(true);
-        }
-    }
+    update_node_from_state(index);
 }
 
 void AnimationEditor::store_animation_state(sAnimationState& state)
@@ -853,8 +1054,9 @@ void AnimationEditor::store_animation_state(sAnimationState& state)
         void* data = prop_it.second.property;
 
         // The tracks ids are always shared
-        if (current_animation_state) {
-            state.properties[prop_it.first].track_id = current_animation_state->properties[prop_it.first].track_id;
+        if (last_animation_state_idx != -1) {
+            auto current_state = get_animation_state(last_animation_state_idx);
+            state.properties[prop_it.first].track_id = current_state->properties[prop_it.first].track_id;
         }
 
         switch (prop_it.second.property_type) {
@@ -895,7 +1097,7 @@ void AnimationEditor::set_loop_type(uint8_t type)
 
 void AnimationEditor::play_animation()
 {
-    player->play(current_animation);
+    player->play(current_animation, timeline->get_current_time());
 
     // Manage menu player buttons
     {
@@ -928,6 +1130,8 @@ void AnimationEditor::stop_animation()
 {
     player->stop(true);
 
+    timeline->set_current_time(0.0f);
+
     {
         // Show play button
         auto w = Node2D::get_widget_from_name("play_animation");
@@ -941,22 +1145,55 @@ void AnimationEditor::stop_animation()
 
 void AnimationEditor::render_gui()
 {
-    ImGui::Text("Animations");
+    assert(current_node);
 
-    ImGui::Separator();
+    ImGui::SeparatorText("Editor Animations");
 
-    for (const auto& a : animations_data) {
-        ImGui::Text("%s", a.second.animation->get_name().c_str());
+    const std::string& current_animation_name = current_animation->get_name();
+
+    if (ImGui::BeginCombo("Animation", current_animation_name.c_str(), 0u))
+    {
+        auto& node_animations = animation_storage[current_node->get_scene_unique_id()];
+
+        for (const auto& a : node_animations) {
+            const std::string& a_name = a.second.animation->get_name();
+            const bool is_selected = (a_name == current_animation_name);
+            if (ImGui::Selectable(a_name.c_str(), is_selected)) {
+                set_animation(a_name);
+            }
+            if (is_selected) {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
     }
 
-    ImGui::Separator();
+    if (current_node->get_node_type() == "Character3D") {
+
+        auto character = static_cast<Character3D*>(current_node);
+        const auto& animations = character->get_custom_animations();
+
+        if (!animations.empty()) {
+            ImGui::SeparatorText("Custom Animations");
+            for (int n = 0; n < animations.size(); n++) {
+                ImGui::Text(animations[n].c_str());
+            }
+        }
+
+        if (ImGui::Button("Start New Animation")) {
+            auto anim = create_new_animation();
+            set_animation(anim->get_name());
+        }
+    }
+
+    ImGui::SeparatorText("Current Animation");
 
     if (current_animation)
     {
         ImGui::Text("Animation %s", current_animation->get_name().c_str());
         ImGui::Text("Num Tracks %d", current_animation->get_track_count());
 
-        auto& states = animations_data[get_animation_idx()].states;
+        auto& states = get_animation_states();
         ImGui::Text("Num States %zu", states.size());
 
         if (current_animation && ImGui::Button("Play")) {
@@ -1006,8 +1243,9 @@ void AnimationEditor::init_ui()
         first_row->add_child(loop_mode);
     }
 
-    // ** Go back to scene editor **
-    first_row->add_child(new ui::TextureButton2D("character_view", { "data/textures/character.png" }));
+    first_row->add_child(new ui::TextureButton2D("enable_ik", { "data/textures/a.png", ui::ALLOW_TOGGLE | ui::SELECTED }));
+
+    first_row->add_child(new ui::TextureButton2D("save_animation", { "data/textures/save.png" }));
 
     ui::HContainer2D* second_row = new ui::HContainer2D("row_1", { 0.0f, 0.0f });
     vertical_container->add_child(second_row);
@@ -1016,7 +1254,7 @@ void AnimationEditor::init_ui()
     second_row->add_child(new ui::TextureButton2D("go_back", { "data/textures/back.png" }));
 
     // ** Open keyframe list **
-    second_row->add_child(new ui::TextureButton2D("open_list", { "data/textures/keyframe_list.png" }));
+    second_row->add_child(new ui::TextureButton2D("open_timeline", { "data/textures/keyframe_list.png" }));
 
     // ** Keyframe actions
     {
@@ -1037,13 +1275,20 @@ void AnimationEditor::init_ui()
         .name = "inspector_root",
         .title = "Animation",
         .position = {32.0f, 32.f},
-        .close_fn = std::bind(&AnimationEditor::on_close_inspector, this, std::placeholders::_1),
-        // .back_fn = std::bind(&AnimationEditor::on_goback_inspector, this, std::placeholders::_1)
+        .close_fn = std::bind(&AnimationEditor::on_close_inspector, this, std::placeholders::_1)
     });
 
-    if (renderer->get_openxr_available())
-    {
-        // Load controller UI labels
+    timeline = new ui::Timeline({
+        .name = "inspector_root",
+        .title = "Animation Timeline",
+        .position = {32.0f, 32.f},
+        .edit_keyframe_fn = std::bind(&AnimationEditor::on_edit_timeline_keyframe, this, std::placeholders::_1, std::placeholders::_2),
+        .duplicate_keyframe_fn = std::bind(&AnimationEditor::on_duplicate_timeline_keyframe, this, std::placeholders::_1, std::placeholders::_2),
+        .move_keyframe_fn = std::bind(&AnimationEditor::on_move_timeline_keyframe, this, std::placeholders::_1, std::placeholders::_2),
+        .delete_keyframe_fn = std::bind(&AnimationEditor::on_delete_timeline_keyframe, this, std::placeholders::_1, std::placeholders::_2)
+    });
+
+    if (renderer->get_openxr_available()) {
 
         // Thumbsticks
         // Buttons
@@ -1073,9 +1318,36 @@ void AnimationEditor::init_ui()
 
 void AnimationEditor::bind_events()
 {
+    Node::bind("enable_ik", [&](const std::string& signal, void* button) {
+        ik_enabled = !ik_enabled;
+        ik_active = false;
+
+        if (ik_enabled) {
+            Skeleton* skeleton = static_cast<SkeletonInstance3D*>(current_node)->get_skeleton();
+            if (!skeleton || !current_joint) {
+                return;
+            }
+
+            Pose& pose = skeleton->get_current_pose();
+            const auto& parents = pose.get_parents();
+            auto it = std::find(parents.begin(), parents.end(), current_joint->get_index());
+            if (it == parents.end()) {
+                set_active_chain(current_joint->get_index());
+            }
+        }
+    });
+
+    // Animation events
+    {
+        Node::bind("save_animation", [&](const std::string& signal, void* button) { save_character_animation(); });
+    }
+
     // Keyframe events
     {
-        Node::bind("open_list", [&](const std::string& signal, void* button) { inspect_keyframes_list(true); });
+        Node::bind("open_timeline", [&](const std::string& signal, void* button) {
+            // inspect_keyframes_list(true);
+            timeline_dirty = true;
+        });
         Node::bind("record_action", [&](const std::string& signal, void* button) { });
         Node::bind("create_keyframe", [&](const std::string& signal, void* button) { create_keyframe(); });
         Node::bind("submit_keyframe", [&](const std::string& signal, void* button) { if (keyframe_dirty) { process_keyframe(); } });
@@ -1095,10 +1367,6 @@ void AnimationEditor::bind_events()
         Node::bind("loop_reverse", [&](const std::string& signal, void* button) { set_loop_type(ANIMATION_LOOP_REVERSE); });
         Node::bind("loop_ping_pong", [&](const std::string& signal, void* button) { set_loop_type(ANIMATION_LOOP_PING_PONG); });
     }
-
-    Node::bind("character_view", [&](const std::string& signal, void* button) {
-        inspect_character(true);
-    }); 
 
     Node::bind("animation_speed", (FuncFloat)[&](const std::string& signal, float value) { player->set_speed(value); });
 }
@@ -1147,7 +1415,7 @@ void AnimationEditor::inspect_keyframe()
 
     show_keyframe_dirty = false;
 
-    auto w = Node2D::get_widget_from_name("open_list");
+    auto w = Node2D::get_widget_from_name("open_timeline");
     static_cast<ui::Button2D*>(w)->set_disabled(true);
 }
 
@@ -1244,55 +1512,11 @@ void AnimationEditor::inspect_node(Node* node)
     }
 }
 
-void AnimationEditor::inspect_character(bool force)
-{
-    if (!dynamic_cast<Character3D*>(current_node)) {
-        assert(0);
-        return;
-    }
-
-    inspector->clear();
-
-    auto character = static_cast<Character3D*>(current_node);
-    auto sculpt_nodes = character->get_children();
-
-    for (uint32_t i = 0; i < sculpt_nodes.size(); ++i) {
-
-        auto node = sculpt_nodes[i];
-
-        inspector->same_line();
-
-        {
-            std::string signal = node->get_name() + std::to_string(node_signal_uid++) + "_edit_character_set";
-            inspector->button(signal, "data/textures/edit.png", 0u, "Edit");
-
-            Node::bind(signal, [&, n = node](const std::string& sg, void* data) {
-                RoomsEngine::switch_editor(SCULPT_EDITOR, static_cast<SculptNode*>(n));
-            });
-        }
-
-        {
-            std::string signal = node->get_name() + std::to_string(node_signal_uid++) + "_label_character_set";
-            inspector->label(signal, node->get_name(), 0u, SceneEditor::COLOR_HIGHLIGHT_CHARACTER);
-        }
-
-        inspector->end_line();
-    }
-
-    Node::emit_signal(inspector->get_name() + "@children_changed", (void*)nullptr);
-
-    inspector_transform_dirty = !inspector->get_visibility() || force;
-
-    if (force) {
-        inspector->set_visibility(true);
-    }
-}
-
 void AnimationEditor::inspect_keyframes_list(bool force)
 {
     inspector->clear();
 
-    auto& states = animations_data[get_animation_idx()].states;
+    auto& states = get_animation_states();
 
     for (uint32_t i = 0; i < states.size(); ++i) {
 
@@ -1375,14 +1599,70 @@ bool AnimationEditor::on_close_inspector(ui::Inspector* scope)
     w->set_visibility(true);
 
     // Reactivate open list
-    w = Node2D::get_widget_from_name("open_list");
+    w = Node2D::get_widget_from_name("open_timeline");
     static_cast<ui::Button2D*>(w)->set_disabled(false);
 
+    timeline_dirty = true;
     editing_keyframe = false;
     keyframe_dirty = false;
-    current_animation_state = nullptr;
+    last_animation_state_idx = -1;
 
     update_animation_trajectory();
 
     return should_close;
+}
+
+bool AnimationEditor::on_edit_timeline_keyframe(ui::Timeline* scope, uint32_t index)
+{
+    edit_keyframe(index);
+    return true;
+}
+
+bool AnimationEditor::on_duplicate_timeline_keyframe(ui::Timeline* scope, uint32_t index)
+{
+    bool ok = duplicate_keyframe(index);
+    return ok;
+}
+
+bool AnimationEditor::on_move_timeline_keyframe(ui::Timeline* scope, uint32_t index)
+{
+    if (!current_node || !current_animation) {
+        assert(0);
+        return false;
+    }
+
+    auto state = get_animation_state(index);
+    assert(state);
+    float new_time = scope->get_selected_key()->time;
+    state->time = new_time;
+
+    for (auto prop : state->properties) {
+        const std::string& property_name = prop.first;
+        const sPropertyState& p_state = state->properties[property_name];
+        if (p_state.keyframe_idx == -1) {
+            continue;
+        }
+        Track* track = current_animation->get_track_by_id(p_state.track_id);
+        Keyframe& keyframe = track->get_keyframe(p_state.keyframe_idx);
+        keyframe.time = new_time;
+    }
+
+    current_animation->recalculate_duration();
+
+    update_animation_trajectory();
+
+    return true;
+}
+
+bool AnimationEditor::on_delete_timeline_keyframe(ui::Timeline* scope, uint32_t index)
+{
+    // Allow only delete when 2 or more keys
+    auto& states = get_animation_states();
+    if (states.size() <= 1u) {
+        return false;
+    }
+
+    delete_keyframe(index);
+
+    return true;
 }

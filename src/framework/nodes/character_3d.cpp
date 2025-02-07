@@ -5,6 +5,9 @@
 #include "framework/nodes/skeleton_helper_3d.h"
 #include "framework/nodes/joint_3d.h"
 #include "framework/math/intersections.h"
+#include "framework/animation/animation.h"
+
+#include "graphics/renderer_storage.h"
 
 #include "engine/rooms_engine.h"
 
@@ -21,7 +24,7 @@ Character3D::Character3D() : SkeletonInstance3D()
 
 Character3D::~Character3D()
 {
-    delete helper;
+    // delete helper;
 
     const auto& indices = skeleton->get_joint_indices();
     for (uint32_t i = 0u; i < indices.size(); ++i) {
@@ -99,18 +102,45 @@ void Character3D::serialize(std::ofstream& binary_scene_file)
     // Serialize skeleton..
     assert(skeleton);
     skeleton->serialize(binary_scene_file);
+
+    // Serialize all animations
+    size_t animations_size = custom_animations.size();
+    binary_scene_file.write(reinterpret_cast<char*>(&animations_size), sizeof(size_t));
+
+    for (uint32_t i = 0u; i < animations_size; ++i) {
+        const auto& animation_name = custom_animations[i];
+        auto animation = RendererStorage::get_animation(animation_name);
+        animation->serialize(binary_scene_file);
+    }
 }
 
 void Character3D::parse(std::ifstream& binary_scene_file)
 {
     Node3D::parse(binary_scene_file);
 
-    skeleton = new Skeleton();
-    skeleton->parse(binary_scene_file);
+    // Parse skeleton
+    {
+        skeleton = new Skeleton();
+        skeleton->parse(binary_scene_file);
 
-    set_skeleton(skeleton);
+        set_skeleton(skeleton);
 
-    helper = new SkeletonHelper3D(skeleton, this);
+        helper = new SkeletonHelper3D(skeleton, this);
+    }
+
+    // Parse animations
+    {
+        size_t animations_size = 0;
+        binary_scene_file.read(reinterpret_cast<char*>(&animations_size), sizeof(size_t));
+        custom_animations.resize(animations_size);
+
+        for (uint32_t i = 0u; i < animations_size; ++i) {
+            auto animation = new Animation();
+            animation->parse(binary_scene_file);
+            custom_animations[i] = animation->get_name();
+            RendererStorage::register_animation(custom_animations[i], animation);
+        }
+    }
 }
 
 void Character3D::clone(Node* new_node, bool copy)
@@ -190,4 +220,9 @@ void Character3D::update_joints_from_pose()
         SculptNode* new_sculpt = static_cast<SculptNode*>(get_children()[i]);
         new_sculpt->set_transform(Transform::combine(get_global_transform(), pose.get_global_transform(i)));
     }
+}
+
+void Character3D::store_animation(const std::string& animation_name)
+{
+    custom_animations.push_back(animation_name);
 }

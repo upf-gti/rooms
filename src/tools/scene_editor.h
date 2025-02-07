@@ -13,6 +13,8 @@ class Node3D;
 class Group3D;
 class Scene;
 class Room;
+class Character3D;
+class SculptNode;
 
 namespace ui {
     class Inspector;
@@ -47,8 +49,8 @@ class SceneEditor : public BaseEditor {
     *   Intersections stuff
     */
 
-    glm::vec3 ray_origin;
-    glm::vec3 ray_direction;
+    glm::vec3 ray_origin = {};
+    glm::vec3 ray_direction = {};
 
     /*
     *   Input stuff
@@ -87,6 +89,14 @@ class SceneEditor : public BaseEditor {
     void process_node_hovered();
 
     /*
+    *   Characters stuff
+    */
+
+    Character3D* current_character = nullptr;
+
+    void edit_character(Character3D* character);
+
+    /*
     *   Group stuff
     */
 
@@ -113,6 +123,8 @@ class SceneEditor : public BaseEditor {
     void init_ui();
     void bind_events();
 
+    void open_context_menu(Node* node);
+
     bool on_goback_inspector(ui::Inspector* scope);
     bool on_close_inspector(ui::Inspector* scope);
 
@@ -120,11 +132,13 @@ class SceneEditor : public BaseEditor {
     void inspect_node(Node* node, uint32_t flags = NODE_STANDARD, const std::string& texture_path = "");
     void inspect_group(bool force = false);
     void inspect_light(bool force = false);
+    void inspect_character(bool force = false);
 
     bool rotation_started = false;
     bool scale_started = false;
     glm::quat last_right_hand_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
     glm::vec3 last_right_hand_translation = {};
+    glm::vec3 grab_offset = {};
     float last_hand_distance = 0.0f;
 
     void update_node_transform(const float delta_time, const bool rotate_selected_node);
@@ -203,11 +217,13 @@ public:
     // void on_resize_window(uint32_t width, uint32_t height) override;
     void on_enter(void* data) override;
 
-    void set_main_scene(Scene* new_scene) { main_scene = new_scene; };
+    void set_main_scene(Scene* new_scene);
     void set_inspector_dirty() { inspector_dirty = true; };
 
     Group3D* get_current_group() { return current_group; }
     Node* get_selected_node() { return selected_node; }
+
+    uint32_t get_sculpt_context_flags(SculptNode* node) override;
 
     static Color get_node_highlight_color(Node* node);
 };

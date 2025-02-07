@@ -23,11 +23,14 @@
 
 class MeshInstance3D;
 
-enum eSculptInstanceFlags : uint32_t {
+enum eSculptInstanceContextFlags : uint32_t {
     SCULPT_NOT_SELECTED = 0u,
-    SCULPT_IS_OUT_OF_FOCUS = 0b1u,
-    SCULPT_IS_HOVERED = 0b10u,
-    SCULPT_IS_SELECTED = 0b100u
+    SCULPT_IS_OUT_OF_FOCUS = 1 << 0,
+    SCULPT_IS_HOVERED = 1 << 1,
+    SCULPT_IS_SELECTED = 1 << 2,
+    SCULPT_IN_SCULPT_EDITOR = 1 << 3,
+    SCULPT_IN_SCENE_EDITOR = 1 << 4,
+    SCULPT_HOVER_CHECK_SIBLINGS = 1 << 5,
 };
 
 #define MAX_INSTANCES_PER_SCULPT 20u

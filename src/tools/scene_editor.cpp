@@ -1,7 +1,5 @@
 #include "scene_editor.h"
 
-#include "includes.h"
-
 #include "framework/input.h"
 #include "framework/parsers/parse_scene.h"
 #include "framework/nodes/sculpt_node.h"
@@ -12,7 +10,6 @@
 #include "framework/nodes/directional_light_3d.h"
 #include "framework/nodes/group_3d.h"
 #include "framework/nodes/slider_2d.h"
-#include "framework/nodes/container_2d.h"
 #include "framework/nodes/button_2d.h"
 #include "framework/math/intersections.h"
 #include "framework/ui/io.h"
@@ -66,15 +63,8 @@ void SceneEditor::initialize()
     default_sculpt->initialize();
     RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
     default_sculpt->set_position({0.0f, 1.0f, 0.0f});
-    //static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(default_sculpt);
     main_scene->add_node(default_sculpt);
 #endif
-
-   /* auto e = parse_mesh("data/meshes/torus/torus.obj");
-    main_scene->add_node(e);
-
-    e = parse_mesh("data/meshes/cube/cube.obj");
-    main_scene->add_node(e);*/
 
     Node::bind(main_scene->get_name() + "@nodes_added", [&](const std::string& sg, void* data) {
         set_inspector_dirty();
@@ -221,7 +211,10 @@ void SceneEditor::update(float delta_time)
     if (inspector_dirty) {
 
         if (selected_node && dynamic_cast<Light3D*>(selected_node)) {
-            inspect_light();
+            inspect_light(true);
+        }
+        else if (selected_node && dynamic_cast<Character3D*>(selected_node)) {
+            inspect_character(true);
         }
         else if (current_group) {
             inspect_group(true);
@@ -271,22 +264,7 @@ void SceneEditor::render_gui()
     }
 
     if (hovered_node) {
-
         ImGui::Text("Hovered Node");
-
-        //ImGui::OpenPopup("context_menu_popup");
-
-        //if (ImGui::BeginPopup("context_menu_popup")) {
-
-        //    if (ImGui::MenuItem("Clone")) {
-        //        // Handle clone action..
-        //    }
-        //    if (ImGui::MenuItem("Delete")) {
-        //        // Handle delete action..
-        //    }
-
-        //    ImGui::EndPopup();
-        //}
     }
 }
 
@@ -294,6 +272,14 @@ void SceneEditor::on_enter(void* data)
 {
     gizmo->set_operation(TRANSLATE);
     Node::emit_signal("combo_gizmo_modes@changed", (void*)"translate");
+}
+
+void SceneEditor::set_main_scene(Scene* new_scene)
+{
+    current_group = nullptr;
+    current_character = nullptr;
+
+    main_scene = new_scene;
 }
 
 void SceneEditor::update_hovered_node()
@@ -306,6 +292,29 @@ void SceneEditor::update_hovered_node()
 
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     rooms_renderer->get_sculpt_manager()->set_ray_to_test(ray_origin, ray_direction);
+}
+
+uint32_t SceneEditor::get_sculpt_context_flags(SculptNode* node)
+{
+    uint32_t flags = SCULPT_IN_SCENE_EDITOR;
+
+    auto parent = node->get_parent();
+
+    if (current_group) {
+        if ((!parent || parent != (Node*)current_group)) {
+            flags |= SCULPT_IS_OUT_OF_FOCUS;
+        }
+    }
+    else if (current_character) {
+        if ((!parent || parent != (Node*)current_character)) {
+            flags |= SCULPT_IS_OUT_OF_FOCUS;
+        }
+    }
+    else if (parent) {
+        flags |= SCULPT_HOVER_CHECK_SIBLINGS;
+    }
+
+    return flags;
 }
 
 Color SceneEditor::get_node_highlight_color(Node* node)
@@ -330,11 +339,12 @@ void SceneEditor::process_node_hovered()
 {
     const bool sculpt_hovered = !!dynamic_cast<SculptNode*>(hovered_node);
     const bool group_hovered = !sculpt_hovered && !!dynamic_cast<Group3D*>(hovered_node);
+    const bool character_hovered = !sculpt_hovered && !group_hovered && !!dynamic_cast<Character3D*>(hovered_node);
     const bool a_pressed = Input::was_button_pressed(XR_BUTTON_A);
     const bool b_pressed = Input::was_button_pressed(XR_BUTTON_B);
     const bool should_open_context_menu = Input::was_button_pressed(XR_BUTTON_B) || Input::was_mouse_pressed(GLFW_MOUSE_BUTTON_RIGHT);
 
-    if (group_hovered) {
+    if (group_hovered && renderer->get_openxr_available()) {
         if (grouping_node) {
             bool can_group = (hovered_node != node_to_group);
             shortcuts[shortcuts::ADD_TO_GROUP] = can_group;
@@ -344,28 +354,12 @@ void SceneEditor::process_node_hovered()
         }
         else {
             shortcuts[shortcuts::EDIT_GROUP] = true;
-            if (b_pressed) {
+            if (a_pressed) {
                 edit_group(static_cast<Group3D*>(hovered_node));
             }
             else if (select_action_pressed) {
                 select_node(hovered_node, false);
             }
-            /*else if (should_open_context_menu) {
-
-                glm::vec2 position = Input::get_mouse_position();
-                glm::vec3 position_3d = glm::vec3(0.0f);
-
-                if (renderer->get_openxr_available()) {
-                    position = { 0.0f, 0.0f };
-                    const sGPU_SculptResults& gpu_results = renderer->get_sculpt_manager()->read_results.loaded_results;
-                    position_3d = ray_origin + ray_direction * gpu_results.ray_intersection.ray_t;
-                }
-
-                new ui::ContextMenu(position, position_3d, {
-                    { "Edit", [&, n = hovered_node](const std::string& name, uint32_t index) { edit_group(static_cast<Group3D*>(n)); }},
-                    { "Delete", [&, n = hovered_node](const std::string& name, uint32_t index) { delete_node(n); }}
-                });
-            }*/
         }
     }
     // In 2d, we have to select manually by click, so do not enter here!
@@ -400,20 +394,7 @@ void SceneEditor::process_node_hovered()
             RoomsEngine::switch_editor(SCULPT_EDITOR, static_cast<SculptNode*>(hovered_node));
         }
         else if (should_open_context_menu) {
-            glm::vec2 position = Input::get_mouse_position();
-            glm::vec3 position_3d = glm::vec3(0.0f);
-
-            if (renderer->get_openxr_available()) {
-                position = { 0.0f, 0.0f };
-                const sGPU_SculptResults& gpu_results = renderer->get_sculpt_manager()->loaded_results;
-                position_3d = ray_origin + ray_direction * gpu_results.ray_intersection.ray_t;
-            }
-
-            new ui::ContextMenu(position, position_3d, {
-                { "Animate", [&, n = hovered_node](const std::string& name, uint32_t index) { selected_node = n; RoomsEngine::switch_editor(ANIMATION_EDITOR, n); }},
-                { "Make Unique", [&, n = hovered_node](const std::string& name, uint32_t index) { make_unique(n); }},
-                { "Delete", [&, n = hovered_node](const std::string& name, uint32_t index) { delete_node(n); }}
-            });
+            open_context_menu(hovered_node);
         }
         else if (select_action_pressed) {
             select_node(hovered_node, false);
@@ -561,13 +542,13 @@ void SceneEditor::init_ui()
                 new ui::ImageLabel2D("More Options", shortcuts::B_BUTTON_PATH, shortcuts::OPEN_CONTEXT_MENU),
                 new ui::ImageLabel2D("Edit Sculpt", shortcuts::A_BUTTON_PATH, shortcuts::EDIT_SCULPT_NODE),
                 new ui::ImageLabel2D("Edit Group", shortcuts::A_BUTTON_PATH, shortcuts::EDIT_GROUP),
-                new ui::ImageLabel2D("Create Group", shortcuts::R_GRIP_B_BUTTON_PATH, shortcuts::ANIMATE_NODE, double_size),
-                new ui::ImageLabel2D("Add to Group", shortcuts::R_GRIP_B_BUTTON_PATH, shortcuts::ANIMATE_NODE, double_size),
+                new ui::ImageLabel2D("Create Group", shortcuts::A_BUTTON_PATH, shortcuts::CREATE_GROUP),
+                new ui::ImageLabel2D("Add to Group", shortcuts::A_BUTTON_PATH, shortcuts::ADD_TO_GROUP),
+                new ui::ImageLabel2D("Group Node", shortcuts::R_GRIP_B_BUTTON_PATH, shortcuts::GROUP_NODE, double_size),
                 new ui::ImageLabel2D("Clone Node", shortcuts::R_GRIP_A_BUTTON_PATH, shortcuts::CLONE_NODE, double_size),
                 new ui::ImageLabel2D("Place Node", shortcuts::R_TRIGGER_PATH, shortcuts::PLACE_NODE),
                 new ui::ImageLabel2D("Select Node", shortcuts::R_TRIGGER_PATH, shortcuts::SELECT_NODE),
-                new ui::ImageLabel2D("Ungroup", shortcuts::R_GRIP_R_TRIGGER_PATH, shortcuts::UNGROUP, double_size),
-                new ui::ImageLabel2D("Group Node", shortcuts::R_GRIP_R_TRIGGER_PATH, shortcuts::GROUP_NODE, double_size)
+                new ui::ImageLabel2D("Ungroup", shortcuts::R_GRIP_R_TRIGGER_PATH, shortcuts::UNGROUP, double_size)
             });
         }
     }
@@ -682,11 +663,46 @@ void SceneEditor::bind_events()
     }
 }
 
+void SceneEditor::open_context_menu(Node* node)
+{
+    glm::vec2 position = Input::get_mouse_position();
+    glm::vec3 position_3d = glm::vec3(0.0f);
+
+    if (renderer->get_openxr_available()) {
+        position = { 0.0f, 0.0f };
+        const sGPU_SculptResults& gpu_results = renderer->get_sculpt_manager()->loaded_results;
+        position_3d = ray_origin + ray_direction * gpu_results.ray_intersection.ray_t;
+    }
+
+    auto callback = [&, n = node](const std::string& output) {
+        n->set_name(output);
+        set_inspector_dirty();
+    };
+
+    std::vector<ui::sContextMenuOption> options = {
+        { "Animate", [&, n = node](const std::string& name, uint32_t index) { selected_node = n; RoomsEngine::switch_editor(ANIMATION_EDITOR, n); }},
+        { "Rename", [fn = callback, str = node->get_name()](const std::string& name, uint32_t index) { ui::Keyboard::request(fn, str, 32u); }}
+    };
+
+    if (node->get_node_type() == "SculptNode") {
+        options.push_back({ "Make Unique", [&, n = node](const std::string& name, uint32_t index) { make_unique(n); } });
+    }
+
+    options.push_back({ "Delete", [&, n = node](const std::string& name, uint32_t index) { delete_node(n); } });
+
+    // this will be auto-deleted once loses focus
+    new ui::ContextMenu(position, position_3d, options);
+}
+
 bool SceneEditor::on_goback_inspector(ui::Inspector* scope)
 {
     if (current_group) {
         current_group = nullptr;
         Node2D::get_widget_from_name<ui::TextureButton2D*>("group")->set_disabled(false);
+    }
+
+    if (current_character) {
+        current_character = nullptr;
     }
 
     deselect();
@@ -701,6 +717,10 @@ bool SceneEditor::on_close_inspector(ui::Inspector* scope)
     if (current_group) {
         current_group = nullptr;
         Node2D::get_widget_from_name<ui::TextureButton2D*>("group")->set_disabled(false);
+    }
+
+    if (current_character) {
+        current_character = nullptr;
     }
 
     return true;
@@ -1132,7 +1152,7 @@ void SceneEditor::render_gizmo()
 void SceneEditor::update_node_transform(const float delta_time, const bool rotate_selected_node)
 {
     // Do not rotate sculpt if shift -> we might be rotating the edit
-    if (rotate_selected_node && !is_shift_left_pressed) {
+    if (rotate_selected_node && !is_shift_left_pressed && !action_in_progress) {
 
         if (!selected_node) {
             if (!hovered_node) {
@@ -1146,30 +1166,40 @@ void SceneEditor::update_node_transform(const float delta_time, const bool rotat
         glm::quat right_hand_rotation = Input::get_controller_rotation(HAND_RIGHT, POSE_AIM);
         glm::vec3 right_hand_translation = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
         glm::vec3 left_hand_translation = Input::get_controller_position(HAND_LEFT, POSE_AIM);
-        float hand_distance = glm::length2(right_hand_translation - left_hand_translation);
+        // float hand_distance = glm::length2(right_hand_translation - left_hand_translation);
 
         if (!rotation_started) {
             RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
             const float ray_t = rooms_renderer->get_sculpt_manager()->loaded_results.ray_intersection.ray_t;
-            const glm::vec3 sculpt_intersection_pos = prev_ray_origin + prev_ray_dir * ray_t;
-
+            const glm::vec3& sculpt_intersection_pos = prev_ray_origin + prev_ray_dir * ray_t;
+            grab_offset = sculpt_intersection_pos - node_3d->get_translation();
             last_right_hand_rotation = right_hand_rotation;
             last_right_hand_translation = right_hand_translation;
-            hand_sculpt_distance = glm::length(node_3d->get_translation() - right_hand_translation);
+            hand_sculpt_distance = glm::length(sculpt_intersection_pos - right_hand_translation);
             push_undo_action({ sActionData::ACTION_TRANSFORM, node_3d, node_3d->get_transform() });
         }
 
         const glm::vec2 thumbstick_values = Input::get_thumbstick_value(HAND_RIGHT);
 
-        if (glm::abs(thumbstick_values.y) >= THUMBSTICK_DEADZONE) {
-            const float new_distance_delta = (thumbstick_values.y + glm::sign(thumbstick_values.y) * THUMBSTICK_DEADZONE) * delta_time;
+        if (glm::abs(thumbstick_values.y) >= XR_THUMBSTICK_DEADZONE) {
+            const float new_distance_delta = (thumbstick_values.y + glm::sign(thumbstick_values.y) * XR_THUMBSTICK_DEADZONE) * delta_time;
             hand_sculpt_distance = glm::clamp(hand_sculpt_distance + new_distance_delta, 0.0f, 5.0f);
         }
 
         glm::quat hand_rotation_diff = (right_hand_rotation * glm::inverse(last_right_hand_rotation));
 
-        node_3d->set_position(hand_sculpt_distance * ray_direction + ray_origin);
+        Transform parent_transform;
+
+        if (current_group || node_3d->get_parent()) {
+            parent_transform = get_group_global_transform(node_3d);
+        }
+
+        node_3d->set_position((hand_sculpt_distance * ray_direction + ray_origin) - grab_offset);
         node_3d->get_transform().rotate_world(hand_rotation_diff);
+
+        if (current_group || node_3d->get_parent()) {
+            node_3d->set_transform(Transform::combine(Transform::inverse(parent_transform), node_3d->get_transform()));
+        }
 
         /*if (Input::get_trigger_value(HAND_RIGHT) > 0.5) {
 
@@ -1282,6 +1312,9 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
             else if (dynamic_cast<Group3D*>(n)) {
                 edit_group(static_cast<Group3D*>(n));
             }
+            else if (dynamic_cast<Character3D*>(n)) {
+                edit_character(static_cast<Character3D*>(n));
+            }
         });
     }
 
@@ -1305,21 +1338,9 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
         uint32_t flags = ui::TEXT_EVENTS | (node == selected_node ? ui::SELECTED : 0);
         inspector->label(signal, node_name, flags, SceneEditor::get_node_highlight_color(node));
 
-        // Request keyboard and use the result to set the new node name. Not the nicest code, but anyway..
-        {
-            Node::bind(signal, [&, n = node](const std::string& sg, void* data) {
-                select_node(n, false);
-            });
-
-            auto callback = [&, n = node](const std::string& output) {
-                n->set_name(output);
-                set_inspector_dirty();
-            };
-
-            Node::bind(signal + "@long_click", [fn = callback, str = node_name](const std::string& sg, void* data) {
-                ui::Keyboard::request(fn, str, 24u);
-            });
-        }
+        Node::bind(signal, [&, n = node](const std::string& sg, void* data) {
+            select_node(n, false);
+        });
     }
 
     // Remove button
@@ -1364,7 +1385,7 @@ void SceneEditor::inspect_group(bool force)
 
     uint8_t flags = ui::INSPECTOR_FLAG_BACK_BUTTON | ui::INSPECTOR_FLAG_CLOSE_BUTTON;
 
-    if (!inspector->get_visibility()) {
+    if (!inspector->get_visibility() || force) {
         flags |= ui::INSPECTOR_FLAG_FORCE_3D_POSITION;
     }
 
@@ -1394,11 +1415,62 @@ void SceneEditor::inspect_group(bool force)
     }
 }
 
+
+void SceneEditor::inspect_character(bool force)
+{
+    if (!dynamic_cast<Character3D*>(selected_node)) {
+        assert(0);
+        return;
+    }
+
+    uint8_t flags = ui::INSPECTOR_FLAG_BACK_BUTTON | ui::INSPECTOR_FLAG_CLOSE_BUTTON;
+
+    if (!inspector->get_visibility() || force) {
+        flags |= ui::INSPECTOR_FLAG_FORCE_3D_POSITION;
+    }
+
+    inspector->clear(flags, "Character");
+
+    auto character = static_cast<Character3D*>(selected_node);
+    auto sculpt_nodes = character->get_children();
+
+    for (uint32_t i = 0; i < sculpt_nodes.size(); ++i) {
+
+        auto node = sculpt_nodes[i];
+
+        inspector->same_line();
+
+        {
+            std::string signal = node->get_name() + std::to_string(node_signal_uid++) + "_edit_character_set";
+            inspector->button(signal, "data/textures/edit.png", 0u, "Edit");
+
+            Node::bind(signal, [&, n = node](const std::string& sg, void* data) {
+                RoomsEngine::switch_editor(SCULPT_EDITOR, static_cast<SculptNode*>(n));
+                });
+        }
+
+        {
+            std::string signal = node->get_name() + std::to_string(node_signal_uid++) + "_label_character_set";
+            inspector->label(signal, node->get_name(), 0u, SceneEditor::COLOR_HIGHLIGHT_CHARACTER);
+        }
+
+        inspector->end_line();
+    }
+
+    Node::emit_signal(inspector->get_name() + "@children_changed", (void*)nullptr);
+
+    inspector_dirty = false;
+
+    if (force) {
+        inspector->set_visibility(true);
+    }
+}
+
 void SceneEditor::inspect_light(bool force)
 {
     uint8_t flags = ui::INSPECTOR_FLAG_BACK_BUTTON | ui::INSPECTOR_FLAG_CLOSE_BUTTON;
 
-    if (!inspector->get_visibility()) {
+    if (!inspector->get_visibility() || force) {
         flags |= ui::INSPECTOR_FLAG_FORCE_3D_POSITION;
     }
 
@@ -1460,8 +1532,12 @@ void SceneEditor::inspect_exports(bool force)
 {
     uint8_t flags = ui::INSPECTOR_FLAG_BACK_BUTTON | ui::INSPECTOR_FLAG_CLOSE_BUTTON;
 
-    if (!inspector->get_visibility()) {
+    if (!inspector->get_visibility() || force) {
         flags |= ui::INSPECTOR_FLAG_FORCE_3D_POSITION;
+    }
+    else {
+        // In case of files being already displayed, a second click will update the files..
+        get_export_files();
     }
 
     inspector->clear(flags, "Available Rooms");
@@ -1477,6 +1553,7 @@ void SceneEditor::inspect_exports(bool force)
         Node::bind(signal, [&, str = full_name](const std::string& sg, void* data) {
             deselect();
             static_cast<RoomsEngine*>(RoomsEngine::instance)->set_main_scene(str);
+            set_inspector_dirty();
         });
 
         signal = name + std::to_string(node_signal_uid++) + "_add";
@@ -1494,6 +1571,8 @@ void SceneEditor::inspect_exports(bool force)
     }
 
     Node::emit_signal(inspector->get_name() + "@children_changed", (void*)nullptr);
+
+    inspector->clear_scroll();
 }
 
 void SceneEditor::get_export_files()
@@ -1654,6 +1733,17 @@ bool SceneEditor::scene_redo()
     return true;
 }
 
+void SceneEditor::edit_character(Character3D* character)
+{
+    if (!character) {
+        assert(0);
+        return;
+    }
+
+    current_character = character;
+
+    set_inspector_dirty();
+}
 
 SceneEditor::eTriggerAction SceneEditor::get_trigger_action(const float delta_time)
 {

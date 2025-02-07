@@ -152,11 +152,11 @@ void SculptEditor::initialize()
             return;
         }
 
-        sGPU_SculptResults* last_gpu_results = reinterpret_cast<sGPU_SculptResults*>(data);
+        last_gpu_results = *(reinterpret_cast<sGPU_SculptResults*>(data));
 
         // Computing sculpt AABB
         {
-            const sGPU_SculptResults::sGPU_SculptEvalData& eval_data = last_gpu_results->sculpt_eval_data;
+            const sGPU_SculptResults::sGPU_SculptEvalData& eval_data = last_gpu_results.sculpt_eval_data;
 
             // If there has been an eval, assign the AABB to the sculpt
             if (static_cast<RoomsRenderer*>(engine->get_renderer())->has_performed_evaluation()) {
@@ -169,7 +169,7 @@ void SculptEditor::initialize()
 
         // Computing intersection for surface snap
         {
-            const sGPU_RayIntersectionData& intersection = last_gpu_results->ray_intersection;
+            const sGPU_RayIntersectionData& intersection = last_gpu_results.ray_intersection;
 
             if (intersection.has_intersected) {
                 last_snap_position = ray_origin + ray_direction * intersection.ray_t;
@@ -197,10 +197,11 @@ void SculptEditor::on_enter(void* data)
     // Get head relative position for setting the sculpt instance if in XR
     if (renderer->get_openxr_available()) {
         const AABB sculpt_aabb = sculpt_node->get_sculpt_data()->get_AABB();
-        const glm::vec3 cam_origin = renderer->get_camera_eye();
-        const glm::vec3 to_sculpt_instance_pos = (renderer->get_camera_front() * (0.4f + glm::length(sculpt_aabb.half_size) * 1.25f)) + cam_origin;
+        const glm::vec3& cam_origin = renderer->get_camera_eye();
+        // const glm::vec3& to_sculpt_instance_pos = (renderer->get_camera_front() * (0.4f + glm::length(sculpt_aabb.half_size) * 1.25f)) + cam_origin;
 
-        current_instance_transform.set_position(to_sculpt_instance_pos);
+        const glm::vec3& to_sculpt_instance_pos = sculpt_node->get_translation();
+        // current_instance_transform.set_position(to_sculpt_instance_pos);
         mirror_transform.set_position(to_sculpt_instance_pos);
         lock_axis_transform.set_position(to_sculpt_instance_pos);
     } else {
@@ -231,13 +232,15 @@ void SculptEditor::clean()
     BaseEditor::clean();
 }
 
-bool SculptEditor::is_out_of_focus(SculptNode* sculpt_node)
+uint32_t SculptEditor::get_sculpt_context_flags(SculptNode* node)
 {
-    if (!renderer->get_openxr_available()) {
-        return get_current_sculpt() != sculpt_node;
+    uint32_t flags = SCULPT_IN_SCULPT_EDITOR;
+
+    if (get_current_sculpt() == node) {
+        return flags;
     }
 
-    return true;
+    return (flags | SCULPT_IS_OUT_OF_FOCUS);
 }
 
 bool SculptEditor::is_tool_being_used(bool stamp_enabled)
@@ -278,6 +281,7 @@ bool SculptEditor::edit_update(float delta_time)
 
         if (intersection.has_intersected) {
             StrokeMaterial tmp = stroke_parameters.get_material();
+            last_used_material = tmp;
             tmp.color = Color(intersection.intersection_albedo, 1.0f);
             tmp.roughness = intersection.intersection_roughness;
             tmp.metallic = intersection.intersection_metallic;
@@ -285,7 +289,10 @@ bool SculptEditor::edit_update(float delta_time)
         }
 
         if (is_tool_used) {
-            pick_material();
+            if (!intersection.has_intersected) {
+                update_gui_from_stroke_material(last_used_material);
+            }
+            should_pick_material = true;
             return false;
         }
     }
@@ -320,7 +327,7 @@ bool SculptEditor::edit_update(float delta_time)
             }
         }
 
-        if (use_mirror) {
+        if (use_mirror && !hide_mirror) {
             bool r = mirror_gizmo.update(Input::get_controller_position(HAND_RIGHT, POSE_AIM), delta_time);
             is_tool_used &= !r;
             is_tool_pressed &= !r;
@@ -354,14 +361,14 @@ bool SculptEditor::edit_update(float delta_time)
         // Disable the unused joystick axis until the joystick is released
         uint8_t curr_thumbstick_axis = Input::get_leading_thumbstick_axis(HAND_RIGHT);
 
-        if (thumbstick_leading_axis == THUMBSTICK_NO_AXIS) {
+        if (thumbstick_leading_axis == XR_THUMBSTICK_NO_AXIS) {
             thumbstick_leading_axis = curr_thumbstick_axis;
         }
-        else if (curr_thumbstick_axis == THUMBSTICK_NO_AXIS) {
-            thumbstick_leading_axis = THUMBSTICK_NO_AXIS;
+        else if (curr_thumbstick_axis == XR_THUMBSTICK_NO_AXIS) {
+            thumbstick_leading_axis = XR_THUMBSTICK_NO_AXIS;
         }
 
-        bool use_x_axis = (thumbstick_leading_axis == THUMBSTICK_AXIS_X);
+        bool use_x_axis = (thumbstick_leading_axis == XR_THUMBSTICK_AXIS_X);
         const glm::vec2& thumbstick_values = Input::get_thumbstick_value(HAND_RIGHT);
         float size_multiplier = (use_x_axis ? thumbstick_values.x : thumbstick_values.y) * delta_time * 0.1f;
 
@@ -484,7 +491,7 @@ bool SculptEditor::edit_update(float delta_time)
 
         // Only enter spline mode when the acceleration of the hand exceds a threshold
         // To stretch, toggle with 'B'
-        else if(!creating_path && glm::length(glm::abs(controller_movement_data[HAND_RIGHT].velocity)) > 0.20f) {
+        else if(!creating_path && glm::length(glm::abs(controller_movement_data[HAND_RIGHT].velocity)) > 0.30f) {
             start_spline(true);
         }
     }
@@ -563,13 +570,17 @@ void SculptEditor::update(float delta_time)
     new_edits.clear();
 
     // Render current instance
-    if (renderer->get_openxr_available()) {
+    /*if (renderer->get_openxr_available()) {
         uint32_t flags = 0u;
         RoomsRenderer* renderer = static_cast<RoomsRenderer*>(Renderer::instance);
+        glm::mat4x4 model = Transform::transform_to_mat4(get_current_transform());
+        if (current_sculpt->get_parent()) {
+            model = current_sculpt->get_parent<Node3D*>()->get_global_model() * model;
+        }
         in_frame_sculpt_render_list_id = renderer->add_sculpt_render_call(
-            current_sculpt->get_sculpt_data(), Transform::transform_to_mat4(get_current_transform()), flags);
+            current_sculpt->get_sculpt_data(), model, flags);
         in_frame_sculpt_render_list_id += current_sculpt->get_sculpt_data()->get_in_frame_model_buffer_index();
-    }
+    }*/
 
     // Operation changer for the different tools
     {
@@ -792,7 +803,7 @@ void SculptEditor::set_preview_stroke()
 
     renderer->get_sculpt_manager()->set_preview_stroke(
         current_sculpt->get_sculpt_data(),
-        renderer->get_openxr_available() ? in_frame_sculpt_render_list_id : current_sculpt->get_in_frame_model_idx(),
+        /*renderer->get_openxr_available() ? in_frame_sculpt_render_list_id :*/ current_sculpt->get_in_frame_model_idx(),
         preview_stroke, preview_tmp_edits
     );
 }
@@ -810,11 +821,11 @@ void SculptEditor::add_edit_repetitions(std::vector<Edit>& edits)
     for (size_t i = 0u; i < edit_count; i++) {
 
         Edit& edit = edits[i];
-        edit.position -= (glm::vec3(0.0f, 0.0f, og_offset) * edit.rotation);
+        edit.position -= (glm::vec3(og_offset, 0.0f, 0.0f) * edit.rotation);
 
         for (uint8_t k = 1u; k <= rep_count; k++) {
             Edit rep_edit = edit;
-            rep_edit.position += (glm::vec3(0.0f, 0.0f, rep_spacing * k) * edit.rotation);
+            rep_edit.position += (glm::vec3(rep_spacing * k, 0.0f, 0.0f) * edit.rotation);
             edits.push_back(rep_edit);
         }
     }
@@ -890,7 +901,7 @@ void SculptEditor::test_ray_to_sculpts()
     Engine::instance->get_scene_ray(ray_origin, ray_direction);
 
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
-    rooms_renderer->get_sculpt_manager()->set_ray_to_test(ray_origin, ray_direction, current_sculpt->get_sculpt_data(), in_frame_sculpt_render_list_id);
+    rooms_renderer->get_sculpt_manager()->set_ray_to_test(ray_origin, ray_direction, current_sculpt->get_sculpt_data(), current_sculpt->get_in_frame_model_idx());
 }
 
 void SculptEditor::update_sculpt_rotation()
@@ -1041,7 +1052,7 @@ void SculptEditor::render()
 
         mirror_mesh->render();
     }
-    else if (use_mirror) {
+    else if (use_mirror && !hide_mirror) {
 
         mirror_gizmo.render();
 
@@ -1096,23 +1107,23 @@ void SculptEditor::render_gui()
         stroke_parameters.set_dirty(true);
     }
 
-    ImGui::Text("Sculpt Instance Transform");
+    //ImGui::Text("Sculpt Instance Transform");
 
-    glm::vec3 position = current_instance_transform.get_position();
-    glm::quat rotation = current_instance_transform.get_rotation();
-    glm::vec3 scale = current_instance_transform.get_scale();
+    //glm::vec3 position = current_instance_transform.get_position();
+    //glm::quat rotation = current_instance_transform.get_rotation();
+    //glm::vec3 scale = current_instance_transform.get_scale();
 
-    if (ImGui::DragFloat3("Translation", &position[0], 0.1f)) {
-        current_instance_transform.set_position(position);
-    }
+    //if (ImGui::DragFloat3("Translation", &position[0], 0.1f)) {
+    //    current_instance_transform.set_position(position);
+    //}
 
-    if (ImGui::DragFloat4("Rotation", &rotation[0], 0.1f)) {
-        current_instance_transform.set_rotation(rotation);
-    }
+    //if (ImGui::DragFloat4("Rotation", &rotation[0], 0.1f)) {
+    //    current_instance_transform.set_rotation(rotation);
+    //}
 
-    if (ImGui::DragFloat3("Scale", &scale[0], 0.1f)) {
-        current_instance_transform.set_scale(scale);
-    }
+    //if (ImGui::DragFloat3("Scale", &scale[0], 0.1f)) {
+    //    current_instance_transform.set_scale(scale);
+    //}
 }
 
 bool SculptEditor::can_snap_to_surface()
@@ -1275,11 +1286,13 @@ void SculptEditor::enable_tool(eTool tool)
 */
 Transform& SculptEditor::get_current_transform()
 {
-    if (!renderer->get_openxr_available()) {
+    return current_sculpt->get_transform();
+
+    /*if (!renderer->get_openxr_available()) {
         return current_sculpt->get_transform();
     }
 
-    return current_instance_transform;
+    return current_instance_transform;*/
 }
 
 bool SculptEditor::is_rotation_being_used()
@@ -1436,13 +1449,11 @@ void SculptEditor::init_ui()
 
     {
         ui::ItemGroup2D* g_reps = new ui::ItemGroup2D("g_reps");
-        g_reps->add_child(new ui::IntSlider2D("rep_count", { .path = "data/textures/a.png", .flags = ui::USER_RANGE, .ivalue_max = 8, .p_data = &rep_count }));
-        g_reps->add_child(new ui::FloatSlider2D("rep_spacing", { .path = "data/textures/a.png", .flags = ui::USER_RANGE, .fvalue_max = 0.2f, .precision = 2, .p_data = &rep_spacing }));
+        g_reps->add_child(new ui::IntSlider2D("rep_count", { .path = "data/textures/edit_repetition.png", .flags = ui::USER_RANGE, .ivalue_max = 8, .p_data = &rep_count }));
+        // in meters
+        g_reps->add_child(new ui::FloatSlider2D("rep_spacing", { .path = "data/textures/edit_repetition_spacing.png", .flags = ui::USER_RANGE, .fvalue_max = 0.1f, .precision = 2, .p_data = &rep_spacing }));
         first_row->add_child(g_reps);
     }
-
-    // debug
-    // first_row->add_child(new ui::TextureButton2D("create_spline", { "data/textures/bezier.png", ui::ALLOW_TOGGLE }));
 
     // ** Shape, Brush, Material Editors **
     {
@@ -1562,7 +1573,8 @@ void SculptEditor::init_ui()
         // Mirror
         {
             ui::ButtonSubmenu2D* mirror_submenu = new ui::ButtonSubmenu2D("mirror", { "data/textures/mirror.png" });
-            mirror_submenu->add_child(new ui::TextureButton2D("mirror_toggle", { "data/textures/mirror.png", ui::ALLOW_TOGGLE }));
+            mirror_submenu->add_child(new ui::TextureButton2D("use_mirror", { "data/textures/mirror.png", ui::ALLOW_TOGGLE }));
+            mirror_submenu->add_child(new ui::TextureButton2D("hide_mirror", { "data/textures/cross.png", ui::ALLOW_TOGGLE }));
             ui::ComboButtons2D* g_mirror = new ui::ComboButtons2D("g_mirror");
             g_mirror->add_child(new ui::TextureButton2D("mirror_translation", { "data/textures/translation_gizmo.png", ui::SELECTED }));
             g_mirror->add_child(new ui::TextureButton2D("mirror_rotation", { "data/textures/rotation_gizmo.png" }));
@@ -1603,16 +1615,17 @@ void SculptEditor::init_ui()
         second_row->add_child(combo_main_tools);
     }
 
+    // Smooth factor
+    {
+        ui::Slider2D* smooth_factor_slider = new ui::FloatSlider2D("smooth_factor", { .path = "data/textures/smooth.png", .fvalue = stroke_parameters.get_smooth_factor(), .flags = ui::SKIP_VALUE,
+            .fvalue_min = MIN_SMOOTH_FACTOR, .fvalue_max = MAX_SMOOTH_FACTOR, .precision = 3 });
+        second_row->add_child(smooth_factor_slider);
+    }
+
     // ** Undo/Redo **
     {
         second_row->add_child(new ui::TextureButton2D("undo", { "data/textures/undo.png" }));
         second_row->add_child(new ui::TextureButton2D("redo", { "data/textures/redo.png" }));
-    }
-
-    // Smooth factor
-    {
-        ui::Slider2D* smooth_factor_slider = new ui::FloatSlider2D("smooth_factor", { .path = "data/textures/smooth.png", .fvalue = stroke_parameters.get_smooth_factor(), .flags = ui::SKIP_VALUE, .fvalue_min = MIN_SMOOTH_FACTOR, .fvalue_max = MAX_SMOOTH_FACTOR, .precision = 3 });
-        second_row->add_child(smooth_factor_slider);
     }
 
     // Load controller UI labels
@@ -1682,8 +1695,6 @@ void SculptEditor::bind_events()
     Node::bind("torus", [&](const std::string& signal, void* button) { set_primitive(SD_TORUS); });
     Node::bind("vesica", [&](const std::string& signal, void* button) { set_primitive(SD_VESICA); });
 
-    // Node::bind("create_spline", [&](const std::string& signal, void* button) { start_spline(false); });
-
     Node::bind("main_size", (FuncFloat)[&](const std::string& signal, float value) { set_edit_size(value); });
     Node::bind("secondary_size", (FuncFloat)[&](const std::string& signal, float value) { set_edit_size(-1.0f, value); });
     Node::bind("round_size", (FuncFloat)[&](const std::string& signal, float value) { set_edit_size(-1.0f, -1.0f, value); });
@@ -1691,7 +1702,8 @@ void SculptEditor::bind_events()
     //Node::bind("onion_value", [&](const std::string& signal, float value) { set_onion_modifier(value); });
     Node::bind("cap_value", (FuncFloat)[&](const std::string& signal, float value) { set_cap_modifier(value); });
 
-    Node::bind("mirror_toggle", [&](const std::string& signal, void* button) { toggle_mirror(); });
+    Node::bind("use_mirror", [&](const std::string& signal, void* button) { toggle_mirror(); });
+    Node::bind("hide_mirror", [&](const std::string& signal, void* button) { hide_mirror = !hide_mirror; });
     Node::bind("mirror_translation", [&](const std::string& signal, void* button) { mirror_gizmo.set_operation(TRANSLATE); });
     Node::bind("mirror_rotation", [&](const std::string& signal, void* button) { mirror_gizmo.set_operation(ROTATE); });
     Node::bind("mirror_both", [&](const std::string& signal, void* button) { mirror_gizmo.set_operation(TRANSLATE | ROTATE); });
@@ -1907,16 +1919,6 @@ void SculptEditor::update_stroke_from_material(const std::string& name)
 
 void SculptEditor::pick_material()
 {
-    const sGPU_RayIntersectionData& intersection = last_gpu_results.ray_intersection;
-
-    // Do not check _has_intersected_ since we can assume we triggered the action..
-
-    // Set all data
-    stroke_parameters.set_material_color(Color(intersection.intersection_albedo, 1.0f));
-    stroke_parameters.set_material_roughness(intersection.intersection_roughness);
-    stroke_parameters.set_material_metallic(intersection.intersection_metallic);
-    // stroke_parameters.set_material_noise(-1.0f);
-
     // Disable picking..
     if (is_picking_material) {
         Node::emit_signal("pick_material@pressed", (void*)nullptr);
@@ -1924,6 +1926,18 @@ void SculptEditor::pick_material()
     }
 
     should_pick_material = false;
+
+    const sGPU_RayIntersectionData& intersection = last_gpu_results.ray_intersection;
+
+    if (intersection.has_intersected == 0u) {
+        return;
+    }
+
+    // Set all data
+    stroke_parameters.set_material_color(Color(intersection.intersection_albedo, 1.0f));
+    stroke_parameters.set_material_roughness(intersection.intersection_roughness);
+    stroke_parameters.set_material_metallic(intersection.intersection_metallic);
+    // stroke_parameters.set_material_noise(-1.0f);
 
     update_gui_from_stroke_material(stroke_parameters.get_material());
 }

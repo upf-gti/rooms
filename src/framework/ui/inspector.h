@@ -64,7 +64,8 @@ namespace ui {
         InspectorFunc on_back = nullptr;
 
         glm::vec2 last_scroll_position = {};
-        glm::vec3 last_grab_position = {};
+        glm::vec2 last_grab_position = {};
+        float last_grab_distance = 0.0f;
 
         std::map<std::string, Node2D*> items;
         std::map<std::string, std::variant<glm::fvec2, glm::fvec3, glm::fvec4, glm::ivec2, glm::ivec3, glm::ivec4>> inner_data;
@@ -77,6 +78,7 @@ namespace ui {
 
         void update(float delta_time);
         void clear(uint8_t reset_flags = INSPECTOR_FLAG_CLOSE_BUTTON, const std::string& new_title = "");
+        void clear_scroll();
 
         void set_title(const std::string& new_title);
 

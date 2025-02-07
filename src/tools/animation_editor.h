@@ -2,7 +2,7 @@
 
 #include "base_editor.h"
 
-#include "framework/animation/track.h"
+#include "framework/animation/animation.h"
 #include "framework/animation/skeleton.h"
 
 class RoomsRenderer;
@@ -11,11 +11,11 @@ class Node3D;
 class MeshInstance3D;
 class SkeletonInstance3D;
 class Joint3D;
-class Animation;
 class Surface;
 
 namespace ui {
     class Inspector;
+    class Timeline;
 };
 
 namespace shortcuts {
@@ -30,7 +30,7 @@ namespace shortcuts {
 struct sPropertyState {
     TrackType value;
     int track_id = -1;
-    Keyframe* keyframe = nullptr;
+    int keyframe_idx = -1;
 };
 
 struct sAnimationState {
@@ -39,10 +39,11 @@ struct sAnimationState {
 };
 
 struct sAnimationData {
-    float current_time = 0.0f;
     Animation* animation = nullptr;
     std::vector<sAnimationState> states;
 };
+
+using NodeAnimationsMap = std::unordered_map<std::string, sAnimationData>;
 
 struct sIKChain {
     std::vector<Transform> transforms;
@@ -61,13 +62,13 @@ class AnimationEditor : public BaseEditor {
     */
 
     Animation* current_animation = nullptr;
-    Track* current_track = nullptr;
+    int last_animation_state_idx = -1;
 
-    sAnimationState* current_animation_state = nullptr;
+    // this stores a list of animation data per node name
+    std::unordered_map<std::string, NodeAnimationsMap> animation_storage;
 
-    std::unordered_map<uint32_t, sAnimationData> animations_data;
-
-    uint32_t get_animation_idx();
+    Animation* create_new_animation();
+    void set_animation(const std::string& name);
 
     /*
     *   Nodes
@@ -87,11 +88,12 @@ class AnimationEditor : public BaseEditor {
     float last_hand_distance = 0.0f;
 
     Node3D* get_current_node();
-
-    void update_node_from_state(const sAnimationState& state);
-    void update_node_transform();
-
     SkeletonInstance3D* find_skeleton(Node* node);
+
+    void update_node_from_state(uint32_t index);
+    void update_node_transform();
+    void on_select_joint();
+    void save_character_animation();
 
     /*
     *   Keyframes
@@ -106,22 +108,27 @@ class AnimationEditor : public BaseEditor {
     void create_keyframe();
     void process_keyframe();
     void edit_keyframe(uint32_t index);
-    void duplicate_keyframe(uint32_t index);
+    bool duplicate_keyframe(uint32_t index);
+    void delete_keyframe(uint32_t index);
 
     void set_animation_state(uint32_t index);
     void store_animation_state(sAnimationState& state);
+    std::vector<sAnimationState>& get_animation_states();
     sAnimationState* get_animation_state(uint32_t index);
 
     /*
     *   IK
     */
 
-    std::vector<sIKChain> ik_chains;
+    bool ik_enabled = true;
+    bool ik_active = false;
+
+    std::unordered_map<uint8_t, sIKChain> ik_chains;
 
     void initialize_ik();
+    void create_ik_chain(uint32_t chain_endpoint_idx, uint32_t depth);
     void set_active_chain(uint32_t chain_idx);
-    void update_ik();
-    void render_ik();
+    void update_ik(float delta_time);
 
     /*
         Animation Player
@@ -134,12 +141,20 @@ class AnimationEditor : public BaseEditor {
     void stop_animation();
 
     /*
+        Timeline
+    */
+
+    bool timeline_dirty = true;
+    void update_timeline();
+
+    /*
         UI
     */
 
     static uint64_t keyframe_signal_uid;
     static uint64_t node_signal_uid;
 
+    bool gizmo_active = false;
     bool inspector_transform_dirty = false;
 
     ui::Inspector* inspector = nullptr;
@@ -149,12 +164,15 @@ class AnimationEditor : public BaseEditor {
     void update_panel_transform();
     void generate_shortcuts() override;
 
-    void inspect_character(bool force = false);
     void inspect_keyframes_list(bool force = false);
     void inspect_keyframe();
     void inspect_keyframe_properties();
     void inspect_node(Node* node);
 
+    bool on_edit_timeline_keyframe(ui::Timeline* scope, uint32_t index);
+    bool on_duplicate_timeline_keyframe(ui::Timeline* scope, uint32_t index);
+    bool on_move_timeline_keyframe(ui::Timeline* scope, uint32_t index);
+    bool on_delete_timeline_keyframe(ui::Timeline* scope, uint32_t index);
     bool on_close_inspector(ui::Inspector* scope = nullptr);
 
     void render_gizmo();

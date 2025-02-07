@@ -171,7 +171,10 @@ void RoomsRenderer::clean()
 
         for (int i = 0; i < RENDER_LIST_COUNT; ++i) {
             custom_mirror_instances_data.instances_data_uniforms[i].destroy();
-            wgpuBindGroupRelease(custom_mirror_instances_data.instances_bind_groups[i]);
+
+            if (custom_mirror_instances_data.instances_bind_groups[i]) {
+                wgpuBindGroupRelease(custom_mirror_instances_data.instances_bind_groups[i]);
+            }
         }
     }
 }

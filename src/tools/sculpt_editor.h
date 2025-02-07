@@ -34,19 +34,10 @@ class SculptEditor : public BaseEditor {
     MeshInstance3D* sculpt_area_box = nullptr;
 
     SculptNode* current_sculpt = nullptr;
-    Transform current_instance_transform;
-    uint32_t in_frame_sculpt_render_list_id;
+    // Transform current_instance_transform;
+    // uint32_t in_frame_sculpt_render_list_id;
 
     StrokeManager stroke_manager = {};
-
-    bool was_tool_used = false;
-
-    bool called_undo = false;
-    bool called_redo = false;
-
-    eTool current_tool = eTool::NONE;
-
-    uint8_t thumbstick_leading_axis = 0u;
 
     static uint8_t last_generated_material_uid;
     uint8_t num_generated_materials = 0u;
@@ -109,6 +100,7 @@ class SculptEditor : public BaseEditor {
     glm::vec3 ray_origin;
     glm::vec3 ray_direction;
     sGPU_SculptResults last_gpu_results;
+    StrokeMaterial last_used_material;
 
     // Edit
     glm::quat edit_rotation_diff = { 0.0, 0.0, 0.0, 1.0 };
@@ -143,6 +135,7 @@ class SculptEditor : public BaseEditor {
     // Mirror
 
     bool use_mirror = false;
+    bool hide_mirror = false;
 
     Gizmo3D mirror_gizmo = {};
     MeshInstance3D* mirror_mesh = nullptr;
@@ -182,9 +175,16 @@ class SculptEditor : public BaseEditor {
     *	Editor
     */
 
-    bool is_tool_pressed = false;
-    bool is_released = false;
-    bool was_tool_pressed = false;
+    bool called_undo        = false;
+    bool called_redo        = false;
+    bool is_tool_pressed    = false;
+    bool is_released        = false;
+    bool was_tool_pressed   = false;
+    bool was_tool_used      = false;
+
+    eTool current_tool = eTool::NONE;
+
+    uint8_t thumbstick_leading_axis = 0u;
 
     enum eStrokeMode {
         STROKE_MODE_NONE,
@@ -229,7 +229,7 @@ public:
     SculptNode* get_current_sculpt() { return current_sculpt; }
 
     bool is_tool_being_used(bool stamp_enabled);
-    bool is_out_of_focus(SculptNode* sculpt_node);
+    uint32_t get_sculpt_context_flags(SculptNode* node) override;
 
     void add_preview_edit_list(std::vector<Edit>& new_edit_lists) {
         for (Edit& edit : new_edit_lists) {

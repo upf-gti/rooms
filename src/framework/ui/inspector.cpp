@@ -38,14 +38,14 @@ namespace ui {
         float title_y_corrected = desc.title_height * 0.5f - title_text_scale * 0.5f;
         ui::Container2D* title_container = new ui::Container2D(name + "_title", { 0.0f, 0.0f }, { inner_width - padding * 0.4f, desc.title_height });
         title = new ui::Text2D(desc.title.empty() ? "Inspector" : desc.title, { 0.0f, title_y_corrected }, title_text_scale, ui::TEXT_CENTERED | ui::SKIP_TEXT_RECT);
-        back_button = new ui::TextureButton2D("back_button", { "data/textures/back.png", 0u, { padding, title_y_corrected }, glm::vec2(32.0f), colors::WHITE, "Back" });
-        close_button = new ui::TextureButton2D("close_button", { "data/textures/cross.png", 0u, { inner_width - padding * 3.0f, title_y_corrected }, glm::vec2(32.0f), colors::WHITE, "Close" });
+        back_button = new ui::TextureButton2D(name + "_back_button", { "data/textures/back.png", 0u, { padding, title_y_corrected }, glm::vec2(32.0f), colors::WHITE, "Back" });
+        close_button = new ui::TextureButton2D(name + "_close_button", { "data/textures/cross.png", 0u, { inner_width - padding * 3.0f, title_y_corrected }, glm::vec2(32.0f), colors::WHITE, "Close" });
         title_container->add_child(back_button);
         title_container->add_child(title);
         title_container->add_child(close_button);
         column->add_child(title_container);
 
-        Node::bind("close_button", [&](const std::string& sg, void* data) {
+        Node::bind(name + "_close_button", [&](const std::string& sg, void* data) {
             bool should_close = true;
             if (on_close) {
                 should_close = on_close(this);
@@ -55,7 +55,7 @@ namespace ui {
             }
         });
 
-        Node::bind("back_button", [&](const std::string& sg, void* data) {
+        Node::bind(name + "_back_button", [&](const std::string& sg, void* data) {
             if (on_back) {
                 on_back(this);
             }
@@ -107,7 +107,6 @@ namespace ui {
     {
         if ((IO::get_hover() == root) && Input::was_grab_pressed(HAND_RIGHT)) {
             grabbing = true;
-            last_grab_position = Input::get_controller_position(HAND_RIGHT, POSE_AIM);
         }
 
         if (Input::was_grab_released(HAND_RIGHT)) {
@@ -142,16 +141,13 @@ namespace ui {
                 auto webgpu_context = Renderer::instance->get_webgpu_context();
                 float width = static_cast<float>(webgpu_context->render_width);
                 float height = static_cast<float>(webgpu_context->render_height);
-                glm::vec2 size = panel_size * 0.5f / glm::vec2(width, height);
-
-                // glm::vec3 delta_grab = (eye - last_grab_position) * 2.0f;
-                // float distance = glm::distance(eye - delta_grab, get_xr_viewport()->get_translation());
-                glm::vec3 new_pos = eye + forward * 0.35f;// distance;
+                glm::vec2 grab_offset = glm::vec2(last_grab_position.x, panel_size.y - last_grab_position.y) / glm::vec2(width, height);
+                glm::vec3 new_pos = eye + forward * last_grab_distance;
 
                 m = glm::translate(m, new_pos);
                 m = m * glm::toMat4(get_rotation_to_face(new_pos, renderer->get_camera_eye(), { 0.0f, 1.0f, 0.0f }));
                 m = glm::rotate(m, glm::radians(180.f), { 1.0f, 0.0f, 0.0f });
-                m = glm::translate(m, -glm::vec3(size, 0.0f));
+                m = glm::translate(m, -glm::vec3(grab_offset, 0.0f));
                 set_xr_transform(Transform::mat4_to_transform(m));
 
                 root->set_priority(DRAGGABLE);
@@ -197,6 +193,11 @@ namespace ui {
                 Node2D* row = static_cast<Node2D*>(r);
                 row->translate({ 0.0f, scroll_dt });
             }
+
+            if (renderer->get_openxr_available() && grabbing && Input::was_grab_pressed(HAND_RIGHT)) {
+                last_grab_position = last_scroll_position;
+                last_grab_distance = data.ray_distance;
+            }
         }
 
         Node2D::update(delta_time);
@@ -205,6 +206,19 @@ namespace ui {
     void Inspector::set_title(const std::string& new_title)
     {
         title->set_text(new_title);
+    }
+
+    void Inspector::clear_scroll()
+    {
+        last_scroll_position = {};
+
+        // do the scroll..
+        for (auto r : body->get_children()) {
+            Node2D* row = static_cast<Node2D*>(r);
+            row->translate({ 0.0f, -scroll_top });
+        }
+
+        scroll_top = 0.0f;
     }
 
     void Inspector::clear(uint8_t reset_flags, const std::string& new_title)
@@ -241,6 +255,9 @@ namespace ui {
         }
 
         items.clear();
+
+        body_height = 0.0f;
+        scroll_top = 0.0f;
 
         IO::set_hover(nullptr, {});
 
@@ -414,7 +431,7 @@ namespace ui {
     HContainer2D* Inspector::create_row()
     {
         ui::HContainer2D* new_row = new ui::HContainer2D("row_" + std::to_string(row_id++), { 0.0f, 0.0f });
-        new_row->padding = glm::vec2(2.0f + indentation_level * 8.0f, 1.0f);
+        new_row->padding = glm::vec2(2.0f + indentation_level * 4.0f, 1.0f);
         new_row->item_margin = glm::vec2(4.0f, 0.0f);
         body->add_child(new_row);
 
