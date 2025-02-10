@@ -7,6 +7,8 @@
 #include "spdlog/spdlog.h"
 #include <glm/detail/compute_vector_relational.hpp>
 
+AABB get_world_aabb_of_edits(const std::vector<Edit>& new_edits, const sdPrimitive primitive, const float smooth_margin);
+
 void StrokeManager::init()
 {
     result_to_compute.set_defaults();
@@ -255,7 +257,7 @@ sStrokeInfluence* StrokeManager::add(std::vector<Edit> new_edits)
     edit_list_count = 0u;
 
     // Compute AABB for the incomming strokes
-    AABB in_frame_stroke_aabb = history_top->get_world_AABB();
+    AABB in_frame_stroke_aabb = get_world_aabb_of_edits(new_edits, history_top->primitive, history_top->parameters.w * 2.0f);
     AABB culling_aabb = compute_grid_aligned_AABB(in_frame_stroke_aabb, brick_world_size);
     //in_frame_stroke_aabb.half_size -= glm::vec3(in_frame_stroke.parameters.w);
 
@@ -384,4 +386,14 @@ uint32_t StrokeManager::divide_AABB_on_max_eval_size(const AABB& base, AABB divi
     aabb_split(divided_bases, 0u, &division_count, half_max_division_size);
 
     return division_count;
+}
+
+
+AABB get_world_aabb_of_edits(const std::vector<Edit>& new_edits, const sdPrimitive primitive, const float smooth_margin) {
+    AABB result;
+    for (uint32_t i = 0u; i < new_edits.size(); i++) {
+        result = merge_aabbs(result, extern_get_edit_world_AABB(new_edits[i], primitive, smooth_margin));
+    }
+
+    return result;
 }
