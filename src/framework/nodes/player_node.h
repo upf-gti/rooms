@@ -11,6 +11,8 @@ class PlayerNode : public Node3D {
     bool was_trigger_pressed = false;
     glm::vec3 prev_lcontroller_position = {};
 
+    glm::quat prev_lcontroller_rotation = {};
+
 public:
     PlayerNode();
 
