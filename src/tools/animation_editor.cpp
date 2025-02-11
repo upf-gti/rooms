@@ -829,6 +829,75 @@ void AnimationEditor::create_keyframe()
 }
 
 /*
+*   Inserts a new keyframe using current state and time
+*/
+
+bool AnimationEditor::insert_keyframe()
+{
+    if (!current_node || !current_animation) {
+        assert(0);
+        return false;
+    }
+
+    auto& states = get_animation_states();
+    if (states.empty()) {
+        return false;
+    }
+
+    // This inserts a keyframe for EACH property in the state
+    last_animation_state_idx = 0;
+
+    sAnimationState new_anim_state;
+    store_animation_state(new_anim_state);
+    float time = timeline->get_current_time();
+    new_anim_state.time = time;
+
+    for (auto& p : current_node->get_animatable_properties()) {
+        std::string property_name = p.first;
+        sPropertyState* p_state = &new_anim_state.properties[property_name];
+        Track* track = current_animation->get_track_by_id(p_state->track_id);
+        p_state->keyframe_idx = track->add_keyframe({ .value = p_state->value, .in = 0.0f, .out = 0.0f, .time = time }, true);
+    }
+
+    current_animation->recalculate_duration();
+
+    // Add to state list
+    {
+        auto it = std::find_if(states.begin(), states.end(), [t = time](const sAnimationState& s) {
+            return (s.time > t);
+        });
+
+        if (it == states.end()) {
+            assert(0);
+            return false;
+        }
+
+        // store index
+        uint32_t index = it - states.begin();
+
+        states.insert(it, new_anim_state);
+
+        // Update keyframe ids for next states properties
+        for (uint32_t i = index + 1u; i < states.size(); ++i) {
+
+            auto& state = states[i];
+
+            for (const auto& prop : state.properties) {
+                const std::string& property_name = prop.first;
+                sPropertyState& p_state = state.properties[property_name];
+                if (p_state.keyframe_idx != -1) {
+                    p_state.keyframe_idx++;
+                }
+            }
+        }
+    }
+
+    on_close_inspector();
+
+    return true;
+}
+
+/*
 *   Adds a new keyframe or edits an existing one
 */
 
@@ -908,7 +977,7 @@ void AnimationEditor::process_keyframe()
     on_close_inspector();
 }
 
-void AnimationEditor::edit_keyframe(uint32_t index)
+bool AnimationEditor::edit_keyframe(uint32_t index)
 {
     show_keyframe_dirty = true;
     keyframe_dirty = true;
@@ -928,6 +997,8 @@ void AnimationEditor::edit_keyframe(uint32_t index)
     // Deactivate open list
     w = Node2D::get_widget_from_name("open_timeline");
     static_cast<ui::Button2D*>(w)->set_disabled(true);
+
+    return true;
 }
 
 bool AnimationEditor::duplicate_keyframe(uint32_t index)
@@ -1288,8 +1359,9 @@ void AnimationEditor::init_ui()
         .name = "inspector_root",
         .title = "Animation Timeline",
         .position = {32.0f, 32.f},
-        .edit_keyframe_fn = std::bind(&AnimationEditor::on_edit_timeline_keyframe, this, std::placeholders::_1, std::placeholders::_2),
-        .duplicate_keyframe_fn = std::bind(&AnimationEditor::on_duplicate_timeline_keyframe, this, std::placeholders::_1, std::placeholders::_2),
+        .insert_keyframe_fn = [&](ui::Timeline* scope, uint32_t index) -> bool { return insert_keyframe(); },
+        .edit_keyframe_fn = [&](ui::Timeline* scope, uint32_t index) -> bool { return edit_keyframe(index); },
+        .duplicate_keyframe_fn = [&](ui::Timeline* scope, uint32_t index) -> bool { return duplicate_keyframe(index); },
         .move_keyframe_fn = std::bind(&AnimationEditor::on_move_timeline_keyframe, this, std::placeholders::_1, std::placeholders::_2),
         .delete_keyframe_fn = std::bind(&AnimationEditor::on_delete_timeline_keyframe, this, std::placeholders::_1, std::placeholders::_2)
     });
@@ -1616,18 +1688,6 @@ bool AnimationEditor::on_close_inspector(ui::Inspector* scope)
     update_animation_trajectory();
 
     return should_close;
-}
-
-bool AnimationEditor::on_edit_timeline_keyframe(ui::Timeline* scope, uint32_t index)
-{
-    edit_keyframe(index);
-    return true;
-}
-
-bool AnimationEditor::on_duplicate_timeline_keyframe(ui::Timeline* scope, uint32_t index)
-{
-    bool ok = duplicate_keyframe(index);
-    return ok;
 }
 
 bool AnimationEditor::on_move_timeline_keyframe(ui::Timeline* scope, uint32_t index)

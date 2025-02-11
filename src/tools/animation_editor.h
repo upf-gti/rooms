@@ -106,8 +106,9 @@ class AnimationEditor : public BaseEditor {
     bool editing_keyframe = false;
 
     void create_keyframe();
+    bool insert_keyframe();
     void process_keyframe();
-    void edit_keyframe(uint32_t index);
+    bool edit_keyframe(uint32_t index);
     bool duplicate_keyframe(uint32_t index);
     void delete_keyframe(uint32_t index);
 
@@ -169,10 +170,9 @@ class AnimationEditor : public BaseEditor {
     void inspect_keyframe_properties();
     void inspect_node(Node* node);
 
-    bool on_edit_timeline_keyframe(ui::Timeline* scope, uint32_t index);
-    bool on_duplicate_timeline_keyframe(ui::Timeline* scope, uint32_t index);
     bool on_move_timeline_keyframe(ui::Timeline* scope, uint32_t index);
     bool on_delete_timeline_keyframe(ui::Timeline* scope, uint32_t index);
+
     bool on_close_inspector(ui::Inspector* scope = nullptr);
 
     void render_gizmo();

@@ -22,7 +22,7 @@
 namespace ui {
 
     Timeline::Timeline(const TimelineDesc& desc)
-        : Panel2D(name, desc.position, { 0.0f, 0.0f }, ui::CREATE_3D), panel_size(desc.size), padding(desc.padding)
+        : Panel2D(desc.name, desc.position, { 0.0f, 0.0f }, ui::CREATE_3D), panel_size(desc.size), padding(desc.padding)
     {
         float inner_width = panel_size.x - padding * 2.0f;
         float inner_height = panel_size.y - padding * 2.0f;
@@ -30,11 +30,12 @@ namespace ui {
         // Used when hovering a keyframe..
         set_priority(BUTTON);
 
-        on_close = desc.close_fn;
-        on_edit_keyframe = desc.edit_keyframe_fn;
-        on_duplicate_keyframe = desc.duplicate_keyframe_fn;
-        on_move_keyframe = desc.move_keyframe_fn;
-        on_delete_keyframe = desc.delete_keyframe_fn;
+        custom_on_close = desc.close_fn;
+        custom_on_insert_keyframe = desc.insert_keyframe_fn;
+        custom_on_edit_keyframe = desc.edit_keyframe_fn;
+        custom_on_duplicate_keyframe = desc.duplicate_keyframe_fn;
+        custom_on_move_keyframe = desc.move_keyframe_fn;
+        custom_on_delete_keyframe = desc.delete_keyframe_fn;
 
         root = new ui::XRPanel(name + "_background", { 0.0f, 0.f }, panel_size, 0u, panel_color);
         add_child(root);
@@ -50,52 +51,20 @@ namespace ui {
         float title_y_corrected = desc.title_height * 0.5f - title_text_scale * 0.5f;
         ui::Container2D* title_container = new ui::Container2D(name + "_title", { 0.0f, 0.0f }, { inner_width - padding * 0.4f, desc.title_height });
         title = new ui::Text2D(desc.title.empty() ? "Inspector" : desc.title, { 0.0f, title_y_corrected }, title_text_scale, ui::TEXT_CENTERED | ui::SKIP_TEXT_RECT);
-        auto edit_button = new ui::TextureButton2D("edit_timeline_keyframe", { "data/textures/edit.png", 0u, { button_start, title_y_corrected }, glm::vec2(32.0f), colors::WHITE, "Edit" });
-        auto duplicate_button = new ui::TextureButton2D("duplicate_timeline_keyframe", { "data/textures/duplicate_key.png", 0u, { button_start + button_space, title_y_corrected }, glm::vec2(32.0f), colors::WHITE, "Duplicate" });
-        auto delete_button = new ui::TextureButton2D("delete_timeline_keyframe", { "data/textures/delete.png", 0u, { button_start + button_space * 2.0f, title_y_corrected }, glm::vec2(32.0f), colors::WHITE, "Delete" });
-        auto close_button = new ui::TextureButton2D("close_timeline", { "data/textures/cross.png", 0u, { inner_width - padding * 4.0f, title_y_corrected }, glm::vec2(32.0f), colors::WHITE, "Close" });
-        time_text = new ui::Text2D("0.0", { button_start + button_space * 3.0f + 2.0f, title_y_corrected + 8.0f }, 20.f, ui::SKIP_TEXT_RECT);
-        title_container->add_child(edit_button);
-        title_container->add_child(duplicate_button);
-        title_container->add_child(delete_button);
-        title_container->add_child(time_text);
-        title_container->add_child(title);
-        title_container->add_child(close_button);
+        auto insert_button = new ui::TextureButton2D(name + "@insert_keyframe", { "data/textures/add.png", 0u, { button_start, title_y_corrected }, glm::vec2(32.0f), colors::WHITE, "Insert" });
+        auto edit_button = new ui::TextureButton2D(name + "@edit_keyframe", { "data/textures/edit.png", 0u, { button_start + button_space, title_y_corrected }, glm::vec2(32.0f), colors::WHITE, "Edit" });
+        auto duplicate_button = new ui::TextureButton2D(name + "@duplicate_keyframe", { "data/textures/duplicate_key.png", 0u, { button_start + button_space * 2.0f, title_y_corrected }, glm::vec2(32.0f), colors::WHITE, "Duplicate" });
+        auto delete_button = new ui::TextureButton2D(name + "@delete_keyframe", { "data/textures/delete.png", 0u, { button_start + button_space * 3.0f, title_y_corrected }, glm::vec2(32.0f), colors::WHITE, "Delete" });
+        auto close_button = new ui::TextureButton2D(name + "@close_timeline", { "data/textures/cross.png", 0u, { inner_width - padding * 4.0f, title_y_corrected }, glm::vec2(32.0f), colors::WHITE, "Close" });
+        time_text = new ui::Text2D("0.0", { button_start + button_space * 4.0f + 2.0f, title_y_corrected + 8.0f }, 20.f, ui::SKIP_TEXT_RECT);
+        title_container->add_childs({ insert_button, edit_button, duplicate_button, delete_button, time_text, title, close_button });
         column->add_child(title_container);
 
-        Node::bind("edit_timeline_keyframe", [&](const std::string& sg, void* data) {
-            auto key = get_selected_key();
-            if (key && on_edit_keyframe) {
-                on_edit_keyframe(this, key->index);
-            }
-        });
-
-        Node::bind("duplicate_timeline_keyframe", [&](const std::string& sg, void* data) {
-            auto key = get_selected_key();
-            if (key && on_duplicate_keyframe) {
-                bool must_select_new = on_duplicate_keyframe(this, key->index);
-                if (must_select_new) {
-                    select_keyframe_by_index(keyframes.size() - 1u);
-                }
-            }
-        });
-
-        Node::bind("delete_timeline_keyframe", [&](const std::string& sg, void* data) {
-            auto key = get_selected_key();
-            if (key && on_delete_keyframe) {
-                on_delete_keyframe(this, key->index);
-            }
-        });
-
-        Node::bind("close_timeline", [&](const std::string& sg, void* data) {
-            bool should_close = true;
-            if (on_close) {
-                should_close = on_close(this, 0u);
-            }
-            if (should_close) {
-                set_visibility(false);
-            }
-        });
+        Node::bind(name + "@insert_keyframe", [&](const std::string& sg, void* data) { on_insert_keyframe(); });
+        Node::bind(name + "@edit_keyframe", [&](const std::string& sg, void* data) { on_edit_keyframe(); });
+        Node::bind(name + "@duplicate_keyframe", [&](const std::string& sg, void* data) { on_duplicate_keyframe(); });
+        Node::bind(name + "@delete_keyframe", [&](const std::string& sg, void* data) { on_delete_keyframe(); });
+        Node::bind(name + "@close_timeline", [&](const std::string& sg, void* data) { on_close_timeline(); });
 
         render_background = false;
 
@@ -317,8 +286,8 @@ namespace ui {
 
                 current_time = key->time;
 
-                if (on_move_keyframe) {
-                    on_move_keyframe(this, key->index);
+                if (custom_on_move_keyframe) {
+                    custom_on_move_keyframe(this, key->index);
                 }
             }
 
@@ -334,7 +303,7 @@ namespace ui {
                 IO::set_focus(root);
             }
 
-            if (root_input_data.is_pressed && !IO::is_focus_type(Node2DClassType::HSLIDER)) {
+            if (root_input_data.is_pressed && !IO::is_focus_type(HSLIDER)) {
                 scroll_dt += (last_scroll_positionX - root_input_data.local_position.x);
             }
 
@@ -515,5 +484,50 @@ namespace ui {
     void Timeline::set_title(const std::string& new_title)
     {
         title->set_text(new_title);
+    }
+
+    void Timeline::on_insert_keyframe()
+    {
+        if (custom_on_insert_keyframe) {
+            custom_on_insert_keyframe(this, 0u);
+        }
+    }
+
+    void Timeline::on_edit_keyframe()
+    {
+        auto key = get_selected_key();
+        if (key && custom_on_edit_keyframe) {
+            custom_on_edit_keyframe(this, key->index);
+        }
+    }
+
+    void Timeline::on_duplicate_keyframe()
+    {
+        auto key = get_selected_key();
+        if (key && custom_on_duplicate_keyframe) {
+            bool must_select_new = custom_on_duplicate_keyframe(this, key->index);
+            if (must_select_new) {
+                select_keyframe_by_index(keyframes.size() - 1u);
+            }
+        }
+    }
+
+    void Timeline::on_delete_keyframe()
+    {
+        auto key = get_selected_key();
+        if (key && custom_on_delete_keyframe) {
+            custom_on_delete_keyframe(this, key->index);
+        }
+    }
+
+    void Timeline::on_close_timeline()
+    {
+        bool should_close = true;
+        if (custom_on_close) {
+            should_close = custom_on_close(this, 0u);
+        }
+        if (should_close) {
+            set_visibility(false);
+        }
     }
 }

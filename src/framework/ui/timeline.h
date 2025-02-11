@@ -27,6 +27,7 @@ namespace ui {
         glm::vec2 size = { 800.f, 190.f };
         glm::vec2 position = { 0.0f, 0.0f };
         TimelineFunc close_fn = nullptr;
+        TimelineFunc insert_keyframe_fn = nullptr;
         TimelineFunc edit_keyframe_fn = nullptr;
         TimelineFunc duplicate_keyframe_fn = nullptr;
         TimelineFunc move_keyframe_fn = nullptr;
@@ -75,11 +76,12 @@ namespace ui {
         Panel2D* playhead = nullptr;
         Text2D* title = nullptr;
         Text2D* time_text = nullptr;
-        TimelineFunc on_close = nullptr;
-        TimelineFunc on_edit_keyframe = nullptr;
-        TimelineFunc on_duplicate_keyframe = nullptr;
-        TimelineFunc on_move_keyframe = nullptr;
-        TimelineFunc on_delete_keyframe = nullptr;
+        TimelineFunc custom_on_close = nullptr;
+        TimelineFunc custom_on_insert_keyframe = nullptr;
+        TimelineFunc custom_on_edit_keyframe = nullptr;
+        TimelineFunc custom_on_duplicate_keyframe = nullptr;
+        TimelineFunc custom_on_move_keyframe = nullptr;
+        TimelineFunc custom_on_delete_keyframe = nullptr;
 
         /*
         *   Keyframes
@@ -100,6 +102,16 @@ namespace ui {
         MeshInstance* generate_keyframe_mesh(const Color& color);
         void select_keyframe(TimelineKeyframe* key);
         void select_keyframe_by_index(int index);
+
+        /*
+       *   Actions events
+       */
+
+        void on_insert_keyframe();
+        void on_edit_keyframe();
+        void on_duplicate_keyframe();
+        void on_delete_keyframe();
+        void on_close_timeline();
 
     public:
 
