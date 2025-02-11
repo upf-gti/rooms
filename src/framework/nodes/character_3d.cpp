@@ -39,6 +39,7 @@ void Character3D::initialize()
     set_skeleton(static_cast<RoomsEngine*>(RoomsEngine::instance)->get_default_skeleton());
 
     helper = new SkeletonHelper3D(skeleton, this);
+    helper->initialize();
 
     generate_default_sculpts_skeleton();
 }
@@ -126,6 +127,7 @@ void Character3D::parse(std::ifstream& binary_scene_file)
         set_skeleton(skeleton);
 
         helper = new SkeletonHelper3D(skeleton, this);
+        helper->initialize();
     }
 
     // Parse animations
