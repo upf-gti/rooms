@@ -217,6 +217,11 @@ void SculptEditor::on_enter(void* data)
 void SculptEditor::on_exit()
 {
     static_cast<RoomsRenderer*>(RoomsRenderer::instance)->get_raymarching_renderer()->set_preview_render(false);
+
+    // Remove an empty sculpt on the exit
+    if (stroke_manager.history->size() == 0u) {
+        current_sculpt->get_sculpt_data()->mark_as_deleted();
+    }
 }
 
 void SculptEditor::clean()
@@ -746,7 +751,15 @@ void SculptEditor::update(float delta_time)
         needs_evaluation = stroke_manager.redo();
         called_redo = false;
     } else if (new_edits.size() > 0u) {
-        needs_evaluation = stroke_manager.add(new_edits);
+        // If there is not history, only add the non-substract edits
+        if (stroke_manager.history->size() == 0u) {
+            if (stroke_parameters.get_operation() != OP_SMOOTH_SUBSTRACTION) {
+                needs_evaluation = stroke_manager.add(new_edits);
+            }
+        } else {
+            needs_evaluation = stroke_manager.add(new_edits);
+        }
+        
     }
 
     if (needs_evaluation) {

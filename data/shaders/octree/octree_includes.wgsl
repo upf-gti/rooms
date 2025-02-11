@@ -323,18 +323,6 @@ struct sPaddedAABB {
     pad1        : u32
 };
 
-// From z-order from https://developer.nvidia.com/blog/thinking-parallel-part-iii-tree-construction-gpu/
-fn zorder_expand_bits(v : u32) -> u32 {
-    var res : u32 = v;
-
-    res = (res * 0x00010001u) & 0xFF0000FFu;
-    res = (res * 0x00000101u) & 0x0F00F00Fu;
-    res = (res * 0x00000011u) & 0xC30C30C3u;
-    res = (res * 0x00000005u) & 0x49249249u;
-
-    return res;
-}
-
 // From: https://github.com/Forceflow/libmorton/blob/main/include/libmorton/morton3D.h
 const MORTON_MAGIC_BITS_ENCODE : array<u32, 6> = array<u32, 6>(
     0x000003ffu, 0u, 0x30000ffu, 0x0300f00fu, 0x30c30c3u, 0x9249249u

@@ -57,14 +57,14 @@ void SceneEditor::initialize()
 
     init_ui();
 
-#ifndef DISABLE_RAYMARCHER
-    SculptNode* default_sculpt = new SculptNode();
-    default_sculpt->set_name("default_sculpt");
-    default_sculpt->initialize();
-    RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
-    default_sculpt->set_position({0.0f, 1.0f, 0.0f});
-    main_scene->add_node(default_sculpt);
-#endif
+//#ifndef DISABLE_RAYMARCHER
+//    SculptNode* default_sculpt = new SculptNode();
+//    default_sculpt->set_name("default_sculpt");
+//    default_sculpt->initialize();
+//    RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
+//    default_sculpt->set_position({0.0f, 1.0f, 0.0f});
+//    main_scene->add_node(default_sculpt);
+//#endif
 
     Node::bind(main_scene->get_name() + "@nodes_added", [&](const std::string& sg, void* data) {
         set_inspector_dirty();
@@ -573,11 +573,15 @@ void SceneEditor::bind_events()
 
         static_cast<RoomsEngine*>(RoomsEngine::instance)->set_current_sculpt(new_sculpt);
 
-        select_node(new_sculpt);
+        //select_node(new_sculpt);
         add_node(new_sculpt);
         set_inspector_dirty();
 
         Node::emit_signal("@on_sculpt_added", (void*)nullptr);
+
+        // Switch to sculpt editor
+        Node::emit_signal("@on_sculpt_edited", (void*)nullptr);
+        RoomsEngine::switch_editor(SCULPT_EDITOR, new_sculpt);
     });
 
     Node::bind("character", [&](const std::string& signal, void* button) {
@@ -1302,7 +1306,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
 
         Node::bind(signal, [&, n = node, flags = flags](const std::string& sg, void* data) {
 
-            select_node(n, false);
+            //select_node(n, false);
 
             // Set as current sculpt and go to sculpt editor
             if (dynamic_cast<SculptNode*>(n)) {

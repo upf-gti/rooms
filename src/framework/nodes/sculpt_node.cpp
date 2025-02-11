@@ -1,5 +1,7 @@
 #include "sculpt_node.h"
 
+#include "tools/scene_editor.h"
+
 #include "framework/math/intersections.h"
 #include "framework/resources/sculpt.h"
 #include "framework/parsers/parse_scene.h"
@@ -12,6 +14,8 @@
 
 #include "tools/sculpt_editor.h"
 #include "tools/scene_editor.h"
+
+#include "engine/scene.h"
 
 #include "shaders/AABB_shader.wgsl.gen.h"
 
@@ -87,6 +91,13 @@ void SculptNode::update(float delta_time)
     auto scene_editor = engine->get_editor<SceneEditor*>(SCENE_EDITOR);
 
     uint32_t flags = editor->get_sculpt_context_flags(this);
+
+    if (sculpt_gpu_data->is_deleted()) {
+        scene_editor->get_current_scene()->remove_node(this);
+        scene_editor->refresh_inspector();
+        delete this; // LMAO
+        return;
+    }
 
     /* Do not highlight if:
     * 1) Out of focus

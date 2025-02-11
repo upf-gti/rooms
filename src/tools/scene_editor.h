@@ -222,8 +222,11 @@ public:
 
     Group3D* get_current_group() { return current_group; }
     Node* get_selected_node() { return selected_node; }
+    Scene* get_current_scene() { return main_scene; }
 
     uint32_t get_sculpt_context_flags(SculptNode* node) override;
 
     static Color get_node_highlight_color(Node* node);
+
+    void refresh_inspector() { inspector_dirty = true; }
 };
