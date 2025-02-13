@@ -68,6 +68,8 @@ class SculptEditor : public BaseEditor {
     MeshInstance3D* mesh_preview = nullptr;
     MeshInstance3D* mesh_preview_outline = nullptr;
 
+    SculptNode* sculpt_node = nullptr;
+
     // Repeat mode
     uint32_t rep_count = 0u;
     float rep_spacing = 0.02f;
@@ -83,6 +85,7 @@ class SculptEditor : public BaseEditor {
     bool can_snap_to_surface();
     void add_edit_repetitions(std::vector<Edit>& edits);
 
+    bool has_sculpting_started  = false;
     bool dimensions_dirty       = true;
     bool force_new_stroke       = false;
     bool stamp_enabled          = false;

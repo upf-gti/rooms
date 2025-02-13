@@ -186,7 +186,7 @@ void SculptEditor::initialize()
 
 void SculptEditor::on_enter(void* data)
 {
-    SculptNode* sculpt_node = reinterpret_cast<SculptNode*>(data);
+    sculpt_node = reinterpret_cast<SculptNode*>(data);
     assert(sculpt_node);
     set_current_sculpt(sculpt_node);
 
@@ -197,10 +197,11 @@ void SculptEditor::on_enter(void* data)
     // Get head relative position for setting the sculpt instance if in XR
     if (renderer->get_openxr_available()) {
         const AABB sculpt_aabb = sculpt_node->get_sculpt_data()->get_AABB();
-        const glm::vec3& cam_origin = renderer->get_camera_eye();
-        // const glm::vec3& to_sculpt_instance_pos = (renderer->get_camera_front() * (0.4f + glm::length(sculpt_aabb.half_size) * 1.25f)) + cam_origin;
 
         const glm::vec3& to_sculpt_instance_pos = sculpt_node->get_translation();
+
+        has_sculpting_started = stroke_manager.history->size() != 0u;
+
         // current_instance_transform.set_position(to_sculpt_instance_pos);
         mirror_transform.set_position(to_sculpt_instance_pos);
         lock_axis_transform.set_position(to_sculpt_instance_pos);
@@ -657,6 +658,13 @@ void SculptEditor::update(float delta_time)
     }
 
     bool is_tool_used = edit_update(delta_time);
+    if (is_tool_used) {
+        has_sculpting_started = true;
+    }
+
+    if (!has_sculpting_started) {
+        sculpt_node->set_position(edit_to_add.position);
+    }
 
     update_sculpt_rotation();
 
