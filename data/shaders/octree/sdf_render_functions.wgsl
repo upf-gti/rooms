@@ -54,7 +54,7 @@ fn apply_light(toEye : vec3f, position : vec3f, position_world : vec3f, normal_i
     m.metallic = material.metallic;
     m.roughness = max(material.roughness, 0.04);
 
-    m.c_diff = mix(m.albedo, vec3f(0.0), m.metallic);
+    m.diffuse = mix(m.albedo, vec3f(0.0), m.metallic);
     m.f0 = mix(vec3f(0.04), m.albedo, m.metallic);
     m.f90 = vec3f(1.0);
     m.specular_weight = 1.0;
