@@ -100,13 +100,13 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
     WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
 
 #ifndef NDEBUG
-    wgpuRenderPassEncoderPushDebugGroup(render_pass, "Render sculpt proxy geometry");
+    webgpu_context->push_debug_group(render_pass, { "Render sculpt proxy geometry", WGPU_STRLEN });
 #endif
 
     // Prepare the pipeline
     if (!render_proxy_geometry_pipeline.set(render_pass)) {
 #ifndef NDEBUG
-        wgpuRenderPassEncoderPopDebugGroup(render_pass);
+        webgpu_context->pop_debug_group(render_pass);
 #endif
         return;
     }
@@ -149,13 +149,13 @@ void RaymarchingRenderer::render_preview_raymarching_proxy(WGPURenderPassEncoder
     WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
 
 #ifndef NDEBUG
-    wgpuRenderPassEncoderPushDebugGroup(render_pass, "Render preview proxy geometry");
+    webgpu_context->push_debug_group(render_pass, { "Render preview proxy geometry", WGPU_STRLEN });
 #endif
 
     // Render Preview proxy geometry
     if (!render_preview_proxy_geometry_pipeline.set(render_pass)) {
 #ifndef NDEBUG
-        wgpuRenderPassEncoderPopDebugGroup(render_pass);
+        webgpu_context->pop_debug_group(render_pass);
 #endif
         return;
     }
@@ -179,7 +179,7 @@ void RaymarchingRenderer::render_preview_raymarching_proxy(WGPURenderPassEncoder
     wgpuRenderPassEncoderDrawIndirect(render_pass, std::get<WGPUBuffer>(sdf_globals.indirect_buffers.data), sizeof(uint32_t) * 4u);
 
 #ifndef NDEBUG
-    wgpuRenderPassEncoderPopDebugGroup(render_pass);
+    webgpu_context->pop_debug_group(render_pass);
 #endif
 }
 

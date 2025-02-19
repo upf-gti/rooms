@@ -423,7 +423,7 @@ void RoomsRenderer::update_sculpts_indirect_buffers(WGPUCommandEncoder command_e
     WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(global_command_encoder, &compute_pass_desc);
 
 #ifndef NDEBUG
-    wgpuComputePassEncoderPushDebugGroup(compute_pass, "Update the sculpts instances");
+    webgpu_context->push_debug_group(compute_pass, { "Update the sculpts instances", WGPU_STRLEN });
 #endif
 
     if (sculpts_render_lists.size() > 0u) {
@@ -438,7 +438,7 @@ void RoomsRenderer::update_sculpts_indirect_buffers(WGPUCommandEncoder command_e
     }
 
 #ifndef NDEBUG
-    wgpuComputePassEncoderPopDebugGroup(compute_pass);
+    webgpu_context->pop_debug_group(compute_pass);
 #endif
     wgpuComputePassEncoderEnd(compute_pass);
     wgpuComputePassEncoderRelease(compute_pass);

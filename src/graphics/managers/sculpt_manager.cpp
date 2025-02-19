@@ -13,7 +13,7 @@
 
 #include <spdlog/spdlog.h>
 
-void get_mapped_result_buffer(WGPUBufferMapAsyncStatus status, void* user_payload);
+void get_mapped_result_buffer(WGPUMapAsyncStatus status, void* user_payload);
 
 void SculptManager::init()
 {
@@ -78,7 +78,7 @@ void SculptManager::update(WGPUCommandEncoder command_encoder)
     if (intersections_to_compute > 0u) {
         WGPUComputePassDescriptor compute_pass_desc = {};
 
-        std::vector<WGPUComputePassTimestampWrites> timestampWrites(1);
+        std::vector<WGPUPassTimestampWrites> timestampWrites(1);
         timestampWrites[0].beginningOfPassWriteIndex = Renderer::instance->timestamp(command_encoder, "pre_evaluation_or_what");
         timestampWrites[0].querySet = Renderer::instance->get_query_set();
         timestampWrites[0].endOfPassWriteIndex = Renderer::instance->timestamp(command_encoder, "intersection");
@@ -96,7 +96,7 @@ void SculptManager::update(WGPUCommandEncoder command_encoder)
     // Create the octree renderpass
     WGPUComputePassDescriptor compute_pass_desc = {};
 
-    std::vector<WGPUComputePassTimestampWrites> timestampWrites(1);
+    std::vector<WGPUPassTimestampWrites> timestampWrites(1);
     timestampWrites[0].beginningOfPassWriteIndex = Renderer::instance->timestamp(command_encoder, "pre_evaluation");
     timestampWrites[0].querySet = Renderer::instance->get_query_set();
     timestampWrites[0].endOfPassWriteIndex = Renderer::instance->timestamp(command_encoder, "evaluation");
@@ -141,7 +141,7 @@ void SculptManager::update(WGPUCommandEncoder command_encoder)
 
         if (sculpts_to_delete.size() > 0u) {
 #ifndef NDEBUG
-            wgpuComputePassEncoderPushDebugGroup(compute_pass, "Sculpt removal");
+            webgpu_context->push_debug_group(compute_pass, { "Sculpt removal", WGPU_STRLEN });
 #endif
             for (uint32_t i = 0u; i < sculpts_to_delete.size(); i++) {
                 delete_sculpt(compute_pass, sculpts_to_delete[i]);
@@ -149,7 +149,7 @@ void SculptManager::update(WGPUCommandEncoder command_encoder)
             }
             sculpts_to_delete.clear();
 #ifndef NDEBUG
-            wgpuComputePassEncoderPopDebugGroup(compute_pass);
+            webgpu_context->pop_debug_group(compute_pass);
 #endif
         }
     }
@@ -314,15 +314,17 @@ void SculptManager::delete_sculpt(WGPUComputePassEncoder compute_pass, Sculpt* t
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();
 
+    WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
+
 #ifndef NDEBUG
-    wgpuComputePassEncoderPushDebugGroup(compute_pass, "Delete Sculpt");
+    webgpu_context->push_debug_group(compute_pass, { "Delete Sculpt", WGPU_STRLEN });
 #endif
     sculpt_delete_pipeline.set(compute_pass);
     wgpuComputePassEncoderSetBindGroup(compute_pass, 0, to_delete->get_octree_bindgroup(), 0, nullptr);
     wgpuComputePassEncoderSetBindGroup(compute_pass, 1, sculpt_delete_bindgroup, 0, nullptr);
     wgpuComputePassEncoderDispatchWorkgroups(compute_pass, sdf_globals.octree_last_level_size / (8u * 8u * 8u), 1, 1);
 #ifndef NDEBUG
-    wgpuComputePassEncoderPopDebugGroup(compute_pass);
+    webgpu_context->pop_debug_group(compute_pass);
 #endif
 }
 
@@ -368,7 +370,7 @@ bool SculptManager::evaluate(WGPUComputePassEncoder compute_pass, const sEvaluat
     // Compute dispatches
     {
 #ifndef NDEBUG
-        wgpuComputePassEncoderPushDebugGroup(compute_pass, "SDF Evaluator");
+        webgpu_context->push_debug_group(compute_pass, { "SDF Evaluator", WGPU_STRLEN } );
 #endif
         // prepare buffers
         uint32_t to_fill = 0u;
@@ -402,7 +404,7 @@ bool SculptManager::evaluate(WGPUComputePassEncoder compute_pass, const sEvaluat
         wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1u, 1u, 1u);
 
 #ifndef NDEBUG
-        wgpuComputePassEncoderPushDebugGroup(compute_pass, "Write to texture");
+        webgpu_context->push_debug_group(compute_pass, { "Write to texture", WGPU_STRLEN } );
 #endif
         // Write to texture dispatch
         write_to_texture_pipeline.set(compute_pass);
@@ -412,7 +414,7 @@ bool SculptManager::evaluate(WGPUComputePassEncoder compute_pass, const sEvaluat
         wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass, std::get<WGPUBuffer>(evaluation_culling_dispatch_uniform.data), 0u);
 
 #ifndef NDEBUG
-        wgpuComputePassEncoderPopDebugGroup(compute_pass);
+        webgpu_context->pop_debug_group(compute_pass);
 #endif
 
         brick_copy_aabb_gen_pipeline.set(compute_pass);
@@ -426,7 +428,7 @@ bool SculptManager::evaluate(WGPUComputePassEncoder compute_pass, const sEvaluat
         wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1u, 1u, 1u);
 
 #ifndef NDEBUG
-        wgpuComputePassEncoderPopDebugGroup(compute_pass);
+        webgpu_context->pop_debug_group(compute_pass);
 #endif
 
     }
@@ -449,13 +451,13 @@ void SculptManager::clean_previous_preview(WGPUComputePassEncoder compute_pass)
 
     // Call the brick unmark
 #ifndef NDEBUG
-    wgpuComputePassEncoderPushDebugGroup(compute_pass, "Brick unmark");
+    webgpu_context->push_debug_group(compute_pass, { "Brick unmark", WGPU_STRLEN });
 #endif
     brick_unmark_pipeline.set(compute_pass);
     wgpuComputePassEncoderSetBindGroup(compute_pass, 0, brick_unmark_bind_group, 0, nullptr);
     wgpuComputePassEncoderDispatchWorkgroups(compute_pass, sdf_globals.octants_max_size / (8u * 8u * 8u), 1, 1);
 #ifndef NDEBUG
-    wgpuComputePassEncoderPopDebugGroup(compute_pass);
+    webgpu_context->pop_debug_group(compute_pass);
 #endif
     previus_dispatch_had_preview = false;
 }
@@ -472,16 +474,16 @@ void SculptManager::evaluate_preview(WGPUComputePassEncoder compute_pass)
     upload_preview_strokes();
 
 #ifndef NDEBUG
-    wgpuComputePassEncoderPushDebugGroup(compute_pass, "Preview evaluation");
+    webgpu_context->push_debug_group(compute_pass, { "Preview evaluation", WGPU_STRLEN });
 #endif
 
     evaluator_preview_step_pipeline.set(compute_pass);
     wgpuComputePassEncoderSetBindGroup(compute_pass, 0u, evaluator_preview_bind_group, 0u, nullptr);
     wgpuComputePassEncoderSetBindGroup(compute_pass, 1u, preview.sculpt->get_octree_bindgroup(), 0u, nullptr);
     wgpuComputePassEncoderDispatchWorkgroups(compute_pass, (uint32_t)glm::ceil(sdf_globals.octree_last_level_size / 512.0), 1u, 1u);
- 
+
 #ifndef NDEBUG
-    wgpuComputePassEncoderPopDebugGroup(compute_pass);
+    webgpu_context->pop_debug_group(compute_pass);
 #endif
 
     preview.needs_computing = false;
@@ -500,22 +502,23 @@ void SculptManager::evaluate_closest_ray_intersection(WGPUComputePassEncoder com
     sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();
 
 #ifndef NDEBUG
-    wgpuComputePassEncoderPushDebugGroup(compute_pass, "Ray intersection");
+    webgpu_context->push_debug_group(compute_pass, { "Ray intersection", WGPU_STRLEN });
 #endif
 
     // TODO: add range checks for the ray, for an early out
     // TODO: if bindless, we could do a workgroup/thread per ray
- 
+
     // Upload ray uniform
     uint32_t starting_idx = 0u;
     webgpu_context->update_buffer(std::get<WGPUBuffer>(ray_info_uniform.data), 0u, &ray_to_upload, sizeof(sGPU_RayData));
     if (intersection_node_to_test != nullptr) {
         starting_idx = intersection_node_to_test->get_in_frame_render_instance_idx();
-    } else if (sculpt_to_test != nullptr) {
+    }
+    else if (sculpt_to_test != nullptr) {
         starting_idx = model_to_test_idx;
     }
     webgpu_context->update_buffer(std::get<WGPUBuffer>(ray_sculpt_instances_uniform.data), 0u, &starting_idx, sizeof(uint32_t));
-    
+
 
     ray_intersection_pipeline.set(compute_pass);
     wgpuComputePassEncoderSetBindGroup(compute_pass, 0u, ray_intersection_info_bind_group, 0u, nullptr);
@@ -533,7 +536,8 @@ void SculptManager::evaluate_closest_ray_intersection(WGPUComputePassEncoder com
                 wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1u, 1u, 1u);
             }
         }
-    } else {
+    }
+    else {
         Sculpt* curr_sculpt = (sculpt_to_test) ? sculpt_to_test : intersection_node_to_test->get_sculpt_data();
 
         wgpuComputePassEncoderSetBindGroup(compute_pass, 2u, curr_sculpt->get_octree_bindgroup(), 0u, nullptr);
@@ -546,7 +550,7 @@ void SculptManager::evaluate_closest_ray_intersection(WGPUComputePassEncoder com
     wgpuComputePassEncoderDispatchWorkgroups(compute_pass, 1u, 1u, 1u);
 
 #ifndef NDEBUG
-    wgpuComputePassEncoderPopDebugGroup(compute_pass);
+    webgpu_context->pop_debug_group(compute_pass);
 #endif
 
     intersection_node_to_test = nullptr;
