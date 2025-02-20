@@ -675,9 +675,13 @@ void SculptEditor::update(float delta_time)
             current_spline.for_each([&](const Knot& point) {
                 Edit edit;
                 edit.position = point.position;
+                // edit.rotation = point.rotation;
+                edit.rotation = current_spline.get_knot(0u).rotation;
                 edit.dimensions = glm::vec4(point.size, 0.0f);
                 new_edits.push_back(edit);
             });
+
+            add_edit_repetitions(new_edits);
 
             force_new_stroke = true;
             reset_spline();
@@ -687,17 +691,17 @@ void SculptEditor::update(float delta_time)
         if (creating_spline()) {
 
             if (!current_spline.size()) {
-                current_spline.add_knot({ edit_to_add.position, edit_to_add.dimensions });
+                current_spline.add_knot({ edit_to_add.position, edit_to_add.dimensions, edit_to_add.rotation });
             }
             else if (Input::was_button_pressed(XR_BUTTON_A)) {
-                current_spline.add_knot({ edit_to_add.position, edit_to_add.dimensions });
+                current_spline.add_knot({ edit_to_add.position, edit_to_add.dimensions, edit_to_add.rotation });
 
                 if (current_spline.size() >= MAX_KNOTS_PER_SPLINE) {
                     end_spline();
                 }
             }
         }
-        // Upload the edit to the  edit list
+        // Upload the edit to the edit list
         else if (is_tool_used) {
 
             new_edits.push_back(edit_to_add);
@@ -720,11 +724,13 @@ void SculptEditor::update(float delta_time)
 
         preview_spline = current_spline;
 
-        preview_spline.add_knot({ edit_to_add.position, edit_to_add.dimensions });
+        preview_spline.add_knot({ edit_to_add.position, edit_to_add.dimensions, edit_to_add.rotation });
 
         preview_spline.for_each([&](const Knot& point) {
             Edit edit;
             edit.position = point.position;
+            edit.rotation = preview_spline.get_knot(0u).rotation;
+            // edit.rotation = point.rotation;
             edit.dimensions = glm::vec4(point.size, 0.0f);
             preview_tmp_edits.push_back(edit);
         });
@@ -785,7 +791,7 @@ void SculptEditor::update(float delta_time)
             reset_spline();
         } else if (creating_spline()) {
             // Add last position
-            current_spline.add_knot({ edit_to_add.position, edit_to_add.dimensions });
+            current_spline.add_knot({ edit_to_add.position, edit_to_add.dimensions, edit_to_add.rotation });
             end_spline();
         }
 
@@ -1644,9 +1650,9 @@ void SculptEditor::init_ui()
             right_hand_box->add_child(new ui::ImageLabel2D("Surface Snap", shortcuts::B_BUTTON_PATH, shortcuts::SNAP_SURFACE));
             right_hand_box->add_child(new ui::ImageLabel2D("Center Sculpt", shortcuts::R_GRIP_B_BUTTON_PATH, shortcuts::CENTER_SCULPT, double_size));
             right_hand_box->add_child(new ui::ImageLabel2D("Add/Substract", shortcuts::A_BUTTON_PATH, shortcuts::ADD_SUBSTRACT));
+            right_hand_box->add_child(new ui::ImageLabel2D("Add Knot", shortcuts::A_BUTTON_PATH, shortcuts::ADD_KNOT));
             right_hand_box->add_child(new ui::ImageLabel2D("Pick Material", shortcuts::R_GRIP_A_BUTTON_PATH, shortcuts::PICK_MATERIAL, double_size));
             right_hand_box->add_child(new ui::ImageLabel2D("Stamp", shortcuts::R_TRIGGER_PATH, shortcuts::STAMP));
-            right_hand_box->add_child(new ui::ImageLabel2D("Add Knot", shortcuts::R_TRIGGER_PATH, shortcuts::ADD_KNOT));
             right_hand_box->add_child(new ui::ImageLabel2D("Smear", shortcuts::R_GRIP_R_TRIGGER_PATH, shortcuts::SMEAR, double_size));
         }
     }
