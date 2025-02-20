@@ -25,8 +25,6 @@ class SculptNode : public Node3D {
 
     Sculpt* sculpt_gpu_data = nullptr;
 
-    void from_history(const std::vector<Stroke>& new_history, bool loaded_from_memory = true);
-
     // DEBUG
     MeshInstance3D* AABB_mesh = nullptr;
 
@@ -45,6 +43,8 @@ public:
 
     virtual void serialize(std::ofstream& binary_scene_file);
     virtual void parse(std::ifstream& binary_scene_file);
+
+    void from_history(const std::vector<Stroke>& new_history, bool loaded_from_memory = true);
 
     void make_unique();
     void clone(Node* new_node, bool copy = true) override;

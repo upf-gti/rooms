@@ -1153,7 +1153,7 @@ void SceneEditor::render_gizmo()
     }
 }
 
-void SceneEditor::update_node_transform(const float delta_time, const bool rotate_selected_node)
+void SceneEditor::update_node_transform(float delta_time, bool rotate_selected_node)
 {
     // Do not rotate sculpt if shift -> we might be rotating the edit
     if (rotate_selected_node && !is_shift_left_pressed && !action_in_progress) {

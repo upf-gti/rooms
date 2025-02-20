@@ -907,3 +907,21 @@ void SculptManager::read_GPU_results()
 
     performed_evaluation = false;
 }
+
+void SculptManager::apply_sculpt_offset(SculptNode* sculpt_node, const glm::vec3& texture_space_offset)
+{
+    Sculpt* gpu_data = sculpt_node->get_sculpt_data();
+    std::vector<Stroke> stroke_history = gpu_data->get_stroke_history();
+
+    for (auto& stroke : stroke_history) {
+
+        for (int i = 0; i < stroke.edit_count; i++) {
+            Edit& edit = stroke.edits[i];
+            edit.position += texture_space_offset;
+        }
+    }
+
+    sculpt_node->from_history(stroke_history, true);
+
+    delete_sculpt(gpu_data);
+}

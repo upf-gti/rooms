@@ -145,6 +145,7 @@ int RoomsEngine::post_initialize()
     }
 
     player = new PlayerNode();
+    player->set_name("PlayerNode");
     main_scene->add_node(player);
 
     return 0;

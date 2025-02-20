@@ -141,7 +141,7 @@ class SceneEditor : public BaseEditor {
     glm::vec3 grab_offset = {};
     float last_hand_distance = 0.0f;
 
-    void update_node_transform(const float delta_time, const bool rotate_selected_node);
+    void update_node_transform(float delta_time, bool rotate_selected_node);
     void update_hovered_node();
 
     /*

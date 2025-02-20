@@ -209,9 +209,10 @@ public:
     void set_ray_to_test(const glm::vec3& ray_origin, const glm::vec3& ray_dir, SculptNode* node_to_test = nullptr);
     void set_ray_to_test(const glm::vec3& ray_origin, const glm::vec3& ray_dir, Sculpt * sculpt, const uint32_t model_id);
 
-
     Sculpt* create_sculpt();
     Sculpt* create_sculpt_from_history(const std::vector<Stroke>& stroke_history);
+
+    void apply_sculpt_offset(SculptNode* sculpt_node, const glm::vec3& texture_space_offset);
 
     bool has_performed_evaluation() { return performed_evaluation; }
 

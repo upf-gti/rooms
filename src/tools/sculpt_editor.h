@@ -34,15 +34,12 @@ class SculptEditor : public BaseEditor {
     MeshInstance3D* sculpt_area_box = nullptr;
 
     SculptNode* current_sculpt = nullptr;
-    // Transform current_instance_transform;
-    // uint32_t in_frame_sculpt_render_list_id;
 
     StrokeManager stroke_manager = {};
 
     static uint8_t last_generated_material_uid;
     uint8_t num_generated_materials = 0u;
 
-    Transform& get_current_transform();
     bool is_rotation_being_used();
     void add_pbr_material_data(const std::string& name, const Color& base_color, float roughness, float metallic,
         float noise_intensity = 0.0f, const Color& noise_color = colors::RUST, float noise_frequency = 20.0f, int noise_octaves = 8);
