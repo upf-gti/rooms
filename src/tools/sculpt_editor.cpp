@@ -1355,13 +1355,13 @@ void SculptEditor::generate_shortcuts()
         shortcuts[shortcuts::SPLINE_DENSITY] = !is_shift_right_pressed;
     }
     else {
-        shortcuts[shortcuts::REPETITIONS] = !is_shift_right_pressed;
+        shortcuts[shortcuts::CENTER_SCULPT] = is_shift_right_pressed;
         shortcuts[shortcuts::BACK_TO_SCENE] = true;
         shortcuts[shortcuts::MAIN_SIZE] = !is_shift_right_pressed;
         shortcuts[shortcuts::SECONDARY_SIZE] = is_shift_right_pressed;
         shortcuts[shortcuts::ADD_SUBSTRACT] = !is_shift_right_pressed;
         shortcuts[shortcuts::ROUND_SHAPE] = !is_shift_right_pressed;
-        shortcuts[shortcuts::SNAP_SURFACE] = is_shift_right_pressed;
+        shortcuts[shortcuts::SNAP_SURFACE] = !is_shift_right_pressed;
         shortcuts[shortcuts::PICK_MATERIAL] = is_shift_right_pressed;
         shortcuts[shortcuts::STAMP] = !is_shift_right_pressed;
         shortcuts[shortcuts::SMEAR] = is_shift_right_pressed;
