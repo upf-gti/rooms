@@ -582,12 +582,8 @@ void SculptEditor::update(float delta_time)
             if (creating_path) {
                 stroke_mode = (stroke_mode == STROKE_MODE_STRETCH) ? STROKE_MODE_SPLINE : STROKE_MODE_STRETCH;
             }
-            else if (is_shift_right_pressed) {
+            else if (!is_shift_right_pressed) {
                 snap_to_surface = !snap_to_surface;
-            }
-            else {
-                // Free slot!
-                // ...
             }
         }
 
@@ -640,9 +636,9 @@ void SculptEditor::update(float delta_time)
         }
     }
 
-    /*if (Input::was_button_pressed(XR_BUTTON_Y) && !creating_path) {
+    if (Input::was_button_pressed(XR_BUTTON_Y) && !creating_path) {
         RoomsEngine::switch_editor(SCENE_EDITOR);
-    }*/
+    }
 
     bool is_tool_used = edit_update(delta_time);
     if (is_tool_used) {
@@ -655,7 +651,7 @@ void SculptEditor::update(float delta_time)
 
     update_sculpt_rotation();
 
-    if (Input::was_button_pressed(XR_BUTTON_Y) && !creating_path) {
+    if (Input::was_button_pressed(XR_BUTTON_B) && !creating_path && is_shift_right_pressed) {
         glm::vec3 texture_offset = world_to_texture3d(current_sculpt->get_translation()) - edit_to_add.position;
         renderer->get_sculpt_manager()->apply_sculpt_offset(current_sculpt, texture_offset);
         stroke_manager.set_current_sculpt(current_sculpt);
@@ -1644,9 +1640,9 @@ void SculptEditor::init_ui()
             right_hand_box->add_child(new ui::ImageLabel2D("Round Shape", shortcuts::R_THUMBSTICK_X_PATH, shortcuts::ROUND_SHAPE));
             right_hand_box->add_child(new ui::ImageLabel2D("Smooth", shortcuts::R_GRIP_R_THUMBSTICK_X_PATH, shortcuts::MODIFY_SMOOTH, double_size));
             right_hand_box->add_child(new ui::ImageLabel2D("Spline Density", shortcuts::R_THUMBSTICK_X_PATH, shortcuts::SPLINE_DENSITY));
-            right_hand_box->add_child(new ui::ImageLabel2D("Repetition", shortcuts::B_BUTTON_PATH, shortcuts::REPETITIONS));
             right_hand_box->add_child(new ui::ImageLabel2D("Stretch/Spline", shortcuts::B_BUTTON_PATH, shortcuts::TOGGLE_STRETCH_SPLINE));
-            right_hand_box->add_child(new ui::ImageLabel2D("Surface Snap", shortcuts::R_GRIP_B_BUTTON_PATH, shortcuts::SNAP_SURFACE, double_size));
+            right_hand_box->add_child(new ui::ImageLabel2D("Surface Snap", shortcuts::B_BUTTON_PATH, shortcuts::SNAP_SURFACE));
+            right_hand_box->add_child(new ui::ImageLabel2D("Center Sculpt", shortcuts::R_GRIP_B_BUTTON_PATH, shortcuts::CENTER_SCULPT, double_size));
             right_hand_box->add_child(new ui::ImageLabel2D("Add/Substract", shortcuts::A_BUTTON_PATH, shortcuts::ADD_SUBSTRACT));
             right_hand_box->add_child(new ui::ImageLabel2D("Pick Material", shortcuts::R_GRIP_A_BUTTON_PATH, shortcuts::PICK_MATERIAL, double_size));
             right_hand_box->add_child(new ui::ImageLabel2D("Stamp", shortcuts::R_TRIGGER_PATH, shortcuts::STAMP));

@@ -63,7 +63,7 @@ namespace shortcuts {
         MAIN_SIZE,
         SECONDARY_SIZE,
         ADD_SUBSTRACT,
-        REPETITIONS,
+        CENTER_SCULPT,
         TOGGLE_STRETCH_SPLINE,
         SPLINE_DENSITY,
         ADD_KNOT,
