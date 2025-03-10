@@ -36,18 +36,26 @@ void PlayerNode::update(float delta_time)
     if (Input::is_trigger_pressed(HAND_LEFT)) {
         if (!was_trigger_pressed) {
             prev_lcontroller_position = Input::get_controller_position(HAND_LEFT, POSE_GRIP, false);
-            prev_lcontroller_rotation = Input::get_controller_rotation(HAND_LEFT, POSE_AIM);
+            prev_lcontroller_rotation = Input::get_controller_rotation(HAND_LEFT, POSE_GRIP);
             was_trigger_pressed = true;
         } else {
             const glm::vec3 curr_lcontroller_pos = Input::get_controller_position(HAND_LEFT, POSE_GRIP, false);
-            const glm::quat curr_lcontroller_rotation = Input::get_controller_rotation(HAND_LEFT, POSE_AIM);
+            const glm::quat curr_lcontroller_rotation = Input::get_controller_rotation(HAND_LEFT, POSE_GRIP);
 
-            transform.translate((prev_lcontroller_position - curr_lcontroller_pos));
+            if (Input::is_grab_pressed(HAND_LEFT)) {
+                glm::quat rot_diff = curr_lcontroller_rotation * glm::inverse(prev_lcontroller_rotation);
 
-            glm::quat rot_diff = curr_lcontroller_rotation * glm::inverse(prev_lcontroller_rotation);
+                glm::vec3 angles = glm::eulerAngles(rot_diff);
 
-            // Reduce the rotation magnitude before aplying the rotation
-            transform.rotate(glm::slerp(glm::quat{0.0f, 0.0f, 0.0f, 1.0f}, rot_diff, 0.25f));
+                rot_diff = glm::angleAxis(angles.y, curr_lcontroller_rotation *  glm::vec3(0.0f, 1.0f, 0.0f));
+
+
+                // Reduce the rotation magnitude before aplying the rotation
+                transform.rotate(glm::slerp(glm::quat{0.0f, 0.0f, 0.0f, 1.0f}, rot_diff, 0.5f));
+            }
+            else {
+                transform.translate((prev_lcontroller_position - curr_lcontroller_pos));
+            }
 
             prev_lcontroller_position = curr_lcontroller_pos;
             prev_lcontroller_rotation = curr_lcontroller_rotation;
