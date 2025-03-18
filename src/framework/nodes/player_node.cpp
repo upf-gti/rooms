@@ -9,6 +9,7 @@
 #ifdef XR_SUPPORT
 #include "xr/openxr_context.h"
 #endif
+#include <glm/gtx/vector_angle.hpp>
 
 REGISTER_NODE_CLASS(PlayerNode)
 
@@ -35,30 +36,40 @@ void PlayerNode::update(float delta_time)
     // TODO: add inercia or something to make it feel better
     if (Input::is_trigger_pressed(HAND_LEFT)) {
         if (!was_trigger_pressed) {
+            // Get the controllers in world position
             prev_lcontroller_position = Input::get_controller_position(HAND_LEFT, POSE_GRIP, false);
-            prev_lcontroller_rotation = Input::get_controller_rotation(HAND_LEFT, POSE_GRIP);
             was_trigger_pressed = true;
         } else {
             const glm::vec3 curr_lcontroller_pos = Input::get_controller_position(HAND_LEFT, POSE_GRIP, false);
-            const glm::quat curr_lcontroller_rotation = Input::get_controller_rotation(HAND_LEFT, POSE_GRIP);
 
             if (Input::is_grab_pressed(HAND_LEFT)) {
-                glm::quat rot_diff = curr_lcontroller_rotation * glm::inverse(prev_lcontroller_rotation);
+                const glm::vec3 head_pos = glm::inverse(transform.get_model()) * glm::vec4(transform.get_position(), 1.0);
 
-                glm::vec3 angles = glm::eulerAngles(rot_diff);
+                const glm::vec2 head_pos_2d = glm::vec2(head_pos.x, head_pos.y);
+                const glm::vec2 prev_lcontroller_pos_2d = glm::vec2(prev_lcontroller_position.x, prev_lcontroller_position.y);
+                const glm::vec2 curr_lcontroller_pos_2d = glm::vec2(curr_lcontroller_pos.x, curr_lcontroller_pos.y);
 
-                rot_diff = glm::angleAxis(angles.y, curr_lcontroller_rotation *  glm::vec3(0.0f, 1.0f, 0.0f));
+                glm::vec2 curr_vec = glm::normalize(curr_lcontroller_pos_2d - head_pos_2d);
+                glm::vec2 prev_vec = glm::normalize(prev_lcontroller_pos_2d - head_pos_2d);
 
+                float d = glm::length(curr_vec - prev_vec);
 
-                // Reduce the rotation magnitude before aplying the rotation
-                transform.rotate(glm::slerp(glm::quat{0.0f, 0.0f, 0.0f, 1.0f}, rot_diff, 0.5f));
+                float rot_angle = glm::orientedAngle(curr_vec, prev_vec);
+
+                // For a bit more rotation speed
+                rot_angle *= PLAYER_ROTATION_SPEED;
+
+                glm::quat rot_diff = glm::normalize(glm::angleAxis(rot_angle, glm::vec3(0.0f, 1.0f, 0.0f)));
+
+                transform.rotate(rot_diff);
             }
             else {
-                transform.translate((prev_lcontroller_position - curr_lcontroller_pos));
+                // TODO: This could be speed dependant
+                const glm::vec3 movement = prev_lcontroller_position - curr_lcontroller_pos;
+                transform.translate(glm::normalize(movement) * glm::length(movement) * PLAYER_TRANSLATION_SPEED);
             }
 
             prev_lcontroller_position = curr_lcontroller_pos;
-            prev_lcontroller_rotation = curr_lcontroller_rotation;
         }
     } else {
         was_trigger_pressed = false;

@@ -5,13 +5,14 @@
 
 class RoomsEngine;
 
+#define PLAYER_TRANSLATION_SPEED 1.6f
+#define PLAYER_ROTATION_SPEED 1.8f
+
 class PlayerNode : public Node3D {
     RoomsEngine *engine = nullptr;
 
     bool was_trigger_pressed = false;
     glm::vec3 prev_lcontroller_position = {};
-
-    glm::quat prev_lcontroller_rotation = {};
 
 public:
     PlayerNode();
