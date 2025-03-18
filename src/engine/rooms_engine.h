@@ -70,10 +70,14 @@ class RoomsEngine : public Engine
 
     PlayerNode* player = nullptr;
 
+    bool controllers_visible = false;
+
 public:
 
     int initialize(Renderer* renderer, sEngineConfiguration configuration = {}) override;
     virtual int post_initialize() override;
+
+    static RoomsEngine* get_instance() { return static_cast<RoomsEngine*>(instance); }
 
     void clean() override;
 
@@ -85,7 +89,8 @@ public:
     void set_main_scene(const std::string& scene_path);
     void add_to_main_scene(const std::string& scene_path);
 
-    static void render_controllers();
+    void show_controllers();
+    void hide_controllers();
 
     static void switch_editor(uint8_t editor_idx, void* data = nullptr);
     static void toggle_use_grid();
@@ -106,4 +111,10 @@ public:
 
     template <typename T = BaseEditor*>
     inline T get_editor(uint8_t editor_idx) const { return static_cast<T>(editors[editor_idx]); }
+
+#ifdef __EMSCRIPTEN__
+    void set_wasm_module_initialized(bool value) {
+        wasm_module_initialized = value;
+    }
+#endif
 };

@@ -46,7 +46,7 @@ namespace ui {
         // Set xr position
         auto renderer = Renderer::instance;
 
-        if (renderer->get_openxr_available()) {
+        if (renderer->get_xr_available()) {
             glm::mat4x4 m(1.0f);
             glm::vec3 eye = renderer->get_camera_eye();
             m = glm::translate(m, position_3d);

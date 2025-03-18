@@ -15,7 +15,7 @@ namespace ui {
 
     void Cursor::initialize()
     {
-        is_xr = Renderer::instance->get_openxr_available();
+        is_xr = Renderer::instance->get_xr_available();
 
         size = is_xr ? glm::vec2(42.f) : glm::vec2(32.f);
 

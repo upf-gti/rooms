@@ -36,7 +36,7 @@ public:
     SculptNode(SculptNode* reference);
     ~SculptNode();
 
-    void initialize();
+    void initialize() override;
 
     void update(float delta_time);
     void render() override;

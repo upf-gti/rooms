@@ -248,7 +248,7 @@ namespace ui {
             }
         }
 
-        if (renderer->get_openxr_available()) {
+        if (renderer->get_xr_available()) {
 
             if (!placed) {
                 glm::mat4x4 m(1.0f);

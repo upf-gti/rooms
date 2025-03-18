@@ -1,6 +1,22 @@
 #include "engine/rooms_engine.h"
 #include "graphics/renderers/rooms_renderer.h"
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#include <emscripten/html5.h>
+#include <emscripten/bind.h>
+
+// Binding code
+EMSCRIPTEN_BINDINGS(_Class_) {
+
+    emscripten::class_<RoomsEngine>("Engine")
+        .constructor<>()
+        .class_function("getInstance", &RoomsEngine::get_instance, emscripten::return_value_policy::reference())
+        .function("setWasmModuleInitialized", &RoomsEngine::set_wasm_module_initialized);
+
+}
+#endif
+
 int main()
 {
     RoomsEngine* engine = new RoomsEngine();

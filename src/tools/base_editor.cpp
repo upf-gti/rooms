@@ -16,7 +16,7 @@ void BaseEditor::clean()
 
 void BaseEditor::update(float delta_time)
 {
-    if (renderer->get_openxr_available()) {
+    if (renderer->get_xr_available()) {
 
         is_shift_left_pressed = Input::is_grab_pressed(HAND_LEFT);
         is_shift_right_pressed = Input::is_grab_pressed(HAND_RIGHT);
@@ -83,7 +83,7 @@ void BaseEditor::update(float delta_time)
 void BaseEditor::render()
 {
     // Shortcuts panels
-    if (renderer->get_openxr_available()) {
+    if (renderer->get_xr_available()) {
         left_hand_box->render();
         right_hand_box->render();
     }
@@ -100,7 +100,7 @@ void BaseEditor::on_resize_window(uint32_t width, uint32_t height)
 
 void BaseEditor::update_shortcuts(const std::unordered_map<uint8_t, bool>& active_shortcuts)
 {
-    assert(renderer->get_openxr_available() && "Updating shortcuts in non-XR mode!");
+    assert(renderer->get_xr_available() && "Updating shortcuts in non-XR mode!");
 
     glm::mat4x4 m = glm::rotate(glm::mat4x4(1.0f), glm::radians(-120.f), glm::vec3(1.0f, 0.0f, 0.0f));
     m = glm::translate(m, glm::vec3(0.02f, 0.0f, 0.02f));

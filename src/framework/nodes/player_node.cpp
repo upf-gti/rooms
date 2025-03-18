@@ -6,9 +6,12 @@
 #include "framework/input.h"
 #include "engine/rooms_engine.h"
 
-#ifdef XR_SUPPORT
-#include "xr/openxr_context.h"
+#if defined(OPENXR_SUPPORT)
+#include "xr/openxr/openxr_context.h"
+#elif defined(WEBXR_SUPPORT)
+#include "xr/webxr/webxr_context.h"
 #endif
+
 #include <glm/gtx/vector_angle.hpp>
 
 REGISTER_NODE_CLASS(PlayerNode)
@@ -18,9 +21,9 @@ PlayerNode::PlayerNode() : Node3D()
     node_type = "PlayerNode";
 
 #ifdef XR_SUPPORT
-    if (RoomsRenderer::instance->get_openxr_available()) {
+    if (RoomsRenderer::instance->get_xr_available()) {
         // Sets this node 's transform as teh origin for the OpenXR
-        Renderer::instance->get_openxr_context()->root_transform = &transform;
+        Renderer::instance->get_xr_context()->root_transform = &transform;
     }
 #endif
 

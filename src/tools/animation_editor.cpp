@@ -108,6 +108,9 @@ void AnimationEditor::clean()
 
 void AnimationEditor::on_enter(void* data)
 {
+    RoomsEngine* engine = static_cast<RoomsEngine*>(RoomsEngine::instance);
+    engine->show_controllers();
+
     gizmo->set_operation(TRANSLATE | ROTATE);
 
     current_node = reinterpret_cast<Node3D*>(data);
@@ -197,7 +200,7 @@ void AnimationEditor::on_enter(void* data)
     }
 
     // Set inspector in front on VR mode
-    if (renderer->get_openxr_available()) {
+    if (renderer->get_xr_available()) {
 
         glm::mat4x4 m(1.0f);
         glm::vec3 eye = static_cast<RoomsRenderer*>(Renderer::instance)->get_camera_eye();
@@ -286,7 +289,7 @@ void AnimationEditor::update(float delta_time)
         }
     }
 
-    if (renderer->get_openxr_available()) {
+    if (renderer->get_xr_available()) {
 
         if (!keyframe_dirty) {
             if (Input::was_button_pressed(XR_BUTTON_X)) {
@@ -328,8 +331,6 @@ void AnimationEditor::update(float delta_time)
 
 void AnimationEditor::render()
 {
-    RoomsEngine::render_controllers();
-
     BaseEditor::render();
 
     // inspector->render();
@@ -371,7 +372,7 @@ void AnimationEditor::update_gizmo(float delta_time)
     Node3D* node = get_current_node();
 
     // Gizmo only needs to update for XR
-    if (!keyframe_dirty || !node || !renderer->get_openxr_available()) {
+    if (!keyframe_dirty || !node || !renderer->get_xr_available()) {
         return;
     }
 
@@ -422,7 +423,7 @@ void AnimationEditor::render_gizmo()
 
         gizmo_active = gizmo->render();
 
-        if (gizmo_active && !renderer->get_openxr_available()) {
+        if (gizmo_active && !renderer->get_xr_available()) {
             node->set_global_transform(gizmo->get_transform());
 
             if (dynamic_cast<Joint3D*>(node)) {
@@ -444,7 +445,7 @@ void AnimationEditor::render_gizmo()
 
             bool transform_dirty = ik_gizmo.render();
 
-            if (transform_dirty && !renderer->get_openxr_available()) {
+            if (transform_dirty && !renderer->get_xr_available()) {
                 ik_target = Transform::combine(Transform::inverse(global), ik_gizmo.get_transform());
             }
         }
@@ -1366,7 +1367,7 @@ void AnimationEditor::init_ui()
         .delete_keyframe_fn = std::bind(&AnimationEditor::on_delete_timeline_keyframe, this, std::placeholders::_1, std::placeholders::_2)
     });
 
-    if (renderer->get_openxr_available()) {
+    if (renderer->get_xr_available()) {
 
         // Thumbsticks
         // Buttons

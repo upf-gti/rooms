@@ -7,7 +7,11 @@
 #include "shaders/mesh_forward.wgsl.gen.h"
 #include "shaders/quad_mirror.wgsl.gen.h"
 
-#include "xr/openxr_context.h"
+#if defined(OPENXR_SUPPORT)
+#include "xr/openxr/openxr_context.h"
+#elif defined(WEBXR_SUPPORT)
+#include "xr/webxr/webxr_context.h"
+#endif
 
 #include "framework/nodes/environment_3d.h"
 #include "engine/rooms_engine.h"
@@ -71,7 +75,7 @@ int RoomsRenderer::post_initialize()
 
     set_custom_pass_user_data(&raymarching_renderer);
 
-    if (is_openxr_available && use_mirror_screen && use_custom_mirror) {
+    if (is_xr_available && use_mirror_screen && use_custom_mirror) {
         custom_mirror_texture = webgpu_context->create_texture(
             WGPUTextureDimension_2D,
             webgpu_context->xr_swapchain_format,
@@ -155,7 +159,7 @@ void RoomsRenderer::clean()
     global_sculpts_instance_data_uniform.destroy();
 
 
-    if (is_openxr_available && use_mirror_screen && use_custom_mirror) {
+    if (is_xr_available && use_mirror_screen && use_custom_mirror) {
         wgpuTextureRelease(custom_mirror_texture);
         wgpuTextureViewRelease(custom_mirror_texture_view);
 
@@ -356,7 +360,7 @@ void RoomsRenderer::update(float delta_time)
 
 void RoomsRenderer::render()
 {
-    if (is_openxr_available && use_mirror_screen && use_custom_mirror) {
+    if (is_xr_available && use_mirror_screen && use_custom_mirror) {
 
         RoomsEngine* rooms_engine = static_cast<RoomsEngine*>(RoomsEngine::get_instance());
         Environment3D* environment = rooms_engine->get_environment();

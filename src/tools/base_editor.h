@@ -3,6 +3,10 @@
 #include <string>
 #include <unordered_map>
 
+#if defined(XR_SUPPORT)
+#include "xr/xr_context.h"
+#endif
+
 #include "framework/input_xr.h"
 
 class RoomsRenderer;

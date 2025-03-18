@@ -78,12 +78,14 @@ void SculptManager::update(WGPUCommandEncoder command_encoder)
     if (intersections_to_compute > 0u) {
         WGPUComputePassDescriptor compute_pass_desc = {};
 
+#ifndef __EMSCRIPTEN__
         std::vector<WGPUPassTimestampWrites> timestampWrites(1);
         timestampWrites[0].beginningOfPassWriteIndex = Renderer::instance->timestamp(command_encoder, "pre_evaluation_or_what");
         timestampWrites[0].querySet = Renderer::instance->get_query_set();
         timestampWrites[0].endOfPassWriteIndex = Renderer::instance->timestamp(command_encoder, "intersection");
 
         compute_pass_desc.timestampWrites = timestampWrites.data();
+#endif
 
         WGPUComputePassEncoder intersection_compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
 
@@ -96,12 +98,14 @@ void SculptManager::update(WGPUCommandEncoder command_encoder)
     // Create the octree renderpass
     WGPUComputePassDescriptor compute_pass_desc = {};
 
+#ifndef __EMSCRIPTEN__
     std::vector<WGPUPassTimestampWrites> timestampWrites(1);
     timestampWrites[0].beginningOfPassWriteIndex = Renderer::instance->timestamp(command_encoder, "pre_evaluation");
     timestampWrites[0].querySet = Renderer::instance->get_query_set();
     timestampWrites[0].endOfPassWriteIndex = Renderer::instance->timestamp(command_encoder, "evaluation");
 
     compute_pass_desc.timestampWrites = timestampWrites.data();
+#endif
 
     WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
 

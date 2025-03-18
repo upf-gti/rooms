@@ -44,4 +44,6 @@ public:
     void generate_shortcuts() override {};
 
     void end();
+
+    void on_enter(void* data) override;
 };

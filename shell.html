@@ -2,53 +2,84 @@
 <html lang="en-us">
 
 <head>
-  <meta charset="utf-8">
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-  <title>Rooms</title>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Rooms</title>
 </head>
 
 <body>
-  <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex=-1
-    style="position:fixed;height:100%;width:100%;top:0%;left:0%;resize:both;"></canvas>
-  <template id="main-script">
-    {{{ SCRIPT }}}
-  </template>
-  <script type='text/javascript'>
+    <button id="xr-button" style="z-index:10;position:absolute;top:2%;left:2%" disabled>WebXR or WebGPU not supported</button>
+    <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex=-1
+        style="position:fixed;height:100%;width:100%;top:0%;left:0%;resize:both;"></canvas>
+    <template id="main-script">
+        {{{ SCRIPT }}}
+    </template>
+    <script type='text/javascript'>
 
-    function loadApp() {
-    }
+        var Module = {
+            preRun: [],
+            postRun: [],
+            canvas: (function () {
+                var canvas = document.getElementById('canvas');
 
-    var Module = {
-      preRun: [],
-      postRun: [],
-      canvas: (function () {
-        var canvas = document.getElementById('canvas');
+                // Event handler to resize the canvas when the document view is changed
+                window.addEventListener('resize', () => {
+                    canvas.clientWidth = window.innerWidth;
+                    canvas.clientHeight = window.innerHeight;
+                    canvas.width = window.innerWidth;
+                    canvas.height = window.innerHeight;
+                }, false);
 
-        // Event handler to resize the canvas when the document view is changed
-        window.addEventListener('resize', () => {
-          canvas.clientWidth = window.innerWidth;
-          canvas.clientHeight = window.innerHeight;
-          canvas.width = window.innerWidth;
-          canvas.height = window.innerHeight;
-        }, false);
+                return canvas;
+            })(),
+            totalDependencies: 0
+        };
 
-        return canvas;
-      })(),
-      totalDependencies: 0
-    };
+        async function onEnginePreInitialized() {
 
-    (async () => {
-      // Custom for WebGPU
-      if (!navigator.gpu) {
-        console.error("Sorry, WebGPU is not suported by your browser.");
-        return;
-      } else {
-        const jsTemplate = document.getElementById("main-script");
-        const js = jsTemplate.content.cloneNode(true);
-        document.body.appendChild(js);
-      }
-    })();
-  </script>
+            await Promise.resolve( Module.Engine.getInstance() ).then( result => {
+
+                if ( !result ) {
+                    console.error( "Module Instance is null" );
+                }
+
+                window.engineInstance = result;
+
+            } ).catch( error => {
+                console.log( error );
+            });
+
+            Promise.resolve( window.engineInstance.setWasmModuleInitialized(true) ).then().catch( error => {
+                console.log( error );
+            });
+        }
+
+        function onEngineInitialized() {
+        }
+
+        (async () => {
+            // Custom for WebGPU
+            if (!navigator.gpu) {
+                console.error("Sorry, WebGPU is not supported by your browser.");
+                const msg = document.createElement("div");
+                Object.assign(msg.style, {
+                    width: "50%",
+                    fontSize: "36px",
+                    fontWeight: "500",
+                    textAlign: "center",
+                    margin: "0 auto",
+                    marginTop: "25%"
+                });
+                msg.innerText = "Sorry, WebGPU is not supported by your browser.";
+                document.body.appendChild(msg);
+                return;
+            } else {
+                const jsTemplate = document.getElementById("main-script");
+                const js = jsTemplate.content.cloneNode(true);
+                document.body.appendChild(js);
+            }
+        })();
+    </script>
 </body>
 
 </html>

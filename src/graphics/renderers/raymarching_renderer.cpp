@@ -43,7 +43,7 @@ RaymarchingRenderer::RaymarchingRenderer()
 int RaymarchingRenderer::initialize()
 {
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
-    bool is_openxr_available = RoomsRenderer::instance->get_openxr_available();
+    bool is_openxr_available = RoomsRenderer::instance->get_xr_available();
 
     // Compute constants
 
@@ -186,7 +186,7 @@ void RaymarchingRenderer::render_preview_raymarching_proxy(WGPURenderPassEncoder
 void RaymarchingRenderer::init_raymarching_proxy_pipeline()
 {
     WebGPUContext* webgpu_context = RoomsRenderer::instance->get_webgpu_context();
-    bool is_openxr_available = RoomsRenderer::instance->get_openxr_available();
+    bool is_openxr_available = RoomsRenderer::instance->get_xr_available();
 
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();

@@ -117,7 +117,7 @@ namespace ui {
 
         auto renderer = Renderer::instance;
 
-        if (renderer->get_openxr_available()) {
+        if (renderer->get_xr_available()) {
 
             if (!placed) {
                 glm::mat4x4 m(1.0f);
@@ -194,7 +194,7 @@ namespace ui {
                 row->translate({ 0.0f, scroll_dt });
             }
 
-            if (renderer->get_openxr_available() && grabbing && Input::was_grab_pressed(HAND_RIGHT)) {
+            if (renderer->get_xr_available() && grabbing && Input::was_grab_pressed(HAND_RIGHT)) {
                 last_grab_position = last_scroll_position;
                 last_grab_distance = data.ray_distance;
             }

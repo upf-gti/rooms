@@ -145,7 +145,7 @@ void SceneEditor::update(float delta_time)
     {
         select_action_pressed = Input::was_mouse_released(GLFW_MOUSE_BUTTON_LEFT);
 
-        if (renderer->get_openxr_available()) {
+        if (renderer->get_xr_available()) {
             eTriggerAction trigger_state = get_trigger_action(delta_time);
             select_action_pressed |= (trigger_state == TRIGGER_TAPPED);
 
@@ -239,7 +239,7 @@ void SceneEditor::update(float delta_time)
         }
     }
 
-    if (renderer->get_openxr_available()) {
+    if (renderer->get_xr_available()) {
         BaseEditor::update_shortcuts(shortcuts);
     }
 
@@ -248,8 +248,6 @@ void SceneEditor::update(float delta_time)
 
 void SceneEditor::render()
 {
-    RoomsEngine::render_controllers();
-
     render_gizmo();
 
     BaseEditor::render();
@@ -270,6 +268,9 @@ void SceneEditor::render_gui()
 
 void SceneEditor::on_enter(void* data)
 {
+    RoomsEngine* engine = static_cast<RoomsEngine*>(RoomsEngine::instance);
+    engine->show_controllers();
+
     gizmo->set_operation(TRANSLATE);
     Node::emit_signal("combo_gizmo_modes@changed", (void*)"translate");
 }
@@ -344,7 +345,7 @@ void SceneEditor::process_node_hovered()
     const bool b_pressed = Input::was_button_pressed(XR_BUTTON_B);
     const bool should_open_context_menu = Input::was_button_pressed(XR_BUTTON_B) || Input::was_mouse_pressed(GLFW_MOUSE_BUTTON_RIGHT);
 
-    if (group_hovered && renderer->get_openxr_available()) {
+    if (group_hovered && renderer->get_xr_available()) {
         if (grouping_node) {
             bool can_group = (hovered_node != node_to_group);
             shortcuts[shortcuts::ADD_TO_GROUP] = can_group;
@@ -363,7 +364,7 @@ void SceneEditor::process_node_hovered()
         }
     }
     // In 2d, we have to select manually by click, so do not enter here!
-    else if (grouping_node && renderer->get_openxr_available()) {
+    else if (grouping_node && renderer->get_xr_available()) {
         bool can_group = (hovered_node != node_to_group);
         shortcuts[shortcuts::CREATE_GROUP] = can_group;
         if (a_pressed && can_group) {
@@ -518,7 +519,7 @@ void SceneEditor::init_ui()
     main_panel->set_visibility(false);
 
     // Load controller UI labels
-    if (renderer->get_openxr_available()) {
+    if (renderer->get_xr_available()) {
         // Thumbsticks
         // Buttons
         // Triggers
@@ -672,7 +673,7 @@ void SceneEditor::open_context_menu(Node* node)
     glm::vec2 position = Input::get_mouse_position();
     glm::vec3 position_3d = glm::vec3(0.0f);
 
-    if (renderer->get_openxr_available()) {
+    if (renderer->get_xr_available()) {
         position = { 0.0f, 0.0f };
         const sGPU_SculptResults& gpu_results = renderer->get_sculpt_manager()->loaded_results;
         position_3d = ray_origin + ray_direction * gpu_results.ray_intersection.ray_t;
@@ -738,7 +739,7 @@ void SceneEditor::select_node(Node* node, bool place)
     }
 
     // Select group target node in 2d only!
-    if (grouping_node && !renderer->get_openxr_available()) {
+    if (grouping_node && !renderer->get_xr_available()) {
         process_group(node);
         return;
     }
@@ -749,7 +750,7 @@ void SceneEditor::select_node(Node* node, bool place)
     Node::emit_signal(node->get_name() + "_label@selected", (void*)nullptr);
 
     // To allow the user to move the node at the beginning
-    moving_node = place && is_gizmo_usable() && renderer->get_openxr_available();
+    moving_node = place && is_gizmo_usable() && renderer->get_xr_available();
 }
 
 void SceneEditor::add_node(Node* node, Node* parent, int idx)
@@ -1074,7 +1075,7 @@ void SceneEditor::update_gizmo(float delta_time)
     }
 
     // Gizmo should update in XR mode only 
-    if (!renderer->get_openxr_available()) {
+    if (!renderer->get_xr_available()) {
         return;
     }
 
@@ -1129,7 +1130,7 @@ void SceneEditor::render_gizmo()
 
     // This is only for 2D since Gizmo.render will only return true if
     // Gizmo2D is used!
-    if (renderer->get_openxr_available()) {
+    if (renderer->get_xr_available()) {
         return;
     }
 

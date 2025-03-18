@@ -19,6 +19,6 @@ public:
     void update(float delta_time) override;
     void render() override;
 
-    void on_enter(void* data);
-    void on_exit();
+    void on_enter(void* data) override;
+    void on_exit() override;
 };

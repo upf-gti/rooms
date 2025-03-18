@@ -97,7 +97,7 @@ void TutorialEditor::update(float delta_time)
         grabbing = false;
     }
 
-    if(renderer->get_openxr_available()) {
+    if(renderer->get_xr_available()) {
 
         if (!placed) {
             glm::mat4x4 m(1.0f);
@@ -152,6 +152,12 @@ void TutorialEditor::end()
     Node::emit_signal("@on_tutorial_ended", (void*)nullptr);
 }
 
+void TutorialEditor::on_enter(void* data)
+{
+    RoomsEngine* engine = static_cast<RoomsEngine*>(RoomsEngine::instance);
+    engine->hide_controllers();
+}
+
 void TutorialEditor::next_panel()
 {
     current_panel_idx++;
@@ -167,7 +173,7 @@ ui::XRPanel* TutorialEditor::generate_panel(const std::string& name, const std::
     glm::vec2 size = glm::vec2(static_cast<float>(webgpu_context->render_width), static_cast<float>(webgpu_context->render_height)) * 0.5f;
     glm::vec2 pos = size * 0.5f;
 
-    if (renderer->get_openxr_available()) {
+    if (renderer->get_xr_available()) {
         size = glm::vec2(1920.f, 1080.0f);
         pos = -size * 0.5f;
     }

@@ -61,7 +61,7 @@ add_compile_definitions(_HAS_EXCEPTIONS=0)
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${ROOMS_DIR_SOURCES})
 
-set_target_properties(${PROJECT_NAME} PROPERTIES VS_DEBUGGER_ENVIRONMENT "DAWN_DEBUG_BREAK_ON_ERROR=1")
+#set_target_properties(${PROJECT_NAME} PROPERTIES VS_DEBUGGER_ENVIRONMENT "DAWN_DEBUG_BREAK_ON_ERROR=1")
 
 set_property(DIRECTORY ${ROOMS_DIR_ROOT} PROPERTY VS_STARTUP_PROJECT ${PROJECT_NAME})
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 20)
@@ -79,21 +79,23 @@ if (EMSCRIPTEN)
     )
 
     add_library(webgpu_layer
-        "${CMAKE_BINARY_DIR}/_deps/emdawn-src/include/webgpu.cpp"
+        "${CMAKE_BINARY_DIR}/_deps/emdawn-src/webgpu.cpp"
     )
     target_link_libraries(${PROJECT_NAME}
         webgpu_layer
     )
 
     add_compile_options(
-    #"-fno-exceptions"
-    "$<$<CONFIG:Release>:-flto>"
+        # "-fno-exceptions"
+        "$<$<CONFIG:Release>:-flto>"
     )
 
     add_link_options(
-    #"-fno-exceptions"
-    "$<$<CONFIG:Release>:-flto>"
+        # "-fno-exceptions"
+        "$<$<CONFIG:Release>:-flto>"
     )
+
+    # See https://github.com/kainino0x/webgpu-cross-platform-demo/tree/dawnwasm for a sample setup
 
     target_link_options(${PROJECT_NAME} PRIVATE
 
@@ -106,24 +108,25 @@ if (EMSCRIPTEN)
         "--js-library=${CMAKE_BINARY_DIR}/_deps/emdawn-src/library_webgpu_generated_struct_info.js"
         "--js-library=${CMAKE_BINARY_DIR}/_deps/emdawn-src/library_webgpu_generated_sig_info.js"
         "--js-library=${CMAKE_BINARY_DIR}/_deps/emdawn-src/library_webgpu.js"
-        "--js-library=${CMAKE_BINARY_DIR}/_deps/emdawn-src/library_html5_webgpu.js"
         "--closure-args=--externs=${CMAKE_BINARY_DIR}/_deps/emdawn-src/webgpu-externs.js"
 
+        -sEXPORTED_FUNCTIONS=_main,_malloc,_free
         -sUSE_GLFW=3
         -sALLOW_MEMORY_GROWTH
-#        -sASYNCIFY
-#        -sWASM=0
+        -sASYNCIFY
 #        -sASSERTIONS
 #        -fsanitize=address
         -Wdeprecated-literal-operator
         -sSTACK_SIZE=5MB
-#        -sASYNCIFY_STACK_SIZE=10000
+        -sASYNCIFY_STACK_SIZE=10000
         -lembind # to bind functions from c++ to javascript
-        -O3
-#        -sWASM_BIGINT
+        -sWASM_BIGINT
+
         # only for dev
-#        -sERROR_ON_WASM_CHANGES_AFTER_LINK
-#        -O0
+        #-sERROR_ON_WASM_CHANGES_AFTER_LINK
+        #-sWASM=0
+        # For faster debug builds
+        # -O1
         # ------------
         --shell-file "${ROOMS_DIR_ROOT}/${SHELL_FILE}"
         --preload-file "${ROOMS_DIR_ROOT}/data@/data"

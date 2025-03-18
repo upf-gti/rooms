@@ -54,7 +54,7 @@ int RoomsEngine::post_initialize()
     environment->set_scale({ 10.0f, 10.0f, 10.0f });
 
     // Load Meta Quest Controllers and Controller pointer
-    if (renderer->get_openxr_available())
+    if (renderer->get_xr_available())
     {
         std::vector<Node*> entities;
         GltfParser parser;
@@ -175,6 +175,16 @@ void RoomsEngine::add_to_main_scene(const std::string& scene_path)
     main_scene->parse(scene_path);
 }
 
+void RoomsEngine::show_controllers()
+{
+    controllers_visible = true;
+}
+
+void RoomsEngine::hide_controllers()
+{
+    controllers_visible = false;
+}
+
 void RoomsEngine::init_default_skeleton()
 {
     std::vector<Node*> nodes;
@@ -206,7 +216,7 @@ void RoomsEngine::init_default_skeleton()
 
 void RoomsEngine::update(float delta_time)
 {
-    bool is_xr = renderer->get_openxr_available();
+    bool is_xr = renderer->get_xr_available();
 
     // Default cursor at the beginning of the frame..
     cursor.set(is_xr ? ui::MOUSE_CURSOR_CIRCLE : ui::MOUSE_CURSOR_DEFAULT);
@@ -274,16 +284,24 @@ void RoomsEngine::render()
         active_context_menu->render();
     }
 
-    if (Renderer::instance->get_openxr_available() && !playing_scene) {
-        const glm::mat4x4& raycast_transform = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
-        ray_pointer->set_transform(Transform::mat4_to_transform(raycast_transform));
-        float xr_ray_distance = IO::get_xr_ray_distance();
-        ray_pointer->scale(glm::vec3(1.0f, 1.0f, xr_ray_distance < 0.0f ? 0.5f : xr_ray_distance));
-        ray_pointer->render();
+    if (Renderer::instance->get_xr_available()) {
 
-        sphere_pointer->set_transform(Transform::mat4_to_transform(raycast_transform));
-        sphere_pointer->scale(glm::vec3(0.1f));
-        sphere_pointer->render();
+        if (!playing_scene) {
+            const glm::mat4x4& raycast_transform = Input::get_controller_pose(HAND_RIGHT, POSE_AIM);
+            ray_pointer->set_transform(Transform::mat4_to_transform(raycast_transform));
+            float xr_ray_distance = IO::get_xr_ray_distance();
+            ray_pointer->scale(glm::vec3(1.0f, 1.0f, xr_ray_distance < 0.0f ? 0.5f : xr_ray_distance));
+            ray_pointer->render();
+
+            sphere_pointer->set_transform(Transform::mat4_to_transform(raycast_transform));
+            sphere_pointer->scale(glm::vec3(0.1f));
+            sphere_pointer->render();
+        }
+
+        if (controllers_visible) {
+            controller_mesh_right->render();
+            controller_mesh_left->render();
+        }
     }
 
     Engine::render();
@@ -295,17 +313,6 @@ void RoomsEngine::render()
         delete node;
         to_delete.pop_back();
     }
-}
-
-void RoomsEngine::render_controllers()
-{
-    if (!Renderer::instance->get_openxr_available()) {
-        return;
-    }
-
-    RoomsEngine* i = static_cast<RoomsEngine*>(instance);
-    i->controller_mesh_right->render();
-    i->controller_mesh_left->render();
 }
 
 void RoomsEngine::resize_window(int width, int height)

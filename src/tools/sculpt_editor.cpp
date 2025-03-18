@@ -190,12 +190,15 @@ void SculptEditor::on_enter(void* data)
     assert(sculpt_node);
     set_current_sculpt(sculpt_node);
 
+    RoomsEngine* engine = static_cast<RoomsEngine*>(RoomsEngine::instance);
+    engine->show_controllers();
+
     RoomsRenderer* renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     Transform& mirror_transform = mirror_gizmo.get_transform();
     Transform& lock_axis_transform = axis_lock_gizmo.get_transform();
 
     // Get head relative position for setting the sculpt instance if in XR
-    if (renderer->get_openxr_available()) {
+    if (renderer->get_xr_available()) {
         const AABB sculpt_aabb = sculpt_node->get_sculpt_data()->get_AABB();
 
         const glm::vec3& to_sculpt_instance_pos = sculpt_node->get_translation();
@@ -261,7 +264,7 @@ bool SculptEditor::is_tool_being_used(bool stamp_enabled)
     was_tool_pressed = is_tool_pressed;
     is_tool_pressed = is_currently_pressed;
 
-    if (renderer->get_openxr_available()) {
+    if (renderer->get_xr_available()) {
         return add_edit_with_tool;
     }
     else {
@@ -321,7 +324,7 @@ bool SculptEditor::edit_update(float delta_time)
     }
 
     // Guides: edit position modifiers
-    if(renderer->get_openxr_available()) {
+    if(renderer->get_xr_available()) {
         // Snap surface
 
         if (snap_to_surface) {
@@ -512,7 +515,7 @@ bool SculptEditor::edit_update(float delta_time)
     // Debug sculpting
     {
         // For debugging sculpture without a headset
-        if (!renderer->get_openxr_available()) {
+        if (!renderer->get_xr_available()) {
 
             if (is_tool_being_used(stamp_enabled)) {
                 edit_to_add.position = current_sculpt->get_transform().get_position() + glm::vec3(glm::vec3(0.2f * (random_f() * 4 - 2), 0.2f * (random_f() * 4 - 2), 0.2f * (random_f() * 4 - 2)));
@@ -568,7 +571,7 @@ void SculptEditor::update(float delta_time)
     BaseEditor::update(delta_time);
 
     // Update controller UI
-    if (renderer->get_openxr_available()) {
+    if (renderer->get_xr_available()) {
         generate_shortcuts();
     }
 
@@ -709,7 +712,7 @@ void SculptEditor::update(float delta_time)
             add_edit_repetitions(new_edits);
 
             // a hack for flatscreen sculpting
-            if (!renderer->get_openxr_available() && new_edits.size() > 0u) {
+            if (!renderer->get_xr_available() && new_edits.size() > 0u) {
                 stroke_manager.change_stroke_params(stroke_parameters);
             }
 
@@ -776,7 +779,7 @@ void SculptEditor::update(float delta_time)
     // Update UI state if:
     // a) evaluated
     // b) tool used (is_released in xr, or is_tool_used in 2d)
-    if (needs_evaluation || is_released || (is_tool_used && !renderer->get_openxr_available())) {
+    if (needs_evaluation || is_released || (is_tool_used && !renderer->get_xr_available())) {
         update_ui_workflow_state();
     }
     
@@ -1042,7 +1045,7 @@ void SculptEditor::render()
         update_edit_preview(edit_to_add.dimensions);
 
         // Render mesh preview only in XR
-        if (renderer->get_openxr_available()) {
+        if (renderer->get_xr_available()) {
 
             // Render something to be able to cull faces later...
             if (!must_render_mesh_preview_outline()) {
@@ -1072,7 +1075,7 @@ void SculptEditor::render()
 
         mirror_gizmo.render();
 
-        if (!renderer->get_openxr_available()) {
+        if (!renderer->get_xr_available()) {
             mirror_normal = glm::normalize(mirror_gizmo.get_rotation() * normals::pZ);
         }
 
@@ -1082,8 +1085,6 @@ void SculptEditor::render()
     }
 
     BaseEditor::render();
-
-    RoomsEngine::render_controllers();
 
     // Render always or only XR?
     sculpt_area_box->set_transform(Transform::identity());
@@ -1621,7 +1622,7 @@ void SculptEditor::init_ui()
     }
 
     // Load controller UI labels
-    if (renderer->get_openxr_available())
+    if (renderer->get_xr_available())
     {
         // Thumbsticks
         // Buttons

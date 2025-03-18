@@ -86,7 +86,7 @@ namespace ui {
         frame_mesh_hovered = generate_keyframe_mesh(colors::WHITE);
         frame_mesh_selected = generate_keyframe_mesh(Color(1.0f, 0.136f, 0.0f, 1.0f));
 
-        if (Renderer::instance->get_openxr_available()) {
+        if (Renderer::instance->get_xr_available()) {
             disable_2d();
         }
     }
@@ -109,7 +109,7 @@ namespace ui {
         material->set_priority(BUTTON);
         material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, shaders::mesh_forward::libraries, material));
 
-        if (Renderer::instance->get_openxr_available()) {
+        if (Renderer::instance->get_xr_available()) {
             material->set_is_2D(false);
         }
 
@@ -191,7 +191,7 @@ namespace ui {
 
         auto renderer = Renderer::instance;
 
-        if (renderer->get_openxr_available()) {
+        if (renderer->get_xr_available()) {
 
             if (!placed) {
                 glm::mat4x4 m(1.0f);
@@ -320,7 +320,7 @@ namespace ui {
             time_dirty |= (new_time != current_time);
             current_time = new_time;
 
-            if (renderer->get_openxr_available() && grabbing && Input::was_grab_pressed(HAND_RIGHT)) {
+            if (renderer->get_xr_available() && grabbing && Input::was_grab_pressed(HAND_RIGHT)) {
                 last_grab_position = root_input_data.local_position;
                 last_grab_distance = root_input_data.ray_distance;
             }
@@ -396,7 +396,7 @@ namespace ui {
                 );
 
                 if (data.is_hovered) {
-                    if (Renderer::instance->get_openxr_available()) {
+                    if (Renderer::instance->get_xr_available()) {
                         data.ray_intersection = intersection_point;
                         data.ray_distance = collision_dist;
                     }

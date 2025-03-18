@@ -17,6 +17,9 @@ void PlayerEditor::clean()
 
 void PlayerEditor::on_enter(void* data)
 {
+    RoomsEngine* engine = static_cast<RoomsEngine*>(RoomsEngine::instance);
+    engine->hide_controllers();
+
     current_room = reinterpret_cast<Room*>(data);
 }
 
