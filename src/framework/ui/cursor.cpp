@@ -127,10 +127,6 @@ namespace ui {
 
     void Cursor::render()
     {
-#ifdef __EMSCRIPTEN__
-        return;
-#endif
-
         if (!current) {
             return;
         }
@@ -142,7 +138,7 @@ namespace ui {
             }
 
         } else {
-
+#ifndef __EMSCRIPTEN__
             auto& io = ImGui::GetIO();
             if (io.WantCaptureMouse) {
                 return;
@@ -156,6 +152,7 @@ namespace ui {
             current->set_position(cursor_position);
 
             current->render();
+#endif
         }
     }
 }
