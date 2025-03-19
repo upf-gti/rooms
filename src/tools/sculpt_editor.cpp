@@ -161,7 +161,7 @@ void SculptEditor::initialize()
             // If there has been an eval, assign the AABB to the sculpt
             if (static_cast<RoomsRenderer*>(engine->get_renderer())->has_performed_evaluation()) {
                 glm::vec3 half_size = (eval_data.aabb_max - eval_data.aabb_min) / 2.0f;
-                AABB result = { result.half_size + eval_data.aabb_min, half_size };
+                AABB result = { half_size + eval_data.aabb_min, half_size };
                 result = result.transform(Transform::transform_to_mat4(current_sculpt->get_transform()));
                 current_sculpt->get_sculpt_data()->set_AABB(result);
             }
