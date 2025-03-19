@@ -138,7 +138,7 @@ void RaymarchingRenderer::render_raymarching_proxy(WGPURenderPassEncoder render_
     }
 
 #ifndef NDEBUG
-    wgpuRenderPassEncoderPopDebugGroup(render_pass);
+    webgpu_context->pop_debug_group(render_pass);
 #endif
 }
 
