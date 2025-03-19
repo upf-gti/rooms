@@ -55,7 +55,7 @@ class SceneEditor : public BaseEditor {
     /*
     *   Input stuff
     */
-
+    uint32_t selected_node_id = 0;
     Node* selected_node = nullptr;
     Node* hovered_node = nullptr;
 
@@ -196,6 +196,8 @@ class SceneEditor : public BaseEditor {
     glm::vec3 prev_ray_dir = {};
 
     eTriggerAction get_trigger_action(const float delta_time);
+
+    bool is_moving_node_by_hand = false;
 
 public:
 

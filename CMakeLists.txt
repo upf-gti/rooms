@@ -112,10 +112,11 @@ if (EMSCRIPTEN)
 
         -sEXPORTED_FUNCTIONS=_main,_malloc,_free
         -sUSE_GLFW=3
-        -sALLOW_MEMORY_GROWTH
+#        -sALLOW_MEMORY_GROWTH
         -sASYNCIFY
 #        -sASSERTIONS
 #        -fsanitize=address
+        -sINITIAL_MEMORY=2147483648
         -Wdeprecated-literal-operator
         -sSTACK_SIZE=5MB
         -sASYNCIFY_STACK_SIZE=10000

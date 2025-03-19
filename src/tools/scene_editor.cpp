@@ -96,8 +96,17 @@ void SceneEditor::initialize()
         assert(last_gpu_results);
         sGPU_RayIntersectionData& intersection = last_gpu_results->ray_intersection;
 
+        // Stop selecting nodes when the ray stops to hit the sculpt
         if (intersection.has_intersected == 0u) {
+            if (!is_moving_node_by_hand) {
+                deselect();
+            }
             return;
+        }
+
+        if (intersection.sculpt_id != selected_node_id) {
+            deselect();
+            selected_node_id = intersection.sculpt_id;
         }
 
         std::function<void(Node* node)> check_intersections = [&](Node* node) {
@@ -676,7 +685,8 @@ void SceneEditor::open_context_menu(Node* node)
     if (renderer->get_xr_available()) {
         position = { 0.0f, 0.0f };
         const sGPU_SculptResults& gpu_results = renderer->get_sculpt_manager()->loaded_results;
-        position_3d = ray_origin + ray_direction * gpu_results.ray_intersection.ray_t;
+        // Move a bit the intersection point
+        position_3d = ray_origin + ray_direction * (gpu_results.ray_intersection.ray_t - 0.015f);
     }
 
     auto callback = [&, n = node](const std::string& output) {
@@ -690,7 +700,23 @@ void SceneEditor::open_context_menu(Node* node)
     };
 
     if (node->get_node_type() == "SculptNode") {
-        options.push_back({ "Make Unique", [&, n = node](const std::string& name, uint32_t index) { make_unique(n); } });
+        SculptNode* sculpt_node = (SculptNode*)node;
+        options.push_back({ "Clone", [&, n = node](const std::string& name, uint32_t index) { clone_node(n); } });
+
+        // Make unique should only be possible if the sculpt is not unique (has no clones)
+        if (sculpt_node->get_sculpt_data()->get_ref_count() > 1) {
+            options.push_back({ "Make Unique", [&, n = node](const std::string& name, uint32_t index) { make_unique(n); } });
+        }
+        // If we are editing a group, and we are seeing this menu, we can assume that this node is inside a group
+        if (current_group) {
+            options.push_back({ "Un-group", [&, n = node](const std::string& name, uint32_t index) { ungroup_node((Group3D*)n); } });
+        }
+    }
+
+    if (node->get_node_type() == "Group3D") {
+        options.push_back({ "Edit group", [&, n = node](const std::string& name, uint32_t index) { edit_group((Group3D*)n); } });
+        options.push_back({ "Un-group", [&, n = node](const std::string& name, uint32_t index) { ungroup_node((Group3D*)n); } });
+        // TODO: add to group
     }
 
     options.push_back({ "Delete", [&, n = node](const std::string& name, uint32_t index) { delete_node(n); } });
@@ -1156,6 +1182,8 @@ void SceneEditor::render_gizmo()
 
 void SceneEditor::update_node_transform(float delta_time, bool rotate_selected_node)
 {
+    is_moving_node_by_hand = false;
+
     // Do not rotate sculpt if shift -> we might be rotating the edit
     if (rotate_selected_node && !is_shift_left_pressed && !action_in_progress) {
 
@@ -1201,6 +1229,7 @@ void SceneEditor::update_node_transform(float delta_time, bool rotate_selected_n
 
         node_3d->set_position((hand_sculpt_distance * ray_direction + ray_origin) - grab_offset);
         node_3d->get_transform().rotate_world(hand_rotation_diff);
+        is_moving_node_by_hand = true;
 
         if (current_group || node_3d->get_parent()) {
             node_3d->set_transform(Transform::combine(Transform::inverse(parent_transform), node_3d->get_transform()));
