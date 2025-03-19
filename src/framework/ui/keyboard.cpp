@@ -243,7 +243,7 @@ namespace ui {
             float x_pos = input_start_position + state.get_caret_position();
             caret->set_position({ x_pos - 2.0f, caret->get_local_translation().y });
             if (timer > 0.5f) {
-                caret->set_visibility(!caret->get_visibility());
+                caret->set_visibility(!caret->get_visibility(), false);
                 timer = 0.0f;
             }
         }

@@ -42,7 +42,7 @@ namespace ui {
 
         // Set all visibility as false by default
         for (uint8_t i = 0u; i < MOUSE_CURSOR_COUNT; ++i) {
-            cursors[i]->set_visibility(false);
+            cursors[i]->set_visibility(false, false);
         }
 
         if (is_xr) {
@@ -60,7 +60,7 @@ namespace ui {
     void Cursor::set(int type)
     {
         for (uint8_t i = 0u; i < MOUSE_CURSOR_COUNT; ++i) {
-            cursors[i]->set_visibility(false);
+            cursors[i]->set_visibility(false, false);
         }
 
         if (type == MOUSE_CURSOR_NONE || type >= MOUSE_CURSOR_COUNT) {
@@ -72,7 +72,7 @@ namespace ui {
 
         current = cursors[type];
 
-        current->set_visibility(true);
+        current->set_visibility(true, false);
     }
 
     void Cursor::update(float delta_time)
