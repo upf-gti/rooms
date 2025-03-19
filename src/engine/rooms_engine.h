@@ -58,8 +58,8 @@ class RoomsEngine : public Engine
     // Engine meshes
     Environment3D* environment = nullptr;
     MeshInstance3D* grid = nullptr;
-    MeshInstance3D* controller_mesh_left = nullptr;
-    MeshInstance3D* controller_mesh_right = nullptr;
+    Node3D* controller_mesh_left = nullptr;
+    Node3D* controller_mesh_right = nullptr;
     MeshInstance3D* ray_pointer = nullptr;
     MeshInstance3D* sphere_pointer = nullptr;
 
@@ -86,7 +86,7 @@ public:
 
     void resize_window(int width, int height) override;
 
-    void set_main_scene(const std::string& scene_path);
+    void set_main_scene(const std::string& scene_path) override;
     void add_to_main_scene(const std::string& scene_path);
 
     void show_controllers();

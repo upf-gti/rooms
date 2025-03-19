@@ -35,7 +35,7 @@ public:
     Character3D();
     ~Character3D();
 
-    void initialize();
+    void initialize() override;
     void update(float delta_time) override;
     void render() override;
     void render_gui() override;

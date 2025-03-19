@@ -38,11 +38,11 @@ public:
 
     void initialize() override;
 
-    void update(float delta_time);
+    void update(float delta_time) override;
     void render() override;
 
-    virtual void serialize(std::ofstream& binary_scene_file);
-    virtual void parse(std::ifstream& binary_scene_file);
+    virtual void serialize(std::ofstream& binary_scene_file) override;
+    virtual void parse(std::ifstream& binary_scene_file) override;
 
     void from_history(const std::vector<Stroke>& new_history, bool loaded_from_memory = true);
 

@@ -1159,6 +1159,9 @@ void AnimationEditor::store_animation_state(sAnimationState& state)
         case Node::AnimatablePropertyType::FVEC4: state.properties[prop_it.first].value = *((glm::vec4*)data); break;
         case Node::AnimatablePropertyType::QUAT: state.properties[prop_it.first].value = *((glm::quat*)data); break;
         case Node::AnimatablePropertyType::UNDEFINED: break;
+        default:
+            assert(0);
+            break;
         }
     }
 }
@@ -1254,7 +1257,7 @@ void AnimationEditor::render_gui()
         if (!animations.empty()) {
             ImGui::SeparatorText("Custom Animations");
             for (int n = 0; n < animations.size(); n++) {
-                ImGui::Text(animations[n].c_str());
+                ImGui::Text("%s", animations[n].c_str());
             }
         }
 
@@ -1583,6 +1586,9 @@ void AnimationEditor::inspect_node(Node* node)
             }
             break;
         case Node::AnimatablePropertyType::UNDEFINED:
+            assert(0);
+            break;
+        default:
             assert(0);
             break;
         }

@@ -89,7 +89,7 @@ void Character3D::render_gui()
     if (is_open || selected)
     {
         for (size_t i = 0; i < joint_nodes.size(); ++i) {
-            ImGui::Text("%s [%d]", skeleton->get_joint_name(i).c_str(), i);
+            ImGui::Text("%s [%zu]", skeleton->get_joint_name(i).c_str(), i);
         }
 
         ImGui::TreePop();

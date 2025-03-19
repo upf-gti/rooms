@@ -56,12 +56,14 @@ int RoomsEngine::post_initialize()
     // Load Meta Quest Controllers and Controller pointer
     if (renderer->get_xr_available())
     {
-        std::vector<Node*> entities;
+        std::vector<Node*> entities_left;
+        std::vector<Node*> entities_right;
         GltfParser parser;
-        parser.parse("data/meshes/controllers/left_controller.glb", entities);
-        parser.parse("data/meshes/controllers/right_controller.glb", entities);
-        controller_mesh_left = static_cast<MeshInstance3D*>(entities[0]);
-        controller_mesh_right = static_cast<MeshInstance3D*>(entities[1]);
+        parser.parse("data/meshes/controllers/left_controller.glb", entities_left);
+        parser.parse("data/meshes/controllers/right_controller.glb", entities_right);
+
+        controller_mesh_left = static_cast<Node3D*>(entities_left[0]);
+        controller_mesh_right = static_cast<Node3D*>(entities_right[0]);
 
         // Controller pointer
         ray_pointer = parse_mesh("data/meshes/raycast.obj");
@@ -301,6 +303,7 @@ void RoomsEngine::render()
         if (controllers_visible) {
             controller_mesh_right->render();
             controller_mesh_left->render();
+
         }
     }
 
