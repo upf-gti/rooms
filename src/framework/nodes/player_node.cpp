@@ -22,7 +22,7 @@ PlayerNode::PlayerNode() : Node3D()
 
 #ifdef XR_SUPPORT
     if (RoomsRenderer::instance->get_xr_available()) {
-        // Sets this node 's transform as teh origin for the OpenXR
+        // Sets this node transform as the origin for XR
         Renderer::instance->get_xr_context()->root_transform = &transform;
     }
 #endif

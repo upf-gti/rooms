@@ -93,7 +93,6 @@ namespace ui {
 
     Timeline::~Timeline()
     {
-        delete quad_surface;
         delete frame_mesh;
         delete frame_mesh_hovered;
         delete frame_mesh_selected;

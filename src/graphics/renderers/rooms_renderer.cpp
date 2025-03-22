@@ -423,7 +423,7 @@ void RoomsRenderer::update_sculpts_indirect_buffers(WGPUCommandEncoder command_e
         return;
     }*/
 
-    WGPUComputePassDescriptor compute_pass_desc = {};
+    WGPUComputePassDescriptor compute_pass_desc = { .label = { "update_sculpts_indirect_buffers_pass", WGPU_STRLEN} };
     WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(global_command_encoder, &compute_pass_desc);
 
 #ifndef NDEBUG

@@ -76,7 +76,7 @@ void SculptManager::update(WGPUCommandEncoder command_encoder)
 
     // New render pass for the interseccions
     if (intersections_to_compute > 0u) {
-        WGPUComputePassDescriptor compute_pass_desc = {};
+        WGPUComputePassDescriptor compute_pass_desc = { .label = { "closest_ray_pass", WGPU_STRLEN} };
 
 #ifndef __EMSCRIPTEN__
         std::vector<WGPUPassTimestampWrites> timestampWrites(1);
@@ -96,7 +96,7 @@ void SculptManager::update(WGPUCommandEncoder command_encoder)
     }
 
     // Create the octree renderpass
-    WGPUComputePassDescriptor compute_pass_desc = {};
+    WGPUComputePassDescriptor compute_pass_desc = { .label = { "evaluation_pass", WGPU_STRLEN} };
 
 #ifndef __EMSCRIPTEN__
     std::vector<WGPUPassTimestampWrites> timestampWrites(1);
