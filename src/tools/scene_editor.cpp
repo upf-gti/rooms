@@ -97,17 +97,17 @@ void SceneEditor::initialize()
         sGPU_RayIntersectionData& intersection = last_gpu_results->ray_intersection;
 
         // Stop selecting nodes when the ray stops to hit the sculpt
-        if (intersection.has_intersected == 0u) {
+        /*if (intersection.has_intersected == 0u) {
             if (!is_moving_node_by_hand) {
                 deselect();
             }
             return;
-        }
+        }*/
 
-        if (intersection.sculpt_id != selected_node_id) {
-            deselect();
-            selected_node_id = intersection.sculpt_id;
-        }
+        //if (intersection.sculpt_id != selected_node_id) {
+        //    deselect();
+        //    selected_node_id = intersection.sculpt_id;
+        //}
 
         std::function<void(Node* node)> check_intersections = [&](Node* node) {
             SculptNode* sculpt_node = dynamic_cast<SculptNode*>(node);
@@ -628,10 +628,10 @@ void SceneEditor::bind_events()
     }
 
     Node::bind("deselect", [&](const std::string& signal, void* button) { deselect(); });
-    Node::bind("group", [&](const std::string& signal, void* button) { group_node(selected_node); });
-    Node::bind("ungroup", [&](const std::string& signal, void* button) { ungroup_node(selected_node, true, false); });
+    Node::bind("group", [&](const std::string& signal, void* button) { if (selected_node) group_node(selected_node); });
+    Node::bind("ungroup", [&](const std::string& signal, void* button) { if (selected_node) ungroup_node(selected_node, true, false); });
     // Node::bind("duplicate", [&](const std::string& signal, void* button) { clone_node(selected_node, true); });
-    Node::bind("clone", [&](const std::string& signal, void* button) { clone_node(selected_node, false); });
+    Node::bind("clone", [&](const std::string& signal, void* button) { if (selected_node) clone_node(selected_node, false); });
 
     // Export / Import (.room) / Player
     {
@@ -819,6 +819,8 @@ Node* SceneEditor::clone_node(Node* node, bool copy, bool push_undo)
     /*if (!selected_node) {
         return nullptr;
     }*/
+
+    assert(node);
 
     RoomsEngine* engine = static_cast<RoomsEngine*>(RoomsEngine::instance);
 
