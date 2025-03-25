@@ -333,8 +333,9 @@ void RoomsRenderer::initialize_sculpt_render_instances()
 
     sculpt_instances.prepare_indirect_shader = RendererStorage::get_shader("data/shaders/octree/prepare_indirect_sculpt_render.wgsl");
     {
-        uint32_t size = sizeof(uint32_t) * 22u;
-        sculpt_instances.count_buffer.resize(22u);
+        uint32_t max_num_sculpts = 50u;
+        uint32_t size = sizeof(uint32_t) * max_num_sculpts;
+        sculpt_instances.count_buffer.resize(max_num_sculpts);
         memset(sculpt_instances.count_buffer.data(), 1u, size);
         sculpt_instances.uniform_count_buffer.data = webgpu_context->create_buffer(size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, sculpt_instances.count_buffer.data(), "sculpt index data");
         sculpt_instances.uniform_count_buffer.binding = 0u;
