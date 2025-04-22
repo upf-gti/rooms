@@ -253,7 +253,6 @@ bool SculptNode::test_ray_collision(const glm::vec3& ray_origin, const glm::vec3
     return intersecting;
 }
 
-
 void SculptNode::set_out_of_focus(const bool oof)
 {
     if (oof) {

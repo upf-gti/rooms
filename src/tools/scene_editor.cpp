@@ -540,7 +540,7 @@ void SceneEditor::init_ui()
             left_hand_box = new ui::VContainer2D("left_controller_root", { 0.0f, 0.0f }, ui::CREATE_3D);
             left_hand_box->add_childs({
                 new ui::ImageLabel2D("Scene Panel", shortcuts::Y_BUTTON_PATH, shortcuts::TOGGLE_SCENE_INSPECTOR),
-                new ui::ImageLabel2D("Redo", shortcuts::L_GRIP_X_BUTTON_PATH, shortcuts::SCENE_REDO, double_size),
+                new ui::ImageLabel2D("Undo", shortcuts::X_BUTTON_PATH, shortcuts::SCENE_UNDO),
                 new ui::ImageLabel2D("Redo", shortcuts::L_GRIP_X_BUTTON_PATH, shortcuts::SCENE_REDO, double_size)
             });
         }
@@ -701,7 +701,7 @@ void SceneEditor::open_context_menu(Node* node)
 
     if (node->get_node_type() == "SculptNode") {
         SculptNode* sculpt_node = (SculptNode*)node;
-        options.push_back({ "Clone", [&, n = node](const std::string& name, uint32_t index) { clone_node(n); } });
+        options.push_back({ "Duplicate", [&, n = node](const std::string& name, uint32_t index) { clone_node(n); } });
 
         // Make unique should only be possible if the sculpt is not unique (has no clones)
         if (sculpt_node->get_sculpt_data()->get_ref_count() > 1) {
