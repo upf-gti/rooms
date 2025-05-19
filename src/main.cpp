@@ -12,8 +12,8 @@ EMSCRIPTEN_BINDINGS(_Class_) {
     emscripten::class_<RoomsEngine>("Engine")
         .constructor<>()
         .class_function("getInstance", &RoomsEngine::get_instance, emscripten::return_value_policy::reference())
-        .function("setWasmModuleInitialized", &RoomsEngine::set_wasm_module_initialized);
-
+        .function("setWasmModuleInitialized", &RoomsEngine::set_wasm_module_initialized)
+        .function("loadRoom", &RoomsEngine::set_main_scene);
 }
 #endif
 

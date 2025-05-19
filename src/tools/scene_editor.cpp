@@ -290,6 +290,8 @@ void SceneEditor::set_main_scene(Scene* new_scene)
     current_character = nullptr;
 
     main_scene = new_scene;
+
+    set_inspector_dirty();
 }
 
 void SceneEditor::update_hovered_node()

@@ -14,7 +14,7 @@ class sGPU_RayIntersectionData;
 class SculptNode : public Node3D {
 
     struct sSculptBinaryHeader {
-        size_t stroke_count = 0;
+        uint64_t stroke_count = 0;
     };
 
     // bool are_sculpt_flags_dirty = false;
