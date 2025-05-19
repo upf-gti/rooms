@@ -3,9 +3,12 @@
 #include <string>
 #include <unordered_map>
 
-#if defined(XR_SUPPORT)
-#include "xr/xr_context.h"
+#if defined(OPENXR_SUPPORT)
+#include "xr/openxr/openxr_context.h"
+#elif defined(WEBXR_SUPPORT)
+#include "xr/webxr/webxr_context.h"
 #endif
+
 
 #include "framework/input_xr.h"
 
