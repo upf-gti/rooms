@@ -497,12 +497,13 @@ bool SculptEditor::edit_update(float delta_time)
             edit_to_add.dimensions = glm::clamp(edit_to_add.dimensions, glm::vec4(MIN_PRIMITIVE_SIZE), glm::vec4(temp_limit));
             dimensions_dirty = true;
         }
-
+#if defined(XR_SUPPORT)
         // Only enter spline mode when the acceleration of the hand exceds a threshold
         // To stretch, toggle with 'B'
         else if(!creating_path && glm::length(glm::abs(controller_movement_data[HAND_RIGHT].velocity)) > 0.30f) {
             start_spline(true);
         }
+#endif
     }
 
     if (!creating_path) {
@@ -548,6 +549,7 @@ bool SculptEditor::edit_update(float delta_time)
 
     // Add edit based on controller movement
     // TODO(Juan): Check rotation?
+#if defined(XR_SUPPORT)
     if (!stamp_enabled && was_tool_pressed && is_tool_used) {
         if (glm::length(controller_movement_data[HAND_RIGHT].prev_edit_position - edit_position_world) < (edit_to_add.dimensions.x / 3.0f)) {
             is_tool_used = false;
@@ -558,6 +560,7 @@ bool SculptEditor::edit_update(float delta_time)
     else {
         controller_movement_data[HAND_RIGHT].prev_edit_position = edit_position_world;
     }
+#endif
 
     return is_tool_used;
 }

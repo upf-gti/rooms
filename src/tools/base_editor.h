@@ -134,7 +134,9 @@ protected:
         glm::vec3 prev_edit_position = {};
     };
 
+#if defined(XR_SUPPORT)
     sControllerMovementData controller_movement_data[HAND_COUNT];
+#endif
 
     RoomsRenderer* renderer = nullptr;
 
