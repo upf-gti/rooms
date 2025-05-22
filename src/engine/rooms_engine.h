@@ -74,7 +74,7 @@ class RoomsEngine : public Engine
 
 public:
 
-    int initialize(Renderer* renderer, sEngineConfiguration configuration = {}) override;
+    int initialize(Renderer* renderer, const sEngineConfiguration& configuration = {}) override;
     virtual int post_initialize() override;
 
     static RoomsEngine* get_instance() { return static_cast<RoomsEngine*>(instance); }

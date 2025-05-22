@@ -37,7 +37,7 @@
 bool RoomsEngine::use_grid = true;
 bool RoomsEngine::use_environment_map = true;
 
-int RoomsEngine::initialize(Renderer* renderer, sEngineConfiguration configuration)
+int RoomsEngine::initialize(Renderer* renderer, const sEngineConfiguration& configuration)
 {
     int error = Engine::initialize(renderer, configuration);
 
