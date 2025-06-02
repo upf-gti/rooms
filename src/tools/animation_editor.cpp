@@ -284,7 +284,7 @@ void AnimationEditor::update(float delta_time)
         Engine::instance->get_scene_ray(ray_origin, ray_direction);
 
         // This sets current_joint to a valid joint in the skeleton instance
-        if (current_node->test_ray_collision(ray_origin, ray_direction, distance, reinterpret_cast<Node3D**>(&current_joint))) {
+        if (current_node->test_ray_collision(ray_origin, ray_direction, &distance, reinterpret_cast<Node3D**>(&current_joint))) {
             on_select_joint();
         }
     }
@@ -344,7 +344,7 @@ void AnimationEditor::render()
     for (uint32_t i = 0u; i < states.size(); i++) {
         const glm::vec3& position = std::get<glm::vec3>(states[i].properties["translation"].value);
         const glm::mat4& anim_position_model = glm::scale(glm::translate(glm::mat4(1.0f), position), glm::vec3(0.006f));
-        Renderer::instance->add_renderable(keyframe_markers_render_instance, anim_position_model);
+        Renderer::instance->add_renderable(keyframe_markers_render_instance->get_mesh_instance(), anim_position_model);
     }
 
     animation_trajectory_instance->render();

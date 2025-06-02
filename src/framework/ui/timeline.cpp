@@ -390,7 +390,7 @@ namespace ui {
                     quad_rotation,
                     intersection_point,
                     local_intersection_point,
-                    collision_dist,
+                    &collision_dist,
                     false
                 );
 

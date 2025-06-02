@@ -113,7 +113,7 @@ void Group3D::add_nodes(const std::vector<Node3D*>& nodes, bool pivot_dirty)
     }
 }
 
-bool Group3D::test_ray_collision(const glm::vec3& ray_origin, const glm::vec3& ray_direction, float& distance, Node3D** out)
+bool Group3D::test_ray_collision(const glm::vec3& ray_origin, const glm::vec3& ray_direction, float* distance, Node3D** out)
 {
     for (auto node : get_children()) {
 
