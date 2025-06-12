@@ -98,7 +98,7 @@ namespace ui {
         delete frame_mesh_selected;
     }
 
-    MeshInstance* Timeline::generate_keyframe_mesh(const Color& color)
+    Mesh* Timeline::generate_keyframe_mesh(const Color& color)
     {
         Material* material = new Material();
         material->set_color(color);
@@ -112,7 +112,7 @@ namespace ui {
             material->set_is_2D(false);
         }
 
-        MeshInstance* mesh_instance = new MeshInstance();
+        Mesh* mesh_instance = new Mesh();
         mesh_instance->add_surface(quad_surface);
         mesh_instance->set_surface_material_override(mesh_instance->get_surface(0), material);
 

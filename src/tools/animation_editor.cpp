@@ -19,6 +19,7 @@
 
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/renderer_storage.h"
+#include "graphics/primitives/sphere_mesh.h"
 
 #include "shaders/mesh_forward.wgsl.gen.h"
 
@@ -67,8 +68,6 @@ void AnimationEditor::initialize()
     init_ui();
 
     // Animation UI visualizations
-    keyframe_markers_render_instance = new MeshInstance3D();
-
     Material* joint_material = new Material();
     joint_material->set_depth_read(false);
     joint_material->set_priority(0);
@@ -76,8 +75,9 @@ void AnimationEditor::initialize()
     joint_material->set_color(glm::vec4(1.0f, 0.0f, 0.0f, 0.50f));
     joint_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, shaders::mesh_forward::libraries));
 
+    keyframe_markers_render_instance = new MeshInstance3D();
+    keyframe_markers_render_instance->set_mesh(new SphereMesh());
     keyframe_markers_render_instance->set_frustum_culling_enabled(false);
-    keyframe_markers_render_instance->add_surface(RendererStorage::get_surface("sphere"));
     keyframe_markers_render_instance->set_surface_material_override(keyframe_markers_render_instance->get_surface(0), joint_material);
 
     // Trajectory line
@@ -93,8 +93,8 @@ void AnimationEditor::initialize()
     skeleton_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, shaders::mesh_forward::libraries, skeleton_material));
 
     animation_trajectory_instance = new MeshInstance3D();
-    animation_trajectory_instance->set_frustum_culling_enabled(false);
     animation_trajectory_instance->add_surface(animation_trajectory_mesh);
+    animation_trajectory_instance->set_frustum_culling_enabled(false);
     animation_trajectory_instance->set_surface_material_override(animation_trajectory_mesh, skeleton_material);
 }
 
@@ -344,7 +344,7 @@ void AnimationEditor::render()
     for (uint32_t i = 0u; i < states.size(); i++) {
         const glm::vec3& position = std::get<glm::vec3>(states[i].properties["translation"].value);
         const glm::mat4& anim_position_model = glm::scale(glm::translate(glm::mat4(1.0f), position), glm::vec3(0.006f));
-        Renderer::instance->add_renderable(keyframe_markers_render_instance->get_mesh_instance(), anim_position_model);
+        Renderer::instance->add_renderable(keyframe_markers_render_instance->get_mesh(), anim_position_model);
     }
 
     animation_trajectory_instance->render();

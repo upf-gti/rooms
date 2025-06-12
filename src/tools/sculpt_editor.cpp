@@ -14,6 +14,8 @@
 
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/renderer_storage.h"
+#include "graphics/primitives/quad_mesh.h"
+#include "graphics/primitives/box_mesh.h"
 
 #include "shaders/mesh_forward.wgsl.gen.h"
 #include "shaders/mesh_transparent.wgsl.gen.h"
@@ -37,7 +39,7 @@ void SculptEditor::initialize()
     stroke_manager.set_brick_world_size(glm::vec3(sdf_globals.brick_world_size));
 
     mirror_mesh = new MeshInstance3D();
-    mirror_mesh->add_surface(RendererStorage::get_surface("quad"));
+    mirror_mesh->set_mesh(new QuadMesh());
     mirror_mesh->scale(glm::vec3(0.25f));
 
     Material* mirror_material = new Material();

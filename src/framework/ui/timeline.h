@@ -95,11 +95,11 @@ namespace ui {
 
         Surface* quad_surface = nullptr;
 
-        MeshInstance* frame_mesh = nullptr;
-        MeshInstance* frame_mesh_selected = nullptr;
-        MeshInstance* frame_mesh_hovered = nullptr;
+        Mesh* frame_mesh = nullptr;
+        Mesh* frame_mesh_selected = nullptr;
+        Mesh* frame_mesh_hovered = nullptr;
 
-        MeshInstance* generate_keyframe_mesh(const Color& color);
+        Mesh* generate_keyframe_mesh(const Color& color);
         void select_keyframe(TimelineKeyframe* key);
         void select_keyframe_by_index(int index);
 
