@@ -168,7 +168,7 @@ void AnimationEditor::on_enter(void* data)
                         // Sample node in that timestamp
                         std::string p_name = track->get_name();
                         Node::AnimatableProperty& node_property = current_node->get_animatable_property(p_name);
-                        anim->sample(state.time, track->get_id(), ANIMATION_LOOP_NONE, &node_property, eInterpolationType::STEP);
+                        anim->sample(state.time, track->get_id(), ANIMATION_LOOP_NONE, &node_property, INTERPOLATION_STEP);
 
                         sPropertyState& ps = state.properties[p_name];
                         ps.track_id = track->get_id();
@@ -680,7 +680,7 @@ void AnimationEditor::update_node_from_state(uint32_t index)
     for (auto& p : state->properties) {
 
         Node::AnimatableProperty& node_property = current_node->get_animatable_property(p.first);
-        current_animation->sample(state->time, p.second.track_id, ANIMATION_LOOP_NONE, &node_property, eInterpolationType::STEP);
+        current_animation->sample(state->time, p.second.track_id, ANIMATION_LOOP_NONE, &node_property, INTERPOLATION_STEP);
 
         // TODO: now the conversion void -> TYPE is done in the sample, but only supports 3 types
         // ...
