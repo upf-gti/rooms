@@ -19,7 +19,7 @@ struct sJobCounters {
 @group(1) @binding(0) var<storage, read_write> octree : Octree;
 
 
-#include sdf_interval_functions.wgsl
+#include sdf_interval_stroke_functions.wgsl
 
 fn intersection_AABB_AABB(b1_min : vec3f, b1_max : vec3f, b2_min : vec3f, b2_max : vec3f) -> bool {
     return (b1_min.x <= b2_max.x && b1_min.y <= b2_max.y && b1_min.z <= b2_max.z) && (b1_max.x >= b2_min.x && b1_max.y >= b2_min.y && b1_max.z >= b2_min.z);
@@ -69,27 +69,6 @@ fn brick_reevaluate(octree_index : u32, raw_brick_id_count : u32)
     let prev_counter : i32 = atomicAdd(&job_counters.bricks_to_write_to_tex_count, 1);
     bricks_to_write_to_tex_buffer[prev_counter] = raw_brick_id_count;
 }
-
-// fn preview_brick_create(octree_index : u32, octant_center : vec3f, is_interior_brick : bool, edit_start_index : u32, edit_count : u32)
-// {
-//     let preview_brick : u32 = atomicAdd(&brick_buffers.preview_instance_counter, 1u);
-    
-//     brick_buffers.preview_instance_data[preview_brick].position = octant_center;
-//     brick_buffers.preview_instance_data[preview_brick].in_use = 0u;
-//     brick_buffers.preview_instance_data[preview_brick].edit_id_start = edit_start_index;
-//     brick_buffers.preview_instance_data[preview_brick].edit_count = edit_count;
-
-//     if (is_interior_brick) {
-//         brick_buffers.preview_instance_data[preview_brick].in_use = INTERIOR_BRICK_FLAG; 
-//     }
-// }
-
-// fn brick_mark_as_preview(octree_index : u32, edit_start_index : u32, edit_count : u32)
-// {
-//     brick_buffers.brick_instance_data[octree.data[octree_index].tile_pointer & OCTREE_TILE_INDEX_MASK].in_use |= BRICK_HAS_PREVIEW_FLAG;
-//     brick_buffers.brick_instance_data[octree.data[octree_index].tile_pointer & OCTREE_TILE_INDEX_MASK].edit_id_start = edit_start_index;
-//     brick_buffers.brick_instance_data[octree.data[octree_index].tile_pointer & OCTREE_TILE_INDEX_MASK].edit_count = edit_count;
-// }
 
 var<workgroup> brick_to_eval_wg_size : u32;
 var<workgroup> bricks_to_eval_wg_buffer : array<u32, 512u>;
@@ -163,8 +142,7 @@ fn compute(@builtin(local_invocation_index) thread_id: u32, @builtin(num_workgro
             let culled_idx : u32 = stroke_culling[curr_culling_layer_index + i];
             if (stroke_history.strokes[culled_idx].operation != OP_SMOOTH_PAINT) {
                 surface_interval = evaluate_stroke_interval(current_subdivision_interval, 
-                                                            &(stroke_history.strokes[culled_idx]),
-                                                            &edit_list, 
+                                                            culled_idx, 
                                                             surface_interval, 
                                                             brick_center, 
                                                             level_half_size );
@@ -178,8 +156,7 @@ fn compute(@builtin(local_invocation_index) thread_id: u32, @builtin(num_workgro
             let non_culled_idx : u32 = i + MAX_STROKE_INFLUENCE_COUNT;
             if (stroke_history.strokes[non_culled_idx].operation != OP_SMOOTH_PAINT) {
                 surface_interval = evaluate_stroke_interval(current_subdivision_interval, 
-                                                            &(stroke_history.strokes[non_culled_idx]),
-                                                            &edit_list, 
+                                                            non_culled_idx, 
                                                             surface_interval, 
                                                             brick_center, 
                                                             level_half_size );

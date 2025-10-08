@@ -85,8 +85,7 @@ void SculptManager::update(WGPUCommandEncoder command_encoder)
         timestampWrites[0].endOfPassWriteIndex = Renderer::instance->timestamp(command_encoder, "intersection");
 
         compute_pass_desc.timestampWrites = timestampWrites.data();
-#endif
-
+#endif // __EMSCRIPTEN__
         WGPUComputePassEncoder intersection_compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
 
         evaluate_closest_ray_intersection(intersection_compute_pass);
@@ -105,7 +104,7 @@ void SculptManager::update(WGPUCommandEncoder command_encoder)
     timestampWrites[0].endOfPassWriteIndex = Renderer::instance->timestamp(command_encoder, "evaluation");
 
     compute_pass_desc.timestampWrites = timestampWrites.data();
-#endif
+#endif // __EMSCRIPTEN__
 
     WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
 
@@ -782,7 +781,7 @@ void SculptManager::init_shaders()
     evaluator_2_5_write_to_texture_setup_step_shader = RendererStorage::get_shader("data/shaders/octree/evaluator_2-5_write_to_texture_step.wgsl");
     evaluator_preview_step_shader = RendererStorage::get_shader("data/shaders/octree/evaluator_preview_culling.wgsl");
 
-    write_to_texture_shader = RendererStorage::get_shader("data/shaders/octree/write_to_texture.wgsl");
+    write_to_texture_shader = RendererStorage::get_shader("data/shaders/octree/evaluator_3_write_to_texture.wgsl");
     brick_removal_shader = RendererStorage::get_shader("data/shaders/octree/brick_removal.wgsl");
     brick_copy_aabb_gen_shader = RendererStorage::get_shader("data/shaders/octree/brick_copy_aabb_gen.wgsl");
     brick_unmark_shader = RendererStorage::get_shader("data/shaders/octree/brick_unmark.wgsl");

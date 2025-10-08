@@ -390,7 +390,7 @@ void RoomsRenderer::render()
             }
         }
     }
-#endif
+#endif //__EMSCRIPTEN__
 
     if (get_sculpt_manager()->has_performed_evaluation()) {
         sculpt_manager->read_GPU_results();

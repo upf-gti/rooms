@@ -22,7 +22,7 @@ struct sJobCounters {
 
 @group(1) @binding(0) var<storage, read_write> octree : Octree;
 
-#include sdf_functions.wgsl
+#include sdf_stroke_functions.wgsl
 
 var<workgroup> wg_used_pixels : atomic<u32>;
 var<workgroup> wg_current_brick_to_process : i32;
@@ -48,7 +48,6 @@ var<workgroup> wg_atlas_tile_coord : vec3u;
     del evaluador.
 */
 
-// TODO: needs the culling back!!
 @compute @workgroup_size(8, 8, 8)
 fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation_id) local_id: vec3<u32>, @builtin(local_invocation_index) thread_id: u32)
 {
@@ -105,22 +104,17 @@ fn compute(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation
                 result_surface.distance = 10000.0;
             }
 
-            // // Evaluating the edit context
-            // for (var j : u32 = 0; j < stroke_history.count; j++) {
-            //     result_surface = evaluate_stroke(pos, &(stroke_history.strokes[j]), &edit_list, result_surface, stroke_history.strokes[j].edit_list_index, stroke_history.strokes[j].edit_count);
-            // }
-
             // Evaluating the edit context
             for (var j : u32 = 0; j < in_stroke_brick_count; j++) {
                 let index : u32 = stroke_culling[j + curr_culling_layer_index];
-                result_surface = evaluate_stroke(pos, &(stroke_history.strokes[index]), &edit_list, result_surface, stroke_history.strokes[index].edit_list_index, stroke_history.strokes[index].edit_count);
+                result_surface = evaluate_stroke(pos, index, result_surface, stroke_history.strokes[index].edit_list_index, stroke_history.strokes[index].edit_count);
             }
 
             let culled_part : u32 = min(stroke_history.count, MAX_STROKE_INFLUENCE_COUNT);
             let non_culled_count : u32 = stroke_history.count - culled_part;
             for(var j : u32 = 0u; j < non_culled_count; j++) {
                 let index : u32 = j + MAX_STROKE_INFLUENCE_COUNT;
-                result_surface = evaluate_stroke(pos, &(stroke_history.strokes[index]), &edit_list, result_surface, stroke_history.strokes[index].edit_list_index, stroke_history.strokes[index].edit_count);
+                result_surface = evaluate_stroke(pos, index, result_surface, stroke_history.strokes[index].edit_list_index, stroke_history.strokes[index].edit_count);
             }
 
             // validate if there is something in hte brick
