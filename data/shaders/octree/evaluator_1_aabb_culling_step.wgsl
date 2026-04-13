@@ -23,9 +23,6 @@ struct sJobCounters {
 @group(1) @binding(3) var<storage, read_write> dispatch_counter : sEvaluatorDispatchCounter;
 
 
-
-//@group(3) @binding(0) var<storage, read> preview_stroke : PreviewStroke;
-
 /**
     NOTE: the biggest bottlenecks of the evaluator are 2 constnat costs:
     Culling step & brick copy, each takes like 0.3 ms, so its a fixed cost of 0.6 ms (ROUGHT!)

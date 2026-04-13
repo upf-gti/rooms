@@ -1,5 +1,4 @@
 #include math.wgsl
-#include sdf_functions.wgsl
 #include octree_includes.wgsl
 #include material_packing.wgsl
 #include tonemappers.wgsl
@@ -40,6 +39,8 @@ struct VertexOutput {
 @group(2) @binding(2) var<storage, read> sculpt_indirect : SculptIndirectCall_NonAtomic;
 
 //@group(2) @binding(3) var<storage, read> ray_intersection_info: RayIntersectionInfo;
+
+#include sdf_stroke_preview_functions.wgsl
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
@@ -141,7 +142,7 @@ fn sample_sdf_with_preview(sculpt_position : vec3f, atlas_position : vec3f) -> S
     surface.distance = sample_sdf_atlas(atlas_position);
     surface.material = interpolate_material(atlas_position * SDF_RESOLUTION);
     
-    surface = evaluate_stroke(sculpt_position, &(preview_stroke.stroke), &(preview_stroke.edit_list), surface, edit_range.x, edit_range.y);
+    surface = evaluate_preview_stroke(sculpt_position, surface, edit_range.x, edit_range.y);
     
     return surface;
 }
@@ -153,8 +154,7 @@ fn sample_sdf_with_preview_without_material(sculpt_position : vec3f, atlas_posit
     var surface : Surface;
     surface.distance = sample_sdf_atlas(atlas_position);
     
-    surface = evaluate_stroke(sculpt_position, &(preview_stroke.stroke), &(preview_stroke.edit_list), surface, edit_range.x, edit_range.y);
-
+    surface = evaluate_preview_stroke(sculpt_position, surface, edit_range.x, edit_range.y);
     
     return surface.distance;
 }

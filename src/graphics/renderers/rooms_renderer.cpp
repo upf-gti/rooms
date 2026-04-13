@@ -75,6 +75,7 @@ int RoomsRenderer::post_initialize()
 
     set_custom_pass_user_data(&raymarching_renderer);
 
+#if defined(USE_MIRROR_WINDOW)
     if (is_xr_available && use_mirror_screen && use_custom_mirror) {
         custom_mirror_texture = webgpu_context->create_texture(
             WGPUTextureDimension_2D,
@@ -133,6 +134,7 @@ int RoomsRenderer::post_initialize()
         uniforms = { &custom_mirror_camera_uniform };
         custom_mirror_camera_bind_group = webgpu_context->create_bind_group(uniforms, RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, shaders::mesh_forward::libraries), 1);
     }
+#endif // USE_MIRROR_WINDOW
 
 #ifndef DISABLE_RAYMARCHER
     custom_post_opaque_pass = [](WGPURenderPassEncoder render_pass, WGPUBindGroup camera_bind_group, void* user_data, uint32_t camera_stride_offset = 0) {
@@ -333,8 +335,9 @@ void RoomsRenderer::initialize_sculpt_render_instances()
 
     sculpt_instances.prepare_indirect_shader = RendererStorage::get_shader("data/shaders/octree/prepare_indirect_sculpt_render.wgsl");
     {
-        uint32_t size = sizeof(uint32_t) * 22u;
-        sculpt_instances.count_buffer.resize(22u);
+        uint32_t max_num_sculpts = 50u;
+        uint32_t size = sizeof(uint32_t) * max_num_sculpts;
+        sculpt_instances.count_buffer.resize(max_num_sculpts);
         memset(sculpt_instances.count_buffer.data(), 1u, size);
         sculpt_instances.uniform_count_buffer.data = webgpu_context->create_buffer(size, WGPUBufferUsage_CopyDst | WGPUBufferUsage_Storage, sculpt_instances.count_buffer.data(), "sculpt index data");
         sculpt_instances.uniform_count_buffer.binding = 0u;
@@ -360,6 +363,7 @@ void RoomsRenderer::update(float delta_time)
 
 void RoomsRenderer::render()
 {
+#if defined(XR_SUPPORT)
     if (is_xr_available && use_mirror_screen && use_custom_mirror) {
 
         RoomsEngine* rooms_engine = static_cast<RoomsEngine*>(RoomsEngine::get_instance());
@@ -371,6 +375,7 @@ void RoomsRenderer::render()
 
         environment->set_position(xr_context->per_view_data[0].position);
     }
+#endif
 
     Renderer::render();
 
@@ -385,7 +390,7 @@ void RoomsRenderer::render()
             }
         }
     }
-#endif
+#endif //__EMSCRIPTEN__
 
     if (get_sculpt_manager()->has_performed_evaluation()) {
         sculpt_manager->read_GPU_results();

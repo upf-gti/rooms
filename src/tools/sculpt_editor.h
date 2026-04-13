@@ -4,6 +4,7 @@
 
 #include "graphics/edit.h"
 
+#include "framework/nodes/text_3d.h"
 #include "framework/ui/gizmo_3d.h"
 #include "framework/math/spline.h"
 

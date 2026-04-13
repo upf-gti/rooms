@@ -14,6 +14,8 @@
 
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/renderer_storage.h"
+#include "graphics/primitives/quad_mesh.h"
+#include "graphics/primitives/box_mesh.h"
 
 #include "shaders/mesh_forward.wgsl.gen.h"
 #include "shaders/mesh_transparent.wgsl.gen.h"
@@ -37,9 +39,7 @@ void SculptEditor::initialize()
     stroke_manager.set_brick_world_size(glm::vec3(sdf_globals.brick_world_size));
 
     mirror_mesh = new MeshInstance3D();
-    Surface* quad_surface = new Surface();
-    quad_surface->create_quad();
-    mirror_mesh->add_surface(quad_surface);
+    mirror_mesh->set_mesh(new QuadMesh());
     mirror_mesh->scale(glm::vec3(0.25f));
 
     Material* mirror_material = new Material();
@@ -500,12 +500,13 @@ bool SculptEditor::edit_update(float delta_time)
             edit_to_add.dimensions = glm::clamp(edit_to_add.dimensions, glm::vec4(MIN_PRIMITIVE_SIZE), glm::vec4(temp_limit));
             dimensions_dirty = true;
         }
-
+#if defined(XR_SUPPORT)
         // Only enter spline mode when the acceleration of the hand exceds a threshold
         // To stretch, toggle with 'B'
         else if (!creating_path && glm::length(glm::abs(controller_movement_data[HAND_RIGHT].velocity)) > 0.30f) {
             start_spline(true);
         }
+#endif
     }
 
     if (!creating_path) {
@@ -551,6 +552,7 @@ bool SculptEditor::edit_update(float delta_time)
 
     // Add edit based on controller movement
     // TODO(Juan): Check rotation?
+#if defined(XR_SUPPORT)
     if (!stamp_enabled && was_tool_pressed && is_tool_used) {
         if (glm::length(controller_movement_data[HAND_RIGHT].prev_edit_position - edit_position_world) < (edit_to_add.dimensions.x / 3.0f)) {
             is_tool_used = false;
@@ -562,6 +564,7 @@ bool SculptEditor::edit_update(float delta_time)
     else {
         controller_movement_data[HAND_RIGHT].prev_edit_position = edit_position_world;
     }
+#endif
 
     return is_tool_used;
 }

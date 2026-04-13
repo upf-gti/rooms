@@ -97,17 +97,17 @@ void SceneEditor::initialize()
         sGPU_RayIntersectionData& intersection = last_gpu_results->ray_intersection;
 
         // Stop selecting nodes when the ray stops to hit the sculpt
-        if (intersection.has_intersected == 0u) {
+        /*if (intersection.has_intersected == 0u) {
             if (!is_moving_node_by_hand) {
                 deselect();
             }
             return;
-        }
+        }*/
 
-        if (intersection.sculpt_id != selected_node_id) {
-            deselect();
-            selected_node_id = intersection.sculpt_id;
-        }
+        //if (intersection.sculpt_id != selected_node_id) {
+        //    deselect();
+        //    selected_node_id = intersection.sculpt_id;
+        //}
 
         std::function<void(Node* node)> check_intersections = [&](Node* node) {
             SculptNode* sculpt_node = dynamic_cast<SculptNode*>(node);
@@ -290,6 +290,8 @@ void SceneEditor::set_main_scene(Scene* new_scene)
     current_character = nullptr;
 
     main_scene = new_scene;
+
+    set_inspector_dirty();
 }
 
 void SceneEditor::update_hovered_node()
@@ -540,7 +542,7 @@ void SceneEditor::init_ui()
             left_hand_box = new ui::VContainer2D("left_controller_root", { 0.0f, 0.0f }, ui::CREATE_3D);
             left_hand_box->add_childs({
                 new ui::ImageLabel2D("Scene Panel", shortcuts::Y_BUTTON_PATH, shortcuts::TOGGLE_SCENE_INSPECTOR),
-                new ui::ImageLabel2D("Redo", shortcuts::L_GRIP_X_BUTTON_PATH, shortcuts::SCENE_REDO, double_size),
+                new ui::ImageLabel2D("Undo", shortcuts::X_BUTTON_PATH, shortcuts::SCENE_UNDO),
                 new ui::ImageLabel2D("Redo", shortcuts::L_GRIP_X_BUTTON_PATH, shortcuts::SCENE_REDO, double_size)
             });
         }
@@ -628,10 +630,10 @@ void SceneEditor::bind_events()
     }
 
     Node::bind("deselect", [&](const std::string& signal, void* button) { deselect(); });
-    Node::bind("group", [&](const std::string& signal, void* button) { group_node(selected_node); });
-    Node::bind("ungroup", [&](const std::string& signal, void* button) { ungroup_node(selected_node, true, false); });
+    Node::bind("group", [&](const std::string& signal, void* button) { if (selected_node) group_node(selected_node); });
+    Node::bind("ungroup", [&](const std::string& signal, void* button) { if (selected_node) ungroup_node(selected_node, true, false); });
     // Node::bind("duplicate", [&](const std::string& signal, void* button) { clone_node(selected_node, true); });
-    Node::bind("clone", [&](const std::string& signal, void* button) { clone_node(selected_node, false); });
+    Node::bind("clone", [&](const std::string& signal, void* button) { if (selected_node) clone_node(selected_node, false); });
 
     // Export / Import (.room) / Player
     {
@@ -701,7 +703,7 @@ void SceneEditor::open_context_menu(Node* node)
 
     if (node->get_node_type() == "SculptNode") {
         SculptNode* sculpt_node = (SculptNode*)node;
-        options.push_back({ "Clone", [&, n = node](const std::string& name, uint32_t index) { clone_node(n); } });
+        options.push_back({ "Duplicate", [&, n = node](const std::string& name, uint32_t index) { clone_node(n); } });
 
         // Make unique should only be possible if the sculpt is not unique (has no clones)
         if (sculpt_node->get_sculpt_data()->get_ref_count() > 1) {
@@ -819,6 +821,8 @@ Node* SceneEditor::clone_node(Node* node, bool copy, bool push_undo)
     /*if (!selected_node) {
         return nullptr;
     }*/
+
+    assert(node);
 
     RoomsEngine* engine = static_cast<RoomsEngine*>(RoomsEngine::instance);
 

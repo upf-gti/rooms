@@ -13,7 +13,7 @@ struct sJobCounters {
 
 @group(1) @binding(0) var<storage, read_write> octree : Octree;
 
-#include sdf_interval_functions.wgsl
+#include sdf_interval_preview_stroke_functions.wgsl
 
 /**
     NOTE: the biggest bottlenecks of the evaluator are 2 constnat costs:
@@ -137,7 +137,7 @@ fn compute(@builtin(workgroup_id) wg_id: vec3u, @builtin(local_invocation_index)
                                         preview_stroke.stroke.aabb_min, 
                                         preview_stroke.stroke.aabb_max)) {
                  let prev_interval : vec2f = octree.data[octree_index].octant_center_distance;
-                let surface_with_preview_interval : vec2f = evaluate_stroke_interval(current_subdivision_interval,  &(preview_stroke.stroke), &(preview_stroke.edit_list), prev_interval, brick_center, brick_half_size);
+                let surface_with_preview_interval : vec2f = evaluate_preview_stroke_interval(current_subdivision_interval, prev_interval, brick_center, brick_half_size);
                 let int_distance = abs(distance(prev_interval, surface_with_preview_interval));
 
                 let in_surface_with_preview : bool = surface_with_preview_interval.x < 0.0 && surface_with_preview_interval.y > 0.0;

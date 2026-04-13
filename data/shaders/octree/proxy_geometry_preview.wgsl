@@ -1,5 +1,4 @@
 #include math.wgsl
-#include sdf_functions.wgsl
 #include octree_includes.wgsl
 #include material_packing.wgsl
 #include tonemappers.wgsl
@@ -23,12 +22,13 @@ struct VertexOutput {
     @location(4) @interpolate(flat) voxel_center_sculpt_space : vec3f,
 };
 
-// @group(0) @binding(0) var<uniform> sculpt_data : SculptData;
 @group(0) @binding(1) var<storage, read> preview_stroke : PreviewStroke;
 @group(0) @binding(5) var<storage, read> brick_buffers: BrickBuffers_ReadOnly;
 @group(0) @binding(9) var<storage, read> sculpt_instance_data: array<SculptInstanceData>;
 
 #dynamic @group(1) @binding(0) var<uniform> camera_data : CameraData;
+
+#include sdf_stroke_preview_functions.wgsl
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
@@ -87,7 +87,7 @@ fn sample_sdf_preview(position : vec3f) -> f32
         surface.distance = 10000.0;
     }
     
-    surface = evaluate_stroke(position, &(preview_stroke.stroke), &(preview_stroke.edit_list), surface, edit_range.x, edit_range.y);
+    surface = evaluate_preview_stroke(position, surface, edit_range.x, edit_range.y);
     
     return surface.distance;
 }

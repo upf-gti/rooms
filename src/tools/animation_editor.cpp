@@ -68,8 +68,6 @@ void AnimationEditor::initialize()
     init_ui();
 
     // Animation UI visualizations
-    keyframe_markers_render_instance = new MeshInstance3D();
-
     Material* joint_material = new Material();
     joint_material->set_depth_read(false);
     joint_material->set_priority(0);
@@ -77,9 +75,8 @@ void AnimationEditor::initialize()
     joint_material->set_color(glm::vec4(1.0f, 0.0f, 0.0f, 0.50f));
     joint_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, shaders::mesh_forward::libraries));
 
-    keyframe_markers_surface = new Surface();
-    keyframe_markers_surface->create_sphere();
-    keyframe_markers_render_instance->add_surface(keyframe_markers_surface);
+    keyframe_markers_render_instance = new MeshInstance3D();
+    keyframe_markers_render_instance->set_mesh(new SphereMesh());
     keyframe_markers_render_instance->set_frustum_culling_enabled(false);
     keyframe_markers_render_instance->set_surface_material_override(keyframe_markers_render_instance->get_surface(0), joint_material);
 
@@ -171,7 +168,7 @@ void AnimationEditor::on_enter(void* data)
                         // Sample node in that timestamp
                         std::string p_name = track->get_name();
                         Node::AnimatableProperty& node_property = current_node->get_animatable_property(p_name);
-                        anim->sample(state.time, track->get_id(), ANIMATION_LOOP_NONE, &node_property, eInterpolationType::INTERPOLATION_STEP);
+                        anim->sample(state.time, track->get_id(), ANIMATION_LOOP_NONE, &node_property, INTERPOLATION_STEP);
 
                         sPropertyState& ps = state.properties[p_name];
                         ps.track_id = track->get_id();
@@ -683,7 +680,7 @@ void AnimationEditor::update_node_from_state(uint32_t index)
     for (auto& p : state->properties) {
 
         Node::AnimatableProperty& node_property = current_node->get_animatable_property(p.first);
-        current_animation->sample(state->time, p.second.track_id, ANIMATION_LOOP_NONE, &node_property, eInterpolationType::INTERPOLATION_STEP);
+        current_animation->sample(state->time, p.second.track_id, ANIMATION_LOOP_NONE, &node_property, INTERPOLATION_STEP);
 
         // TODO: now the conversion void -> TYPE is done in the sample, but only supports 3 types
         // ...

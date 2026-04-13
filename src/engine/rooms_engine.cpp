@@ -17,6 +17,7 @@
 #include "engine/scene.h"
 
 #include "graphics/renderers/rooms_renderer.h"
+#include "graphics/primitives/quad_mesh.h"
 
 #include "shaders/mesh_forward.wgsl.gen.h"
 #include "shaders/mesh_grid.wgsl.gen.h"
@@ -116,9 +117,7 @@ int RoomsEngine::post_initialize()
     {
         grid = new MeshInstance3D();
         grid->set_name("Grid");
-        Surface* quad_surface = new Surface();
-        quad_surface->create_quad();
-        grid->add_surface(quad_surface);
+        grid->set_mesh(new QuadMesh());
         grid->set_position(glm::vec3(0.0f));
         grid->rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
         grid->scale(glm::vec3(25.f));

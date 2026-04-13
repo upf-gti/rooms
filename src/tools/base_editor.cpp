@@ -16,6 +16,7 @@ void BaseEditor::clean()
 
 void BaseEditor::update(float delta_time)
 {
+#if defined(XR_SUPPORT)
     if (renderer->get_xr_available()) {
 
         is_shift_left_pressed = Input::is_grab_pressed(HAND_LEFT);
@@ -76,6 +77,7 @@ void BaseEditor::update(float delta_time)
             Engine::instance->vibrate_hand(HAND_LEFT, 0.25f, 0.25f);
         }
     }
+#endif
 
     main_panel->update(delta_time);
 }
