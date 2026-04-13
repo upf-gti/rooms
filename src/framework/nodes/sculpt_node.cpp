@@ -34,7 +34,7 @@ Stroke SculptNode::default_stroke = {
     .operation = OP_SMOOTH_UNION,
     .parameters = { 0.f, -1.f, 0.f, 0.f },
     .edits = {
-        { .position = {0.0f, 0.0f, 0.0f}, .dimensions = { 0.02f, 0.02f, 0.02f, 0.0f } }
+        {.position = {0.0f, 0.0f, 0.0f}, .dimensions = { 0.02f, 0.02f, 0.02f, 0.0f } }
     }
 };
 
@@ -130,7 +130,7 @@ void SculptNode::update(float delta_time)
             flags |= SCULPT_IS_SELECTED;
         }
     }
-    
+
     in_frame_sculpt_render_list_id = renderer->add_sculpt_render_call(sculpt_gpu_data, get_global_model(), flags);
 
     // static_cast<RoomsRenderer*>(Renderer::instance)->add_sculpt_render_call(sculpt_gpu_data, glm::translate(get_global_model(), {0.05, 0.0, 0.0}));
@@ -142,7 +142,7 @@ void SculptNode::render()
 {
 #ifdef SHOW_SCULPT_AABB
     const AABB& sculpt_aabb = sculpt_gpu_data->get_AABB();
-    AABB_mesh->set_scale(sculpt_aabb.half_size*2.0f);
+    AABB_mesh->set_scale(sculpt_aabb.half_size * 2.0f);
     AABB_mesh->set_position(get_global_model() * glm::vec4(sculpt_aabb.center, 1.0));
     AABB_mesh->render();
 #endif
@@ -193,7 +193,8 @@ void SculptNode::parse(std::ifstream& binary_scene_file)
         stroke_history.resize(header.stroke_count);
         binary_scene_file.read(reinterpret_cast<char*>(&stroke_history[0]), header.stroke_count * sizeof(Stroke));
         from_history(stroke_history);
-    } else {
+    }
+    else {
         initialize();
     }
 
@@ -236,7 +237,7 @@ bool SculptNode::check_intersection(sGPU_RayIntersectionData* data)
     return data->has_intersected == 1u && (sculpt_gpu_data->get_sculpt_id() == data->sculpt_id) && (in_frame_sculpt_render_list_id == data->instance_id);
 }
 
-bool SculptNode::test_ray_collision(const glm::vec3& ray_origin, const glm::vec3& ray_direction, float& distance, Node3D** out)
+bool SculptNode::test_ray_collision(const glm::vec3& ray_origin, const glm::vec3& ray_direction, float* distance, Node3D** out)
 {
     const AABB& aabb = sculpt_gpu_data->get_AABB();
 
@@ -246,7 +247,8 @@ bool SculptNode::test_ray_collision(const glm::vec3& ray_origin, const glm::vec3
 
     if (intersecting) {
         sculpt_flags |= SCULPT_IS_HOVERED;
-    } else {
+    }
+    else {
         sculpt_flags &= ~SCULPT_IS_HOVERED;
     }
 

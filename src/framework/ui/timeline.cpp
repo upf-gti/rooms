@@ -9,6 +9,8 @@
 #include "framework/animation/animation.h"
 #include "framework/math/intersections.h"
 
+#include "framework/nodes/mesh_instance_3d.h"
+
 #include "engine/engine.h"
 
 #include "graphics/renderer.h"
@@ -98,7 +100,7 @@ namespace ui {
         delete frame_mesh_selected;
     }
 
-    MeshInstance* Timeline::generate_keyframe_mesh(const Color& color)
+    MeshInstance3D* Timeline::generate_keyframe_mesh(const Color& color)
     {
         Material* material = new Material();
         material->set_color(color);
@@ -112,7 +114,7 @@ namespace ui {
             material->set_is_2D(false);
         }
 
-        MeshInstance* mesh_instance = new MeshInstance();
+        MeshInstance3D* mesh_instance = new MeshInstance3D();
         mesh_instance->add_surface(quad_surface);
         mesh_instance->set_surface_material_override(mesh_instance->get_surface(0), material);
 
@@ -162,8 +164,8 @@ namespace ui {
             glm::mat4x4 model = glm::translate(glm::mat4x4(1.0f), glm::vec3(position, -CURSOR * 3e-5));
             model = glm::scale(model, glm::vec3(scale, 1.0f));
             model = get_global_viewport_model() * model;
-            Renderer::instance->add_renderable(key.selected ? frame_mesh_selected :
-                key.hovered ? frame_mesh_hovered : frame_mesh, model);
+            Renderer::instance->add_renderable(key.selected ? frame_mesh_selected->get_mesh() :
+                key.hovered ? frame_mesh_hovered->get_mesh() : frame_mesh->get_mesh(), model);
 
             // reset input stuff
             key.hovered = false;
@@ -390,7 +392,7 @@ namespace ui {
                     quad_rotation,
                     intersection_point,
                     local_intersection_point,
-                    collision_dist,
+                    &collision_dist,
                     false
                 );
 

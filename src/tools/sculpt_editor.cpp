@@ -37,7 +37,9 @@ void SculptEditor::initialize()
     stroke_manager.set_brick_world_size(glm::vec3(sdf_globals.brick_world_size));
 
     mirror_mesh = new MeshInstance3D();
-    mirror_mesh->add_surface(RendererStorage::get_surface("quad"));
+    Surface* quad_surface = new Surface();
+    quad_surface->create_quad();
+    mirror_mesh->add_surface(quad_surface);
     mirror_mesh->scale(glm::vec3(0.25f));
 
     Material* mirror_material = new Material();
@@ -89,13 +91,13 @@ void SculptEditor::initialize()
 
     // Initialize default primitive states
     {
-        primitive_default_states[SD_SPHERE]     = { glm::vec4(0.02f, 0.0f,  0.0f,  0.0f) };
-        primitive_default_states[SD_BOX]        = { glm::vec4(0.02f, 0.02f, 0.02f, 0.0f) };
-        primitive_default_states[SD_CONE]       = { glm::vec4(0.05f, 0.05f, 0.0f,  0.0f) };
-        primitive_default_states[SD_CYLINDER]   = { glm::vec4(0.03f, 0.05f, 0.0f,  0.0f) };
-        primitive_default_states[SD_CAPSULE]    = { glm::vec4(0.03f, 0.05f, 0.0f,  0.0f) };
-        primitive_default_states[SD_TORUS]      = { glm::vec4(0.03f, 0.01f, 0.0f,  0.0f) };
-        primitive_default_states[SD_VESICA]     = { glm::vec4(0.03f, 0.05f, 0.0f,  0.0f) };
+        primitive_default_states[SD_SPHERE] = { glm::vec4(0.02f, 0.0f,  0.0f,  0.0f) };
+        primitive_default_states[SD_BOX] = { glm::vec4(0.02f, 0.02f, 0.02f, 0.0f) };
+        primitive_default_states[SD_CONE] = { glm::vec4(0.05f, 0.05f, 0.0f,  0.0f) };
+        primitive_default_states[SD_CYLINDER] = { glm::vec4(0.03f, 0.05f, 0.0f,  0.0f) };
+        primitive_default_states[SD_CAPSULE] = { glm::vec4(0.03f, 0.05f, 0.0f,  0.0f) };
+        primitive_default_states[SD_TORUS] = { glm::vec4(0.03f, 0.01f, 0.0f,  0.0f) };
+        primitive_default_states[SD_VESICA] = { glm::vec4(0.03f, 0.05f, 0.0f,  0.0f) };
     }
 
     // Edit preview mesh
@@ -179,7 +181,7 @@ void SculptEditor::initialize()
                 }
             }
         }
-    });
+        });
 
     enable_tool(SCULPT);
 }
@@ -208,7 +210,8 @@ void SculptEditor::on_enter(void* data)
         // current_instance_transform.set_position(to_sculpt_instance_pos);
         mirror_transform.set_position(to_sculpt_instance_pos);
         lock_axis_transform.set_position(to_sculpt_instance_pos);
-    } else {
+    }
+    else {
         mirror_transform.set_position(sculpt_node->get_translation());
         lock_axis_transform.set_position(sculpt_node->get_translation());
     }
@@ -230,10 +233,10 @@ void SculptEditor::on_exit()
 
 void SculptEditor::clean()
 {
-    if(mirror_mesh) delete mirror_mesh;
-    if(sculpt_area_box) delete sculpt_area_box;
-    if(mesh_preview) delete mesh_preview;
-    if(mesh_preview_outline) delete mesh_preview_outline;
+    if (mirror_mesh) delete mirror_mesh;
+    if (sculpt_area_box) delete sculpt_area_box;
+    if (mesh_preview) delete mesh_preview;
+    if (mesh_preview_outline) delete mesh_preview_outline;
 
     mirror_gizmo.clean();
     axis_lock_gizmo.clean();
@@ -324,7 +327,7 @@ bool SculptEditor::edit_update(float delta_time)
     }
 
     // Guides: edit position modifiers
-    if(renderer->get_xr_available()) {
+    if (renderer->get_xr_available()) {
         // Snap surface
 
         if (snap_to_surface) {
@@ -382,7 +385,7 @@ bool SculptEditor::edit_update(float delta_time)
         float size_multiplier = (use_x_axis ? thumbstick_values.x : thumbstick_values.y) * delta_time * 0.1f;
 
         // Update edit dimensions
-        if(stroke_mode == STROKE_MODE_NONE) {
+        if (stroke_mode == STROKE_MODE_NONE) {
 
             // Get the data from the primitive default
             edit_to_add.dimensions = primitive_default_states[stroke_parameters.get_primitive()].dimensions;
@@ -500,7 +503,7 @@ bool SculptEditor::edit_update(float delta_time)
 
         // Only enter spline mode when the acceleration of the hand exceds a threshold
         // To stretch, toggle with 'B'
-        else if(!creating_path && glm::length(glm::abs(controller_movement_data[HAND_RIGHT].velocity)) > 0.30f) {
+        else if (!creating_path && glm::length(glm::abs(controller_movement_data[HAND_RIGHT].velocity)) > 0.30f) {
             start_spline(true);
         }
     }
@@ -519,7 +522,7 @@ bool SculptEditor::edit_update(float delta_time)
 
             if (is_tool_being_used(stamp_enabled)) {
                 edit_to_add.position = current_sculpt->get_transform().get_position() + glm::vec3(glm::vec3(0.2f * (random_f() * 4 - 2), 0.2f * (random_f() * 4 - 2), 0.2f * (random_f() * 4 - 2)));
-                glm::vec3 euler_angles(glm::pi<float>()* random_f(), glm::pi<float>()* random_f(), glm::pi<float>()* random_f());
+                glm::vec3 euler_angles(glm::pi<float>() * random_f(), glm::pi<float>() * random_f(), glm::pi<float>() * random_f());
                 // edit_to_add.dimensions = glm::vec4(0.05f, 0.05f, 0.05f, 0.0f) * 1.0f;
                 //edit_to_add.dimensions = (edit_to_add.operation == OP_SUBSTRACTION) ? 3.0f * glm::vec4(0.2f, 0.2f, 0.2f, 0.2f) : glm::vec4(0.2f, 0.2f, 0.2f, 0.2f);
                 edit_to_add.rotation = glm::normalize(glm::inverse(glm::normalize(glm::quat(euler_angles))));
@@ -551,7 +554,8 @@ bool SculptEditor::edit_update(float delta_time)
     if (!stamp_enabled && was_tool_pressed && is_tool_used) {
         if (glm::length(controller_movement_data[HAND_RIGHT].prev_edit_position - edit_position_world) < (edit_to_add.dimensions.x / 3.0f)) {
             is_tool_used = false;
-        } else {
+        }
+        else {
             controller_movement_data[HAND_RIGHT].prev_edit_position = edit_position_world;
         }
     }
@@ -640,7 +644,7 @@ void SculptEditor::update(float delta_time)
     }
 
     if (Input::was_button_pressed(XR_BUTTON_Y) && !creating_path) {
-        RoomsEngine::switch_editor(SCENE_EDITOR);
+        RoomsEngine::get_instance()->switch_editor(SCENE_EDITOR);
     }
 
     bool is_tool_used = edit_update(delta_time);
@@ -682,7 +686,7 @@ void SculptEditor::update(float delta_time)
                 edit.rotation = current_spline.get_knot(0u).rotation;
                 edit.dimensions = glm::vec4(point.size, 0.0f);
                 new_edits.push_back(edit);
-            });
+                });
 
             add_edit_repetitions(new_edits);
 
@@ -736,7 +740,7 @@ void SculptEditor::update(float delta_time)
             // edit.rotation = point.rotation;
             edit.dimensions = glm::vec4(point.size, 0.0f);
             preview_tmp_edits.push_back(edit);
-        });
+            });
     }
     else {
         preview_tmp_edits.push_back(edit_to_add);
@@ -753,19 +757,22 @@ void SculptEditor::update(float delta_time)
     if (called_undo) {
         needs_evaluation = stroke_manager.undo();
         called_undo = false;
-    } else if (called_redo) {
+    }
+    else if (called_redo) {
         needs_evaluation = stroke_manager.redo();
         called_redo = false;
-    } else if (new_edits.size() > 0u) {
+    }
+    else if (new_edits.size() > 0u) {
         // If there is not history, only add the non-substract edits
         if (stroke_manager.history->size() == 0u) {
             if (stroke_parameters.get_operation() != OP_SMOOTH_SUBSTRACTION) {
                 needs_evaluation = stroke_manager.add(new_edits);
             }
-        } else {
+        }
+        else {
             needs_evaluation = stroke_manager.add(new_edits);
         }
-        
+
     }
 
     if (needs_evaluation) {
@@ -782,7 +789,7 @@ void SculptEditor::update(float delta_time)
     if (needs_evaluation || is_released || (is_tool_used && !renderer->get_xr_available())) {
         update_ui_workflow_state();
     }
-    
+
     was_tool_used = is_tool_used;
 
     if (is_tool_used) {
@@ -792,7 +799,8 @@ void SculptEditor::update(float delta_time)
             edit_to_add.dimensions = primitive_default_states[stroke_parameters.get_primitive()].dimensions;
             dimensions_dirty = true;
             reset_spline();
-        } else if (creating_spline()) {
+        }
+        else if (creating_spline()) {
             // Add last position
             current_spline.add_knot({ edit_to_add.position, edit_to_add.dimensions, edit_to_add.rotation });
             end_spline();
@@ -1665,18 +1673,18 @@ void SculptEditor::init_ui()
 void SculptEditor::bind_events()
 {
     Node::bind("go_back", [&](const std::string& signal, void* button) {
-        RoomsEngine::switch_editor(SCENE_EDITOR);
-    });
+        RoomsEngine::get_instance()->switch_editor(SCENE_EDITOR);
+        });
 
     Node::bind("add", [&](const std::string& signal, void* button) {
         enable_tool(SCULPT);
         set_operation(OP_SMOOTH_UNION);
-    });
+        });
 
     Node::bind("substract", [&](const std::string& signal, void* button) {
         enable_tool(SCULPT);
         set_operation(OP_SMOOTH_SUBSTRACTION);
-    });
+        });
 
     Node::bind("paint", [&](const std::string& signal, void* button) { enable_tool(PAINT); });
 
@@ -1732,7 +1740,7 @@ void SculptEditor::bind_events()
         Node::bind(child->get_name(), [&](const std::string& signal, void* button) {
             const Color& color = (reinterpret_cast<ui::Button2D*>(button))->color;
             stroke_parameters.set_material_color(color);
-        });
+            });
     }
 
     // Bind recent color buttons...
@@ -1749,7 +1757,7 @@ void SculptEditor::bind_events()
                 const Color& color = (reinterpret_cast<ui::Button2D*>(button))->color;
                 stroke_parameters.set_material_color(color);
                 Node::emit_signal("color_picker@changed", color);
-            });
+                });
         }
     }
     else {
@@ -1765,7 +1773,7 @@ void SculptEditor::bind_events()
             ui::Button2D* child = static_cast<ui::Button2D*>(samples_group->get_children()[i]);
             Node::bind(child->get_name(), [&](const std::string& signal, void* button) {
                 update_stroke_from_material(signal);
-            });
+                });
         }
     }
     else {
@@ -1774,11 +1782,11 @@ void SculptEditor::bind_events()
 
     Node::bind("save_material", [&](const std::string& signal, void* button) {
         generate_material_from_stroke(button);
-    });
+        });
 
     Node::bind("shuffle_material", [&](const std::string& signal, void* button) {
         generate_random_material();
-    });
+        });
 
     // Bind color blendind operations for painting
     {
@@ -1789,7 +1797,7 @@ void SculptEditor::bind_events()
                 ui::Button2D* child = static_cast<ui::Button2D*>(color_blending_modes->get_children()[i]);
                 Node::bind(child->get_name(), [&, index = i](const std::string& signal, void* button) {
                     stroke_parameters.set_color_blend_operation(static_cast<ColorBlendOp>(index));
-                });
+                    });
             }
         }
         else {
@@ -1862,12 +1870,12 @@ void SculptEditor::generate_material_from_stroke(void* button)
         // Add data to existing samples..
         const StrokeMaterial& mat = stroke_parameters.get_material();
         add_pbr_material_data(output, mat.color, mat.roughness, mat.metallic);
-            // mat.noise_params.x, mat.noise_color, mat.noise_params.y, static_cast<int>(mat.noise_params.z));
+        // mat.noise_params.x, mat.noise_color, mat.noise_params.y, static_cast<int>(mat.noise_params.z));
 
         Node::bind(output, [&](const std::string& signal, void* button) {
             update_stroke_from_material(signal);
-        });
-    };
+            });
+        };
 
     ui::Keyboard::request(callback, name);
 }

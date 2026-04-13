@@ -67,82 +67,14 @@ set_property(DIRECTORY ${ROOMS_DIR_ROOT} PROPERTY VS_STARTUP_PROJECT ${PROJECT_N
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 20)
 set_property(TARGET ${PROJECT_NAME} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${ROOMS_DIR_ROOT}")
 
+if (EMSCRIPTEN)
+    set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".html")
+endif()
+
 if (MSVC)
     add_compile_options(/Zc:__cplusplus)
 endif()
 
-if (EMSCRIPTEN)
-    set(SHELL_FILE shell.html)
-
-    include_directories(BEFORE
-        "${CMAKE_BINARY_DIR}/_deps/emdawn-src/include/"
-    )
-
-    add_library(webgpu_layer
-        "${CMAKE_BINARY_DIR}/_deps/emdawn-src/webgpu.cpp"
-    )
-    target_link_libraries(${PROJECT_NAME}
-        webgpu_layer
-    )
-
-    add_compile_options(
-        # "-fno-exceptions"
-        "$<$<CONFIG:Release>:-flto>"
-    )
-
-    add_link_options(
-        # "-fno-exceptions"
-        "$<$<CONFIG:Release>:-flto>"
-    )
-
-    # See https://github.com/kainino0x/webgpu-cross-platform-demo/tree/dawnwasm for a sample setup
-
-    target_link_options(${PROJECT_NAME} PRIVATE
-
-        # -sVERBOSE
-
-        # We are using Dawn-generated bindings, not built-in ones
-        -sUSE_WEBGPU=0
-        # The JS libraries needed for bindings
-        "--js-library=${CMAKE_BINARY_DIR}/_deps/emdawn-src/library_webgpu_enum_tables.js"
-        "--js-library=${CMAKE_BINARY_DIR}/_deps/emdawn-src/library_webgpu_generated_struct_info.js"
-        "--js-library=${CMAKE_BINARY_DIR}/_deps/emdawn-src/library_webgpu_generated_sig_info.js"
-        "--js-library=${CMAKE_BINARY_DIR}/_deps/emdawn-src/library_webgpu.js"
-        "--closure-args=--externs=${CMAKE_BINARY_DIR}/_deps/emdawn-src/webgpu-externs.js"
-
-        -sEXPORTED_FUNCTIONS=_main,_malloc,_free
-        -sUSE_GLFW=3
-#        -sALLOW_MEMORY_GROWTH
-        -sASYNCIFY
-#        -sASSERTIONS
-#        -fsanitize=address
-        -sINITIAL_MEMORY=2147483648
-        -Wdeprecated-literal-operator
-        -sSTACK_SIZE=5MB
-        -sASYNCIFY_STACK_SIZE=10000
-        -lembind # to bind functions from c++ to javascript
-        -sWASM_BIGINT
-
-        # only for dev
-        #-sERROR_ON_WASM_CHANGES_AFTER_LINK
-        #-sWASM=0
-        # For faster debug builds
-        # -O1
-        # ------------
-        --shell-file "${ROOMS_DIR_ROOT}/${SHELL_FILE}"
-        --preload-file "${ROOMS_DIR_ROOT}/data@/data"
-	)
-
-	# Make sure to re-link when the shell file changes
-    set_property(
-        TARGET ${PROJECT_NAME}
-        PROPERTY LINK_DEPENDS
-        "${ROOMS_DIR_ROOT}/${SHELL_FILE}"
-    )
-
-    set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".html")
-endif()
-
 # wgpuEngine
 add_subdirectory(libraries/wgpuEngine)
-target_link_libraries(${PROJECT_NAME} webgpuEngine)
+target_link_libraries(${PROJECT_NAME} wgpuEngine)

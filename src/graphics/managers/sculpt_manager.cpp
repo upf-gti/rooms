@@ -251,7 +251,7 @@ Sculpt* SculptManager::create_sculpt()
     WGPUBindGroup octree_bindgroup = webgpu_context->create_bind_group(uniforms, evaluator_2_interval_culling_step_shader, 1u, "Octree bindgroup");
 
     uniforms = { &brick_index_buffer, &indirect_buffer };
-    WGPUBindGroup readonly_sculpt_buffer_bindgroup = webgpu_context->create_bind_group(uniforms, RendererStorage::get_shader("data/shaders/octree/proxy_geometry_plain.wgsl"), 2u, "Read only octree bindgroup");
+    WGPUBindGroup readonly_sculpt_buffer_bindgroup = webgpu_context->create_bind_group(uniforms, RendererStorage::get_shader("data/shaders/octree/proxy_geometry_plain.wgsl", { "DISABLE_SHADOWS" }), 2u, "Read only octree bindgroup");
 
 
     uniforms = { &octree_uniform, &brick_index_buffer, &indirect_buffer, &sdf_globals.brick_buffers};

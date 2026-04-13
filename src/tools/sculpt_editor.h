@@ -4,7 +4,6 @@
 
 #include "graphics/edit.h"
 
-#include "framework/nodes/text.h"
 #include "framework/ui/gizmo_3d.h"
 #include "framework/math/spline.h"
 
@@ -82,15 +81,15 @@ class SculptEditor : public BaseEditor {
     bool can_snap_to_surface();
     void add_edit_repetitions(std::vector<Edit>& edits);
 
-    bool has_sculpting_started  = false;
-    bool dimensions_dirty       = true;
-    bool force_new_stroke       = false;
-    bool stamp_enabled          = false;
-    bool rotation_started       = false;
-    bool edit_rotation_started  = false;
-    bool snap_to_surface        = false;
-    bool is_picking_material    = false;
-    bool should_pick_material   = false;
+    bool has_sculpting_started = false;
+    bool dimensions_dirty = true;
+    bool force_new_stroke = false;
+    bool stamp_enabled = false;
+    bool rotation_started = false;
+    bool edit_rotation_started = false;
+    bool snap_to_surface = false;
+    bool is_picking_material = false;
+    bool should_pick_material = false;
 
     glm::quat last_hand_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
     glm::vec3 last_hand_translation = {};
@@ -175,12 +174,12 @@ class SculptEditor : public BaseEditor {
     *	Editor
     */
 
-    bool called_undo        = false;
-    bool called_redo        = false;
-    bool is_tool_pressed    = false;
-    bool is_released        = false;
-    bool was_tool_pressed   = false;
-    bool was_tool_used      = false;
+    bool called_undo = false;
+    bool called_redo = false;
+    bool is_tool_pressed = false;
+    bool is_released = false;
+    bool was_tool_pressed = false;
+    bool was_tool_used = false;
 
     eTool current_tool = eTool::NONE;
 

@@ -9,6 +9,8 @@
 
 #include "glm/vec2.hpp"
 
+class MeshInstance3D;
+
 namespace ui {
 
     class Text2D;
@@ -95,11 +97,11 @@ namespace ui {
 
         Surface* quad_surface = nullptr;
 
-        MeshInstance* frame_mesh = nullptr;
-        MeshInstance* frame_mesh_selected = nullptr;
-        MeshInstance* frame_mesh_hovered = nullptr;
+        MeshInstance3D* frame_mesh = nullptr;
+        MeshInstance3D* frame_mesh_selected = nullptr;
+        MeshInstance3D* frame_mesh_hovered = nullptr;
 
-        MeshInstance* generate_keyframe_mesh(const Color& color);
+        MeshInstance3D* generate_keyframe_mesh(const Color& color);
         void select_keyframe(TimelineKeyframe* key);
         void select_keyframe_by_index(int index);
 

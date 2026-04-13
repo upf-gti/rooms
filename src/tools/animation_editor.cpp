@@ -16,6 +16,7 @@
 #include "framework/ui/timeline.h"
 #include "framework/animation/solvers/fabrik_solver.h"
 #include "framework/camera/camera.h"
+#include "graphics/primitives/sphere_mesh.h"
 
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/renderer_storage.h"
@@ -42,8 +43,8 @@ uint64_t AnimationEditor::node_signal_uid = 0;
 ui::Timeline* timeline = nullptr;
 
 uint32_t get_changed_properties_from_states(const sAnimationState& prev_state,
-                                            const sAnimationState& current_state,
-                                            std::vector<std::string>& changed_properties_list)
+    const sAnimationState& current_state,
+    std::vector<std::string>& changed_properties_list)
 {
     uint32_t changed_properties_count = 0u;
     // Compare the properties of one state to another
@@ -76,14 +77,16 @@ void AnimationEditor::initialize()
     joint_material->set_color(glm::vec4(1.0f, 0.0f, 0.0f, 0.50f));
     joint_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, shaders::mesh_forward::libraries));
 
+    keyframe_markers_surface = new Surface();
+    keyframe_markers_surface->create_sphere();
+    keyframe_markers_render_instance->add_surface(keyframe_markers_surface);
     keyframe_markers_render_instance->set_frustum_culling_enabled(false);
-    keyframe_markers_render_instance->add_surface(RendererStorage::get_surface("sphere"));
     keyframe_markers_render_instance->set_surface_material_override(keyframe_markers_render_instance->get_surface(0), joint_material);
 
     // Trajectory line
     animation_trajectory_mesh = new Surface();
     animation_trajectory_mesh->set_name("Animation trajectory");
-    animation_trajectory_mesh->create_surface_data({{ glm::vec3(0.0f) }});
+    animation_trajectory_mesh->create_surface_data({ { glm::vec3(0.0f) } });
 
     Material* skeleton_material = new Material();
     skeleton_material->set_color({ 1.0f, 0.0f, 0.0f, 1.0f });
@@ -93,8 +96,8 @@ void AnimationEditor::initialize()
     skeleton_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, shaders::mesh_forward::libraries, skeleton_material));
 
     animation_trajectory_instance = new MeshInstance3D();
-    animation_trajectory_instance->set_frustum_culling_enabled(false);
     animation_trajectory_instance->add_surface(animation_trajectory_mesh);
+    animation_trajectory_instance->set_frustum_culling_enabled(false);
     animation_trajectory_instance->set_surface_material_override(animation_trajectory_mesh, skeleton_material);
 }
 
@@ -168,7 +171,7 @@ void AnimationEditor::on_enter(void* data)
                         // Sample node in that timestamp
                         std::string p_name = track->get_name();
                         Node::AnimatableProperty& node_property = current_node->get_animatable_property(p_name);
-                        anim->sample(state.time, track->get_id(), ANIMATION_LOOP_NONE, &node_property, eInterpolationType::STEP);
+                        anim->sample(state.time, track->get_id(), ANIMATION_LOOP_NONE, &node_property, eInterpolationType::INTERPOLATION_STEP);
 
                         sPropertyState& ps = state.properties[p_name];
                         ps.track_id = track->get_id();
@@ -246,7 +249,7 @@ void AnimationEditor::update(float delta_time)
     BaseEditor::update(delta_time);
 
     // Update inspector for keyframes
-    if(show_keyframe_dirty) {
+    if (show_keyframe_dirty) {
         update_node_from_state(last_animation_state_idx);
         inspect_keyframe();
     }
@@ -275,7 +278,7 @@ void AnimationEditor::update(float delta_time)
 
     // Get joints from skeleton
     bool select_pressed = Input::was_trigger_pressed(HAND_RIGHT) || Input::was_mouse_pressed(GLFW_MOUSE_BUTTON_LEFT);
-    if(select_pressed &&
+    if (select_pressed &&
         (dynamic_cast<SkeletonInstance3D*>(current_node) || dynamic_cast<Character3D*>(current_node))) {
         glm::vec3 ray_origin;
         glm::vec3 ray_direction;
@@ -284,7 +287,7 @@ void AnimationEditor::update(float delta_time)
         Engine::instance->get_scene_ray(ray_origin, ray_direction);
 
         // This sets current_joint to a valid joint in the skeleton instance
-        if (current_node->test_ray_collision(ray_origin, ray_direction, distance, reinterpret_cast<Node3D**>(&current_joint))) {
+        if (current_node->test_ray_collision(ray_origin, ray_direction, &distance, reinterpret_cast<Node3D**>(&current_joint))) {
             on_select_joint();
         }
     }
@@ -302,7 +305,7 @@ void AnimationEditor::update(float delta_time)
                 create_keyframe();
             }
             else if (Input::was_button_pressed(XR_BUTTON_B)) {
-                RoomsEngine::switch_editor(SCENE_EDITOR);
+                RoomsEngine::get_instance()->switch_editor(SCENE_EDITOR);
             }
         }
         // Creating keyframe
@@ -344,7 +347,7 @@ void AnimationEditor::render()
     for (uint32_t i = 0u; i < states.size(); i++) {
         const glm::vec3& position = std::get<glm::vec3>(states[i].properties["translation"].value);
         const glm::mat4& anim_position_model = glm::scale(glm::translate(glm::mat4(1.0f), position), glm::vec3(0.006f));
-        Renderer::instance->add_renderable(keyframe_markers_render_instance, anim_position_model);
+        Renderer::instance->add_renderable(keyframe_markers_render_instance->get_mesh(), anim_position_model);
     }
 
     animation_trajectory_instance->render();
@@ -537,7 +540,7 @@ void AnimationEditor::save_character_animation()
 
         // re-register animation
         RendererStorage::register_animation(output, current_animation);
-    };
+        };
 
     ui::Keyboard::request(callback, current_animation->get_name());
 }
@@ -680,7 +683,7 @@ void AnimationEditor::update_node_from_state(uint32_t index)
     for (auto& p : state->properties) {
 
         Node::AnimatableProperty& node_property = current_node->get_animatable_property(p.first);
-        current_animation->sample(state->time, p.second.track_id, ANIMATION_LOOP_NONE, &node_property, eInterpolationType::STEP);
+        current_animation->sample(state->time, p.second.track_id, ANIMATION_LOOP_NONE, &node_property, eInterpolationType::INTERPOLATION_STEP);
 
         // TODO: now the conversion void -> TYPE is done in the sample, but only supports 3 types
         // ...
@@ -788,7 +791,7 @@ void AnimationEditor::update_animation_trajectory()
 
     if (keyframe_dirty && current_node) {
         vertices_to_upload.push_back(vertices_to_upload.back());
-        vertices_to_upload.push_back({ current_node->get_translation()});
+        vertices_to_upload.push_back({ current_node->get_translation() });
     }
 
     animation_trajectory_mesh->update_surface_data({ vertices_to_upload });
@@ -866,7 +869,7 @@ bool AnimationEditor::insert_keyframe()
     {
         auto it = std::find_if(states.begin(), states.end(), [t = time](const sAnimationState& s) {
             return (s.time > t);
-        });
+            });
 
         if (it == states.end()) {
             assert(0);
@@ -910,7 +913,7 @@ void AnimationEditor::process_keyframe()
     }
 
     // Read the properties in order to see if there is any change
-    
+
     sAnimationState new_anim_state;
     store_animation_state(new_anim_state);
 
@@ -1357,7 +1360,7 @@ void AnimationEditor::init_ui()
         .title = "Animation",
         .position = {32.0f, 32.f},
         .close_fn = std::bind(&AnimationEditor::on_close_inspector, this, std::placeholders::_1)
-    });
+        });
 
     timeline = new ui::Timeline({
         .name = "inspector_root",
@@ -1368,7 +1371,7 @@ void AnimationEditor::init_ui()
         .duplicate_keyframe_fn = [&](ui::Timeline* scope, uint32_t index) -> bool { return duplicate_keyframe(index); },
         .move_keyframe_fn = std::bind(&AnimationEditor::on_move_timeline_keyframe, this, std::placeholders::_1, std::placeholders::_2),
         .delete_keyframe_fn = std::bind(&AnimationEditor::on_delete_timeline_keyframe, this, std::placeholders::_1, std::placeholders::_2)
-    });
+        });
 
     if (renderer->get_xr_available()) {
 
@@ -1417,7 +1420,7 @@ void AnimationEditor::bind_events()
                 set_active_chain(current_joint->get_index());
             }
         }
-    });
+        });
 
     // Animation events
     {
@@ -1429,8 +1432,8 @@ void AnimationEditor::bind_events()
         Node::bind("open_timeline", [&](const std::string& signal, void* button) {
             // inspect_keyframes_list(true);
             timeline_dirty = true;
-        });
-        Node::bind("record_action", [&](const std::string& signal, void* button) { });
+            });
+        Node::bind("record_action", [&](const std::string& signal, void* button) {});
         Node::bind("create_keyframe", [&](const std::string& signal, void* button) { create_keyframe(); });
         Node::bind("submit_keyframe", [&](const std::string& signal, void* button) { if (keyframe_dirty) { process_keyframe(); } });
     }
@@ -1539,34 +1542,34 @@ void AnimationEditor::inspect_node(Node* node)
         case Node::AnimatablePropertyType::INT32:
             inspector->islider(signal, *((int*)data), (int*)data);
             break;
-        /*case Node::AnimatablePropertyType::INT64:
-            break;*/
-        /*case Node::AnimatablePropertyType::UINT8:
-            break;
-        case Node::AnimatablePropertyType::UINT16:
-            break;
-        case Node::AnimatablePropertyType::UINT32:
-            break;*/
-        /*case Node::AnimatablePropertyType::UINT64:
-            break;*/
+            /*case Node::AnimatablePropertyType::INT64:
+                break;*/
+                /*case Node::AnimatablePropertyType::UINT8:
+                    break;
+                case Node::AnimatablePropertyType::UINT16:
+                    break;
+                case Node::AnimatablePropertyType::UINT32:
+                    break;*/
+                    /*case Node::AnimatablePropertyType::UINT64:
+                        break;*/
         case Node::AnimatablePropertyType::FLOAT32:
             inspector->fslider(signal, *((float*)data), (float*)data);
             break;
-        /*case Node::AnimatablePropertyType::FLOAT64:
-            break;*/
+            /*case Node::AnimatablePropertyType::FLOAT64:
+                break;*/
         case Node::AnimatablePropertyType::IVEC2:
             inspector->vector2<int>(signal, *((glm::ivec2*)data), 0, 64, (glm::ivec2*)data);
             break;
-        /*case Node::AnimatablePropertyType::UVEC2:
-            break;*/
+            /*case Node::AnimatablePropertyType::UVEC2:
+                break;*/
         case Node::AnimatablePropertyType::FVEC2:
             inspector->vector2<float>(signal, *((glm::fvec2*)data), 0.0f, 1.0f, (glm::fvec2*)data);
             break;
         case Node::AnimatablePropertyType::IVEC3:
             inspector->vector3<int>(signal, *((glm::ivec3*)data), 0, 64, (glm::ivec3*)data);
             break;
-        /*case Node::AnimatablePropertyType::UVEC3:
-            break;*/
+            /*case Node::AnimatablePropertyType::UVEC3:
+                break;*/
         case Node::AnimatablePropertyType::FVEC3:
             inspector->vector3<float>(signal, *((glm::fvec3*)data), 0.0f, 1.0f, (glm::fvec3*)data);
             // this is done everytime a vector3 is modified, move to another place!!
@@ -1575,13 +1578,14 @@ void AnimationEditor::inspect_node(Node* node)
         case Node::AnimatablePropertyType::IVEC4:
             inspector->vector4<int>(signal, *((glm::ivec4*)data), 0, 64, (glm::ivec4*)data);
             break;
-        /*case Node::AnimatablePropertyType::UVEC4:
-            break;*/
+            /*case Node::AnimatablePropertyType::UVEC4:
+                break;*/
         case Node::AnimatablePropertyType::FVEC4:
         case Node::AnimatablePropertyType::QUAT: // Using vector4 for showing quats
             if (prop_it.first.find("color") != std::string::npos) {
                 inspector->color_picker(signal, *((Color*)data), (Color*)data);
-            } else {
+            }
+            else {
                 inspector->vector4<float>(signal, *((glm::fvec4*)data), 0.0f, 1.0f, (glm::fvec4*)data);
             }
             break;
@@ -1619,7 +1623,7 @@ void AnimationEditor::inspect_keyframes_list(bool force)
 
             Node::bind(signal, [&, it = i](const std::string& sg, void* data) {
                 edit_keyframe(it);
-            });
+                });
         }
 
         // Duplicate keyframe
@@ -1629,7 +1633,7 @@ void AnimationEditor::inspect_keyframes_list(bool force)
 
             Node::bind(signal, [&, it = i](const std::string& sg, void* data) {
                 duplicate_keyframe(it);
-            });
+                });
         }
 
         // inspector->icon("data/textures/keyframe.png");
@@ -1640,7 +1644,7 @@ void AnimationEditor::inspect_keyframes_list(bool force)
 
             Node::bind(signal, [&, it = i](const std::string& sg, void* data) {
                 set_animation_state(it);
-            });
+                });
         }
 
         inspector->label("empty", std::to_string(s.time), ui::SKIP_TEXT_RECT);

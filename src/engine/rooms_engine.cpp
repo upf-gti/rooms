@@ -37,13 +37,13 @@
 bool RoomsEngine::use_grid = true;
 bool RoomsEngine::use_environment_map = true;
 
-int RoomsEngine::initialize(Renderer* renderer, sEngineConfiguration configuration)
+int RoomsEngine::initialize(Renderer* renderer, const sEngineConfiguration& configuration)
 {
     int error = Engine::initialize(renderer, configuration);
 
     if (error) return error;
 
-	return 0;
+    return 0;
 }
 
 int RoomsEngine::post_initialize()
@@ -116,7 +116,9 @@ int RoomsEngine::post_initialize()
     {
         grid = new MeshInstance3D();
         grid->set_name("Grid");
-        grid->add_surface(RendererStorage::get_surface("quad"));
+        Surface* quad_surface = new Surface();
+        quad_surface->create_quad();
+        grid->add_surface(quad_surface);
         grid->set_position(glm::vec3(0.0f));
         grid->rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
         grid->scale(glm::vec3(25.f));
@@ -194,19 +196,19 @@ void RoomsEngine::init_default_skeleton()
     parser.parse("data/meshes/character.glb", nodes);
     assert(nodes.size() == 1u);
 
-    std::function<SkeletonInstance3D*(Node*)> find_skeleton = [&](Node* node)
-    {
-        if (dynamic_cast<SkeletonInstance3D*>(node)) {
-            return static_cast<SkeletonInstance3D*>(node);
-        }
-        for (auto child : node->get_children()) {
-            auto instance = find_skeleton(child);
-            if (dynamic_cast<SkeletonInstance3D*>(instance)) {
-                return instance;
+    std::function<SkeletonInstance3D* (Node*)> find_skeleton = [&](Node* node)
+        {
+            if (dynamic_cast<SkeletonInstance3D*>(node)) {
+                return static_cast<SkeletonInstance3D*>(node);
             }
-        }
-        return (SkeletonInstance3D*)nullptr;
-    };
+            for (auto child : node->get_children()) {
+                auto instance = find_skeleton(child);
+                if (dynamic_cast<SkeletonInstance3D*>(instance)) {
+                    return instance;
+                }
+            }
+            return (SkeletonInstance3D*)nullptr;
+        };
 
     auto instance = find_skeleton(nodes[0]);
 
@@ -253,6 +255,7 @@ void RoomsEngine::update(float delta_time)
     }
 
     Engine::update(delta_time);
+
 }
 
 void RoomsEngine::render()
@@ -282,7 +285,7 @@ void RoomsEngine::render()
         get_editor<TutorialEditor*>(TUTORIAL_EDITOR)->render();
     }
 
-    if(active_context_menu) {
+    if (active_context_menu) {
         active_context_menu->render();
     }
 
@@ -334,15 +337,13 @@ void RoomsEngine::switch_editor(uint8_t editor_idx, void* data)
         return;
     }
 
-    RoomsEngine* i = static_cast<RoomsEngine*>(instance);
-
-    if (i->current_editor) {
-        i->current_editor->on_exit();
+    if (current_editor) {
+        current_editor->on_exit();
     }
 
-    i->current_editor = i->get_editor(editor_idx);
-    i->current_editor_type = static_cast<EditorType>(editor_idx);
-    i->current_editor->on_enter(data);
+    current_editor = get_editor(editor_idx);
+    current_editor_type = static_cast<EditorType>(editor_idx);
+    current_editor->on_enter(data);
 }
 
 void RoomsEngine::toggle_use_grid()
@@ -434,7 +435,7 @@ void RoomsEngine::render_gui()
         }
         if (ImGui::BeginTabItem("Rooms Debugger"))
         {
-            sGPU_SculptResults &intersection_info = rooms_renderer->get_sculpt_manager()->loaded_results;
+            sGPU_SculptResults& intersection_info = rooms_renderer->get_sculpt_manager()->loaded_results;
             std::string intersected = (intersection_info.ray_intersection.has_intersected == 1u) ? "yes" : "no";
             ImGui::Text("Ray Intersection: %s", intersected.c_str());
             ImGui::Text("Tile pointer: %d", intersection_info.ray_intersection.tile_pointer);

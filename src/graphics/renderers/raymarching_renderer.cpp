@@ -37,8 +37,7 @@
 */
 
 RaymarchingRenderer::RaymarchingRenderer()
-{
-}
+{}
 
 int RaymarchingRenderer::initialize()
 {
@@ -193,13 +192,13 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
 
     cube_mesh = parse_mesh("data/meshes/cube.obj");
 
-    render_proxy_shader = RendererStorage::get_shader("data/shaders/octree/proxy_geometry_plain.wgsl");
+    render_proxy_shader = RendererStorage::get_shader("data/shaders/octree/proxy_geometry_plain.wgsl", { "DISABLE_SHADOWS" });
 
     {
         camera_uniform = rooms_renderer->get_current_camera_uniform();
 
         std::vector<Uniform*> uniforms = { &sdf_globals.linear_sampler_uniform, &rooms_renderer->get_global_sculpts_instance_data(),
-            &sdf_globals.sdf_texture_uniform, & sdf_globals.brick_buffers,
+            &sdf_globals.sdf_texture_uniform, &sdf_globals.brick_buffers,
             &sdf_globals.sdf_material_texture_uniform, &sdf_globals.preview_stroke_uniform_2 };
 
         render_proxy_geometry_bind_group = webgpu_context->create_bind_group(uniforms, render_proxy_shader, 0);
@@ -218,10 +217,10 @@ void RaymarchingRenderer::init_raymarching_proxy_pipeline()
     render_proxy_geometry_pipeline.create_render_async(render_proxy_shader, color_target, desc);
 
     // Proxy for Preview
-    render_preview_proxy_shader = RendererStorage::get_shader("data/shaders/octree/proxy_geometry_preview.wgsl");
+    render_preview_proxy_shader = RendererStorage::get_shader("data/shaders/octree/proxy_geometry_preview.wgsl", { "DISABLE_SHADOWS" });
     {
         std::vector<Uniform*> uniforms;
-        uniforms = {&sdf_globals.preview_stroke_uniform_2, &sdf_globals.brick_buffers, &rooms_renderer->get_global_sculpts_instance_data() };
+        uniforms = { &sdf_globals.preview_stroke_uniform_2, &sdf_globals.brick_buffers, &rooms_renderer->get_global_sculpts_instance_data() };
         sculpt_data_bind_preview_group = webgpu_context->create_bind_group(uniforms, render_preview_proxy_shader, 0);
     }
 

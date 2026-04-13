@@ -1,3 +1,4 @@
+#include "engine/engine.h"
 #include "engine/rooms_engine.h"
 #include "graphics/renderers/rooms_renderer.h"
 
@@ -17,11 +18,15 @@ EMSCRIPTEN_BINDINGS(_Class_) {
 }
 #endif
 
-int main()
+void get_engine_config(sEngineConfiguration& out_config)
 {
-    RoomsEngine* engine = new RoomsEngine();
+    out_config.window_width = 1280;
+    out_config.window_height = 720;
 
-    sRendererConfiguration rooms_render_config;
+    out_config.window_title = "ROOMS";
+    //out_config.fullscreen = true;
+
+    sRendererConfiguration rooms_render_config = {};
 
 #ifndef DISABLE_RAYMARCHER
     rooms_render_config.required_limits.maxBufferSize = 536870912;
@@ -30,23 +35,12 @@ int main()
     rooms_render_config.required_limits.maxComputeInvocationsPerWorkgroup = 512;
 #endif
 
-    RoomsRenderer* renderer = new RoomsRenderer(rooms_render_config);
+    out_config.custom_engine_instance = new RoomsEngine();
+    out_config.custom_renderer_instance = new RoomsRenderer(rooms_render_config);
 
-    sEngineConfiguration configuration;
-    configuration.window_title = "ROOMS";
-    //configuration.fullscreen = true;
-
-    if (engine->initialize(renderer, configuration)) {
-        return 1;
-    }
-
-    engine->start_loop();
-
-    engine->clean();
-
-    delete engine;
-
-    delete renderer;
-
-    return 0;
+    // Optional callbacks
+    out_config.engine_post_initialize = nullptr;
+    out_config.engine_pre_update = nullptr;
+    out_config.engine_post_update = nullptr;
+    out_config.engine_render = nullptr;
 }

@@ -34,7 +34,7 @@ void PlayerEditor::update(float delta_time)
 {
     // debug, exit player..
     if (Input::was_key_pressed(GLFW_KEY_ESCAPE) || Input::was_button_pressed(XR_BUTTON_Y)) {
-        RoomsEngine::switch_editor(SCENE_EDITOR);
+        RoomsEngine::get_instance()->switch_editor(SCENE_EDITOR);
     }
 
     if (!current_room) {

@@ -74,15 +74,15 @@ class RoomsEngine : public Engine
 
 public:
 
-    int initialize(Renderer* renderer, sEngineConfiguration configuration = {}) override;
+    int initialize(Renderer* renderer, const sEngineConfiguration& configuration = {}) override;
     virtual int post_initialize() override;
 
     static RoomsEngine* get_instance() { return static_cast<RoomsEngine*>(instance); }
 
     void clean() override;
 
-	void update(float delta_time) override;
-	void render() override;
+    void update(float delta_time) override;
+    void render() override;
 
     void resize_window(int width, int height) override;
 
@@ -92,7 +92,7 @@ public:
     void show_controllers();
     void hide_controllers();
 
-    static void switch_editor(uint8_t editor_idx, void* data = nullptr);
+    void switch_editor(uint8_t editor_idx, void* data = nullptr);
     static void toggle_use_grid();
     static void toggle_use_environment_map();
 

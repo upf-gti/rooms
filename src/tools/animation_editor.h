@@ -76,6 +76,8 @@ class AnimationEditor : public BaseEditor {
 
     Surface* animation_trajectory_mesh = nullptr;
     MeshInstance3D* animation_trajectory_instance = nullptr;
+
+    Surface* keyframe_markers_surface = nullptr;
     MeshInstance3D* keyframe_markers_render_instance = nullptr;
 
     Node3D* current_node = nullptr;

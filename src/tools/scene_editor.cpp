@@ -401,7 +401,7 @@ void SceneEditor::process_node_hovered()
         shortcuts[shortcuts::EDIT_SCULPT_NODE] = sculpt_hovered;
         if (a_pressed && sculpt_hovered) {
             select_node(hovered_node, false);
-            RoomsEngine::switch_editor(SCULPT_EDITOR, static_cast<SculptNode*>(hovered_node));
+            RoomsEngine::get_instance()->switch_editor(SCULPT_EDITOR, static_cast<SculptNode*>(hovered_node));
         }
         else if (should_open_context_menu) {
             open_context_menu(hovered_node);
@@ -414,7 +414,7 @@ void SceneEditor::process_node_hovered()
 
 void SceneEditor::enter_room()
 {
-    RoomsEngine::switch_editor(PLAYER_EDITOR, current_room);
+    RoomsEngine::get_instance()->switch_editor(PLAYER_EDITOR, current_room);
 }
 
 void SceneEditor::init_ui()
@@ -591,7 +591,7 @@ void SceneEditor::bind_events()
 
         // Switch to sculpt editor
         Node::emit_signal("@on_sculpt_edited", (void*)nullptr);
-        RoomsEngine::switch_editor(SCULPT_EDITOR, new_sculpt);
+        RoomsEngine::get_instance()->switch_editor(SCULPT_EDITOR, new_sculpt);
     });
 
     Node::bind("character", [&](const std::string& signal, void* button) {
@@ -695,7 +695,7 @@ void SceneEditor::open_context_menu(Node* node)
     };
 
     std::vector<ui::sContextMenuOption> options = {
-        { "Animate", [&, n = node](const std::string& name, uint32_t index) { selected_node = n; RoomsEngine::switch_editor(ANIMATION_EDITOR, n); }},
+        { "Animate", [&, n = node](const std::string& name, uint32_t index) { selected_node = n; RoomsEngine::get_instance()->switch_editor(ANIMATION_EDITOR, n); }},
         { "Rename", [fn = callback, str = node->get_name()](const std::string& name, uint32_t index) { ui::Keyboard::request(fn, str, 32u); }}
     };
 
@@ -1341,7 +1341,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
             // Set as current sculpt and go to sculpt editor
             if (dynamic_cast<SculptNode*>(n)) {
                 Node::emit_signal("@on_sculpt_edited", (void*)nullptr);
-                RoomsEngine::switch_editor(SCULPT_EDITOR, static_cast<SculptNode*>(n));
+                RoomsEngine::get_instance()->switch_editor(SCULPT_EDITOR, static_cast<SculptNode*>(n));
             }
             else if (dynamic_cast<Group3D*>(n)) {
                 edit_group(static_cast<Group3D*>(n));
@@ -1366,7 +1366,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
             // TODO CHECK: This corrupts the pointer to the node "n"
             // select_node(n, false);
 
-            RoomsEngine::switch_editor(ANIMATION_EDITOR, n);
+            RoomsEngine::get_instance()->switch_editor(ANIMATION_EDITOR, n);
         });
     }
 
@@ -1482,7 +1482,7 @@ void SceneEditor::inspect_character(bool force)
             inspector->button(signal, "data/textures/edit.png", 0u, "Edit");
 
             Node::bind(signal, [&, n = node](const std::string& sg, void* data) {
-                RoomsEngine::switch_editor(SCULPT_EDITOR, static_cast<SculptNode*>(n));
+                RoomsEngine::get_instance()->switch_editor(SCULPT_EDITOR, static_cast<SculptNode*>(n));
             });
         }
 

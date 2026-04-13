@@ -65,6 +65,8 @@ struct FragmentOutput {
 @group(2) @binding(2) var sampler_clamp: sampler;
 @group(2) @binding(3) var<uniform> lights : array<Light, MAX_LIGHTS>;
 @group(2) @binding(4) var<uniform> num_lights : u32;
+// @group(2) @binding(5) var lights_shadow_maps: texture_depth_2d_array;
+// @group(2) @binding(6) var shadow_sampler: sampler_comparison;
 
 fn get_material_preview() -> SdfMaterial {
     var material : SdfMaterial;
