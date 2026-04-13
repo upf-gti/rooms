@@ -143,6 +143,12 @@ int RoomsRenderer::post_initialize()
     };
 #endif
 
+    // When we read back from the GPU, read the number of bricks that are currently being used
+    Node::bind("@on_gpu_results", [&](const std::string& sg, void* data) {
+        sGPU_SculptResults *gpu_results = (sGPU_SculptResults*) data;
+        used_brick_count = gpu_results->sculpt_eval_data.curr_sculpt_brick_count;
+    });
+
     return 0;
 }
 
@@ -387,6 +393,7 @@ void RoomsRenderer::render()
 
             if (label == "evaluation") {
                 last_evaluation_time = last_frame_timestamps[i];
+                total_evaluator_time += last_evaluation_time;
             }
         }
     }
@@ -495,7 +502,7 @@ uint32_t RoomsRenderer::add_sculpt_render_call(Sculpt* sculpt, const glm::mat4& 
     if (!sculpts_render_lists.contains(sculpt_id)) {
         sculpts_render_lists[sculpt_id] = sSculptRenderInstances{ .sculpt = sculpt, .instance_count = 0u };
     }
-    
+
     render_instance = &sculpts_render_lists[sculpt_id];
 
     assert(render_instance->instance_count < MAX_INSTANCES_PER_SCULPT && "MAX NUM OF SCULPT INSTANCES");

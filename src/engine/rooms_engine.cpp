@@ -455,6 +455,8 @@ void RoomsEngine::render_gui()
             std::map<uint8_t, std::string>& queries_map = renderer->get_queries_label_map();
 
             ImGui::Text("\tlast evaluation time: %.4f", rooms_renderer->get_last_evaluation_time());
+            ImGui::Text("\tTotal evaluation time: %.6f", rooms_renderer->get_total_evaluation_time());
+            ImGui::Text("\tUsed brick count: %d", rooms_renderer->get_brick_usage());
 
             for (int i = 0; i < timestamps.size(); ++i) {
                 float time = timestamps[i];
@@ -470,5 +472,3 @@ void RoomsEngine::render_gui()
 
     ImGui::End();
 }
-
-

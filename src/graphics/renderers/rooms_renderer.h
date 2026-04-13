@@ -47,6 +47,8 @@ class RoomsRenderer : public Renderer {
     SculptManager*      sculpt_manager = nullptr;
 
     float last_evaluation_time = 0.0f;
+    float total_evaluator_time = 0.0f;
+    uint32_t used_brick_count = 0u;
 
     sSDFGlobals sdf_globals;
 
@@ -137,6 +139,8 @@ public:
     }
 
     float get_last_evaluation_time() { return last_evaluation_time; }
+    float get_total_evaluation_time() { return total_evaluator_time; }
+    uint32_t get_brick_usage() { return used_brick_count; }
 
     bool has_performed_evaluation() const;
     /*
