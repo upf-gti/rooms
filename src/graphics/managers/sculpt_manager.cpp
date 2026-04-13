@@ -118,6 +118,8 @@ void SculptManager::update(WGPUCommandEncoder command_encoder)
         sEvaluateRequest& evaluate_request = evaluations_to_process.back();
 
         if (evaluate(compute_pass, evaluate_request)) {
+            evaluted_total_edits += evaluate_request.edit_count;
+            evaluted_total_strokes += evaluate_request.strokes_to_process.stroke_count;
             evaluations_to_process.pop_back();
         }
     }
