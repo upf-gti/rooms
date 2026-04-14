@@ -75,6 +75,8 @@ if (MSVC)
     add_compile_options(/Zc:__cplusplus)
 endif()
 
+set(WGPUENGINE_ASSET_FOLDER "${ROOMS_DIR_ROOT}/data")
+
 # wgpuEngine
 add_subdirectory(libraries/wgpuEngine)
 target_link_libraries(${PROJECT_NAME} wgpuEngine)

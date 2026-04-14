@@ -18,6 +18,7 @@
 
 #include "graphics/renderers/rooms_renderer.h"
 #include "graphics/primitives/quad_mesh.h"
+#include "graphics/primitives/sphere_mesh.h"
 
 #include "shaders/mesh_forward.wgsl.gen.h"
 #include "shaders/mesh_grid.wgsl.gen.h"
@@ -77,7 +78,8 @@ int RoomsEngine::post_initialize()
 
         ray_pointer->set_surface_material_override(ray_pointer->get_surface(0), pointer_material);
 
-        sphere_pointer = parse_mesh("data/meshes/sphere.obj");
+        sphere_pointer = new MeshInstance3D();
+        sphere_pointer->set_mesh(new SphereMesh());
 
         Material* sphere_pointer_material = new Material();
         sphere_pointer_material->set_depth_read(false);
@@ -325,7 +327,7 @@ void RoomsEngine::resize_window(int width, int height)
     Engine::resize_window(width, height);
 
     if (current_editor) {
-        current_editor->on_resize_window(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
+        current_editor->on_resize_window(renderer->get_webgpu_context()->render_width, renderer->get_webgpu_context()->render_height);
     }
 }
 

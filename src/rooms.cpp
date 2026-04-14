@@ -6,16 +6,6 @@
 #include <emscripten.h>
 #include <emscripten/html5.h>
 #include <emscripten/bind.h>
-
-// Binding code
-EMSCRIPTEN_BINDINGS(_Class_) {
-
-    emscripten::class_<RoomsEngine>("Engine")
-        .constructor<>()
-        .class_function("getInstance", &RoomsEngine::get_instance, emscripten::return_value_policy::reference())
-        .function("setWasmModuleInitialized", &RoomsEngine::set_wasm_module_initialized)
-        .function("loadRoom", &RoomsEngine::set_main_scene);
-}
 #endif
 
 void get_engine_config(sEngineConfiguration& out_config)
