@@ -436,7 +436,8 @@ void RoomsEngine::render_gui()
         }
         if (ImGui::BeginTabItem("Rooms Debugger"))
         {
-            sGPU_SculptResults& intersection_info = rooms_renderer->get_sculpt_manager()->loaded_results;
+            SculptManager *sculpt_manager = rooms_renderer->get_sculpt_manager();
+            sGPU_SculptResults& intersection_info = sculpt_manager->loaded_results;
             std::string intersected = (intersection_info.ray_intersection.has_intersected == 1u) ? "yes" : "no";
             ImGui::Text("Ray Intersection: %s", intersected.c_str());
             ImGui::Text("Tile pointer: %d", intersection_info.ray_intersection.tile_pointer);
@@ -457,6 +458,10 @@ void RoomsEngine::render_gui()
             std::map<uint8_t, std::string>& queries_map = renderer->get_queries_label_map();
 
             ImGui::Text("\tlast evaluation time: %.4f", rooms_renderer->get_last_evaluation_time());
+            ImGui::Text("\tTotal evaluation time: %.6f", rooms_renderer->get_total_evaluation_time());
+            ImGui::Text("\tUsed brick count: %d", rooms_renderer->get_brick_usage());
+            ImGui::Text("\tPrecesed edit count: %d", sculpt_manager->get_total_edit_count());
+            ImGui::Text("\tPrecesed strokes count: %d", sculpt_manager->get_total_strokes_count());
 
             for (int i = 0; i < timestamps.size(); ++i) {
                 float time = timestamps[i];
@@ -472,5 +477,3 @@ void RoomsEngine::render_gui()
 
     ImGui::End();
 }
-
-

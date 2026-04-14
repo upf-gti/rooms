@@ -2,6 +2,7 @@
 
 #include "framework/resources/sculpt.h"
 #include "graphics/texture.h"
+#include <glm/fwd.hpp>
 
 
 /*
@@ -51,6 +52,9 @@ class SculptManager {
 
     Uniform         gpu_results_uniform;
     WGPUBindGroup   gpu_results_bindgroup = nullptr;
+
+    uint32_t        evaluted_total_edits = 0u;
+    uint32_t        evaluted_total_strokes = 0u;
 
     // Sculpt instances
     struct sEvaluateRequest {
@@ -219,4 +223,7 @@ public:
     void delete_sculpt(Sculpt* to_delete) {
         sculpts_to_delete.push_back(to_delete);
     }
+
+    uint32_t get_total_edit_count() { return evaluted_total_edits; }
+    uint32_t get_total_strokes_count() { return evaluted_total_strokes; }
 };
