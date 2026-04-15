@@ -49,6 +49,7 @@ class RoomsRenderer : public Renderer {
     float last_evaluation_time = 0.0f;
     float total_evaluator_time = 0.0f;
     uint32_t used_brick_count = 0u;
+    bool previous_frame_evaluated = false;
 
     sSDFGlobals sdf_globals;
 

@@ -74,18 +74,19 @@ void SculptManager::update(WGPUCommandEncoder command_encoder)
     WebGPUContext* webgpu_context = rooms_renderer->get_webgpu_context();
     sSDFGlobals& sdf_globals = rooms_renderer->get_sdf_globals();
 
+    //performed_evaluation = false;
+
     // New render pass for the interseccions
     if (intersections_to_compute > 0u) {
         WGPUComputePassDescriptor compute_pass_desc = { .label = { "closest_ray_pass", WGPU_STRLEN} };
 
-#ifndef __EMSCRIPTEN__
+
         std::vector<WGPUPassTimestampWrites> timestampWrites(1);
         timestampWrites[0].beginningOfPassWriteIndex = Renderer::instance->timestamp(command_encoder, "pre_evaluation_or_what");
         timestampWrites[0].querySet = Renderer::instance->get_query_set();
         timestampWrites[0].endOfPassWriteIndex = Renderer::instance->timestamp(command_encoder, "intersection");
 
         compute_pass_desc.timestampWrites = timestampWrites.data();
-#endif // __EMSCRIPTEN__
         WGPUComputePassEncoder intersection_compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
 
         evaluate_closest_ray_intersection(intersection_compute_pass);
@@ -97,14 +98,12 @@ void SculptManager::update(WGPUCommandEncoder command_encoder)
     // Create the octree renderpass
     WGPUComputePassDescriptor compute_pass_desc = { .label = { "evaluation_pass", WGPU_STRLEN} };
 
-#ifndef __EMSCRIPTEN__
     std::vector<WGPUPassTimestampWrites> timestampWrites(1);
     timestampWrites[0].beginningOfPassWriteIndex = Renderer::instance->timestamp(command_encoder, "pre_evaluation");
     timestampWrites[0].querySet = Renderer::instance->get_query_set();
     timestampWrites[0].endOfPassWriteIndex = Renderer::instance->timestamp(command_encoder, "evaluation");
 
     compute_pass_desc.timestampWrites = timestampWrites.data();
-#endif // __EMSCRIPTEN__
 
     WGPUComputePassEncoder compute_pass = wgpuCommandEncoderBeginComputePass(command_encoder, &compute_pass_desc);
 
@@ -121,6 +120,7 @@ void SculptManager::update(WGPUCommandEncoder command_encoder)
             evaluted_total_edits += evaluate_request.edit_count;
             evaluted_total_strokes += evaluate_request.strokes_to_process.stroke_count;
             evaluations_to_process.pop_back();
+            performed_evaluation = true;
         }
     }
 
@@ -559,7 +559,7 @@ void SculptManager::evaluate_closest_ray_intersection(WGPUComputePassEncoder com
 #endif
 
     intersection_node_to_test = nullptr;
-    performed_evaluation = true;
+    //performed_evaluation = true;
 }
 
 void SculptManager::upload_strokes_and_edits(const uint32_t stroke_count, const std::vector<sGPUStroke>& strokes_to_compute, const uint32_t edits_count, const std::vector<Edit>& edits_to_upload)

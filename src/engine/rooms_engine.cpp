@@ -228,9 +228,6 @@ void RoomsEngine::update(float delta_time)
 
     ui::Keyboard::update(delta_time);
 
-    // NOTE: main update was before env_map update, test if this here breacks anything
-    main_scene->update(delta_time);
-
     if (current_editor) {
 
         current_editor->update(delta_time);
@@ -278,8 +275,6 @@ void RoomsEngine::render()
     if (use_grid && !playing_scene) {
         grid->render();
     }
-
-    main_scene->render();
 
     if (current_editor) {
         current_editor->render();
@@ -457,8 +452,8 @@ void RoomsEngine::render_gui()
             std::vector<float> timestamps = renderer->get_last_frame_timestamps();
             std::map<uint8_t, std::string>& queries_map = renderer->get_queries_label_map();
 
-            ImGui::Text("\tlast evaluation time: %.4f", rooms_renderer->get_last_evaluation_time());
-            ImGui::Text("\tTotal evaluation time: %.6f", rooms_renderer->get_total_evaluation_time());
+            ImGui::Text("\tlast evaluation time: %.4f (ms)", rooms_renderer->get_last_evaluation_time());
+            ImGui::Text("\tTotal evaluation time: %.6f (ms)", rooms_renderer->get_total_evaluation_time());
             ImGui::Text("\tUsed brick count: %d", rooms_renderer->get_brick_usage());
             ImGui::Text("\tPrecesed edit count: %d", sculpt_manager->get_total_edit_count());
             ImGui::Text("\tPrecesed strokes count: %d", sculpt_manager->get_total_strokes_count());

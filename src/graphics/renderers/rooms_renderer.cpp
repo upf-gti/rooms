@@ -365,6 +365,9 @@ void RoomsRenderer::update(float delta_time)
     upload_sculpt_models_and_instances(global_command_encoder);
 
     update_sculpts_indirect_buffers(global_command_encoder);
+
+    // Benchmark camera position
+    // camera_3d->look_at(glm::vec3(0.926932f, 2.5922f, 0.390704f), glm::vec3(0.382948f, 1.98621f, -0.189705f), glm::vec3(0, 1.0, 0));
 }
 
 void RoomsRenderer::render()
@@ -385,22 +388,23 @@ void RoomsRenderer::render()
 
     Renderer::render();
 
-#ifndef __EMSCRIPTEN__
     if (!last_frame_timestamps.empty()) {
         std::map<uint8_t, std::string>& queries_map = get_queries_label_map();
         for (int i = 0; i < last_frame_timestamps.size(); ++i) {
             std::string label = queries_map[i * 2 + 1];
 
-            if (label == "evaluation") {
+            if (previous_frame_evaluated && label == "evaluation") {
                 last_evaluation_time = last_frame_timestamps[i];
                 total_evaluator_time += last_evaluation_time;
             }
         }
     }
-#endif //__EMSCRIPTEN__
 
     if (get_sculpt_manager()->has_performed_evaluation()) {
+        previous_frame_evaluated = true;
         sculpt_manager->read_GPU_results();
+    } else {
+        previous_frame_evaluated = false;
     }
 
     // For the next frame
@@ -474,7 +478,7 @@ void RoomsRenderer::upload_sculpt_models_and_instances(WGPUCommandEncoder comman
     sculpt_instances.count_buffer[1u] = 0u;
     for (auto& it : sculpts_render_lists) {
         if (models_for_upload.capacity() <= in_frame_instance_count) {
-            models_for_upload.resize(models_for_upload.capacity() + 10u);
+            models_for_upload.resize(models_for_upload.capacity() + 56u);
         }
 
         it.second.sculpt->set_in_frame_model_buffer_index(in_frame_instance_count);
