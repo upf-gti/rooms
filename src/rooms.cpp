@@ -16,17 +16,15 @@ void get_engine_config(sEngineConfiguration& out_config)
     out_config.window_title = "ROOMS";
     //out_config.fullscreen = true;
 
-    sRendererConfiguration rooms_render_config = {};
-
 #ifndef DISABLE_RAYMARCHER
-    rooms_render_config.required_limits.maxBufferSize = 536870912;
-    rooms_render_config.required_limits.maxStorageBufferBindingSize = SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION * sizeof(float);
-    rooms_render_config.required_limits.maxStorageBuffersPerShaderStage = 8; // GTX 1080 friendly :(
-    rooms_render_config.required_limits.maxComputeInvocationsPerWorkgroup = 512;
+    out_config.render_config.required_limits.maxBufferSize = 536870912;
+    out_config.render_config.required_limits.maxStorageBufferBindingSize = SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION * sizeof(float);
+    out_config.render_config.required_limits.maxStorageBuffersPerShaderStage = 8; // GTX 1080 friendly :(
+    out_config.render_config.required_limits.maxComputeInvocationsPerWorkgroup = 512;
 #endif
 
     out_config.custom_engine_instance = new RoomsEngine();
-    out_config.custom_renderer_instance = new RoomsRenderer(rooms_render_config);
+    out_config.custom_renderer_instance = new RoomsRenderer();
 
     // Optional callbacks
     out_config.engine_post_initialize = nullptr;

@@ -44,7 +44,7 @@ struct sSDFGlobals {
 class RoomsRenderer : public Renderer {
 
     RaymarchingRenderer raymarching_renderer;
-    SculptManager*      sculpt_manager = nullptr;
+    SculptManager* sculpt_manager = nullptr;
 
     float last_evaluation_time = 0.0f;
     float total_evaluator_time = 0.0f;
@@ -107,10 +107,10 @@ class RoomsRenderer : public Renderer {
 
 public:
 
-    RoomsRenderer(const sRendererConfiguration& config = {});
+    RoomsRenderer();
     ~RoomsRenderer();
 
-    virtual int pre_initialize(GLFWwindow* window, bool use_mirror_screen = false) override;
+    virtual int pre_initialize(GLFWwindow* window, const sRendererConfiguration& config, bool use_mirror_screen = false) override;
     virtual int initialize() override;
     virtual int post_initialize() override;
     void clean() override;

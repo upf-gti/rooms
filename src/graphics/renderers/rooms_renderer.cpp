@@ -32,7 +32,7 @@ void sSDFGlobals::clean()
     linear_sampler_uniform.destroy();
 }
 
-RoomsRenderer::RoomsRenderer(const sRendererConfiguration& config) : Renderer(config)
+RoomsRenderer::RoomsRenderer() : Renderer()
 {
 
 }
@@ -46,9 +46,9 @@ RoomsRenderer::~RoomsRenderer()
     Renderer::clean();
 }
 
-int RoomsRenderer::pre_initialize(GLFWwindow* window, bool use_mirror_screen)
+int RoomsRenderer::pre_initialize(GLFWwindow* window, const sRendererConfiguration& config, bool use_mirror_screen)
 {
-    Renderer::pre_initialize(window, use_mirror_screen);
+    Renderer::pre_initialize(window, config, use_mirror_screen);
 
     clear_color = glm::vec4(0.22f, 0.22f, 0.22f, 1.0);
 
@@ -140,14 +140,14 @@ int RoomsRenderer::post_initialize()
     custom_post_opaque_pass = [](WGPURenderPassEncoder render_pass, WGPUBindGroup camera_bind_group, void* user_data, uint32_t camera_stride_offset = 0) {
         RaymarchingRenderer* raymarching_renderer = reinterpret_cast<RaymarchingRenderer*>(user_data);
         raymarching_renderer->render(render_pass, camera_bind_group, camera_stride_offset);
-    };
+        };
 #endif
 
     // When we read back from the GPU, read the number of bricks that are currently being used
     Node::bind("@on_gpu_results", [&](const std::string& sg, void* data) {
-        sGPU_SculptResults *gpu_results = (sGPU_SculptResults*) data;
+        sGPU_SculptResults* gpu_results = (sGPU_SculptResults*)data;
         used_brick_count = gpu_results->sculpt_eval_data.curr_sculpt_brick_count;
-    });
+        });
 
     return 0;
 }
@@ -289,7 +289,7 @@ void RoomsRenderer::init_sdf_globals()
             atlas_indices[i + 4u] = sdf_globals.octants_max_size - i - 1u;
         }
 
-        webgpu_context->update_buffer(std::get<WGPUBuffer>(sdf_globals.brick_buffers.data), 0u, atlas_indices, sizeof(uint32_t)* (sdf_globals.octants_max_size + 4u));
+        webgpu_context->update_buffer(std::get<WGPUBuffer>(sdf_globals.brick_buffers.data), 0u, atlas_indices, sizeof(uint32_t) * (sdf_globals.octants_max_size + 4u));
         delete[] atlas_indices;
     }
 
@@ -403,7 +403,8 @@ void RoomsRenderer::render()
     if (get_sculpt_manager()->has_performed_evaluation()) {
         previous_frame_evaluated = true;
         sculpt_manager->read_GPU_results();
-    } else {
+    }
+    else {
         previous_frame_evaluated = false;
     }
 
