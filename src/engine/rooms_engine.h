@@ -72,6 +72,8 @@ class RoomsEngine : public Engine
 
     bool controllers_visible = false;
 
+    bool show_imgui = true;
+
 public:
 
     int initialize(Renderer* renderer, const sEngineConfiguration& configuration = {}) override;
