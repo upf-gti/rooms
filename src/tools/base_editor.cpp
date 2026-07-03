@@ -24,14 +24,13 @@ void BaseEditor::update(float delta_time)
 
         // Update main UI
 
-        glm::mat4x4 pose = Input::get_controller_pose(HAND_LEFT, POSE_AIM);
-        pose = glm::translate(pose, glm::vec3(0.0f, 0.05f, -0.04f));
-        pose = glm::rotate(pose, glm::radians(120.f), glm::vec3(1.0f, 0.0f, 0.0f));
-        main_panel->set_xr_transform(Transform::mat4_to_transform(pose));
+        glm::mat4x4 pose = Input::get_controller_pose(HAND_LEFT);
+        glm::mat4x4 m = glm::rotate(glm::mat4x4(1.0f), glm::radians(60.f), glm::vec3(1.0f, 0.0f, 0.0f));
+
+        main_panel->set_xr_transform(Transform::mat4_to_transform(pose * glm::translate(m, glm::vec3(0.0f, -0.15f, 0.0f))));
 
         // Update controller labels if needed
 
-        glm::mat4x4 m = glm::rotate(glm::mat4x4(1.0f), glm::radians(60.f), glm::vec3(1.0f, 0.0f, 0.0f));
         m = glm::translate(m, glm::vec3(0.04f, -0.05f, -0.01f));
 
         {

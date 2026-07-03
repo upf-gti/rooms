@@ -295,7 +295,7 @@ void RoomsEngine::render()
             ray_pointer->render();
 
             sphere_pointer->set_transform(Transform::mat4_to_transform(raycast_transform));
-            sphere_pointer->scale(glm::vec3(0.1f));
+            sphere_pointer->scale(glm::vec3(0.01f));
             sphere_pointer->render();
         }
 
