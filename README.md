@@ -11,6 +11,10 @@ Through VR headsets, users could have the possibility to create full XR experien
 
 Developed using [wgpuEngine](https://github.com/upf-gti/wgpuEngine), our UPF-GTI new C++ WebGPU based engine.
 
+> [!IMPORTANT]
+> You can also read our most recent publication ***"Rooms: A WebGPU-Based VR Platform for Intuitive 3D Sculpting and Animation"***, on *IEEE Computer Graphics and Applications*.
+[10.1109/MCG.2026.3714587](https://doi.org/10.1109/MCG.2026.3714587)
+
 <p align="center" width="100%">
     <img src="./data/images/demo_capture.png"> 
 </p>
