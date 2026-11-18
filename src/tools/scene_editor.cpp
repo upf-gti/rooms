@@ -1,5 +1,7 @@
 #include "scene_editor.h"
 
+#include "engine/haptics_manager.h"
+
 #include "framework/input.h"
 #include "framework/parsers/parse_scene.h"
 #include "framework/nodes/sculpt_node.h"
@@ -253,6 +255,21 @@ void SceneEditor::update(float delta_time)
     }
 
     inspector->update(delta_time);
+
+    // HAPTICS ==============
+    // If the ray intersection is close enought, then set the manager to register the contact
+    HapticsManager *haptics_manager = ((RoomsEngine*)RoomsEngine::instance)->haptics_manager;
+
+    RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
+    SculptManager* sculpt_manager = rooms_renderer->get_sculpt_manager();
+    sGPU_RayIntersectionData& intersection_info = sculpt_manager->loaded_results.ray_intersection;
+
+    bool is_touching_sculpt = intersection_info.has_intersected ? intersection_info.ray_t < 0.02f : false;
+
+    haptics_manager->update_contact_info(is_touching_sculpt,
+                                         intersection_info.intersection_roughness,
+                                         intersection_info.intersection_metallic,
+                                         glm::vec3(0.0f)); // TODO: hand velocity
 }
 
 void SceneEditor::render()

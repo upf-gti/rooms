@@ -36,6 +36,8 @@
 #include <fstream>
 #include <graphics/managers/sculpt_manager.h>
 
+#include "haptics_manager.h"
+
 bool RoomsEngine::use_grid = true;
 bool RoomsEngine::use_environment_map = true;
 
@@ -153,6 +155,11 @@ int RoomsEngine::post_initialize()
     player->set_name("PlayerNode");
     main_scene->add_node(player);
 
+    // HAPTICS ===
+
+    haptics_manager = new HapticsManager();
+    haptics_manager->set_connection("localhost", 8081);
+
     return 0;
 }
 
@@ -165,6 +172,7 @@ void RoomsEngine::clean()
     }
 
     gizmo.clean();
+    delete haptics_manager;
 }
 
 void RoomsEngine::set_main_scene(const std::string& scene_path)
@@ -251,6 +259,8 @@ void RoomsEngine::update(float delta_time)
         controller_mesh_right->set_transform(Transform::mat4_to_transform(Input::get_controller_pose(HAND_RIGHT)));
         controller_mesh_left->set_transform(Transform::mat4_to_transform(Input::get_controller_pose(HAND_LEFT)));
     }
+
+    haptics_manager->send_update();
 
     Engine::update(delta_time);
 

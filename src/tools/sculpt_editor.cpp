@@ -29,6 +29,8 @@
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtx/string_cast.hpp>
 
+#include "engine/haptics_manager.h"
+
 uint8_t SculptEditor::last_generated_material_uid = 0;
 
 void SculptEditor::initialize()
@@ -811,6 +813,17 @@ void SculptEditor::update(float delta_time)
 
         stroke_mode = STROKE_MODE_NONE;
     }
+
+    // HAPTICS ==============
+    // If the ray intersection is close enought, then set the manager to register the contact
+    HapticsManager* haptics_manager = ((RoomsEngine*)RoomsEngine::instance)->haptics_manager;
+
+    StrokeMaterial current_mat = stroke_parameters.get_material();
+
+    haptics_manager->update_contact_info(is_tool_used,
+                                         current_mat.roughness,
+                                         current_mat.metallic,
+                                         glm::vec3(0.0f)); // TODO: hand velocity
 }
 
 void SculptEditor::set_preview_stroke()

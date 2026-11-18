@@ -11,6 +11,7 @@ class Node3D;
 class SculptNode;
 class Environment3D;
 class BaseEditor;
+class HapticsManager;
 
 namespace ui {
     class ContextMenu;
@@ -75,6 +76,8 @@ class RoomsEngine : public Engine
     bool show_imgui = true;
 
 public:
+    // External Haptics
+    HapticsManager* haptics_manager = nullptr;
 
     int initialize(Renderer* renderer, const sEngineConfiguration& configuration = {}) override;
     virtual int post_initialize() override;
