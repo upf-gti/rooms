@@ -25,24 +25,29 @@ bool HapticsManager::set_connection(const std::string hapt_url,
 void HapticsManager::update_contact_info(const bool contact, const float mat_roughness, const float mat_metalness, const glm::vec3 hand_speed)
 {
     current_status.contact = contact;
-    current_status.roughness = mat_roughness;
-    current_status.metalness = mat_metalness;
+    // TODO: this magic constants should be loaded from a text file
+    // Map of roughnes to rumble Hzs
+    current_status.rumble = (uint8_t) std::lerp(0.0f, 150.0f, mat_roughness);
+    // A full metalic surface should give cold feedback, so close, to 0
+    current_status.temperature = (uint8_t) std::lerp(25.0f, 5.0f, mat_metalness);
 }
 
 
 bool HapticsManager::send_update() {
+    uint8_t HAPTICS_TEMP_DELTA = 4u; // Boundary to signal when a temperature change is significative enought
+    uint8_t HAPTICS_RUMBLE_DELTA = 1u; // Boundary to signal when a rumble change is significative enought
     std::string message_to_send = message_generator(0, 0, 0, 0);
 
     if (current_status.contact) {
-        if (old_status.contact) {
-            // Config message
-            message_to_send = message_generator(1, 0, 0, 0);
-        } else {
+        if (old_status.contact || abs(current_status.temperature - old_status.temperature) >  HAPTICS_TEMP_DELTA) {
+            // Config message. Since PBR paramter changes are very subtle, we set the power to a third of 255 (the max)
+            message_to_send = message_generator(1, current_status.temperature, 85, 85);
+        } else if (abs(current_status.rumble - old_status.rumble) >  HAPTICS_RUMBLE_DELTA) {
             // Update message
-            // TODO: do this, but good 
-            message_to_send = message_generator(2, (uint8_t) current_status.roughness * 255.0, (uint8_t)(1.0f - current_status.metalness) * 255.0, 0);
+            // 90 degrees to the motor that pulls the finger
+            message_to_send = message_generator(2, current_status.rumble, current_status.rumble, 90);
         }
-        
+
         spdlog::trace("Send Haptic respose: {}", message_to_send);
     }
 

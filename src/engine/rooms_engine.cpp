@@ -158,7 +158,7 @@ int RoomsEngine::post_initialize()
     // HAPTICS ===
 
     haptics_manager = new HapticsManager();
-    haptics_manager->set_connection("localhost", 8081);
+    haptics_manager->set_connection("localhost", 11000);
 
     return 0;
 }

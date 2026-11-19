@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <string>
 #include <stdint.h>
 #include <glm/glm.hpp>
@@ -13,7 +14,10 @@
 
 #else // __linux__ and MACOS
 #include <sys/socket.h>
-
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
 #endif
 
 struct Socket {
@@ -23,7 +27,7 @@ struct Socket {
     static bool socket_dll_loaded;
     SOCKET socket_connection = INVALID_SOCKET; // = int32*
 #else // __linux__ and MACOS
-
+    int socket = 0;
 #endif
 
     bool CreateClientSocket(const std::string address, const std::string listening_port, int* error_code, bool is_TCP = true) {
@@ -79,8 +83,28 @@ struct Socket {
         initialized = true;
         return true;
 #else // __linux__ and MACOS
-        assert(false);
-        // TODO
+        socket = socket(AF_INET, (is_TCP) ? SOCK_STREAM : SOCK_DGRAM, 0);
+
+        if (socket < 0) {
+            return false;
+        }
+
+        sockaddr_in server_address = {
+            .sin_family = AF_INET6,
+            .sin_port = htons(std::stoi(listening_port)),
+        };
+
+        if (inet_pton(AF_INET, "127.0.0.1", &server_address.sin_addr) <= 0) {
+            // Invalid adress
+            return false;
+        }
+
+        if (connect(socket, (sockaddr*) &server_address, sizeof(sockaddr_in)) < 0) {
+            return false;
+        }
+
+        initialized = true;
+        return true;
 #endif
     }
 
@@ -93,7 +117,7 @@ struct Socket {
 
         return result != SOCKET_ERROR;
 #else // __linux__ and MACOS
-        TODO
+        return msg_length  == send(socket, msg_buffer, msg_length, 0);
 #endif
     }
 
@@ -117,11 +141,11 @@ struct Socket {
 
         return false;
 #else // __linux__ and MACOS
-
+        // TODO
 #endif
     }
 
-    bool close() {
+    bool close_socket() {
         if (!initialized) {
             return false;
         }
@@ -131,9 +155,12 @@ struct Socket {
         closesocket(socket_connection);
         socket_connection = INVALID_SOCKET;
 
+        initialized = false;
+
         return result_code != SOCKET_ERROR;
 #else // __linux__ and MACOS
-        TODO
+        close(socket);
+        return true;
 #endif
     }
 
@@ -156,8 +183,8 @@ public:
 
     struct sHapticStatus {
         bool contact = false;
-        float roughness = 0.0f; // Up to 1.0f
-        float metalness = 0.0f; // Up to 1.0f
+        uint8_t rumble = 0;
+        uint8_t temperature = 0;
     };
 
     sHapticStatus current_status;
