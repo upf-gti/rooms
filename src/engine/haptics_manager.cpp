@@ -22,14 +22,19 @@ HapticsManager::HapticsManager() {
         max_rumble = config["max_rumble"].GetFloat();
         min_rumble = config["min_rumble"].GetFloat();
 
+        haptics_url = config["haptic_device_IP"].GetString();
+        listening_port = config["haptic_device_port"].GetInt();
+
         spdlog::info("HAPTICS: Loaded config haptic file.");
     } else {
         spdlog::info("HAPTICS: Could not find the haptics config file.");
     }
 #endif
-
     spdlog::info("HAPTICS: temperature range: {} - {} C", min_temperature, max_temperature);
     spdlog::info("HAPTICS: rumble range: {} - {} Hz", min_rumble, max_rumble);
+    spdlog::info("HAPTICS: Connection dir: {} Port: {}", haptics_url, listening_port);
+
+    set_connection(haptics_url, listening_port);
 }
 
 HapticsManager::~HapticsManager()
