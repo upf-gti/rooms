@@ -402,11 +402,12 @@ void RoomsRenderer::render()
 
     if (get_sculpt_manager()->has_performed_evaluation()) {
         previous_frame_evaluated = true;
-        sculpt_manager->read_GPU_results();
     }
     else {
         previous_frame_evaluated = false;
     }
+
+    sculpt_manager->read_GPU_results();
 
     // For the next frame
     sculpts_render_lists.clear();

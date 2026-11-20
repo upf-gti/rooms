@@ -190,6 +190,8 @@ public:
     sHapticStatus current_status;
     sHapticStatus old_status;
 
+    uint8_t last_sent_message = 0u;
+
     inline std::string message_generator(const uint8_t message_code, const uint8_t p1, const uint8_t p2, const uint8_t p3) {
         return std::to_string(message_code) + ',' + std::to_string(p1) + ',' + std::to_string(p2) + ',' + std::to_string(p3);
     }

@@ -9,7 +9,7 @@ bool Socket::socket_dll_loaded = false;
 
 HapticsManager::~HapticsManager()
 {
-    haptic_socket.close();
+    haptic_socket.close_socket();
 }
 
 bool HapticsManager::set_connection(const std::string hapt_url,
@@ -34,22 +34,33 @@ void HapticsManager::update_contact_info(const bool contact, const float mat_rou
 
 
 bool HapticsManager::send_update() {
+    // Not send message if there is no change to the haptics
+    if (old_status.contact == current_status.contact &&
+        old_status.rumble == current_status.rumble &&
+        old_status.temperature == current_status.temperature &&
+        (last_sent_message == 2u || last_sent_message == 0u)) {
+        return true;
+    }
+
     uint8_t HAPTICS_TEMP_DELTA = 4u; // Boundary to signal when a temperature change is significative enought
     uint8_t HAPTICS_RUMBLE_DELTA = 1u; // Boundary to signal when a rumble change is significative enought
     std::string message_to_send = message_generator(0, 0, 0, 0);
+    last_sent_message = 0u;
 
     if (current_status.contact) {
-        if (old_status.contact || abs(current_status.temperature - old_status.temperature) >  HAPTICS_TEMP_DELTA) {
+        if (!old_status.contact || abs(current_status.temperature - old_status.temperature) >  HAPTICS_TEMP_DELTA) {
             // Config message. Since PBR paramter changes are very subtle, we set the power to a third of 255 (the max)
             message_to_send = message_generator(1, current_status.temperature, 85, 85);
-        } else if (abs(current_status.rumble - old_status.rumble) >  HAPTICS_RUMBLE_DELTA) {
+            last_sent_message = 1u;
+        } else {
             // Update message
             // 90 degrees to the motor that pulls the finger
             message_to_send = message_generator(2, current_status.rumble, current_status.rumble, 90);
+            last_sent_message = 2u;
         }
-
-        spdlog::trace("Send Haptic respose: {}", message_to_send);
     }
+
+    spdlog::info("Send Haptic respose: {}", message_to_send);
 
     old_status = current_status;
     return haptic_socket.send_to((const char*) message_to_send.c_str(), sizeof(char) * message_to_send.length());

@@ -820,7 +820,7 @@ void SculptEditor::update(float delta_time)
 
     StrokeMaterial current_mat = stroke_parameters.get_material();
 
-    haptics_manager->update_contact_info(is_tool_used,
+    haptics_manager->update_contact_info(is_tool_pressed,
                                          current_mat.roughness,
                                          current_mat.metallic,
                                          glm::vec3(0.0f)); // TODO: hand velocity
