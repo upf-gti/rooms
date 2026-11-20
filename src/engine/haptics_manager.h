@@ -192,10 +192,17 @@ public:
 
     uint8_t last_sent_message = 0u;
 
+    // Interpolation parameter
+    float max_temperature = 25.0f;
+    float min_temperature = 5.0f;
+
+    float max_rumble = 150.0f;
+    float min_rumble = 0.0f;
+
     inline std::string message_generator(const uint8_t message_code, const uint8_t p1, const uint8_t p2, const uint8_t p3) {
         return std::to_string(message_code) + ',' + std::to_string(p1) + ',' + std::to_string(p2) + ',' + std::to_string(p3);
     }
-
+    HapticsManager();
     ~HapticsManager();
 
     bool set_connection(const std::string hapt_url, const uint32_t list_ports);

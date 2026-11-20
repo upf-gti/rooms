@@ -1,11 +1,36 @@
 #include "haptics_manager.h"
 
 #include "spdlog/spdlog.h"
+#include <fstream>
+#include <rapidjson/document.h>
+#include "framework/utils/json_utils.h"
 
 // Networking sockets
 #ifdef _WIN32
 bool Socket::socket_dll_loaded = false;
 #endif
+
+#define HAPTICS_LOAD_CONFIG_FROM_FILE 1
+
+HapticsManager::HapticsManager() {
+#ifdef HAPTICS_LOAD_CONFIG_FROM_FILE
+    rapidjson::Document config = load_json("haptics_config.json");
+
+    if (config.IsObject()) {
+        max_temperature = config["max_temperature"].GetFloat();
+        min_temperature = config["min_temperature"].GetFloat();
+        max_rumble = config["max_rumble"].GetFloat();
+        min_rumble = config["min_rumble"].GetFloat();
+
+        spdlog::info("HAPTICS: Loaded config haptic file.");
+    } else {
+        spdlog::info("HAPTICS: Could not find the haptics config file.");
+    }
+#endif
+
+    spdlog::info("HAPTICS: temperature range: {} - {} C", min_temperature, max_temperature);
+    spdlog::info("HAPTICS: rumble range: {} - {} Hz", min_rumble, max_rumble);
+}
 
 HapticsManager::~HapticsManager()
 {
@@ -27,9 +52,9 @@ void HapticsManager::update_contact_info(const bool contact, const float mat_rou
     current_status.contact = contact;
     // TODO: this magic constants should be loaded from a text file
     // Map of roughnes to rumble Hzs
-    current_status.rumble = (uint8_t) std::lerp(0.0f, 150.0f, mat_roughness);
+    current_status.rumble = (uint8_t) std::lerp(min_rumble, max_rumble, mat_roughness);
     // A full metalic surface should give cold feedback, so close, to 0
-    current_status.temperature = (uint8_t) std::lerp(25.0f, 5.0f, mat_metalness);
+    current_status.temperature = (uint8_t) std::lerp(max_temperature, min_temperature, mat_metalness);
 }
 
 
@@ -60,7 +85,7 @@ bool HapticsManager::send_update() {
         }
     }
 
-    spdlog::info("Send Haptic respose: {}", message_to_send);
+    spdlog::info("HAPTICS: Send message: {}", message_to_send);
 
     old_status = current_status;
     return haptic_socket.send_to((const char*) message_to_send.c_str(), sizeof(char) * message_to_send.length());
