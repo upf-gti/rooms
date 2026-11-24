@@ -34,6 +34,7 @@ HapticsManager::HapticsManager() {
 #endif
     spdlog::info("HAPTICS: temperature range: {} - {} C", min_temperature, max_temperature);
     spdlog::info("HAPTICS: rumble range: {} - {} Hz", min_rumble, max_rumble);
+    spdlog::info("HAPTCIS: rumble strength {}", rumble_strength);
     spdlog::info("HAPTICS: Connection dir: {} Port: {}", haptics_url, listening_port);
 
     set_connection(haptics_url, listening_port);
@@ -63,7 +64,6 @@ bool HapticsManager::set_connection(const std::string hapt_url,
 void HapticsManager::update_contact_info(const bool contact, const float mat_roughness, const float mat_metalness, const glm::vec3 hand_speed)
 {
     current_status.contact = contact;
-    // TODO: this magic constants should be loaded from a text file
     // Map of roughnes to rumble Hzs
     current_status.rumble = (uint8_t) std::lerp(min_rumble, max_rumble, mat_roughness);
     // A full metalic surface should give cold feedback, so close, to 0
@@ -72,6 +72,10 @@ void HapticsManager::update_contact_info(const bool contact, const float mat_rou
 
 
 bool HapticsManager::send_update() {
+    // NOTE: COMENT THIS IF YOU WANT TO SEND A LOT OF MESSAGES:
+    // Since it is UDP and the message can get lost, maybe this is better?
+    // If not, we can send each message a certain set of times
+
     // Not send message if there is no change to the haptics
     if (old_status.contact == current_status.contact &&
         old_status.rumble == current_status.rumble &&
