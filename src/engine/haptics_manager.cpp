@@ -81,7 +81,7 @@ bool HapticsManager::send_update() {
         old_status.rumble == current_status.rumble &&
         old_status.temperature == current_status.temperature &&
         (last_sent_message == 2u || last_sent_message == 0u)) {
-        return true;
+        //return true;
     }
 
     uint8_t HAPTICS_TEMP_DELTA = 4u; // Boundary to signal when a temperature change is significative enought
