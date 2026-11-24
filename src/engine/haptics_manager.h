@@ -201,6 +201,7 @@ public:
 
     float max_rumble = 150.0f;
     float min_rumble = 0.0f;
+    float rumble_strength = 60.0f;
 
     inline std::string message_generator(const uint8_t message_code, const uint8_t p1, const uint8_t p2, const uint8_t p3) {
         return std::to_string(message_code) + ',' + std::to_string(p1) + ',' + std::to_string(p2) + ',' + std::to_string(p3);

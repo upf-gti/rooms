@@ -3,6 +3,7 @@
   "min_temperature": 6.0,
   "max_rumble": 100.0,
   "min_rumble": 5.0,
+  "rumble_strength": 85.0,
   "haptic_device_port": 11000,
   "haptic_device_IP": "10.225.116.66"
 }

@@ -22,6 +22,8 @@ HapticsManager::HapticsManager() {
         max_rumble = config["max_rumble"].GetFloat();
         min_rumble = config["min_rumble"].GetFloat();
 
+        rumble_strength = config["rumble_strength"].GetFloat();
+
         haptics_url = config["haptic_device_IP"].GetString();
         listening_port = config["haptic_device_port"].GetInt();
 
@@ -86,7 +88,7 @@ bool HapticsManager::send_update() {
     if (current_status.contact) {
         if (!old_status.contact || abs(current_status.temperature - old_status.temperature) >  HAPTICS_TEMP_DELTA) {
             // Config message. Since PBR paramter changes are very subtle, we set the power to a third of 255 (the max)
-            message_to_send = message_generator(1, current_status.temperature, 85, 85);
+            message_to_send = message_generator(1, current_status.temperature, rumble_strength, rumble_strength);
             last_sent_message = 1u;
         } else {
             // Update message
