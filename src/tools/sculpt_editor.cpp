@@ -282,7 +282,7 @@ bool SculptEditor::is_tool_being_used(bool stamp_enabled)
 
 bool SculptEditor::edit_update(float delta_time)
 {
-    stamp_enabled = !is_shift_right_pressed;
+    stamp_enabled = is_shift_right_pressed;
 
     // Poll action using stamp mode when picking material also mode to detect once
     bool is_tool_used = is_tool_being_used(stamp_enabled || is_picking_material);

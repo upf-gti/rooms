@@ -60,9 +60,10 @@ void BaseEditor::update(float delta_time)
         if (!is_something_hovered()) {
             last_hover_time += delta_time;
 
-            if (last_hover_time > 10.0f) {
-                main_panel->set_visibility(false);
-            }
+            // TODO: Add this as a setting
+            //if (last_hover_time > 10.0f) {
+            //    main_panel->set_visibility(false);
+            //}
         }
         else {
             last_hover_time = 0.0f;

@@ -4,5 +4,5 @@
   "max_rumble": 100.0,
   "min_rumble": 5.0,
   "haptic_device_port": 11000,
-  "haptic_device_IP": "localhost"
+  "haptic_device_IP": "10.225.116.66"
 }

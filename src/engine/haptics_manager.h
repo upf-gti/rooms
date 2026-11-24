@@ -47,7 +47,7 @@ struct Socket {
         addrinfo* result = nullptr;
         addrinfo connection_hints = {
             .ai_family = AF_UNSPEC, // For IPV6
-            .ai_socktype = SOCK_STREAM,
+            .ai_socktype = SOCK_DGRAM,
             .ai_protocol = (is_TCP) ? IPPROTO_TCP : IPPROTO_UDP
         };
 
@@ -72,11 +72,14 @@ struct Socket {
 
         // Stablish the connection
         result_code = connect(socket_connection, result->ai_addr, (int32_t) result->ai_addrlen);
+        int error = WSAGetLastError();
         freeaddrinfo(result);
 
         if (result_code == SOCKET_ERROR) {
+            int error = WSAGetLastError();
             closesocket(socket_connection);
             socket_connection = INVALID_SOCKET;
+            
             return false;
         }
 

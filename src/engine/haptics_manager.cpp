@@ -35,6 +35,12 @@ HapticsManager::HapticsManager() {
     spdlog::info("HAPTICS: Connection dir: {} Port: {}", haptics_url, listening_port);
 
     set_connection(haptics_url, listening_port);
+
+    std::string message_to_send = message_generator(0, 0, 0, 0);
+    last_sent_message = 0u;
+    if (!haptic_socket.send_to((const char*)message_to_send.c_str(), sizeof(char) * message_to_send.length())) {
+        spdlog::error("HAPTICS: Error sending first message");
+    }
 }
 
 HapticsManager::~HapticsManager()
@@ -49,7 +55,7 @@ bool HapticsManager::set_connection(const std::string hapt_url,
 
     // TODO: Managet this gracely
     int32_t error_code;
-    return haptic_socket.CreateClientSocket(hapt_url, std::to_string(listening_port), &error_code, true);
+    return haptic_socket.CreateClientSocket(hapt_url, std::to_string(listening_port), &error_code, false);
 }
 
 void HapticsManager::update_contact_info(const bool contact, const float mat_roughness, const float mat_metalness, const glm::vec3 hand_speed)

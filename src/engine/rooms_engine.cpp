@@ -259,7 +259,9 @@ void RoomsEngine::update(float delta_time)
         controller_mesh_left->set_transform(Transform::mat4_to_transform(Input::get_controller_pose(HAND_LEFT)));
     }
 
-    haptics_manager->send_update();
+    if (!haptics_manager->send_update()) {
+        spdlog::error("HAPTICS: Could not send message.");
+    }
 
     Engine::update(delta_time);
 
