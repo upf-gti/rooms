@@ -269,7 +269,7 @@ void RoomsEngine::update(float delta_time)
 
 void RoomsEngine::render()
 {
-    if (show_imgui) {
+    if (false && show_imgui) {
         render_gui();
     }
 

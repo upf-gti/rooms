@@ -72,15 +72,14 @@ void HapticsManager::update_contact_info(const bool contact, const float mat_rou
 
 
 bool HapticsManager::send_update() {
-    // NOTE: COMENT THIS IF YOU WANT TO SEND A LOT OF MESSAGES:
-    // Since it is UDP and the message can get lost, maybe this is better?
-    // If not, we can send each message a certain set of times
-
     // Not send message if there is no change to the haptics
     if (old_status.contact == current_status.contact &&
         old_status.rumble == current_status.rumble &&
         old_status.temperature == current_status.temperature &&
         (last_sent_message == 2u || last_sent_message == 0u)) {
+        // NOTE: UN-COMENT THIS IF YOU WANT TO AVOID SENDING A LOT OF MESSAGES:
+        // Since it is UDP and the message can get lost, maybe this is better?
+        // If not, we can send each message a certain set of times
         //return true;
     }
 
