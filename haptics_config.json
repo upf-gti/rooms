@@ -6,8 +6,8 @@
   "rumble_strength": 85.0,
   "rumble_difference": 20,
   "haptics_speed_cap" : 1.2,
-  "haptics_speed_min_multiplayer": 1.0,
-  "haptics_speed_max_multiplayer": 2.0,
+  "haptics_speed_min_multipliyer": 1.0,
+  "haptics_speed_max_multipliyer": 1.5,
   "haptic_device_port": 11000,
   "haptic_device_IP": "10.225.116.66"
 }

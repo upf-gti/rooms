@@ -25,8 +25,8 @@ HapticsManager::HapticsManager() {
         rumble_strength = config["rumble_strength"].GetFloat();
 
         max_haptic_speed = config["haptics_speed_cap"].GetFloat();
-        haptic_speed_min_multiplayer = config["haptics_speed_min_multiplayer"].GetFloat();
-        haptic_speed_max_multiplayer = config["haptics_speed_max_multiplayer"].GetFloat();
+        haptic_speed_min_multiplayer = config["haptics_speed_min_multipliyer"].GetFloat();
+        haptic_speed_max_multiplayer = config["haptics_speed_max_multipliyer"].GetFloat();
         rumble_difference = config["rumble_difference"].GetInt();
 
         haptics_url = config["haptic_device_IP"].GetString();
