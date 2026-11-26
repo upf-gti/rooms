@@ -59,18 +59,18 @@ void SceneEditor::initialize()
 
     init_ui();
 
-//#ifndef DISABLE_RAYMARCHER
-//    SculptNode* default_sculpt = new SculptNode();
-//    default_sculpt->set_name("default_sculpt");
-//    default_sculpt->initialize();
-//    RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
-//    default_sculpt->set_position({0.0f, 1.0f, 0.0f});
-//    main_scene->add_node(default_sculpt);
-//#endif
+    //#ifndef DISABLE_RAYMARCHER
+    //    SculptNode* default_sculpt = new SculptNode();
+    //    default_sculpt->set_name("default_sculpt");
+    //    default_sculpt->initialize();
+    //    RoomsRenderer* rooms_renderer = dynamic_cast<RoomsRenderer*>(Renderer::instance);
+    //    default_sculpt->set_position({0.0f, 1.0f, 0.0f});
+    //    main_scene->add_node(default_sculpt);
+    //#endif
 
     Node::bind(main_scene->get_name() + "@nodes_added", [&](const std::string& sg, void* data) {
         set_inspector_dirty();
-    });
+        });
 
     Node::bind("@node_deleted", [&](const std::string& sg, void* data) {
         Node* node = reinterpret_cast<Node*>(data);
@@ -78,7 +78,7 @@ void SceneEditor::initialize()
             deselect();
         }
         set_inspector_dirty();
-    });
+        });
 
     Node::bind("@on_gpu_results", [&](const std::string& sg, void* data) {
 
@@ -127,13 +127,13 @@ void SceneEditor::initialize()
             for (auto child : node->get_children()) {
                 check_intersections(child);
             }
-        };
+            };
 
         auto& nodes = current_group ? current_group->get_children() : main_scene->get_nodes();
         for (auto node : nodes) {
             check_intersections(node);
         }
-    });
+        });
 }
 
 void SceneEditor::clean()
@@ -154,6 +154,7 @@ void SceneEditor::update(float delta_time)
 
     glm::vec3 current_right_hand_pos = Input::get_controller_position(HAND_RIGHT);
     glm::vec3 right_hand_velocity = (current_right_hand_pos - last_right_hand_translation) / delta_time;
+    last_right_hand_translation = current_right_hand_pos;
 
     // Update input actions
     {
@@ -191,7 +192,7 @@ void SceneEditor::update(float delta_time)
     shortcuts.clear();
     shortcuts[shortcuts::TOGGLE_SCENE_INSPECTOR] = !is_shift_left_pressed;
 
-    if(!selected_node || (hovered_node != selected_node)) {
+    if (!selected_node || (hovered_node != selected_node)) {
         shortcuts[shortcuts::SELECT_NODE] = !is_shift_right_pressed;
     }
 
@@ -248,7 +249,8 @@ void SceneEditor::update(float delta_time)
 
         if (can_undo) {
             scene_undo();
-        } else if (can_redo) {
+        }
+        else if (can_redo) {
             scene_redo();
         }
     }
@@ -261,7 +263,7 @@ void SceneEditor::update(float delta_time)
 
     // HAPTICS ==============
     // If the ray intersection is close enought, then set the manager to register the contact
-    HapticsManager *haptics_manager = ((RoomsEngine*)RoomsEngine::instance)->haptics_manager;
+    HapticsManager* haptics_manager = ((RoomsEngine*)RoomsEngine::instance)->haptics_manager;
 
     RoomsRenderer* rooms_renderer = static_cast<RoomsRenderer*>(RoomsRenderer::instance);
     SculptManager* sculpt_manager = rooms_renderer->get_sculpt_manager();
@@ -270,9 +272,9 @@ void SceneEditor::update(float delta_time)
     bool is_touching_sculpt = intersection_info.has_intersected ? intersection_info.ray_t < 0.02f : false;
 
     haptics_manager->update_contact_info(is_touching_sculpt,
-                                         intersection_info.intersection_roughness,
-                                         intersection_info.intersection_metallic,
-                                         right_hand_velocity); // TODO: hand velocity
+        intersection_info.intersection_roughness,
+        intersection_info.intersection_metallic,
+        right_hand_velocity); // TODO: hand velocity
 }
 
 void SceneEditor::render()
@@ -493,8 +495,8 @@ void SceneEditor::init_ui()
         {
             ui::ItemGroup2D* g_add_node = new ui::ItemGroup2D("g_light_types", ui::HIDDEN);
             g_add_node->add_child(new ui::TextureButton2D("omni", { "data/textures/light.png" }));
-            g_add_node->add_child(new ui::TextureButton2D("spot", { "data/textures/spot.png"  }));
-            g_add_node->add_child(new ui::TextureButton2D("directional", { "data/textures/sun.png"  }));
+            g_add_node->add_child(new ui::TextureButton2D("spot", { "data/textures/spot.png" }));
+            g_add_node->add_child(new ui::TextureButton2D("directional", { "data/textures/sun.png" }));
             add_node_submenu->add_child(g_add_node);
         }
 
@@ -543,7 +545,7 @@ void SceneEditor::init_ui()
             .position = {32.0f, 32.f},
             .close_fn = std::bind(&SceneEditor::on_close_inspector, this, std::placeholders::_1),
             .back_fn = std::bind(&SceneEditor::on_goback_inspector, this, std::placeholders::_1)
-        });
+            });
         inspector->set_visibility(false);
     }
 
@@ -564,7 +566,7 @@ void SceneEditor::init_ui()
                 new ui::ImageLabel2D("Scene Panel", shortcuts::Y_BUTTON_PATH, shortcuts::TOGGLE_SCENE_INSPECTOR),
                 new ui::ImageLabel2D("Undo", shortcuts::X_BUTTON_PATH, shortcuts::SCENE_UNDO),
                 new ui::ImageLabel2D("Redo", shortcuts::L_GRIP_X_BUTTON_PATH, shortcuts::SCENE_REDO, double_size)
-            });
+                });
         }
 
         // Right hand
@@ -581,7 +583,7 @@ void SceneEditor::init_ui()
                 new ui::ImageLabel2D("Place Node", shortcuts::R_TRIGGER_PATH, shortcuts::PLACE_NODE),
                 new ui::ImageLabel2D("Select Node", shortcuts::R_TRIGGER_PATH, shortcuts::SELECT_NODE),
                 new ui::ImageLabel2D("Ungroup", shortcuts::R_GRIP_R_TRIGGER_PATH, shortcuts::UNGROUP, double_size)
-            });
+                });
         }
     }
 
@@ -614,7 +616,7 @@ void SceneEditor::bind_events()
         // Switch to sculpt editor
         Node::emit_signal("@on_sculpt_edited", (void*)nullptr);
         RoomsEngine::get_instance()->switch_editor(SCULPT_EDITOR, new_sculpt);
-    });
+        });
 
     Node::bind("character", [&](const std::string& signal, void* button) {
         Character3D* new_character = new Character3D();
@@ -622,7 +624,7 @@ void SceneEditor::bind_events()
         select_node(new_character);
         add_node(new_character);
         set_inspector_dirty();
-    });
+        });
 
     // Environment / Scene Lights
     {
@@ -642,11 +644,11 @@ void SceneEditor::bind_events()
 
         Node::bind("use_environment", [&](const std::string& signal, void* button) {
             RoomsEngine::toggle_use_environment_map();
-        });
+            });
 
         Node::bind("use_grid", [&](const std::string& signal, void* button) {
             RoomsEngine::toggle_use_grid();
-        });
+            });
     }
 
     Node::bind("deselect", [&](const std::string& signal, void* button) { deselect(); });
@@ -661,7 +663,7 @@ void SceneEditor::bind_events()
             main_scene->serialize("data/exports/" + output + ".room");
             main_scene->set_name(output);
             exports_dirty = true;
-        };
+            };
 
         Node::bind("save", [&, fn = callback](const std::string& signal, void* button) { ui::Keyboard::request(fn, main_scene->get_name()); });
         Node::bind("load", [&](const std::string& signal, void* button) { inspect_exports(true); });
@@ -683,7 +685,7 @@ void SceneEditor::bind_events()
             for (const std::string& w : to_show) {
                 Node2D::get_widget_from_name(w)->set_visibility(true);
             }
-        });
+            });
 
         Node::bind("@on_tutorial_step", (FuncInt)[&](const std::string& signal, int step) {
 
@@ -692,8 +694,8 @@ void SceneEditor::bind_events()
             case TUTORIAL_ADD_NODE:
                 main_panel->set_visibility(true);
                 break;
-            /*case TUTORIAL_STAMP_SMEAR:
-                break;*/
+                /*case TUTORIAL_STAMP_SMEAR:
+                    break;*/
             }
         });
     }
@@ -714,7 +716,7 @@ void SceneEditor::open_context_menu(Node* node)
     auto callback = [&, n = node](const std::string& output) {
         n->set_name(output);
         set_inspector_dirty();
-    };
+        };
 
     std::vector<ui::sContextMenuOption> options = {
         { "Animate", [&, n = node](const std::string& name, uint32_t index) { selected_node = n; RoomsEngine::get_instance()->switch_editor(ANIMATION_EDITOR, n); }},
@@ -1086,7 +1088,7 @@ void SceneEditor::create_light_node(uint8_t type)
         new_light->set_position({ 0.0f, 1.f, 0.0f });
         new_light->rotate(glm::radians(-90.f), { 1.f, 0.0f, 0.f });
         break;
-        case LIGHT_DIRECTIONAL:
+    case LIGHT_DIRECTIONAL:
         new_light = new DirectionalLight3D();
         new_light->rotate(glm::radians(-90.f), { 1.f, 0.0f, 0.f });
         break;
@@ -1277,7 +1279,6 @@ void SceneEditor::update_node_transform(float delta_time, bool rotate_selected_n
         rotation_started = true;
 
         last_right_hand_rotation = right_hand_rotation;
-        last_right_hand_translation = right_hand_translation;
     }
 
     // If rotation has stopped
@@ -1376,7 +1377,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
             else if (dynamic_cast<Light3D*>(n)) {
                 set_inspector_dirty();
             }
-        });
+            });
     }
 
     if (flags & NODE_ANIMATE) {
@@ -1391,7 +1392,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
             // select_node(n, false);
 
             RoomsEngine::get_instance()->switch_editor(ANIMATION_EDITOR, n);
-        });
+            });
     }
 
     if (flags & NODE_NAME) {
@@ -1401,7 +1402,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
 
         Node::bind(signal, [&, n = node](const std::string& sg, void* data) {
             select_node(n, false);
-        });
+            });
     }
 
     // Remove button
@@ -1411,7 +1412,7 @@ void SceneEditor::inspect_node(Node* node, uint32_t flags, const std::string& te
 
         Node::bind(signal, [&, n = node](const std::string& sg, void* data) {
             delete_node(n);
-        });
+            });
     }
 
     inspector->end_line();
@@ -1507,7 +1508,7 @@ void SceneEditor::inspect_character(bool force)
 
             Node::bind(signal, [&, n = node](const std::string& sg, void* data) {
                 RoomsEngine::get_instance()->switch_editor(SCULPT_EDITOR, static_cast<SculptNode*>(n));
-            });
+                });
         }
 
         {
@@ -1551,7 +1552,7 @@ void SceneEditor::inspect_light(bool force)
         inspector->color_picker(signal, Color(light->get_color(), 1.0f));
         Node::bind(signal, [l = light](const std::string& sg, const Color& color) {
             l->set_color(color);
-        });
+            });
     }
 
     // Intensity
@@ -1615,13 +1616,13 @@ void SceneEditor::inspect_exports(bool force)
             deselect();
             static_cast<RoomsEngine*>(RoomsEngine::instance)->set_main_scene(str);
             set_inspector_dirty();
-        });
+            });
 
         signal = name + std::to_string(node_signal_uid++) + "_add";
         inspector->button(signal, "data/textures/add.png", 0u, "Add");
         Node::bind(signal, [&, str = full_name](const std::string& sg, void* data) {
             static_cast<RoomsEngine*>(RoomsEngine::instance)->add_to_main_scene(str);
-        });
+            });
 
         inspector->label("empty", name);
         inspector->end_line();

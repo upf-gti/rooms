@@ -5,6 +5,8 @@
 #include <rapidjson/document.h>
 #include "framework/utils/json_utils.h"
 
+#include <algorithm>
+
 // Networking sockets
 #ifdef _WIN32
 bool Socket::socket_dll_loaded = false;
@@ -33,7 +35,8 @@ HapticsManager::HapticsManager() {
         listening_port = config["haptic_device_port"].GetInt();
 
         spdlog::info("HAPTICS: Loaded config haptic file.");
-    } else {
+    }
+    else {
         spdlog::info("HAPTICS: Could not find the haptics config file.");
     }
 #endif
@@ -57,7 +60,7 @@ HapticsManager::~HapticsManager()
 }
 
 bool HapticsManager::set_connection(const std::string hapt_url,
-                                    const uint32_t list_ports) {
+    const uint32_t list_ports) {
     haptics_url = hapt_url;
     listening_port = list_ports;
 
@@ -74,9 +77,9 @@ void HapticsManager::update_contact_info(const bool contact, const float mat_rou
     // If the speed is 0, then the frequency should be 0
     float speed_mult_frequency = std::lerp(haptic_speed_min_multiplayer, haptic_speed_max_multiplayer, capped_speed / max_haptic_speed) * glm::sign(capped_speed);
     // Map of roughnes to rumble Hzs
-    current_status.rumble = (uint8_t) glm::min(std::lerp(min_rumble, max_rumble, mat_roughness) * speed_mult_frequency, 255.0f);
+    current_status.rumble = (uint8_t)glm::min(std::lerp(min_rumble, max_rumble, mat_roughness) * speed_mult_frequency, 255.0f);
     // A full metalic surface should give cold feedback, so close, to 0
-    current_status.temperature = (uint8_t) std::lerp(max_temperature, min_temperature, mat_metalness);
+    current_status.temperature = (uint8_t)std::lerp(max_temperature, min_temperature, mat_metalness);
 }
 
 
@@ -98,15 +101,16 @@ bool HapticsManager::send_update() {
     last_sent_message = 0u;
 
     if (current_status.contact) {
-        if (!old_status.contact || abs(current_status.temperature - old_status.temperature) >  HAPTICS_TEMP_DELTA) {
+        if (!old_status.contact || abs(current_status.temperature - old_status.temperature) > HAPTICS_TEMP_DELTA) {
             // Config message. Since PBR paramter changes are very subtle, we set the power to a third of 255 (the max)
             message_to_send = message_generator(1, current_status.temperature, rumble_strength, rumble_strength);
             last_sent_message = 1u;
-        } else {
+        }
+        else {
             // Update message
             // 90 degrees to the motor that pulls the finger
             // Set slightly different rumbles to each motor
-            message_to_send = message_generator(2, glm::max(0u, current_status.rumble - rumble_difference), current_status.rumble, 90);
+            message_to_send = message_generator(2, static_cast<uint8_t>(std::max(0, int32_t(current_status.rumble) - int32_t(rumble_difference))), current_status.rumble, 90);
             last_sent_message = 2u;
         }
     }
@@ -114,5 +118,5 @@ bool HapticsManager::send_update() {
     spdlog::info("HAPTICS: Send message: {}", message_to_send);
 
     old_status = current_status;
-    return haptic_socket.send_to((const char*) message_to_send.c_str(), sizeof(char) * message_to_send.length());
+    return haptic_socket.send_to((const char*)message_to_send.c_str(), sizeof(char) * message_to_send.length());
 }
