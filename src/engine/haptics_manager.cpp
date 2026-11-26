@@ -24,6 +24,11 @@ HapticsManager::HapticsManager() {
 
         rumble_strength = config["rumble_strength"].GetFloat();
 
+        max_haptic_speed = config["haptics_speed_cap"].GetFloat();
+        haptic_speed_min_multiplayer = config["haptics_speed_min_multiplayer"].GetFloat();
+        haptic_speed_max_multiplayer = config["haptics_speed_max_multiplayer"].GetFloat();
+        rumble_difference = config["rumble_difference"].GetInt();
+
         haptics_url = config["haptic_device_IP"].GetString();
         listening_port = config["haptic_device_port"].GetInt();
 
@@ -64,8 +69,12 @@ bool HapticsManager::set_connection(const std::string hapt_url,
 void HapticsManager::update_contact_info(const bool contact, const float mat_roughness, const float mat_metalness, const glm::vec3 hand_speed)
 {
     current_status.contact = contact;
+
+    float capped_speed = glm::min(glm::length(hand_speed), max_haptic_speed);
+    // If the speed is 0, then the frequency should be 0
+    float speed_mult_frequency = std::lerp(haptic_speed_min_multiplayer, haptic_speed_max_multiplayer, capped_speed / max_haptic_speed) * glm::sign(capped_speed);
     // Map of roughnes to rumble Hzs
-    current_status.rumble = (uint8_t) std::lerp(min_rumble, max_rumble, mat_roughness);
+    current_status.rumble = (uint8_t) glm::min(std::lerp(min_rumble, max_rumble, mat_roughness) * speed_mult_frequency, 255.0f);
     // A full metalic surface should give cold feedback, so close, to 0
     current_status.temperature = (uint8_t) std::lerp(max_temperature, min_temperature, mat_metalness);
 }
@@ -96,7 +105,8 @@ bool HapticsManager::send_update() {
         } else {
             // Update message
             // 90 degrees to the motor that pulls the finger
-            message_to_send = message_generator(2, current_status.rumble, current_status.rumble, 90);
+            // Set slightly different rumbles to each motor
+            message_to_send = message_generator(2, glm::max(0u, current_status.rumble - rumble_difference), current_status.rumble, 90);
             last_sent_message = 2u;
         }
     }

@@ -152,6 +152,9 @@ void SceneEditor::update(float delta_time)
 {
     BaseEditor::update(delta_time);
 
+    glm::vec3 current_right_hand_pos = Input::get_controller_position(HAND_RIGHT);
+    glm::vec3 right_hand_velocity = (current_right_hand_pos - last_right_hand_translation) / delta_time;
+
     // Update input actions
     {
         select_action_pressed = Input::was_mouse_released(GLFW_MOUSE_BUTTON_LEFT);
@@ -269,7 +272,7 @@ void SceneEditor::update(float delta_time)
     haptics_manager->update_contact_info(is_touching_sculpt,
                                          intersection_info.intersection_roughness,
                                          intersection_info.intersection_metallic,
-                                         glm::vec3(0.0f)); // TODO: hand velocity
+                                         right_hand_velocity); // TODO: hand velocity
 }
 
 void SceneEditor::render()
@@ -1121,7 +1124,7 @@ void SceneEditor::update_gizmo(float delta_time)
         return;
     }
 
-    // Gizmo should update in XR mode only 
+    // Gizmo should update in XR mode only
     if (!renderer->get_xr_available()) {
         return;
     }

@@ -820,10 +820,15 @@ void SculptEditor::update(float delta_time)
 
     StrokeMaterial current_mat = stroke_parameters.get_material();
 
+    glm::vec3 current_right_hand_pos = Input::get_controller_position(HAND_RIGHT);
+    glm::vec3 right_hand_velocity = (current_right_hand_pos - last_right_hand_position) / delta_time;
+
+    last_right_hand_position  = current_right_hand_pos;
+
     haptics_manager->update_contact_info(is_tool_pressed,
                                          current_mat.roughness,
                                          current_mat.metallic,
-                                         glm::vec3(0.0f)); // TODO: hand velocity
+                                         right_hand_velocity); // TODO: hand rotational velocity
 }
 
 void SculptEditor::set_preview_stroke()

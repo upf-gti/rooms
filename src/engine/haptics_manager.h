@@ -79,7 +79,7 @@ struct Socket {
             int error = WSAGetLastError();
             closesocket(socket_connection);
             socket_connection = INVALID_SOCKET;
-            
+
             return false;
         }
 
@@ -202,6 +202,11 @@ public:
     float max_rumble = 150.0f;
     float min_rumble = 0.0f;
     float rumble_strength = 60.0f;
+    uint8_t rumble_difference = 10u;
+
+    float max_haptic_speed = 1.2f;
+    float haptic_speed_min_multiplayer = 1.0f;
+    float haptic_speed_max_multiplayer = 2.0f;
 
     inline std::string message_generator(const uint8_t message_code, const uint8_t p1, const uint8_t p2, const uint8_t p3) {
         return std::to_string(message_code) + ',' + std::to_string(p1) + ',' + std::to_string(p2) + ',' + std::to_string(p3);
